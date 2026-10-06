@@ -6,7 +6,6 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Read, Write};
@@ -329,10 +328,6 @@ pub fn conflicting_record<'a>(
         .find(|r| {
             r.service_name == service || r.bundle_path == bundle || r.executable_path == executable
         })
-}
-
-pub fn content_hash(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
 }
 
 pub fn random_id() -> Result<String, String> {
@@ -916,7 +911,7 @@ pub fn inspect_plist(path: &Path) -> PlistObservation {
     }
     match fs::read(path) {
         Ok(bytes) => {
-            result.sha256 = Some(content_hash(&bytes));
+            result.sha256 = Some(crate::digest::sha256_hex(&bytes));
             match plutil_json_from_bytes(&bytes) {
                 Ok(value) => result.config = Some(value),
                 Err(error) => result.error = Some(error),
@@ -961,7 +956,7 @@ pub fn record_location(record: &RunnerRecord) -> Result<(PathBuf, String), Strin
                 .and_then(|n| n.to_str())
                 != Some(expected_parent)
             || Path::new(&record.executable_path).parent()
-                != Some(&Path::new(&record.bundle_path).join("Contents/MacOS"))
+                != Some(&Path::new(&record.bundle_path).join(crate::app_layout::BUNDLE_MACOS_REL))
         {
             return Err(
                 "recorded cleanup ownership is inconsistent with this user, scope or paths".into(),
@@ -1305,7 +1300,7 @@ mod tests {
                 .as_nanos()
         ));
         let bundle = root.join("Runner.xpc");
-        let macos = bundle.join("Contents/MacOS");
+        let macos = bundle.join(crate::app_layout::BUNDLE_MACOS_REL);
         fs::create_dir_all(&macos).unwrap();
         for name in ["PWRunner", "pw-probe-runner", "sb_api_validator"] {
             fs::write(macos.join(name), name).unwrap();

@@ -12,7 +12,6 @@
 use crate::request_patch::RequestError;
 use serde::Serialize;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 use std::path::Path;
 
 /// Successful augment resolution, used to construct the always-present
@@ -62,12 +61,6 @@ fn is_valid_augment_name(name: &str) -> bool {
     // unambiguously to a filename component and resists traversal via
     // `..`, `/`, or shell metacharacters.
     !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-}
-
-fn sha256_hex_of(s: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(s.as_bytes());
-    format!("{:x}", hasher.finalize())
 }
 
 /// Resolve `request.policy.augments` against `<app_root>/Contents/Resources/Augments/`.
@@ -177,11 +170,11 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         appended.push_str(&contents);
     }
 
-    let original_sha256 = sha256_hex_of(&original_source);
+    let original_sha256 = crate::digest::sha256_hex(&original_source);
 
     let mut applied_source = original_source.clone();
     applied_source.push_str(&appended);
-    let applied_sha256 = sha256_hex_of(&applied_source);
+    let applied_sha256 = crate::digest::sha256_hex(&applied_source);
 
     policy.insert("sbpl_source".to_string(), Value::String(applied_source));
 
@@ -268,9 +261,12 @@ mod tests {
             AugmentResolution::Applied(aug) => {
                 assert_eq!(aug.applied, vec!["exec_baseline".to_string()]);
                 assert_ne!(aug.original_sha256, aug.applied_sha256);
-                assert_eq!(aug.original_sha256, sha256_hex_of(original));
+                assert_eq!(aug.original_sha256, crate::digest::sha256_hex(original));
                 let expected_applied = format!("{original}\n; comment-only\n");
-                assert_eq!(aug.applied_sha256, sha256_hex_of(&expected_applied));
+                assert_eq!(
+                    aug.applied_sha256,
+                    crate::digest::sha256_hex(&expected_applied)
+                );
             }
             other => panic!("expected Applied, got {:?}", outcome_name(other)),
         }

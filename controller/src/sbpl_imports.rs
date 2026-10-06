@@ -6,7 +6,6 @@
 //! they read. Neither identifies what the worker's compiler read; macro
 //! evaluation is outside this scan.
 
-use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
@@ -58,11 +57,6 @@ pub struct ImportRecord {
     pub error: Option<String>,
 }
 
-pub fn sha256_hex(data: &str) -> String {
-    let digest = Sha256::digest(data.as_bytes());
-    digest.iter().map(|b| format!("{b:02x}")).collect()
-}
-
 /// Resolve a bare import name against `IMPORT_SEARCH_PATHS`. Absolute paths are
 /// returned as-is when the file exists. Returns the first match.
 fn resolve_import_path(name: &str) -> Option<PathBuf> {
@@ -96,11 +90,7 @@ fn build_import_record(name: String, resolved: PathBuf) -> (ImportRecord, Option
             );
         }
     };
-    let digest = Sha256::digest(&bytes);
-    let sha = digest
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+    let sha = crate::digest::sha256_hex(&bytes);
     let size_bytes = Some(metadata.len());
     let mtime_unix = metadata
         .modified()
@@ -370,8 +360,7 @@ pub fn compute_closure_hash(source: &str, imports: &[ImportRecord]) -> String {
         .collect();
     lines.sort();
     payload.extend_from_slice(lines.join("\n").as_bytes());
-    let digest = Sha256::digest(&payload);
-    digest.iter().map(|b| format!("{b:02x}")).collect()
+    crate::digest::sha256_hex(&payload)
 }
 
 #[cfg(test)]
@@ -458,7 +447,7 @@ mod tests {
     #[test]
     fn closure_hash_differs_from_policy_sha_when_imports_resolved() {
         let src = "(version 1)";
-        let policy_sha = sha256_hex(src);
+        let policy_sha = crate::digest::sha256_hex(src);
         let closure = compute_closure_hash(src, &[record("a.sb", "/p/a.sb", "111")]);
         assert_ne!(policy_sha, closure);
     }

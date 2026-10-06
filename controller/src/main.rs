@@ -7,6 +7,7 @@ mod app_layout;
 mod augments;
 mod bundle;
 mod cli;
+mod digest;
 mod disposition;
 mod dossier;
 mod evidence;

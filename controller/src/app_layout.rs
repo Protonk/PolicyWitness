@@ -36,6 +36,8 @@ pub const SHIPPED_VALIDATOR: ShippedBinary = ShippedBinary {
 /// bundle, and the installer signs and reads them back at the same paths.
 pub const BUNDLE_WORKER_REL: &str = "Contents/MacOS/pw-probe-runner";
 pub const BUNDLE_VALIDATOR_REL: &str = "Contents/MacOS/sb_api_validator";
+/// The directory both live in, for checks on recorded executable paths.
+pub const BUNDLE_MACOS_REL: &str = "Contents/MacOS";
 
 fn validate_tool_name(tool_name: &str) -> Result<(), String> {
     let mut components = Path::new(tool_name).components();

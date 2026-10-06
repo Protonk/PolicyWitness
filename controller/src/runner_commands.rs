@@ -103,6 +103,22 @@ fn load_registry_or_default() -> Result<(PathBuf, RunnerRegistry), String> {
     Ok((registry_path, registry))
 }
 
+/// The registry for a command that will replace it: the lock is taken before
+/// the file is read, so the loaded contents are the ones the caller edits. The
+/// guard must stay bound until the save.
+fn load_registry_locked() -> Result<(PathBuf, std::fs::File, RunnerRegistry), String> {
+    let registry_path = runner_manager::runner_registry_path()?;
+    let lock = runner_manager::lock_registry(&registry_path)?;
+    let registry = runner_manager::load_registry(&registry_path)?;
+    Ok((registry_path, lock, registry))
+}
+
+/// The value after a flag, or the usage error naming the flag.
+fn flag_value<'a>(args: &'a [OsString], idx: usize, flag: &str) -> Result<&'a OsString, String> {
+    args.get(idx + 1)
+        .ok_or_else(|| format!("missing value for {flag}"))
+}
+
 fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let mut bundle_path: Option<PathBuf> = None;
     let mut service_name: Option<String> = None;
@@ -121,60 +137,44 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--bundle" => {
-                let path = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --bundle".to_string())?;
+                let path = flag_value(args, idx, "--bundle")?;
                 bundle_path = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--service-name" => {
-                let name = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --service-name".to_string())?;
+                let name = flag_value(args, idx, "--service-name")?;
                 service_name = Some(name.to_string_lossy().to_string());
                 idx += 2;
             }
             "--scope" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --scope".to_string())?;
+                let value = flag_value(args, idx, "--scope")?;
                 let scope_str = value.to_string_lossy();
                 scope = RunnerScope::parse(scope_str.as_ref())
                     .ok_or_else(|| "invalid value for --scope".to_string())?;
                 idx += 2;
             }
             "--identity" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --identity".to_string())?;
+                let value = flag_value(args, idx, "--identity")?;
                 identity = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--entitlements" => {
-                let path = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --entitlements".to_string())?;
+                let path = flag_value(args, idx, "--entitlements")?;
                 entitlements_path = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--executable" => {
-                let path = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --executable".to_string())?;
+                let path = flag_value(args, idx, "--executable")?;
                 executable_override = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--bundle-id" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --bundle-id".to_string())?;
+                let value = flag_value(args, idx, "--bundle-id")?;
                 bundle_id_override = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--kind" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --kind".to_string())?;
+                let value = flag_value(args, idx, "--kind")?;
                 let raw = value.to_string_lossy();
                 if raw == "machme" {
                     return Err("--kind machme is not supported; use --kind byoxpc".to_string());
@@ -195,9 +195,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 idx += 1;
             }
             "--env" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --env".to_string())?;
+                let value = flag_value(args, idx, "--env")?;
                 let raw = value.to_string_lossy();
                 let (key, val) = raw
                     .split_once('=')
@@ -297,9 +295,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let service_name = bundle_id.clone();
     let bundle_id = Some(bundle_id);
 
-    let registry_path = runner_manager::runner_registry_path()?;
-    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
-    let mut registry = runner_manager::load_registry(&registry_path)?;
+    let (registry_path, _registry_lock, mut registry) = load_registry_locked()?;
     if let Some(existing) = runner_manager::conflicting_record(
         &registry,
         &service_name,
@@ -394,7 +390,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             owner_uid: runner_manager::current_uid_string()?
                 .parse()
                 .map_err(|_| "invalid uid")?,
-            plist_sha256: runner_manager::content_hash(plist_contents.as_bytes()),
+            plist_sha256: crate::digest::sha256_hex(plist_contents.as_bytes()),
         }),
         id: runner_id.clone(),
         service_name: service_name.clone(),
@@ -451,16 +447,12 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --id".to_string())?;
+                let value = flag_value(args, idx, "--id")?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = flag_value(args, idx, "--service-name")?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -547,16 +539,12 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --id".to_string())?;
+                let value = flag_value(args, idx, "--id")?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = flag_value(args, idx, "--service-name")?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -631,16 +619,12 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --id".to_string())?;
+                let value = flag_value(args, idx, "--id")?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args
-                    .get(idx + 1)
-                    .ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = flag_value(args, idx, "--service-name")?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -652,9 +636,7 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
         }
     }
 
-    let registry_path = runner_manager::runner_registry_path()?;
-    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
-    let mut registry = runner_manager::load_registry(&registry_path)?;
+    let (registry_path, _registry_lock, mut registry) = load_registry_locked()?;
     if runner_id.is_none() && service_name.is_none() {
         return Err("runner remove requires --id or --service-name".to_string());
     }
@@ -684,9 +666,7 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
 /// validation — it does not reconcile against launchctl or LaunchAgents/.
 /// Callers wanting that use the report-only reconcile command.
 fn cmd_runner_validate() -> Result<i32, String> {
-    let registry_path = runner_manager::runner_registry_path()?;
-    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
-    let mut registry = runner_manager::load_registry(&registry_path)?;
+    let (registry_path, _registry_lock, mut registry) = load_registry_locked()?;
     let mut missing = 0usize;
     let mut invalid = 0usize;
     let mut failures = Vec::new();

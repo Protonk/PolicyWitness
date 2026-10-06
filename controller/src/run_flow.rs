@@ -2349,7 +2349,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
     #[test]
     fn policy_dossier_follows_the_request_state_table() {
         let source = "(version 1)\n(allow default)\n";
-        let hash = crate::sbpl_imports::sha256_hex(source);
+        let hash = crate::digest::sha256_hex(source);
         // String source, no augments (also null or empty augments).
         for resolution in [
             AugmentResolution::NotPresent,

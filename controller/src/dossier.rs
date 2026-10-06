@@ -10,7 +10,10 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary};
+use crate::app_layout::{
+    BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL, SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER,
+    ShippedBinary,
+};
 use crate::augments::PolicyAugmentation;
 use crate::evidence::{self, EvidenceManifest};
 use crate::host_facts;
@@ -54,7 +57,7 @@ pub struct Augmentation {
 
 impl Augmentation {
     pub fn not_requested(source: Option<&str>) -> Self {
-        let hash = source.map(sbpl_imports::sha256_hex);
+        let hash = source.map(crate::digest::sha256_hex);
         Augmentation {
             status: "not_requested".into(),
             applied: Vec::new(),
@@ -76,7 +79,7 @@ impl Augmentation {
         Augmentation {
             status: "failed".into(),
             applied: Vec::new(),
-            original_sha256: original.map(sbpl_imports::sha256_hex),
+            original_sha256: original.map(crate::digest::sha256_hex),
             applied_sha256: None,
             error: Some(error),
         }
@@ -417,10 +420,7 @@ impl Binaries {
         manifest: Result<&EvidenceManifest, &String>,
     ) -> Self {
         let service_selected = target.executable_path.as_deref();
-        let bundle_macos = target
-            .bundle_path
-            .as_ref()
-            .map(|b| b.join("Contents").join("MacOS"));
+        let bundle = target.bundle_path.as_deref();
         let shipped = |role: &ShippedBinary| app_root.join(role.rel_path);
         // A built-in selection whose path is the manifest's uniquely selected,
         // correctly typed entry needs no hash.
@@ -441,8 +441,8 @@ impl Binaries {
         };
         let worker_selected = manifest_entry(&SHIPPED_WORKER);
         let validator_selected = manifest_entry(&SHIPPED_VALIDATOR);
-        let worker_bundle = bundle_macos.as_ref().map(|m| m.join("pw-probe-runner"));
-        let validator_bundle = bundle_macos.as_ref().map(|m| m.join("sb_api_validator"));
+        let worker_bundle = bundle.map(|b| b.join(BUNDLE_WORKER_REL));
+        let validator_bundle = bundle.map(|b| b.join(BUNDLE_VALIDATOR_REL));
         Binaries {
             service,
             worker: helper_record(
@@ -1297,7 +1297,7 @@ mod tests {
     #[test]
     fn augmentation_records_hash_only_bytes_that_existed() {
         let source = "(version 1)\n";
-        let hash = sbpl_imports::sha256_hex(source);
+        let hash = crate::digest::sha256_hex(source);
         let plain = Augmentation::not_requested(Some(source));
         assert_eq!(
             (

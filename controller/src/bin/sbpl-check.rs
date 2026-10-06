@@ -15,6 +15,8 @@ mod json_contract;
 #[path = "../shape.rs"]
 mod shape;
 
+#[path = "../digest.rs"]
+mod digest;
 #[path = "../host_facts.rs"]
 mod host_facts;
 #[path = "../sbpl_imports.rs"]
@@ -340,7 +342,7 @@ fn check(
         }
     };
 
-    let policy_sha256 = sbpl_imports::sha256_hex(admitted.source);
+    let policy_sha256 = digest::sha256_hex(admitted.source);
     let resolved = walk(admitted.source);
     let inventory = ImportInventory {
         policy_closure_sha256: sbpl_imports::compute_closure_hash(
@@ -813,7 +815,7 @@ mod tests {
             );
             assert_eq!(
                 wire["data"]["policy_sha256"],
-                sbpl_imports::sha256_hex(source),
+                digest::sha256_hex(source),
                 "{label}"
             );
         }
