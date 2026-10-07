@@ -17,7 +17,9 @@ def main(out):
     paths = ['AGENTS.md', 'build.sh', 'runner/README.md', 'tests/README.md',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
-             'controller/src/cli.rs', 'controller/README.md',
+             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md',
+             'tests/fixtures/contract/response_shape.json',
+             'tests/fixtures/contract/envelope_shape.json',
              'tests/suites/source_drift/check.py']
     paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
     paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
