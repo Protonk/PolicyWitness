@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test
+from generator_common import citation, require_test, format_value, render_spans, span_problems
 
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
@@ -41,6 +41,7 @@ RULES_START = "<!-- BEGIN SHARED READING RULES -->"
 RULES_END = "<!-- END SHARED READING RULES -->"
 GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
 GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
+SPAN_DOCUMENTS = ("docs/LIMITS.md",)
 GUIDE_NAME = "PolicyWitness.md"
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
@@ -60,7 +61,7 @@ VALUE_OWNERS = {
     'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
     'controller/src/run_flow.rs', 'controller/src/log_capture.rs',
     'controller/src/bin/sbpl-check.rs', 'controller/src/bin/sandbox-log-observer.rs',
-    'controller/src/runner_manager.rs',
+    'controller/src/runner_manager.rs', 'controller/src/runner_commands.rs',
 }
 
 
@@ -202,7 +203,7 @@ def render(limits):
         for item in limits:
             if item["section"] != section:
                 continue
-            cells = [f"{item['title']} (`{item['id']}`)", f"{item['value']:,} {item['unit']}"]
+            cells = [f"{item['title']} (`{item['id']}`)", format_value(item["value"], item["unit"])]
             if refuses:
                 cells.append(item["refusal_field"])
             cells += [item['counting'] + " " + item['effect'], item['control']]
@@ -234,7 +235,13 @@ def replace_block(text, start, end, replacement):
     return text[:begin] + replacement + text[finish:]
 
 
+def span_values(limits):
+    return {row["id"] + suffix: format_value(row["value"], unit)
+            for row in limits for suffix, unit in ((".value", None), (".value_unit", row["unit"]))}
+
+
 def update_document(text, limits):
+    text = render_spans(text, "limits", span_values(limits))
     text = replace_block(text, START, END, render(limits))
     return replace_block(text, COVERAGE_START, COVERAGE_END, render_coverage(limits))
 
@@ -365,7 +372,7 @@ def main():
                 ("PolicyWitness.md", guide_before, guide_after)]
                 if old != new]
             if stale:
-                raise ValueError(f"stale {', '.join(stale)}; run python3 docs/generate_limits.py")
+                raise ValueError(f"stale {', '.join(stale)}; {'; '.join(span_problems(before, 'limits', span_values(limits)))}; run python3 docs/generate_limits.py")
             if args.stage_guide is not None:
                 args.stage_guide.write_bytes(guide_bytes)
         else:

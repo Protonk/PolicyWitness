@@ -24,6 +24,9 @@ import Security
 // API use under runner/Sources, and preflight rejects a shipped host
 // executable with an undefined _sandbox_* symbol.
 
+// Delay scheduled by the terminal request owner so its XPC reply can flush.
+let hostExitDelayMs = 50
+
 private func bundleString(_ key: String) -> String? {
     Bundle.main.object(forInfoDictionaryKey: key) as? String
 }
@@ -228,7 +231,7 @@ final class PWRunnerService: NSObject, PWRunnerProtocol {
     // the real driver against a controlled, nonexistent executable.
     init(admission: PWRunnerAdmission,
          scheduleExit: @escaping () -> Void = {
-             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(hostExitDelayMs)) { exit(0) }
          },
          orchestrate: @escaping (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult = {
              CWorkerOrchestrator.run(parsed: $0, policyHash: $1, bundleId: $2,

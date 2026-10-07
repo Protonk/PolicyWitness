@@ -29,6 +29,9 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document']}
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
+        paths.update({'docs/generate_limits.py', 'docs/limits.json'})
+        limits = json.loads((ROOT / 'docs/limits.json').read_text())
+        paths.update(ref['path'] for row in limits['limits'] for key in ('sources', 'checks') for ref in row[key])
         for graph in self.manifest['graphs']:
             for item in graph['nodes'] + graph['edges']:
                 paths.update(ref['path'] for key in ('sources', 'checks') for ref in item[key])
@@ -70,6 +73,11 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             'unknown kind': lambda d: d['graphs'][0]['nodes'][0].__setitem__('kind', 'no_such_kind'),
             'cluster names unknown node': lambda d: d['graphs'][0]['clusters'][0]['nodes'].append('no_such_node'),
             'unknown field': lambda d: d['graphs'][0]['nodes'][0].__setitem__('colour', 'red'),
+            'undeclared fact': lambda d: d['graphs'][0]['nodes'][0]['facts'].update(unknown='control'),
+            'unused fact': lambda d: d['graphs'][0]['node_facts'].append('Unused'),
+            'duplicate declaration': lambda d: d['graphs'][0]['node_facts'].append(d['graphs'][0]['node_facts'][0]),
+            'literal duration': lambda d: d['graphs'][0]['nodes'][0].update(note='7 seconds'),
+            'unknown placeholder': lambda d: d['graphs'][0]['nodes'][0].update(note='{limit:missing}'),
             'old schema': lambda d: d.update(schema_version=1),
             'missing form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].pop('form'),
             'invalid form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].update(form='maybe'),

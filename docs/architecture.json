@@ -33,6 +33,8 @@
       "title": "Process topology",
       "file": "architecture-topology",
       "rankdir": "TB",
+      "node_facts": ["Where", "Lifetime", "Language", "Started by", "Sandboxed", "Native sandbox API"],
+      "edge_facts": [],
       "clusters": [
         {"id": "app", "label": "app top level", "nodes": ["controller", "client", "observer", "sbpl_check"]},
         {"id": "xpc", "label": "inside the XPC bundle", "nodes": ["host", "worker", "validator"]},
@@ -59,9 +61,9 @@
         },
         {
           "id": "host", "label": "PWRunner", "kind": "executable",
-          "facts": {"Language": "Swift", "Where": "inside the XPC bundle", "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC", "Sandboxed": "no", "Native sandbox API": "none, by the invariance rule", "Lifetime": "one specimen; exits 50 ms after replying"},
+          "facts": {"Language": "Swift", "Where": "inside the XPC bundle", "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC", "Sandboxed": "no", "Native sandbox API": "none, by the invariance rule", "Lifetime": "one specimen; exits {limit:host_exit_delay} after replying"},
           "note": "All authorized connections share one terminal, locked request claim. Only its owner schedules host exit; connections racing retirement can still fail before refusal.",
-          "sources": [{"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener.service()"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "runSpecimen"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "milliseconds(50)"}],
+          "sources": [{"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener.service()"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "runSpecimen"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "hostExitDelayMs"}],
           "checks": [{"path": "tests/lib/artifact.py", "symbol": "inspect", "form": "control"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance", "form": "rule"}, {"path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift", "symbol": "runServiceAdmissionTests", "form": "test"}, {"path": "tests/suites/runner_byoxpc/opt_in/single_use.sh", "symbol": "single_use", "form": "test"}]
         },
         {
@@ -200,6 +202,8 @@
       "title": "Boundaries and their guards",
       "file": "architecture-boundaries",
       "rankdir": "TB",
+      "node_facts": ["Owner", "Form"],
+      "edge_facts": [],
       "clusters": [
         {"id": "controller_side", "label": "controller", "nodes": ["held_request", "envelope", "observer_report", "helper_envelope"]},
         {"id": "host_side", "label": "host", "nodes": ["run_spec", "shm_region", "validator_wire", "reply", "profile_capture"]},
@@ -373,6 +377,8 @@
       "title": "The document graph",
       "file": "architecture-documents",
       "rankdir": "LR",
+      "node_facts": ["Owns", "Carries", "Guards"],
+      "edge_facts": [],
       "clusters": [
         {"id": "manifests", "label": "hand-owned manifests", "nodes": ["contract_json", "limits_json", "matrix_json", "architecture_json", "catalog_json"]},
         {"id": "generators", "label": "generators", "nodes": ["gen_contract", "gen_limits", "gen_identity", "gen_architecture"]},
@@ -467,7 +473,7 @@
         },
         {
           "id": "architecture_md", "label": "docs/ARCHITECTURE.md", "kind": "document",
-          "facts": {"Carries": "these three figures and their tables"},
+          "facts": {"Carries": "these figures and their tables"},
           "sources": [{"path": "docs/generate_architecture.py", "symbol": "REGION_START"}],
           "checks": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "test_document_and_figures_are_current", "form": "test"}]
         },
@@ -868,6 +874,8 @@
       "title": "The BYOXPC apparatus",
       "file": "architecture-byoxpc",
       "rankdir": "TB",
+      "node_facts": ["Role", "Contents", "Ownership", "Behavior", "Identity", "Checks", "Location", "Lifecycle"],
+      "edge_facts": [],
       "clusters": [
         {"id": "installation", "label": "installation", "nodes": ["bundle_copy", "entitlements_plist", "install", "signing", "plist", "registry"]},
         {"id": "launch", "label": "launch and connection", "nodes": ["launchd", "host", "client", "caller_auth"]},
@@ -878,115 +886,115 @@
       "nodes": [
         {
           "id": "user", "label": "the installer", "kind": "person",
-          "facts": {"Who": "a person or a harness", "Supplies": "a bundle copy, an identity, an entitlements plist, a scope"},
+          "facts": {"Role": "a person or a harness", "Contents": "a bundle copy, an identity, an entitlements plist, a scope"},
           "sources": [{"path": "docs/PolicyWitness.md", "symbol": "Install a BYOXPC runner"}],
           "checks": [{"path": "tests/fixtures/byoxpc/session.py", "symbol": "install", "form": "control"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         },
         {
           "id": "bundle_copy", "label": "copied XPC bundle", "kind": "record",
-          "facts": {"Owner": "the installer", "Holds": "the host, the worker and the validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"},
+          "facts": {"Ownership": "the installer", "Contents": "the host, the worker and the validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"},
           "sources": [{"path": "docs/PolicyWitness.md", "symbol": "Install a BYOXPC runner"}, {"path": "build.sh", "symbol": "sign_macho"}],
           "checks": [{"path": "tests/fixtures/byoxpc/session.py", "symbol": "owned_bundle", "form": "control"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         },
         {
           "id": "entitlements_plist", "label": "the installer's entitlements plist", "kind": "record",
-          "facts": {"Owner": "the installer", "Reaches": "the host executable and the embedded worker, the process the policy is applied to"},
+          "facts": {"Ownership": "the installer", "Behavior": "the host executable and the embedded worker, the process the policy is applied to"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "--entitlements"}],
           "checks": [{"path": "tests/fixtures/byoxpc/session.py", "symbol": "binary_entitlements", "form": "control"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         },
         {
           "id": "install", "label": "runner install", "kind": "command",
-          "facts": {"Does": "signs the worker, the validator and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables"},
+          "facts": {"Behavior": "signs the worker, the validator and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_install"}, {"path": "controller/src/runner_commands.rs", "symbol": "--env"}, {"path": "controller/src/runner_manager.rs", "symbol": "sign_install_tree"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}, {"path": "tests/fixtures/byoxpc/session.py", "symbol": "install", "form": "control"}, {"path": "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh", "symbol": "entitlement_readback", "form": "test"}]
         },
         {
           "id": "signing", "label": "codesign of the bundle tree", "kind": "command",
-          "facts": {"Signs": "the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle with the identity and the entitlements", "Verifies": "the sealed bundle recursively (--deep --strict) before anything is recorded"},
+          "facts": {"Identity": "the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle with the identity and the entitlements", "Checks": "the sealed bundle recursively (--deep --strict) before anything is recorded"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "sign_install_tree"}, {"path": "controller/src/runner_manager.rs", "symbol": "codesign_sign"}, {"path": "controller/src/runner_manager.rs", "symbol": "codesign_verify"}],
           "checks": [{"path": "controller/src/runner_manager.rs", "symbol": "install_signing_signs_helpers_before_the_bundle", "form": "test"}, {"path": "tests/suites/preflight/run.sh", "symbol": "byoxpc_verification_controls", "form": "test"}, {"path": "tests/fixtures/byoxpc/session.py", "symbol": "binary_entitlements", "form": "control"}]
         },
         {
           "id": "plist", "label": "LaunchAgent or LaunchDaemon plist", "kind": "record",
-          "facts": {"Carries": "MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env, ThrottleInterval of one second", "Where": "the user's LaunchAgents or /Library/LaunchDaemons"},
+          "facts": {"Contents": "MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env, ThrottleInterval of {limit:byoxpc_throttle_interval}", "Location": "the user's LaunchAgents or /Library/LaunchDaemons"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "build_launchd_plist"}, {"path": "controller/src/runner_manager.rs", "symbol": "MachServices"}, {"path": "controller/src/runner_manager.rs", "symbol": "EnvironmentVariables"}, {"path": "controller/src/runner_manager.rs", "symbol": "launchd_plist_path"}, {"path": "controller/src/runner_manager.rs", "symbol": "BYOXPC_THROTTLE_INTERVAL_SECONDS"}],
           "checks": [{"path": "tests/suites/shell_helpers/check_byoxpc_setup.py", "symbol": "main", "form": "test"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "byoxpc_plist_sets_the_respawn_throttle", "form": "test"}]
         },
         {
           "id": "registry", "label": "runner registry", "kind": "record",
-          "facts": {"States": "pending, installed, pending_cleanup", "Records": "service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true)"},
+          "facts": {"Lifecycle": "pending, installed, pending_cleanup", "Contents": "service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true)"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "install_record"}, {"path": "controller/src/runner_manager.rs", "symbol": "RunnerState"}, {"path": "controller/src/runner_manager.rs", "symbol": "PendingCleanup"}, {"path": "controller/src/runner_manager.rs", "symbol": "entitlements_from_codesign"}, {"path": "controller/src/runner_manager.rs", "symbol": "read_back"}],
           "checks": [{"path": "controller/src/runner_manager.rs", "symbol": "legacy_machme_kind_deserializes_as_byoxpc", "form": "test"}, {"path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh", "symbol": "registry_recovery", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "registry_records_without_helper_read_backs_still_load", "form": "test"}]
         },
         {
           "id": "launchd", "label": "launchd", "kind": "os",
-          "facts": {"Starts": "the host on demand for its Mach service", "Throttle": "one launch per ThrottleInterval, one second in the generated plist; launchd's default without the key is ten seconds"},
+          "facts": {"Behavior": "the host on demand for its Mach service", "Lifecycle": "one launch per ThrottleInterval, {limit:byoxpc_throttle_interval} in the generated plist; launchd's own default applies without the key"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "launchctl_bootstrap"}, {"path": "controller/src/runner_manager.rs", "symbol": "launchctl_target"}],
           "checks": [{"path": "tests/suites/runner_mach_service_liveness/run.sh", "symbol": "pwrunner_survives_mach_service_launch", "form": "test"}, {"path": "tests/fixtures/byoxpc/session.py", "symbol": "service_present", "form": "control"}]
         },
         {
           "id": "host", "label": "PWRunner as a Mach service", "kind": "executable",
-          "facts": {"Bound by": "NSXPCListener(machServiceName:) from --mach-service", "Signature": "the installed identity and entitlements", "Resolves helpers": "relative to its own bundle"},
+          "facts": {"Behavior": "NSXPCListener(machServiceName:) from --mach-service", "Identity": "the installed identity and entitlements", "Location": "relative to its own bundle"},
           "sources": [{"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener(machServiceName:"}, {"path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift", "symbol": "defaultWorkerExecutablePath"}],
           "checks": [{"path": "tests/suites/runner_mach_service_liveness/run.sh", "symbol": "pwrunner_survives_mach_service_launch", "form": "test"}, {"path": "tests/suites/runner_byoxpc/opt_in/single_use.sh", "symbol": "single_use", "form": "test"}]
         },
         {
           "id": "client", "label": "pw-runner-client --mach-service", "kind": "executable",
-          "facts": {"Connects": "NSXPCConnection(machServiceName:), with the privileged option for system scope"},
+          "facts": {"Behavior": "NSXPCConnection(machServiceName:), with the privileged option for system scope"},
           "sources": [{"path": "runner/Clients/PWRunnerClient/main.swift", "symbol": "--mach-service"}, {"path": "runner/Clients/PWRunnerClient/main.swift", "symbol": "--privileged"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         },
         {
           "id": "caller_auth", "label": "caller authorization", "kind": "check",
-          "facts": {"Rule": "the caller's Team ID equals the host's; an optional identifier allowlist", "Keys": "PWRunnerRequireSignedCaller and PWRunnerAllowedIdentifiers in the host's Info.plist, inherited by a copy"},
+          "facts": {"Checks": "the caller's Team ID equals the host's; an optional identifier allowlist", "Contents": "PWRunnerRequireSignedCaller and PWRunnerAllowedIdentifiers in the host's Info.plist, inherited by a copy"},
           "sources": [{"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "authorizedCaller"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "PWRunnerRequireSignedCaller"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "PWRunnerAllowedIdentifiers"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh", "symbol": "runner_auth_external", "form": "test"}]
         },
         {
           "id": "selector", "label": "request runner selector", "kind": "record",
-          "facts": {"Names": "the runner by id or service, with mode and required_entitlements", "Checked": "every required key present with the value true in the worker's recorded read-back; the host's entitlements are recorded, not consulted; a record without a worker read-back is refused with a reinstall message when anything is required", "Stripped": "before XPC delivery"},
+          "facts": {"Contents": "the runner by id or service, with mode and required_entitlements", "Checks": "every required key present with the value true in the worker's recorded read-back; the host's entitlements are recorded, not consulted; a record without a worker read-back is refused with a reinstall message when anything is required", "Lifecycle": "before XPC delivery"},
           "sources": [{"path": "controller/src/runner_select.rs", "symbol": "parse_runner_selector_value"}, {"path": "controller/src/runner_select.rs", "symbol": "enforce_required_entitlements"}, {"path": "controller/src/runner_select.rs", "symbol": "strip_runner_selector"}],
           "checks": [{"path": "controller/src/runner_select.rs", "symbol": "malformed_selection_never_falls_back_or_discards_entitlements", "form": "test"}, {"path": "controller/src/runner_select.rs", "symbol": "selection_refuses_a_false_valued_required_key", "form": "test"}, {"path": "controller/src/runner_select.rs", "symbol": "entitlement_gate_consults_the_worker_not_the_host", "form": "test"}]
         },
         {
           "id": "provenance", "label": "runner provenance and binary baselines", "kind": "record",
-          "facts": {"Records": "runner kind, service name, registry id, and the host's, the worker's and the validator's signatures and entitlements; hashes of the bundle's service, worker and validator files as observed before invocation"},
+          "facts": {"Contents": "runner kind, service name, registry id, and the host's, the worker's and the validator's signatures and entitlements; hashes of the bundle's service, worker and validator files as observed before invocation"},
           "sources": [{"path": "controller/src/runner_select.rs", "symbol": "runner_provenance_from_target"}, {"path": "controller/src/dossier.rs", "symbol": "observe"}],
           "checks": [{"path": "controller/src/run_flow.rs", "symbol": "byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines", "form": "test"}, {"path": "tests/suites/witness_contract/check_dossier.py", "symbol": "byoxpc_binaries", "form": "test"}, {"path": "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh", "symbol": "dossier_witness_byoxpc", "form": "test"}]
         },
         {
           "id": "worker", "label": "pw-probe-runner in the copy", "kind": "sandboxed",
-          "facts": {"Signature": "the installed identity and the supplied entitlements, signed before the bundle seal", "Applies the policy under": "the installed plist's entitlements; a require-entitlement rule consults this process"},
+          "facts": {"Identity": "the installed identity and the supplied entitlements, signed before the bundle seal", "Behavior": "the installed plist's entitlements; a require-entitlement rule consults this process"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "sign_install_tree"}, {"path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift", "symbol": "defaultWorkerExecutablePath"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/opt_in/single_use.sh", "symbol": "single_use", "form": "test"}, {"path": "tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh", "symbol": "entitlement_transfer", "form": "test"}]
         },
         {
           "id": "validator", "label": "sb_api_validator in the copy", "kind": "executable",
-          "facts": {"Signature": "the installed identity alone, no entitlements"},
+          "facts": {"Identity": "the installed identity alone, no entitlements"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "sign_install_tree"}, {"path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift", "symbol": "defaultValidatorExecutablePath"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}, {"path": "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh", "symbol": "entitlement_readback", "form": "test"}]
         },
         {
           "id": "verify", "label": "runner verify", "kind": "command",
-          "facts": {"Does": "sends a fixed allow-all request through the client and waits five seconds by default", "Consumes": "the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for the generated plist's one-second ThrottleInterval; a refusal executed nothing and the request can be sent again"},
+          "facts": {"Behavior": "sends a fixed allow-all request through the client and waits {limit:runner_verify_wait} by default", "Lifecycle": "the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for the generated plist's {limit:byoxpc_throttle_interval} ThrottleInterval; a refusal executed nothing and the request can be sent again"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_verify"}, {"path": "controller/src/runner_commands.rs", "symbol": "verify_request"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "PWRunnerAdmission"}],
           "checks": [{"path": "controller/src/runner_commands.rs", "symbol": "verification_request_is_the_fixed_allow_all_specimen", "form": "test"}]
         },
         {
           "id": "validate", "label": "runner validate", "kind": "command",
-          "facts": {"Does": "verifies each record's bundle recursively and the host, worker and validator individually, re-reads every signature and entitlement set, reports failures by record and binary; consults no launchctl"},
+          "facts": {"Behavior": "verifies each record's bundle recursively and the host, worker and validator individually, re-reads every signature and entitlement set, reports failures by record and binary; consults no launchctl"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_validate"}, {"path": "controller/src/runner_manager.rs", "symbol": "codesign_metadata"}, {"path": "controller/src/runner_manager.rs", "symbol": "validate_record"}],
           "checks": [{"path": "controller/src/runner_manager.rs", "symbol": "validation_reports_the_bundle_and_each_binary_that_fails", "form": "test"}, {"path": "tests/suites/preflight/run.sh", "symbol": "byoxpc_verification_controls", "form": "test"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         },
         {
           "id": "remove", "label": "runner remove", "kind": "command",
-          "facts": {"Does": "moves ownership to pending_cleanup, boots the service out, removes the plist, retires the record after verified absence"},
+          "facts": {"Behavior": "moves ownership to pending_cleanup, boots the service out, removes the plist, retires the record after verified absence"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_remove"}, {"path": "controller/src/runner_manager.rs", "symbol": "bootout_service"}, {"path": "controller/src/runner_manager.rs", "symbol": "cleanup_complete"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh", "symbol": "registry_recovery", "form": "test"}, {"path": "tests/fixtures/byoxpc/session.py", "symbol": "cleanup", "form": "control"}]
         },
         {
           "id": "reconcile", "label": "runner reconcile", "kind": "command",
-          "facts": {"Does": "reports launchd services and plists that look owned, changing nothing"},
+          "facts": {"Behavior": "reports launchd services and plists that look owned, changing nothing"},
           "sources": [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_reconcile"}, {"path": "controller/src/runner_manager.rs", "symbol": "inspect_service"}, {"path": "controller/src/runner_manager.rs", "symbol": "inspect_plist"}],
           "checks": [{"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]
         }
@@ -1057,7 +1065,7 @@
         },
         {
           "id": "X10", "from": "launchd", "to": "host", "kind": "launch",
-          "label": "start on demand for the Mach service; one launch per ThrottleInterval (one second) between launches",
+          "label": "start on demand for the Mach service; one launch per ThrottleInterval ({limit:byoxpc_throttle_interval}) between launches",
           "short": "start on demand",
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "MachServices"}, {"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener(machServiceName:"}],
           "checks": [{"path": "tests/suites/runner_mach_service_liveness/run.sh", "symbol": "pwrunner_survives_mach_service_launch", "form": "test"}]
@@ -1141,7 +1149,7 @@
         },
         {
           "id": "X22", "from": "remove", "to": "launchd", "kind": "launch",
-          "label": "bootout, then re-read for up to one second of teardown",
+          "label": "bootout, then re-read for up to {limit:runner_remove_teardown_wait} of teardown",
           "short": "bootout",
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "bootout_service"}],
           "checks": [{"path": "tests/fixtures/byoxpc/session.py", "symbol": "cleanup", "form": "control"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}]

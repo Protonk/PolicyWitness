@@ -24,11 +24,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test
+from generator_common import citation, require_test, DURATION_SIZE_RE, LIMIT_RE, strings, format_value, render_spans, span_problems
+import generate_limits
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/architecture.json"
 GENERATOR_NAME = "docs/generate_architecture.py"
+SPAN_DOCUMENTS = ("docs/ARCHITECTURE.md",)
 REGION_START = "<!-- BEGIN GENERATED ARCHITECTURE GRAPH {graph} -->"
 REGION_END = "<!-- END GENERATED ARCHITECTURE GRAPH {graph} -->"
 STAMP_RE = re.compile(r"<!-- architecture\.json graph (\S+); dot sha256 ([0-9a-f]{64}) -->")
@@ -73,9 +75,21 @@ def load_manifest(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
     if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 2:
         raise ValueError("expected architecture manifest schema_version 2")
+    limits = generate_limits.load_limits(root / "docs/limits.json", root)
+    known_limits = {row["id"] for row in limits}
+    for text in strings(data):
+        if DURATION_SIZE_RE.search(text):
+            raise ValueError(f"literal duration or size: {text}")
+        if "{limit:" in LIMIT_RE.sub("", text):
+            raise ValueError(f"malformed limit placeholder: {text}")
+        for ident in LIMIT_RE.findall(text):
+            if ident not in known_limits:
+                raise ValueError(f"unknown limit placeholder: {ident}")
     document = Path(data["document"])
     if document.is_absolute() or ".." in document.parts or document.suffix != ".md":
         raise ValueError("document must be a repository-relative Markdown path")
+    if data["document"] not in SPAN_DOCUMENTS:
+        raise ValueError("document is not registered for architecture spans")
     styles = data["styles"]
     if set(styles) != {"node_kinds", "edge_kinds"}:
         raise ValueError("styles must define node_kinds and edge_kinds")
@@ -88,7 +102,7 @@ def load_manifest(path: Path, root: Path = ROOT):
         raise ValueError("graphs must be a nonempty list")
     graph_ids, files, edge_ids = set(), set(), set()
     for graph in data["graphs"]:
-        expected = {"id", "title", "file", "rankdir", "clusters", "nodes", "edges"}
+        expected = {"id", "title", "file", "rankdir", "clusters", "nodes", "edges", "node_facts", "edge_facts"}
         if set(graph) != expected:
             raise ValueError(f"graph {graph.get('id')}: unexpected/missing fields")
         gid = graph["id"]
@@ -142,6 +156,15 @@ def load_manifest(path: Path, root: Path = ROOT):
             if "short" in edge and (not isinstance(edge["short"], str) or not edge["short"].strip()):
                 raise ValueError(f"{owner}: empty short label")
             _citations(owner, edge, root)
+        for group in ("node", "edge"):
+            declaration = graph[group + "_facts"]
+            if (not isinstance(declaration, list) or
+                    any(not isinstance(k, str) or not k.strip() for k in declaration) or
+                    len(declaration) != len(set(declaration))):
+                raise ValueError(f"{gid}: invalid {group} fact declaration")
+            used = {key for item in graph[group + "s"] for key in item.get("facts", {})}
+            if set(declaration) != used:
+                raise ValueError(f"{gid}: undeclared or unused {group} fact keys")
         if not isinstance(graph["clusters"], list):
             raise ValueError(f"{gid}: clusters must be a list")
         clustered = set()
@@ -201,7 +224,26 @@ def _attr_text(attrs):
     return ", ".join(f'{k}="{esc(v)}"' for k, v in attrs.items())
 
 
-def render_dot(graph, styles, document_name):
+def limit_ids(item):
+    return sorted({ident for text in strings(item) for ident in LIMIT_RE.findall(text)})
+
+
+def resolve_graph(graph, limits):
+    values = {row["id"]: format_value(row["value"], row["unit"]) for row in limits}
+    def resolve(value):
+        if isinstance(value, str):
+            return LIMIT_RE.sub(lambda match: values[match[1]], value)
+        if isinstance(value, list):
+            return [resolve(item) for item in value]
+        if isinstance(value, dict):
+            return {key: resolve(item) for key, item in value.items()}
+        return value
+    return resolve(graph)
+
+
+def render_dot(graph, styles, document_name, limits=None):
+    limits = limits if limits is not None else generate_limits.load_limits(ROOT / "docs/limits.json")
+    graph = resolve_graph(graph, limits)
     lines = [f"digraph {graph['id']} {{"]
     lines.append(
         f'    graph [rankdir={graph["rankdir"]}, bgcolor="white", fontname="Helvetica", fontsize=11, '
@@ -221,14 +263,14 @@ def render_dot(graph, styles, document_name):
         attrs = dict(styles["node_kinds"][node["kind"]])
         attrs["label"] = f"{node['label']}\n{node['id']}"
         attrs["URL"] = node_url
-        attrs["tooltip"] = f"{node['id']}: {node['label']}"
+        attrs["tooltip"] = f"{node['id']}: {node['label']}" + " | " + "; ".join(node["facts"].values()) + " " + node.get("note", "")
         lines.append(f"    {node['id']} [{_attr_text(attrs)}];")
     for edge in graph["edges"]:
         attrs = dict(styles["edge_kinds"][edge["kind"]])
         # The figure shows the id and a short label; the table beside it holds the full edge text.
         attrs["label"] = f"{edge['id']} {edge['short']}" if "short" in edge else edge["id"]
         attrs["URL"] = edge_url
-        attrs["tooltip"] = f"{edge['id']}: {edge['label']}"
+        attrs["tooltip"] = f"{edge['id']}: {edge['label']}" + " | " + "; ".join(edge.get("facts", {}).values()) + " " + edge.get("note", "")
         lines.append(f"    {edge['from']} -> {edge['to']} [{_attr_text(attrs)}];")
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -281,7 +323,12 @@ def _fact_columns(items):
     return columns
 
 
-def render_region(graph, document_name):
+def render_region(graph, document_name, limits=None):
+    limits = limits if limits is not None else generate_limits.load_limits(ROOT / "docs/limits.json")
+    sections = {row["id"]: anchor(generate_limits.SECTIONS[row["section"]]) for row in limits}
+    links = {item["id"]: "; ".join(f"[`{ident}`](LIMITS.md#{sections[ident]})" for ident in limit_ids(item))
+             for item in graph["nodes"] + graph["edges"]}
+    graph = resolve_graph(graph, limits)
     svg = f"{graph['file']}.svg"
     dot = f"{graph['file']}.dot"
     manifest = Path(MANIFEST_NAME).name
@@ -302,23 +349,23 @@ def render_region(graph, document_name):
         f"#### {nodes_heading(graph)}",
         "",
     ]
-    columns = _fact_columns(graph["nodes"])
+    columns = graph["node_facts"]
     rows = []
     for node in graph["nodes"]:
         row = [node["id"], node["label"], node["kind"]]
         row += [node["facts"].get(c, "") for c in columns]
-        row += [_citation_cell(node["sources"]), _citation_cell(node["checks"])]
+        row += [_citation_cell(node["sources"]), _citation_cell(node["checks"]), links[node["id"]]]
         rows.append(row)
-    parts.append(_table(["Id", "Node", "Kind", *columns, "Sources", "Checks"], rows))
+    parts.append(_table(["Id", "Node", "Kind", *columns, "Sources", "Checks", "Limits"], rows))
     parts += ["", f"#### {edges_heading(graph)}", ""]
-    columns = _fact_columns(graph["edges"])
+    columns = graph["edge_facts"]
     rows = []
     for edge in graph["edges"]:
         row = [edge["id"], edge["from"], edge["to"], edge["kind"], edge["label"]]
         row += [edge.get("facts", {}).get(c, "") for c in columns]
-        row += [_citation_cell(edge["sources"]), _citation_cell(edge["checks"])]
+        row += [_citation_cell(edge["sources"]), _citation_cell(edge["checks"]), links[edge["id"]]]
         rows.append(row)
-    parts.append(_table(["Id", "From", "To", "Kind", "Edge", *columns, "Sources", "Checks"], rows))
+    parts.append(_table(["Id", "From", "To", "Kind", "Edge", *columns, "Sources", "Checks", "Limits"], rows))
     notes = [(n["id"], n["note"]) for n in graph["nodes"] if "note" in n]
     notes += [(e["id"], e["note"]) for e in graph["edges"] if "note" in e]
     if notes:
@@ -346,12 +393,24 @@ def replace_block(text, start, end, body):
     return text[:begin] + start + "\n" + body + "\n" + end + text[finish:]
 
 
-def render_document(text, manifest):
+def span_values(manifest):
+    graphs = manifest["graphs"]
+    values = {"graphs": len(graphs), "nodes": sum(len(g["nodes"]) for g in graphs),
+              "edges": sum(len(g["edges"]) for g in graphs),
+              "unpinned": sum(not item["checks"] for g in graphs for item in g["nodes"] + g["edges"])}
+    for graph in graphs:
+        values[graph["id"] + ".nodes"] = len(graph["nodes"])
+        values[graph["id"] + ".edges"] = len(graph["edges"])
+    return {name: format_value(value) for name, value in values.items()}
+
+
+def render_document(text, manifest, limits=None):
+    text = render_spans(text, "architecture", span_values(manifest))
     document_name = Path(manifest["document"]).name
     for graph in manifest["graphs"]:
         start = REGION_START.format(graph=graph["id"])
         end = REGION_END.format(graph=graph["id"])
-        text = replace_block(text, start, end, render_region(graph, document_name))
+        text = replace_block(text, start, end, render_region(graph, document_name, limits))
     return text
 
 
@@ -369,11 +428,12 @@ def render_svg(dot_text):
 
 def expected_outputs(root: Path, manifest):
     """Every file this generator owns, with the text it should hold (SVGs by stamp)."""
+    limits = generate_limits.load_limits(root / "docs/limits.json", root)
     document_path = root / manifest["document"]
     document_name = document_path.name
     outputs = {}
     for graph in manifest["graphs"]:
-        dot_text = render_dot(graph, manifest["styles"], document_name)
+        dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         outputs[document_path.parent / f"{graph['file']}.dot"] = dot_text
     return outputs
 
@@ -381,10 +441,11 @@ def expected_outputs(root: Path, manifest):
 def check(root: Path):
     manifest = load_manifest(root / MANIFEST_NAME, root)
     problems = []
+    limits = generate_limits.load_limits(root / "docs/limits.json", root)
     document_path = root / manifest["document"]
     document_name = document_path.name
     for graph in manifest["graphs"]:
-        dot_text = render_dot(graph, manifest["styles"], document_name)
+        dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         dot_path = document_path.parent / f"{graph['file']}.dot"
         svg_path = document_path.parent / f"{graph['file']}.svg"
         if not dot_path.is_file() or dot_path.read_text() != dot_text:
@@ -398,7 +459,8 @@ def check(root: Path):
     else:
         text = document_path.read_text()
         try:
-            if render_document(text, manifest) != text:
+            problems.extend(span_problems(text, "architecture", span_values(manifest)))
+            if render_document(text, manifest, limits) != text:
                 problems.append(f"{manifest['document']}: generated regions are stale; regenerate")
         except ValueError as error:
             problems.append(f"{manifest['document']}: {error}")
@@ -411,13 +473,14 @@ def check(root: Path):
 
 def write(root: Path, skip_svg: bool):
     manifest = load_manifest(root / MANIFEST_NAME, root)
+    limits = generate_limits.load_limits(root / "docs/limits.json", root)
     document_path = root / manifest["document"]
     document_name = document_path.name
     text = document_path.read_text()
-    rendered = render_document(text, manifest)  # validate markers before writing anything
+    rendered = render_document(text, manifest, limits)  # validate markers before writing anything
     written = []
     for graph in manifest["graphs"]:
-        dot_text = render_dot(graph, manifest["styles"], document_name)
+        dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         dot_path = document_path.parent / f"{graph['file']}.dot"
         if not dot_path.is_file() or dot_path.read_text() != dot_text:
             dot_path.write_text(dot_text)

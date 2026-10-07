@@ -55,6 +55,7 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "request_label": requestLabelMaxBytes,
                 "test_override_path": testOverridePathMaxBytes,
                 "probe_plan_label": probePlanLabelMaxBytes,
+                "host_exit_delay": hostExitDelayMs,
                 "worker_policy_transfer": worker.policyTransferTimeoutMs,
                 "worker_ready_wait": worker.readyByteTimeoutMs,
                 "worker_sentinel_wait": worker.sentinelTimeoutMs,

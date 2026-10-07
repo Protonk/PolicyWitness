@@ -599,8 +599,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 ### How to read the tables
 
-- Capacities are inclusive maxima unless the row says otherwise: a 63-byte
-  step ID fits, a 64-byte one exceeds its limit. UTF-8 counts measure decoded
+- Capacities are inclusive maxima unless the row says otherwise: a step ID of
+  <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
   strings rather than JSON escapes or characters. Rows labeled `bytes` specify
   whether they count raw output, bytecode or a calculated allowance. String
   capacities exclude any terminating NUL.
@@ -657,6 +657,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
+| Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled by the terminal request owner after replying. The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim. | Fixed. |
+| Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default reply wait for the fixed runner verify specimen. An expired wait returns the client timeout outcome. Verification consumes the single-use host it reaches. | Flag `--timeout-ms` on `runner verify`. |
 | Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
@@ -671,7 +673,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Elapsed monotonic allowance to confirm an exec child's exit after observation ends. Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
-| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 seconds | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
+| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 
 ### Queries and transport
 

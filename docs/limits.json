@@ -632,6 +632,68 @@
       "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
     },
     {
+      "id": "host_exit_delay",
+      "section": "execution",
+      "title": "Host reply flush delay",
+      "value": 50,
+      "unit": "milliseconds",
+      "counting": "Delay scheduled by the terminal request owner after replying.",
+      "effect": "The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+          "symbol": "hostExitDelayMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+          "symbol": "runServiceAdmissionTests",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Compiled value agreement and the terminal request claim are tested. Actual XPC reply flushing and scheduling latency are source-inspected; this is not a delivery guarantee."
+    },
+    {
+      "id": "runner_verify_wait",
+      "section": "execution",
+      "title": "Runner verification wait",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Default reply wait for the fixed runner verify specimen.",
+      "effect": "An expired wait returns the client timeout outcome. Verification consumes the single-use host it reaches.",
+      "control": "Flag `--timeout-ms` on `runner verify`.",
+      "sources": [
+        {
+          "path": "controller/src/runner_commands.rs",
+          "symbol": "RUNNER_VERIFY_DEFAULT_TIMEOUT_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_commands.rs",
+          "symbol": "documented_verification_wait",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "controller/src/runner_commands.rs",
+          "symbol": "verification_request_is_the_fixed_allow_all_specimen",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "The compiled default and the fixed verification request are tested. Live timeout scheduling is source-inspected."
+    },
+    {
       "id": "worker_policy_transfer",
       "section": "execution",
       "title": "Worker policy delivery",

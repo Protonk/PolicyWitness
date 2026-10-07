@@ -30,6 +30,18 @@ def build_checks(text):
 
 
 def ownership(root, name):
+    regions, whole = region_ownership(root, name)
+    if name in {'limits', 'architecture'}:
+        gen = module('span_owner_' + name, root / f'docs/generate_{name}.py')
+        common = module('span_common', root / 'docs/generator_common.py')
+        for document in gen.SPAN_DOCUMENTS:
+            for match in common.authored_spans((root / document).read_text()):
+                if match[1].startswith(name + '.'):
+                    regions.setdefault(document, []).append((f'<!-- span {match[1]} -->', '<!-- /span -->'))
+    return regions, whole
+
+
+def region_ownership(root, name):
     """Explicit regions and whole-file outputs; never infer ownership from a diff."""
     gen = module('owner_' + name, root / f'docs/generate_{name}.py')
     if name == 'contract':
@@ -58,10 +70,10 @@ def outside(data, regions):
         return data
     text = data.decode()
     for start, end in regions:
-        if text.count(start) != 1 or text.count(end) != 1 or text.index(start) >= text.index(end):
+        if text.count(start) != 1 or (not start.startswith('<!-- span ') and text.count(end) != 1) or end not in text[text.index(start):]:
             raise ValueError('broken ownership markers')
         a = text.index(start) + len(start)
-        b = text.index(end)
+        b = text.index(end, a)
         text = text[:a] + text[b:]
     return text
 
@@ -203,6 +215,155 @@ class GeneratorContractTests(unittest.TestCase):
                 self.assertFalse(verified(text.replace('whether a test asserts the row is not verified', '')))
                 for word in ('exercises', 'covers', 'proves'):
                     self.assertFalse(verified(text + ' ' + word))
+
+    def test_fact_keys_are_declared_and_columns_follow_the_declaration(self):
+        gen = module('architecture_columns', ROOT / 'docs/generate_architecture.py')
+        data = gen.load_manifest(ROOT / gen.MANIFEST_NAME)
+        for graph in data['graphs']:
+            if graph['id'] == 'byoxpc':
+                self.assertLessEqual(len(graph['node_facts']), 8)
+            # Reverse the declaration so collecting keys from items cannot satisfy this check.
+            graph['node_facts'].reverse()
+            graph['edge_facts'].reverse()
+            region = gen.render_region(graph, 'ARCHITECTURE.md')
+            for kind, leading in [('node', ['Id', 'Node', 'Kind']), ('edge', ['Id', 'From', 'To', 'Kind', 'Edge'])]:
+                expected = '| ' + ' | '.join(leading + graph[kind + '_facts'] + ['Sources', 'Checks', 'Limits']) + ' |'
+                self.assertIn(expected, region)
+                collected = gen._fact_columns(graph[kind + 's'])
+                if len(collected) > 1:
+                    self.assertNotEqual(collected, graph[kind + '_facts'])
+        for mutate in [
+            lambda d: d['graphs'][0]['nodes'][0]['facts'].update(Unknown='control'),
+            lambda d: d['graphs'][0]['node_facts'].append('Unused'),
+        ]:
+            self.refuse_manifest('architecture', mutate, 'undeclared or unused')
+
+    def test_durations_and_sizes_render_from_limits(self):
+        gen = module('architecture_limits', ROOT / 'docs/generate_architecture.py')
+        data = gen.load_manifest(ROOT / gen.MANIFEST_NAME)
+        rows = gen.generate_limits.load_limits(ROOT / 'docs/limits.json')
+        table = gen.generate_limits.render(rows)
+        for graph in data['graphs']:
+            rendered = gen.render_region(graph, 'ARCHITECTURE.md', rows)
+            dot = gen.render_dot(graph, data['styles'], 'ARCHITECTURE.md', rows)
+            self.assertNotIn('{limit:', dot)
+            for ident in gen.limit_ids(graph):
+                row = next(row for row in rows if row['id'] == ident)
+                cell = gen.format_value(row['value'], row['unit'])
+                self.assertIn(cell, table)
+                self.assertIn(cell, rendered)
+                self.assertIn(cell, dot)
+                self.assertIn(f'[`{ident}`](LIMITS.md#', rendered)
+        self.assertEqual(gen.format_value(1, 'seconds'), '1 second')
+        for literal in ['7 seconds', '7 ms', '7 MiB', 'seven seconds', '7-second']:
+            self.refuse_manifest('architecture', lambda d: d['graphs'][0]['nodes'][0].update(note=literal), 'literal duration or size')
+        self.refuse_manifest('architecture', lambda d: d['graphs'][0]['nodes'][0].update(note='{limit:missing}'), 'unknown limit')
+        root = self.checkout()
+        path = root / 'docs/limits.json'
+        data = json.loads(path.read_text())
+        next(row for row in data['limits'] if row['id'] == 'host_exit_delay')['value'] += 1
+        path.write_text(json.dumps(data))
+        before = {p: (root / p).read_bytes() for p in ['docs/limits.json', 'docs/LIMITS.md']}
+        # A deterministic renderer fixture makes stamp checks independent of installed Graphviz.
+        script = root / 'docs/generate_architecture.py'
+        script.write_text(script.read_text().replace('def render_svg(dot_text):',
+            'def render_svg(dot_text):\n    return ' + repr('<svg>fixture</svg>\n')))
+        old_dot = (root / 'docs/architecture-topology.dot').read_text()
+        result = self.command(root, 'architecture')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(before, {p: (root / p).read_bytes() for p in before})
+        dot = (root / 'docs/architecture-topology.dot').read_text()
+        self.assertNotEqual(old_dot, dot)
+        self.assertIn('51 milliseconds', dot)
+        self.assertIn('51 milliseconds', (root / 'docs/ARCHITECTURE.md').read_text())
+        self.assertTrue(gen.svg_stamp_matches((root / 'docs/architecture-topology.svg').read_text(), 'topology', dot))
+        self.assertEqual(self.command(root, 'limits').returncode, 0)
+        self.assertIn('| 51 milliseconds |', (root / 'docs/LIMITS.md').read_text())
+        # A renderer returning unresolved placeholders must be visible in dot output.
+        broken = gen.render_dot.__globals__['resolve_graph']
+        try:
+            gen.render_dot.__globals__['resolve_graph'] = lambda graph, limits: graph
+            architecture = json.loads((root / 'docs/architecture.json').read_text())
+            self.assertIn('{limit:', gen.render_dot(architecture['graphs'][0],
+                architecture['styles'], 'ARCHITECTURE.md', rows))
+        finally:
+            gen.render_dot.__globals__['resolve_graph'] = broken
+
+    def test_spans_are_authored_outside_regions_and_copied_as_bytes(self):
+        common = module('span_checks', ROOT / 'docs/generator_common.py')
+        for name, filename, span in [
+            ('architecture', 'docs/ARCHITECTURE.md', 'architecture.graphs'),
+            ('limits', 'docs/LIMITS.md', 'limits.step_id.value'),
+        ]:
+            root = self.checkout()
+            path = root / filename
+            original = path.read_text()
+            opening = f'<!-- span {span} -->'
+            a = original.index(opening) + len(opening)
+            b = original.index('<!-- /span -->', a)
+            path.write_text(original[:a] + '99999' + original[b:])
+            before = self.snapshot(root)
+            result = self.command(root, name, '--check')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('stale span ' + span, result.stderr)
+            self.assertEqual(self.snapshot(root), before)
+            result = self.command(root, name)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(path.read_text(), original)
+            before = self.snapshot(root)
+            times = {p: (root / p).stat().st_mtime_ns for p in before}
+            self.assertEqual(self.command(root, name).returncode, 0)
+            self.assertEqual(self.snapshot(root), before)
+            self.assertEqual(times, {p: (root / p).stat().st_mtime_ns for p in before})
+            path.write_text(original.replace(opening, f'<!-- span {name}.no_such_count -->'))
+            before = self.snapshot(root)
+            for args in [('--check',), ()]:
+                result = self.command(root, name, *args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('unknown span ' + name + '.no_such_count', result.stderr)
+                self.assertEqual(self.snapshot(root), before)
+        root = self.checkout()
+        source = root / 'docs/LIMITS.md'
+        source.write_text(source.read_text().replace('<!-- BEGIN SHARED LIMITS -->',
+            '<!-- BEGIN SHARED LIMITS -->\n<!-- span limits.host_exit_delay.value_unit -->stale<!-- /span -->'))
+        result = self.command(root, 'limits')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = '<!-- span limits.host_exit_delay.value_unit -->50 milliseconds<!-- /span -->'
+        self.assertIn(expected, source.read_text())
+        guide = root / 'docs/PolicyWitness.md'
+        self.assertIn(expected, guide.read_text())
+        guide.write_text(guide.read_text().replace(expected, expected.replace('50 milliseconds', 'wrong')))
+        before = self.snapshot(root)
+        result = self.command(root, 'limits', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale PolicyWitness.md', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+        # Authored passes do not interpret or touch copied/generated bytes.
+        text = '<!-- BEGIN GENERATED CONTROL --><!-- span limits.unknown -->x<!-- /span --><!-- END GENERATED CONTROL -->'
+        self.assertEqual(common.render_spans(text, 'limits', {}), text)
+        source.write_text(source.read_text().replace('<!-- BEGIN GENERATED LIMITS -->',
+            '<!-- BEGIN GENERATED LIMITS -->\n<!-- span limits.host_exit_delay.value -->50<!-- /span -->'))
+        result = self.command(root, 'limits', '--check')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('stale LIMITS.md', result.stderr)
+        self.assertEqual(self.command(root, 'limits').returncode, 0)
+        self.assertNotIn('<!-- span limits.host_exit_delay.value -->', source.read_text())
+
+    def test_every_span_prefix_has_one_registered_owner(self):
+        common = module('prefix_checks', ROOT / 'docs/generator_common.py')
+        owners = {}
+        for name in ('limits', 'architecture'):
+            gen = module('prefix_' + name, ROOT / f'docs/generate_{name}.py')
+            self.assertNotIn(name, owners)
+            owners[name] = set(gen.SPAN_DOCUMENTS)
+        for path in (ROOT / 'docs').glob('*.md'):
+            # Fenced teaching examples are not authored spans.
+            text = '\n'.join(module('prose', ROOT / 'docs/generate_limits.py').prose_lines(path.read_text()))
+            text = re.sub(r"`+[^`]*`+", "", text)
+            for match in common.authored_spans(text):
+                prefix = match[1].split('.', 1)[0]
+                self.assertIn(prefix, owners)
+                self.assertIn(path.relative_to(ROOT).as_posix(), owners[prefix])
 
 
 if __name__ == '__main__':
