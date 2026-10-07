@@ -74,7 +74,7 @@ a plain `cargo build` reports `unknown`. The stamp says which code produced an
 envelope; the contract numbers say how to read it.
 
 `run --log-timeout-ms <n>` sets the optional log collection allowance (default
-10,000 ms). It accepts positive integer milliseconds representable in the shared
+<!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->). It accepts positive integer milliseconds representable in the shared
 monotonic clock, including deadline and cleanup-grace addition. Zero, invalid or
 overflowing values fail before runner invocation, even with `--no-log-capture`.
 There is no unlimited value. The runner's `--timeout-ms` is independent.
@@ -92,7 +92,7 @@ Runs a **single runner evaluation** against the selected runner service:
   temporary request file is written; `data.runner_client.request_delivery`
   records the bytes written and any delivery error.
 - Starts a fresh runner instance (one XPC host + two short-lived children), applies the policy exactly once inside the C worker, executes the probe plan and validator batch in parallel, and returns the runner's structured JSON result.
-- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, rounded outward to whole seconds and padded by two seconds at each end, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. The scan's cost varies with the host's log archive, from a fraction of a second to seconds for the same short span; the reply records it as `data.sandbox_log_capture.supervision.elapsed_ms`, and the retained cost receipt (`tests/RETAINED.json`, run `followup-final-gate-03`, `supplemental/cost/`) is a measurement, not a guarantee.
+- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, rounded outward to whole seconds and padded by <!-- span limits.log_window_pad.value_unit -->2 seconds<!-- /span --> at each end, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. The scan's cost varies with the host's log archive, from a fraction of a second to seconds for the same short span; the reply records it as `data.sandbox_log_capture.supervision.elapsed_ms`, and the retained cost receipt (`tests/RETAINED.json`, run `followup-final-gate-03`, `supplemental/cost/`) is a measurement, not a guarantee.
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
   process per run), spawned by the runner host alongside the C
   worker. It reads NDJSON probes from stdin and writes NDJSON
@@ -205,7 +205,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `build`: the build stamp described under the CLI surface
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing, exact received/retained
-  stream byte counts and `capture_limit_bytes` (72 MiB). `stdout_capture_error`
+  stream byte counts and `capture_limit_bytes` (<!-- span limits.controller_output.binary -->72 MiB<!-- /span -->). `stdout_capture_error`
   identifies controller prefix loss; `stdout_parse_error` identifies malformed
   untruncated JSON/UTF-8. Full output is collected first; this is not a streaming
   allocation bound. `request_delivery` records the stdin delivery
@@ -333,13 +333,13 @@ argument: a JSON object with `timeout_ms`, `timeout_source` (`default` or `cli`)
 arithmetic and uses the absolute deadline without restarting it. These are
 boot-relative clock readings, not wall-clock query bounds. Startup, `log show`,
 reply parsing and candidate association consume this same allowance. Standalone observer
-show mode defaults to 10,000 ms. A larger `--log-timeout-ms` changes waiting time
+show mode defaults to <!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->. A larger `--log-timeout-ms` changes waiting time
 only; it changes neither the query interval nor byte limits and promises no
-record. Cleanup has one 1,000 ms grace ending no later than the original deadline
+record. Cleanup has one <!-- span limits.log_cleanup_grace.value_unit -->1,000 milliseconds<!-- /span --> grace ending no later than the original deadline
 plus that grace. This bounds supervised waits, not OS scheduling or arbitrary
 work elsewhere in the controller.
 
-The observer stops its log child 1,000 ms before the shared deadline
+The observer stops its log child <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before the shared deadline
 (`log_report_reserve`) so it can reap the child and deliver its report before
 the controller's own deadline; `reserve_ms` records that withholding (0 at the
 observer boundary, 1,000 under `observer.data.collection`). An inner deadline
@@ -347,8 +347,8 @@ therefore normally arrives as an intact reply whose `observer.data.collection.cu
 is `deadline`, with its retained diagnostics, rather than as a killed observer.
 An allowance at or below the reserve leaves no time for the query itself.
 
-The show path counts bytes while reading both pipes: inner stdout 1 MiB, inner
-stderr 128 KiB, observer stdout 32 MiB, observer stderr 128 KiB. One additional
+The show path counts bytes while reading both pipes: inner stdout <!-- span limits.log_show_stdout.binary -->1 MiB<!-- /span -->, inner
+stderr <!-- span limits.log_show_stderr.binary -->128 KiB<!-- /span -->, observer stdout <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span -->, observer stderr <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span -->. One additional
 byte detects overflow but is not retained. Inner stdout is already filtered by
 the OS predicate; counting precedes PW decoding, parsing and PID filtering.
 Observer stdout counts the serialized report and its final newline. The observer's bounded serializer
@@ -395,7 +395,7 @@ An earlier cutoff can coexist with a later cleanup failure; `timeout` or
 invalid reply shape and mismatched windows have their own statuses above.
 If the bounded observer serializer cannot produce a report, the observer exits
 nonzero with a bounded stderr diagnostic; the controller cannot invent inner
-observations from that missing report. The 32 MiB outer allowance accommodates
+observations from that missing report. The <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> outer allowance accommodates
 the bounded inner text, its repeated raw lines, worst-case JSON escaping and
 metadata; fixed-corpus and escaping controls verify this relationship.
 
@@ -565,10 +565,10 @@ Notes:
   `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
 - Signing covers the bundle tree in order: the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle (`sign_install_tree`). The sealed bundle is then verified recursively (`codesign --verify --deep --strict`), and the host, the worker and the validator are read back separately into the record. A copy missing either helper is refused.
-- The generated launchd plist sets `ThrottleInterval` to one second (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default.
+- The generated launchd plist sets `ThrottleInterval` to <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default.
 - A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See docs/PolicyWitness.md → "Caller authentication and ad-hoc signing".
-- `runner verify` delivers its fixed allow-all verification request on the client's stdin, as a run does; no temporary request file is written. It defaults to a 5-second timeout (override with `--timeout-ms`).
-- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to 1 s of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown.
+- `runner verify` delivers its fixed allow-all verification request on the client's stdin, as a run does; no temporary request file is written. Its default timeout is <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> (override with `--timeout-ms`).
+- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span --> of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown.
 - `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.
 - `runner validate` verifies each registry entry's bundle recursively, then the host, the worker and the validator individually, re-reads every signature and entitlement set, and reports `data.invalid` (records with a failure) and `data.failures` rows (`runner_id`, `service_name`, `binary` as `bundle`, `host`, `worker` or `validator`, `error`). The host's `signature.valid` follows the recursive check; each helper's follows its own. It does not reconcile against launchctl or `LaunchAgents/`.
 

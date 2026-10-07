@@ -379,7 +379,8 @@ defines milestones, native results, open numeric codes, and text availability.
 reply. Policy-write errors retain partial output and host byte/errno evidence in
 `policy_transfer_error`; FD-scoped SIGPIPE suppression and close-on-exec source
 pipe descriptors make closed-input failure observable. Nonblocking delivery
-has a five-second absolute monotonic deadline starting after spawn. Expiry
+has an absolute monotonic deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span -->
+starting after spawn. Expiry
 records `policy_transfer_timeout` without an errno, skips readiness/sentinel
 polling and enters ordinary cleanup. Final reap remains independently observed
 and is not bounded by the delivery deadline. Early stderr capture is not implemented.

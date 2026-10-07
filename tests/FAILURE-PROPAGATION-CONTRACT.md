@@ -445,7 +445,7 @@ public contract. An incomplete attempt can still be a candidate: a kernel event
 can precede interrupted publication.
 
 `capture.window` records the scanned interval, the runner client's own span
-rounded outward to whole seconds and padded by two seconds at each end:
+rounded outward to whole seconds and padded by <!-- span limits.log_window_pad.value_unit -->2 seconds<!-- /span --> at each end:
 `floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client
 milliseconds are unchanged; `pad_seconds: 2` describes the pad. Supported records in either padding region remain eligible
 for correlation. This allowance for client/archive clock differences promises no
@@ -664,7 +664,7 @@ precedence. A confirmed cleanup signal can project
 `host_cleanup_after_transfer_timeout`; neither timeout nor a kill request alone
 establishes a successful reap or any sandbox cause.
 
-The five-second production deadline starts immediately after spawn. The
+The production deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starts immediately after spawn. The
 write endpoint is nonblocking and protected by F_SETNOSIGPIPE, with setup
 checked before spawning. Partial writes, EINTR and backpressure consume the
 same deadline. Zero-progress writes, clock failure or poll failure close
@@ -690,9 +690,9 @@ step ID, dlopen or spawn failure) quotes an unbounded string. Its fields are
 `origin=runner_host`, `field`, `actual`, `maximum`, `unit`, and optional
 `step_id`, `step_index`, `parameter_key`, `index`. `utf8_bytes` counts payload
 bytes (excluding the terminating C NUL); `items` counts entries. `nul_bytes`
-counts forbidden embedded NULs in native C-string fields against maximum zero. Limits remain source 262143 bytes, steps 256, parameters
-1024, step ID 63 bytes, target 511, parameter key/value 127/383, supplied exec
-args 15 of 127 bytes each, the host-only `sandbox_check.operation` and
+counts forbidden embedded NULs in native C-string fields against maximum zero. Limits remain source <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, steps <!-- span limits.probe_steps.value -->256<!-- /span -->, parameters
+<!-- span limits.policy_parameters.value -->1,024<!-- /span -->, step ID <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->, target <!-- span limits.attempt_target.value -->511<!-- /span -->, parameter key/value <!-- span limits.parameter_key.value -->127<!-- /span -->/<!-- span limits.parameter_value.value -->383<!-- /span -->, supplied exec
+args <!-- span limits.exec_arguments.value -->15<!-- /span --> of <!-- span limits.exec_argument.value_unit -->127 UTF-8 bytes<!-- /span --> each, the host-only `sandbox_check.operation` and
 `sandbox_check.filter.value` strings 127/511, the filter kind and attempt
 kind/action labels 127 each (unrecognized labels included), `specimen_id` 255,
 `run_kind` and `policy.format` 63 each, and the three `_test_overrides`
@@ -770,9 +770,9 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a 72 MiB prefix per runner-client
+`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->72 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
-up to 4 MiB) and an independent 8 MiB prefix per sbpl-check stream.
+up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
@@ -785,9 +785,9 @@ streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
 `policy_too_large` in both helper status and missing-reply note prose.
 
-Log collection instead enforces streaming bounds: 32 MiB observer stdout and
-128 KiB observer stderr, containing the inner log-show capture of at most 1 MiB
-stdout and 128 KiB stderr. The log child stops 1,000 ms before the shared
+Log collection instead enforces streaming bounds: <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> observer stdout and
+<!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> observer stderr, containing the inner log-show capture of at most <!-- span limits.log_show_stdout.binary -->1 MiB<!-- /span -->
+stdout and <!-- span limits.log_show_stderr.binary -->128 KiB<!-- /span --> stderr. The log child stops <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before the shared
 deadline so the observer's report can be delivered before the controller's own
 deadline. Its received counts describe actual reads, including
 at most one excess byte that detects a stream overflow, not the total output
@@ -803,7 +803,7 @@ attempt reaping is nonblocking and bounded by exec_reap_grace; the host's
 worker/validator final reap after successful termination remains blocking. No early
 stderr capture is added: pre-mapping, direct dependency output and crashes in the
 reporting path may leave no diagnostic text. Optional compiled-object capture
-(1 MiB) and exec stream text (1023 bytes each, with truncation marker) keep their
+(<!-- span limits.applied_profile.binary -->1 MiB<!-- /span -->) and exec stream text (<!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> each, with truncation marker) keep their
 existing refusal/truncation semantics. Neither optional capture failure nor an
 incomplete post-apply attempt proves a policy cause or instrumentation defect.
 
@@ -837,9 +837,9 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same original-byte JSON parser with explicit retention budgets: 72 MiB
-per runner-client stream, 8 MiB per sbpl-check stream, and streaming limits of
-32 MiB stdout / 128 KiB stderr for the observer. Received/retained byte counts
+the same original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->72 MiB<!-- /span -->
+per runner-client stream, <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream, and streaming limits of
+<!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> stdout / <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> stderr for the observer. Received/retained byte counts
 precede lossy context conversion; log collection's counts are actual bounded
 reads, while the other receivers count fully collected buffers.
 `stdout_capture_error` identifies local truncation and precludes parsing the

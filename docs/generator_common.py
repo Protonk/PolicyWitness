@@ -169,9 +169,7 @@ def authored_spans(text):
     markers = [m for m in re.finditer(r'<!--\s*(?:span\b|/span\b)', text) if authored(m.start())]
     if len(markers) != 2 * len(matches) or any('<!--' in m[2] for m in matches):
         raise ValueError('malformed authored span')
-    names = [m[1] for m in matches]
-    if len(names) != len(set(names)):
-        raise ValueError('duplicate authored span')
+    # A document may state one value in more than one sentence; each span renders.
     return matches
 
 

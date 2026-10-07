@@ -17,73 +17,13 @@
       "document": "controller/README.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "  stream byte counts and `capture_limit_bytes` (72 MiB). `stdout_capture_error`"
+      "text": "- The generated launchd plist sets `ThrottleInterval` to                                                                                (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default."
     },
     {
       "document": "controller/README.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, rounded outward to whole seconds and padded by two seconds at each end, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. The scan's cost varies with the host's log archive, from a fraction of a second to seconds for the same short span; the reply records it as `data.sandbox_log_capture.supervision.elapsed_ms`, and the retained cost receipt (`tests/RETAINED.json`, run `followup-final-gate-03`, `supplemental/cost/`) is a measurement, not a guarantee."
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "- The generated launchd plist sets `ThrottleInterval` to one second (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default."
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to 1 s of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown."
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "- `runner verify` delivers its fixed allow-all verification request on the client's stdin, as a run does; no temporary request file is written. It defaults to a 5-second timeout (override with `--timeout-ms`)."
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "10,000 ms). It accepts positive integer milliseconds representable in the shared"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "The observer stops its log child 1,000 ms before the shared deadline"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "The show path counts bytes while reading both pipes: inner stdout 1 MiB, inner"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "observations from that missing report. The 32 MiB outer allowance accommodates"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "record. Cleanup has one 1,000 ms grace ending no later than the original deadline"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "show mode defaults to 10,000 ms. A larger `--log-timeout-ms` changes waiting time"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "stderr 128 KiB, observer stdout 32 MiB, observer stderr 128 KiB. One additional"
+      "text": "- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to                                                                                             of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown."
     },
     {
       "document": "docs/LIMITS.md",
@@ -95,31 +35,7 @@
       "document": "docs/PolicyWitness.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "- `--log-timeout-ms <n>`: log collection allowance, default 10,000 ms. Positive"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
       "text": "32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "5-second timeout; pass `--timeout-ms <n>` for slow cold-spawn cases."
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "Policy delivery has a five-second absolute monotonic deadline starting after"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "`ThrottleInterval` to one second, so a run requested sooner than a second after"
     },
     {
       "document": "docs/PolicyWitness.md",
@@ -137,18 +53,6 @@
       "document": "docs/PolicyWitness.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "cleanup grace; the `log show` child itself stops 1,000 ms before that deadline"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "result processing share one monotonic deadline, followed by a fixed 1,000 ms"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
       "text": "the key is ten seconds). Three serial runs with a short pause between them"
     },
     {
@@ -158,22 +62,10 @@
       "text": "took about four seconds of wall time in the project's measurement."
     },
     {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "which the installed plist's `ThrottleInterval` bounds at one second after the"
-    },
-    {
       "document": "docs/QUESTIONS.md",
       "invariant": "G9",
       "kind": "literal",
       "text": "Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) are serial and queue behind launchd's respawn throttle, which the generated plist sets to one second."
-    },
-    {
-      "document": "docs/REQUEST-GRAMMAR.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "| `over_capacity` | Admission | 257 distinct steps decode, then exceed the current 256-step capacity. |"
     },
     {
       "document": "docs/SIGNING.md",
@@ -200,70 +92,10 @@
       "text": "The worker ABI places a pre-touched progress/failure header and a 4,096-byte text"
     },
     {
-      "document": "runner/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "has a five-second absolute monotonic deadline starting after spawn. Expiry"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "(1 MiB) and exec stream text (1023 bytes each, with truncation marker) keep their"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "1024, step ID 63 bytes, target 511, parameter key/value 127/383, supplied exec"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "128 KiB observer stderr, containing the inner log-show capture of at most 1 MiB"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "32 MiB stdout / 128 KiB stderr for the observer. Received/retained byte counts"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "Log collection instead enforces streaming bounds: 32 MiB observer stdout and"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "The five-second production deadline starts immediately after spawn. The"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "`Command::output()` buffers before retaining a 72 MiB prefix per runner-client"
-    },
-    {
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
       "invariant": "G9",
       "kind": "literal",
       "text": "`floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "args 15 of 127 bytes each, the host-only `sandbox_check.operation` and"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "counts forbidden embedded NULs in native C-string fields against maximum zero. Limits remain source 262143 bytes, steps 256, parameters"
     },
     {
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
@@ -281,31 +113,7 @@
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "per runner-client stream, 8 MiB per sbpl-check stream, and streaming limits of"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "rounded outward to whole seconds and padded by two seconds at each end:"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "stdout and 128 KiB stderr. The log child stops 1,000 ms before the shared"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "the same original-byte JSON parser with explicit retention budgets: 72 MiB"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "up to 4 MiB) and an independent 8 MiB prefix per sbpl-check stream."
+      "text": "up to 4 MiB) and an independent                                                                     prefix per sbpl-check stream."
     },
     {
       "document": "tests/README.md",

@@ -45,7 +45,8 @@ RULES_START = "<!-- BEGIN SHARED READING RULES -->"
 RULES_END = "<!-- END SHARED READING RULES -->"
 GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
 GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
-SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md")
+SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST-GRAMMAR.md",
+                  "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md")
 GUIDE_NAME = "PolicyWitness.md"
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
@@ -239,9 +240,22 @@ def replace_block(text, start, end, replacement):
     return text[:begin] + replacement + text[finish:]
 
 
+def binary_value(value, unit):
+    """A byte limit that is a whole number of MiB or KiB, as prose states it."""
+    if unit != "bytes":
+        return None
+    for size, name in ((1 << 20, "MiB"), (1 << 10, "KiB")):
+        if value % size == 0:
+            return f"{value // size:,} {name}"
+    return None
+
+
 def span_values(limits):
-    return {row["id"] + suffix: format_value(row["value"], unit)
-            for row in limits for suffix, unit in ((".value", None), (".value_unit", row["unit"]))}
+    values = {row["id"] + suffix: format_value(row["value"], unit)
+              for row in limits for suffix, unit in ((".value", None), (".value_unit", row["unit"]))}
+    values.update({row["id"] + ".binary": binary_value(row["value"], row["unit"])
+                   for row in limits if binary_value(row["value"], row["unit"]) is not None})
+    return values
 
 
 def update_document(text, limits):

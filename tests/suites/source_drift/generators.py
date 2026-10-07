@@ -34,10 +34,13 @@ def ownership(root, name):
         gen = module('span_owner_' + name, root / f'docs/generate_{name}.py')
         common = module('span_common', root / 'docs/generator_common.py')
         for document in gen.SPAN_DOCUMENTS:
-            for match in common.authored_spans((root / document).read_text()):
-                if match[1].startswith(name + '.'):
-                    regions.setdefault(document, []).append((f'<!-- span {match[1]} -->', '<!-- /span -->'))
+            if any(match[1].startswith(name + '.') for match in common.authored_spans((root / document).read_text())):
+                regions.setdefault(document, []).append(SPAN_MARKER)
     return regions, whole
+
+
+# Every authored span's value, whatever its name, is owned inline; the markers stay.
+SPAN_MARKER = ('<!-- span ', '<!-- /span -->')
 
 
 def region_ownership(root, name):
@@ -69,7 +72,10 @@ def outside(data, regions):
         return data
     text = data.decode()
     for start, end in regions:
-        if text.count(start) != 1 or (not start.startswith('<!-- span ') and text.count(end) != 1) or end not in text[text.index(start):]:
+        if (start, end) == SPAN_MARKER:
+            text = re.sub(r'(<!-- span [^>]+ -->)(.*?)(<!-- /span -->)', r'\1\3', text, flags=re.S)
+            continue
+        if text.count(start) != 1 or text.count(end) != 1 or end not in text[text.index(start):]:
             raise ValueError('broken ownership markers')
         a = text.index(start) + len(start)
         b = text.index(end, a)
@@ -675,6 +681,8 @@ class GeneratorContractTests(unittest.TestCase):
             for path, markers in regions.items():
                 text = (ROOT / path).read_text()
                 for start, end in markers:
+                    if (start, end) == SPAN_MARKER:
+                        continue  # inline, and authored_spans admits none inside a region
                     a = text.index(start)
                     b = text.index(end, a) + len(end)
                     for owner, left, right in owners.get(path, []):

@@ -955,7 +955,8 @@ cleanup. `poll_stop_reason` retains an earlier deadline even if the worker
 finishes during grace. On a failed policy write, `policy_transfer_error` records
 the host's errno and written/expected UTF-8 byte counts, while worker evidence
 and process status remain available. Written bytes do not prove child receipt.
-Policy delivery has a five-second absolute monotonic deadline starting after
+Policy delivery has an absolute monotonic deadline of
+<!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starting after
 worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
 `elapsed_ms`, `bytes_written` and `bytes_expected`; it invents no write errno.
 The host closes input and enters cleanup without starting readiness/sentinel
@@ -1566,7 +1567,7 @@ unavailable predictions still permit supported attempts.
 ### Common flags
 
 - `--timeout-ms <n>`: runner RPC timeout
-- `--log-timeout-ms <n>`: log collection allowance, default 10,000 ms. Positive
+- `--log-timeout-ms <n>`: log collection allowance, default <!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->. Positive
   integer milliseconds only; no unlimited value. Invalid values fail before
   running the specimen, including with `--no-log-capture`. A larger value buys
   waiting time only: the specimen, the scan interval and the byte budgets are
@@ -1580,8 +1581,8 @@ unavailable predictions still permit supported attempts.
   wire contract versions this build speaks
 
 Log collection is bounded in time and size. Observer startup, `log show` and
-result processing share one monotonic deadline, followed by a fixed 1,000 ms
-cleanup grace; the `log show` child itself stops 1,000 ms before that deadline
+result processing share one monotonic deadline, followed by a fixed <!-- span limits.log_cleanup_grace.value_unit -->1,000 milliseconds<!-- /span -->
+cleanup grace; the `log show` child itself stops <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before that deadline
 so the observer can deliver its report. Byte limits are listed under
 [Evidence capture](#evidence-capture); a small specimen can still exceed one
 because admission does not bound OS log volume. `sandbox_log_capture.supervision`
@@ -1855,11 +1856,11 @@ $PW runner verify --service-name <service-name>
 runner on the client's stdin, as a run does, and reports the outcome and the
 PID the reply names as `runner_pid`: the worker that served the request, or
 the host when the host refused it (the reply's `pid` rule). It defaults to a
-5-second timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
+<!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
 
 Verification consumes the host it reaches: every host serves one request and
 exits. The next request starts a fresh host once launchd allows a launch,
-which the installed plist's `ThrottleInterval` bounds at one second after the
+which the installed plist's `ThrottleInterval` bounds at <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> after the
 previous launch. A request that reaches the verified host while it is still
 retiring, or a fresh host that another connection reached first, is refused
 with `normalized_outcome: already_ran`. Such a refusal executed nothing
@@ -1871,7 +1872,7 @@ after verification completed in about 0.3 s when admitted.
 
 Consecutive runs through one installed runner are serial and paced by launchd:
 the runner exits after each specimen, and the generated plist sets
-`ThrottleInterval` to one second, so a run requested sooner than a second after
+`ThrottleInterval` to <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->, so a run requested sooner than a second after
 the previous host's launch waits for the remainder (launchd's default without
 the key is ten seconds). Three serial runs with a short pause between them
 took about four seconds of wall time in the project's measurement.

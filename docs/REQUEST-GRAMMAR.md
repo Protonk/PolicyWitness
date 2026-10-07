@@ -60,7 +60,7 @@ Use these corpus IDs with the same renderer:
 | `unused_filter_value` | Meaning across fields | A `none` filter cannot consume a non-null value. |
 | `unknown_filter` | Supported vocabulary | An unknown filter name refuses the specimen. |
 | `unknown_attempt` | Supported vocabulary | An unsupported second attempt prevents the first valid create from running. |
-| `over_capacity` | Admission | 257 distinct steps decode, then exceed the current 256-step capacity. |
+| `over_capacity` | Admission | 257 distinct steps decode, then exceed the current <!-- span limits.probe_steps.value -->256<!-- /span -->-step capacity. |
 | `old_marker` | Version boundary | Another request contract is refused before its fields are interpreted. |
 | `exec_args` | Effective arguments | `exec/spawn` of `touch` consumes its argument and creates the named file. |
 | `capture` | Effective capture | Enabled capture returns a receipt with the submitted nonce. |
