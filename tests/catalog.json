@@ -231,6 +231,7 @@
         "tests/suites/runner_unit/run.sh"
       ],
       "requires": [
+        "app",
         "swift",
         "clang",
         "cargo"
@@ -940,8 +941,7 @@
             "bash",
             "tests/suites/blackbox_e2e/checker_controls.sh"
           ],
-          "description": "Checker and consumer controls reject lost distinctions, removed keys, unsupported versions and invalid records",
-          "requires": []
+          "description": "Checker and consumer controls reject lost distinctions, removed keys, unsupported versions and invalid records"
         },
         {
           "id": "BBX-001",
