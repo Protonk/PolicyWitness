@@ -5,10 +5,10 @@ SBPL profile to a disposable process, records what the sandbox predicted for
 each probe and what happened when the probe was attempted, and prints the
 evidence as one JSON envelope.
 
+Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
+
 > The [user guide](docs/PolicyWitness.md) has the specimen format, the output
 > envelope and the operating guidance.
-
-Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
 
 ## Flow
 
