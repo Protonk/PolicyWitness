@@ -8,6 +8,7 @@ so building before tagging notarizes a build stamped with the previous version.
 notarization still records what it is stamping.
 """
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 import re
@@ -16,6 +17,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
+BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
 
 
 def git(root, *args, check=True):
@@ -25,6 +27,53 @@ def git(root, *args, check=True):
             raise ValueError(f"git {' '.join(args)} failed: {result.stderr.strip() or result.returncode}")
         return None
     return result.stdout.strip()
+
+
+def baseline_entries(text):
+    """A multiset preserves repeated exact prose sites; changed text is a new site."""
+    data = json.loads(text)
+    if not isinstance(data, dict) or set(data) != {'schema_version', 'entries'} or data['schema_version'] != 1:
+        raise ValueError('expected prose baseline schema_version 1')
+    if not isinstance(data['entries'], list):
+        raise ValueError('prose baseline entries must be a list')
+    keys = ('document', 'invariant', 'kind', 'text')
+    for row in data['entries']:
+        if not isinstance(row, dict) or set(row) != set(keys) or any(not isinstance(row[k], str) or not row[k] for k in keys):
+            raise ValueError('malformed prose baseline entry')
+        path = Path(row['document'])
+        if path.is_absolute() or '..' in path.parts or path.suffix != '.md':
+            raise ValueError('baseline document must be repository-relative Markdown')
+        if (row['invariant'], row['kind']) not in {('G9', 'literal'), ('G9', 'count'), ('G11', 'citation_pair')}:
+            raise ValueError('unknown baseline invariant or kind')
+    return Counter(tuple(row[k] for k in keys) for row in data['entries'])
+
+
+def inspect_baseline(root, tag):
+    """Compare against the previous annotated release reachable before this commit."""
+    parent = git(root, 'rev-parse', '--verify', 'HEAD^', check=False)
+    previous, excluded = None, []
+    while parent:
+        candidate = git(root, 'describe', '--abbrev=0', '--match', 'v[0-9]*',
+                        *excluded, parent, check=False)
+        if candidate is None:
+            break
+        if RELEASE_TAG.fullmatch(candidate) and candidate != tag:
+            previous = candidate
+            break
+        excluded += ['--exclude', candidate]
+    current = git(root, 'show', f'HEAD:{BASELINE_NAME}', check=False)
+    prior = git(root, 'show', f'{previous}:{BASELINE_NAME}', check=False) if previous else None
+    report = dict(previous_tag=previous, status='no previous release' if previous is None else 'previous release predates baseline')
+    # Validate even an inaugural baseline: malformed entries cannot establish a release ceiling.
+    now = baseline_entries(current) if current is not None else None
+    if prior is None:
+        return report, []
+    before = baseline_entries(prior)
+    if now is None:
+        return dict(report, status='missing baseline'), ['release removed the prose baseline']
+    added = now - before
+    report.update(status='grown' if added else 'non-growing', additions=sum(added.values()))
+    return report, ([f'prose baseline grew against {previous}: {sum(added.values())} added or rewritten site(s)'] if added else [])
 
 
 def inspect(root, *, remote='origin', dist='dist'):
@@ -57,6 +106,8 @@ def inspect(root, *, remote='origin', dist='dist'):
         stamp['remote_tag'] = remote_ids[0] if remote_ids else None
         if remote_ids and remote_ids[0] != git(root, 'rev-parse', tag):
             problems.append(f'{remote} already holds a different {tag}')
+    stamp['prose_baseline'], baseline_problems = inspect_baseline(root, tag)
+    problems.extend(baseline_problems)
     archive = root / dist / 'archive' / tag
     if archive.exists():
         problems.append(f'{archive} already exists; a version is released once')
@@ -74,6 +125,9 @@ def main(argv=None):
         stamp, problems = inspect(ROOT, remote=args.remote, dist=args.dist)
     except (OSError, ValueError) as exc:
         parser.exit(1, f'STOP: {exc}\n')
+    baseline = stamp.get('prose_baseline', {})
+    if baseline.get('status') in {'no previous release', 'previous release predates baseline'}:
+        print(f"NOTE: prose baseline: {baseline['status']} ({baseline.get('previous_tag')})", file=sys.stderr)
     label = 'WARNING' if args.report else 'STOP'
     for problem in problems:
         print(f'{label}: {problem}', file=sys.stderr)

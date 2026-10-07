@@ -106,8 +106,8 @@ there is no specimen override that fabricates them.
 
 Use `runner_subprocess` as the authoritative process object. The following
 additive JSON locations are defined with producer/validity comments in
-[`PWRunnerAPI.swift`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) and
-[`CWorker.swift`](../runner/Sources/PWRunnerCore/CWorker.swift).
+[PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) and
+[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift).
 They are host observations, not a new worker ABI or a fabricated worker failure
 record. Internal `CWorkerOutput` carries the same facts to the assembler.
 

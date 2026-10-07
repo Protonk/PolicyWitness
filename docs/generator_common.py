@@ -30,7 +30,7 @@ def citation(ref, root, *, check=False, forbidden=()):
     relative = Path(path)
     if relative.is_absolute() or '..' in relative.parts or not (root / relative).is_file():
         raise ValueError(f'missing/invalid reference {path}')
-    if path in forbidden:
+    if relative.as_posix() in forbidden:
         raise ValueError(f'self-citation: {path}')
     text = (root / relative).read_text(errors='replace')
     if symbol not in text:

@@ -373,7 +373,14 @@ the repository root. The same command copies the marked shared section into
 command also copies the shared questions from [QUESTIONS.md](QUESTIONS.md) into
 the guide's Questions section; edit the questions there, writing links into the
 guide as `PolicyWitness.md#anchor`. The JSON is a reviewed description;
-production code does not load it.
+production code does not load it. Check citations carry a `form` that identifies
+an allowed test definition, drift-rule function, or control; their `kind`
+separately describes value, boundary or path coverage. Every row needs a test
+or rule, and every value owner must be a test in the declared owner set.
+Author scalar spans outside generated regions; the limits generator renders
+them before copying the shared prose into the guide. Generator invariants and
+the remaining prose baseline are described in the
+[source-drift contracts](../tests/suites/source_drift/README.md#generator-contracts).
 
 Two editorial rules keep the shared section honest for its reader, a user of the
 guide. First, shared prose states only what that reader can observe with the

@@ -61,6 +61,110 @@ note identical across `AGENTS.md`, `runner/README.md` and `tests/README.md`,
 since that note is carried in three places on purpose.
 Public-command controls separately verify selection and actual execution.
 
+### Generator contracts
+
+The `generator_contract` case in [generators.py](generators.py) holds these
+invariants across the generators. Per-generator cases retain their shape,
+stale-copy, marker and build-refusal controls.
+
+- **G1. One owner, nothing outside.** Every region (including an authored
+  scalar span) and whole-file output has exactly one generator, which changes no byte outside them. A document holds
+  each marker pair once, in order; a broken pair stops the generator before
+  any write.
+- **G2. Idempotence.** A second run immediately after a first writes nothing.
+- **G3. Check mode before signing.** Every generator has `--check`, which
+  writes nothing and exits nonzero on any stale copy, and the build runs
+  every generator's check before signing.
+- **G4. Citations resolve.** Every citation names a repository-relative file
+  that exists and a symbol that occurs in it.
+- **G5. Check citations have a form and a definition.** Every check citation
+  in both manifests carries a form. A `test` is defined in the cited file, in
+  that file's language; a `rule` is a drift-rule function; a `control` is a
+  fixture, golden, helper or compiled C control a test compares against.
+  Every node, edge and limit cites at least one `test` or `rule`. A common
+  word that merely occurs in a file cannot satisfy a `test`.
+- **G6. No self-citation.** A manifest cites neither itself nor any region or
+  whole-file output of its own generator, since the generator would then
+  verify text it wrote.
+- **G7. Declared vocabulary.** A graph declares the fact keys its nodes and
+  edges may use, in column order; an undeclared or unused key is an error.
+- **G8. Durations and sizes render from limits.** The architecture manifest
+  states a duration or size only through a limit placeholder; a literal one
+  anywhere in the manifest is an error.
+- **G9. Counts and values reach prose through spans.** A span is owned by one
+  generator, rendered from its manifest, checked for a stale value or an
+  unknown name, and authored outside every region; a copy region carries it
+  as bytes. Prose does not restate arithmetic over a spanned value.
+- **G10. Captions state the verified guarantee.** A generated caption or
+  summary says what the generator verified about citations, presence and
+  definition, and nothing stronger; it never says a test exercises, covers or
+  proves a row.
+- **G11. Prose citations use the rendered form and are verified.** A drift
+  rule verifies, in every Markdown document it scans, the symbol behind each
+  link whose text is a backticked symbol and whose target is not Markdown,
+  and resolves every `#anchor` against the target's headings.
+
+For G9 and G11, distinguish implementation of the mechanism from its prose
+coverage. The baseline records sites outside each mechanism; coverage is
+complete when the baseline's entries for that invariant are empty.
+
+G1 through G8 and G10 have complete coverage in this scan. G9 and G11 have
+working mechanisms and partial prose coverage: remaining sites live in
+[prose_baseline.json](../../fixtures/docs/prose_baseline.json). The case reports
+entries per invariant. Convert a site to a span or a symbol-form link and remove
+its baseline entry in the same change. Counts without a mechanical pattern
+are surveyed manually; their exact text must remain present until converted.
+Literal and citation-pair entries must match the scan exactly, including
+repeated occurrences. Review any baseline addition as added unverified prose.
+Release preflight refuses additions or rewritten entries against the nearest
+annotated release tag reachable before HEAD; if that release predates
+the baseline, it reports that fact. `--report` turns a growth refusal into a
+warning. This baseline is retained even when empty.
+
+The prose scan includes `docs/*.md`, the root README and AGENTS files,
+`runner/AGENTS.md`, `tests/README.md`, and every Markdown document a generator
+writes. It ignores fenced examples; authored spans are processed only in
+`docs/ARCHITECTURE.md` and `docs/LIMITS.md`. The guide receives span comments
+and values only by copying its shared source. Other generated or copied
+regions are opaque to the span pass. A backticked link label into a non-Markdown
+file denotes a symbol; use a plain filename label for an ordinary file link.
+Local links must resolve, and reference-style links are refused.
+
+Architecture and limits manifests use schema version 2. Check citations carry
+`form` (`test`, `rule`, `control`); the limits `kind` (`value`, `boundary`,
+`path`) is independent. Python definitions and drift-rule calls are checked
+through the AST; Rust, Swift and shell definitions use the documented source
+conventions, with suite-owned catalog case IDs also accepted. These checks
+locate definitions, not test assertions. The shared helpers live in
+[generator_common.py](../../../docs/generator_common.py).
+
+| Form | Allowed files | Definition convention |
+| --- | --- | --- |
+| `test` | `tests/suites/**`, `runner/Tests/**`, or Rust sources with `#[test]` | Python function; Rust function within three lines after `#[test]`; Swift function or run label ending in a colon; shell `test_selected` or `PW_TEST_ID`; or a case ID in the cited file's owning suite in `tests/catalog.json`. |
+| `rule` | `tests/suites/source_drift/*.py` | Python function with a call from `main()`. |
+| `control` | `tests/fixtures/**`, `tests/lib/**`, `build.sh`, or C sources under `tests/` | Symbol presence; Python functions and C function-line definitions are required in those languages. |
+
+
+Graphs declare ordered `node_facts` and `edge_facts`; every declared key must
+be used, and every used key declared. Architecture durations and sizes use
+`{limit:<id>}` placeholders, resolved through the limits loader and formatter.
+The same values reach table cells and dot tooltips, and therefore SVG stamps.
+Architecture exposes `graphs`, `nodes`, `edges`, `unpinned`, and per-graph
+`<graph>.nodes` and `<graph>.edges` spans. Limits exposes `<id>.value` and
+`<id>.value_unit`. Author a span outside generated/copied regions:
+
+```html
+<!-- span architecture.graphs -->4<!-- /span -->
+```
+
+The ownership control mutates inputs in disposable checkouts and compares all
+files outside declared regions and whole-file outputs. Deliberate outside
+writes, unresolved placeholders, invalid definitions, malformed markers,
+stale spans, broken links, unlisted prose and release growth must be detected.
+Refused commands must leave the checkout unchanged. Guide staging is tested
+as a whole-file output, including idempotence; SVG rendering failure is checked
+before any output publication.
+
 ## Success criteria
 
 - The check script exits 0 and prints a one-line summary of how many
@@ -91,6 +195,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
+- `<run>/suites/source_drift/generator_contract/artifacts/generators.log`
 
 ## Run
 
@@ -124,8 +229,8 @@ The `architecture_documentation` case checks
 [`docs/architecture.json`](../../../docs/architecture.json) against the dot
 files, SVG stamps and generated table regions of
 [`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md). The generator refuses
-a node or edge whose cited source file or symbol does not exist, so every
-figure element is pinned to code and to a check; controls exercise broken
+a node or edge whose cited source file or symbol does not exist, or whose
+check lacks an allowed definition and form; controls exercise broken
 citations, unknown references, duplicate ids, stale dot text, a stale table, a
 stale SVG stamp, regeneration without Graphviz, idempotence and refusal before
 any write. An SVG is checked by the stamp naming the hash of its dot text, so
@@ -137,5 +242,3 @@ markers, automatic helper discovery, layout edits and both handshake edits.
 The identity changes on protocol implementation edits even when geometry does
 not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
 and the `runner_unit` host-driver control.
-
-The `generator_contract` case holds the uniform generator ownership and build-check contracts in disposable checkouts, with mutations that must be detected.

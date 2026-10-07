@@ -10,6 +10,18 @@ owners, not proof of values. Compiled C, Swift and Rust tests compare
 implementation values with the limits manifest independently.
 --check verifies every document without writing. --stage-guide copies the
 checked guide for distribution without regenerating stale documentation.
+
+Generator invariants (tests/suites/source_drift/README.md): G1 restricts writes
+to owned regions, authored scalar spans, and the staged whole-file guide;
+malformed pairs stop before any write. G2 requires idempotence, including
+staging; G3 requires a read-only freshness check before signing. G4 resolves
+citations. G5 requires defined test/rule/control forms, a test or rule per row,
+and a test in the value-owner set; kind remains an independent dimension.
+G6 refuses citations into this manifest or its output files. G8 supplies the
+shared singular-aware limits formatter. G9 renders authored spans outside
+regions before copying shared prose into the guide. G10 makes no assertion
+coverage claim from a citation. G11 is held by the shared prose-link drift rule;
+G9/G11's remaining unverified prose sites are recorded in the release baseline.
 """
 from __future__ import annotations
 
@@ -19,8 +31,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test, format_value, render_spans, span_problems
+from generator_common import citation, require_test, format_value, render_spans, span_problems, heading_anchors
 
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
@@ -321,16 +334,8 @@ def validate_guide(text, limits):
 
     # Headings in this guide use ATX syntax. Match the punctuation-stripped
     # anchors used by its Markdown links, including duplicate-heading suffixes.
-    anchors = set()
     prose = "\n".join(prose_lines(text))
-    for heading in re.findall(r"^#{1,6}\s+(.+?)\s*#*\s*$", prose, re.MULTILINE):
-        base = re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
-        anchor = base
-        suffix = 0
-        while anchor in anchors:
-            suffix += 1
-            anchor = f"{base}-{suffix}"
-        anchors.add(anchor)
+    anchors = heading_anchors(prose)
     if "limits" not in anchors:
         raise ValueError("guide is missing its Limits heading")
     for target in re.findall(r"\]\((#[^)]+)\)", prose):
@@ -374,7 +379,8 @@ def main():
             if stale:
                 raise ValueError(f"stale {', '.join(stale)}; {'; '.join(span_problems(before, 'limits', span_values(limits)))}; run python3 docs/generate_limits.py")
             if args.stage_guide is not None:
-                args.stage_guide.write_bytes(guide_bytes)
+                if not args.stage_guide.is_file() or args.stage_guide.read_bytes() != guide_bytes:
+                    args.stage_guide.write_bytes(guide_bytes)
         else:
             if before != after:
                 path.write_text(after)

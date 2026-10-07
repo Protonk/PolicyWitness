@@ -2,8 +2,8 @@
 """Generate the architecture figures and tables from docs/architecture.json.
 
 The manifest owns every node and edge of the graphs in docs/ARCHITECTURE.md,
-each with the source symbol and the check that pin it. This script renders
-each graph to Graphviz dot text, renders that dot to SVG with the installed
+each with source and check citations. This script verifies symbol presence
+and test/rule definitions, renders each graph to Graphviz dot text, renders that dot to SVG with the installed
 `dot`, stamps the SVG with the hash of its dot text, and writes the figure
 embed plus the node and edge tables into the marked regions of the document.
 
@@ -13,6 +13,19 @@ embed plus the node and edge tables into the marked regions of the document.
 
 `--check` needs no Graphviz: an SVG is checked by its stamp, which names the
 hash of the dot text it was rendered from. Rendering needs `dot` on PATH.
+
+Generator invariants (tests/suites/source_drift/README.md): G1 permits writes
+only to uniquely marked regions, authored scalar spans and whole-file figures;
+validation and rendering finish before publication. G2 requires idempotence.
+G3 requires a read-only freshness check before signing. G4 resolves citations;
+G5 checks each citation's form and definition, requiring a test or rule per
+item. G6 refuses citations into this manifest or its outputs. G7 uses declared,
+ordered fact keys and refuses undeclared or unused keys. G8 rejects literal
+durations/sizes and resolves placeholders with the limits loader and formatter,
+including dot tooltips. G9 renders named scalar spans only outside regions.
+G10 captions state presence and definition as the guarantee, never assertion
+coverage. G11 is held by the shared prose-link drift rule; G9/G11's remaining
+unverified prose sites are recorded in the release baseline.
 """
 import argparse
 import hashlib
@@ -23,6 +36,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, require_test, DURATION_SIZE_RE, LIMIT_RE, strings, format_value, render_spans, span_problems
 import generate_limits
@@ -184,7 +198,7 @@ def load_manifest(path: Path, root: Path = ROOT):
         for item in graph["nodes"] + graph["edges"]:
             for key in ("sources", "checks"):
                 for ref in item[key]:
-                    if ref["path"] in forbidden:
+                    if Path(ref["path"]).as_posix() in forbidden:
                         raise ValueError(f"self-citation: {ref['path']}")
     return data
 
@@ -478,22 +492,22 @@ def write(root: Path, skip_svg: bool):
     document_name = document_path.name
     text = document_path.read_text()
     rendered = render_document(text, manifest, limits)  # validate markers before writing anything
-    written = []
+    pending = {}
     for graph in manifest["graphs"]:
         dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         dot_path = document_path.parent / f"{graph['file']}.dot"
         if not dot_path.is_file() or dot_path.read_text() != dot_text:
-            dot_path.write_text(dot_text)
-            written.append(dot_path)
+            pending[dot_path] = dot_text
         if not skip_svg:
             svg_path = document_path.parent / f"{graph['file']}.svg"
             if not svg_path.is_file() or not svg_stamp_matches(svg_path.read_text(errors="replace"), graph["id"], dot_text):
-                svg_path.write_text(stamp_svg(render_svg(dot_text), graph["id"], dot_text))
-                written.append(svg_path)
+                pending[svg_path] = stamp_svg(render_svg(dot_text), graph["id"], dot_text)
     if rendered != text:
-        document_path.write_text(rendered)
-        written.append(document_path)
-    return written
+        pending[document_path] = rendered
+    # Finish validation and rendering before publishing any changed copy.
+    for path, content in pending.items():
+        path.write_text(content)
+    return list(pending)
 
 
 def main():

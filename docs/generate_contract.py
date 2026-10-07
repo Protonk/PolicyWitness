@@ -6,6 +6,13 @@ sits inside a marked region that this script rewrites, so a version change is
 one edit to the JSON plus one regeneration. --check verifies every region
 without writing. Nothing loads the JSON at run time: each language reads its
 own generated copy, and tests compare those copies with the manifest.
+
+Generator invariants (tests/suites/source_drift/README.md): G1 gives each
+marked region one owner and preserves all other bytes; malformed pairs stop
+before any write. G2 makes regeneration idempotent. G3 makes --check read-only,
+nonzero for stale copies, and mandatory before signing. G4 checks the copies'
+source references; G6 keeps the owning manifest independent of its outputs.
+G11's shared drift rule verifies symbol-form prose links and heading anchors.
 """
 from __future__ import annotations
 

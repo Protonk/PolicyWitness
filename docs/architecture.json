@@ -564,7 +564,7 @@
         {
           "id": "drift_limits", "label": "source_drift limits.py", "kind": "check",
           "facts": {"Guards": "the limits generator's copies and every local documentation link"},
-          "sources": [{"path": "tests/suites/source_drift/limits.py", "symbol": "broken_links"}],
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "broken_links"}],
           "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "test_document_is_current", "form": "test"}]
         },
         {
@@ -731,7 +731,7 @@
           "id": "D21", "from": "gen_architecture", "to": "architecture_md", "kind": "writes",
           "label": "figure regions; dot and stamped SVG files beside the document",
           "short": "regions, dot, svg",
-          "sources": [{"path": "docs/generate_architecture.py", "symbol": "render_region"}, {"path": "docs/generate_architecture.py", "symbol": "stamp_svg"}],
+          "sources": [{"path": "docs/generate_architecture.py", "symbol": "expected_outputs"}, {"path": "docs/generate_architecture.py", "symbol": "render_region"}, {"path": "docs/generate_architecture.py", "symbol": "stamp_svg"}],
           "checks": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "test_document_and_figures_are_current", "form": "test"}]
         },
         {
@@ -815,7 +815,7 @@
           "id": "D33", "from": "drift_limits", "to": "gen_limits", "kind": "checks",
           "label": "--check, stale-copy and staging controls; every local link in docs/*.md",
           "short": "--check; links",
-          "sources": [{"path": "tests/suites/source_drift/limits.py", "symbol": "broken_links"}],
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "broken_links"}],
           "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "limits_documentation", "form": "test"}]
         },
         {

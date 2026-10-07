@@ -1,5 +1,4 @@
 """Uniform generator contracts, measurements and adversarial controls."""
-import copy
 import importlib.util
 import json
 import re
@@ -88,6 +87,131 @@ def changed_outside(before, after, regions, whole):
         elif outside(before[path], regions.get(path, [])) != outside(after[path], regions.get(path, [])):
             changed.append(path)
     return changed
+
+
+def scanned_documents(root=ROOT):
+    """Historical routing/docs scan plus every Markdown generator target."""
+    paths = set((root / 'docs').glob('*.md'))
+    paths.update(root / name for name in ['README.md', 'AGENTS.md', 'runner/AGENTS.md', 'tests/README.md'])
+    for name in GENERATORS:
+        regions, _ = region_ownership(root, name)
+        paths.update(root / name for name in regions if name.endswith('.md'))
+    return sorted(paths)
+
+
+def prose_text(text):
+    gen = module('prose_limits', ROOT / 'docs/generate_limits.py')
+    return '\n'.join(gen.prose_lines(text))
+
+
+def broken_links(paths):
+    """Check local files, heading anchors and backticked-symbol link labels (G11)."""
+    from urllib.parse import unquote
+    common = module('link_common', ROOT / 'docs/generator_common.py')
+    broken = []
+    for path in paths:
+        prose = prose_text(path.read_text())
+        # Keep a backticked link label; ignore other inline code examples.
+        def code(match):
+            if prose[max(0, match.start() - 1):match.start()] == '[' and prose[match.end():match.end()+2] == '](':
+                return match[0]
+            return ' ' * len(match[0])
+        prose = re.sub(r'(`+)([^`]*?)\1', code, prose)
+        if re.search(r'\]\s*\[|^\s*\[[^]\n]+\]:', prose, re.M):
+            broken.append(f'{path}: reference-style link is not verified; use inline links')
+        for match in re.finditer(r'\[([^]\n]+)\]\(([^\s)]+)\)', prose):
+            label, target = match[1], match[2]
+            if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                continue
+            filename, separator, anchor = target.partition('#')
+            destination = path.parent / unquote(filename) if filename else path
+            if not destination.exists():
+                broken.append(f'{path}: missing file {target}')
+                continue
+            if separator:
+                if not destination.is_file() or unquote(anchor) not in common.heading_anchors(prose_text(destination.read_text())):
+                    broken.append(f'{path}: missing heading {target}')
+            if re.fullmatch(r'`[^`]+`', label) and destination.suffix.lower() != '.md':
+                if not destination.is_file() or label[1:-1] not in destination.read_text(errors='replace'):
+                    broken.append(f'{path}: missing symbol {label} in {target}')
+    return broken
+
+BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
+
+
+def authored_prose(text):
+    common = module('baseline_common', ROOT / 'docs/generator_common.py')
+    text = prose_text(text)
+    ranges = common.region_ranges(text)
+    ranges += [(m.start(), m.end()) for m in common.SPAN_RE.finditer(text)]
+    keep = [True] * len(text)
+    for a, b in ranges:
+        keep[a:b] = [False] * (b - a)
+    text = ''.join(c if keep[i] else ('\n' if c == '\n' else ' ') for i, c in enumerate(text))
+    return prose_text(text)
+
+
+def prose_sites(root=ROOT):
+    """Exact prose lines/fragments, one entry per literal or unread citation pair."""
+    common = module('measurement_common', ROOT / 'docs/generator_common.py')
+    pattern = re.compile(common.DURATION_SIZE_RE.pattern + r'|\b\d[\d,]*-steps?\b', re.I)
+    entries = []
+    for path in scanned_documents(root):
+        text = authored_prose(path.read_text())
+        document = path.relative_to(root).as_posix()
+        for match in pattern.finditer(text):
+            a, b = text.rfind('\n', 0, match.start()) + 1, text.find('\n', match.end())
+            entries.append(dict(document=document, invariant='G9', kind='literal', text=text[a:b if b >= 0 else len(text)]))
+        for symbol in re.finditer(r'`([^`\n]+)`', text):
+            if text[max(0, symbol.start() - 1):symbol.start()] == '[':
+                continue
+            rest = text[symbol.end():]
+            end = re.search(r'[.!?](?:\s|$)', rest)
+            sentence = rest[:end.start()] if end else rest
+            link = re.search(r'\[([^]\n]+)\]\(([^\s)]+)\)', sentence)
+            if link:
+                target = link[2].split('#', 1)[0]
+                if target and not re.match(r'^[\w+.-]+:', target) and Path(target).suffix.lower() != '.md' and (path.parent / target).is_file():
+                    entries.append(dict(document=document, invariant='G11', kind='citation_pair',
+                                        text=text[symbol.start():symbol.end() + link.end()]))
+    return sorted(entries, key=lambda row: (row['document'], row['kind'], row['text']))
+
+
+def baseline_problems(root=ROOT, entries=None):
+    from collections import Counter
+    release = module('baseline_schema', ROOT / 'tests/lib/release_preflight.py')
+    if entries is None:
+        entries = json.loads((root / BASELINE_NAME).read_text())['entries']
+    release.baseline_entries(json.dumps(dict(schema_version=1, entries=entries)))
+    key = lambda row: tuple(row[k] for k in ('document', 'invariant', 'kind', 'text'))
+    found = Counter(key(row) for row in prose_sites(root))
+    listed = Counter(key(row) for row in entries if row['kind'] != 'count')
+    problems = [f'unlisted prose site: {row}' for row in (found - listed).elements()]
+    problems += [f'baseline site no longer occurs: {row}' for row in (listed - found).elements()]
+    scanned = {path.relative_to(root).as_posix() for path in scanned_documents(root)}
+    for row in entries:
+        if row['kind'] == 'count':
+            path = root / row['document']
+            if row['document'] not in scanned or row['text'] not in authored_prose(path.read_text()):
+                problems.append(f'baseline count no longer occurs: {row}')
+    return problems
+
+
+def measurements(root=ROOT):
+    """Current manifest and prose coverage counts, without treating citations as proof."""
+    from collections import Counter
+    architecture = json.loads((root / 'docs/architecture.json').read_text())
+    limits = json.loads((root / 'docs/limits.json').read_text())['limits']
+    items = [i for g in architecture['graphs'] for i in g['nodes'] + g['edges']]
+    checks = [r for i in items for r in i['checks']]
+    entries = json.loads((root / BASELINE_NAME).read_text())['entries'] if (root / BASELINE_NAME).exists() else []
+    return dict(graphs=len(architecture['graphs']), nodes=sum(len(g['nodes']) for g in architecture['graphs']),
+                edges=sum(len(g['edges']) for g in architecture['graphs']),
+                architecture_citations=sum(len(i['sources']) + len(i['checks']) for i in items),
+                architecture_checks=len(checks), architecture_forms=dict(Counter(r.get('form', 'missing') for r in checks)),
+                limits=len(limits), limit_checks=sum(len(i['checks']) for i in limits),
+                limit_kinds=dict(Counter(r['kind'] for i in limits for r in i['checks'])),
+                baseline=dict(Counter(row['invariant'] for row in entries)))
 
 
 class GeneratorContractTests(unittest.TestCase):
@@ -356,7 +480,7 @@ class GeneratorContractTests(unittest.TestCase):
             gen = module('prefix_' + name, ROOT / f'docs/generate_{name}.py')
             self.assertNotIn(name, owners)
             owners[name] = set(gen.SPAN_DOCUMENTS)
-        for path in (ROOT / 'docs').glob('*.md'):
+        for path in scanned_documents():
             # Fenced teaching examples are not authored spans.
             text = '\n'.join(module('prose', ROOT / 'docs/generate_limits.py').prose_lines(path.read_text()))
             text = re.sub(r"`+[^`]*`+", "", text)
@@ -364,6 +488,150 @@ class GeneratorContractTests(unittest.TestCase):
                 prefix = match[1].split('.', 1)[0]
                 self.assertIn(prefix, owners)
                 self.assertIn(path.relative_to(ROOT).as_posix(), owners[prefix])
+
+    def test_prose_links_resolve_anchors_and_symbol_links(self):
+        self.assertEqual(broken_links(scanned_documents()), [])
+        directory = tempfile.TemporaryDirectory(prefix='pw-prose-links-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / 'source.py').write_text('def defined():\n    pass\n')
+        (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\n')
+        path = root / 'doc.md'
+        path.write_text('[target](target.md#repeated-1) [`defined`](source.py) [file](source.py)')
+        self.assertEqual(broken_links([path]), [])
+        for content, expected in [
+            ('[target](target.md#absent)', 'missing heading'),
+            ('[`absent`](source.py)', 'missing symbol'),
+            ('[target][reference]\n\n[reference]: target.md', 'reference-style'),
+            ('[target](absent.md)', 'missing file'),
+            ('# Here\n[here](#absent)', 'missing heading'),
+        ]:
+            path.write_text(content)
+            self.assertIn(expected, '\n'.join(broken_links([path])))
+
+    def test_prose_baseline_is_consistent_and_growth_is_explicit(self):
+        self.assertEqual(baseline_problems(), [])
+        root = self.checkout()
+        baseline = json.loads((root / BASELINE_NAME).read_text())['entries']
+        path = root / 'docs/ARCHITECTURE.md'
+        for prose, kind in [('A new delay lasts 7 seconds.', 'literal'),
+                            ('The `load_manifest` ([generate_architecture.py](generate_architecture.py)) routine.', 'citation_pair')]:
+            original = path.read_text()
+            path.write_text(original + '\n' + prose + '\n')
+            self.assertTrue(baseline_problems(root, baseline))
+            added = prose_sites(root)
+            for row in prose_sites():
+                added.remove(row)
+            self.assertEqual(len(added), 1)
+            self.assertEqual(added[0]['kind'], kind)
+            self.assertEqual(baseline_problems(root, baseline + added), [])
+            path.write_text(original)
+        missing = dict(document='docs/ARCHITECTURE.md', invariant='G9', kind='literal', text='A vanished delay lasts 7 seconds.')
+        self.assertTrue(baseline_problems(root, baseline + [missing]))
+        counts = measurements(root)['baseline']
+        self.assertEqual(set(counts), {'G9', 'G11'})
+        print('prose baseline coverage:', json.dumps(counts, sort_keys=True))
+
+    def test_release_preflight_refuses_a_grown_baseline(self):
+        from contextlib import redirect_stderr, redirect_stdout
+        import io
+        from unittest.mock import patch
+        release = module('preflight_baseline', ROOT / 'tests/lib/release_preflight.py')
+        entry = dict(document='docs/example.md', invariant='G9', kind='literal', text='7 seconds')
+        rewritten = dict(entry, text='8 seconds')
+        for label, previous, candidate, refused in [
+            ('equal', [entry], [entry], False),
+            ('subset', [entry], [], False),
+            ('superset', [entry], [entry, rewritten], True),
+            ('rewritten', [entry], [rewritten], True),
+            ('predates', None, [entry], False),
+            ('version_reset', [entry], [entry], False),
+        ]:
+            with self.subTest(case=label):
+                directory = tempfile.TemporaryDirectory(prefix='pw-baseline-release-')
+                self.addCleanup(directory.cleanup)
+                root = Path(directory.name)
+                def git(*args):
+                    result = subprocess.run(['git', '-C', str(root), '-c', 'user.name=Generator Control',
+                        '-c', 'user.email=generator@example.invalid', '-c', 'commit.gpgsign=false',
+                        '-c', 'tag.gpgsign=false', *args], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    return result.stdout
+                def commit(rows, tag):
+                    path = root / BASELINE_NAME
+                    if rows is not None:
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text(json.dumps(dict(schema_version=1, entries=rows)))
+                    (root / 'version').write_text(tag)
+                    git('add', '.')
+                    git('commit', '-qm', tag)
+                    git('tag', '-a', tag, '-m', tag)
+                git('init', '-q')
+                previous_tag, candidate_tag = 'v1.0.0', 'v1.1.0'
+                if label == 'version_reset':
+                    commit([entry, rewritten], 'v9.0.0')
+                    previous_tag, candidate_tag = 'v2.3.0', 'v0.2.3'
+                commit(previous, previous_tag)
+                commit(candidate, candidate_tag)
+                stamp, problems = release.inspect(root, remote=str(root))
+                self.assertEqual(bool(problems), refused, problems)
+                self.assertEqual(stamp['prose_baseline']['previous_tag'], previous_tag)
+                if previous is None:
+                    self.assertEqual(stamp['prose_baseline']['status'], 'previous release predates baseline')
+                if refused:
+                    self.assertIn('baseline grew', problems[0])
+                    with patch.object(release, 'ROOT', root), redirect_stderr(io.StringIO()) as err, redirect_stdout(io.StringIO()):
+                        self.assertEqual(release.main(['--remote', str(root)]), 1)
+                        self.assertEqual(release.main(['--remote', str(root), '--report']), 0)
+                    self.assertIn('WARNING: prose baseline grew', err.getvalue())
+
+    def test_whole_file_staging_is_owned_and_idempotent(self):
+        root = self.checkout()
+        destination = root / 'staged-guide.md'
+        before = self.snapshot(root)
+        result = self.command(root, 'limits', '--stage-guide', str(destination))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(destination.read_bytes(), (root / 'docs/PolicyWitness.md').read_bytes())
+        self.assertEqual(changed_outside(before, self.snapshot(root), {}, {'staged-guide.md'}), [])
+        timestamp = destination.stat().st_mtime_ns
+        self.assertEqual(self.command(root, 'limits', '--stage-guide', str(destination)).returncode, 0)
+        self.assertEqual(destination.stat().st_mtime_ns, timestamp)
+
+    def test_architecture_render_failure_leaves_every_copy_untouched(self):
+        root = self.checkout()
+        path = root / 'docs/architecture.json'
+        data = json.loads(path.read_text())
+        data['graphs'][0]['nodes'][0]['label'] += ' changed'
+        path.write_text(json.dumps(data))
+        script = root / 'docs/generate_architecture.py'
+        script.write_text(script.read_text().replace('def render_svg(dot_text):',
+            'def render_svg(dot_text):\n    raise RuntimeError("controlled render refusal")'))
+        before = self.snapshot(root)
+        result = self.command(root, 'architecture')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('controlled render refusal', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+
+    def test_ownership_is_unique_and_unknown_prefixes_are_rejected(self):
+        owners, whole_files = {}, {}
+        common = module('ownership_checks', ROOT / 'docs/generator_common.py')
+        for name in GENERATORS:
+            regions, whole = ownership(ROOT, name)
+            for path in whole:
+                self.assertNotIn(path, whole_files)
+                whole_files[path] = name
+            for path, markers in regions.items():
+                text = (ROOT / path).read_text()
+                for start, end in markers:
+                    a = text.index(start)
+                    b = text.index(end, a) + len(end)
+                    for owner, left, right in owners.get(path, []):
+                        self.assertFalse(max(a, left) < min(b, right), (path, owner, name))
+                    owners.setdefault(path, []).append((name, a, b))
+        self.assertFalse(set(owners) & set(whole_files))
+        authored = common.authored_spans('<!-- span unknown.value -->1<!-- /span -->')
+        self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits'} for m in authored))
+
 
 
 if __name__ == '__main__':

@@ -494,7 +494,7 @@ partial evidence and attribution assertions.
 ## Comparison evidence coverage
 
 The comparison record's scenarios live in one fixture,
-[`tests/fixtures/comparison/matrix.json`](fixtures/comparison/matrix.json):
+[tests/fixtures/comparison/matrix.json](fixtures/comparison/matrix.json):
 every row names a live or constructed step, the expected six-field record, the raw fields
 it rests on and an independent control. `witness_contract/comparison_matrix`
 runs the live specimens through the CLI and checks every live row's record, raw

@@ -38,7 +38,7 @@ Current wire contracts: request schema 4, response schema 15, controller envelop
   diagnostics and log capture stay beside it. The same number versions the
   **envelope frame**: the outer object every controller-family binary prints
   (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
-  `data`), rendered by [`json_contract.rs`](../controller/src/json_contract.rs),
+  `data`), rendered by [json_contract.rs](../controller/src/json_contract.rs),
   which `sbpl-check` and `sandbox-log-observer` compile in by `#[path]`. The
   frame therefore also appears on the helper envelopes the controller nests
   unchanged: `data.policy_check.envelope` from `sbpl-check` and

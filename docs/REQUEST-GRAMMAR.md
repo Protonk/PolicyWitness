@@ -3,7 +3,7 @@
 This is a developer lesson. The [contract rules](CONTRACT.md#accepted-input-contract)
 define the promise; the [specimen reference](PolicyWitness.md#specimen-format)
 describes authoring. The examples here are executable inputs from
-[`tests/fixtures/request_contract/examples.json`](../tests/fixtures/request_contract/examples.json).
+[tests/fixtures/request_contract/examples.json](../tests/fixtures/request_contract/examples.json).
 Their expected refusals are independent data, checked by both the Swift unit
 tests and live CLI/direct-XPC controls.
 
@@ -116,12 +116,12 @@ shadowed aliases are still refused. The selector unit tests pin that rule.
 
 ## What the implementation promises
 
-[`PWRunnerAPI.swift`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) owns
+[PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) owns
 the request types. `CodingKeys` lists the allowed fields; explicit decoding
 rejects unknown names, missing required fields and wrong types. Parameter
 names remain open. No additional schema language participates in parsing.
 
-[`ProbeRunner.swift`](../runner/Sources/PWRunnerCore/ProbeRunner.swift) checks
+[ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift) checks
 meaning: applicable fields, supported attempt pairs and filter names, required
 filter values, capture prerequisites, absolute exec targets and distinct step
 IDs. The service and direct orchestrator both use this check before children.
@@ -142,7 +142,7 @@ an unsupported attempt uses `attempt.result_source: "synthetic"` with
 `missing_reason: "attempt_not_supported"`, even when handed a completed worker
 slot. This is not a public input acceptance rule; the defensive comparison
 case is covered in
-[`ComparisonEvidenceTests.swift`](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift).
+[ComparisonEvidenceTests.swift](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift).
 
 A successful decode establishes neither valid SBPL nor a successful sandbox
 application or operation. A passing request contract cannot certify the host's

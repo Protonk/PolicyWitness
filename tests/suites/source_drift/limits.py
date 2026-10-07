@@ -18,18 +18,7 @@ generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
 
-def broken_links(paths):
-    broken = []
-    for path in paths:
-        # Local Markdown file links, including generated source/test references.
-        # Ignore anchors and URL schemes; no network requests are made.
-        for target in re.findall(r'\]\(([^\s)]+)\)', path.read_text()):
-            if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
-                continue
-            target = target.split('#', 1)[0]
-            if target and not (path.parent / target).exists():
-                broken.append(f'{path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}: {target}')
-    return broken
+from generators import broken_links, scanned_documents
 
 
 class LimitsDocumentationTests(unittest.TestCase):
@@ -391,8 +380,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertTrue(rendered.endswith('\nhandwritten end\n'))
 
     def test_links_in_moved_and_routing_documents(self):
-        paths = list((ROOT / 'docs').glob('*.md')) + [ROOT / name for name in
-            ['README.md', 'AGENTS.md', 'runner/AGENTS.md', 'tests/README.md']]
+        paths = scanned_documents(ROOT)
         self.assertEqual(broken_links(paths), [])
         with tempfile.TemporaryDirectory(prefix='pw-link-') as directory:
             path = Path(directory) / 'doc.md'

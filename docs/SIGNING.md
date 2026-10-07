@@ -64,6 +64,10 @@ stamps from the nearest `v*` tag, so a build made before tagging is stamped with
 the previous version. `tests/lib/release_preflight.py` refuses a release from an
 untagged or dirty tree, from a lightweight tag, when the remote already holds a
 different tag of that name, or when `dist/archive/<tag>/` already exists.
+It also refuses additions or rewritten sites in the committed
+[prose baseline](../tests/fixtures/docs/prose_baseline.json) compared with the
+nearest preceding annotated release tag. A preceding release without a baseline
+is reported as such; `--report` turns a growth refusal into a warning.
 
 ```sh
 git tag -a v0.2.4 -m "PolicyWitness 0.2.4"
