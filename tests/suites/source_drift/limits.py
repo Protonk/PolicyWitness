@@ -35,7 +35,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         paths = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
                  'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh',
-                 generator.CONTRACT_NAME, generator.MATRIX_NAME}
+                 generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS}
         for row in self.manifest['limits']:
             paths.update(ref['path'] for key in ['sources', 'checks'] for ref in row[key])
         for name in paths:

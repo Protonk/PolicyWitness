@@ -5,11 +5,8 @@ This is a conservative source identity, not a compatibility classification or
 proof of correctness. Generated regions are excluded to avoid self-reference.
 The build regenerates it before compiling either side; --check is read-only.
 
-Generator invariants (tests/suites/source_drift/README.md): G1 restricts writes
-to the uniquely marked regions and validates all pairs before writing. G2
-requires idempotence. G3 requires a read-only freshness check before signing.
-G6 excludes this generator's regions from its source digest, avoiding a
-self-reference. No protocol source bytes outside those regions are changed.
+Generator invariants: this generator holds G1, G2, G3 and G6, as stated under Generator
+contracts in tests/suites/source_drift/README.md.
 """
 from __future__ import annotations
 

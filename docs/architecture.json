@@ -275,7 +275,7 @@
           "id": "evidence_manifest", "label": "evidence manifest (in the app)", "kind": "record",
           "facts": {"Owner": "the build", "Form": "hashes and entitlements of every shipped binary; its own schema_version (EVIDENCE_SCHEMA_VERSION)"},
           "sources": [{"path": "tests/build-evidence.py", "symbol": "manifest.json"}, {"path": "controller/src/evidence.rs", "symbol": "EVIDENCE_SCHEMA_VERSION"}],
-          "checks": [{"path": "tests/suites/preflight/run.sh", "symbol": "codesign.preflight", "form": "test"}, {"path": "tests/suites/witness_contract/check_dossier.py", "symbol": "main", "form": "test"}]
+          "checks": [{"path": "tests/suites/preflight/run.sh", "symbol": "codesign.preflight", "form": "test"}, {"path": "tests/suites/witness_contract/dossier_witness.sh", "symbol": "dossier_witness", "form": "test"}]
         },
         {
           "id": "runner_registry", "label": "runner registry (BYOXPC installs)", "kind": "record",
@@ -354,7 +354,7 @@
           "label": "dossier compares selected binaries with manifest baselines; lookup by exact path and kind",
           "short": "baselines by path and kind",
           "sources": [{"path": "controller/src/evidence.rs", "symbol": "unique_typed_entry"}, {"path": "controller/src/dossier.rs", "symbol": "pub struct Binaries"}],
-          "checks": [{"path": "tests/suites/preflight/run.sh", "symbol": "codesign.preflight", "form": "test"}, {"path": "tests/suites/witness_contract/check_dossier.py", "symbol": "main", "form": "test"}]
+          "checks": [{"path": "tests/suites/preflight/run.sh", "symbol": "codesign.preflight", "form": "test"}, {"path": "tests/suites/witness_contract/dossier_witness.sh", "symbol": "dossier_witness", "form": "test"}]
         },
         {
           "id": "B11", "from": "runner_registry", "to": "held_request", "kind": "guard",
@@ -380,11 +380,11 @@
       "node_facts": ["Owns", "Carries", "Guards"],
       "edge_facts": [],
       "clusters": [
-        {"id": "manifests", "label": "hand-owned manifests", "nodes": ["contract_json", "limits_json", "matrix_json", "architecture_json", "catalog_json"]},
-        {"id": "generators", "label": "generators", "nodes": ["gen_contract", "gen_limits", "gen_identity", "gen_architecture"]},
+        {"id": "manifests", "label": "hand-owned manifests", "nodes": ["contract_json", "limits_json", "matrix_json", "architecture_json", "catalog_json", "prose_baseline"]},
+        {"id": "generators", "label": "generators", "nodes": ["gen_contract", "gen_limits", "gen_identity", "gen_architecture", "gen_common"]},
         {"id": "docs", "label": "documents", "nodes": ["contract_md", "limits_md", "guide", "questions_md", "failure_contract", "architecture_md", "agents_md", "controller_readme", "runner_readme", "tests_readme", "coverage_md"]},
         {"id": "sources", "label": "sources with generated or checked regions", "nodes": ["api_swift", "json_contract_rs", "contract_py", "abi_header", "cworker_swift", "cli_rs", "identity_sources", "suites"]},
-        {"id": "checks", "label": "checks", "nodes": ["drift_check", "drift_limits", "drift_contract", "drift_architecture", "build"]}
+        {"id": "checks", "label": "checks", "nodes": ["drift_check", "drift_limits", "drift_contract", "drift_architecture", "drift_generators", "preflight", "build"]}
       ],
       "nodes": [
         {
@@ -425,7 +425,7 @@
         },
         {
           "id": "gen_limits", "label": "generate_limits.py", "kind": "generator",
-          "facts": {"Owns": "the limits tables, the scenario matrix and the guide's copied regions"},
+          "facts": {"Owns": "the limits tables, the scenario matrix, the guide's copied regions and the limits spans"},
           "sources": [{"path": "docs/generate_limits.py", "symbol": "CONTRACT_NAME"}],
           "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "test_document_is_current", "form": "test"}]
         },
@@ -437,7 +437,7 @@
         },
         {
           "id": "gen_architecture", "label": "generate_architecture.py", "kind": "generator",
-          "facts": {"Owns": "these figures, their dot and SVG files and the tables beside them"},
+          "facts": {"Owns": "these figures, their dot and SVG files, the tables beside them and the architecture spans"},
           "sources": [{"path": "docs/generate_architecture.py", "symbol": "MANIFEST_NAME"}],
           "checks": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "test_document_and_figures_are_current", "form": "test"}]
         },
@@ -557,9 +557,9 @@
         },
         {
           "id": "drift_check", "label": "source_drift check.py", "kind": "check",
-          "facts": {"Guards": "copies and vocabularies that are not generated"},
+          "facts": {"Guards": "copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas"},
           "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement"}],
-          "checks": [{"path": "tests/suites/source_drift/check_planner.py", "symbol": "main", "form": "test"}]
+          "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_readmes_present", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_index_vs_disk", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_baseline_in_catalog_defaults", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_runner_outcome_suites_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_normalized_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_kind_enum_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_planner", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_test_overrides_table_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_cli_surface_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_known_gap_index", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_evidence_channel_paths", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_core_ideas_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]
         },
         {
           "id": "drift_limits", "label": "source_drift limits.py", "kind": "check",
@@ -578,6 +578,30 @@
           "facts": {"Guards": "this manifest against its dot, SVG and document copies"},
           "sources": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "ArchitectureDocumentationTests"}],
           "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "architecture_documentation", "form": "test"}]
+        },
+        {
+          "id": "gen_common", "label": "generator_common.py", "kind": "generator",
+          "facts": {"Owns": "the citation forms, the duration pattern, the limits formatter and the span rules the two document generators share"},
+          "sources": [{"path": "docs/generator_common.py", "symbol": "FORM_RULES"}, {"path": "docs/generator_common.py", "symbol": "render_spans"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_check_citations_carry_a_form_and_tests_are_defined", "form": "test"}, {"path": "tests/suites/source_drift/generators.py", "symbol": "test_readme_form_table_is_a_copy_of_the_shared_rules", "form": "test"}]
+        },
+        {
+          "id": "prose_baseline", "label": "tests/fixtures/docs/prose_baseline.json", "kind": "manifest",
+          "facts": {"Owns": "every prose site that still states a value, a count or a citation in an unverified form"},
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "BASELINE_NAME"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_prose_baseline_is_consistent_and_growth_is_explicit", "form": "test"}]
+        },
+        {
+          "id": "drift_generators", "label": "source_drift generators.py", "kind": "check",
+          "facts": {"Guards": "the uniform generator invariants, the baseline's consistency, the drift node's rule list and the form table's copy"},
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "GeneratorContractTests"}],
+          "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "generator_contract", "form": "test"}]
+        },
+        {
+          "id": "preflight", "label": "release_preflight.py", "kind": "check",
+          "facts": {"Guards": "the baseline against the previous release tag"},
+          "sources": [{"path": "tests/lib/release_preflight.py", "symbol": "inspect_baseline"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_release_preflight_refuses_a_grown_baseline", "form": "test"}]
         },
         {
           "id": "build", "label": "build.sh", "kind": "check",
@@ -866,6 +890,83 @@
           "short": "--check",
           "sources": [{"path": "build.sh", "symbol": "generate_architecture.py"}],
           "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_build_checks_every_generator_before_signing", "form": "test"}]
+        },
+        {
+          "id": "D41", "from": "gen_common", "to": "gen_limits", "kind": "reads",
+          "label": "shared citation, formatter and span rules",
+          "short": "shared rules",
+          "sources": [{"path": "docs/generate_limits.py", "symbol": "from generator_common import"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_limits_check_forms_and_value_owners", "form": "test"}]
+        },
+        {
+          "id": "D42", "from": "gen_common", "to": "gen_architecture", "kind": "reads",
+          "label": "shared citation, placeholder and span rules",
+          "short": "shared rules",
+          "sources": [{"path": "docs/generate_architecture.py", "symbol": "from generator_common import"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_check_citations_carry_a_form_and_tests_are_defined", "form": "test"}]
+        },
+        {
+          "id": "D43", "from": "limits_json", "to": "gen_architecture", "kind": "reads",
+          "label": "limit placeholders in facts, labels and notes, and the Limits column",
+          "short": "placeholders",
+          "sources": [{"path": "docs/generate_architecture.py", "symbol": "resolve_graph"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_durations_and_sizes_render_from_limits", "form": "test"}]
+        },
+        {
+          "id": "D44", "from": "drift_generators", "to": "gen_contract", "kind": "checks",
+          "label": "nothing changes outside its regions; --check before signing",
+          "short": "ownership",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_regeneration_changes_nothing_outside_regions"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_regeneration_changes_nothing_outside_regions", "form": "test"}]
+        },
+        {
+          "id": "D45", "from": "drift_generators", "to": "gen_identity", "kind": "checks",
+          "label": "nothing changes outside its regions; --check before signing",
+          "short": "ownership",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_regeneration_changes_nothing_outside_regions"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_regeneration_changes_nothing_outside_regions", "form": "test"}]
+        },
+        {
+          "id": "D46", "from": "drift_generators", "to": "gen_limits", "kind": "checks",
+          "label": "ownership, spans, forms and value owners, and whole-file staging",
+          "short": "ownership",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_whole_file_staging_is_owned_and_idempotent"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_spans_are_authored_outside_regions_and_copied_as_bytes", "form": "test"}]
+        },
+        {
+          "id": "D47", "from": "drift_generators", "to": "gen_architecture", "kind": "checks",
+          "label": "ownership, spans, placeholders, declared columns, captions and render refusal",
+          "short": "ownership",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_architecture_render_failure_leaves_every_copy_untouched"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_captions_state_the_verified_guarantee", "form": "test"}]
+        },
+        {
+          "id": "D48", "from": "drift_generators", "to": "prose_baseline", "kind": "checks",
+          "label": "the listed sites equal the scanned sites; growth only by an explicit entry",
+          "short": "consistency",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "baseline_problems"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_prose_baseline_is_consistent_and_growth_is_explicit", "form": "test"}]
+        },
+        {
+          "id": "D49", "from": "preflight", "to": "prose_baseline", "kind": "checks",
+          "label": "a release's baseline is a subset of the previous release's",
+          "short": "subset",
+          "sources": [{"path": "tests/lib/release_preflight.py", "symbol": "inspect_baseline"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_release_preflight_refuses_a_grown_baseline", "form": "test"}]
+        },
+        {
+          "id": "D50", "from": "drift_check", "to": "architecture_md", "kind": "checks",
+          "label": "Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; the principles list equals the core ideas in AGENTS.md",
+          "short": "prose rules",
+          "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_known_gap_index"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_evidence_channel_paths"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_core_ideas_agreement"}],
+          "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]
+        },
+        {
+          "id": "D51", "from": "drift_generators", "to": "architecture_json", "kind": "checks",
+          "label": "the drift node's rule citations equal the rules check.py runs",
+          "short": "rule list",
+          "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_document_graph_cites_every_drift_rule"}],
+          "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_document_graph_cites_every_drift_rule", "form": "test"}]
         }
       ]
     },
@@ -918,7 +1019,7 @@
           "id": "plist", "label": "LaunchAgent or LaunchDaemon plist", "kind": "record",
           "facts": {"Contents": "MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env, ThrottleInterval of {limit:byoxpc_throttle_interval}", "Location": "the user's LaunchAgents or /Library/LaunchDaemons"},
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "build_launchd_plist"}, {"path": "controller/src/runner_manager.rs", "symbol": "MachServices"}, {"path": "controller/src/runner_manager.rs", "symbol": "EnvironmentVariables"}, {"path": "controller/src/runner_manager.rs", "symbol": "launchd_plist_path"}, {"path": "controller/src/runner_manager.rs", "symbol": "BYOXPC_THROTTLE_INTERVAL_SECONDS"}],
-          "checks": [{"path": "tests/suites/shell_helpers/check_byoxpc_setup.py", "symbol": "main", "form": "test"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "byoxpc_plist_sets_the_respawn_throttle", "form": "test"}]
+          "checks": [{"path": "tests/suites/shell_helpers/run.sh", "symbol": "byoxpc_setup", "form": "test"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_install", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "byoxpc_plist_sets_the_respawn_throttle", "form": "test"}]
         },
         {
           "id": "registry", "label": "runner registry", "kind": "record",
@@ -1054,7 +1155,7 @@
           "label": "build_launchd_plist and write_launchd_plist",
           "short": "plist",
           "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "build_launchd_plist"}, {"path": "controller/src/runner_manager.rs", "symbol": "write_launchd_plist"}],
-          "checks": [{"path": "tests/suites/shell_helpers/check_byoxpc_setup.py", "symbol": "main", "form": "test"}]
+          "checks": [{"path": "tests/suites/shell_helpers/run.sh", "symbol": "byoxpc_setup", "form": "test"}]
         },
         {
           "id": "X9", "from": "plist", "to": "launchd", "kind": "launch",

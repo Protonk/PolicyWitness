@@ -14,18 +14,8 @@ embed plus the node and edge tables into the marked regions of the document.
 `--check` needs no Graphviz: an SVG is checked by its stamp, which names the
 hash of the dot text it was rendered from. Rendering needs `dot` on PATH.
 
-Generator invariants (tests/suites/source_drift/README.md): G1 permits writes
-only to uniquely marked regions, authored scalar spans and whole-file figures;
-validation and rendering finish before publication. G2 requires idempotence.
-G3 requires a read-only freshness check before signing. G4 resolves citations;
-G5 checks each citation's form and definition, requiring a test or rule per
-item. G6 refuses citations into this manifest or its outputs. G7 uses declared,
-ordered fact keys and refuses undeclared or unused keys. G8 rejects literal
-durations/sizes and resolves placeholders with the limits loader and formatter,
-including dot tooltips. G9 renders named scalar spans only outside regions.
-G10 captions state presence and definition as the guarantee, never assertion
-coverage. G11 is held by the shared prose-link drift rule; G9/G11's remaining
-unverified prose sites are recorded in the release baseline.
+Generator invariants: this generator holds G1 to G10 directly and G11 through the shared prose-link rule, as stated under Generator
+contracts in tests/suites/source_drift/README.md.
 """
 import argparse
 import hashlib

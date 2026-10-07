@@ -969,6 +969,101 @@ def check_cli_surface_agreement() -> list[str]:
     return problems
 
 
+ARCHITECTURE_DOC = REPO_ROOT / "docs/ARCHITECTURE.md"
+SHAPE_GOLDENS = {"reply": REPO_ROOT / "tests/fixtures/contract/response_shape.json",
+                 "envelope": REPO_ROOT / "tests/fixtures/contract/envelope_shape.json"}
+
+
+def architecture_prose() -> str:
+    """The handwritten text of the architecture document: no generated regions, no fenced blocks."""
+    text = ARCHITECTURE_DOC.read_text()
+    text = re.sub(r"<!-- BEGIN GENERATED ARCHITECTURE GRAPH \S+ -->.*?<!-- END GENERATED ARCHITECTURE GRAPH \S+ -->",
+                  "", text, flags=re.S)
+    kept, fence = [], None
+    for line in text.splitlines():
+        match = re.match(r"^\s*(`{3,}|~{3,})", line)
+        if match:
+            delimiter = match.group(1)
+            if fence is None:
+                fence = delimiter
+            elif delimiter[0] == fence[0] and len(delimiter) >= len(fence):
+                fence = None
+        elif fence is None:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+def heading_anchor(heading: str) -> str:
+    return re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
+
+
+def section(prose: str, heading: str) -> str | None:
+    match = re.search(r"^## " + re.escape(heading) + r"\s*$(.*?)(?=^## |\Z)", prose, re.M | re.S)
+    return match.group(1) if match else None
+
+
+def check_known_gap_index() -> list[str]:
+    """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else."""
+    prose = architecture_prose()
+    headings = [(m.start(), m.group(1).strip()) for m in re.finditer(r"^## (.+?)\s*$", prose, re.M)]
+    if not headings or headings[-1][1] != "Known gaps":
+        return ["  known gaps: docs/ARCHITECTURE.md must end with a '## Known gaps' section"]
+    index_start = headings[-1][0]
+    gaps = []
+    for paragraph in re.finditer(r"(?:(?<=\n\n)|^)Known gap[^\n]*(?:\n(?!\n)[^\n]*)*", prose, re.M):
+        owner = [h for h in headings if h[0] < paragraph.start()]
+        if paragraph.start() >= index_start or not owner:
+            return [f"  known gaps: a Known gap paragraph must sit under the section whose promise it limits: {paragraph.group(0)[:60]!r}"]
+        gaps.append(heading_anchor(owner[-1][1]))
+    bullets = re.findall(r"^- (.*)$", prose[index_start:], re.M)
+    linked = []
+    for bullet in bullets:
+        match = re.match(r"\[[^\]]+\]\(#([^)]+)\)", bullet)
+        if not match:
+            return [f"  known gaps: an index bullet must open with a link to its section: {bullet[:60]!r}"]
+        linked.append(match.group(1))
+    if linked != gaps:
+        return [f"  known gaps: the index lists {linked} but the Known gap paragraphs sit under {gaps}"]
+    return []
+
+
+def check_evidence_channel_paths() -> list[str]:
+    """Every landing path in the evidence-channels table resolves in a shape golden."""
+    prose = architecture_prose()
+    body = section(prose, "Evidence channels and ownership")
+    if body is None:
+        return ["  evidence channels: section missing from docs/ARCHITECTURE.md"]
+    rows = [line for line in body.splitlines()
+            if line.startswith("| ") and not line.startswith(("| Channel", "| ---"))]
+    if not rows:
+        return ["  evidence channels: table missing from docs/ARCHITECTURE.md"]
+    shapes = {name: set(json.loads(path.read_text())["shape"]) for name, path in SHAPE_GOLDENS.items()}
+    problems: list[str] = []
+    for row in rows:
+        cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            problems.append(f"  evidence channels: row has no landing column: {row[:60]!r}")
+            continue
+        for path in re.findall(r"`([^`]+)`", cells[3]):
+            golden = "envelope" if path.startswith("data.") else "reply"
+            if f"{golden}.{path}" not in shapes[golden]:
+                problems.append(f"  evidence channels: `{path}` is not a key of the {golden} shape golden")
+    return problems
+
+
+def check_core_ideas_agreement() -> list[str]:
+    """The principles list in the architecture document names the core ideas of AGENTS.md, in order."""
+    ideas = section((REPO_ROOT / "AGENTS.md").read_text(), "Core ideas")
+    principles = section(architecture_prose(), "Principles as enforced constraints")
+    if ideas is None or principles is None:
+        return ["  core ideas: AGENTS.md 'Core ideas' or docs/ARCHITECTURE.md 'Principles as enforced constraints' is missing"]
+    expected = re.findall(r"^- \*\*(.+?)\*\*", ideas, re.M)
+    actual = [lead.rstrip(".") for lead in re.findall(r"^- \*\*(.+?)\*\*", principles, re.M)]
+    if not expected or expected != actual:
+        return [f"  core ideas: AGENTS.md lists {expected} but the architecture principles are {actual}"]
+    return []
+
+
 def main() -> int:
     # SwiftPM auto-discovers the same files off disk (convention layout, no
     # sources: arrays to parse), so the load-bearing comparison is build.sh
@@ -1000,6 +1095,9 @@ def main() -> int:
     problems.extend(check_cli_surface_agreement())
     problems.extend(host_invariance_controls())
     problems.extend(check_host_invariance())
+    problems.extend(check_known_gap_index())
+    problems.extend(check_evidence_channel_paths())
+    problems.extend(check_core_ideas_agreement())
 
     if problems:
         fail("source/test-registry drift detected:")

@@ -636,6 +636,30 @@ class GeneratorContractTests(unittest.TestCase):
         self.assertIn('controlled render refusal', result.stderr)
         self.assertEqual(self.snapshot(root), before)
 
+    def test_readme_form_table_is_a_copy_of_the_shared_rules(self):
+        common = module('form_rules', ROOT / 'docs/generator_common.py')
+        readme = (ROOT / 'tests/suites/source_drift/README.md').read_text()
+        self.assertIn('\n'.join(common.form_table()), readme)
+        for form, _, _ in common.FORM_RULES:
+            self.assertEqual(readme.count(f'\n| `{form}` |'), 1, form)
+            self.assertTrue(common.allowed_file(form, 'tests/suites/source_drift/check.py') in (True, False))
+        with self.assertRaises(ValueError):
+            common.allowed_file('maybe', 'tests/suites/source_drift/check.py')
+
+    def test_document_graph_cites_every_drift_rule(self):
+        import ast
+        tree = ast.parse((ROOT / 'tests/suites/source_drift/check.py').read_text())
+        main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main')
+        rules = {n.func.id for n in ast.walk(main)
+                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id.startswith('check_')}
+        self.assertTrue(rules)
+        data = json.loads((ROOT / 'docs/architecture.json').read_text())
+        graph = next(g for g in data['graphs'] if g['id'] == 'documents')
+        node = next(n for n in graph['nodes'] if n['id'] == 'drift_check')
+        cited = {r['symbol'] for r in node['checks']
+                 if r['form'] == 'rule' and r['path'] == 'tests/suites/source_drift/check.py'}
+        self.assertEqual(cited, rules)
+
     def test_ownership_is_unique_and_unknown_prefixes_are_rejected(self):
         owners, whole_files = {}, {}
         common = module('ownership_checks', ROOT / 'docs/generator_common.py')

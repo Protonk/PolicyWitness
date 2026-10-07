@@ -23,6 +23,36 @@ def catalog_case(root, path, symbol):
     return any(case['id'] == symbol for case in data['suites'].get(suite, {}).get('cases', []))
 
 
+# The allowed files and the definition convention per check form. The README's
+# form table is a checked copy of this table.
+FORM_RULES = (
+    ('test', '`tests/suites/**`, `runner/Tests/**`, or Rust sources with `#[test]`',
+     'Python function; Rust function within three lines after `#[test]`; Swift function or run '
+     "label ending in a colon; shell `test_selected` or `PW_TEST_ID`; or a case ID in the cited file's "
+     'owning suite in `tests/catalog.json`.'),
+    ('rule', '`tests/suites/source_drift/*.py`', 'Python function with a call from `main()`.'),
+    ('control', '`tests/fixtures/**`, `tests/lib/**`, `build.sh`, or C sources under `tests/`',
+     'Symbol presence; Python functions and C function-line definitions are required in those languages.'),
+)
+
+
+def allowed_file(form, path):
+    relative = Path(path)
+    if form == 'test':
+        return path.startswith(('tests/suites/', 'runner/Tests/')) or relative.suffix == '.rs'
+    if form == 'rule':
+        return relative.parent.as_posix() == 'tests/suites/source_drift' and relative.suffix == '.py'
+    if form == 'control':
+        return (path.startswith(('tests/fixtures/', 'tests/lib/')) or path == 'build.sh'
+                or (path.startswith('tests/') and relative.suffix == '.c'))
+    raise ValueError(f'unknown check form {form!r}')
+
+
+def form_table():
+    rows = ['| Form | Allowed files | Definition convention |', '| --- | --- | --- |']
+    return rows + [f'| `{form}` | {files} | {definition} |' for form, files, definition in FORM_RULES]
+
+
 def citation(ref, root, *, check=False, forbidden=()):
     path, symbol = ref['path'], ref['symbol']
     if not isinstance(path, str) or not isinstance(symbol, str) or not symbol:
@@ -40,8 +70,8 @@ def citation(ref, root, *, check=False, forbidden=()):
     form = ref.get('form')
     escaped = re.escape(symbol)
     defined = False
+    allowed = allowed_file(form, path)
     if form == 'test':
-        allowed = path.startswith(('tests/suites/', 'runner/Tests/')) or relative.suffix == '.rs'
         if allowed:
             if relative.suffix == '.py':
                 defined = symbol in python_definitions(text)
@@ -53,15 +83,13 @@ def citation(ref, root, *, check=False, forbidden=()):
                 defined = bool(re.search(r'\btest_selected\s+["\']?' + escaped + r'(?:["\']|\s|;|$)|\bPW_TEST_ID="' + escaped + '"', text))
             defined = defined or catalog_case(root, path, symbol)
     elif form == 'rule':
-        if relative.parent.as_posix() == 'tests/suites/source_drift' and relative.suffix == '.py':
+        if allowed:
             tree = ast.parse(text)
             main = next((n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main'), None)
             defined = symbol in python_definitions(text) and main is not None and any(
                 isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == symbol
                 for n in ast.walk(main))
     elif form == 'control':
-        allowed = path.startswith(('tests/fixtures/', 'tests/lib/')) or path == 'build.sh' or (
-            path.startswith('tests/') and relative.suffix == '.c')
         if allowed:
             if relative.suffix == '.py':
                 defined = symbol in python_definitions(text)
@@ -69,8 +97,6 @@ def citation(ref, root, *, check=False, forbidden=()):
                 defined = bool(re.search(r'^\s*(?:(?:static|inline|const|unsigned|signed|int|void|bool|size_t|char|long)\s+)*' + escaped + r'\s*\(', text, re.M))
             else:
                 defined = True
-    else:
-        raise ValueError(f'unknown check form {form!r}')
     if not defined:
         raise ValueError(f'{form} citation is not defined in an allowed file: {path}: {symbol}')
 

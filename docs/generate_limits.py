@@ -11,17 +11,8 @@ implementation values with the limits manifest independently.
 --check verifies every document without writing. --stage-guide copies the
 checked guide for distribution without regenerating stale documentation.
 
-Generator invariants (tests/suites/source_drift/README.md): G1 restricts writes
-to owned regions, authored scalar spans, and the staged whole-file guide;
-malformed pairs stop before any write. G2 requires idempotence, including
-staging; G3 requires a read-only freshness check before signing. G4 resolves
-citations. G5 requires defined test/rule/control forms, a test or rule per row,
-and a test in the value-owner set; kind remains an independent dimension.
-G6 refuses citations into this manifest or its output files. G8 supplies the
-shared singular-aware limits formatter. G9 renders authored spans outside
-regions before copying shared prose into the guide. G10 makes no assertion
-coverage claim from a citation. G11 is held by the shared prose-link drift rule;
-G9/G11's remaining unverified prose sites are recorded in the release baseline.
+Generator invariants: this generator holds G1 to G6 and G8 to G10 directly and G11 through the shared prose-link rule, as stated under Generator
+contracts in tests/suites/source_drift/README.md.
 """
 from __future__ import annotations
 
@@ -54,7 +45,7 @@ RULES_START = "<!-- BEGIN SHARED READING RULES -->"
 RULES_END = "<!-- END SHARED READING RULES -->"
 GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
 GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
-SPAN_DOCUMENTS = ("docs/LIMITS.md",)
+SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md")
 GUIDE_NAME = "PolicyWitness.md"
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
@@ -360,24 +351,33 @@ def main():
         before = path.read_text()
         after = update_document(before, limits)
         contract_before = contract_path.read_text()
-        contract_after = update_contract(contract_before, rows)
+        contract_after = update_contract(render_spans(contract_before, "limits", span_values(limits)), rows)
+        # Documents the limits generator touches only through authored spans.
+        span_only = {}
+        for name in SPAN_DOCUMENTS:
+            if name in ("docs/LIMITS.md", "docs/PolicyWitness.md", CONTRACT_NAME):
+                continue
+            text = (ROOT / name).read_text()
+            span_only[name] = (text, render_spans(text, "limits", span_values(limits)))
         # Derive the copies from the freshly rendered sources and the FAQ, even
         # when the on-disk tables were stale. Validate every input before any
         # writes. QUESTIONS.md is an input only; it is never rewritten.
         questions = questions_path.read_text()
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
-        guide_after = update_guide_rules(
-            update_guide_questions(update_guide(guide_before, after), questions), contract_after)
+        guide_after = update_guide_rules(update_guide_questions(
+            update_guide(render_spans(guide_before, "limits", span_values(limits)), after), questions), contract_after)
         validate_guide(guide_after, limits)
         question_count = len(re.findall(r"^### ", shared_questions(questions), re.MULTILINE))
         if args.check or args.stage_guide is not None:
             stale = [name for name, old, new in [
                 ("LIMITS.md", before, after), (CONTRACT_NAME, contract_before, contract_after),
                 ("PolicyWitness.md", guide_before, guide_after)]
+                + [(name, old, new) for name, (old, new) in span_only.items()]
                 if old != new]
             if stale:
-                detail = "; ".join(span_problems(before, "limits", span_values(limits)))
+                detail = "; ".join(problem for text in [before, contract_before, guide_before, *(old for old, _ in span_only.values())]
+                                   for problem in span_problems(text, "limits", span_values(limits)))
                 raise ValueError(f"stale {', '.join(stale)}; " + (f"{detail}; " if detail else "")
                                  + "run python3 docs/generate_limits.py")
             if args.stage_guide is not None:
@@ -390,6 +390,9 @@ def main():
                 contract_path.write_text(contract_after)
             if guide_before != guide_after:
                 guide_path.write_text(guide_after)
+            for name, (old, new) in span_only.items():
+                if old != new:
+                    (ROOT / name).write_text(new)
         print(f"ok: {len(limits)} limits, {question_count} questions, {len(rows)} matrix rows; " +
               (f"guide staged at {args.stage_guide}" if args.stage_guide is not None else
                "documents current" if args.check else "LIMITS.md and the matrix table generated; guide copies updated"))

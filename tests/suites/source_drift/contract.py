@@ -24,7 +24,7 @@ identity_spec.loader.exec_module(identity_generator)
 
 # build.sh checks the limits documents first; a build checkout needs their inputs.
 LIMITS_FILES = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
-                'docs/QUESTIONS.md', 'build.sh', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
+                'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'build.sh', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
                 'tests/fixtures/comparison/matrix.json'}
 
 

@@ -9,6 +9,7 @@ digraph documents {
         matrix_json;
         architecture_json;
         catalog_json;
+        prose_baseline;
     }
     subgraph cluster_generators {
         label="generators"; style=dashed; color="#888888"; fontsize=10;
@@ -16,6 +17,7 @@ digraph documents {
         gen_limits;
         gen_identity;
         gen_architecture;
+        gen_common;
     }
     subgraph cluster_docs {
         label="documents"; style=dashed; color="#888888"; fontsize=10;
@@ -48,6 +50,8 @@ digraph documents {
         drift_limits;
         drift_contract;
         drift_architecture;
+        drift_generators;
+        preflight;
         build;
     }
     contract_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/contract.json\ncontract_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_json: docs/contract.json | the request, response and envelope version numbers "];
@@ -56,9 +60,9 @@ digraph documents {
     architecture_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/architecture.json\narchitecture_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="architecture_json: docs/architecture.json | the nodes and edges of these figures, each with its citations "];
     catalog_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/catalog.json\ncatalog_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="catalog_json: tests/catalog.json | the registered suites and cases "];
     gen_contract [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_contract.py\ngen_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_contract: generate_contract.py | the generated contract-version regions "];
-    gen_limits [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_limits.py\ngen_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_limits: generate_limits.py | the limits tables, the scenario matrix and the guide's copied regions "];
+    gen_limits [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_limits.py\ngen_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_limits: generate_limits.py | the limits tables, the scenario matrix, the guide's copied regions and the limits spans "];
     gen_identity [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_worker_identity.py\ngen_identity", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_identity: generate_worker_identity.py | the host/worker source identity regions "];
-    gen_architecture [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_architecture.py\ngen_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_architecture: generate_architecture.py | these figures, their dot and SVG files and the tables beside them "];
+    gen_architecture [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_architecture.py\ngen_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_architecture: generate_architecture.py | these figures, their dot and SVG files, the tables beside them and the architecture spans "];
     contract_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/CONTRACT.md\ncontract_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_md: docs/CONTRACT.md | the version sentence and table "];
     limits_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/LIMITS.md\nlimits_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="limits_md: docs/LIMITS.md | the limits tables and coverage "];
     guide [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/PolicyWitness.md\nguide", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="guide: docs/PolicyWitness.md | copied limits, questions and reading rules; the version sentence; the only document that ships "];
@@ -78,10 +82,14 @@ digraph documents {
     cli_rs [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="cli.rs\ncli_rs", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cli_rs: cli.rs | the usage text the controller README mirrors "];
     identity_sources [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="worker and runner sources\nidentity_sources", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="identity_sources: worker and runner sources | every byte the identity digest covers "];
     suites [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/suites/<name>/\nsuites", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="suites: tests/suites/<name>/ | one run.sh and README per suite "];
-    drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py | copies and vocabularies that are not generated "];
+    drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py | copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas "];
     drift_limits [shape="octagon", style="dashed", color="#8e24aa", label="source_drift limits.py\ndrift_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_limits: source_drift limits.py | the limits generator's copies and every local documentation link "];
     drift_contract [shape="octagon", style="dashed", color="#8e24aa", label="source_drift contract.py\ndrift_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_contract: source_drift contract.py | the contract and identity generators' copies "];
     drift_architecture [shape="octagon", style="dashed", color="#8e24aa", label="source_drift architecture.py\ndrift_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_architecture: source_drift architecture.py | this manifest against its dot, SVG and document copies "];
+    gen_common [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generator_common.py\ngen_common", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_common: generator_common.py | the citation forms, the duration pattern, the limits formatter and the span rules the two document generators share "];
+    prose_baseline [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/fixtures/docs/prose_baseline.json\nprose_baseline", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="prose_baseline: tests/fixtures/docs/prose_baseline.json | every prose site that still states a value, a count or a citation in an unverified form "];
+    drift_generators [shape="octagon", style="dashed", color="#8e24aa", label="source_drift generators.py\ndrift_generators", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_generators: source_drift generators.py | the uniform generator invariants, the baseline's consistency, the drift node's rule list and the form table's copy "];
+    preflight [shape="octagon", style="dashed", color="#8e24aa", label="release_preflight.py\npreflight", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="preflight: release_preflight.py | the baseline against the previous release tag "];
     build [shape="octagon", style="dashed", color="#8e24aa", label="build.sh\nbuild", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build: build.sh | assembles and signs the bundle and stages the guide "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
@@ -123,4 +131,15 @@ digraph documents {
     build -> gen_contract [style="dashed", color="#8e24aa", label="D38 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D38: --check before compiling |  "];
     build -> gen_identity [style="dashed", color="#8e24aa", label="D39 regenerate; --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D39: regenerate before compiling; --check before signing |  "];
     build -> gen_architecture [style="dashed", color="#8e24aa", label="D40 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D40: --check before compiling |  "];
+    gen_common -> gen_limits [style="solid", color="#8a7400", label="D41 shared rules", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D41: shared citation, formatter and span rules |  "];
+    gen_common -> gen_architecture [style="solid", color="#8a7400", label="D42 shared rules", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D42: shared citation, placeholder and span rules |  "];
+    limits_json -> gen_architecture [style="solid", color="#8a7400", label="D43 placeholders", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D43: limit placeholders in facts, labels and notes, and the Limits column |  "];
+    drift_generators -> gen_contract [style="dashed", color="#8e24aa", label="D44 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D44: nothing changes outside its regions; --check before signing |  "];
+    drift_generators -> gen_identity [style="dashed", color="#8e24aa", label="D45 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D45: nothing changes outside its regions; --check before signing |  "];
+    drift_generators -> gen_limits [style="dashed", color="#8e24aa", label="D46 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D46: ownership, spans, forms and value owners, and whole-file staging |  "];
+    drift_generators -> gen_architecture [style="dashed", color="#8e24aa", label="D47 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D47: ownership, spans, placeholders, declared columns, captions and render refusal |  "];
+    drift_generators -> prose_baseline [style="dashed", color="#8e24aa", label="D48 consistency", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D48: the listed sites equal the scanned sites; growth only by an explicit entry |  "];
+    preflight -> prose_baseline [style="dashed", color="#8e24aa", label="D49 subset", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D49: a release's baseline is a subset of the previous release's |  "];
+    drift_check -> architecture_md [style="dashed", color="#8e24aa", label="D50 prose rules", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D50: Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; the principles list equals the core ideas in AGENTS.md |  "];
+    drift_generators -> architecture_json [style="dashed", color="#8e24aa", label="D51 rule list", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D51: the drift node's rule citations equal the rules check.py runs |  "];
 }

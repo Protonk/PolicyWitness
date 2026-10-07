@@ -61,6 +61,14 @@ note identical across `AGENTS.md`, `runner/README.md` and `tests/README.md`,
 since that note is carried in three places on purpose.
 Public-command controls separately verify selection and actual execution.
 
+Three rules read the handwritten text of `docs/ARCHITECTURE.md`: every
+paragraph opening with "Known gap" is indexed, in order, by the document's
+last section, which lists nothing else; every landing path in the
+evidence-channels table is a key of the reply or envelope shape golden; and
+the principles list names the core ideas of `AGENTS.md`, lead-in by lead-in.
+The `generator_contract` case holds the document graph's drift node to the
+rules this script runs, and the form table below to the shared module's rules.
+
 ### Generator contracts
 
 The `generator_contract` case in [generators.py](generators.py) holds these
@@ -123,8 +131,8 @@ warning. This baseline is retained even when empty.
 
 The prose scan includes `docs/*.md`, the root README and AGENTS files,
 `runner/AGENTS.md`, `tests/README.md`, and every Markdown document a generator
-writes. It ignores fenced examples; authored spans are processed only in
-`docs/ARCHITECTURE.md` and `docs/LIMITS.md`. The guide receives span comments
+writes. It ignores fenced examples; authored spans are processed in the
+documents each generator names in its `SPAN_DOCUMENTS`. The guide receives span comments
 and values only by copying its shared source. Other generated or copied
 regions are opaque to the span pass. A backticked link label into a non-Markdown
 file denotes a symbol; use a plain filename label for an ordinary file link.
