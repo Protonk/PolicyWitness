@@ -133,9 +133,9 @@ thing `comparison.order: "query_first"` claims
 ([the record](../tests/FAILURE-PROPAGATION-CONTRACT.md#the-record)). The
 timeline below is the host driver's step list in
 [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift), the worker's
-`main` in
-[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
-the controller's `run` in [run_flow.rs](../controller/src/run_flow.rs), laid
+[`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) in
+pw_probe_runner.c and
+the controller's [`run`](../controller/src/run_flow.rs) in run_flow.rs, laid
 side by side.
 
 ```text
@@ -203,15 +203,14 @@ the held bytes once
 
 Where each phase is pinned:
 
-- **Controller admission and selection.** `run` in
-  [run_flow.rs](../controller/src/run_flow.rs): the manifest is loaded once,
+- **Controller admission and selection.** [`run`](../controller/src/run_flow.rs) in
+  run_flow.rs: the manifest is loaded once,
   then `parse_request`, `validate_request_version`, selector parsing,
   `resolve_runner_target_with_registry`, `resolve_augments`, the dossier, and
   `strip_runner_selector` before the held bytes are serialized. Checked by the
   `orchestration` tests in the same file.
-- **Caller authorization.** `authorizedCaller` runs when the connection is
-  accepted, before any request is read
-  ([PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)).
+- **Caller authorization.** [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) runs when the connection is
+  accepted, before any request is read.
 - **Host admission.** `runSpecimen` decodes with closed keys, then
   `admissionFailure(for:)` (capacity), `requestMeaningFailure` (meaning) and
   `computePolicyHash`, in that order; a refusal replies without spawning
@@ -235,8 +234,8 @@ Where each phase is pinned:
   integrity checks (`decodeProfileCapture`); the
   [guide](PolicyWitness.md#compiled-object-receipt-opt-in) distinguishes it
   from a kernel readback. Checked by `AppliedProfileCaptureTests`.
-- **The barrier.** The validator runs inside the `postApplied` hook of
-  [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+- **The barrier.** The validator runs inside the [`postApplied`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) hook of
+  CWorkerOrchestrator.swift
   with the worker's PID, or not at all when no step has a predictable
   query. `proceed` is stored when the hook returns; the worker's
   `wait_for_proceed` refuses to attempt anything before it. `PWRunnerOrdering`
@@ -295,8 +294,8 @@ not wall-clock guarantees in either direction. Their values and their
 checks are in [LIMITS.md](LIMITS.md).
 
 The host sends policy bytes through a nonblocking pipe under the delivery
-deadline (`writePolicy` and `MonotonicDeadline` in
-[MonotonicDeadline.swift](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift)).
+deadline ([`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift) and [`MonotonicDeadline`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift) in
+MonotonicDeadline.swift).
 Partial writes, interruptions and backpressure consume the same allowance.
 Expiry records `policy_transfer_timeout` separately from any write errno,
 closes input and enters cleanup without starting readiness or sentinel polling.
@@ -323,15 +322,15 @@ them, and the controller does the same with the host's.
 | Log capture | the observer | the controller's correlation fields | `data.sandbox_log_capture`; `data.runner_sandbox_diagnostics` (log fields) | deny records the unified log showed in the padded window, with candidate associations; never a verdict |
 
 The rule that holds the channels apart: log evidence never changes execution
-evidence. The assembly seam is `attach_sandbox_logs` in
-[run_flow.rs](../controller/src/run_flow.rs), where the collector receives
+evidence. The assembly seam is [`attach_sandbox_logs`](../controller/src/run_flow.rs) in
+run_flow.rs, where the collector receives
 read-only execution evidence and returns only log-owned fields; the unit test
 `collector_states_preserve_the_serialized_execution_half` checks it, and the
 controller README's
 [ownership table](../controller/README.md#execution-and-log-evidence-ownership)
 names the owner of every field. The host's additions are
-`enrichPathDiagnostics` in
-[PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)
+[`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
+PWRunnerService.swift
 and the planner's synthesized observations in
 [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift).
 No record asserts agreement or disagreement between the prediction and
@@ -436,8 +435,8 @@ is also a constraint on a particular phase above, and each has a mechanism
 that enforces it.
 
 - **One-way sandbox per process.** Every authorized connection shares the
-  host's `PWRunnerAdmission` in
-  [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift).
+  host's [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
+  PWRunnerService.swift.
   Its locked claim is terminal from the first request's entry, including a
   malformed or refused request. Later requests receive `already_ran` without
   orchestration or exit scheduling. Only the owner schedules exit after the
@@ -448,12 +447,12 @@ that enforces it.
   and successful service from a fresh host.
 - **Host/worker split.** The host never links, loads or calls libsandbox.
   Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
-  any binding under `runner/Sources/`, and `host_invariance` in
-  [artifact.py](../tests/lib/artifact.py) runs `nm -u` on the shipped host
+  any binding under `runner/Sources/`, and [`host_invariance`](../tests/lib/artifact.py) in
+  artifact.py runs `nm -u` on the shipped host
   before any app-dependent suite runs.
 - **Witness over interpretation.** An attempt's `rc` is never the claim; the
-  comparison record names its `observation_basis`, and
-  [consumer.py](../tests/lib/consumer.py) re-derives every step's expected
+  comparison record names its `observation_basis`. The consumer,
+  [consumer.py](../tests/lib/consumer.py), re-derives every step's expected
   observation from the raw channels before accepting an envelope.
 - **Predictions precede attempts.** `proceed` and `proceed_observed` in the
   shared region, `collection_closed_before_proceed` in `PWRunnerOrdering`,
@@ -463,8 +462,8 @@ that enforces it.
 - **No dishonest attribution.** No outcome spelling claims a sandbox cause: a
   signal is `runner_failed` with the signal preserved, and
   `termination_cause` is projected only from a disposition record whose cited
-  facts support it (`CAUSE_FOR_TRIGGER` in
-  [disposition.rs](../controller/src/disposition.rs)). Log correlation is a
+  facts support it ([`CAUSE_FOR_TRIGGER`](../controller/src/disposition.rs) in
+  disposition.rs). Log correlation is a
   separate observation with its own `correlation_status`. The pre-apply
   witness case forbids, outright, `ok`, `bad_policy` and the two spellings
   no constant defines.
@@ -667,12 +666,12 @@ service name and scope. The installer signs the copy's embedded worker with
 the supplied identity and entitlements plist, the validator with the identity
 alone, then the enclosing bundle, verifies the seal recursively, and the
 registry records each binary's signature and entitlements as read back
-(`sign_install_tree`, `read_back` in
-[runner_manager.rs](../controller/src/runner_manager.rs)). The dossier
+([`sign_install_tree`](../controller/src/runner_manager.rs), [`read_back`](../controller/src/runner_manager.rs) in
+runner_manager.rs). The dossier
 records the hashes of the bundle's service, worker and validator files as
 observed before invocation and compares them with the manifest baselines
-(`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`
-in [run_flow.rs](../controller/src/run_flow.rs)); the
+([`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs)
+in run_flow.rs); the
 [guide](PolicyWitness.md#the-specimen-dossier) states the limit of that
 record: it does not prove which bytes were launched, and a mismatch does
 not change the run's outcome. The registry is read by an additive loader

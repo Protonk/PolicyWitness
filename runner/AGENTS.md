@@ -8,7 +8,7 @@ Deep contract for the runner's test machinery. The repo-root [AGENTS.md](../AGEN
 
 SwiftPM is test-only here. Production builds still go through [build.sh](../build.sh); the SwiftPM `.build/` tree is gitignored.
 
-**Why an executableTarget, not a testTarget.** XCTest ships with full Xcode, not Command Line Tools, and contributors frequently have only CLT. The hand-rolled `TestKit` harness in [TestKit.swift](Tests/PWRunnerCoreTests/TestKit.swift) gives us XCTest-shaped assertions (`expectEqual`, `expectThrows`, `expectContains`, etc.) without the XCTest dependency, so `swift run PWRunnerCoreTests` works against either toolchain. `PWRunnerCore` is built with `-enable-testing` so the executable can `@testable import PWRunnerCore` and reach internal symbols.
+**Why an executableTarget, not a testTarget.** XCTest ships with full Xcode, not Command Line Tools, and contributors frequently have only CLT. The hand-rolled [`TestKit`](Tests/PWRunnerCoreTests/TestKit.swift) harness in TestKit.swift gives us XCTest-shaped assertions (`expectEqual`, `expectThrows`, `expectContains`, etc.) without the XCTest dependency, so `swift run PWRunnerCoreTests` works against either toolchain. `PWRunnerCore` is built with `-enable-testing` so the executable can `@testable import PWRunnerCore` and reach internal symbols.
 
 **When to add a unit test rather than an e2e suite.** Reach for `runner_unit` when:
 
@@ -56,7 +56,7 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 
 One case is exempt from the first assertion. `witness_contract/pre_apply_failure_reports_no_policy_verdict` checks that the summary excludes `ok` and `bad_policy`, and the spellings `sandbox_apply_failed` and `runner_sandbox_denied` that no constant defines, rather than pinning one replacement outcome, because it protects the absence of library/policy claims across outcome renames; classifier tests pin the mapping separately. The assertions it retains are listed in [the suite README](../tests/suites/witness_contract/README.md#failure-before-published-application). Every other override-driven case uses the exact-outcome recipe above.
 
-**Supported override keys** are the fields of `PWRunnerTestOverrides` in [PWRunnerAPI.swift](Sources/PWRunnerCore/PWRunnerAPI.swift). The table of keys, with the boundary each one re-routes and the outcome it reaches, is in [README.md → Test seam](README.md#test-seam-_test_overrides). The `source_drift` suite fails when the struct and that table disagree.
+**Supported override keys** are the fields of [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerAPI.swift) in PWRunnerAPI.swift. The table of keys, with the boundary each one re-routes and the outcome it reaches, is in [README.md → Test seam](README.md#test-seam-_test_overrides). The `source_drift` suite fails when the struct and that table disagree.
 
 A hostile value drives a real failure: a `/nonexistent/...` path makes `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `worker_post_apply_hang_ms` makes the host's deadline fire before the C worker flips its `done` sentinel. The classifier in `CWorkerOrchestrator` is the same code that runs in production — only its *input* is steered.
 

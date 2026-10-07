@@ -116,10 +116,10 @@ For G9 and G11, distinguish implementation of the mechanism from its prose
 coverage. The baseline records sites outside each mechanism; coverage is
 complete when the baseline's entries for that invariant are empty.
 
-G1 through G8 and G10 have complete coverage in this scan. G9 and G11 have
-working mechanisms and partial prose coverage: remaining sites live in
+G1 through G8, G10 and G11 have complete coverage in this scan. G9 has a
+working mechanism and partial prose coverage: the remaining sites live in
 [prose_baseline.json](../../fixtures/docs/prose_baseline.json). The case reports
-entries per invariant. Convert a site to a span or a symbol-form link and remove
+entries per invariant, zero included. Convert a site to a span or a symbol-form link and remove
 its baseline entry in the same change. Counts without a mechanical pattern
 are surveyed manually; their exact text must remain present until converted.
 Literal and citation-pair entries must match the scan exactly, including

@@ -276,30 +276,25 @@ The shared text above states only what a reader can observe in a reply. The
 mechanisms those statements rest on live here, each beside the symbol that
 implements it, so that a premise can be reopened when the platform changes.
 
-- Reply and output budgets. `RUNNER_CAPTURE_BYTES`
-  ([utils.rs](../controller/src/utils.rs)) is three times `runner_reply_maximum`
+- Reply and output budgets. [`RUNNER_CAPTURE_BYTES`](../controller/src/utils.rs) is three times `runner_reply_maximum`
   rounded up to a whole 4 MiB. The maximum is synthesized by
-  `maximalReplyEncodedSize`
-  ([ReplyMaximumTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift))
+  [`maximalReplyEncodedSize`](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift)
   from the field-complete <!-- span limits.probe_steps.value -->256<!-- /span -->-step reply fixture encoded by
   `pwRunnerEncodeJSON`; it places fields that cannot co-occur side by side, so it
   is an upper bound for the schema, and a reply string key added without a size
   classification fails that test. Collection buffers the whole stream before
   applying a budget; the budgets are not memory limits.
-- Log collection. `LOG_STDOUT_BYTES`, `LOG_STDERR_BYTES`,
-  `OBSERVER_STDOUT_BYTES`, `OBSERVER_STDERR_BYTES`, `DEFAULT_LOG_TIMEOUT_MS`,
-  `CLEANUP_GRACE_MS` and `LOG_REPORT_RESERVE_MS`
-  ([log_capture.rs](../controller/src/log_capture.rs)) are enforced while
+- Log collection. [`LOG_STDOUT_BYTES`](../controller/src/log_capture.rs), [`LOG_STDERR_BYTES`](../controller/src/log_capture.rs),
+  [`OBSERVER_STDOUT_BYTES`](../controller/src/log_capture.rs), [`OBSERVER_STDERR_BYTES`](../controller/src/log_capture.rs), [`DEFAULT_LOG_TIMEOUT_MS`](../controller/src/log_capture.rs),
+  [`CLEANUP_GRACE_MS`](../controller/src/log_capture.rs) and [`LOG_REPORT_RESERVE_MS`](../controller/src/log_capture.rs) are enforced while
   reading. The outer observer allowance is sized for repeated raw lines, six-byte
   JSON escaping and event metadata over bounded inner output; both supervisors
   share one monotonic deadline and a fixed cleanup grace; the derived structures
   (event array, candidates, JSON delimiter count) have independent guards.
-- Admission order and echo. `CWorkerOrchestrator.admissionFailure`
-  ([CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift))
+- Admission order and echo. `CWorkerOrchestrator`'s [`admissionFailure`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
   checks decoded requests before semantic validation or child process work.
   Its `requestAdmissionFailure` checks metadata and executable overrides
-  before plan/parameter counts, then `workerAdmissionFailure`
-  ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)) and the host
+  before plan/parameter counts, then [`workerAdmissionFailure`](../runner/Sources/PWRunnerCore/CWorker.swift) and the host
   `queryAdmissionFailure` check worker strings and query fields. The service
   ([PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift))
   and direct orchestration share this gate. Each string checks its UTF-8
@@ -318,8 +313,7 @@ implements it, so that a premise can be reopened when the platform changes.
   probe line while preserving the next physical line; admitted specimens cannot
   produce such lines. Decoder failures report a bounded category and path, not
   input-derived prose.
-- Exec budget and observation. `PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT`
-  ([pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c))
+- Exec budget and observation. [`PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
   sits `PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS` below the host polling window; the
   margin is a configuration allowance, not an enforced timer. `attempt_budget_start`
   begins before worker setup, `attempt_budget_exclude` subtracts only the
@@ -329,22 +323,17 @@ implements it, so that a premise can be reopened when the platform changes.
   still target its process group after a leader exit; kill, wait and clock
   errors remain errors; final reaping is a nonblocking window of
   `PW_EXEC_REAP_GRACE_MS`; descendants that leave the group are outside cleanup.
-- Deny-log window and selection. `LOG_WINDOW_PAD_SECONDS`
-  ([sandbox_log.rs](../controller/src/sandbox_log.rs)) pads the span after
+- Deny-log window and selection. [`LOG_WINDOW_PAD_SECONDS`](../controller/src/sandbox_log.rs) pads the span after
   whole-second rounding, which matches `log show` precision; the pad allows for
   client and archive clock differences and guarantees neither delivery nor
-  coverage. `sandbox_predicate`
-  ([sandbox-log-observer.rs](../controller/src/bin/sandbox-log-observer.rs))
+  coverage. [`sandbox_predicate`](../controller/src/bin/sandbox-log-observer.rs)
   matches `Sandbox: <name>(<pid>)` for the worker only. Predictions carry
-  `SANDBOX_CHECK_NO_REPORT`
-  ([sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validator.c)),
+  [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c),
   so the kernel writes no record for them. Archive access has cost seconds for
   short spans; scan cost is not independent of span or log volume.
-- Nested timeouts. `DEFAULT_TIMEOUT_MS` ([run_flow.rs](../controller/src/run_flow.rs))
-  is the client wait; `timeoutMsForCWorker`
-  ([CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift))
-  the worker polling window; `ValidatorClientInput`
-  ([ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift))
+- Nested timeouts. [`DEFAULT_TIMEOUT_MS`](../controller/src/run_flow.rs)
+  is the client wait; [`timeoutMsForCWorker`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+  the worker polling window; [`ValidatorClientInput`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
   the validator deadline; `PW_PROCEED_WAIT_MS_DEFAULT` the release wait, with
   `validatorReleaseMarginMs` as the nominal margin
   (<!-- span limits.worker_proceed_wait.value -->60,000<!-- /span --> >
@@ -352,15 +341,12 @@ implements it, so that a premise can be reopened when the platform changes.
   <!-- span limits.validator_exit_grace.value -->1,000<!-- /span --> +
   <!-- span limits.validator_release_margin.value -->5,000<!-- /span -->).
   Policy transfer precedes polling, synchronous validator work is outside the
-  polling budget, and cleanup and reaping add time. `runCWorker`
-  ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)) counts polling
+  polling budget, and cleanup and reaping add time. [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) counts polling
   iterations for readiness, publication and exit grace; it does not compare an
-  elapsed monotonic clock for those waits. The exit grace in `runValidator`
-  ([ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift))
+  elapsed monotonic clock for those waits. The exit grace in [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
   also counts iterations, while its I/O deadline uses `CLOCK_MONOTONIC`.
   Syscall cost and delayed scheduling can extend the nominal polling waits.
-- Transport encoding. The controller's `run`
-  ([run_flow.rs](../controller/src/run_flow.rs)) reads the request with
+- Transport encoding. The controller's [`run`](../controller/src/run_flow.rs) reads the request with
   `std::fs::read_to_string` before calling `parse_request`. Invalid UTF-8 takes
   the read-error path to `tool_error`; it never reaches serde_json or the
   runner's JSONDecoder. This path is source-inspected and checked with a

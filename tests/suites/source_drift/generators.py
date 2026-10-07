@@ -131,7 +131,9 @@ def broken_links(paths):
             if separator:
                 if not destination.is_file() or unquote(anchor) not in common.heading_anchors(prose_text(destination.read_text())):
                     broken.append(f'{path}: missing heading {target}')
-            if re.fullmatch(r'`[^`]+`', label) and destination.suffix.lower() != '.md':
+            # A backticked label is a symbol the target must hold: a code file holds it as
+            # text, and a Markdown document holds it as the id or term the link names.
+            if re.fullmatch(r'`[^`]+`', label):
                 if not destination.is_file() or label[1:-1] not in destination.read_text(errors='replace'):
                     broken.append(f'{path}: missing symbol {label} in {target}')
     return broken
@@ -224,7 +226,7 @@ def measurements(root=ROOT):
                 architecture_checks=len(checks), architecture_forms=dict(Counter(r.get('form', 'missing') for r in checks)),
                 limits=len(limits), limit_checks=sum(len(i['checks']) for i in limits),
                 limit_kinds=dict(Counter(r['kind'] for i in limits for r in i['checks'])),
-                baseline=dict(Counter(row['invariant'] for row in entries)))
+                baseline=dict({'G9': 0, 'G11': 0}, **Counter(row['invariant'] for row in entries)))
 
 
 class GeneratorContractTests(unittest.TestCase):
@@ -510,11 +512,13 @@ class GeneratorContractTests(unittest.TestCase):
         (root / 'source.py').write_text('def defined():\n    pass\n')
         (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\n')
         path = root / 'doc.md'
-        path.write_text('[target](target.md#repeated-1) [`defined`](source.py) [file](source.py)')
+        (root / 'target.md').write_text('# Target\n## Repeated\n## Repeated\nA row names (`step_id`).\n')
+        path.write_text('[target](target.md#repeated-1) [`defined`](source.py) [file](source.py) [`step_id`](target.md#target)')
         self.assertEqual(broken_links([path]), [])
         for content, expected in [
             ('[target](target.md#absent)', 'missing heading'),
             ('[`absent`](source.py)', 'missing symbol'),
+            ('[`absent`](target.md)', 'missing symbol'),
             ('[target][reference]\n\n[reference]: target.md', 'reference-style'),
             ('[target](absent.md)', 'missing file'),
             ('# Here\n[here](#absent)', 'missing heading'),
