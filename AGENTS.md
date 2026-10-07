@@ -24,6 +24,7 @@ Pick what you’re changing:
 - **Limits and their documentation** → [docs/LIMITS.md](docs/LIMITS.md), [docs/limits.json](docs/limits.json), [docs/generate_limits.py](docs/generate_limits.py)
 - **Wire contracts (request/response schema, worker identity, envelope)** → [docs/CONTRACT.md](docs/CONTRACT.md), [docs/contract.json](docs/contract.json), [docs/generate_contract.py](docs/generate_contract.py)
 - **Architecture (one run in time, boundaries, the document graph, BYOXPC)** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); its figures come from [docs/architecture.json](docs/architecture.json) through [docs/generate_architecture.py](docs/generate_architecture.py). Behavior that falls short of a stated promise is written there inline as a paragraph opening with "Known gap" and indexed in its last section.
+- **Generators and the regions they write (hardening plan, invariants G1 to G11)** → [docs/GENERATOR-HARDENING-PLAN.md](docs/GENERATOR-HARDENING-PLAN.md); the plan is deleted when its sequence lands and its invariants move to [tests/suites/source_drift/README.md](tests/suites/source_drift/README.md)
 - **Accepted-input teaching examples and refusal diagnostics** → [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md), [tests/fixtures/request_contract/examples.json](tests/fixtures/request_contract/examples.json)
 - **User guide** → [docs/PolicyWitness.md](docs/PolicyWitness.md); its Limits and Questions sections are copied from [docs/LIMITS.md](docs/LIMITS.md) and [docs/QUESTIONS.md](docs/QUESTIONS.md) by [docs/generate_limits.py](docs/generate_limits.py)
 
