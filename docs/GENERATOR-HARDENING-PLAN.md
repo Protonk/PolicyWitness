@@ -3,21 +3,17 @@
 This is the one document under `docs/` that describes intended behavior
 rather than current behavior. It states the relationship between the four
 documentation generators and the files they write as numbered invariants,
-records where each generator stands against them, specifies the changes and
-the drift tests that close the distance, and orders the work. The
-[Sequence](#sequence) is the executable part: a fresh agent carries it out
-step by step, each step naming its change and its test, with the invariants
-as the acceptance criteria and [Where the generators stand](#where-the-generators-stand)
-as the before picture. Change numbers are identifiers, not an order; the
-sequence is the order. When the last step is done the invariants move into
+records where each generator stands against them, and specifies the changes
+and drift tests needed to satisfy them. Follow [Sequence](#sequence) in
+order, using the invariants as acceptance criteria. Change numbers identify
+the work each step requires. After completing the sequence, move the invariants into
 [the drift suite's README](../tests/suites/source_drift/README.md#invariants)
-and the generators' docstrings, and this file is deleted, so that
-[the documentation rule](../AGENTS.md#documentation) holds again.
+and the generators' docstrings, then delete this file in accordance with
+[the documentation rule](../AGENTS.md#documentation).
 
-The scope is the generators and the problems that live in them. Seams that
-live in prose are listed under
-[What this plan leaves for later](#what-this-plan-leaves-for-later); the plan
-builds the mechanisms that work will use and nothing more.
+The scope is the generators and their verification mechanisms. Prose work
+that depends on those mechanisms is listed under
+[What this plan leaves for later](#what-this-plan-leaves-for-later).
 
 ## Terms
 
@@ -41,21 +37,22 @@ builds the mechanisms that work will use and nothing more.
 - **Citation.** A `path` and `symbol` pair in a manifest. The generator
   verifies that the file exists and that the symbol occurs in it. A citation
   is a place to look, not proof that a test asserts the row.
-- **Form.** New. On a check citation, one of `test`, `rule` or `control`: what
-  sort of thing the symbol is. The limits manifest's existing `kind`, one of
+- **Form.** On a check citation, one of `test`, `rule` or `control`: what
+  sort of thing the symbol is. The limits manifest's `kind`, one of
   `value`, `boundary` or `path`, says what the check establishes about the
   value and is a different dimension.
-- **Limit placeholder.** New. The token `{limit:<id>}` in an architecture
+- **Limit placeholder.** The token `{limit:<id>}` in an architecture
   fact, label or note, which the renderer replaces with that row's value and
   unit from [limits.json](limits.json).
-- **Span.** New. An inline region holding one scalar,
+- **Span.** An inline region holding one scalar,
   `<!-- span <generator>.<name> -->value<!-- /span -->`, authored once,
   outside every region of its document, so a sentence can state a count or a
   value the generator owns.
-- **Baseline.** New. A committed list of the exact prose sites that still
+- **Baseline.** A committed list of the exact prose sites that still
   state a value, a count or a citation in an unverified form. The drift suite
-  holds it consistent with the documents; whether it may grow is decided
-  outside the change (see C9).
+  holds it consistent with the documents; review governs additions between
+  releases, and release preflight enforces non-growth against the previous
+  release (see C9).
 
 ## The invariants
 
@@ -96,11 +93,9 @@ builds the mechanisms that work will use and nothing more.
   link whose text is a backticked symbol and whose target is not Markdown,
   and resolves every `#anchor` against the target's headings.
 
-G9 and G11 each have a mechanism and a coverage. The mechanism holds from the
-step that lands it. The coverage, that no prose site states a value or a
-citation outside the mechanism, is measured by the baseline and holds in full
-on the day the baseline's part for that invariant is empty. Stated this way
-both are true at every point in the sequence.
+For G9 and G11, distinguish implementation of the mechanism from its prose
+coverage. The baseline records sites outside each mechanism; coverage is
+complete when the baseline's entries for that invariant are empty.
 
 ## Where the generators stand
 
@@ -142,8 +137,7 @@ The specifics behind the bold cells:
   worker's "exit 4" is a code, not a duration.
 - The introduction of [ARCHITECTURE.md](ARCHITECTURE.md) says "the three
   figures" and the document graph's node for the document carries the same
-  count as a fact; the manifest has four graphs. The count went stale when
-  the fourth graph landed.
+  count as a fact; the manifest has four graphs.
 - The figure caption says each row cites "the check that exercises it"; the
   generator verifies that a symbol occurs in a file.
 - The architecture prose has 50 local links, 20 with anchors into seven
@@ -186,10 +180,9 @@ the coverage table of [LIMITS.md](LIMITS.md#grounding-and-coverage).
 Tests: `test_check_citations_carry_a_form_and_tests_are_defined`,
 `test_captions_state_the_verified_guarantee`.
 
-Every `checks` reference gains `"form"`. The word is `form` because both
-manifests already use `kind`: the architecture manifest for a node's or
-edge's style, the limits manifest for the value dimension, which is kept
-untouched beside the new field. The loaders apply one rule by form:
+Add `"form"` to every `checks` reference. Preserve `kind` for node and edge
+styles in the architecture manifest and for the value dimension in the
+limits manifest. The loaders apply the following rules by form:
 
 | Form | Allowed files | Symbol must match |
 | --- | --- | --- |
@@ -261,20 +254,17 @@ their source citations. The rendered tables gain a "Limits" column linking
 each id to its section of [LIMITS.md](LIMITS.md). The architecture generator
 never writes the limits manifest or document.
 
-Substitution rather than reference checking, because a fact reading "7
-seconds" could cite a one-second row and pass; with substitution the manifest
-carries no value it could restate. The shared formatter gains the singular
-for a value of one, so a placeholder reads "1 second"; the one limits cell
-that reads "1 seconds" today changes with it, in both copies.
+The shared formatter uses the singular for a value of one, so a placeholder
+reads "1 second". Apply this formatting to the limits table and its guide
+copy as well.
 
-Two durations have no row and get one, each with a value owner and a
-coverage note under [the maintenance rules](LIMITS.md#maintaining-this-document):
-`host_exit_delay`, the 50 ms reply-flush delay, owned in `runner_unit`, which
-is the window in which a second connection meets the terminal claim; and
-`runner_verify_wait`, the verify command's default, owned by the existing
-Rust assertion, with `--timeout-ms` on `runner verify` as its control. The
-alternative, dropping the numbers from the facts, was rejected because the
-principles section already reasons about the first.
+Add rows for two durations, each with a value owner and a coverage note under
+[the maintenance rules](LIMITS.md#maintaining-this-document):
+
+- `host_exit_delay`: the 50 ms reply-flush delay, owned in `runner_unit`. This
+  is the window in which a second connection meets the terminal claim.
+- `runner_verify_wait`: the verify command's default, owned by the existing
+  Rust assertion, with `--timeout-ms` on `runner verify` as its control.
 
 ### C6. Spans (G9)
 
@@ -288,41 +278,41 @@ Test: `test_spans_are_authored_outside_regions_and_copied_as_bytes`.
 ```
 
 Each generator declares the documents it scans for its prefix and renders
-the spans there, in the text outside regions; its check fails on a stale
-value or an unknown name with its prefix. The architecture generator exposes
+the spans there; its check fails on a stale value or an unknown name with its
+prefix. The architecture generator exposes
 `graphs`, `nodes`, `edges`, `unpinned` and, per graph, `<graph>.nodes` and
 `<graph>.edges`; the limits generator exposes `<id>.value` and
 `<id>.value_unit`. Spans and placeholders share the one formatter. A prefix
 no generator owns is caught by the uniform test, which knows every prefix.
 
-The span pass never looks inside a region, and a span marker inside one is
-one of two things. In a copy region it is bytes of the copy: the limits
-generator renders the spans in [LIMITS.md](LIMITS.md) before it copies the
-shared section, so the copy carries the rendered value, and a copy whose span
-differs from its source fails the copy-equality check. In a rendered region
-it cannot occur, because no renderer emits span markers; a marker inserted
-by hand makes the region stale. The guide is registered with neither
-generator, so spans reach it only by copy, and its standalone validation
-accepts span comments as inert HTML comments.
+The span pass reads and writes only text outside regions. The limits
+generator renders spans in [LIMITS.md](LIMITS.md) before copying the shared
+section into the guide. Span markers and values inside a copy region are
+copied bytes; a difference from the source fails the copy-equality check.
+Renderers emit no span markers, so inserting one into a rendered region makes
+the region stale. The guide is registered with neither generator for span
+processing and receives spans only by copy. Its standalone validation accepts
+span comments as inert HTML comments.
 
-The first span replaces "three" in the architecture introduction, and the
-document node's fact drops the count. The 64-byte example beside the 63-byte
-limit is reworded to use the value alone. Every count or value that prose
-still states without a span after this step is a baseline entry.
+Replace "three" in the architecture introduction with the
+`architecture.graphs` span and remove the count from the document node's
+fact. Reword the 64-byte example beside the 63-byte limit to use the value
+alone. Every count or value that prose still states without a span after
+this step is a baseline entry.
 
 ### C7. The prose citation rule (G11)
 
 Files: [limits.py](../tests/suites/source_drift/limits.py), the new test
 module. Test: `test_prose_links_resolve_anchors_and_symbol_links`.
 
-The link checker becomes a function the new module owns and both import. It
-scans the documents it scans today plus every document the generators write,
-resolves `#anchor` fragments against the target's headings with the rule the
-guide validation uses, requires the symbol in the file for a link whose text
-is a backticked symbol and whose target is not Markdown, and requires the
-file for every other local link. A citation in any other form, such as the
-pair "`load_manifest` ([generate_architecture.py](generate_architecture.py))",
-is a baseline entry until it is converted to
+Move the link checker into a function the new module owns and both import.
+Retain its scan set and add every document the generators write. It resolves
+`#anchor` fragments against the target's headings with the rule the guide
+validation uses, requires the symbol in the file for a link whose text is a
+backticked symbol and whose target is not Markdown, and requires the file for
+every other local link. A citation in any other form, such as the pair
+"`load_manifest` ([generate_architecture.py](generate_architecture.py))", is
+a baseline entry until it is converted to
 [`load_manifest`](generate_architecture.py).
 
 ### C8. The outside-regions property (G1)
@@ -331,9 +321,9 @@ Files: the new test module only.
 Test: `test_regeneration_changes_nothing_outside_regions`.
 
 For each generator: change its manifest, regenerate, and assert every target
-is byte-identical outside the generator's regions and whole-file outputs. The
-contract and limits tests hold this for some targets; this holds it for all,
-including the architecture document and the three identity targets.
+is byte-identical outside the generator's regions and whole-file outputs.
+Include all targets, including the architecture document and the three
+identity targets.
 
 ### C9. The prose baseline (G9, G11)
 
@@ -350,7 +340,7 @@ same sentence by a link to a non-Markdown file; and a count statement about
 generated content, which no pattern can find, so those entries are written by
 hand from the survey and only their continued presence is checked.
 
-The baseline has three properties with three guarantors.
+The baseline's checks and review requirements are:
 
 - **Consistency.** The sites the patterns find equal the sites the file
   lists; an unlisted site fails, and so does a listed site that no longer
@@ -358,21 +348,14 @@ The baseline has three properties with three guarantors.
 - **Explicit growth.** Because an unlisted site fails, new unverified prose
   can enter a scanned document only with a new line in this one file. The
   drift test holds this too.
-- **No growth.** No check inside a change can establish it, because any
-  reference it compares against can be edited in the same change. Between
-  releases the reference is the reviewer: a diff that adds a baseline line
-  adds unverified prose and is read as such. At a release it is mechanical:
-  the preflight, which already requires HEAD at an annotated release tag,
-  reads the baseline at the previous release tag and refuses a release whose
-  baseline is not a subset of it; when the previous tag predates the baseline
-  it reports that instead.
+- **No growth.** Reviewers assess baseline additions as additions of
+  unverified prose between releases. Release preflight requires HEAD at an
+  annotated release tag, reads the baseline at the previous release tag, and
+  refuses a release whose baseline is not a subset of it. When the previous
+  tag predates the baseline, preflight reports that instead of refusing.
 
-This is the plan's boundary. The generators and the drift suite make the
-state of the prose knowable and every change to it explicit; they do not
-decide what prose may say. Adding a baseline line is a reviewer's judgment,
-and the preflight rule is the one place that judgment is checked against
-something the change cannot edit. The baseline outlives this plan, and the
-suite README states which invariants hold in full.
+Retain the baseline after this plan is deleted, and state in the suite README
+which invariants have complete coverage.
 
 ## The test case
 
@@ -414,24 +397,22 @@ changed.
 2. C8. No generator changes; the property is recorded before the generators
    change.
 3. C2 and C3 for the architecture manifest, with the mutation table in
-   [architecture.py](../tests/suites/source_drift/architecture.py). The
-   architecture manifest goes first because its citations are the weaker
-   ones, so the definition patterns are settled against the harder cases.
+   [architecture.py](../tests/suites/source_drift/architecture.py).
 4. C2 for the limits manifest, with the mutation table in
    [limits.py](../tests/suites/source_drift/limits.py).
 5. C4. The BYOXPC re-keying is reviewed as a figure change.
 6. C5, including the two new limits rows.
-7. C6, including the first span and the limits rewording.
-8. C7 and C9, including the preflight rule. The baseline's first entries are
-   the sites the survey found; from here a conversion is a baseline removal.
+7. C6, including the architecture introduction's span and the limits rewording.
+8. C7 and C9, including the preflight rule. Initialize the baseline from the
+   survey and remove an entry with each conversion.
 9. `test_measurements_match_this_plan`, the README paragraphs, then delete
    this document and point the router line in [AGENTS.md](../AGENTS.md) at
    the drift suite README. An empty baseline is not a condition of deletion.
 
 ## What this plan leaves for later
 
-Seams between prose and generation. Each conversion removes a baseline
-entry, so progress shows in the drift suite rather than here.
+For deferred prose conversions, remove the corresponding baseline entries
+and report progress in the drift suite.
 
 - Counts the prose states beyond the figure count: three native-API
   processes, seven evidence channels, four records with local versions, six
