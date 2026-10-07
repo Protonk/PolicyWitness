@@ -83,3 +83,11 @@ An independent five-second alarm ends the fixture if the host fails to bound
 delivery; that intervention fails the control. `drain_bytes` checks the prefix,
 200,000 following `x` bytes and EOF, returning 24 only for exact delivery.
 Neither mode applies a policy.
+
+The builder ends by executing every fixture once with no arguments and stdin at
+EOF, so each exits at its first check, and prints the status and elapsed time of
+each exec. That absorbs Gatekeeper's first-launch evaluation of a newly linked
+executable (about 200 ms on a fresh macOS 26 machine), which would otherwise be
+charged to the first driver test that spawns the fixture, such as the 150 ms
+over-budget validator case. The warm-up asserts nothing; the tests own every
+behavioral check.

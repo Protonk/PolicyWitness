@@ -31,3 +31,21 @@ for suffix in clock-failure clock-failure-later; do
     -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
     "${ROOT_DIR}/tests/fixtures/worker_lifecycle/clock_failure.c" -lsandbox -o "${OUTPUT}.${suffix}"
 done
+
+# Exec every fixture once with no arguments, stdin at EOF and only the standard
+# descriptors open, so each exits at its first check. Gatekeeper evaluates a
+# newly linked executable on its first exec (syspolicyd's first-launch scan,
+# about 200 ms on a fresh macOS 26 machine); charged to a driver test with a
+# 150 ms I/O deadline, that cost fails the test. The status and the elapsed time
+# are reported, not checked: the tests own every behavioral assertion.
+/usr/bin/python3 -B -I - "${OUTPUT}" "${OUTPUT}".* <<'PY'
+import subprocess, sys, time
+for path in sys.argv[1:]:
+    start = time.monotonic()
+    try:
+        status = subprocess.run([path], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL, timeout=30).returncode
+    except subprocess.TimeoutExpired:
+        status = 'timeout'
+    print(f'warm {path.rsplit("/", 1)[-1]}: rc={status} {int((time.monotonic() - start) * 1000)} ms')
+PY
