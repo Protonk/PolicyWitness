@@ -2,30 +2,6 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "release-acceptance/run-7d2cf8181e234be286e3cdde083e41dd",
-      "run_id": "20261004T165054Z_a5814610",
-      "reason": "PolicyWitness 0.2.6 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.2.6.",
-      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
-      "app_inventory": "before.json",
-      "release": "v0.2.6"
-    },
-    {
-      "path": "runs/release-0.2.6-default-confirmation",
-      "run_id": "20261004T165914Z_f239bccf",
-      "reason": "PolicyWitness 0.2.6 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.2.6.",
-      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
-      "app_inventory": "artifact-integrity/before.json",
-      "release": "v0.2.6"
-    },
-    {
-      "path": "runs/release-0.2.6-default",
-      "run_id": "20261004T165058Z_6f601a3f",
-      "reason": "PolicyWitness 0.2.6 initial default battery: 160/161 cases passed; unit/rust.unit log-replay capture assertion failed. Retained for diagnosis alongside a successful unchanged-app confirmation; cause unconfirmed.",
-      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
-      "app_inventory": "artifact-integrity/before.json",
-      "release": "v0.2.6"
-    },
-    {
       "path": "runs/byoxpc-investigation-20261006",
       "run_id": "byoxpc-investigation-20261006",
       "reason": "BYOXPC investigation receipts: signing, environment observation limits, entitlement effects, ad-hoc runtime control, verification boundaries and respawn behavior; manual observations with verified cleanup.",
@@ -143,6 +119,22 @@
       "reason": "BYOXPC remediation final gate, opt-in rerun after the session helper waits for the host launchd lists: fake-tool ownership controls, dossier witness, entitlement read-back and transfer, single-use and BBX-001 pass.",
       "source": "08651368504d302c4257e1a2261b7050bd642c64",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "release-acceptance/run-48344dc114bf49648cea1d2566e8fc40",
+      "run_id": "accept-30bc7b4220e9421c8b95687e058b65b9",
+      "reason": "PolicyWitness 0.2.7 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.2.7.",
+      "source": "50802056dfdf6ef55d36d49c40512603594e65ae",
+      "app_inventory": "before.json",
+      "release": "v0.2.7"
+    },
+    {
+      "path": "runs/release-0.2.7-default",
+      "run_id": "20261007T174107Z_806608cf",
+      "reason": "PolicyWitness 0.2.7 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.2.7.",
+      "source": "50802056dfdf6ef55d36d49c40512603594e65ae",
+      "app_inventory": "artifact-integrity/before.json",
+      "release": "v0.2.7"
     }
   ]
 }
