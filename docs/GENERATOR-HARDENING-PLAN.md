@@ -1,13 +1,22 @@
 # Generator hardening plan
 
-This is the one document under `docs/` that describes intended behavior
-rather than current behavior. It states the relationship between the four
-documentation generators and the files they write as numbered invariants,
-records where each generator stands against them, and specifies the changes
-and drift tests needed to satisfy them. Follow [Sequence](#sequence) in
-order, using the invariants as acceptance criteria. Change numbers identify
-the work each step requires. After completing the sequence, move the invariants into
-[the drift suite's README](../tests/suites/source_drift/README.md#invariants)
+PolicyWitness documents facts about itself through four generators that
+copy reviewed manifests into marked regions of its documents and sources,
+and the drift suite checks those copies. This plan hardens that arrangement.
+It fixes the weaknesses the 0.2.7 manifests show: an architecture check the
+build does not run, check citations a common word can satisfy, a manifest
+that cites itself, fact columns with no declared vocabulary, durations
+restated in facts instead of drawn from the limits manifest, counts and
+values restated in prose, captions that claim more than the generator
+verifies, and prose citations no rule reads. It adds four mechanisms, a form
+on every check citation, limit placeholders, inline spans and a prose
+baseline, states the resulting relationship between generators and
+documents as eleven invariants, and specifies the drift case that holds
+them.
+
+Follow [Sequence](#sequence) in order, using the invariants as acceptance criteria.
+Change numbers identify the work each step requires. After completing the sequence, 
+move the invariants into [the drift suite's README](../tests/suites/source_drift/README.md#invariants)
 and the generators' docstrings, then delete this file in accordance with
 [the documentation rule](../AGENTS.md#documentation).
 
@@ -114,7 +123,7 @@ the measurement module of the new test case.
 | G8 | not applicable | not applicable | it is the owner | **missing**: 7 duration facts, 2 with no row |
 | G9 | not applicable | not applicable | **missing**: 4 values restated in prose | **missing**: 1 count restated, and wrong |
 | G10 | exact | not applicable | exact | **overstates** |
-| G11 | not applicable | not applicable | file existence only | file existence only; anchors checked for the guide alone |
+| G11 | not applicable | not applicable | file existence only; anchors checked for the guide alone | file existence only |
 
 The specifics behind the bold cells:
 
@@ -175,7 +184,9 @@ the precise statement.
 ### C2. Check citations gain a form, and tests must be defined (G5, G10)
 
 Files: [architecture.json](architecture.json), [limits.json](limits.json),
-both document generators, [limits.py](../tests/suites/source_drift/limits.py),
+[generate_architecture.py](generate_architecture.py),
+[generate_limits.py](generate_limits.py),
+[limits.py](../tests/suites/source_drift/limits.py),
 the coverage table of [LIMITS.md](LIMITS.md#grounding-and-coverage).
 Tests: `test_check_citations_carry_a_form_and_tests_are_defined`,
 `test_captions_state_the_verified_guarantee`.
@@ -197,9 +208,9 @@ test that drives it, and an item left with only controls gains one. A fixture
 helper such as `install` in [session.py](../tests/fixtures/byoxpc/session.py)
 stays as a `control` beside the suite case added as its `test`.
 
-In the limits manifest the value-owner set keeps its seven modules; every
-value owner is a `test` because the set holds only test modules, and the
-loader asserts it. The four `main` citations are C programs under `tests/`
+In the limits manifest the value-owner set keeps its seven modules until C5
+adds an eighth; every value owner is a `test` because the set holds only
+test modules, and the loader asserts it. The four `main` citations are C programs under `tests/`
 and become controls; each of those rows already holds a `test`. The coverage
 table renders the form beside the kind.
 
@@ -261,14 +272,19 @@ copy as well.
 Add rows for two durations, each with a value owner and a coverage note under
 [the maintenance rules](LIMITS.md#maintaining-this-document):
 
-- `host_exit_delay`: the 50 ms reply-flush delay, owned in `runner_unit`. This
-  is the window in which a second connection meets the terminal claim.
-- `runner_verify_wait`: the verify command's default, owned by the existing
-  Rust assertion, with `--timeout-ms` on `runner verify` as its control.
+- `host_exit_delay`: the 50 ms reply-flush delay, with a value check in
+  [LimitsContractTests.swift](../runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift).
+  This is the window in which a second connection meets the terminal claim.
+- `runner_verify_wait`: the verify command's default, with a value check in
+  [runner_commands.rs](../controller/src/runner_commands.rs) that reads the
+  row from the manifest as `documented_throttle_interval` does, replacing the
+  assertion against a literal there; that file joins the value-owner set as
+  its eighth module. `--timeout-ms` on `runner verify` is its control.
 
 ### C6. Spans (G9)
 
-Files: both document generators, the introduction of
+Files: [generate_architecture.py](generate_architecture.py),
+[generate_limits.py](generate_limits.py), the introduction of
 [ARCHITECTURE.md](ARCHITECTURE.md), the prose of [LIMITS.md](LIMITS.md).
 Test: `test_spans_are_authored_outside_regions_and_copied_as_bytes`.
 
