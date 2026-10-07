@@ -152,28 +152,41 @@ def authored_prose(text):
 
 
 def prose_sites(root=ROOT):
-    """Exact prose lines/fragments, one entry per literal or unread citation pair."""
+    """Exact prose sites: one entry per line holding a literal, one per unread citation link."""
     common = module('measurement_common', ROOT / 'docs/generator_common.py')
     pattern = re.compile(common.DURATION_SIZE_RE.pattern + r'|\b\d[\d,]*-steps?\b', re.I)
+    identifier = re.compile(r'[A-Za-z_][A-Za-z0-9_.:]*(?:\(\))?')
+    boundary = re.compile(r'[.!?](?:\s|$)|\n\s*\n|\||\]\([^\s)]+\)')
     entries = []
     for path in scanned_documents(root):
         text = authored_prose(path.read_text())
         document = path.relative_to(root).as_posix()
+        lines = set()
         for match in pattern.finditer(text):
             a, b = text.rfind('\n', 0, match.start()) + 1, text.find('\n', match.end())
-            entries.append(dict(document=document, invariant='G9', kind='literal', text=text[a:b if b >= 0 else len(text)]))
-        for symbol in re.finditer(r'`([^`\n]+)`', text):
-            if text[max(0, symbol.start() - 1):symbol.start()] == '[':
+            lines.add((a, b if b >= 0 else len(text)))
+        for a, b in sorted(lines):
+            entries.append(dict(document=document, invariant='G9', kind='literal', text=text[a:b]))
+        # A citation pair is a backticked identifier that the linked file holds, in the same
+        # sentence or table cell as a link whose label is not already a symbol.
+        for link in re.finditer(r'\[([^]\n]+)\]\(([^\s)]+)\)', text):
+            label, target = link[1], link[2].split('#', 1)[0]
+            if re.fullmatch(r'`[^`]+`', label) or not target or re.match(r'^[\w+.-]+:', target):
                 continue
-            rest = text[symbol.end():]
-            end = re.search(r'[.!?](?:\s|$)', rest)
-            sentence = rest[:end.start()] if end else rest
-            link = re.search(r'\[([^]\n]+)\]\(([^\s)]+)\)', sentence)
-            if link:
-                target = link[2].split('#', 1)[0]
-                if target and not re.match(r'^[\w+.-]+:', target) and Path(target).suffix.lower() != '.md' and (path.parent / target).is_file():
-                    entries.append(dict(document=document, invariant='G11', kind='citation_pair',
-                                        text=text[symbol.start():symbol.end() + link.end()]))
+            if Path(target).suffix.lower() == '.md' or not (path.parent / target).is_file():
+                continue
+            cited = (path.parent / target).read_text(errors='replace')
+            start = max(0, link.start() - 240)
+            window = text[start:link.start()]
+            edges = list(boundary.finditer(window))
+            if edges:
+                start += edges[-1].end()
+                window = text[start:link.start()]
+            tokens = [token for token in re.finditer(r'`([^`\n]+)`', window)
+                      if identifier.fullmatch(token[1]) and len(token[1]) >= 3 and token[1] in cited]
+            if tokens:
+                entries.append(dict(document=document, invariant='G11', kind='citation_pair',
+                                    text=text[start + tokens[0].start():link.end()]))
     return sorted(entries, key=lambda row: (row['document'], row['kind'], row['text']))
 
 
@@ -526,6 +539,17 @@ class GeneratorContractTests(unittest.TestCase):
             self.assertEqual(added[0]['kind'], kind)
             self.assertEqual(baseline_problems(root, baseline + added), [])
             path.write_text(original)
+        # The corrected scan: UTF-8 counts are not durations, one line is one site, and a
+        # backticked token the linked file does not hold is not a citation.
+        original = path.read_text()
+        path.write_text(original + '\nIt counts UTF-8 bytes, two 7 ms waits and 9 ms more.\n'
+                        + 'The `no_such_symbol_q7` ([generate_architecture.py](generate_architecture.py)) case.\n')
+        added = prose_sites(root)
+        for row in prose_sites():
+            added.remove(row)
+        self.assertEqual([(row['kind'], row['text']) for row in added],
+                         [('literal', 'It counts UTF-8 bytes, two 7 ms waits and 9 ms more.')])
+        path.write_text(original)
         missing = dict(document='docs/ARCHITECTURE.md', invariant='G9', kind='literal', text='A vanished delay lasts 7 seconds.')
         self.assertTrue(baseline_problems(root, baseline + [missing]))
         counts = measurements(root)['baseline']

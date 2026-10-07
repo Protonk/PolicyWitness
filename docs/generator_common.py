@@ -82,7 +82,7 @@ def require_test(owner, checks):
 
 # Durations and sizes in reviewed manifests must come from limits, not literals.
 DURATION_SIZE_RE = re.compile(
-    r'\b(?:\d[\d,]*(?:\.\d+)?[\s-]+(?:ms|milliseconds?|s|seconds?|bytes?|KiB|MiB)|'
+    r'\b(?:(?<!UTF-)\d[\d,]*(?:\.\d+)?[\s-]+(?:ms|milliseconds?|s|seconds?|bytes?|KiB|MiB)|'
     r'(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|'
     r'thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|'
     r'thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)[\s-]+seconds?)\b', re.I)
