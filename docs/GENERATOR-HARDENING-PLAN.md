@@ -52,7 +52,10 @@ that keeps the two coverage invariants honest while conversions are pending.
 - **Baseline.** New in this plan. A committed list of the exact prose sites
   that still state a value, a count or a citation in an unverified form. A
   rule refuses any site that is not listed and any listed site that no longer
-  occurs, so the list can only shrink.
+  occurs, so the list and the documents agree and growth is one explicit line
+  in one file. Whether the list may grow is decided outside the change, by
+  the release preflight against the previous release and by review between
+  releases; see C9.
 
 ## The invariants
 
@@ -72,12 +75,15 @@ can cite it.
 - **G4. Citations resolve.** Every citation names a repository-relative file
   that exists and a symbol that occurs in it. The generator refuses the
   manifest otherwise.
-- **G5. Check citations have a kind and a definition.** Every check citation
-  carries a `kind`. A `test` kind names a test that is defined in the cited
-  file, in the file's language; a `rule` kind names a drift rule function; a
-  `control` kind names a fixture, golden or helper a test compares against.
-  Every node, edge or limit cites at least one `test` or `rule`. A common word
-  that merely occurs in a file cannot satisfy a `test` citation.
+- **G5. Check citations have a form and a definition.** Every check citation
+  in both manifests carries a `form`. A `test` form names a test that is
+  defined in the cited file, in the file's language; a `rule` form names a
+  drift rule function; a `control` form names a fixture, golden, helper or
+  compiled C control that a test compares against. Every node, edge and limit
+  cites at least one `test` or `rule`. A common word that merely occurs in a
+  file cannot satisfy a `test` citation. The limits manifest's existing
+  `kind`, which says what a check establishes about the value, is a different
+  dimension and stays beside `form`.
 - **G6. No self-citation.** A manifest does not cite itself, and does not cite
   any region or whole-file output of its own generator as a source, because the
   generator would then verify text it wrote. A generator's constants are the
@@ -130,7 +136,7 @@ numbers can be reproduced and the tests can assert their targets.
 | G2 idempotence | tested | tested | tested | tested |
 | G3 check in the build | yes | regenerate, then check before signing | yes | **no**; the check runs only in the drift suite |
 | G4 citations resolve | copies table tested | not applicable | yes | yes |
-| G5 kinds and definitions | not applicable | not applicable | partial: kinds and a value-owner set; 4 rows cite `main`; 15 checks match a symbol that occurs ten or more times | **missing**: no kind field |
+| G5 forms and definitions | not applicable | not applicable | partial: a value-owner set, and a `kind` on the value dimension; no `form`; 4 rows cite `main`; 15 checks match a symbol that occurs ten or more times | **missing**: no `form` field |
 | G6 no self-citation | holds | holds; regions are excluded from the digest | holds | **2 self-citations** in the document graph |
 | G7 declared vocabulary | fixed columns | not applicable | fixed columns | **missing**: fact keys are free text |
 | G8 durations and sizes | not applicable | not applicable | it is the owner | **missing**: 7 numeric facts, 2 with no limits row |
@@ -173,11 +179,12 @@ The architecture figures, in detail:
 
 The limits generator, in detail:
 
-- 222 citations, 144 checks, every check with a kind: 75 value, 50 boundary,
-  19 path. Every row has a value owner from a fixed set of seven test files,
-  which the drift suite enforces. 4 rows cite `main` as a boundary or path
-  check, in two C sources and one Python checker; the definition rule in G5
-  would accept `main` in a C fixture as a `control` and refuse it as a `test`.
+- 222 citations, 144 checks, every check with a `kind` on the value
+  dimension, 75 value, 50 boundary and 19 path, and none with a `form`.
+  Every row has a value owner from a fixed set of seven test modules, which
+  the drift suite enforces. 4 rows cite `main` as a boundary or path check,
+  in two C sources and one Python checker; the form rule in G5 accepts
+  `main` in a C control as a `control` and refuses it as a `test`.
 - The prose outside the generated tables restates four values: a 63-byte step
   id fits and a 64-byte one does not; output rounds up to a whole 4 MiB; the
   reply maximum comes from a 256-step fixture; and the release margin
@@ -201,24 +208,41 @@ Graphviz: an SVG is verified by the stamp naming its dot text. Add the edge
 "runs the generators' checks" from the `build` node's fact in favor of the
 edges, which are precise.
 
-### C2. Check citations gain a kind, and tests must be defined (G5, G10)
+### C2. Check citations gain a form, and tests must be defined (G5, G10)
 
-Every `checks` reference in [architecture.json](architecture.json) gains
-`"kind": "test" | "rule" | "control"`. The generator applies the rule by kind:
+Every `checks` reference in [architecture.json](architecture.json) and in
+[limits.json](limits.json) gains `"form": "test" | "rule" | "control"`. The
+word is `form`, not `kind`, because both manifests already use `kind` for
+something else: the architecture manifest for a node's or edge's style, the
+limits manifest for what a check establishes about a value. The generator
+applies the rule by form:
 
-| Kind | Allowed files | Symbol must match |
+| Form | Allowed files | Symbol must match |
 | --- | --- | --- |
 | `test` | `tests/suites/**`, `runner/Tests/**`, Rust sources with `#[test]` | Python `def {symbol}(`; Rust `fn {symbol}(` within three lines after `#[test]`; Swift `func {symbol}(` or a run label `"{symbol}:`; shell `test_selected {symbol}` or `PW_TEST_ID="{symbol}"`; or a case id in [catalog.json](../tests/catalog.json) whose suite owns the file |
 | `rule` | `tests/suites/source_drift/*.py` | Python `def {symbol}(`, and `main()` must call it |
-| `control` | `tests/fixtures/**`, `tests/lib/**`, `build.sh` | occurs in the file; for Python and C, as a definition |
+| `control` | `tests/fixtures/**`, `tests/lib/**`, `build.sh`, and C sources under `tests/` | occurs in the file; for Python and C, as a definition: `def {symbol}(`, or `{symbol}(` at the start of a line |
 
-Every node and edge must cite at least one `test` or `rule`. The initial
-assignment is mechanical by path: suite, runner-test and Rust-test files
-become `test`; drift-rule functions become `rule`; the rest become `control`.
-The 8 plain-word symbols and the 22 non-test citations are then fixed by
-hand: a fixture helper such as `install` in
-[session.py](../tests/fixtures/byoxpc/session.py) becomes a `control`, and
-the row gains the suite case that drives it as its `test`.
+Every node, edge and limit must cite at least one `test` or `rule`. The
+initial assignment is mechanical by path: suite, runner-test and Rust-test
+files become `test`; drift-rule functions become `rule`; the rest become
+`control`. In the architecture manifest the 8 plain-word symbols and the 22
+non-test citations are then fixed by hand: a fixture helper such as
+`install` in [session.py](../tests/fixtures/byoxpc/session.py) becomes a
+`control`, and the row gains the suite case that drives it as its `test`.
+
+In the limits manifest, `kind` is untouched: value, boundary and path keep
+their meaning and their rendering, and the value-owner set in
+[limits.py](../tests/suites/source_drift/limits.py) keeps its seven modules.
+`form` is added beside `kind` on every check. Every value owner is a `test`
+by construction, because the owner set holds only test modules, and the
+loader asserts it rather than assuming it. The four `main` citations are C
+programs under `tests/` and become `control`; each of those rows already
+holds a `test`. The coverage table in
+[LIMITS.md](LIMITS.md#grounding-and-coverage) renders the form beside the
+kind. The limits loader refuses an unexpected field today, so its
+`schema_version` goes to 2 with this change, as the architecture manifest's
+does.
 
 The caption and the details summary change to state what G4 and G5 verify
 and nothing else: each row names the source symbol that implements it and
@@ -356,15 +380,44 @@ find and that is not yet in a verified form:
   these entries are written by hand from the survey, and the rule verifies
   only that each still occurs, so a new count statement is a review matter.
 
-The rule refuses a found site that is not listed, so no new unverified
-restatement or citation enters a scanned document unnoticed, and refuses a
-listed site that no longer occurs, so a conversion must remove its entry and
-the list can only shrink. This is what lets G9 and G11 be stated honestly at
-every point in the sequence: each holds as a mechanism from the step that
-lands it, and holds in full on the day its part of the baseline is empty.
-The baseline outlives this plan. The drift suite keeps the rule, and the
-suite README states which invariants hold in full and which still carry
-entries.
+The baseline has three properties, and each has a different guarantor.
+
+- **Consistency.** The sites the patterns find equal the sites the file
+  lists. An unlisted site fails, and so does a listed site that no longer
+  occurs. The drift test holds this, mechanically.
+- **Explicit growth.** Because an unlisted site fails, a new restatement or
+  citation can enter a scanned document only together with a new line in
+  this one file. Growth is never a side effect of a prose edit; it is a line
+  in a diff to a file whose only purpose is to be short. The drift test
+  holds this too.
+- **No growth.** No check inside a change can establish that the file did
+  not grow, because any reference it compares against, a ceiling, a count or
+  a copy of the file, can be edited in the same change. Non-growth needs a
+  reference the change cannot edit. Between releases that reference is the
+  reviewer: a diff that adds a baseline line is a diff that adds unverified
+  prose, and is read as such. At a release it is mechanical:
+  [release_preflight.py](../tests/lib/release_preflight.py) already requires
+  HEAD to sit at an annotated release tag, and it gains a check that reads
+  the baseline at the previous release tag and refuses a release whose
+  baseline is not a subset of it. When the previous tag predates the
+  baseline there is nothing to compare, and the preflight reports that
+  rather than refusing. A release can therefore convert sites and never add
+  them, and the drift suite keeps every addition explicit until the
+  preflight sees it.
+
+This is where the plan's boundary runs. The generators and the drift suite
+can make the state of the prose knowable and every change to it explicit;
+they cannot decide what prose may say, and this plan does not try to. Adding
+a baseline line is a judgment a reviewer makes, and the preflight rule is
+the one place that judgment is checked against something the change cannot
+edit.
+
+The baseline is what lets G9 and G11 be stated honestly at every point in
+the sequence: each holds as a mechanism from the step that lands it, and
+holds in full on the day its part of the baseline is empty. The baseline
+outlives this plan. The drift suite keeps the consistency rule, the
+preflight keeps the subset rule, and the suite README states which
+invariants hold in full and which still carry entries.
 
 ## The test case
 
@@ -384,14 +437,15 @@ commands in a disposable checkout so that no control can write to the tree.
 | --- | --- | --- | --- |
 | `test_build_checks_every_generator_before_signing` | G3 | [build.sh](../build.sh) invokes `--check` for each of the four generators before the codesign block; the identity generator's regenerate-then-check pair counts | a checkout whose build script lacks one check line fails the test, not the build |
 | `test_regeneration_changes_nothing_outside_regions` | G1 | for each generator: change the manifest, regenerate, and the text outside every region and whole-file output is unchanged in every target | a generator patched to append one byte after its END marker |
-| `test_check_citations_carry_a_kind_and_tests_are_defined` | G5, G4 | every check in the architecture manifest has a kind; every `test` symbol matches a definition pattern for its file; every item has a `test` or `rule`; the measurement functions report zero plain-word `test` symbols and zero `test` citations into fixtures | a check without a kind; `install` with kind `test`; an item with only `control` checks; a `rule` whose function `main()` does not call |
+| `test_check_citations_carry_a_form_and_tests_are_defined` | G5, G4 | every check in both manifests has a form; every `test` symbol matches a definition pattern for its file; every node, edge and limit has a `test` or `rule`; every limit's value owner has form `test`; every limits `kind` is unchanged; the measurement functions report zero plain-word `test` symbols and zero `test` citations into fixtures | a check without a form; `install` with form `test`; an item with only `control` checks; a `rule` whose function `main()` does not call; a limits value owner with form `control`; a limits check whose `kind` is missing |
 | `test_manifests_do_not_cite_themselves_or_their_outputs` | G6 | no source citation in either manifest names the manifest or a file its generator writes | the document node citing its own marker |
 | `test_fact_keys_are_declared_and_columns_follow_the_declaration` | G7 | every fact key is declared; every declared key is used; the rendered table header equals the declaration; the BYOXPC graph declares at most eight node keys | an undeclared key; an unused declared key; a renderer that collects keys from items |
 | `test_durations_and_sizes_render_from_limits` | G8 | no fact, label or note in the architecture manifest matches the duration-or-size pattern; every placeholder names an id in [limits.json](limits.json); the rendered text at each placeholder equals the limits table's value cell for that id; bumping a value in a checkout's limits manifest changes the fact, the table and the dot stamp together; the architecture generator leaves [limits.json](limits.json) and [LIMITS.md](LIMITS.md) byte-identical | a literal "7 seconds" in a fact; a placeholder naming an id that does not exist; a renderer that leaves placeholder text in the dot output |
 | `test_spans_render_check_and_stay_out_of_regions` | G9, G2 | every span in every registered document is current; `--check` reports a stale span and an unknown name by name; regeneration repairs a stale span and a second run writes nothing | a span with a stale value; a span naming `architecture.no_such_count`; a span placed inside a generated region |
 | `test_captions_state_the_verified_guarantee` | G10 | the rendered caption and summary name presence and definition as the verified facts and say that assertion of the row is not verified; neither contains "exercises", "covers" or "proves" | a renderer whose caption omits the unverified clause; a caption containing any of the three words |
 | `test_prose_links_resolve_anchors_and_symbol_links` | G11 | the shared link checker reports nothing for the scanned documents, with every anchor resolved and every symbol-form link verified | a link to a heading that does not exist; a symbol-form link whose symbol is absent; a reference-style link |
-| `test_prose_baseline_only_shrinks` | G9, G11 | every site the two patterns find in the scanned documents is listed in the baseline; every listed site still occurs; the entries are reported per invariant so the README can state which parts are empty | a new "7 seconds" sentence in a scanned document; a new symbol-and-link pair; a baseline entry whose text no longer occurs |
+| `test_prose_baseline_is_consistent_and_growth_is_explicit` | G9, G11 | every site the two patterns find in the scanned documents is listed in the baseline; every listed site still occurs; a new site fails until a line is added to the baseline and to nothing else; the entries are reported per invariant so the README can state which parts are empty | a new "7 seconds" sentence with no baseline line; a new symbol-and-link pair with no baseline line; a baseline entry whose text no longer occurs |
+| `test_release_preflight_refuses_a_grown_baseline` | G9, G11 | in a disposable git repository with two annotated release tags, the preflight accepts a candidate whose baseline equals or is a subset of the previous tag's, refuses a superset, and reports rather than refuses when the previous tag has no baseline; `--report` turns the refusal into a warning as it does for every other finding | a candidate with one added baseline line; a candidate with a rewritten entry that matches no previous entry |
 | `test_measurements_match_this_plan` | all | the measurement functions, run on the committed manifests, produce the citation, column and numeric-fact counts the tests above assert as targets; this test is the one that is edited as the numbers move, and it is deleted with this plan | — |
 
 Every test that runs a generator does so in a checkout and asserts afterward
@@ -408,20 +462,27 @@ and the SVGs re-rendered where the dot text changed.
    build script, one edge in the manifest.
 2. C8 and `test_regeneration_changes_nothing_outside_regions`. No generator
    changes; the test documents the property before the generators change.
-3. C2 and C3 with their two tests, and the mutation tables in
+3. C2 and C3 for the architecture manifest, with their two tests and the
+   mutation table in
    [architecture.py](../tests/suites/source_drift/architecture.py). The
    manifest rewrite is mechanical first, then by hand for the 30 citations the
-   rule refuses. Schema version 2.
-4. C4 and its test. The BYOXPC re-keying is reviewed as a figure change.
-5. C5 and its test, after the two row decisions. The limits manifest gains at
+   rule refuses. Schema version 2. The architecture manifest goes first
+   because its citations are the weaker ones, so the definition patterns are
+   settled against the harder cases.
+4. C2 for the limits manifest: `form` beside `kind`, schema version 2, the
+   mutation table in [limits.py](../tests/suites/source_drift/limits.py), the
+   four `main` citations as controls, the loader's assertion that every value
+   owner is a `test`, and the coverage table's new column.
+5. C4 and its test. The BYOXPC re-keying is reviewed as a figure change.
+6. C5 and its test, after the two row decisions. The limits manifest gains at
    most two rows, each with a value owner and a coverage note, under
    [the maintenance rules](LIMITS.md#maintaining-this-document).
-6. C6 and its test, with the first span in the architecture introduction and
+7. C6 and its test, with the first span in the architecture introduction and
    the rewording of the limits prose that does arithmetic on a value.
-7. C7 and C9 with their tests. The baseline's first entries are the sites
-   the survey found. From here a conversion is a baseline removal, and the
-   test shows it.
-8. `test_measurements_match_this_plan`, then the README paragraphs, then this
+8. C7 and C9 with their tests, including the preflight subset rule. The
+   baseline's first entries are the sites the survey found. From here a
+   conversion is a baseline removal, and the test shows it.
+9. `test_measurements_match_this_plan`, then the README paragraphs, then this
    document is deleted and the router line in [AGENTS.md](../AGENTS.md)
    points at the drift suite README. An empty baseline is not a condition of
    deletion; the README states which invariants hold in full.
@@ -450,5 +511,5 @@ baseline of C9, so progress is visible in the drift suite rather than here.
 - The evidence-channels table, whose landing paths the shape goldens could
   verify. [a rule]
 - The document graph's drift node, which draws four rule edges where the
-  drift script runs thirteen rules. [C2's `rule` kind gives the check a
+  drift script runs thirteen rules. [C2's `rule` form gives the check a
   vocabulary to compare against]
