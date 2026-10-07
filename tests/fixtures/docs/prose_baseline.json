@@ -212,72 +212,6 @@
       "text": "`writePolicy` and `MonotonicDeadline` in\n[MonotonicDeadline.swift](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift)"
     },
     {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "**Source-drift rules.** Mechanical checks over text that is not generated:\n  the host invariance rule, the sandboxed-harness note carried in three\n  places, the CLI surface block against the usage text, one coverage row per\n  outcome constant, the suite table against the suite directories and the\n  catalog, and the test-seam table against `PWRunnerTestOverrides`."
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "Exactly three processes call native sandbox APIs:"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "Four manifests own numbers, limits,\n  figures and the identity; four generators copy them into marked regions of\n  documents and sources"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "Seven channels reach the envelope."
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "The six core ideas in [AGENTS.md](../AGENTS.md#core-ideas)"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "The three nested envelopes"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "four records carry a local version field of\ntheir own"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "reaches, is the fourth figure."
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "three wire numbers and the build generates one source identity"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "  normal 50 ms reply-flush delay. Service tests observe entry and retirement"
-    },
-    {
-      "document": "docs/ARCHITECTURE.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "or waits for the generated plist's one-second `ThrottleInterval`; and a"
-    },
-    {
       "document": "docs/CONTRACT.md",
       "invariant": "G11",
       "kind": "citation_pair",
@@ -366,18 +300,6 @@
       "invariant": "G11",
       "kind": "citation_pair",
       "text": "`workerAdmissionFailure`\n  ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)"
-    },
-    {
-      "document": "docs/LIMITS.md",
-      "invariant": "G9",
-      "kind": "count",
-      "text": "60000 > 30000 + 1000 + 5000"
-    },
-    {
-      "document": "docs/LIMITS.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "  from the field-complete 256-step reply fixture encoded by"
     },
     {
       "document": "docs/LIMITS.md",

@@ -281,7 +281,7 @@ implements it, so that a premise can be reopened when the platform changes.
   rounded up to a whole 4 MiB. The maximum is synthesized by
   `maximalReplyEncodedSize`
   ([ReplyMaximumTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift))
-  from the field-complete 256-step reply fixture encoded by
+  from the field-complete <!-- span limits.probe_steps.value -->256<!-- /span -->-step reply fixture encoded by
   `pwRunnerEncodeJSON`; it places fields that cannot co-occur side by side, so it
   is an upper bound for the schema, and a reply string key added without a size
   classification fails that test. Collection buffers the whole stream before
@@ -346,7 +346,11 @@ implements it, so that a premise can be reopened when the platform changes.
   the worker polling window; `ValidatorClientInput`
   ([ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift))
   the validator deadline; `PW_PROCEED_WAIT_MS_DEFAULT` the release wait, with
-  `validatorReleaseMarginMs` as the nominal margin (60000 > 30000 + 1000 + 5000).
+  `validatorReleaseMarginMs` as the nominal margin
+  (<!-- span limits.worker_proceed_wait.value -->60,000<!-- /span --> >
+  <!-- span limits.validator_io_wait.value -->30,000<!-- /span --> +
+  <!-- span limits.validator_exit_grace.value -->1,000<!-- /span --> +
+  <!-- span limits.validator_release_margin.value -->5,000<!-- /span -->).
   Policy transfer precedes polling, synchronous validator work is outside the
   polling budget, and cleanup and reaping add time. `runCWorker`
   ([CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)) counts polling

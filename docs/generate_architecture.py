@@ -405,6 +405,8 @@ def span_values(manifest):
     for graph in graphs:
         values[graph["id"] + ".nodes"] = len(graph["nodes"])
         values[graph["id"] + ".edges"] = len(graph["edges"])
+        for kind in sorted({node["kind"] for node in graph["nodes"]}):
+            values[f"{graph['id']}.kinds.{kind}"] = sum(node["kind"] == kind for node in graph["nodes"])
     return {name: format_value(value) for name, value in values.items()}
 
 

@@ -158,7 +158,7 @@ be used, and every used key declared. Architecture durations and sizes use
 `{limit:<id>}` placeholders, resolved through the limits loader and formatter.
 The same values reach table cells and dot tooltips, and therefore SVG stamps.
 Architecture exposes `graphs`, `nodes`, `edges`, `unpinned`, and per-graph
-`<graph>.nodes` and `<graph>.edges` spans. Limits exposes `<id>.value` and
+`<graph>.nodes`, `<graph>.edges` and `<graph>.kinds.<kind>` spans. Limits exposes `<id>.value` and
 `<id>.value_unit`. Author a span outside generated/copied regions:
 
 ```html

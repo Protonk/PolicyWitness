@@ -58,9 +58,10 @@ carries a compile diagnostic, which matters inside an
 establishes nothing about how far a host or worker progressed before the
 connection failed.
 
-Exactly three processes call native sandbox APIs: the worker (compile and
-apply), the validator (`sandbox_check`) and `sbpl-check` (compile only). The
-controller, the client, the host and the observer do not, and for the host
+Only the worker (compile and apply), the validator (`sandbox_check`) and
+`sbpl-check` (compile only) call native sandbox APIs; the topology table's
+Native sandbox API column is the record. The controller, the client, the
+host and the observer do not, and for the host
 that is enforced rather than assumed (see [Principles](#principles-as-enforced-constraints)).
 
 ## Process topology
@@ -222,9 +223,10 @@ Where each phase is pinned:
   attempt later creates or removes the target, and the step still receives
   an explicit `prediction_unavailable` observation. Checked by `runner_unit`
   and the planner rule in `source_drift`.
-- **Spawn and apply.** Steps 1 to 8 of the driver's comment in
-  [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) and steps 2 to
-  7 of the worker's. The ready byte has its own window
+- **Spawn and apply.** The driver's header comment in
+  [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) from the
+  region setup through the ready byte, and the worker's from mapping the
+  region through apply. The ready byte has its own window
   (`readyByteTimeoutMs`); `runner_ready_byte_resilience` checks it.
 - **Compiled-object receipt.** When the request opts in, the worker copies
   the compiled object into the capture region before applying it
@@ -245,7 +247,8 @@ Where each phase is pinned:
   `completed`; an exec attempt acquires its pipes and spawn handles after
   apply and releases them before its slot completes. Checked by
   `runner_c_worker_harness` and `runner_exec_lifecycle`.
-- **Exit, grace and kill.** Steps 9 to 11 of the driver's comment;
+- **Exit, grace and kill.** The driver's header comment from the exit
+  request through the final snapshot;
   `runner_outcome_runner_timeout/host_kills_hung_worker` checks the kill path
   and `runner_use_c_worker` the ordinary one.
 - **Reply and envelope.** `reply_version` admits the reply or retains it
@@ -259,26 +262,37 @@ wait and yields a synthetic `xpc_timeout` reply, and it cancels nothing in
 the host. The host's cleanup can fail: `terminate` makes one blocking wait
 after a successful kill request, and when no reap is confirmed the
 collection basis reads `execution_may_continue` rather than
-`after_confirmed_reap`. The worker kills an exec child's process group; a
-descendant that leaves that group is not contained. The
+`after_confirmed_reap`. The
 [failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#host-observations)
 adds no global lifecycle deadline, so a reply, the end of observation and
 the end of execution are three different moments, and each record says
 which one it describes.
 
+Known gap: an exec child's descendant that leaves the child's process group
+is not contained. The worker kills the group at the exec deadline and at
+cleanup, and the lifecycle record says what it observed, but a process that
+has left the group outlives the run unseen, and no record establishes that
+every descendant stopped.
+
 Each budget covers one phase and no more. Policy delivery has its own
-absolute monotonic deadline, started immediately after the spawn; the ready
-window covers only the wait for the ready byte after
-the policy has been written; the sentinel deadline covers application
-through `done`, less the collection interval, because the host runs the
-hook synchronously between polls and the hook's time is outside it; the
-validator I/O deadline covers collection; the proceed budget covers the
-worker's wait for release; the grace timer covers exit request to kill; the
-exec deadline and attempt budget cover the worker's waits on exec children,
-per step and per plan; the log budget covers the observer. The ready and
-sentinel budgets are iteration counts over a sleep interval, not wall-clock
-guarantees in either direction. Their values and their checks are in
-[LIMITS.md](LIMITS.md).
+absolute monotonic deadline, [`worker_policy_transfer`](LIMITS.md#execution-budgets),
+started immediately after the spawn; the ready window,
+[`worker_ready_wait`](LIMITS.md#execution-budgets), covers only the wait for the
+ready byte after the policy has been written; the sentinel deadline,
+[`worker_sentinel_wait`](LIMITS.md#execution-budgets), covers application through
+`done`, less the collection interval, because the host runs the hook
+synchronously between polls and the hook's time is outside it; the
+validator I/O deadline, [`validator_io_wait`](LIMITS.md#execution-budgets), covers
+collection; the proceed budget, [`worker_proceed_wait`](LIMITS.md#execution-budgets),
+covers the worker's wait for release; the grace timer,
+[`worker_exit_grace`](LIMITS.md#execution-budgets), covers exit request to kill; the
+exec deadline and attempt budget, [`exec_child_wait`](LIMITS.md#execution-budgets) and
+[`exec_attempt_budget`](LIMITS.md#execution-budgets), cover the worker's waits on exec
+children, per step and per plan; the log budget,
+[`log_collection_timeout`](LIMITS.md#evidence-capture), covers the observer.
+The ready and sentinel budgets are iteration counts over a sleep interval,
+not wall-clock guarantees in either direction. Their values and their
+checks are in [LIMITS.md](LIMITS.md).
 
 The host sends policy bytes through a nonblocking pipe under the delivery
 deadline (`writePolicy` and `MonotonicDeadline` in
@@ -294,7 +308,7 @@ an earlier client timeout.
 
 ## Evidence channels and ownership
 
-Seven channels reach the envelope. Each native result has one writer. The
+The channels that reach the envelope are tabulated below. Each native result has one writer. The
 host adds its own observations beside a native result and overwrites none of
 them, and the controller does the same with the host's.
 
@@ -330,12 +344,13 @@ this document links it wherever it needs a rule and never restates one.
 
 Each node below is a record that crosses from one owner to another, and each
 edge is the guard that lets it cross. [contract.json](contract.json) owns the
-three wire numbers and the build generates one source identity
-([CONTRACT.md](CONTRACT.md)); four records carry a local version field of
-their own, each read by exactly one receiver (the observer report, the
-evidence manifest, the runner registry and the compiled-object receipt), and
-the node table names them. Every other boundary is held by a golden, a
-suite, or by being built and shipped together, and the edge table says which.
+wire version numbers and the build generates one source identity
+([CONTRACT.md](CONTRACT.md)). The records that carry a local version field
+of their own, each read by exactly one receiver, are the observer report,
+the evidence manifest, the runner registry and the compiled-object receipt,
+and the node table's Form column names each one's field. Every other
+boundary is held by a golden, a suite, or by being built and shipped
+together, and the edge table says which.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH boundaries -->
 ![Boundaries and their guards](architecture-boundaries.svg)
@@ -381,7 +396,7 @@ suite, or by being built and shipped together, and the edge table says which.
 
 Notes:
 
-- `validator_wire`: The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard.
+- `validator_wire`: The wire carries no version marker; the Known gap below the figure says what holds this boundary instead.
 - `B8`: The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.
 
 Every node and edge above cites at least one test or rule.
@@ -389,7 +404,14 @@ Every node and edge above cites at least one test or rule.
 </details>
 <!-- END GENERATED ARCHITECTURE GRAPH boundaries -->
 
-The three nested envelopes (`data.policy_check.envelope`,
+Known gap: the validator wire carries no version marker. Every other
+boundary above is held by a golden or a suite; the validator NDJSON is held
+only by being built and shipped with the host. The validator_batch_mode suite
+checks the shape, but the identity digest excludes the validator and the
+validator_executable_path test seam can pair the host with another
+validator, so co-shipping is an arrangement, not a guard.
+
+The nested envelopes (`data.policy_check.envelope`,
 `data.sandbox_log_capture.observer` and the controller's own) share the
 [envelope frame](CONTRACT.md#what-each-number-identifies), so one version
 number covers the controller family, and the observer's report carries its
@@ -408,9 +430,10 @@ kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 
 ## Principles as enforced constraints
 
-The six core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
-instructions. Each is also a constraint on a particular phase above, and each
-has a mechanism that enforces it.
+The core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
+instructions, and a drift rule keeps the list below equal to that one. Each
+is also a constraint on a particular phase above, and each has a mechanism
+that enforces it.
 
 - **One-way sandbox per process.** Every authorized connection shares the
   host's `PWRunnerAdmission` in
@@ -418,11 +441,11 @@ has a mechanism that enforces it.
   Its locked claim is terminal from the first request's entry, including a
   malformed or refused request. Later requests receive `already_ran` without
   orchestration or exit scheduling. Only the owner schedules exit after the
-  normal 50 ms reply-flush delay. Service tests observe entry and retirement
+  normal <!-- span limits.host_exit_delay.value_unit -->50 milliseconds<!-- /span -->
+  reply-flush delay. Service tests observe entry and retirement
   separately; `runner_byoxpc/single_use` checks two shipped clients, the held
   host's worker relationship, refusal without a file effect, owner completion
-  and successful service from a fresh host. A connection racing retirement
-  can still fail before refusal; no queue or automatic retry is promised.
+  and successful service from a fresh host.
 - **Host/worker split.** The host never links, loads or calls libsandbox.
   Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
   any binding under `runner/Sources/`, and `host_invariance` in
@@ -453,6 +476,11 @@ has a mechanism that enforces it.
   acquired after apply, inside the attempt, and released before the slot
   completes.
 
+Known gap: a connection that races the host's retirement can fail before it
+is refused. Later requests are promised `already_ran`, but a connection that
+arrives while the owner is scheduling exit can fail at the XPC layer first,
+and no queue or automatic retry is promised.
+
 ## How the system verifies itself
 
 The suites are listed in [tests/README.md](../tests/README.md#suite-coverage);
@@ -465,15 +493,26 @@ this section names the mechanisms they are built from.
   worker ABI's sizes and offsets. A difference writes a candidate; replacing
   the golden with the reviewed candidate is the acknowledgement
   ([shape goldens](CONTRACT.md#shape-goldens)).
-- **Generators with marked regions.** Four manifests own numbers, limits,
-  figures and the identity; four generators copy them into marked regions of
-  documents and sources, and the build runs every generator's check before
-  signing. Nothing reads a manifest at run time.
-- **Source-drift rules.** Mechanical checks over text that is not generated:
-  the host invariance rule, the sandboxed-harness note carried in three
-  places, the CLI surface block against the usage text, one coverage row per
-  outcome constant, the suite table against the suite directories and the
-  catalog, and the test-seam table against `PWRunnerTestOverrides`.
+- **Generators with marked regions.** The
+  <!-- span architecture.documents.kinds.manifest -->6<!-- /span --> manifest
+  nodes of the document graph, from the wire numbers to the prose baseline,
+  are hand-owned facts, and the identity is digested from the sources
+  themselves. The
+  <!-- span architecture.documents.kinds.generator -->5<!-- /span --> generator
+  nodes, one of them the shared module, copy manifest facts into marked
+  regions of documents and sources, render counts and limit values into
+  inline spans, and resolve limit placeholders in the architecture facts;
+  the build runs every generator's check before signing. Every check
+  citation carries a form, and the generator verifies the definition behind
+  a test. Prose that still states a value, a count or a citation outside
+  these mechanisms is listed in the
+  [prose baseline](../tests/fixtures/docs/prose_baseline.json), which grows
+  only by an explicit entry and which a release cannot grow. Nothing reads a
+  manifest at run time.
+- **Source-drift rules.** Mechanical checks over text that is not generated,
+  from the host invariance rule to the harness note's copies. Each rule is a
+  citation of the drift node in the document graph, and a test holds that
+  list equal to the rules the script runs.
 - **The consumer.** [consumer.py](../tests/lib/consumer.py) gates an
   envelope on exact versions, validates every step against its raw channel
   fields through the goldens, and selects steps by field; it is the reader
@@ -647,10 +686,11 @@ environment the worker itself holds; the worker spawns exec children with
 an empty environment, so no shipped path reads it back.
 
 The apparatus itself, from the copied bundle to the processes the policy
-reaches, is the fourth figure. Two of its facts are easy to miss from the
+reaches, has the last figure. Two of its facts are easy to miss from the
 guide's install recipe: `runner verify` sends a real request, so it consumes
 the host it reaches, and the next request meets that host's terminal claim
-or waits for the generated plist's one-second `ThrottleInterval`; and a
+or waits for the generated plist's `ThrottleInterval` of
+<!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->; and a
 selector's `required_entitlements` is satisfied only by keys the worker's
 read-back records with the value `true`, never by the host's.
 
@@ -724,10 +764,13 @@ Every node and edge above cites at least one test or rule.
 ## Known gaps
 
 Each gap is stated in full where the promise it limits is stated; this list
-only points there. No paragraph in this document currently opens with
-"Known gap": the three BYOXPC gaps once listed here (installed entitlements
-reaching the host only, non-recursive installation verification, selection by
-key presence in the host's read-back) were closed by the installer's helper
-signing, recursive verification and worker-based selection described in the
-[BYOXPC section](#byoxpc-as-a-variation-on-launch-and-selection).
+only points there, in document order.
+
+- [One run in time](#one-run-in-time): an exec child's descendant that
+  leaves the child's process group is not contained.
+- [Boundaries](#boundaries): the validator wire carries no version marker,
+  so co-shipping is an arrangement, not a guard.
+- [Principles as enforced constraints](#principles-as-enforced-constraints):
+  a connection that races the host's retirement can fail before it is
+  refused.
 

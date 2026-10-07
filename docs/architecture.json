@@ -239,7 +239,7 @@
           "facts": {"Owner": "host and validator, co-shipped in one bundle", "Form": "NDJSON; kind sb_api_validator_verdict; no version marker"},
           "sources": [{"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "sb_api_validator_verdict"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "decodeValidatorFrames"}, {"path": "controller/tools/sb_api_validator/sb_api_validator.c", "symbol": "sandbox_check"}],
           "checks": [{"path": "tests/suites/validator_batch_mode/run.sh", "symbol": "predictions_do_not_report", "form": "test"}, {"path": "tests/suites/failure_boundaries/check.py", "symbol": "validator_overlong_request", "form": "test"}],
-          "note": "The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard."
+          "note": "The wire carries no version marker; the Known gap below the figure says what holds this boundary instead."
         },
         {
           "id": "reply", "label": "runner reply (PWRunnerRunResult)", "kind": "record",
