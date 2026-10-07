@@ -44,7 +44,9 @@ that keeps the two coverage invariants honest while conversions are pending.
 - **Span.** New in this plan. An inline region holding one scalar, written as
   `<!-- span <generator>.<name> -->value<!-- /span -->`, so that a sentence of
   prose can state a count or a value the generator owns without the paragraph
-  becoming a region.
+  becoming a region. A span is authored in one place, outside every generated
+  region of its document; a region that copies text verbatim reproduces the
+  span as bytes of the copy.
 - **Limit placeholder.** New in this plan. The token `{limit:<id>}` inside an
   architecture fact, label or note, which the renderer replaces with the
   value and unit of that row in [limits.json](limits.json), so that the
@@ -102,7 +104,9 @@ can cite it.
   removed from the fact.
 - **G9. Counts and values reach prose through spans.** The mechanism: a span
   is owned by one generator, rendered from its manifest, checked for a stale
-  value or an unknown name, and never inside a region. The coverage: every
+  value or an unknown name, and authored outside every region; a copy region
+  carries it as bytes, checked by the copy's equality with its source. The
+  coverage: every
   prose site that states a count of generated content or a limit value
   without a span is listed in the baseline, the rule refuses a site that is
   not listed, and G9 holds in full when the baseline holds no such site.
@@ -318,13 +322,26 @@ Both document generators learn one inline region form:
 ```
 
 A generator renders the spans whose prefix it owns in every document it
-registers for, and its check fails on a stale value or on a name with its
-prefix that it does not expose. A span inside a generated region is an error.
-The architecture generator exposes `graphs`, `nodes`, `edges`, `unpinned` and,
-per graph, `<graph>.nodes` and `<graph>.edges`. The limits generator exposes
-`<id>.value` and `<id>.value_unit`, formatted as the tables format them. The
-guide's standalone validation accepts span comments, since the shared
-section is copied verbatim.
+registers for, in the text outside that document's generated regions, and
+its check fails on a stale value or on a name with its prefix that it does
+not expose. The architecture generator exposes `graphs`, `nodes`, `edges`,
+`unpinned` and, per graph, `<graph>.nodes` and `<graph>.edges`. The limits
+generator exposes `<id>.value` and `<id>.value_unit`, formatted as the
+tables format them. A span whose prefix no generator owns is caught by the
+uniform test, which knows every prefix.
+
+A span is authored in exactly one place, and the span pass never looks
+inside a region. Inside a region a span marker is one of two things. In a
+copy region, such as the guide's copied limits, questions and reading
+rules, it is bytes of the copy: the limits generator renders the spans in
+[LIMITS.md](LIMITS.md) first and copies the shared section afterwards, so
+the copy carries the rendered value, and a copy whose span differs from its
+source fails the existing copy-equality check, not a span check. In a
+rendered region it cannot occur, because no renderer emits span markers; a
+marker inserted by hand makes the region stale, and the region check
+refuses it. The guide's standalone validation accepts span comments as
+inert HTML comments, and the guide is registered with neither generator as
+a span document: spans reach it only by copy.
 
 Spans and limit placeholders share the one formatter, so a value reads the
 same in a fact, a table and a sentence.
@@ -441,7 +458,7 @@ commands in a disposable checkout so that no control can write to the tree.
 | `test_manifests_do_not_cite_themselves_or_their_outputs` | G6 | no source citation in either manifest names the manifest or a file its generator writes | the document node citing its own marker |
 | `test_fact_keys_are_declared_and_columns_follow_the_declaration` | G7 | every fact key is declared; every declared key is used; the rendered table header equals the declaration; the BYOXPC graph declares at most eight node keys | an undeclared key; an unused declared key; a renderer that collects keys from items |
 | `test_durations_and_sizes_render_from_limits` | G8 | no fact, label or note in the architecture manifest matches the duration-or-size pattern; every placeholder names an id in [limits.json](limits.json); the rendered text at each placeholder equals the limits table's value cell for that id; bumping a value in a checkout's limits manifest changes the fact, the table and the dot stamp together; the architecture generator leaves [limits.json](limits.json) and [LIMITS.md](LIMITS.md) byte-identical | a literal "7 seconds" in a fact; a placeholder naming an id that does not exist; a renderer that leaves placeholder text in the dot output |
-| `test_spans_render_check_and_stay_out_of_regions` | G9, G2 | every span in every registered document is current; `--check` reports a stale span and an unknown name by name; regeneration repairs a stale span and a second run writes nothing | a span with a stale value; a span naming `architecture.no_such_count`; a span placed inside a generated region |
+| `test_spans_are_authored_outside_regions_and_copied_as_bytes` | G9, G2 | every authored span in every registered document is current; `--check` names a stale span and an unknown name; regeneration repairs a stale span and a second run writes nothing; a span in the shared limits section reaches the guide's copy region with its rendered value, and the span pass changes nothing inside any region | a stale authored span; a span naming `architecture.no_such_count`; a span inserted by hand into a rendered region, refused as a stale region; a guide copy whose span value differs from its source, refused as a stale copy |
 | `test_captions_state_the_verified_guarantee` | G10 | the rendered caption and summary name presence and definition as the verified facts and say that assertion of the row is not verified; neither contains "exercises", "covers" or "proves" | a renderer whose caption omits the unverified clause; a caption containing any of the three words |
 | `test_prose_links_resolve_anchors_and_symbol_links` | G11 | the shared link checker reports nothing for the scanned documents, with every anchor resolved and every symbol-form link verified | a link to a heading that does not exist; a symbol-form link whose symbol is absent; a reference-style link |
 | `test_prose_baseline_is_consistent_and_growth_is_explicit` | G9, G11 | every site the two patterns find in the scanned documents is listed in the baseline; every listed site still occurs; a new site fails until a line is added to the baseline and to nothing else; the entries are reported per invariant so the README can state which parts are empty | a new "7 seconds" sentence with no baseline line; a new symbol-and-link pair with no baseline line; a baseline entry whose text no longer occurs |
