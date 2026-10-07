@@ -8,7 +8,7 @@
   "data": {
     "app_provenance": {
       "app_binary_rel_path": "Contents/MacOS/policy-witness",
-      "app_bundle_id": "com.yourteam.policy-witness",
+      "app_bundle_id": "com.policywitness.policy-witness",
       "app_entitlements": {},
       "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
       "evidence_notes": [
@@ -25,7 +25,7 @@
         "run",
         "--timeout-ms",
         "240000",
-        "com.yourteam.policy-witness.PWRunner",
+        "com.policywitness.policy-witness.PWRunner",
         "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/specimen_b.json"
       ],
       "capture_limit_bytes": 75497472,
@@ -44,7 +44,7 @@
       "stdout_truncated": false
     },
     "runner_provenance": {
-      "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
       "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
       "runner_entitlements": {
         "error": null,
@@ -54,12 +54,12 @@
       "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
       "runner_kind": "standard",
       "runner_registry_id": null,
-      "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+      "runner_service_name": "com.policywitness.policy-witness.PWRunner",
       "runner_signature": null
     },
     "runner_registry_id": null,
     "runner_result": {
-      "bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
       "error": "read(verdicts): exceeded 500 ms I/O deadline; wrote 1128 of 1128 probe bytes; drained 1030 stdout bytes",
       "normalized_outcome": "validator_no_reply",
       "pid": 56819,
@@ -848,9 +848,9 @@
       "termination_cause": null,
       "worker_pid": 56819
     },
-    "runner_service_bundle_id": "com.yourteam.policy-witness.PWRunner",
+    "runner_service_bundle_id": "com.policywitness.policy-witness.PWRunner",
     "runner_service_executable": "PWRunner",
-    "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+    "runner_service_name": "com.policywitness.policy-witness.PWRunner",
     "runner_startup_diagnostics": null,
     "sandbox_log_capture": null,
     "timeout_ms": 240000

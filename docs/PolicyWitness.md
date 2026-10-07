@@ -1771,7 +1771,7 @@ $PW runner install --kind byoxpc \
   --entitlements "$ENT" \
   --scope user
 
-$PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
+$PW runner verify --service-name com.policywitness.policy-witness.PWRunner --timeout-ms 2000
 ```
 
 Notes:
@@ -1890,7 +1890,7 @@ Alternative: select by service name:
 
 ```json
 "runner": {
-  "service": "com.yourteam.policy-witness.PWRunner",
+  "service": "com.policywitness.policy-witness.PWRunner",
   "mode": "byoxpc"
 }
 ```
@@ -1916,7 +1916,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
   },
   "probe_plan": [],
   "runner": {
-    "service": "com.yourteam.policy-witness.PWRunner",
+    "service": "com.policywitness.policy-witness.PWRunner",
     "mode": "byoxpc"
   }
 }

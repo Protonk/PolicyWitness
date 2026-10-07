@@ -15,7 +15,7 @@
         "20000",
         "--request",
         "-",
-        "com.yourteam.policy-witness.PWRunner"
+        "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 75497472,
       "ended_at_unix_ms": 1791300771923,
@@ -37,7 +37,7 @@
       "stdout_truncated": false
     },
     "runner_result": {
-      "bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
       "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
       "normalized_outcome": "runner_timeout",
       "pid": 50779,
@@ -465,7 +465,7 @@
       },
       "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/arch-remediation-focused/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
       "runner_provenance": {
-        "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
         "runner_entitlements": {
           "error": null,
@@ -475,7 +475,7 @@
         "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
         "runner_kind": "standard",
         "runner_registry_id": null,
-        "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
         "runner_signature": null
       }
     },

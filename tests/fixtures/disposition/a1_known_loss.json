@@ -8,7 +8,7 @@
   "data": {
     "app_provenance": {
       "app_binary_rel_path": "Contents/MacOS/policy-witness",
-      "app_bundle_id": "com.yourteam.policy-witness",
+      "app_bundle_id": "com.policywitness.policy-witness",
       "app_entitlements": {},
       "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
       "evidence_notes": [
@@ -25,7 +25,7 @@
         "run",
         "--timeout-ms",
         "20000",
-        "com.yourteam.policy-witness.PWRunner",
+        "com.policywitness.policy-witness.PWRunner",
         "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/disposition-accept-audit/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json"
       ],
       "capture_limit_bytes": 8388608,
@@ -44,7 +44,7 @@
       "stdout_truncated": false
     },
     "runner_provenance": {
-      "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
       "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
       "runner_entitlements": {
         "error": null,
@@ -54,12 +54,12 @@
       "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
       "runner_kind": "standard",
       "runner_registry_id": null,
-      "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+      "runner_service_name": "com.policywitness.policy-witness.PWRunner",
       "runner_signature": null
     },
     "runner_registry_id": null,
     "runner_result": {
-      "bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
       "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
       "normalized_outcome": "runner_timeout",
       "pid": 13116,
@@ -281,9 +281,9 @@
       "termination_cause": "unknown",
       "worker_pid": 13116
     },
-    "runner_service_bundle_id": "com.yourteam.policy-witness.PWRunner",
+    "runner_service_bundle_id": "com.policywitness.policy-witness.PWRunner",
     "runner_service_executable": "PWRunner",
-    "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+    "runner_service_name": "com.policywitness.policy-witness.PWRunner",
     "runner_startup_diagnostics": null,
     "sandbox_log_capture": null,
     "timeout_ms": 20000
