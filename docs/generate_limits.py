@@ -377,7 +377,9 @@ def main():
                 ("PolicyWitness.md", guide_before, guide_after)]
                 if old != new]
             if stale:
-                raise ValueError(f"stale {', '.join(stale)}; {'; '.join(span_problems(before, 'limits', span_values(limits)))}; run python3 docs/generate_limits.py")
+                detail = "; ".join(span_problems(before, "limits", span_values(limits)))
+                raise ValueError(f"stale {', '.join(stale)}; " + (f"{detail}; " if detail else "")
+                                 + "run python3 docs/generate_limits.py")
             if args.stage_guide is not None:
                 if not args.stage_guide.is_file() or args.stage_guide.read_bytes() != guide_bytes:
                     args.stage_guide.write_bytes(guide_bytes)
