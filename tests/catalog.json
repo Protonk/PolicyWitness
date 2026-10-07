@@ -75,6 +75,10 @@
         {
           "id": "architecture_documentation",
           "description": "Architecture manifest, dot files, SVG stamps and document regions agree; citation, stale-copy and refusal controls pass"
+        },
+        {
+          "id": "generator_contract",
+          "description": "Uniform generator ownership, citation and prose contracts with mutation controls"
         }
       ]
     },

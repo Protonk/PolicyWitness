@@ -137,3 +137,5 @@ markers, automatic helper discovery, layout edits and both handshake edits.
 The identity changes on protocol implementation edits even when geometry does
 not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
 and the `runner_unit` host-driver control.
+
+The `generator_contract` case holds the uniform generator ownership and build-check contracts in disposable checkouts, with mutations that must be detected.

@@ -19,6 +19,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from generator_common import citation, require_test
+
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
 END = "<!-- END GENERATED LIMITS -->"
@@ -52,6 +55,15 @@ SECTIONS = {
 }
 
 
+VALUE_OWNERS = {
+    'tests/suites/runner_abi_layout/limits.py',
+    'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
+    'controller/src/run_flow.rs', 'controller/src/log_capture.rs',
+    'controller/src/bin/sbpl-check.rs', 'controller/src/bin/sandbox-log-observer.rs',
+    'controller/src/runner_manager.rs',
+}
+
+
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -63,8 +75,8 @@ def unique_object(pairs):
 
 def load_limits(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if set(data) != {"schema_version", "limits"} or data["schema_version"] != 1:
-        raise ValueError("expected limits manifest schema_version 1")
+    if set(data) != {"schema_version", "limits"} or data["schema_version"] != 2:
+        raise ValueError("expected limits manifest schema_version 2")
     if not isinstance(data["limits"], list) or not data["limits"]:
         raise ValueError("limits must be a nonempty list")
     seen = set()
@@ -98,16 +110,17 @@ def load_limits(path: Path, root: Path = ROOT):
             if not isinstance(item[key], list) or not item[key]:
                 raise ValueError(f"{ident}: missing {key}")
             for ref in item[key]:
-                expected = {"path", "symbol", "kind"} if key == "checks" else {"path", "symbol"}
+                expected = {"path", "symbol", "kind", "form"} if key == "checks" else {"path", "symbol"}
                 if set(ref) != expected:
                     raise ValueError(f"{ident}: malformed {key} reference")
-                path = Path(ref["path"])
-                if path.is_absolute() or ".." in path.parts or not (root / path).is_file():
-                    raise ValueError(f"{ident}: missing/invalid reference {path}")
-                if not ref["symbol"] or ref["symbol"] not in (root / path).read_text():
-                    raise ValueError(f"{ident}: missing symbol {ref['symbol']} in {path}")
+                citation(ref, root, check=key == "checks", forbidden={
+                    "docs/limits.json", "docs/LIMITS.md", "docs/PolicyWitness.md", CONTRACT_NAME})
+                if key == "checks" and ref["kind"] == "value" and (
+                        ref["form"] != "test" or ref["path"] not in VALUE_OWNERS):
+                    raise ValueError(f"{ident}: value owner must be a test in VALUE_OWNERS")
                 if key == "checks" and ref["kind"] not in {"value", "boundary", "path"}:
                     raise ValueError(f"{ident}: unknown check kind")
+        require_test(ident, item["checks"])
         if not any(ref["kind"] == "value" for ref in item["checks"]):
             raise ValueError(f"{ident}: no implementation-value check owner")
     if {item["section"] for item in data["limits"]} != set(SECTIONS):
@@ -205,7 +218,7 @@ def render_coverage(limits):
     for item in limits:
         lines.append("| " + " | ".join(map(cell, [f"`{item['id']}`",
             "; ".join(reference(ref) for ref in item['sources']),
-            "; ".join(f"{ref['kind']}: {reference(ref)}" for ref in item['checks']),
+            "; ".join(f"{ref['kind']} ({ref['form']}): {reference(ref)}" for ref in item['checks']),
             item['behavior']])) + " |")
     return "\n".join(lines) + "\n\n" + COVERAGE_END
 

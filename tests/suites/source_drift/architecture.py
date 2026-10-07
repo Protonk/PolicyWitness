@@ -27,7 +27,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-architecture-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        paths = {generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document']}
+        paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document']}
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         for graph in self.manifest['graphs']:
             for item in graph['nodes'] + graph['edges']:
@@ -70,6 +70,10 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             'unknown kind': lambda d: d['graphs'][0]['nodes'][0].__setitem__('kind', 'no_such_kind'),
             'cluster names unknown node': lambda d: d['graphs'][0]['clusters'][0]['nodes'].append('no_such_node'),
             'unknown field': lambda d: d['graphs'][0]['nodes'][0].__setitem__('colour', 'red'),
+            'old schema': lambda d: d.update(schema_version=1),
+            'missing form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].pop('form'),
+            'invalid form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].update(form='maybe'),
+            'self citation': lambda d: d['graphs'][0]['nodes'][0]['sources'][0].update(path='docs/architecture.json', symbol='schema_version'),
             'empty note': lambda d: d['graphs'][0]['nodes'][0].__setitem__('note', ' '),
         }
         for name, mutate in mutations.items():
@@ -93,7 +97,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
                 for ident in unpinned:
                     self.assertIn(f"`{ident}`", region.split('Claims without a cited check:')[1])
             else:
-                self.assertIn('Every node and edge above cites at least one check.', region)
+                self.assertIn('Every node and edge above cites at least one test or rule.', region)
 
     def test_svg_stamps_name_their_dot_text(self):
         document_name = self.document.name

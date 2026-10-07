@@ -44,7 +44,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        paths = {'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
+        paths = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
                  'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh',
                  generator.CONTRACT_NAME, generator.MATRIX_NAME}
         for row in self.manifest['limits']:
@@ -359,6 +359,10 @@ class LimitsDocumentationTests(unittest.TestCase):
 
     def test_manifest_rejects_invalid_metadata_and_dangling_owners(self):
         mutations = [
+            lambda d: d.update(schema_version=1),
+            lambda d: d['limits'][0]['checks'][0].pop('form'),
+            lambda d: d['limits'][0]['checks'][0].pop('kind'),
+            lambda d: d['limits'][0]['checks'][0].update(form='control'),
             lambda d: d['limits'].append(copy.deepcopy(d['limits'][0])),
             lambda d: d['limits'][0].update(value=True),
             lambda d: d['limits'][0].update(unit='characters'),

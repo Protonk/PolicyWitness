@@ -23,6 +23,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from generator_common import citation, require_test
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/architecture.json"
 GENERATOR_NAME = "docs/generate_architecture.py"
@@ -44,14 +47,10 @@ def unique_object(pairs):
 
 
 def _citation(owner, key, ref, root):
-    if not isinstance(ref, dict) or set(ref) != {"path", "symbol"}:
+    expected = {"path", "symbol", "form"} if key == "checks" else {"path", "symbol"}
+    if not isinstance(ref, dict) or set(ref) != expected:
         raise ValueError(f"{owner}: malformed {key} reference")
-    path = Path(ref["path"])
-    if path.is_absolute() or ".." in path.parts or not (root / path).is_file():
-        raise ValueError(f"{owner}: missing/invalid reference {path}")
-    text = (root / path).read_text(errors="replace")
-    if not ref["symbol"] or ref["symbol"] not in text:
-        raise ValueError(f"{owner}: missing symbol {ref['symbol']!r} in {path}")
+    citation(ref, root, check=key == "checks")
 
 
 def _facts(owner, facts):
@@ -72,8 +71,8 @@ def _attrs(owner, attrs):
 
 def load_manifest(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 1:
-        raise ValueError("expected architecture manifest schema_version 1")
+    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 2:
+        raise ValueError("expected architecture manifest schema_version 2")
     document = Path(data["document"])
     if document.is_absolute() or ".." in document.parts or document.suffix != ".md":
         raise ValueError("document must be a repository-relative Markdown path")
@@ -155,6 +154,15 @@ def load_manifest(path: Path, root: Path = ROOT):
                 if nid not in node_ids or nid in clustered:
                     raise ValueError(f"{gid}: cluster {cluster['id']}: unknown or repeated node {nid!r}")
                 clustered.add(nid)
+    forbidden = {MANIFEST_NAME, data["document"]}
+    forbidden.update(str(document.parent / (g["file"] + suffix))
+                     for g in data["graphs"] for suffix in (".dot", ".svg"))
+    for graph in data["graphs"]:
+        for item in graph["nodes"] + graph["edges"]:
+            for key in ("sources", "checks"):
+                for ref in item[key]:
+                    if ref["path"] in forbidden:
+                        raise ValueError(f"self-citation: {ref['path']}")
     return data
 
 
@@ -164,6 +172,7 @@ def _citations(owner, item, root):
             raise ValueError(f"{owner}: {key} must be a list")
         for ref in item[key]:
             _citation(owner, key, ref, root)
+    require_test(owner, item["checks"])
     if not item["sources"]:
         raise ValueError(f"{owner}: at least one source citation is required")
     if "note" in item and (not isinstance(item["note"], str) or not item["note"].strip()):
@@ -283,11 +292,12 @@ def render_region(graph, document_name):
         f"*Figure: {graph['title'].lower()}. Generated from [{manifest}]({manifest}) by "
         f"[{generator}]({generator}); dot source in [{dot}]({dot}). The ids in the figure are the "
         f"ids in the tables below, and each row cites the source symbol that implements it and the "
-        f"check that exercises it.*",
+        f"test or rule the manifest names for it. Symbol presence and test definition are verified; "
+        f"whether a test asserts the row is not verified.*",
         "",
         "<details>",
         f"<summary>{graph['title']}: {len(graph['nodes'])} nodes and {len(graph['edges'])} edges, "
-        "with their citations</summary>",
+        "with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>",
         "",
         f"#### {nodes_heading(graph)}",
         "",
@@ -320,7 +330,7 @@ def render_region(graph, document_name):
     if unpinned:
         parts.append("Claims without a cited check: " + ", ".join(f"`{i}`" for i in unpinned) + ".")
     else:
-        parts.append("Every node and edge above cites at least one check.")
+        parts.append("Every node and edge above cites at least one test or rule.")
     parts += ["", "</details>"]
     return "\n".join(parts)
 

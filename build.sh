@@ -100,6 +100,7 @@ echo "==> Checking limits documentation"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
 echo "==> Checking contract versions"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_contract.py" --check
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_architecture.py" --check
 echo "==> Generating host/worker identity"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py"
 

@@ -122,4 +122,5 @@ digraph documents {
     build -> gen_limits [style="dashed", color="#8e24aa", label="D37 --check; stage", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D37: --check before compiling; --stage-guide into dist"];
     build -> gen_contract [style="dashed", color="#8e24aa", label="D38 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D38: --check before compiling"];
     build -> gen_identity [style="dashed", color="#8e24aa", label="D39 regenerate; --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D39: regenerate before compiling; --check before signing"];
+    build -> gen_architecture [style="dashed", color="#8e24aa", label="D40 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D40: --check before compiling"];
 }

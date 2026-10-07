@@ -65,3 +65,14 @@ if test_selected "${PW_TEST_ID}"; then
   fi
   test_pass "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
+
+PW_TEST_ID="generator_contract"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step generators "check uniform generator contracts and mutation controls"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/generators.log"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/generators.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "generator contract controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "generator contracts and mutation controls pass" "{\"log\":\"${RUN_LOG}\"}"
+fi

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "limits": [
     {
       "id": "policy_source",
@@ -24,18 +24,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -63,18 +66,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -102,18 +108,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -141,18 +150,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -180,18 +192,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -219,18 +234,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -258,18 +276,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -297,18 +318,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -336,18 +360,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
@@ -376,17 +403,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
@@ -415,17 +445,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
@@ -454,17 +487,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Exact, over-limit and multibyte boundaries through the CLI; 256-step oversized-label regressions require a small refusal and unchanged write targets."
@@ -493,17 +529,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; the refusal reply never contains the refused string."
@@ -532,17 +571,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; an at-limit format passes capacity admission and fails meaning validation as bad_request."
@@ -571,17 +613,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "admission",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
           "symbol": "runQueryAdmissionTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
@@ -605,12 +650,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
           "symbol": "runPolicyTransferTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Real stalled and draining pipes plus deterministic interrupted, partial and zero-progress writes. Readiness wait starts only after successful delivery. The production budget fits within the default client wait; a shorter client override is independent and does not cancel the host."
@@ -634,12 +681,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
           "symbol": "runCWorkerTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "runCWorker counts ready-byte polling iterations, then checks shared-memory publication even if the hint was not received. Normal readiness is tested; expiry without aborting is source-inspected."
@@ -663,12 +712,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
           "symbol": "runCWorkerTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "runCWorker counts polling iterations until done. Policy transfer precedes polling; synchronous validator work is outside the count, and scheduler delays add time. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee. Deadline and partial-publication paths use shortened test budgets; the production duration is source-inspected."
@@ -692,12 +743,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
           "symbol": "runCWorkerLifecycleTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "runCWorker counts polling iterations after storing exit_requested, then attempts SIGKILL and reaping. Deadline/cleanup paths use controlled children; the production duration is source-inspected."
@@ -721,22 +774,26 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "NATIVE_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/runner_c_worker_harness/harness.c",
-          "symbol": "proceed_wait_budget_short",
-          "kind": "path"
+          "symbol": "main",
+          "kind": "path",
+          "form": "control"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
           "symbol": "runOrderingTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "wait_for_proceed uses CLOCK_MONOTONIC before acknowledging host release. Failure publishes done, then the exit-request spin can outlive a dead host. Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
@@ -760,7 +817,8 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "validatorReleaseMarginMs allows for host observation, setup, decoding and scheduling. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This configuration guard excludes test overrides and does not bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
@@ -784,7 +842,8 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
@@ -808,12 +867,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
           "symbol": "runValidatorEvidenceTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "runValidator uses a CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. The `_test_overrides.validator_io_timeout_ms` test seam replaces this deadline, floored at 50 ms without a ceiling and mirrored in results; production has no flag. I/O deadline and partial-evidence paths use shortened budgets; the production duration is source-inspected."
@@ -837,12 +898,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
           "symbol": "runValidatorEvidenceTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "runValidator closes the validator pipes and counts exit-grace polling iterations before attempting SIGKILL and reaping. Cleanup paths use controlled children; the production duration is source-inspected."
@@ -865,13 +928,15 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "NATIVE_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
           "symbol": "runCWorkerTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The absolute child deadline and local exec plan cutoff are compared without restarting the plan budget after spawn. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even after leader exit. Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
@@ -898,18 +963,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "NATIVE_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/runner_c_worker_harness/run.sh",
-          "symbol": "run_exec_attempt_budget",
-          "kind": "boundary"
+          "symbol": "exec_attempt_budget_remainder",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "attempt_budget_start runs before worker setup; attempt_budget_exclude removes only the interval returned by the release barrier. Exec attempts receive an absolute cutoff independent of the host polling clock. Clock failure after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, clock failures and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
@@ -932,13 +1000,15 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "NATIVE_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/fixtures/worker_lifecycle/exec_control.c",
           "symbol": "main",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "control"
         }
       ],
       "behavior": "Final reaping uses nonblocking waitpid in a local monotonic observation window. Failed group termination permits only an immediate nonblocking reap. The allowance does not bound native syscall duration or host descheduling. Controlled pending/EINTR waits exhaust the grace; kill, wait and clock failures retain missing status. Every wait is required to be nonblocking."
@@ -970,12 +1040,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "documented_controller_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "The production wait and timeout response are source-inspected; compiled default agreement is tested."
@@ -999,12 +1071,14 @@
         {
           "path": "controller/src/runner_manager.rs",
           "symbol": "documented_removal_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/runner_manager.rs",
           "symbol": "bootout_waits_out_launchd_teardown_within_the_budget",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
@@ -1028,17 +1102,20 @@
         {
           "path": "controller/src/runner_manager.rs",
           "symbol": "documented_throttle_interval",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/runner_manager.rs",
           "symbol": "byoxpc_plist_sets_the_respawn_throttle",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
-          "path": "tests/suites/runner_byoxpc/opt_in/single_use.py",
-          "symbol": "respawn_wait",
-          "kind": "boundary"
+          "path": "tests/suites/runner_byoxpc/opt_in/single_use.sh",
+          "symbol": "single_use",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Measured on one owned installation (macOS 14.8, user scope) with the plist rewritten per candidate: with no key a run 0.4 s after the previous one took about 10.3 s and a run after the install's own verify about 9.2 s; with the interval at one second those took about 1.3 s and 0.3 s. The single-use live case reads the installed plist's value and waits it out plus a margin before requiring a fresh host."
@@ -1065,18 +1142,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "NATIVE_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
           "symbol": "query_boundary",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "tests/suites/failure_boundaries/check.py",
           "symbol": "validator_overlong_request",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The fixed 65536-byte buffer allows a 65534-byte payload. The reader counts physical bytes, including raw NUL, and drains an overlong line. Admission bounds on operation and filter value keep a fully escaped probe line to a few KiB. Exact payload boundary, over-limit drain/recovery, valid raw and escaped Unicode, malformed escapes/UTF-8/raw controls and raw-NUL physical framing. Every rejected probe is followed by a valid recovery probe."
@@ -1104,17 +1184,20 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
           "symbol": "runReplyMaximumTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "tests/suites/witness_contract/check_max_target_reply.py",
           "symbol": "main",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. runner_unit recomputes the number; edit the manifest when the synthesizer's value moves. The synthesizer's value is compared with the manifest; the budget relation is asserted; an injected unclassified key is detected. Live 256-step workloads are measured against this bound."
@@ -1138,17 +1221,20 @@
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "documented_controller_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/runner_client.rs",
-          "symbol": "mod tests",
-          "kind": "path"
+          "symbol": "valid_oversized_producer_is_receiver_loss_not_malformed_json",
+          "kind": "path",
+          "form": "test"
         },
         {
           "path": "tests/suites/witness_contract/check_max_target_reply.py",
           "symbol": "main",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Five admitted 256-step CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
@@ -1172,22 +1258,26 @@
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "documented_controller_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "inner_byte_limit_with_maximal_json_escaping_fits_outer_serialization_limit",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/log_replay_tests.rs",
           "symbol": "controlled_256_step_capture_keeps_every_long_target_candidate",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The cap is enforced while reading. One extra byte witnesses overflow; no JSON fragments are recovered from the retained prefix. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under the production default allowance. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
@@ -1211,12 +1301,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
@@ -1240,12 +1332,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
@@ -1269,12 +1363,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Raw bytes read from observer stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
@@ -1298,22 +1394,26 @@
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "documented_controller_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "run_span_window_floors_start_ceils_end_and_never_collapses",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "requested_intervals_select_independently_timed_events",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "padded_records_survive_assembly_and_consumer_recovery",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The pad allows for differences between client wall-clock and archive event timestamps; it guarantees neither delivery nor coverage under every clock condition. Independent timestamp fixtures cover both padding regions, exact and exterior bounds, equal spans and rollback. Complete full, early-only, late-only and empty replies preserve eligible candidates and missing-record diagnostics through assembly, serialization and consumer recovery."
@@ -1337,12 +1437,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "larger_allowance_buys_time_only_and_still_bounds_hangs",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The shared CLOCK_MONOTONIC allowance starts before observer launch and includes inner log show capture. The log child receives the allowance minus the report reserve. Independent slow-success and permanent-hang fixtures prove that a larger finite allowance buys waiting time only; shared absolute deadlines are not restarted by the observer."
@@ -1366,12 +1468,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "cleanup_failures_and_lost_ownership_remain_unconfirmed",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "Owned orphan controls cover leader death before reply, pipes open or closed, group absence, failed signalling/probing and lost ownership. The bound concerns supervised waiting, not OS scheduling."
@@ -1395,17 +1499,20 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "inner_timeout_preserves_available_record_and_actual_child_wait",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/log_replay_tests.rs",
           "symbol": "timeout_override_changes_waiting_only_across_both_boundaries",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "At the log show boundary the observer stops its log child this long before the controller deadline to allow reaping and report delivery. The controller deadline is unchanged; cleanup and scheduling can consume the reserve. A short inner allowance cuts off the log child while the observer's report, including its inner cutoff, still reaches the controller; a stalled query exhausts the reserved inner allowance and is reported the same way."
@@ -1429,17 +1536,20 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "event_limit_withholds_completion_without_discarding_retained_diagnostics",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "maximum_event_volume_correlates_within_the_default_allowance",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Exact and over-limit fixtures retain diagnostics and distinguish complete capture from overflow. The maximum event volume correlates against a 256-step plan inside the default collection allowance."
@@ -1463,12 +1573,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "derived_json_and_candidate_allocations_are_bounded",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "A 256-record unique-path control preserves all associations; repeated matching attempts exhaust the candidate budget."
@@ -1492,12 +1604,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "derived_json_and_candidate_allocations_are_bounded",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The charge is a conservative encoded/allocation allowance, not a measurement of peak process memory. Long repeated paths exercise the allocation allowance independently of the candidate count. This is a derived-data bound, not a peak-process-memory claim."
@@ -1521,12 +1635,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "derived_json_and_candidate_allocations_are_bounded",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "A 256-step control preserves unique candidates; over-limit arrays reject correlation."
@@ -1550,12 +1666,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "derived_json_and_candidate_allocations_are_bounded",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The structural count is checked before allocating a JSON tree. Independent oversized JSON array trips the structural guard before Value allocation."
@@ -1579,12 +1697,14 @@
         {
           "path": "controller/src/log_capture.rs",
           "symbol": "documented_collection_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sandbox_log.rs",
           "symbol": "supervised_receiver_retains_failed_inner_evidence_and_rejects_bad_shapes",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The observer rejects excess metadata before launching log show; the controller also rejects oversized reply metadata. Receiver malformed-shape controls cover excess metadata; direct argument admission is source-inspected."
@@ -1608,12 +1728,14 @@
         {
           "path": "controller/src/run_flow.rs",
           "symbol": "documented_controller_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/utils.rs",
           "symbol": "arbitrary_budgets_preserve_counts_at_every_unicode_cut",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget."
@@ -1637,12 +1759,14 @@
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "test"
         }
       ],
       "behavior": "Exact and over-limit invalid-frame context controls; no rejected bytes become verdicts."
@@ -1665,18 +1789,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
           "symbol": "runCWorkerTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "Each text buffer reserves its terminating NUL outside this payload limit. Additional output is drained even after retention stops. Small stdout/stderr capture is tested. Overflow truncation and the exact retained-prefix/marker split are source-inspected."
@@ -1699,18 +1826,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
           "symbol": "runWorkerEvidenceTests",
-          "kind": "path"
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The diagnostic buffer reserves its terminating NUL outside the payload limit. Bounded diagnostic/truncation controls in the Swift worker evidence tests."
@@ -1733,18 +1863,21 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "tests/suites/runner_abi_layout/capture.c",
           "symbol": "main",
-          "kind": "boundary"
+          "kind": "boundary",
+          "form": "control"
         }
       ],
       "behavior": "Capture supports nonempty single-profile (type 0) objects; it runs before applying the same object. Failed capture leaves application unchanged. Independently constructed object controls cover exact, excessive and unsupported captures."
@@ -1767,13 +1900,15 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "The per-step C path-buffer payload excludes its terminating NUL. Source-inspected buffer use; no exact path-length behavior claim is tested."
@@ -1796,13 +1931,15 @@
       "checks": [
         {
           "path": "tests/suites/runner_abi_layout/limits.py",
-          "symbol": "ABI_LIMITS",
-          "kind": "value"
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
           "symbol": "runLimitsContractTests",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "The per-step C error-buffer payload excludes its terminating NUL. Source-inspected bounded formatting; no exact error-text boundary claim is tested."
@@ -1826,12 +1963,14 @@
         {
           "path": "controller/src/bin/sbpl-check.rs",
           "symbol": "documented_helper_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/bin/sbpl-check.rs",
-          "symbol": "mod tests",
-          "kind": "path"
+          "symbol": "source_byte_cap_counts_utf8_bytes_not_characters",
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "Oversized input is tested through the shipped helper and fallback CLI; exact boundary behavior is source-inspected."
@@ -1855,12 +1994,14 @@
         {
           "path": "controller/src/bin/sbpl-check.rs",
           "symbol": "documented_helper_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sbpl_imports.rs",
-          "symbol": "mod tests",
-          "kind": "path"
+          "symbol": "resolve_imports_truncates_on_depth_cap",
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "At depth 8 the helper records a diagnostic instead of reading or expanding that file; libsandbox compilation has its own import resolution. Deep import-chain control in the helper unit tests."
@@ -1884,12 +2025,14 @@
         {
           "path": "controller/src/bin/sbpl-check.rs",
           "symbol": "documented_helper_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         },
         {
           "path": "controller/src/sbpl_imports.rs",
-          "symbol": "mod tests",
-          "kind": "path"
+          "symbol": "resolve_imports_truncates_on_count_cap",
+          "kind": "path",
+          "form": "test"
         }
       ],
       "behavior": "The helper traversal deduplicates visited files/names and accumulates at most this many records; libsandbox compilation does not use that inventory as a limit. Import-count exhaustion control in the helper unit tests."
@@ -1913,7 +2056,8 @@
         {
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "documented_observer_limits",
-          "kind": "value"
+          "kind": "value",
+          "form": "test"
         }
       ],
       "behavior": "This bound covers streaming text accumulation only, not memory use or total report size. Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected."
