@@ -61,6 +61,7 @@ assembly. Move only the compilation responsibilities in the first three rows.
 | C worker: `controller/tools/pw_probe_runner/pw_probe_runner.c` and its headers | `build.sh` writes `pw-probe-runner` beside the source | Meson executable in `builddir/` |
 | C validator: `controller/tools/sb_api_validator/sb_api_validator.c` | `build.sh` writes `sb_api_validator` beside the source | Meson executable in `builddir/` |
 | Swift client, Swift host, C shim: source lists in `build.sh`'s `XPC_RUNNER_*` declarations and compile calls | Client and host compiled directly into the app/XPC bundle; shim object in the Swift module cache | Meson executables `pw-runner-client`, `PWRunner`, and static library `PWCWorkerShim` in `builddir/`; shim linked into host |
+| Native compilation policy and supported variants | Native flags in `build.sh`; `PW_INSPECTION` and `BUILD_XPC` select variants | Meson declares and enforces fixed target settings; `build.sh` translates the two public knobs into `inspection` and `xpc` |
 | Rust controller, observer and SBPL checker; stamp environment | Cargo writes `controller/target/release/` | Cargo, still invoked directly by `build.sh`; [build.rs](controller/build.rs) retains stamp dependencies |
 | Limits, contract and architecture checks | `build.sh` runs the three generators with `--check` before compilation | Unchanged; stale tracked text must refuse the build before any Meson command |
 | Host/worker identity | [generate_worker_identity.py](docs/generate_worker_identity.py) writes regions in the ABI header, `CWorker.swift` and `tests/lib/contract.py` | Same generator, run by `build.sh` before compilation and checked again before signing |
@@ -88,6 +89,40 @@ including deliberately mutated sources, into evidence directories. Keep the
 manual ad hoc-signed debugger helper at
 [controller/tools/sb_api_validator/build.sh](controller/tools/sb_api_validator/build.sh)
 unless its separate retirement is chosen below.
+
+### Native configuration contract
+
+A Meson directory retains configuration as well as incremental outputs.
+`default_options` initializes values; it does not enforce project requirements.
+
+- **Fixed native policy belongs to Meson.** Express mandatory target settings
+  in declarations and shared `override_options`; use Meson configuration
+  assertions for unsupported settings. Enforce `b_asneeded=false` on the C
+  executable targets; defaults alone cannot protect consequential settings.
+  Check effective optimization/debug settings, not just the `buildtype` label;
+  reject unsupported native argument injection or instrumentation that would
+  bypass the declared target policy. Keep the policy in the Meson files selected
+  for identity at cutover, without a second flag table in `build.sh`.
+- **Supported variants remain caller choices.** `build.sh` passes `inspection`
+  and `xpc` explicitly on every setup/reconfigure. Meson maps those choices to
+  target settings and membership; the shell does not repair fixed flags or
+  duplicate their policy through introspection assertions.
+- **A directory belongs to its configured toolchain.** Preserve Apple's
+  `xcrun --sdk macosx` selection, including `DEVELOPER_DIR`, and check the selected
+  compiler/SDK paths and versions against the directory's recorded configuration
+  during setup/reconfiguration. Refuse a mismatch with instructions for a fresh
+  directory or explicit reset; preserve matching directories for incremental
+  builds. Check only languages needed by the selected variant: `xpc=false`
+  must not discover Swift, and first enabling XPC adds Swift to the recorded
+  configuration. Separate CLT, Xcode and experimental directories help isolation
+  but do not enforce policy by their names.
+
+Apply the policy checks on setup, reconfiguration and compile-triggered
+regeneration. Supported build recipes reconfigure before reusing a directory;
+changing the shell's toolchain environment then invoking bare Ninja/compile is
+not a supported toolchain switch. Source-manifest introspection discovers
+membership across branches; configured-directory introspection reports active
+targets and configuration. Global options alone do not describe target overrides.
 
 ## Identity policy
 
@@ -119,6 +154,12 @@ first two chunks. Unrelated changes to existing digest inputs still require
 normal regeneration. Equal identities during the pilot establish agreement on
 the selected sources; they do not certify equal compile flags or output bytes.
 
+This remains true after cutover: `PW_INSPECTION` and compiler/SDK selection
+already permit different builds of the same source identity. Keep the ignored
+directory outside the digest. Configuration and command receipts belong with
+migration acceptance evidence; expanding the shipped evidence schema into a
+build-provenance record is a separate change.
+
 ## Entry conditions and review decisions
 
 Start by reading [AGENTS.md](AGENTS.md), `build.sh`, the Makefile,
@@ -140,8 +181,9 @@ The following choices are settled and are not review items:
 - **Tooling.** Add Meson and Ninja. The minimum is the exercised pair, Meson
   1.12.1 and Ninja 1.13.2, declared as `meson_version: '>=1.12.1'`. A lower
   minimum is a separate change that must be exercised before it is claimed.
-  Preserve Command Line Tools support, Cargo and the system Python used by
-  existing scripts.
+  Preserve Command Line Tools support as an existing compatibility requirement,
+  with the fresh-directory CLT compilation gate in Chunk 1. Full Xcode is not a
+  new prerequisite. Preserve Cargo and the system Python used by existing scripts.
 - **Module cache.** `SWIFT_MODULE_CACHE` retires at cutover. Swift module
   caches and the shim object live under `builddir/`, which is writable
   wherever Meson can build at all. `build.sh` keeps the variable until then.
@@ -149,8 +191,9 @@ The following choices are settled and are not review items:
   the combined Chunk 1 pilot. C-only adoption is not a fallback.
 - **Compiler/linker policy.** Make consequential settings explicit, set
   `b_asneeded=false`, and accept only documented, inspected backend additions
-  under the [compiler/linker policy](#compilerlinker-policy). Apply this policy
-  from the pilot onward.
+  under the [compiler/linker policy](#compilerlinker-policy). Enforce these through
+  the [native configuration contract](#native-configuration-contract) from the
+  pilot onward; manifest defaults alone do not satisfy it.
 - **No-XPC compatibility.** Preserve `BUILD_XPC=0`, including its lack of
   Swift discovery and its signed partial-bundle output. Gate Swift language
   registration and the shim/client/service targets with a boolean `xpc`
@@ -214,11 +257,14 @@ tree needs its own repair before beginning this chunk.
    from the two C executables' flags and apply the settled compiler/linker
    policy. Declare C in `project()`; register Swift with
    `add_languages('swift', required: true)` only inside the `xpc` guard.
+   Implement the native configuration contract in this pilot, including
+   toolchain-directory reuse checks and writable module caches during compiler
+   discovery as well as target compilation.
 2. Add reusable structural and normalized-envelope comparison scripts under
    test machinery, implementing the [shared verification procedures](#shared-verification-procedures).
-   Preserve the manifest/options, compiler commands, tool versions, binary
-   hashes, raw comparison inputs and explicit differences. The experimental
-   build recipe is not yet represented by the source identity.
+   Preserve the [configuration and command receipts](#configuration-and-command-receipts),
+   binary hashes, raw comparison inputs and explicit differences. The
+   experimental build recipe is not yet represented by the source identity.
 3. Update `docs/SIGNING.md` with comparison-build commands and the tool
    requirements for that optional path; production does not require Meson
    yet. Add `meson.build` to the Build + signing router in `AGENTS.md`.
@@ -227,7 +273,8 @@ tree needs its own repair before beginning this chunk.
 
 | Target/setting | Required declaration |
 | --- | --- |
-| Project defaults | C; `buildtype=plain`, `warning_level=0`, `b_ndebug=false`, `b_asneeded=false`; `meson_version: '>=1.12.1'` |
+| Project/languages | C initially; `meson_version: '>=1.12.1'`; conditional Swift registration below |
+| Fixed native policy | Effective plain build settings, `warning_level=0`, `b_ndebug=false`, `b_asneeded=false`; enforced by Meson target settings/assertions under the native configuration contract, not merely `default_options` |
 | XPC option | Boolean `xpc`, default true; conditionally register Swift and declare the shim, client and host. Worker and validator remain unconditional. |
 | `sb_api_validator` | Its one C source; `-Wall -Wextra -O2 -std=c11` |
 | `pw-probe-runner` | Its one C source; same flags; `-lsandbox`; compiler dependency tracking for all included headers |
@@ -267,6 +314,23 @@ exercise this matrix:
 
 The first five rows were exercised by the probe. Use mtime-only touches for
 these dependency checks; production source edits are outside this chunk.
+
+Exercise the [configuration-state controls](#configuration-state-controls).
+Then run the following CLT gate against the real root manifest, with the same
+Meson/Ninja versions and `xpc=true`:
+
+1. Select `DEVELOPER_DIR=/Library/Developer/CommandLineTools` for both setup
+   and compilation in a fresh, separate ignored build directory. Use Apple's
+   compiler selection and writable module caches; remove inherited overrides
+   that would select Xcode tools or an Xcode SDK. Do not reuse an Xcode directory.
+2. Record resolved C/Swift compiler and SDK paths/versions and verify they
+   select CLT. Compile both C executables, the shim, client and host; inspect
+   generated commands for accidental Xcode-app paths. Require a no-op second
+   compile and run the same structural comparison against direct `build.sh`
+   compile commands under the same CLT selection.
+3. Preserve receipts with the pilot evidence. Missing CLT, a missing compiler,
+   or a compilation failure leaves this gate unmet. The earlier scratch probe
+   does not accept the root manifest.
 
 In a fresh build directory with Swift discovery deliberately unavailable,
 configure `xpc=false` and compile both C executables. Require no Swift discovery
@@ -320,6 +384,9 @@ old compiler route; that temporary state is never a standalone commit on main.
    `diff_sets` alongside disk and `build.sh`: three sets during this chunk.
    Filter to the existing source domains; client/service entrypoints are not
    extra core sources. Treat failed introspection or missing targets as errors.
+   Always use file-mode introspection here and in the mutation reader. It sees
+   the host and shim declarations across the `xpc` guard; introspection of an
+   `xpc=false` build directory correctly omits them and is not a substitute.
 2. In `check_planner.py`, copy the Meson files and any inputs introspection
    requires into the disposable checkout. Verify that its unmodified fixture
    still passes and its intended source mutations cause the expected refusals.
@@ -342,7 +409,9 @@ this chunk; reader/check changes are outside the selected digest sources.
 identity `--check`. Exercise source-list mismatch and missing-target cases in
 disposable manifests so the new reader cannot silently ignore an absent file.
 Retain proof that planner refusals concern the intended rule rather than
-incomplete copied inputs.
+incomplete copied inputs. Check that file-mode source membership is unchanged
+whether no build directory exists or a local directory has `xpc=false`; check
+active target membership separately through that configured directory.
 
 **Acceptance before promotion.** Run
 `tests/run.sh --case witness_contract/order_barrier_mutations` against the
@@ -387,6 +456,9 @@ later notarization/release run.
    Map `BUILD_XPC` to the boolean `xpc` option on every setup/reconfigure.
    Preserve conditional Swift discovery and the partial-bundle workflow;
    keep both C executables unconditional and custom `DIST_DIR` assembly working.
+   Reuse only a directory accepted by Meson's configuration controls, and
+   propagate any refusal before copying or signing native outputs. Do not
+   migrate the fixed native policy back into shell flags or assertions.
 3. Replace the three `clang` and two `swiftc` invocations with consumption
    of the four executables. The shim is already linked into the host; it is
    not copied into the bundle. Preserve all existing binary destinations,
@@ -404,8 +476,9 @@ later notarization/release run.
    identity input list; the build-stamp contract keeps its existing owner
    and semantics. Correct `AGENTS.md`'s "Rust-only iteration" shorthand and
    document the preserved no-XPC output, tool requirements and limited checks
-   in `docs/SIGNING.md`. If selected, add `make native` with accurate header/help
-   comments and shared generator preparation/inspection-option mapping.
+   in `docs/SIGNING.md`, together with supported variants, CLT selection and
+   toolchain-directory reset requirements. If selected, add `make native` with
+   accurate header/help comments and shared generator preparation/inspection-option mapping.
 6. In `docs/architecture.json`, update the build node's guard description
    and add the settled source-kind `meson_build` node with an edge to
    `drift_check` labelled "source list equals the tree", citing Chunk 2's
@@ -430,6 +503,8 @@ distribution output; missing tools must not become the reason they pass.
 **Cheapest useful validation.** Run `make build IDENTITY=...` twice; the second
 Meson compile does no work and artifact inspection still passes. Switch
 `PW_INSPECTION=0` and back, verifying the corresponding Swift settings.
+Repeat the configuration-state controls through the production entry point,
+requiring policy refusals to prevent bundle consumption of stale native outputs.
 Repeat the pilot's missing-Swift and option-toggle checks through `build.sh`'s
 option mapping. Build with `BUILD_XPC=0` into a separate `DIST_DIR`: require
 both C outputs in the Meson directory, no shim/Swift targets, and a signed
@@ -526,8 +601,8 @@ structure. Bare `clang -c` already relies on compiler/platform defaults, so
 requiring every compiler decision to appear as an explicit flag is not a
 meaningful equivalence rule.
 
-Set `b_asneeded=false` to remove Meson 1.12.1's additional
-`-dead_strip_dylibs`: unused-library removal is a semantic link decision
+Enforce `b_asneeded=false` through Meson target options to remove Meson 1.12.1's
+additional `-dead_strip_dylibs`: unused-library removal is a semantic link decision
 that this migration does not need. Accept and document
 `-headerpad_max_install_names` as an Apple-backend addition, subject to the
 artifact checks; there is no independent header-padding switch in that backend.
@@ -545,6 +620,43 @@ describe `b_asneeded` and other configurable policies. Record accepted argument
 differences with the comparison evidence and explain their purpose beside the
 manifest settings. Any new consequential difference requires explicit review;
 structural similarity is not blanket acceptance of new flags.
+
+### Configuration-state controls
+
+In a disposable configured directory, change `b_asneeded` to true with
+`meson configure`, then reconfigure and compile without passing a corrective
+value. Require the C target link commands still to omit `-dead_strip_dylibs`
+because of their declared overrides. A global introspection value of true is
+not itself a failure when the target override is effective.
+
+Change an asserted consequential setting to an unsupported value and require a
+clear Meson refusal before compilation; exercise injected native arguments as
+well. Restore the accepted configuration and require a successful build followed
+by no work. These checks must work through direct Meson commands as well as the
+Chunk 3 production entry point, without a shell repair step.
+
+Exercise supported `inspection`/`xpc` changes as specified in the chunks. Change
+the developer directory or compiler/SDK context, reconfigure, and require stale
+directory reuse to be refused; a fresh directory under that selection must
+configure and compile. Preserve the old directory. Re-establish these controls
+and review argument differences after Meson/compiler upgrades.
+
+### Configuration and command receipts
+
+Keep these with managed migration acceptance output, linked from the pilot or
+cutover record and bound to the exact compared native outputs by hashes:
+
+- Manifest/options contents, selected public variants, effective build options
+  and active target information from the configured directory.
+- Meson/Ninja versions, resolved compiler paths/versions, selected developer
+  directory and SDK path/version.
+- Effective per-target compile and link commands, including target overrides,
+  and the documented explanation of accepted differences from the old route.
+
+Capture generated commands even for a no-op build. Global build options alone
+do not describe target overrides. Receipts support provenance; configuration
+controls enforce policy. The shipped evidence manifest and runtime envelope
+remain unchanged.
 
 ### Structural and artifact comparison
 
@@ -630,21 +742,22 @@ regenerates identity as described above.
 | Risk | Where it is handled |
 | --- | --- |
 | Meson/Swift upgrades change implicit arguments or shim linking | Exercise both languages in Chunk 1; investigate failures or revert the migration |
-| Configuration retains the previous inspection setting | Explicit reconfiguration and option-switch checks in Chunk 3 |
+| Persistent configuration overrides fixed policy or retains an old variant | Meson target overrides/assertions plus configuration-state controls; `build.sh` explicitly maps only supported variants |
+| A directory silently carries an old compiler/SDK selection | Toolchain-context reuse checks; fresh separate directories for CLT/Xcode; preserve receipts of actual tools and commands |
 | Source readers pass with incomplete manifests or fail for unrelated missing files | Exercise Chunk 2 checks in the integration worktree before removing old readers; land only with Chunk 3 |
 | A claimed build edge becomes unchecked documentation | Architecture citations point to source-drift rules; identity controls and ABI/live-identity tests provide distinct evidence |
 | Temporary duplicate flag ownership persists | Limit the experimental chunks to one review cycle; cut over the combined graph or remove it |
 | An early comment or helper edit changes identity | Keep existing digest inputs unchanged through Chunk 2; defer `Package.swift` comments and generator edits to cutover |
 | A landed cutover is mistaken for a release-accepted artifact | Tracked cutover observations separate local checks from user-run, hash-bound release evidence |
-| New tool requirements exceed demonstrated compatibility | The minimum equals the exercised Meson/Ninja pair; preserve Command Line Tools support despite the probe using full Xcode |
+| New tool requirements exceed demonstrated compatibility | The minimum equals the exercised Meson/Ninja pair; the real root manifest must pass the fresh-directory CLT gate in Chunk 1 |
 
 ## Evidence appendix
 
-Build timings and compilation/rehearsal results below come from the original
-investigation; they are not acceptance of the proposed implementation. The
-identity-scope check below was performed while resolving the plan's decisions.
-Existing run summaries were also read to confirm the reported baseline counts;
-the builds and live battery were not rerun for this document edit.
+The original build timings and signed rehearsals, and the subsequent disposable
+identity/configuration/CLT probes below, are investigation evidence, not
+acceptance of the proposed root manifest. Existing run summaries establish the
+reported baseline counts; no new signed app or live battery was run for the
+configuration and CLT investigation.
 
 **Identity-scope check.** Against disposable copies of
 `generate_worker_identity.py:source_paths` and its targets, adding root Meson
@@ -667,6 +780,22 @@ The same project configured successfully with Swift explicitly unavailable
 and its language-registration guard off; reconfiguration with that guard on
 refused the missing compiler. This verifies the configuration mechanism,
 not a full `BUILD_XPC=0` signed build. No app or repository source was modified.
+
+**Persistent-configuration checks.** In a disposable Meson 1.12.1 C project,
+changing `b_asneeded` to true survived reconfiguration despite the manifest's
+false default. The ordinary target acquired `-dead_strip_dylibs`; a target with
+`override_options: ['b_asneeded=false']` did not. A manifest assertion against
+the changed value caused the next compile's regeneration to refuse.
+
+**CLT compilation check.** Against copied current sources at `d37f248`, the
+existing probe configured and compiled all four executables and the shim using
+Meson 1.12.1/Ninja 1.13.2, `DEVELOPER_DIR=/Library/Developer/CommandLineTools`,
+Apple's system compiler shims, `b_asneeded=false` and writable temporary module
+caches. Resolution selected CLT's Apple clang 21.0.0, Swift 6.4 and
+`/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk`. Generated commands had no
+Xcode-app paths and the second compile did no work. Temporary files were
+discarded; this is an observation of scratch-manifest compilation, not retained
+acceptance receipts or signed/runtime acceptance of the future root manifest.
 
 **Release/record grounding.** `release_preflight.py:inspect` requires a clean,
 tagged source for release; the Makefile uses its report mode for a notarization
