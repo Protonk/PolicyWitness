@@ -208,3 +208,21 @@ red since the envelope-comparison repair: its fixture list of the
 `blackbox_e2e` wrapper's children had not gained `comparison_controls.sh`,
 and no run after that commit had selected the suite; the list now names
 all five children.
+
+Audit findings F3 and F4 were settled afterwards. F4: the app now declares
+one supported macOS, 26.0, the version this repository is tested on, in
+`Info.plist`, `meson.build` (pinned at compile and link) and, through
+`build.sh`, Cargo; `build.sh` refuses to sign a bundle whose Mach-O minimum
+versions disagree with the plist. Before this the plist said 14.0, the Rust
+binaries carried 11.0 and the Swift and C binaries carried the SDK default,
+26.0; the released 0.2.7 app has the same three values, so a comparison with
+it now differs for the three Rust binaries in `build_version` and, because the
+higher minimum lets the linker use chained fixups, in load commands
+(`LC_DYLD_CHAINED_FIXUPS` and `LC_DYLD_EXPORTS_TRIE` replace
+`LC_DYLD_INFO_ONLY`), sections (`__stub_helper` and `__la_symbol_ptr` are
+gone) and one import (`dyld_stub_binder`); the Swift and C binaries already
+had that layout. The plists differ in `LSMinimumSystemVersion`. F3: the build
+directories remain incremental and trusted working state; the documents say
+so instead of calling `builddir/` "never an input", and the receipts pair
+each output with its entry in Ninja's log, its mtime and its minimum version.
+

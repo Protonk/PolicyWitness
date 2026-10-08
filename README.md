@@ -50,7 +50,9 @@ the install recipe and the signing constraints.
 
 Download a notarized release from
 [GitHub Releases](https://github.com/Protonk/PolicyWitness/releases), or build
-one as described under [What ships](#what-ships). Run it from a normal
+one as described under [What ships](#what-ships). Releases and builds target
+macOS 26, the version this repository is tested on; `Info.plist` and
+`meson.build` declare that minimum together. Run it from a normal
 Terminal; a sandboxed automation harness can refuse the XPC lookup.
 
 ```sh

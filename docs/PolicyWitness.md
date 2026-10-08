@@ -28,7 +28,7 @@ Reading paths: try it via [Quick start](#quick-start), write a specimen via [Spe
 
 ## Quick start
 
-Quick start uses the built-in standard runner. If you need entitlements the standard runner doesn't ship — debug-attach, DYLD env, custom dylib loading, JIT — see [External runners (BYOXPC)](#external-runners-byoxpc) below.
+PolicyWitness requires macOS 26. Quick start uses the built-in standard runner. If you need entitlements the standard runner doesn't ship — debug-attach, DYLD env, custom dylib loading, JIT — see [External runners (BYOXPC)](#external-runners-byoxpc) below.
 
 Set a convenience variable, adjusting the path to wherever `PolicyWitness.app` is installed:
 

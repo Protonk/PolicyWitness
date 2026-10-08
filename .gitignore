@@ -7,7 +7,8 @@
 .DS_Store
 
 # Meson build directories (builddir for production, builddir-* for alternate
-# toolchains). Configuration and incremental outputs only; never an input.
+# toolchains): configuration and incremental outputs, trusted working state
+# like controller/target/ (docs/SIGNING.md).
 /builddir*/
 
 # controller (Rust)

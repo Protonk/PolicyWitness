@@ -23,7 +23,8 @@ set -euo pipefail
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
 #   dist/PolicyWitness.md (checked standalone user guide)
-#   builddir/ (Meson configuration and native outputs; never an input)
+#   builddir/ (Meson configuration and native outputs: trusted working state,
+#              like controller/target/; see docs/SIGNING.md)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="PolicyWitness"
@@ -122,6 +123,28 @@ stamp_info_plist() {
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${PW_BUILD_NUMBER}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWBuildDescribe string ${PW_BUILD_DESCRIBE}" "${plist}"
   /usr/libexec/PlistBuddy -c "Add :PWBuildCommit string ${PW_BUILD_COMMIT}" "${plist}"
+}
+
+# The supported macOS: Info.plist declares it, meson.build pins the native
+# compile and link to the same value, Cargo's Apple targets read it from this
+# variable, and every shipped Mach-O is checked against the plist below.
+PW_MINIMUM_MACOS="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "${INFO_PLIST_TEMPLATE}")"
+if [[ ! "${PW_MINIMUM_MACOS}" =~ ^[0-9]+\.[0-9]+$ ]]; then
+  echo "ERROR: Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'" 1>&2
+  exit 2
+fi
+export MACOSX_DEPLOYMENT_TARGET="${PW_MINIMUM_MACOS}"
+echo "==> Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}"
+
+# A shipped Mach-O must carry that minimum; a stale output or a toolchain
+# default that moved refuses here rather than shipping a disagreement.
+check_minimum_macos() {
+  local target="$1" minos
+  minos="$(/usr/bin/otool -l "${target}" | /usr/bin/awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
+  if [[ "${minos}" != "${PW_MINIMUM_MACOS}" ]]; then
+    echo "ERROR: ${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}" 1>&2
+    exit 2
+  fi
 }
 
 # Select and verify the signing identity.
@@ -229,10 +252,11 @@ if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; the
   exit 2
 fi
 export SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
-echo "==> Configuring native build: ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
+  echo "==> Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
   meson configure "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
 else
+  echo "==> Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
   meson setup "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
 fi
 echo "==> Compiling native executables"
@@ -271,6 +295,9 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 
 cp "${SBPL_CHECK_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
+for rust_bin in policy-witness sandbox-log-observer sbpl-check; do
+  check_minimum_macos "${APP_BUNDLE}/Contents/MacOS/${rust_bin}"
+done
 
 # sb_api_validator is embedded only INSIDE each XPC service bundle (see
 # the XPC build loop below) and resolved relative to that bundle by the
@@ -322,6 +349,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   echo "==> Embedding PW runner client"
   cp "${PW_RUNNER_CLIENT_BIN}" "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
+  check_minimum_macos "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 
   echo "==> Embedding PWRunner XPC services"
@@ -364,6 +392,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     # The orchestrator checks bundle-local first.
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
+    for svc_bin in "${svc_name}" pw-probe-runner sb_api_validator; do
+      check_minimum_macos "${svc_bundle}/Contents/MacOS/${svc_bin}"
+    done
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"

@@ -97,6 +97,28 @@ a separate step, swiftc no longer runs `dsymutil` itself; `build.sh` runs it
 for inspection builds so each Swift executable keeps its `.dSYM` beside it in
 the bundle, as before.
 
+The supported macOS is the one this repository is tested on, declared in
+`Info.plist` as `LSMinimumSystemVersion` and pinned in `meson.build`, which
+passes it at compile and at link for the C and Swift executables; `build.sh`
+exports the same value to Cargo for the Rust ones and refuses to sign a bundle
+in which any Mach-O's minimum version differs from the plist. The selected
+SDK's default and an inherited `MACOSX_DEPLOYMENT_TARGET` cannot change the
+native outputs, and the receipts record each output's minimum version.
+Changing the supported version means changing the plist and the manifest
+together; building for an older macOS from a checkout is possible that way but
+not supported.
+
+`builddir/` and `controller/target/` are incremental build directories and
+trusted working state, like the checkout they sit in. The build reads them:
+Meson, Ninja and Cargo decide what is up to date from their own records, and
+nothing attests that an output came from the current sources beyond those
+records. Reproducibility rests on the source identity and a clean checkout at
+the release commit, which the release procedure requires; reset a directory
+after a toolchain change. The receipt pairs each output's hash and mtime with
+its entry in Ninja's log; the recorded time precedes the file's by a few tens
+of milliseconds for a cc rule, so a lag of seconds means the output changed
+after Ninja produced it. That is evidence to read, not a verdict.
+
 To build the native executables alone, run the same commands directly:
 
 ```sh

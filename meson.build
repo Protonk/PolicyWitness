@@ -44,34 +44,27 @@ foreach name, expected : fixed_options
       name, expected, get_option(name)))
 endforeach
 
+# The supported macOS, declared here and in Info.plist (LSMinimumSystemVersion);
+# build.sh checks every shipped Mach-O against the plist before signing. The
+# value is passed at compile and at link, so neither the selected SDK's default
+# nor a MACOSX_DEPLOYMENT_TARGET in the environment can change these outputs.
+macos_minimum = '26.0'
+macos_version_min = '-mmacosx-version-min=' + macos_minimum
+swift_target = ['-target', (host_machine.cpu_family() == 'aarch64' ? 'arm64' : host_machine.cpu_family())
+                + '-apple-macosx' + macos_minimum]
+
 # Executables are linked without Meson's -dead_strip_dylibs, so the linker
 # sees the same library list build.sh passed. Declared per target: a global
 # b_asneeded value cannot reach these links.
 executable_options = ['b_asneeded=false']
 
-# The two C executables keep the flags build.sh used for them.
-c_executable_flags = ['-Wall', '-Wextra', '-O2', '-std=c11']
-
-# Host-side sandbox_check validator; embedded beside the worker in the XPC bundle.
-sb_api_validator = executable('sb_api_validator',
-  files('controller/tools/sb_api_validator/sb_api_validator.c'),
-  c_args: c_executable_flags,
-  override_options: executable_options)
-
-# The sandboxed C worker. sandbox_compile_string and sandbox_apply are SPI
-# that live in libsandbox, linked dynamically as before. Its included headers
-# (the ABI header, worker evidence and profile capture) are tracked through
-# the compiler's dependency output, so editing one rebuilds the worker.
-pw_probe_runner = executable('pw-probe-runner',
-  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),
-  c_args: c_executable_flags,
-  link_args: ['-lsandbox'],
-  override_options: executable_options)
-
 if get_option('xpc')
   # Swift is registered only when the XPC pieces are built, so xpc=false
   # never discovers a Swift compiler.
   add_languages('swift', required: true, native: false)
+  # Meson passes a Swift target's link_args nowhere; the link step takes project
+  # link arguments, so the deployment target reaches swiftc's link through them.
+  add_project_link_arguments(swift_target, language: 'swift')
   foreach name, expected : {'swift_args': [], 'swift_link_args': []}
     assert(get_option(name) == expected,
       'fixed native policy: @0@ must be @1@ (got @2@); only inspection and xpc are configurable'.format(
@@ -82,12 +75,13 @@ if get_option('xpc')
   # Meson can build at all. The inspection option selects the Swift flavour.
   swift_flags = ['-module-cache-path', meson.current_build_dir() / 'swift-module-cache']
   swift_flags += get_option('inspection') ? ['-Onone', '-g'] : ['-O']
+  swift_flags += swift_target
 
   # The C shim the host links. build.sh compiled it with a bare `clang -c`,
   # which buildtype=plain and warning_level=0 reproduce; it is not a product.
   # A Meson Swift target cannot carry C sources, hence the static library.
   cworker_shim = static_library('PWCWorkerShim',
-    files('runner/Sources/PWCWorkerShim/PWCWorkerShim.c'))
+    files('runner/Sources/PWCWorkerShim/PWCWorkerShim.c'), c_args: [macos_version_min])
 
   # build.sh named this output pw-runner-client, which is not a Swift module
   # identifier, so swiftc fell back to the module name `main`; keep it.
@@ -118,3 +112,25 @@ if get_option('xpc')
     link_with: cworker_shim,
     override_options: executable_options)
 endif
+
+# The two C executables follow the XPC block: Meson requires project link
+# arguments to be declared before any target.
+# The two C executables keep the flags build.sh used for them.
+c_executable_flags = ['-Wall', '-Wextra', '-O2', '-std=c11', macos_version_min]
+
+# Host-side sandbox_check validator; embedded beside the worker in the XPC bundle.
+sb_api_validator = executable('sb_api_validator',
+  files('controller/tools/sb_api_validator/sb_api_validator.c'),
+  c_args: c_executable_flags,
+  link_args: [macos_version_min],
+  override_options: executable_options)
+
+# The sandboxed C worker. sandbox_compile_string and sandbox_apply are SPI
+# that live in libsandbox, linked dynamically as before. Its included headers
+# (the ABI header, worker evidence and profile capture) are tracked through
+# the compiler's dependency output, so editing one rebuilds the worker.
+pw_probe_runner = executable('pw-probe-runner',
+  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),
+  c_args: c_executable_flags,
+  link_args: ['-lsandbox', macos_version_min],
+  override_options: executable_options)

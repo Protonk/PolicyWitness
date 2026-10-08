@@ -6,8 +6,13 @@ Apple toolchain, the manifest and options with their hashes, the effective
 build options and active targets of the configured directory, the targets the
 manifest declares when read without a build directory, every compile and link
 command Ninja runs for each native output (captured even when nothing is out
-of date) and the outputs' hashes. Meson's own assertions enforce the fixed
-native policy; a receipt records, it does not enforce.
+of date), the outputs' hashes and platform minimum versions, the deployment
+target variable in the environment, and each output's entry in Ninja's log
+beside its current mtime. Ninja's recorded time precedes the file's by a few
+tens of milliseconds for a cc rule and equals it for a swiftc rule, so
+`lag_ms` of seconds or more means the output changed after Ninja produced it;
+that is evidence to read, not a verdict. Meson's own assertions enforce the
+fixed native policy; a receipt records, it does not enforce.
 
     meson_receipts.py BUILDDIR OUT [--manifest meson.build]
 """
@@ -22,7 +27,25 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import native_compare
+
 MANIFEST_FILES = ('meson.build', 'meson.options')
+
+
+def ninja_log_entries(builddir):
+    """The last entry per output in Ninja's log: end time, recorded mtime and command hash."""
+    entries = {}
+    log = builddir / '.ninja_log'
+    if not log.is_file():
+        return entries
+    for line in log.read_text().splitlines():
+        if line.startswith('#'):
+            continue
+        fields = line.split('\t')
+        if len(fields) == 5:
+            entries[fields[3]] = dict(end_ms=int(fields[1]), recorded_mtime_ns=int(fields[2]), command_hash=fields[4])
+    return entries
 
 
 def sha256(path):
@@ -60,6 +83,7 @@ def tools(rec):
         ninja=rec.text(['ninja', '--version']), ninja_path=shutil.which('ninja'),
         xcode_select=rec.text(['xcode-select', '-p']),
         DEVELOPER_DIR=env.get('DEVELOPER_DIR'), SDKROOT=env.get('SDKROOT'),
+        MACOSX_DEPLOYMENT_TARGET=env.get('MACOSX_DEPLOYMENT_TARGET'),
         sdk_path=rec.text(['xcrun', '--sdk', 'macosx', '--show-sdk-path']),
         sdk_version=rec.text(['xcrun', '--sdk', 'macosx', '--show-sdk-version']),
         clang=rec.text(['xcrun', '--sdk', 'macosx', '-f', 'clang']),
@@ -114,6 +138,7 @@ def capture(builddir, out, manifest):
     commands.mkdir()
     receipt['targets'] = []
     receipt['outputs'] = {}
+    log_entries = ninja_log_entries(builddir)
     for target in json.loads((out / 'targets.json').read_text()):
         entry = dict(name=target['name'], id=target['id'], type=target['type'], filename=target['filename'],
                      sources=[s for group in target['target_sources'] for s in group.get('sources', [])],
@@ -124,7 +149,13 @@ def capture(builddir, out, manifest):
             result = rec.run(['ninja', '-C', builddir, '-t', 'commands', relative])
             (commands / (Path(filename).name + '.txt')).write_text(result.stdout if result.returncode == 0 else result.stderr)
             if Path(filename).is_file():
-                receipt['outputs'][relative] = dict(sha256=sha256(filename), size=Path(filename).stat().st_size)
+                stat = Path(filename).stat()
+                entry = dict(sha256=sha256(filename), size=stat.st_size, mtime_ns=stat.st_mtime_ns)
+                if target['type'] == 'executable':
+                    entry['build_version'] = native_compare.describe(filename)['build_version']
+                logged = log_entries.get(relative)
+                entry['ninja_log'] = dict(logged, lag_ms=round((stat.st_mtime_ns - logged['recorded_mtime_ns']) / 1e6, 1)) if logged else None
+                receipt['outputs'][relative] = entry
     dry = rec.run(['ninja', '-C', builddir, '-n'])
     (out / 'dry-run.txt').write_text(dry.stdout + dry.stderr)
     receipt['no_work_pending'] = 'no work to do' in dry.stdout
