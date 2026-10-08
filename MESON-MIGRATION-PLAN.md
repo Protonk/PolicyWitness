@@ -1,721 +1,509 @@
 # Meson migration plan
 
-A staged plan for letting Meson own the compiled parts of the PolicyWitness
-build while `make`, `build.sh`, Cargo and the release helpers keep everything
-they guard today. It answers the planning brief that asked for a graduated,
-chunkable migration rather than an implementation; nothing in this document
-has been applied to the build.
+## Recommendation and scope
 
-Two kinds of statement appear below and are labelled. **Observed** means a
-command was run against this checkout and the result is reported. **Proposed**
-means a change the plan recommends, which a later commit may make differently.
+Introduce Meson in three chunks: a C pilot, the Swift compilation slice, then
+production integration. Meson will own four native executables and one shim
+library. Keep `make` as the operator interface, Cargo as the Rust builder, and
+`build.sh` plus the existing release helpers as the assembly and release path.
 
-## Summary
+The benefit is an explicit, inspectable source/dependency graph, header-aware
+incremental builds, and native outputs outside the source tree. The recorded
+unchanged build takes about seven seconds; compilation accounts for most of
+that, but signing, evidence generation and packaging will still run.
 
-- The build is already fast and almost entirely procedural. **Observed:** an
-  unchanged tree rebuilds, signs and zips in about 7 s wall, of which about
-  4.6 s is the two `swiftc` invocations and about 1.3 s is seven `codesign
-  --timestamp` calls. Meson can remove the compile time on an unchanged tree
-  and almost nothing else; the floor is signing, evidence and zipping.
-- The real gain is structural: an explicit, introspectable source list for the
-  five native executables, header tracking the shell script does not have,
-  binaries that leave the source tree, and a typed `inspection` option instead
-  of a string-compared environment variable. Two repository checks today
-  parse `build.sh` with regular expressions to learn the Swift source list,
-  and a third copies it into a disposable checkout for the same reason; a
-  Meson build file read through `meson introspect` gives them a JSON manifest.
-- Five of the sixteen steps in `build.sh` are compilation. The other eleven are
-  gates (generator checks, identity regeneration, identity verification),
-  procedure (the git stamp, bundle assembly, plist stamping, guide staging,
-  zipping) or security (identity selection, inside-out signing, evidence over
-  signed bytes, outer seal). None of those belong in Meson and the plan leaves
-  every one of them where it is.
-- Recommended shape: a pilot over the two C tools and the C shim (no change to
-  the shipped app), then the two Swift executables with the drift checks
-  reading the Meson manifest while both owners still exist, then a cutover in
-  which `build.sh` compiles nothing itself and copies from the Meson build
-  directory. Cargo is never touched. A smaller migration that stops after the
-  C tools is a legitimate resting point and is described.
-- One identity rule changes meaning if it is not updated in the same commit.
-  The host/worker source identity digests `build.sh` and `runner/Package.swift`
-  as compile-flag owners; `meson.build` and `meson.options` must join that list
-  when they take over the flags.
-
-## What was examined
-
-**Observed** on 2026-10-07 at commit `06fc25e` on macOS 26.7.1 (Darwin 25.6.0),
-Xcode 27 (Apple clang 21.0.0, Swift 6.4), cargo 1.99 from a keg-only rustup,
-`/usr/bin/python3` 3.9.6, Meson 1.12.1 and Ninja 1.13.2 from Homebrew.
-
-- Read: [Makefile](Makefile), [build.sh](build.sh), [docs/SIGNING.md](docs/SIGNING.md),
-  [tests/build-evidence.py](tests/build-evidence.py), [tests/lib/artifact.py](tests/lib/artifact.py),
-  the four generators under [docs/](docs/) and [docs/generator_common.py](docs/generator_common.py),
-  [controller/build.rs](controller/build.rs), [controller/Cargo.toml](controller/Cargo.toml),
-  [runner/Package.swift](runner/Package.swift), [docs/architecture.json](docs/architecture.json),
-  the source_drift suite ([check.py](tests/suites/source_drift/check.py),
-  [generators.py](tests/suites/source_drift/generators.py), [limits.py](tests/suites/source_drift/limits.py),
-  [contract.py](tests/suites/source_drift/contract.py), [check_planner.py](tests/suites/source_drift/check_planner.py)),
-  [tests/suites/witness_contract/opt_in/mutations.py](tests/suites/witness_contract/opt_in/mutations.py),
-  [tests/lib/suite_run.py](tests/lib/suite_run.py), [tests/lib/release_preflight.py](tests/lib/release_preflight.py),
-  [tests/lib/release_accept.py](tests/lib/release_accept.py), [tests/catalog.json](tests/catalog.json),
-  [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md) and the test fixture builders under
-  [tests/fixtures/](tests/fixtures/).
-- Ran: `make build` twice with an explicit `IDENTITY` (once after a controller
-  change, once on an unchanged tree), each `build.sh` compile and signing step
-  on its own under a timer, `codesign --verify` and `artifact.inspect` on the
-  result, the default battery (`tests/run.sh` into
-  `tests/out/runs/meson-plan-baseline`), and a disposable Meson project under
-  `.tmp/meson-probe/` that compiles the real C and Swift sources through
-  symlinks into the tree. The probe's build file is reproduced under
-  [Chunk 1](#chunk-1-pilot-the-c-tools-under-meson) so it can be recreated;
-  `.tmp` is disposable.
-
-## Inventory of build boundaries
-
-**Observed.** `build.sh` runs these steps in this order. "Kind" says what the
-step is for; "Meson?" is the plan's verdict.
-
-| # | Step (build.sh) | Kind | Inputs | Outputs | Meson? |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `generate_limits.py --check`, `generate_contract.py --check`, `generate_architecture.py --check` (lines 99 to 103) | gate (G3) | docs, manifests | none | No. Checks over tracked text; a stale copy must stop the build before any compiler runs, and two drift controls prove that by running `build.sh` in a checkout that has no compilers. |
-| 2 | `generate_worker_identity.py` in write mode (105) | in-tree generation | protocol sources, `build.sh`, `Package.swift` | regions inside `pw_probe_runner_abi.h`, `CWorker.swift`, `tests/lib/contract.py` | No. Meson outputs live in the build directory; this rewrites sources. It must run before any compile. Meson benefits anyway: a rewritten `CWorker.swift` has a new mtime and only the host recompiles. |
-| 3 | Build stamp from git (112 to 128) | procedure | tags, HEAD | `PW_*` values, plist edits | No. One owner for the stamp; it feeds Cargo through environment variables and the plists through PlistBuddy. `release_preflight.py` mirrors this logic. |
-| 4 | Identity selection and keychain check (130 to 175) | security gate | keychain | `IDENTITY` | No. |
-| 5 | Flag selection from `PW_INSPECTION` (177 to 186) | procedure | env | Swift flags, `RUSTFLAGS` | Partly. The Swift and C flags move with the compiles; `RUSTFLAGS` stays. One knob must drive both (see ownership). |
-| 6 | `cargo build --release` for three binaries (190 to 212) | compilation (Rust) | `controller/`, stamp env | `controller/target/release/*` | No, by the brief. Cargo already rebuilds when only the stamp changed (`build.rs`). |
-| 7 | `clang` for `sb_api_validator` (226 to 232) | compilation (C) | one `.c` | binary written **into the source tree** (gitignored) | **Yes.** |
-| 8 | `clang -lsandbox` for `pw-probe-runner` (234 to 246) | compilation (C) | one `.c` and three headers; only the ABI header's existence is checked | binary written into the source tree (gitignored) | **Yes.** |
-| 9 | Bundle skeleton, Info.plist copy and stamp, Rust binaries copied, augments copied (248 to 303) | assembly | 3, 6, `Info.plist`, `runner/augments/*.sb` | bundle layout | No. Layout is a contract checked by `EXECUTABLES`; it stays in the script that also signs it. |
-| 10 | `swiftc` for `pw-runner-client` (354 to 361) | compilation (Swift) | 2 Swift files | binary written straight into the bundle | **Yes.** |
-| 11 | `clang -c` for `PWCWorkerShim.o` into the Swift module cache directory (364 to 365) | compilation (C) | one `.c` | object | **Yes** (as a static library Meson links). |
-| 12 | Per service: plist copy and stamp, `swiftc` for `PWRunner`, copy worker and validator into the service bundle (366 to 412) | compilation + assembly interleaved | 10 Swift files, `main.swift`, shim object | service bundle contents | **Compile yes, assembly no.** The copies and plist stamping stay. |
-| 13 | `generate_worker_identity.py --check` (420) | gate | sources | none | No. "Refuse a source edit during compilation." |
-| 14 | Inside-out signing: top-level helpers, then the service's embedded helpers, then the service bundle with its entitlements (427 to 469) | security | 9 to 12, `IDENTITY` | signatures | No. |
-| 15 | `build-evidence.py` over the signed bytes (471 to 475) | generation over artifacts | signed bundle | `Contents/Resources/Evidence/*` | No. Order-sensitive: it hashes signed helpers and is itself sealed by the outer signature. |
-| 16 | Outer app signature, verification, standalone observer signature, guide staging, ZIP (477 to 499) | security, generation, packaging | everything above | the three deliverables | No. |
-
-Outside `build.sh`, four more things compile code and none of them should move:
-
-- The Makefile targets `test`, `clean`, `notarize`, `release` and `publish` are
-  procedure and guards over Python helpers; `build` is one path through
-  `build.sh`. **Proposed:** the Makefile keeps dispatching to `build.sh`, which
-  dispatches to Meson for compilation; no Meson command is added to the
-  Makefile's `build` recipe, so the keychain guard, the stamp and the gate order
-  keep one owner. An optional `native` target for compiling without an identity
-  is discussed under Chunk 3.
-- `runner/Package.swift` is a test-only SwiftPM manifest for `runner_unit`; it
-  is also an input to the identity digest. It stays.
-- The fixture builders under `tests/fixtures/*/build.sh` and the per-suite
-  `clang` calls (`runner_abi_layout`, `runner_live_worker_identity`) compile
-  test equipment into per-run artifact directories, log the build as evidence,
-  and in places deliberately mutate and rebuild production sources. That is test
-  machinery, not product build; it stays shell.
-- `controller/tools/sb_api_validator/build.sh` builds an ad hoc-signed debugger
-  copy of the validator for manual use. It is not on the shipped path. Whether
-  to retire it is a human decision listed at the end.
-
-## Where Meson helps and where it would only wrap
-
-**Observed** timings on this machine, wall clock:
-
-| Measurement | Time |
-| --- | --- |
-| `make build`, controller recompiled by Cargo | 11.4 s |
-| `make build`, unchanged tree | 6.9 s |
-| the three generator checks together | 0.4 s |
-| `cargo build` with nothing to do | 0.04 s |
-| the three `clang` invocations together | 0.25 s |
-| `swiftc` for the client | 1.4 s |
-| `swiftc` for the service | 3.2 s |
-| one `codesign --timestamp` (seven per build) | 0.18 s |
-| `build-evidence.py` | 0.2 s |
-| `ditto` ZIP | 0.3 s |
-| Meson probe: `meson setup` (once) | 2.1 s |
-| Meson probe: cold build of all five native targets, parallel | 4.3 s |
-| Meson probe: no-op `ninja` | 0.0 s |
-
-**Observed** incremental behaviour of the probe: touching
-`pw_worker_evidence.h` rebuilt only the worker (Ninja records all three worker
-headers as dependencies; `build.sh` checks only that the ABI header exists);
-touching `CWorker.swift` rebuilt only the host; touching `PWRunnerAPI.swift`
-rebuilt the client and the host; touching the shim rebuilt the shim archive and
-relinked the host. `build.sh` recompiles all five on every run and deletes the
-bundle first.
-
-Where Meson genuinely helps:
-
-- **A declared source list with a machine-readable form.** Meson refuses
-  globbing, so the list in `meson.build` is a manifest in the same sense the
-  repository already uses that word. `meson introspect <path to meson.build>
-  --targets` returns every target's sources and arguments as JSON without a
-  configured build directory (**Observed**). Today
-  `check.py` (`build_sh_swift_files`, `build_sh_c_files`) and
-  `mutations.py` (`build_host`) recover the same list by regular expressions
-  over bash, and `check_planner.py` copies `build.sh` into its disposable
-  checkout only so that `check.py` can parse it.
-- **Header dependencies and minimal rebuilds**, above.
-- **Outputs out of the source tree.** Two `.gitignore` lines exist only because
-  `build.sh` writes `pw-probe-runner` and `sb_api_validator` next to their
-  sources, and the shim object lands in the Swift module cache directory.
-- **One typed knob for inspection builds.** `PW_INSPECTION` becomes a boolean
-  option whose value `meson introspect --buildoptions` reports, instead of a
-  string compared in two places.
-- **Parallel compilation** of independent targets, worth about a second.
-
-Where Meson would only wrap a script and add a layer:
-
-- Cargo. A `custom_target` that shells out to `cargo build` with
-  `build_always_stale` gives Meson nothing to reason about and gives Cargo a
-  second caller. `build.sh` keeps calling Cargo and copying its outputs.
-- The generators. They write into tracked sources and are gated by `--check`;
-  a `run_target` would hide the ordering the drift controls prove.
-- Stamp, plist stamping, bundle assembly, signing, evidence, outer seal, guide
-  staging, ZIP, notarization, acceptance, archiving, rotation, publication.
-  Each has an accumulated guard and a required order; putting them behind
-  Ninja's scheduler would reintroduce ordering risk for no graph benefit.
-- Test fixture builds, for the reasons above.
-
-## Constraints the checkout imposes
-
-These are the places where moving a compile step changes what an existing
-check or identity claims. Each one must be handled in the same commit as the
-step it concerns.
-
-1. **The identity digest covers `build.sh` and `Package.swift`.** **Observed:**
-   `SOURCE_FILES` in [docs/generate_worker_identity.py](docs/generate_worker_identity.py)
-   names `docs/generate_worker_identity.py`, `build.sh` and
-   `runner/Package.swift`; `SOURCE_DIRS` covers `controller/tools/pw_probe_runner`
-   and `runner/Sources`. Today the worker's and host's compile flags are bytes
-   of `build.sh`, so a flag change changes the identity. **Proposed:** when a
-   Meson file takes over any compile flag, add `meson.build` and
-   `meson.options` to `SOURCE_FILES` in that commit. Expect the identity value
-   to change at every chunk (it changes on any `build.sh` edit today);
-   `runner_abi_layout`, `runner_live_worker_identity` and the identity controls
-   in `contract.py` observe the regenerated copies.
-2. **Two readers parse `build.sh` for the Swift source list, and one copies it.**
-   `check.py` compares the on-disk `runner/Sources` tree with the
-   `XPC_RUNNER_*_FILE` declarations and the swiftc block; `mutations.py`
-   asserts the same list before compiling a mutated host; the planner control
-   copies `build.sh` for `check.py`. **Proposed:** `diff_sets` in `check.py`
-   already compares any number of manifests, so Chunk 2 adds the Meson list as
-   a third manifest while `build.sh` still has its own, and Chunk 3 removes the
-   `build.sh` manifest. `mutations.py` reads the same Meson list.
-3. **Two controls run `build.sh` in a checkout with no compilers.**
-   `limits.py` (`test_build_refuses_stale_guide_before_signing_or_creating_output`)
-   and `contract.py` (`test_build_refuses_stale_contract_copy_before_signing_or_creating_output`)
-   copy only documents and `build.sh`, run it, and require exit 1 within 10 s
-   with no `dist` created. **Constraint:** the generator checks stay first in
-   `build.sh`, before any `meson` command; a Meson invocation placed earlier
-   would fail these controls for the wrong reason.
-4. **`generators.py` checks that `build.sh` calls every generator's `--check`.**
-   `test_build_checks_every_generator_before_signing` reads `build.sh`. The
-   gates stay in `build.sh`, so this is unaffected.
-5. **The document graph cites `build.sh` symbols.** **Observed:** the `build`
-   node and edges D15, D37 to D40 cite `generate_worker_identity.py`,
-   `generate_contract.py`, `generate_architecture.py` and `--stage-guide` in
-   `build.sh`; the BYOXPC `bundle_copy` node cites `sign_macho`. All remain in
-   `build.sh`, so the citations stay valid. `generator_common.FORM_RULES` allows
-   `build.sh` by exact path as a `control` file; `meson.build` could be cited as
-   a `source` (symbol presence) but not as a check unless that table is widened,
-   which is a human decision.
-6. **Meson's Swift rules.** **Observed** in the probe: a Swift target may not
-   contain a C source, so the shim becomes `static_library` and the host links
-   it; the module name defaults to the target name and `pw-runner-client` is not
-   an identifier, so `swift_module_name: 'main'` is required to reproduce the
-   mangling `build.sh` produces (its `swiftc` falls back to `main`); Meson passes
-   `-module-name PWRunner` for the host, which matches the current binary. The
-   `swift_module_name` keyword exists since Meson 1.9.
-7. **Meson adds linker flags `build.sh` does not pass.** **Observed:** the C
-   executables are linked with `-Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names`,
-   so their bytes differ from `build.sh`'s while size, load commands, section
-   sizes, undefined `_sandbox_*` imports and no-argument behaviour are identical.
-8. **Swift output is not reproducible.** **Observed:** the same `swiftc`
-   command on the same sources produced different bytes in two output
-   directories, in the same directory at two times, and without `-g`. The C
-   compiles were byte-identical across directories and times. Byte equality is
-   therefore available as a gate for nothing that `swiftc` produces, under
-   either build system.
-9. **`files()` is sandboxed to the source root.** `meson.build` must sit at or
-   above the sources it names, so the production file lives at the repository
-   root (the probe used symlinks). Its build directory must be gitignored;
-   `release_preflight.py` ignores untracked files when deciding a tree is dirty
-   (`--untracked-files=no`) but the generator-contract controls in
-   `generators.py` copy `git ls-files --others --exclude-standard`, so an
-   unignored build directory would be copied into their disposable checkouts.
-10. **A new development-tool requirement.** Today the documented requirement is
-    Xcode Command Line Tools ([docs/SIGNING.md](docs/SIGNING.md#build)) plus
-    Cargo; the Makefile uses the system `python3`. Meson and Ninja would be
-    added (Homebrew installs them with their own Python). This is a human
-    decision.
-
-## Ownership after the migration
-
-**Proposed.** Nothing in this table is ambiguous today except the compile flags,
-and the plan keeps it that way.
-
-| Responsibility | Owner | Reads | Writes |
+| Chunk | Scope and resulting ownership | Promotion gate | Difficulty confidence |
 | --- | --- | --- | --- |
-| Rust compilation, dependencies, stamp embedding | Cargo, invoked by `build.sh` | `controller/`, `PW_*` env | `controller/target/release/` |
-| C and Swift compilation of the five native executables and the shim | Meson, invoked by `build.sh` | `meson.build`, `meson.options`, sources | the ignored build directory only |
-| Identity, contract, limits, architecture regions | the four generators, invoked by `build.sh` before Meson | manifests and sources | marked regions in tracked files |
-| Stamp, identity selection, inspection knob | `build.sh` | git, keychain, `PW_INSPECTION` | `-Dinspection=` for Meson, `RUSTFLAGS` and `PW_*` for Cargo, plist values |
-| Bundle layout, copies from both build outputs, plists, augments | `build.sh` | Cargo and Meson outputs | `dist/PolicyWitness.app` |
-| Signing order, evidence, outer seal, guide, ZIP | `build.sh` | the assembled bundle | signatures, `Evidence/`, deliverables |
-| Notarize, accept, archive, rotate, publish | Makefile and `tests/lib/release_*.py`, `notarize.py`, `tests/accept-release.sh` | the ZIP | release evidence |
-| Source-list agreement with disk | `source_drift` `check.py` | `meson introspect` JSON, the tree | nothing |
+| 1: C pilot | Meson builds comparison copies of the worker, validator and shim. Production still uses `build.sh` compiles. | Structural/incremental checks and a signed-copy pilot | High: the probe exercised the compilation and a signed-copy rehearsal. |
+| 2: Swift slice | Meson also builds the client and host; source checks read both manifests. Production still uses `build.sh` compiles. | Default battery on a substituted copy; source and barrier controls | Medium: Swift compiled in the probe; reader changes remain untried. |
+| 3: cutover | `build.sh` consumes Meson outputs and removes its native compile commands. | Signed artifact, behavioural comparison and release-chain acceptance | Medium: integration is small; acceptance is the substantial work. |
 
-The inspection knob: `build.sh` keeps `PW_INSPECTION` as the only public
-switch and translates it to `meson setup ... -Dinspection=true|false`
-(running `meson configure` when the build directory already exists with the
-other value) and to `RUSTFLAGS` as today. Meson never reads `PW_INSPECTION`.
+This document specifies proposed work; the migration has not been implemented.
+The [evidence appendix](#evidence-appendix) contains observations recorded by the
+planning investigation at `06fc25e`, not acceptance of future implementation.
+Each chunk below includes its required code, documentation and verification
+work. Shared verification procedures are defined once and referenced by name.
 
-## Chunk 1: pilot, the C tools under Meson
+Protect request/reply semantics, worker/validator separation, process lifetimes,
+entitlements, compiler/platform assumptions and bundle paths. Do not introduce
+CI, publication work, a Cargo wrapper target, or another release route.
 
-**Scope.** `sb_api_validator`, `pw-probe-runner` and the `PWCWorkerShim`
-object, compiled by Meson into an ignored build directory. The shipped app does
-not change: `build.sh` is not edited except for the identity file list, and
-the Meson outputs are compared against `build.sh`'s, not shipped.
+## Build boundaries and final ownership
 
-**Why first.** They are the smallest isolated compile responsibility, their
-outputs are byte-reproducible (so comparison is strong), one of them is the
-sandboxed worker whose flags the identity covers (so the identity question is
-settled early and cheaply), and nothing about signing, Swift or bundle layout
-is touched.
+[build.sh](build.sh) currently interleaves native compilation with bundle
+assembly. Move only the compilation responsibilities in the first three rows.
 
-**Owner now:** `build.sh` steps 7, 8 and 11. **Owner after:** Meson, for these
-three outputs in the build directory; `build.sh` still compiles its own copies
-and ships them during this chunk.
+| Responsibility and inputs | Current output/owner | Owner after cutover |
+| --- | --- | --- |
+| C worker: `controller/tools/pw_probe_runner/pw_probe_runner.c` and its headers | `build.sh` writes `pw-probe-runner` beside the source | Meson executable in `builddir/` |
+| C validator: `controller/tools/sb_api_validator/sb_api_validator.c` | `build.sh` writes `sb_api_validator` beside the source | Meson executable in `builddir/` |
+| Swift client, Swift host, C shim: source lists in `build.sh`'s `XPC_RUNNER_*` declarations and compile calls | Client and host compiled directly into the app/XPC bundle; shim object in the Swift module cache | Meson executables `pw-runner-client`, `PWRunner`, and static library `PWCWorkerShim` in `builddir/`; shim linked into host |
+| Rust controller, observer and SBPL checker; stamp environment | Cargo writes `controller/target/release/` | Cargo, still invoked directly by `build.sh`; [build.rs](controller/build.rs) retains stamp dependencies |
+| Limits, contract and architecture checks | `build.sh` runs the three generators with `--check` before compilation | Unchanged; stale tracked text must refuse the build before any Meson command |
+| Host/worker identity | [generate_worker_identity.py](docs/generate_worker_identity.py) writes regions in the ABI header, `CWorker.swift` and `tests/lib/contract.py` | Same generator, run by `build.sh` before compilation and checked again before signing |
+| Git stamp, signing identity selection, inspection setting | `build.sh` reads git, keychain and environment | Unchanged; translate `PW_INSPECTION` to Meson's boolean `inspection` option and preserve Cargo's `RUSTFLAGS` handling |
+| Bundle skeleton, plists, binary copies, augments | `build.sh` assembles `dist/PolicyWitness.app` | Same owner and destinations; native binary copies read Meson outputs |
+| Nested signing, evidence generation, outer seal | `build.sh`, [build-evidence.py](tests/build-evidence.py) | Unchanged order; evidence hashes signed helpers and is sealed by the outer app signature |
+| Verification, standalone observer signing, checked guide staging, ZIP | `build.sh` | Unchanged |
+| Notarize, staple, accept, archive, retain/rotate, publish | [Makefile](Makefile), `notarize.py`, `tests/lib/release_*.py`, [accept-release.sh](tests/accept-release.sh) | Unchanged procedures and safeguards |
 
-**Prerequisites.** Meson and Ninja installed; the three decisions on tools,
-file location and build-directory name taken (see the end).
+The final build order is: documentation checks → identity generation → git
+stamp → signing identity selection → build options → Cargo → Meson → bundle
+assembly → identity check → nested signing → evidence → outer seal and
+verification → standalone observer signing → guide → ZIP. Keep the Makefile's
+`build` recipe dispatching to `build.sh`; retain its useful comments and guards.
 
-**Files.** **Proposed** contents, adapted from the probe that was observed to
-build and from the flags in `build.sh`:
+Generation stays outside Meson because it writes tracked source regions or
+checks them, rather than producing build-directory artifacts. Identity changes
+can update both the worker's ABI header and the host's Swift source; Meson must
+track both. Cargo already owns its incremental build. Assembly and release
+steps have order-sensitive safeguards that a scheduler wrapper would not improve.
 
-```meson
-# meson.build (repository root)
-project('policywitness-native', 'c', 'swift',
-  meson_version: '>=1.9',
-  default_options: ['buildtype=plain', 'warning_level=0', 'b_ndebug=false'])
+Other compilation stays where it is: [runner/Package.swift](runner/Package.swift)
+is test-only; fixture builders and per-suite `clang` calls build test equipment,
+including deliberately mutated sources, into evidence directories. Keep the
+manual ad hoc-signed debugger helper at
+[controller/tools/sb_api_validator/build.sh](controller/tools/sb_api_validator/build.sh)
+unless its separate retirement is chosen below.
 
-inspection = get_option('inspection')
-c_flags = ['-Wall', '-Wextra', '-O2', '-std=c11']
+## Entry conditions and review decisions
 
-executable('sb_api_validator',
-  'controller/tools/sb_api_validator/sb_api_validator.c',
-  c_args: c_flags)
+Start by reading [AGENTS.md](AGENTS.md), `build.sh`, the Makefile,
+[signing procedures](docs/SIGNING.md), [test procedures](tests/README.md), and
+[source-drift generator contracts](tests/suites/source_drift/README.md#generator-contracts).
+Read [runner/AGENTS.md](runner/AGENTS.md) before touching runner test machinery.
+Recheck the inspected sources against the current checkout; do not depend on a
+scratch probe still existing.
 
-executable('pw-probe-runner',
-  'controller/tools/pw_probe_runner/pw_probe_runner.c',
-  c_args: c_flags,
-  link_args: ['-lsandbox'])
+The recorded default baseline at `06fc25e` completed 168 cases: 167 passed and
+`unit/rust.fmt` failed on formatting in `controller/src/runner_commands.rs`.
+Resolve that independently and establish a current baseline before crediting
+a green-battery promotion gate. The recorded failure is not a gate exemption.
 
-cworker_shim = static_library('PWCWorkerShim',
-  'runner/Sources/PWCWorkerShim/PWCWorkerShim.c')
-```
+These are review choices, with recommended assumptions for the implementation.
+Settle the applicable choices before their chunk; they are not claims that
+approval has already been given.
 
-```meson
-# meson.options
-option('inspection', type: 'boolean', value: true,
-  description: 'PW_INSPECTION=1: -Onone -g for Swift, -O otherwise')
-```
+| When | Decision | Recommended assumption |
+| --- | --- | --- |
+| Before Chunk 1 | Development tools and minimum Meson version | Add Meson and Ninja; preserve Command Line Tools support, Cargo and the system Python used by existing scripts. Proposed Meson minimum is 1.9 for `swift_module_name`; only 1.12.1/Ninja 1.13.2 were exercised. Validate the claimed minimum rather than inferring it from the probe. |
+| Before Chunk 1 | File and output locations | Root `meson.build` and `meson.options`, ignored root `builddir/`. The manifest must be above the sources it names. |
+| Before Chunk 1 | Identity coverage | Add both Meson files to the conservative source digest immediately and regenerate after each chunk. Keep existing inputs. |
+| Before Chunk 2 | Compile-only `make native` convenience | Optional; omit unless wanted. If added, it must prepare generated identity inputs and use the same option mapping as production. |
+| Before Chunk 3 | `SWIFT_MODULE_CACHE` compatibility | Recommend retiring the override and using a writable cache under `builddir/`. If retaining it, pass it through explicitly and document that choice consistently; do not silently ignore it. |
+| Before Chunk 3 | Architecture citations | Cite `meson.build` as a source and the source-drift check as the verifying rule. Leave `generator_common.FORM_RULES` unchanged unless a separate need for a control citation is demonstrated. |
+| Before Chunk 3 | Notarization timing | Recommend one cutover rehearsal. Alternatively use the next real release, with release-chain acceptance explicitly pending until it succeeds. |
+| Optional follow-up | Manual validator debugger script | Keep it during this migration; retirement is a separate choice. |
 
-Plus one `.gitignore` entry for the build directory and `meson.build`,
-`meson.options` appended to `SOURCE_FILES` in `generate_worker_identity.py`
-(then regenerate; the regenerated regions are part of the commit).
+Adding Meson files to the identity digest changes generated identity values
+even while production still compiles through `build.sh`. Chunks 1 and 2
+preserve the production compiler route and runtime contract; they do not
+promise unchanged shipped bytes. Always compare host and worker built from
+the same regenerated source state.
 
-**Must not change.** `build.sh` behaviour and output; `EXECUTABLES`; the
-bundle; the test battery's view of the app. The `-lsandbox` link, which the
-R5 note in `build.sh` requires, and the `-std=c11 -Wall -Wextra -O2` flags.
+For all chunks, use fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` directories,
+preserve receipts, and serialize test execution under the existing checkout
+lock. Cheap compile checks require no signing or notarization credentials.
+Signed-copy promotion requires a Developer ID identity; notarization is
+reserved for the final gate. Follow the repository's sandbox-escalation
+guidance for keychain, signature, XPC or log restrictions.
 
-**Cheapest useful validation** (**Observed** to pass in the probe, so the
-pilot is confirming it against the root file):
+## Chunk 1: C compilation pilot
+
+**Scope and rationale.** Build the two C executables and the shim under Meson
+as comparison outputs. They are small, isolated compilation units; the worker
+also exercises identity coverage early. `build.sh` remains the production
+compiler, assembler and signer. Prerequisites are the Chunk 1 decisions above,
+the current source baseline, and Meson/Ninja plus Apple's C toolchain.
+
+**Work, in order:**
+
+1. Add the root build manifest and options, and ignore `builddir/`. Declare
+   explicit sources using the settings below. The pilot needs only C;
+   introduce Swift when adding its targets in Chunk 2. Keep the shim's flags
+   distinct from the two executables.
+2. Add `meson.build` and `meson.options` to `SOURCE_FILES` in
+   `docs/generate_worker_identity.py`. Run
+   `python3 docs/generate_worker_identity.py` and commit its three generated
+   regions together with the inputs. Do not edit generated regions manually.
+   Extend the identity controls in `tests/suites/source_drift/contract.py`
+   to demonstrate that edits to the new flag/option owners change the digest.
+3. Add small, reusable structural and normalized-envelope comparison scripts
+   to the test machinery, implementing the [shared verification procedures](#shared-verification-procedures).
+   Save raw inputs and explicit differences. These scripts support all three
+   chunks; they do not assemble a second production app.
+4. Update `docs/SIGNING.md` with the chosen Meson/Ninja requirements and
+   comparison-build commands; describe production as still using `build.sh`.
+   Add `meson.build` to the Build + signing router in `AGENTS.md`.
+   Keep generated-document edits at their authoritative inputs.
+
+| Target/setting | Required declaration |
+| --- | --- |
+| Project defaults | `buildtype=plain`, `warning_level=0`, `b_ndebug=false`; chosen minimum Meson version |
+| `sb_api_validator` | Its one C source; `-Wall -Wextra -O2 -std=c11` |
+| `pw-probe-runner` | Its one C source; same flags; `-lsandbox`; compiler dependency tracking for all included headers |
+| `PWCWorkerShim` | `static_library` from `runner/Sources/PWCWorkerShim/PWCWorkerShim.c`; preserve the current shim compile settings |
+| `inspection` | Boolean option, default true; will select Swift `-Onone -g` versus `-O` in Chunk 2 |
+
+**Must remain unchanged.** Production compile commands, `EXECUTABLES`, bundle
+layout, signing, evidence semantics, and worker linking against libsandbox.
+Ignore the build directory from the start: generator controls copy untracked,
+nonignored files into disposable checkouts.
+
+**Cheapest useful validation.** After identity regeneration, run
+`meson setup builddir`, `meson compile -C builddir`, then compile again and
+require no work. Compare the C outputs with current `build.sh` outputs using
+the structural check. The worker invoked without arguments must retain exit
+2 and the `--shm-fd is required` diagnostic. Inspect
+`meson introspect meson.build --targets`; touch `pw_worker_evidence.h` and
+verify that only the worker rebuilds. Run `tests/run.sh --suite source_drift`
+with a fresh output directory, including the extended identity controls.
+Do not treat the expected linker-induced byte differences as a failure;
+unexplained structural differences block promotion.
+
+**Acceptance before promotion.** Build a baseline app through the existing
+signed path after regeneration, then use the signed-copy procedure below to
+replace its worker and validator. Against that copy, run:
 
 ```sh
-meson setup builddir && meson compile -C builddir
-for t in pw-probe-runner sb_api_validator; do
-  cmp <(otool -l builddir/$t | grep -E '^ *(cmd|segname|sectname|name)') \
-      <(otool -l controller/tools/*/$t | grep -E '^ *(cmd|segname|sectname|name)')
-  cmp <(nm -u builddir/$t | grep _sandbox_) <(nm -u controller/tools/*/$t | grep _sandbox_)
-  size builddir/$t controller/tools/*/$t
-done
-builddir/pw-probe-runner; controller/tools/pw_probe_runner/pw-probe-runner   # both: rc 2, "--shm-fd is required"
-meson introspect meson.build --targets | python3 -m json.tool | head
-touch controller/tools/pw_probe_runner/pw_worker_evidence.h && meson compile -C builddir  # only the worker rebuilds
+PW_APP_DIR='/private/tmp/<copy>/PolicyWitness.app' \
+PW_TEST_OUT_DIR='tests/out/runs/<fresh-name>' \
+tests/run.sh --suite smoke --suite runner_c_worker_harness \
+  --suite validator_batch_mode --suite runner_abi_layout \
+  --suite runner_live_worker_identity --case witness_contract/happy_path_baseline
 ```
 
-The byte difference from Meson's two extra linker flags is expected; the
-comparison is of load-command structure, section sizes, imports and behaviour.
-If the structure differs, stop and investigate before anything else.
+Require all selected cases to pass, no skips/unrun cases or harness errors,
+and the candidate app inventory to remain unchanged. Compare the five
+`tests/fixtures/pw_runner/` requests through both same-source apps using the
+envelope procedure. Record results from the real root manifest; the scratch
+rehearsal is supporting evidence only. No notarization is needed.
 
-**Stronger acceptance before promotion.** Substitute the Meson-built worker
-and validator into a disposable copy of the app and exercise the copy through
-the existing controls, following the recipe `signed_copy` in
-[mutations.py](tests/suites/witness_contract/opt_in/mutations.py) already
-uses: `ditto` the app to `/private/tmp`, replace the two helpers inside
-`PWRunner.xpc`, give the app and the service fresh `CFBundleIdentifier`s, sign
-the helpers, then the service with its entitlements, run `build-evidence.py`,
-sign the app with its entitlements, and require `artifact.inspect` to pass.
-Then run `tests/run.sh --suite smoke --suite runner_c_worker_harness --suite
-validator_batch_mode` with `PW_APP_DIR` pointing at the copy. The harness
-suite drives the real worker through the shared-memory ABI with no host, so it
-is the most direct check that a Meson-built worker is the same worker. See
-[the rehearsal](#rehearsal-of-the-chunk-1-acceptance-check) for what this
-looked like when it was tried.
+**Rollback/stop.** Revert the pilot files, identity input list, comparison
+tooling and documentation changes together, then regenerate identity and
+rebuild as needed. Production has never consumed Meson outputs. Stop here if
+structural checks fail or the tooling cost is not worth the C slice.
 
-**Revert.** Delete `meson.build`, `meson.options` and the `.gitignore` line,
-restore `SOURCE_FILES`, regenerate the identity. No shipped byte depended on
-the chunk.
+## Chunk 2: Swift compilation and source-manifest readers
 
-**Confidence in the difficulty estimate:** high. Every element was exercised
-by the probe.
+**Scope and rationale.** Add the client and host, including the shim link, and
+make the Meson source inventory visible to existing checks. This is where
+most compile time and source-list maintenance move. XPC compilation belongs
+here; XPC bundle assembly remains in `build.sh`. Both build systems still
+compile their own outputs, and only `build.sh` outputs ship.
 
-## Chunk 2: the native slice, including the Swift executables
+**Prerequisites.** Chunk 1 accepted; read the runner test instructions and
+choose whether to add `make native`. Expect more integration work than the
+pilot: Swift output requires structural/behavioural comparison and three
+source-list consumers must change.
 
-**Scope.** Add `pw-runner-client` and `PWRunner` to `meson.build`; make the
-source list in `meson.build` the manifest the drift checks compare with the
-tree, alongside the `build.sh` list, while both exist; optionally give
-developers a compile-only entry point. The shipped app still comes from
-`build.sh`'s own compiles.
+**Work, in order:**
 
-**Why second.** The Swift compiles are where the time goes and where the
-source list lives, so this is where the explicit graph pays. It is larger than
-the pilot because the drift checks and the barrier mutation control must learn
-a new reader, and because Swift output cannot be compared by bytes.
+1. Enable Swift and add the targets below. Preserve the explicit source order
+   from `build.sh` so the review can compare lists directly.
+2. In `tests/suites/source_drift/check.py`, add Meson readers using
+   `meson introspect meson.build --targets`. Feed the relevant host Swift and
+   shim C sets into `diff_sets` alongside disk and `build.sh`: three sets
+   during this chunk. Filter to the same source domains as the existing
+   readers; client/service entrypoints are not extra core sources.
+3. In `check_planner.py`, copy the Meson files and any inputs their
+   introspection needs into its disposable checkout. In
+   `tests/suites/witness_contract/opt_in/mutations.py:build_host`, read the
+   production host list from Meson and retain the assertion that it equals
+   the on-disk core set. Preserve the mutation control's deliberate identity
+   handling and its own compilation of test equipment.
+4. Update `tests/suites/source_drift/README.md` and its `run.sh` descriptions
+   for the three-way check. Update `runner/Package.swift` comments to name
+   both temporary production/comparison lists, and `tests/OPT_IN_TESTS.md`
+   to say the barrier control follows Meson's manifest.
+5. If selected, add `make native` with accurate header/help comments. It
+   runs the generator checks, prepares identity inputs, sets up/configures
+   Meson and compiles, without signing or bundling. Keep one mapping of
+   `PW_INSPECTION` to Meson's option for this entry point and the production
+   cutover; do not create competing flag definitions.
+6. Regenerate identity after the manifest and `Package.swift` edits.
+   Include generated regions in this chunk.
 
-**The Swift/XPC boundary belongs here for compilation and nowhere for
-assembly.** The probe showed Meson compiling the host from the same eleven
-files with the same module name, the same dynamic library list, the same
-load-command structure and no `_sandbox_*` import (**Observed**). The XPC
-bundle itself (its `Info.plist` and stamp, the embedded worker and validator,
-its entitlements and signature) is assembly and signing; it stays in
-`build.sh` in every chunk. If Meson's Swift support cannot reproduce the host
-at this step, the migration stops at the C tools (see stopping points).
+| Target | Sources and settings |
+| --- | --- |
+| `pw-runner-client` | `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` and `runner/Clients/PWRunnerClient/main.swift`; `swift_module_name: 'main'` |
+| `PWRunner` | The ten explicit `runner/Sources/PWRunnerCore/` Swift files listed by `build.sh`, plus `runner/Services/PWRunner/main.swift`; module name `PWRunner`; `link_with: cworker_shim` |
+| Both | `-module-cache-path` under the writable build directory; `inspection` chooses `-Onone -g` or `-O` |
 
-**Owner now:** `build.sh` steps 10 and 12 (compile part). **Owner after:**
-Meson for the two binaries in the build directory; `build.sh` still ships its
-own until Chunk 3.
+**Must remain unchanged.** Host/core source membership, module names, compiler
+optimization/debug settings, the host's absence of sandbox API imports,
+test-only SwiftPM ownership, and all production assembly/signing. The probe
+used a separate shim static library because its Swift target could not
+contain C source directly.
 
-**Files.** The Swift targets from the probe:
+**Cheapest useful validation.** Compile both inspection settings and perform
+the structural comparison on client and host. Require matching dynamic
+libraries/load-command structure, the stated module names in mangled symbols,
+and no undefined `_sandbox_*` imports in the host. Exercise this matrix,
+then run `tests/run.sh --suite source_drift`:
 
-```meson
-swift_common = ['-module-cache-path', meson.current_build_dir() / 'swift-module-cache']
-swift_opt = inspection ? ['-Onone', '-g'] : ['-O']
+| Input change | Required incremental response |
+| --- | --- |
+| None | No native compile/link work |
+| `pw_worker_evidence.h` touched | Worker rebuilds |
+| `CWorker.swift` touched | Host rebuilds |
+| `PWRunnerAPI.swift` touched | Client and host rebuild |
+| Shim source touched | Shim rebuilds; host relinks |
+| Identity input content changed, then identity regenerated | Worker and host rebuild from their changed generated inputs |
+| `inspection` changed | Swift settings change; a no-op compile must not retain the previous flavour |
 
-executable('pw-runner-client',
-  'runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
-  'runner/Clients/PWRunnerClient/main.swift',
-  swift_module_name: 'main',   # build.sh's swiftc falls back to "main" for this output name
-  swift_args: swift_common + swift_opt)
+The first five rows were exercised by the probe. Content changes requiring
+identity regeneration have wider consequences than an mtime-only touch;
+verify those separately and restore/regenerate the source state afterward.
 
-executable('PWRunner',
-  files('runner/Sources/PWRunnerCore/PWRunnerAPI.swift',
-        'runner/Sources/PWRunnerCore/SandboxApply.swift',
-        'runner/Sources/PWRunnerCore/ProbeRunner.swift',
-        'runner/Sources/PWRunnerCore/PathUtils.swift',
-        'runner/Sources/PWRunnerCore/CWorker.swift',
-        'runner/Sources/PWRunnerCore/MonotonicDeadline.swift',
-        'runner/Sources/PWRunnerCore/ValidatorClient.swift',
-        'runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift',
-        'runner/Sources/PWRunnerCore/PWRunnerService.swift',
-        'runner/Sources/PWRunnerCore/PWRunnerListener.swift'),
-  'runner/Services/PWRunner/main.swift',
-  swift_args: swift_common + swift_opt,
-  link_with: cworker_shim)
-```
+**Acceptance before promotion.** Substitute all four Meson executables into
+a same-source signed app using the shared procedure. Run the full default
+battery with `PW_APP_DIR=<copy>` and a fresh output directory, plus
+`tests/run.sh --case witness_contract/order_barrier_mutations` against that
+copy. Require the unmodified control to pass and both mutations to be
+detected, as well as a green battery and unchanged app inventory. This
+exercises the new manifest reader rather than merely its JSON parser.
 
-Changes to checks, each small:
-
-- `check.py`: a `meson_swift_files()` and `meson_c_files()` reader over
-  `meson introspect meson.build --targets`, added as third manifests to the
-  two `diff_sets` calls. The README of the suite describes three manifests
-  for the duration of the chunk.
-- `check_planner.py`: copy `meson.build` and `meson.options` into the
-  disposable checkout alongside `build.sh`.
-- `mutations.py` (`build_host`): read the host's source list from the Meson
-  manifest, keeping the assertion that it equals the on-disk set.
-- `generate_worker_identity.py`: no further change (the files were added in
-  Chunk 1).
-- Optional: a Makefile target `native` that runs `meson setup` if needed and
-  `meson compile -C builddir`, for a compile loop that needs no identity. It is
-  a developer convenience, not part of the shipped CLI; the Makefile header's
-  target list and comments gain one entry.
-
-**Must not change.** The ten-file host source set and its order (the order
-is not semantically significant to `swiftc`, but keep it to make diffs
-trivial); `-Onone -g` under inspection and `-O` otherwise; the module cache
-living under a writable path (`build.sh` uses `.tmp/swift-module-cache`
-because sandboxed harnesses block `~/.cache`; the build directory serves the
-same purpose).
-
-**Cheapest useful validation.** `meson compile`, then for each Swift binary:
-`nm -u | grep -c _sandbox_` is zero for the host, `otool -L` lists equal,
-load-command structure equal, module name `main` for the client and
-`PWRunner` for the host (`nm | grep '_\$s'` prefixes). Then the incremental
-matrix above, and `tests/run.sh --suite source_drift` with the three-manifest
-check in place.
-
-**Stronger acceptance before promotion.** The signed-copy substitution of all
-four Meson-built binaries (client, host, worker, validator), evidence
-regenerated and the copy sealed, then the default battery against the copy:
-`PW_APP_DIR=<copy> PW_TEST_OUT_DIR=tests/out/runs/<name> tests/run.sh`. The
-dispatcher's artifact check gates the copy exactly as it gates `dist`, so a
-layout or seal mistake in the substitution fails before any case runs. Also
-run `tests/run.sh --case witness_contract/order_barrier_mutations`, because
-that control compiles the host itself from the source list it now reads from
-Meson; it must still detect both mutations and pass the unmodified control.
-
-**Revert.** Remove the Swift targets and the third manifests; `mutations.py`
-back to the `build.sh` regex. The shipped app never depended on the chunk.
-
-**Confidence in the difficulty estimate:** medium. The compile was observed;
-the three reader changes and the barrier control rerun were not.
+**Rollback/stop.** Revert the Swift targets, reader/documentation changes and
+optional convenience target; restore the mutation reader and regenerate
+identity. Keep the accepted C pilot. If Swift equivalence or reader changes
+prove unsuitable, use the C-only endpoint below. Keep dual compilation to
+one review cycle rather than treating this as a permanent operating mode.
 
 ## Chunk 3: production cutover
 
-**Scope.** `build.sh` stops compiling. After the generator gates and the stamp
-it runs `meson setup builddir -Dinspection=...` (or `meson configure` when the
-directory exists) and `meson compile -C builddir`, then copies the five
-binaries from `builddir/` into the bundle paths it already assembles, in the
-same places it copied them before. The `XPC_RUNNER_*` declarations, the three
-`clang` calls and the two `swiftc` calls leave `build.sh`; the two in-tree
-binary ignores leave `.gitignore`; `check.py` drops the `build.sh` manifest
-and compares disk with Meson only.
+**Scope and rationale.** Make `build.sh` consume the accepted Meson outputs
+and remove its native compile commands in one reversible commit. This is
+the first change to the compiler route used by the shipped app.
 
-**Why last.** It is the only chunk that changes shipped bytes and the only one
-whose rollback touches the release path, so it should land when the previous
-two chunks have made the comparison routine.
+**Prerequisites.** Chunks 1 and 2 accepted, a green current baseline, and the
+Chunk 3 review choices settled. Signing credentials and a logged-in GUI
+session are needed for the full artifact/BYOXPC gate; settle notarization
+timing before declaring release-chain acceptance.
 
-**Owner now:** `build.sh`. **Owner after:** Meson for compilation; `build.sh`
-for everything else, unchanged in order: gates, stamp, identity, Cargo, Meson,
-assembly, identity `--check`, signing, evidence, seal, guide, ZIP.
+**Work, in order:**
 
-**Must not change.** The signing order and the `sign_macho` function; the
-evidence manifest's content model; `EXECUTABLES`; the ZIP; every Makefile
-target; the request/reply semantics, worker and validator separation, process
-lifetimes, entitlements and the XPC bundle layout. The two build-refusal
-controls must still see exit 1 before any Meson command runs in a checkout
-without compilers.
+1. After the existing documentation, identity, stamp, keychain and Cargo
+   steps, set up or reconfigure `builddir/` with the current options and run
+   `meson compile -C builddir`. Keep `PW_INSPECTION` as the public knob;
+   Meson reads its boolean option, not that environment variable.
+   Preserve `BUILD_XPC=0` skipping the client/service build, including Swift
+   discovery, and keep custom `DIST_DIR` assembly working.
+2. Replace the three `clang` and two `swiftc` invocations with consumption
+   of the four executables. The shim is already linked into the host; it is
+   not copied into the bundle. Preserve all existing binary destinations,
+   plist stamping and source-independent assembly declarations.
+3. Remove obsolete native source/flag declarations and the two in-tree
+   executable ignores. Remove `build.sh` source readers from `check.py`;
+   it now compares disk with Meson. Update copied-checkout inputs where
+   necessary. Do not move Meson before the generator refusal gates.
+4. Update `build.sh`'s input/output comments for Meson and the selected
+   module-cache policy. Update Makefile build comments while preserving
+   its commands/guards; `README.md`'s assembly description;
+   `docs/SIGNING.md`'s production build instructions; runner README/AGENTS
+   and `Package.swift` comments; and source-drift README/run descriptions
+   for the final two-way comparison. The build-stamp contract keeps its
+   existing owner and semantics.
+5. In `docs/architecture.json`, update the build node's guard description.
+   Proposed for review: a source-kind `meson_build` node with an edge to
+   `drift_check` labelled "source list equals the tree", citing Chunk 2's
+   checking rule. Retain the existing build-generator, guide-staging and
+   `sign_macho` anchors. Regenerate with
+   `python3 docs/generate_architecture.py` (rendering needs Graphviz).
+   Represent the checked source-list relationship, not a second compile
+   graph; Meson introspection/Ninja can render that graph on demand.
+6. Regenerate identity after all digested edits and include the generated
+   regions. Keep `build.sh` and `Package.swift` in the digest.
 
-**Cheapest useful validation.** `make build IDENTITY=...` twice; the second
-run's `meson compile` reports nothing to do and the app still inspects clean.
-`make build PW_INSPECTION=0` reconfigures and produces `-O` binaries. The
-`source_drift` suite passes with the two-manifest check. `SWIFT_MODULE_CACHE`,
-which `build.sh` accepts today because sandboxed harnesses block `~/.cache`,
-is either retired (the cache lives in the build directory) or passed through
-to Meson; either way its header comment changes.
+**Must remain unchanged.** `sign_macho`, nested signing order, evidence
+content model, `EXECUTABLES`, outer seal, guide/ZIP procedure and all release
+targets. The stale-guide and stale-contract controls must still fail with
+their expected diagnostics before any compiler, Meson invocation, or
+distribution output; missing tools must not become the reason they pass.
 
-**Stronger acceptance before promotion (the cutover gate).**
+**Cheapest useful validation.** Run `make build IDENTITY=...` twice; the second
+Meson compile does no work and artifact inspection still passes. Switch
+`PW_INSPECTION=0` and back, verifying the corresponding Swift settings.
+Check `BUILD_XPC=0` retains its existing scope; a partial bundle is not a
+release acceptance artifact. Run `tests/run.sh --suite source_drift`, including
+the copied-checkout, generator-order and refusal controls.
 
-1. `make build`, then the full default battery against `dist` (`make test`
-   or a named run directory), green with no skips, unrun cases or harness
-   errors.
-2. The opt-in controls that touch what changed: `preflight/signed_artifact_controls`
-   (real signatures over copies of the new app),
-   `witness_contract/order_barrier_mutations` (compiles the host from the Meson
-   manifest), `smoke/runner_caller_auth`, and, from a logged-in GUI session,
-   `runner_byoxpc` (the copied XPC bundle with Meson-built host, worker and
-   validator installed as a Mach service and verified).
-3. The behavioural comparison against the current release in
-   [Equivalence](#equivalence-what-the-cutover-can-and-cannot-certify).
-4. `make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY=...` once,
-   as a rehearsal that spends one submission and ends in archive acceptance of
-   the Meson-built ZIP. Whether to spend it at the cutover commit or to let the
-   next real `make release` be that rehearsal is a human decision; the plan
-   recommends spending it, because notarization is the one check that only
-   Apple performs and it has refused ad hoc-signed helpers before.
+**Acceptance before promotion:**
 
-**Cutover and rollback point.** The cutover is one commit. Rolling back is
-`git revert` of that commit: `build.sh` compiles again, the identity
-regenerates on the next build, the ignored build directory is inert. Because
-`build.sh` deletes and recreates the bundle every run, no artifact can mix
-binaries from both producers. Do not keep a `PW_NATIVE=` switch that selects
-the producer at run time; two producers behind one script is the dual
-ownership the brief asks to avoid.
+1. Build the complete signed app and require the full default battery against
+   `dist` to pass without skips, unrun cases or harness errors.
+2. Run `preflight/signed_artifact_controls`,
+   `witness_contract/order_barrier_mutations`, `smoke/runner_caller_auth`,
+   and the `runner_byoxpc` suite from a logged-in GUI session. Use exact
+   `--case` selectors for the first three and `--suite runner_byoxpc`.
+   Follow existing installation ownership and cleanup requirements.
+3. Perform the shared artifact/envelope comparison against the current
+   released build. The investigation used `dist/archive/v0.2.7/`; select
+   and record the actual release baseline at implementation time.
+4. Run `make notarize NOTARY_KEYCHAIN_PROFILE=<profile> IDENTITY=...` once,
+   or credit the agreed next real `make release`. Keep the existing
+   submission, stapling, Gatekeeper, re-zip and final ZIP acceptance receipts.
+   `make notarize` rebuilds and accepts the ZIP; archiving and rotation
+   belong to `make release`. No publication is part of this migration.
+   If the rehearsal is deferred, record this gate as pending.
 
-**Documentation that follows the cutover** is listed in the next section but
-one. The Makefile's header comment on `build` changes one sentence
-("compiles" becomes "runs the generator checks, Cargo and Meson, then signs").
+**Cutover and rollback.** Land the production switch as one commit. Reverting
+it restores the `build.sh` native compiles; regenerate identity and rebuild
+the app afterward. Its existing delete-and-recreate assembly prevents mixing
+old bundle contents with new outputs. Do not add a runtime producer-selection
+switch such as `PW_NATIVE`. The ignored Meson build directory can remain
+inert after rollback.
 
-**Confidence in the difficulty estimate:** medium. The mechanics are small;
-the gate is the work.
+## Shared verification procedures
 
-## Equivalence: what the cutover can and cannot certify
+### Structural and artifact comparison
 
-The current release is `v0.2.7` in `dist/archive/v0.2.7/` (published, with
-`origin.kind: github_release`). A Meson-built app cannot be compared with it by
-bytes: the stamp differs, every signature carries its own timestamp, the
-evidence manifest carries `generated_at`, and `swiftc` output is not
-reproducible even with the same build system (**Observed**). The comparison
-that is available, and that the plan proposes as the cutover's
-behavioural-equivalence check, is:
+For native outputs, compare `otool -L` dynamic libraries, `otool -l`
+load-command/segment/section structure, `size`, and undefined `_sandbox_*`
+imports from `nm -u`. For Swift, also check the module names in mangled
+symbols. Preserve the comparison as a script from Chunk 1 onward and rerun
+it when toolchains change. A compile success alone is insufficient.
 
-- **Artifact structure.** `artifact.inspect` passes; the set of
-  `(id, kind, rel_path)` triples in `manifest.json` is equal, and the
-  `entitlements` object of every entry is equal; `symbols.json` entries are
-  equal (the exported `_pw_*` markers); for every executable, the undefined
-  `_sandbox_*` import set, the dynamic library list and the load-command
-  structure are equal; `Info.plist` keys are equal with only the four stamp
-  values differing.
-- **Behaviour.** The default battery passes against the new app; release
-  acceptance (`tests/accept-release.sh`) passes on the new ZIP after
-  notarization; the five request fixtures under `tests/fixtures/pw_runner/`
-  produce envelopes equal to the released app's after removing volatile
-  fields. **Observed** in the rehearsal, the volatile classes are PIDs,
-  wall-clock and monotonic timestamps and deadlines, elapsed durations, the
-  observer's raw `log show` text and deny lines, bundle identifiers, service
-  names and paths, the client `argv`, and the `stdout_bytes_*` counts; against
-  a different build the four `build` stamp values join them. Everything else,
-  including every `comparison` record and verdict, was equal. The consumer in
-  `tests/lib/consumer.py` is the reader to validate both envelopes with first,
-  since it is the one the suites share.
+The probe reported Meson adding
+`-Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names`. Its C output bytes
+differed from the old path despite matching measured structure and behaviour.
+Repeated direct Swift builds also differed in bytes. Therefore whole-binary
+byte equality is not the acceptance gate.
 
-What the suite cannot certify, and the plan does not claim: notarization
-acceptance (only the rehearsal shows it); timing behaviour under load; that
-two Swift binaries from the same sources are the same program (no build system
-offers this here; the battery and the harness suite are the evidence); and
-that the Meson-built app has no behaviour the fixtures and the battery do not
-exercise, which is equally true of today's app.
+For assembled apps, require `tests/lib/artifact.py:inspect` to pass. Compare
+evidence-manifest `(id, kind, rel_path)` inventories and entitlements,
+`symbols.json` exported `_pw_*` markers, and per-executable imports,
+libraries and load-command structure. Plists should differ only in accounted
+build stamps and, for temporary signed copies, their fresh identifiers.
+Signatures, timestamps and content hashes need not equal the old artifact;
+each manifest must describe its own actual signed bytes.
 
-## Documentation and identity changes by chunk
+### Signed-copy substitution
 
-Only ownership changes are updated; no facts are copied into a second place.
+Use the pattern in
+[mutations.py:signed_copy](tests/suites/witness_contract/opt_in/mutations.py):
 
-| Chunk | File | Change |
-| --- | --- | --- |
-| 1 | `docs/generate_worker_identity.py` | `SOURCE_FILES` gains `meson.build`, `meson.options`; regenerate the three regions. |
-| 1 | `.gitignore` | ignore the build directory. |
-| 1 | `docs/SIGNING.md` "Build" | requirements gain Meson and Ninja with the minimum version; one sentence that Meson compiles the native executables (Chunk 3 wording; in Chunks 1 and 2 say it builds a comparison copy). |
-| 1 | `AGENTS.md` Quick Router | the "Build + signing" row names `meson.build`. |
-| 2 | `tests/suites/source_drift/README.md` and `check.py` | the source-set invariant names three manifests, then two after Chunk 3. |
-| 2 | `runner/Package.swift` comment | "must be added to build.sh's swiftc invocation" becomes "to meson.build"; the drift sentence follows. |
-| 2 | `tests/OPT_IN_TESTS.md` "Order barrier mutation controls" | the control follows the Meson manifest. |
-| 2 | `Makefile` | the optional `native` target and its header lines. |
-| 3 | `build.sh` header | the input list drops `SWIFT_MODULE_CACHE` (the cache moves into the build directory) and the outputs paragraph says the binaries come from Meson. |
-| 3 | `README.md` "What ships" | the sentence that `./build.sh` assembles the Rust, Swift and C pieces says Meson compiles the Swift and C ones. |
-| 3 | `runner/AGENTS.md` and `runner/README.md` | "Production builds still go through build.sh" stays true; add that the compile step is Meson's. |
-| 3 | `docs/CONTRACT.md` "Build stamp" | unchanged in substance; the stamp still comes from `build.sh`. |
-| 3 | `docs/architecture.json` | **Proposed, needs review:** the `build` node's `Guards` fact says it runs the checks, Cargo and Meson, then signs; a new `source`-kind node `meson_build` ("meson.build") with an edge to `drift_check` labelled "source list equals the tree", cited to the new `check.py` rule. The node's check citation must be a `test` or `rule` (G5); the rule is the one Chunk 2 adds. Regenerate with `python3 docs/generate_architecture.py`. This records a build-graph fact in the document graph only because a drift rule verifies it; it does not draw the compile graph, which `meson introspect` and `ninja -t graph` already render on demand. |
+1. Build a baseline app from the current regenerated sources. Copy it with
+   `ditto` to a disposable location under `/private/tmp`, replace the
+   selected native executables, and assign fresh app/service bundle IDs.
+2. Sign replaced helpers/client as applicable, then the service with its
+   existing entitlements. Run `tests/build-evidence.py`, sign the outer app
+   with its entitlements, and run `codesign --verify --deep --strict`.
+3. Require artifact inspection before running the chunk's test selection with
+   `PW_APP_DIR` pointing at the copy. Retain receipts and before/after
+   inventory under the managed test output. Leave `dist` intact.
 
-What demonstrates that a documented build edge is real: the drift rule that
-compares the Meson source list with the tree (a `rule` citation), the identity
-controls that show a flag edit changes the identity (`contract.py`), and the
-layout and live-identity suites that compare the compiled worker with the
-Swift host (`runner_abi_layout`, `runner_live_worker_identity`). A sentence in
-a README is a place to look, not evidence, consistent with G5 and G10.
+The worker and validator remain under
+`Contents/XPCServices/PWRunner.xpc/Contents/MacOS/`; the host is alongside
+them and the client is under the app's `Contents/MacOS/`. Bundle-local helper
+resolution must work for both the built-in service and BYOXPC copies.
 
-The prose rules do not scan a root-level Markdown file other than `README.md`
-and `AGENTS.md` (`scanned_documents` in `generators.py`), so this plan is not
-subject to the span and citation rules. Edits to `docs/SIGNING.md` are; keep
-duration and size literals out of the added sentences.
+### Envelope comparison and its limits
 
-## Decisions and risks for human review
+Run all five request fixtures under `tests/fixtures/pw_runner/` through both
+apps. Validate envelopes first with [tests/lib/consumer.py](tests/lib/consumer.py).
+Retain originals and compare normalized leaves, including every comparison
+record, verdict, attempt outcome and disposition.
 
-Decisions:
+The rehearsal identified these variable classes: PIDs; wall-clock/monotonic
+times and deadlines; durations; observer raw log output and deny lines;
+temporary-copy bundle/service names and paths; the client argv; and
+`stdout_bytes_*` affected by longer identifiers. Across builds, account for
+the four stamp values too. Use explicit field paths and explain every
+excluded difference; these classes are not permission to discard arbitrary
+strings or evidence records. A changed source identity is an expected
+provenance change to verify against its own sources, not a volatile value
+to silently erase.
 
-1. Add Meson and Ninja to the development-tool requirements, and pin a
-   minimum Meson version (1.9 for `swift_module_name`; 1.12.1 is what was
-   observed to work).
-2. Name and location of the build directory (`builddir/` at the root is the
-   Meson convention) and the `meson.build` at the repository root.
-3. Accept that the identity value changes at each chunk, with `meson.build`
-   and `meson.options` joining the digested file list from Chunk 1.
-4. Whether to widen `FORM_RULES` so `meson.build` can be cited as a `control`
-   in the manifests, or to cite it only as a `source` (the plan assumes the
-   latter).
-5. Whether the Chunk 3 cutover spends a notarization rehearsal or waits for the
-   next release.
-6. Whether to retire `controller/tools/sb_api_validator/build.sh` once the
-   validator is a Meson target (a developer could sign the Meson output ad hoc
-   with `debug.ent` instead).
-7. Whether the optional `make native` target is wanted at all.
+The built-in runner's `data.specimen.binaries` dossier was null in the
+rehearsal; it is populated for BYOXPC. Use artifact inspection for the
+built-in app's manifest baseline.
 
-Risks:
+Passing these checks supports the tested structural and behavioural claims.
+It does not prove program equivalence, timing under load, or behaviour beyond
+the exercised cases. Local tests do not certify Apple's notarization
+acceptance; only the final release-chain gate supplies that evidence.
 
-- Meson's Swift support is younger than its C support. The probe used
-  `swift_module_name`, a `-working-directory` compile and a static-library
-  link, all of which behaved; a Swift or Meson upgrade could change the
-  implicit arguments. Mitigation: the structural comparison in each chunk's
-  cheap validation, kept as a small script so it is rerun after toolchain
-  updates.
-- Meson's implicit linker flags differ from `build.sh`'s. The probe found no
-  structural effect; the comparison must be repeated on the real `meson.build`
-  and after Meson upgrades.
-- A stale build directory after `PW_INSPECTION` changes. `build.sh` must
-  always pass the option and reconfigure; a `meson compile` alone would ship
-  the previous flavour.
-- The checks that parse `build.sh` fail closed when the file changes shape,
-  which is their purpose; Chunk 2 should land the new readers before Chunk 3
-  removes the old text, so the suite is never green by accident.
-- `check_planner.py` and the two build-refusal controls copy a fixed file
-  list; forgetting `meson.build` there makes a control fail for a reason that
-  looks like drift.
+## Smaller endpoint and remaining risks
 
-## Stopping points
+A C-only cutover is an acceptable endpoint if Swift support or reader changes
+cost more than they return. Retain the accepted C targets, leave the Swift
+compile commands and their source readers in `build.sh`, and adapt Chunk 3
+to consume the two C executables and shim library. Preserve C-manifest checks
+for any ownership that did move. Repeat the relevant signed-app, identity and
+release gates; the fact that the slice is smaller does not waive them.
 
-- **After Chunk 1, remove it** if the structural comparison fails or if the
-  team decides the tool requirement is not worth two C compiles and a shim.
-  Nothing shipped depended on it.
-- **Cut over the C tools only.** If Chunk 2 shows the Swift host cannot be
-  reproduced structurally, or the three readers prove more invasive than
-  expected, a reduced Chunk 3 moves only steps 7, 8 and 11 of `build.sh` into
-  Meson and leaves the two `swiftc` calls where they are. The identity file
-  list is already right; `check.py` keeps parsing `build.sh` for Swift. This is
-  a stable end state, smaller than the full candidate scope, and it still
-  removes the in-tree binaries and the untracked headers.
-- **Do not stop between Chunk 2 and Chunk 3 for long.** That is the state in
-  which two files own the same compile flags and three checks compare three
-  manifests; it is meant to last one review cycle.
+| Risk | Where it is handled |
+| --- | --- |
+| Meson/Swift upgrades change implicit arguments or shim linking | Structural comparison in every chunk and after toolchain changes; C-only endpoint if unsuitable |
+| Configuration retains the previous inspection setting | Explicit reconfiguration and option-switch checks in Chunk 3 |
+| Source readers pass with incomplete manifests or fail for unrelated missing files | Chunk 2 three-way comparison, copied-checkout controls and barrier mutations before removing old readers |
+| A claimed build edge becomes unchecked documentation | Architecture citations point to source-drift rules; identity controls and ABI/live-identity tests provide distinct evidence |
+| Temporary duplicate flag ownership persists | Chunk 2 is limited to one review cycle; proceed to one production route or revert the Swift slice |
+| New tool requirements exceed demonstrated compatibility | Review/validate the minimum; preserve Command Line Tools support despite the probe using full Xcode |
 
-## Rehearsal of the Chunk 1 acceptance check
+## Evidence appendix
 
-**Observed** on 2026-10-07, using the probe's Meson-built `pw-probe-runner`
-and `sb_api_validator` (unsigned, from `.tmp/meson-probe/build/`) and the
-`dist/PolicyWitness.app` that `make build` had just produced from the same
-commit. The script lived in the session scratch directory and the copy under
-`/private/tmp`; both were removed afterwards, and `dist` was not touched.
+These are recorded observations from the original investigation, separated
+from the implementation gates above. They have not been rerun merely to
+reorganize this plan.
 
-1. `ditto` the app to a temporary directory; replace the two helpers inside
-   `PWRunner.xpc/Contents/MacOS`; give the app and the service fresh
-   `CFBundleIdentifier`s; sign the two helpers, then the service with its
-   entitlements plist; run `build-evidence.py`; sign the app with its
-   entitlements; `codesign --verify --deep --strict`. Every step exited 0 and
-   `artifact.inspect` reported no errors, so the dispatcher admitted the copy.
-2. `PW_APP_DIR=<copy> tests/run.sh --case smoke/specimen_file_read_deny --case
-   witness_contract/happy_path_baseline --suite runner_c_worker_harness --suite
-   validator_batch_mode --suite runner_live_worker_identity` into
-   `tests/out/runs/meson-pilot-rehearsal`: 36 of 36 cases passed with no skips
-   or unrun cases, the copy inventoried unchanged, in about 28 s. The 31
-   harness cases drive the Meson-built worker through the shared-memory ABI
-   with no host; the live-identity case observes the worker's PID and
-   `sandbox_check` verdicts from the OS side.
-3. Each of the five request fixtures under `tests/fixtures/pw_runner/` was
-   run through both apps directly. All ten runs exited 0 with
-   `normalized_outcome: ok`. Flattening the envelopes and comparing leaf by
-   leaf, between 326 and 373 leaves per envelope, 35 to 41 differed, and every
-   differing path was one of: a PID, a wall-clock or monotonic timestamp or
-   deadline, an elapsed duration, the observer's `log show` output and raw
-   deny lines (which carry PIDs and times), the copy's bundle identifiers,
-   service name and paths, the client `argv` that names the service, and the
-   two `stdout_bytes_*` counts that follow from the longer identifiers. Every
-   `comparison` record, `sandbox_check` verdict, attempt outcome and
-   disposition field was equal. The `data.specimen.binaries` dossier is
-   `null` for the built-in runner in both apps; it is populated only for
-   BYOXPC targets, so the manifest-baseline comparison for a built-in app is
-   the one `artifact.inspect` performs.
+**Environment and scope.** At `06fc25e` on 2026-10-07: macOS 26.7.1
+(Darwin 25.6.0), Xcode 27, Apple clang 21.0.0, Swift 6.4, Cargo 1.99 from a
+keg-only rustup, system Python 3.9.6, Meson 1.12.1 and Ninja 1.13.2.
+The probe compiled real sources through symlinks in `.tmp/meson-probe/`.
+Scratch contents are disposable; the implementation must not rely on them.
 
-This is the evidence the pilot's promotion gate asks for, obtained once with
-probe outputs rather than with a root `meson.build`; Chunk 1 should repeat it
-with the real file and keep the normalised-envelope comparison as a small
-script beside the structural one.
+**Measured cost.**
 
-## Baseline battery
+| Measurement | Recorded wall time |
+| --- | --- |
+| Build with Cargo recompilation / unchanged build | 11.4 s / 6.9 s |
+| Generator checks / unchanged Cargo | 0.4 s / 0.04 s |
+| Three C compiles / Swift client / Swift host | 0.25 s / 1.4 s / 3.2 s |
+| Signing | About 0.18 s per timestamped call; seven calls |
+| Evidence / ZIP | 0.2 s / 0.3 s |
+| Meson setup / cold native build / no-op Ninja | 2.1 s / 4.3 s / 0.0 s |
 
-**Observed:** `tests/run.sh` against the freshly built `dist` app, into
-`tests/out/runs/meson-plan-baseline`, took about 6.4 minutes and completed
-all 168 selected cases: 167 passed, 1 failed, no skips, no unrun cases, the
-app inventoried unchanged. The failure is `unit/rust.fmt`: `cargo fmt --check`
-reports formatting differences in `controller/src/runner_commands.rs` at
-commit `06fc25e`, before and independently of anything in this plan. It is
-reported here so the cutover gate's "green battery" is read against a known
-baseline; it should be fixed on its own.
+**Probe findings.** Header tracking, isolated Swift rebuilds and shim relinking
+behaved as shown in Chunk 2's first five matrix rows. Source introspection
+worked without a configured build directory. The client needed module name
+`main`; the host used `PWRunner` and a separate shim library. Structural
+comparisons matched despite the binary differences described above. These
+observations support the chosen scope; they do not establish support for
+every earlier toolchain.
+
+**Signed-copy rehearsal.** Meson-built worker and validator were substituted
+into a freshly built same-commit app. Signing, evidence generation, signature
+verification and artifact inspection succeeded. The selection comprised
+`smoke/specimen_file_read_deny`, `witness_contract/happy_path_baseline`,
+`runner_c_worker_harness`, `validator_batch_mode` and
+`runner_live_worker_identity`: 36/36 cases passed, no skips or unrun cases,
+unchanged candidate inventory, about 28 seconds. Evidence was recorded under
+`tests/out/runs/meson-pilot-rehearsal`; the temporary script/app were removed.
+This was narrower than the full Chunk 1 promotion selection.
+
+The five fixtures were also run through both apps: all ten runs returned 0
+with `normalized_outcome: ok`. Each envelope had 326–373 leaves, with 35–41
+differences confined to the variable classes listed above; comparison
+records, verdicts, attempt outcomes and dispositions matched.
+
+**Default baseline.** `tests/out/runs/meson-plan-baseline` recorded the
+168-case run in about 6.4 minutes, unchanged app inventory, no skips or unrun
+cases, and the formatting failure described in the entry conditions.
+
+**Source anchors.** The investigation read the build/signing/artifact sources
+linked above; the four `docs/generate_*.py` generators and
+[generator_common.py](docs/generator_common.py);
+[controller/Cargo.toml](controller/Cargo.toml); `runner/Package.swift`;
+[docs/architecture.json](docs/architecture.json); the source-drift
+[checker](tests/suites/source_drift/check.py),
+[planner control](tests/suites/source_drift/check_planner.py),
+[generator controls](tests/suites/source_drift/generators.py),
+[limits controls](tests/suites/source_drift/limits.py) and
+[contract/identity controls](tests/suites/source_drift/contract.py);
+the barrier mutation control; [suite_run.py](tests/lib/suite_run.py),
+[release_preflight.py](tests/lib/release_preflight.py),
+[release_accept.py](tests/lib/release_accept.py),
+[tests/catalog.json](tests/catalog.json), [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md)
+and fixture builders under [tests/fixtures/](tests/fixtures/).
