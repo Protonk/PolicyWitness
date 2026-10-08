@@ -16,6 +16,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/suites/witness_contract'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import native_sources
 from check_ordering import held_effects, save
 from bundle import command, cleanup_processes
 from artifact import digest, inventory, inspect, MANIFEST
@@ -84,15 +86,16 @@ def harness_control(harness, worker, out, expected):
 def meson_host_sources(out):
     """The production host source list, read from meson.build in file mode.
 
-    File-mode introspection lists the PWRunner target without a build
-    directory and regardless of the xpc option. The core sources are returned
-    runner-relative, in declaration order; the service entry point is checked
-    and returned separately."""
-    meta = command(out / 'introspect', ['meson', 'introspect', ROOT / 'meson.build', '--targets'], timeout=60)
-    targets = {t['name']: [s for g in t['target_sources'] for s in g['sources']]
-               for t in json.loads((out / 'introspect/stdout').read_text())}
-    assert 'PWRunner' in targets, f'meson.build declares no PWRunner target: {sorted(targets)}'
-    sources = [str(Path(s).resolve().relative_to((ROOT / 'runner').resolve())) for s in targets['PWRunner']]
+    The shared reader lists the PWRunner target without a build directory and
+    regardless of the xpc option, refuses a duplicated declaration, and the
+    whole manifest must agree with the tree before any host is compiled. The
+    core sources are returned runner-relative, in declaration order; the
+    service entry point is checked and returned separately."""
+    command(out / 'introspect', ['meson', 'introspect', ROOT / 'meson.build', '--targets'], timeout=60)
+    targets, problems = native_sources.parse_targets((out / 'introspect/stdout').read_text(), ROOT, 'meson.build')
+    problems += native_sources.problems(targets, native_sources.expected(ROOT), 'meson.build')
+    assert not problems, 'meson.build disagrees with the tree:\n' + '\n'.join(problems)
+    sources = [s[len('runner/'):] for s in targets['PWRunner']]
     core = [s for s in sources if s.startswith('Sources/PWRunnerCore/') and s.endswith('.swift')]
     entry = [s for s in sources if s not in core]
     assert entry == ['Services/PWRunner/main.swift'], sources
@@ -105,9 +108,8 @@ def build_host(package, work, out):
         obj = work / (name + '.o'); objects.append(obj)
         command(out / ('compile-' + name), ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-c',
             package / 'Sources' / name / (name + '.c'), '-o', obj])
-    # Follow the production source inventory, refusing silent divergence from the tree.
+    # Follow the production source inventory; the reader has already refused divergence from the tree.
     sources, entry = meson_host_sources(out)
-    assert set(sources) == {str(p.relative_to(package)) for p in (package / 'Sources/PWRunnerCore').rglob('*.swift')}, sources
     host = work / 'PWRunner'
     command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
         '-module-cache-path', work / 'module-cache', '-o', host,

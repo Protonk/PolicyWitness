@@ -108,6 +108,14 @@ Changing the supported version means changing the plist and the manifest
 together; building for an older macOS from a checkout is possible that way but
 not supported.
 
+After compiling, `build.sh` reads the configured directory's targets, the
+ones Meson actually evaluated, and refuses unless every target's sources are
+exactly the files the tree holds for it; a manifest that compiles a
+substitute, or a dead declaration standing in for a live one, stops there,
+before any output is copied. The `source_drift` suite applies the same
+expectation to the manifest read without a build directory, through the
+shared reader in `tests/lib/native_sources.py`. Both check membership only.
+
 `builddir/` and `controller/target/` are incremental build directories and
 trusted working state, like the checkout they sit in. The build reads them:
 Meson, Ninja and Cargo decide what is up to date from their own records, and

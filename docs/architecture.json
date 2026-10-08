@@ -611,9 +611,9 @@
         },
         {
           "id": "build", "label": "build.sh", "kind": "check",
-          "facts": {"Guards": "compiles the native executables through Meson, assembles and signs the bundle and stages the guide"},
-          "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}, {"path": "build.sh", "symbol": "meson compile"}, {"path": "build.sh", "symbol": "--stage-guide"}],
-          "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "test_document_is_current", "form": "test"}]
+          "facts": {"Guards": "compiles the native executables through Meson, checks the configured source lists against the tree, assembles and signs the bundle and stages the guide"},
+          "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}, {"path": "build.sh", "symbol": "meson compile"}, {"path": "build.sh", "symbol": "native_sources.py"}, {"path": "build.sh", "symbol": "--stage-guide"}],
+          "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "test_document_is_current", "form": "test"}, {"path": "tests/lib/native_sources.py", "symbol": "problems", "form": "control"}]
         }
       ],
       "edges": [

@@ -3,18 +3,18 @@
 
 The check has two halves:
 
-1. Source-set drift between meson.build's explicit host source lists and
-   the on-disk runner source tree. The PWRunner target enumerates the Swift
-   files and the PWCWorkerShim target the C shim that ship in PWRunner.xpc
-   by explicit path; the test-only SwiftPM package (runner/Package.swift)
-   compiles the same set but discovers it automatically by SwiftPM
-   convention (everything under Sources/PWRunnerCore and the Sources/<Shim>
-   dir). So the SwiftPM side == on-disk by construction, and the drift that
-   can actually ship a broken binary is the manifest lagging the tree: a
-   file added under Sources/PWRunnerCore but missing from the target never
-   reaches the XPC binary (and vice versa). We compare disk and meson.build
-   directly; the manifest is read by file-mode introspection, which needs no
-   build directory.
+1. Source-set drift between meson.build's explicit source lists and the
+   tree. Every native target is pinned: the PWRunner target enumerates the
+   Swift files that ship in PWRunner.xpc, the PWCWorkerShim target the C
+   shim, and the client, worker and validator their single files. The
+   test-only SwiftPM package (runner/Package.swift) compiles the host set
+   but discovers it automatically by SwiftPM convention, so the SwiftPM
+   side == on-disk by construction, and the drift that can actually ship a
+   broken binary is the manifest lagging the tree, or naming a substitute.
+   The shared reader in tests/lib/native_sources.py reads the manifest in
+   file mode, which needs no build directory, and refuses a target name
+   declared twice; build.sh applies the same expectation to the configured
+   build directory after compiling.
 
 2. Test-registry drift across what should be self-consistent project
    discipline:
@@ -56,13 +56,14 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RUNNER_DIR = REPO_ROOT / "runner"
 MESON_BUILD = REPO_ROOT / "meson.build"
+sys.path.insert(0, str(REPO_ROOT / "tests" / "lib"))
+import native_sources  # noqa: E402  (shared with the order-barrier control and build.sh)
 # Runner sources live under SwiftPM-convention target dirs. The source-set
 # checks discover the on-disk set by walking these; the per-symbol contract
 # checks below read specific files out of the core target. Both reference
@@ -94,13 +95,11 @@ def fail(msg: str) -> None:
 # ---------------------------------------------------------------------------
 # Source manifest checks.
 #
-# Both halves return paths relative to runner/ (POSIX), e.g.
-# "Sources/PWRunnerCore/CWorker.swift", so the disk walk and meson.build's
-# target sources compare directly without name-vs-path normalization.
-# Discovery is recursive under the target dirs, so the suite does not assume
-# any particular flat layout — moving a file within a target is invisible
-# here; only adding/removing a compiled file (or forgetting to wire it into
-# meson.build) trips the diff.
+# The disk walks here feed the summary line; the comparison itself lives in
+# tests/lib/native_sources.py, which walks the same directories recursively
+# and reports repository-relative paths. Moving a file within a target is
+# invisible there; adding or removing a compiled file, or forgetting to wire
+# it into meson.build, trips the diff.
 # ---------------------------------------------------------------------------
 
 def disk_swift_files() -> set[str]:
@@ -114,92 +113,21 @@ def disk_c_files() -> set[str]:
     return out
 
 
-def meson_declared_targets() -> dict[str, list[str]]:
-    """Targets and their sources as meson.build declares them.
-
-    File-mode introspection reads the manifest without a build directory, so
-    the host and shim declarations are listed regardless of the `xpc` guard; a
-    configured directory would list only its active targets. Introspection
-    failure is a script error: the manifest cannot be read, so nothing about
-    its source list is known."""
-    argv = ["meson", "introspect", str(MESON_BUILD), "--targets"]
-    try:
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=60, cwd=REPO_ROOT)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        fail(f"meson introspection failed: {' '.join(argv)}: {exc}")
-        sys.exit(2)
-    if result.returncode != 0:
-        fail(f"meson introspection failed (rc={result.returncode}): {' '.join(argv)}\n{result.stderr.strip()}")
-        sys.exit(2)
-    try:
-        targets = json.loads(result.stdout)
-    except ValueError as exc:
-        fail(f"meson introspection returned malformed JSON: {exc}")
-        sys.exit(2)
-    return {t["name"]: [s for group in t["target_sources"] for s in group.get("sources", [])] for t in targets}
-
-
-def _meson_target_files(targets: dict[str, list[str]], name: str, domain: str, suffix: str,
-                        entry_points: set[str], problems: list[str]) -> set[str]:
-    """The runner-relative sources of one declared target inside one source domain.
-
-    `entry_points` are accepted beside the domain (the service and client
-    `main.swift` are not core sources); any other source is a problem, as is a
-    missing target."""
-    if name not in targets:
-        problems.append(f"  meson: meson.build declares no {name!r} target")
-        return set()
-    files: set[str] = set()
-    for source in targets[name]:
-        try:
-            relative = Path(source).resolve().relative_to(RUNNER_DIR.resolve()).as_posix()
-        except ValueError:
-            problems.append(f"  meson: {name} source {source!r} is outside runner/")
-            continue
-        if relative in entry_points:
-            continue
-        if relative.startswith(domain) and relative.endswith(suffix):
-            files.add(relative)
-        else:
-            problems.append(f"  meson: {name} source {relative!r} is outside its domain {domain!r}")
-    return files
-
-
 def check_meson_source_lists() -> list[str]:
-    """meson.build's host and shim source lists equal the tree.
+    """meson.build's targets carry exactly the sources the tree holds for them.
 
-    The PWRunner target carries the core Swift sources plus the service entry
-    point; the PWCWorkerShim target carries the shim C sources. Each set is
-    compared with its on-disk domain; a file in one set but not the other is
-    reported by name, and a missing target is reported as such."""
-    problems: list[str] = []
-    targets = meson_declared_targets()
-    swift = _meson_target_files(targets, "PWRunner", "Sources/PWRunnerCore/", ".swift",
-                                {"Services/PWRunner/main.swift"}, problems)
-    c = _meson_target_files(targets, "PWCWorkerShim", "Sources/PWCWorkerShim/", ".c", set(), problems)
-    problems.extend(diff_sets("swift", {
-        "disk (runner/Sources/PWRunnerCore/**/*.swift)": disk_swift_files(),
-        "meson.build (PWRunner target)": swift,
-    }))
-    problems.extend(diff_sets("c", {
-        "disk (runner/Sources/<shim>/**/*.c)": disk_c_files(),
-        "meson.build (PWCWorkerShim target)": c,
-    }))
-    return problems
-
-
-def diff_sets(label: str, manifests: dict[str, set[str]]) -> list[str]:
-    union: set[str] = set().union(*manifests.values())
-    problems: list[str] = []
-    for filename in sorted(union):
-        present_in = [name for name, files in manifests.items() if filename in files]
-        if len(present_in) == len(manifests):
-            continue
-        missing_from = sorted(set(manifests) - set(present_in))
-        problems.append(
-            f"  {label}: {filename!r} is in {present_in} but missing from {missing_from}"
-        )
-    return problems
+    The shared reader lists the manifest's declarations in file mode, refuses
+    a target name declared more than once, and compares every target with the
+    tree: the host's core files plus the service entry point, the shim's C
+    files, and the client's, worker's and validator's known files. build.sh
+    applies the same expectation to the configured build directory after
+    compiling. Both check membership only."""
+    try:
+        targets, problems = native_sources.declared_targets(MESON_BUILD)
+    except native_sources.IntrospectionError as exc:
+        fail(str(exc))
+        sys.exit(2)
+    return problems + native_sources.problems(targets, native_sources.expected(REPO_ROOT), "meson.build")
 
 
 # ---------------------------------------------------------------------------
@@ -1103,9 +1031,8 @@ def check_core_ideas_agreement() -> list[str]:
 
 def main() -> int:
     # SwiftPM auto-discovers the same files off disk (convention layout, no
-    # sources: arrays to parse), so the load-bearing comparison is the on-disk
-    # Sources/ tree against the explicit list that builds a PWRunner.xpc:
-    # meson.build's PWRunner target.
+    # sources: arrays to parse), so the load-bearing comparison is the tree
+    # against the explicit lists in meson.build.
     problems: list[str] = []
     problems.extend(check_meson_source_lists())
     problems.extend(check_readmes_present())

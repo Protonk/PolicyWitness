@@ -15,6 +15,10 @@ def main(out):
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
     paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md', 'docs/SIGNING.md',
+             'tests/lib/native_sources.py', 'controller/tools/pw_probe_runner/pw_probe_runner.c',
+             'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
+             'controller/tools/sb_api_validator/sb_api_validator.c',
+             'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
              'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md',
@@ -85,15 +89,27 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     manifest_original = (repo / manifest).read_text()
     core_line = "    'runner/Sources/PWRunnerCore/PathUtils.swift',\n"
     assert manifest_original.count(core_line) == 1, 'fixture requires the current PWRunner source list'
+    host_declaration = manifest_original[manifest_original.index("pwrunner = executable('PWRunner',"):]
+    host_declaration = host_declaration[:host_declaration.index('endif')]
+    decoy = ('\nif false\n' + host_declaration.replace('pwrunner = ', 'pwrunner_decoy = ').rstrip() + '\nendif\n')
+    worker_line = "  files('controller/tools/pw_probe_runner/pw_probe_runner.c'),"
+    assert manifest_original.count(worker_line) == 1
     for name, mutated, diagnostic in [
         ('meson-core-file-dropped', manifest_original.replace(core_line, ''),
-         "'Sources/PWRunnerCore/PathUtils.swift' is in ['disk (runner/Sources/PWRunnerCore/**/*.swift)'] but missing from ['meson.build"),
+         "PWRunner lacks 'runner/Sources/PWRunnerCore/PathUtils.swift' which is in the tree"),
         ('meson-core-file-added', manifest_original.replace(core_line, core_line + "    'runner/Sources/PWRunnerCore/Missing.swift',\n"),
-         "'Sources/PWRunnerCore/Missing.swift' is in ['meson.build"),
+         "PWRunner has 'runner/Sources/PWRunnerCore/Missing.swift' which the tree does not expect"),
         ('meson-host-target-missing', manifest_original.replace("executable('PWRunner',", "executable('PWRunnerRenamed',"),
-         "declares no 'PWRunner' target"),
+         "no 'PWRunner' target"),
         ('meson-shim-target-missing', manifest_original.replace("static_library('PWCWorkerShim',", "static_library('PWCWorkerShimRenamed',"),
-         "declares no 'PWCWorkerShim' target"),
+         "no 'PWCWorkerShim' target"),
+        # A dead declaration with the complete list beside a live one missing a
+        # file: the duplicate name is refused instead of resolved.
+        ('meson-duplicate-host-declaration', manifest_original.replace(core_line, '') + decoy,
+         "declares 'PWRunner' 2 times"),
+        ('meson-worker-source-substituted',
+         manifest_original.replace(worker_line, "  files('controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'),"),
+         "pw-probe-runner has 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c' which the tree does not expect"),
     ]:
         assert mutated != manifest_original, name
         scenarios.append((name, manifest, mutated, 1, diagnostic))
@@ -119,8 +135,53 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         receipts.append(record)
     if (ROOT / HOST).read_text() != original:
         raise AssertionError('source controls changed the working planner')
+    receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} planner and host source controls passed')
+
+
+def configured_controls(repo, manifest_original, worker_line, out):
+    """The configured-directory reading build.sh uses: what Meson evaluated must be the tree.
+
+    xpc=false configures only the two C executables, so these controls need
+    no Swift discovery. The unmodified manifest passes; a worker declaration
+    pointing at a substitute file, present on disk so Meson accepts it, is
+    refused by name."""
+    checker = repo / 'tests/lib/native_sources.py'
+    substitute = repo / 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'
+    substitute.parent.mkdir()
+    shutil.copy2(repo / 'controller/tools/pw_probe_runner/pw_probe_runner.c', substitute)
+    receipts = []
+    for name, manifest, expected, diagnostic in [
+        ('configured-unmodified', manifest_original, 0, None),
+        ('configured-worker-substituted',
+         manifest_original.replace(worker_line, "  files('controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'),"),
+         1, "pw-probe-runner has 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c' which the tree does not expect"),
+    ]:
+        evidence = out / name
+        evidence.mkdir()
+        (repo / 'meson.build').write_text(manifest)
+        (evidence / 'meson.build').write_text(manifest)
+        builddir = repo / 'builddir'
+        shutil.rmtree(builddir, ignore_errors=True)
+        setup = ['meson', 'setup', str(builddir), str(repo), '-Dxpc=false']
+        result = subprocess.run(setup, cwd=repo, capture_output=True, text=True, timeout=120)
+        (evidence / 'setup.stdout').write_text(result.stdout)
+        (evidence / 'setup.stderr').write_text(result.stderr)
+        if result.returncode != 0:
+            raise AssertionError(f'{name}: meson setup failed: {result.stderr}')
+        argv = [sys.executable, '-B', str(checker), '--builddir', str(builddir)]
+        result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
+        (evidence / 'stdout').write_text(result.stdout)
+        (evidence / 'stderr').write_text(result.stderr)
+        record = dict(scenario=name, argv=argv, returncode=result.returncode,
+                      expected_returncode=expected, expected_diagnostic=diagnostic)
+        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+        if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
+            raise AssertionError(f'{name}: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
+        receipts.append(record)
+    (repo / 'meson.build').write_text(manifest_original)
+    return receipts
 
 
 if __name__ == '__main__':

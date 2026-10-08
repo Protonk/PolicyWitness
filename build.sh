@@ -261,6 +261,13 @@ else
 fi
 echo "==> Compiling native executables"
 meson compile -C "${MESON_BUILD_DIR}"
+# What Meson evaluated must be the tree: every configured target's sources
+# are compared with the repository, so a manifest that compiles a substitute
+# or a dead declaration standing in for a live one refuses here, before any
+# output is copied. The source_drift suite applies the same expectation to the
+# manifest read without a build directory.
+echo "==> Checking the configured native source lists against the tree"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}"
 for native_bin in "${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}"; do
   if [[ ! -x "${native_bin}" ]]; then
     echo "ERROR: expected Meson output at ${native_bin}" 1>&2

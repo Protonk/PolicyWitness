@@ -226,3 +226,18 @@ directories remain incremental and trusted working state; the documents say
 so instead of calling `builddir/` "never an input", and the receipts pair
 each output with its entry in Ninja's log, its mtime and its minimum version.
 
+Audit finding F6 was closed afterwards. The two readers of `meson.build`
+keyed targets by name, so a dead declaration (one Meson never evaluates)
+with the complete source list could stand in for a live one that compiled a
+substitute; file-mode introspection lists both. One shared reader,
+`tests/lib/native_sources.py`, now refuses a duplicated target name and pins
+every target, not only the host and shim: the client, worker and validator
+must carry their single known files. `build.sh` reads the configured build
+directory after compiling, the targets Meson actually evaluated, and refuses
+before copying any output when they differ from the tree; the `source_drift`
+suite applies the same expectation to the manifest read without a build
+directory, with planner controls for a duplicated host declaration and a
+substituted worker file in both readings. Both check membership only; the
+manifest's identity and the receipts' effective commands remain the review
+surface for what the compiler does to those files.
+
