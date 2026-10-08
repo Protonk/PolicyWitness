@@ -952,6 +952,17 @@
           "description": "Envelope comparisons reject structural and command changes while allowing provenance-matched relocation"
         },
         {
+          "id": "native_comparison_controls",
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/native_comparison_controls.sh"
+          ],
+          "requires": [
+            "clang"
+          ],
+          "description": "Structural executable comparison names dynamic-library version and name, platform version, section-size and sandbox-import differences"
+        },
+        {
           "id": "checker_controls",
           "command": [
             "bash",

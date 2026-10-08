@@ -112,8 +112,11 @@ def main():
                  early_failure=children[1], rc=1)
         exercise(f'empty_errexit{errexit}', [], errexit=errexit, rc=1)
 
+    # Every child the real blackbox_e2e wrapper runs, in its order; a child the
+    # wrapper names but this list omits is missing from the fixture and fails.
     bbx = ['tests/suites/blackbox_e2e/' + name for name in
-           ('checker_controls.sh', 'bbx_001.sh', 'bbx_002.sh')]
+           ('comparison_controls.sh', 'native_comparison_controls.sh', 'checker_controls.sh',
+            'bbx_001.sh', 'bbx_002.sh')]
     exercise('blackbox_skip', bbx, wrapper='blackbox_e2e', modes={bbx[0]: 'skip'})
     exercise('blackbox_failure', bbx, wrapper='blackbox_e2e', modes={bbx[1]: 'fail'}, rc=1)
     exercise('blackbox_missing', bbx, wrapper='blackbox_e2e', missing=[bbx[1]], rc=1)

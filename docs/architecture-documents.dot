@@ -121,7 +121,7 @@ digraph documents {
     api_swift -> runner_readme [style="dotted", color="#444444", label="D26 seam table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D26: test-seam table from PWRunnerTestOverrides |  "];
     suites -> tests_readme [style="dotted", color="#444444", label="D27 suite rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D27: one suite-table row per suite |  "];
     suites -> catalog_json [style="dotted", color="#444444", label="D28 suite names", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D28: suite directories equal catalog suites |  "];
-    drift_check -> agents_md [style="dashed", color="#8e24aa", label="D29 note equality", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D29: harness note equality across three copies |  "];
+    drift_check -> agents_md [style="dashed", color="#8e24aa", label="D29 note equality", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D29: harness note equality across four copies |  "];
     drift_check -> controller_readme [style="dashed", color="#8e24aa", label="D30 CLI surface", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D30: CLI surface block equals cli.rs usage |  "];
     drift_check -> coverage_md [style="dashed", color="#8e24aa", label="D31 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D31: every outcome constant has a row and every row a constant |  "];
     drift_check -> tests_readme [style="dashed", color="#8e24aa", label="D32 suite table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D32: suite table equals suites and catalog |  "];

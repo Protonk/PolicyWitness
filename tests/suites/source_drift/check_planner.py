@@ -14,7 +14,7 @@ def main(out):
     out.mkdir()
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
-    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md',
+    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md', 'docs/SIGNING.md',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
              'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md',

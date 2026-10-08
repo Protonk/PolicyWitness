@@ -815,7 +815,7 @@
         },
         {
           "id": "D29", "from": "drift_check", "to": "agents_md", "kind": "checks",
-          "label": "harness note equality across three copies",
+          "label": "harness note equality across four copies",
           "short": "note equality",
           "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement"}],
           "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]

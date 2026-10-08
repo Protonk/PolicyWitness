@@ -43,6 +43,8 @@ import artifact
 STRICT_SEGMENTS = ('__TEXT', '__DATA_CONST', '__DATA')
 RECORDED_SEGMENTS = ('__LINKEDIT',)
 IGNORED_LOAD_COMMANDS = ('LC_CODE_SIGNATURE',)
+# otool -l prints a few keys as two words; everything else is one word then the value.
+MULTIWORD_KEYS = ('current version', 'compatibility version', 'time stamp')
 STAMP_KEYS = ('CFBundleShortVersionString', 'CFBundleVersion', 'PWBuildDescribe', 'PWBuildCommit')
 IDENTIFIER_KEYS = ('CFBundleIdentifier',)
 SWIFT_MODULE_RE = re.compile(r'\$s(\d+)([A-Za-z_][A-Za-z0-9_]*)')
@@ -73,7 +75,12 @@ def load_commands(path):
             continue
         if current is None or ' ' not in stripped:
             continue
-        key, _, value = stripped.partition(' ')
+        for known in MULTIWORD_KEYS:
+            if stripped.startswith(known + ' '):
+                key, value = known, stripped[len(known) + 1:]
+                break
+        else:
+            key, _, value = stripped.partition(' ')
         target = section if section is not None else current
         target.setdefault(key, value.strip())
     return commands

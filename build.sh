@@ -219,9 +219,11 @@ fi
 # tree compiles nothing. meson.build's policy assertions run on setup and on
 # every regeneration, so an unsupported or injected option refuses here,
 # before any output is copied or signed. (Meson reads CFLAGS and friends only
-# when a directory is first set up; a fresh directory refuses them.) The worker
-# links libsandbox dynamically there (sandbox_apply and sandbox_compile_string
-# are SPI in /usr/lib/libsandbox.dylib); the validator does not.
+# when a directory is first set up; a fresh directory refuses them.) The
+# source directory is named on setup so the build does not depend on the
+# caller's working directory. The worker links libsandbox dynamically there
+# (sandbox_apply and sandbox_compile_string are SPI in
+# /usr/lib/libsandbox.dylib); the validator does not.
 if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
   echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md" 1>&2
   exit 2
@@ -231,7 +233,7 @@ echo "==> Configuring native build: ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
   meson configure "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
 else
-  meson setup "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
+  meson setup "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
 fi
 echo "==> Compiling native executables"
 meson compile -C "${MESON_BUILD_DIR}"

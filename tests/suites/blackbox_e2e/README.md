@@ -161,3 +161,12 @@ container and scalar type changes, and missing or null volatile values. Each
 control retains its inputs, report and diagnostics; negative controls must
 reach comparison and name the expected difference, rather than merely fail
 schema validation.
+
+`native_comparison_controls` exercises `tests/lib/native_compare.py exe`
+through its CLI with a tiny program compiled by the macOS SDK clang. An
+identical copy compares equal. Byte-level edits to the Mach-O load commands
+that leave the code untouched must each be named: a changed dynamic-library
+version and a changed library name as `dylibs`, a changed platform minimum
+version as `build_version`. A larger program differs by `__TEXT,__text`
+section size, and a program importing `sandbox_check` fails the host's
+no-sandbox-imports requirement. It needs clang but no app or signing identity.

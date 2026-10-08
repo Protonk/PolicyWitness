@@ -107,7 +107,7 @@ def build_host(package, work, out):
             package / 'Sources' / name / (name + '.c'), '-o', obj])
     # Follow the production source inventory, refusing silent divergence from the tree.
     sources, entry = meson_host_sources(out)
-    assert set(sources) == {str(p.relative_to(package)) for p in (package / 'Sources/PWRunnerCore').glob('*.swift')}, sources
+    assert set(sources) == {str(p.relative_to(package)) for p in (package / 'Sources/PWRunnerCore').rglob('*.swift')}, sources
     host = work / 'PWRunner'
     command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
         '-module-cache-path', work / 'module-cache', '-o', host,

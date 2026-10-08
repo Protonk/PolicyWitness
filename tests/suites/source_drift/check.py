@@ -37,8 +37,9 @@ The check has two halves:
         key list; runner/AGENTS.md points at it rather than carrying one.
      i. The first paragraph under the "Sandboxed automation harnesses"
         heading is identical in AGENTS.md, runner/README.md and
-        tests/README.md. The note is carried in three places on purpose;
-        each copy adds its own local paragraph after the shared one.
+        tests/README.md and docs/SIGNING.md. The note is carried in four
+        places on purpose; each copy adds its own local paragraph after the
+        shared one.
      j. Host invariance: no file under runner/Sources binds or calls a
         libsandbox entry point or loads the library. The XPC host never
         links, loads or calls libsandbox; the worker and the validator do.
@@ -912,16 +913,17 @@ def check_test_overrides_table_agreement() -> list[str]:
 # ---------------------------------------------------------------------------
 # Sandboxed-harness note agreement.
 #
-# The note under "Sandboxed automation harnesses" is carried in three files on
+# The note under "Sandboxed automation harnesses" is carried in four files on
 # purpose: AGENTS.md (orientation), runner/README.md (what the refusal looks
-# like in the envelope) and tests/README.md (what the dispatcher can detect).
+# like in the envelope), tests/README.md (what the dispatcher can detect) and
+# docs/SIGNING.md (which build steps need an unsandboxed shell).
 # Each copy adds a local paragraph; the first paragraph is shared and must stay
 # identical so the copies read as one maintained note rather than drift.
 # Whitespace is normalized because the READMEs hard-wrap and AGENTS.md does not.
 # ---------------------------------------------------------------------------
 
 HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
-HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, TESTS_README]
+HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, TESTS_README, REPO_ROOT / "docs/SIGNING.md"]
 
 
 def parse_harness_note_paragraph(path: Path) -> str:
@@ -949,7 +951,7 @@ def check_harness_note_agreement() -> list[str]:
             problems.append(
                 f"  harness note: the shared first paragraph differs between "
                 f"{canonical_path.relative_to(REPO_ROOT)} and {path.relative_to(REPO_ROOT)}. "
-                f"This note is triplicated on purpose; edit all three copies together or none."
+                f"This note is carried in four places on purpose; edit all four copies together or none."
             )
     return problems
 

@@ -34,6 +34,9 @@ fixed_options = {
   'c_std': 'none',
   'c_args': [],
   'c_link_args': [],
+  # The label last: a changed optimization or debug level is named as such
+  # above before the label it implies is reported here.
+  'buildtype': 'plain',
 }
 foreach name, expected : fixed_options
   assert(get_option(name) == expected,

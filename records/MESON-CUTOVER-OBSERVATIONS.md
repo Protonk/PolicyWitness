@@ -18,7 +18,11 @@ evidence is gitignored and exists only in the local checkout.
   `tests/out/runs/meson-cutover-default-2/migration/source/tracked.diff`
   (SHA-256 `0dc85b5a410218dd77d9b2d083d2d97de45b88bfeb693a173220f9b3dee4c984`, no untracked files). The cutover commit carries that
   diff plus this record, the retention index entries below and the plan's
-  removal; those additions are not build or test inputs.
+  removal. The record and the removal are not build or test inputs. The
+  retention index is read by the dispatcher before every run and refuses a
+  malformed index, so it is a test input; its added entries only protect the
+  listed directories from pruning and change no selected case's command,
+  equipment or fixtures.
 - **Build stamp.** `PWBuildDescribe` `v0.2.7-28-gf69a7e3-dirty`, `PWBuildCommit` `f69a7e3437f0ee9e9df949302bd4085e309b96ba`,
   `CFBundleVersion` `488`; worker identity `e2ffb11905ed22af49ad80dcc37fc08664dd067b3b5c5452da2b5b373ce7e4da`.
 - **Artifact.** `dist/PolicyWitness.zip` SHA-256 `0af979bfe7cfc1fbc1e071c0547c137758138022b204ed3c6344a46ee6656ba5`; the app
@@ -187,3 +191,20 @@ rebuilt.
 - **Chunk 2 documentation.** The intermediate three-way wording was written and validated, then replaced by the final two-way wording in the same uncommitted tree; only the final wording lands.
 - **Default battery at the gate.** The first gate battery failed one Rust observer timing test (`both_raw_streams_are_bounded_at_exact_edges`, `pipe_open_after_exit`) in code the migration does not touch; the battery was rerun in full into a second directory rather than crediting the first run. Both runs are kept.
 - **Plan removal.** The plan said to link the cutover record from the plan only; the plan was deleted after execution at the maintainer's request, so the record has no inbound link.
+
+## Corrections
+
+2026-10-08, after an independent audit of the cutover (its report is local,
+outside the repository): the sentence under "Base commit plus diff" originally
+called the retention index entries non-inputs; corrected above (audit finding
+F2). The same change fixed the audit's code findings F1 (the order-barrier
+helper's non-recursive source walk), F5 (the buildtype label is now asserted
+beside the effective values), F7 (the structural comparer never compared
+dynamic-library versions because it split otool's multiword fields at the
+first space), named the source directory on `build.sh`'s first Meson setup,
+and added Meson's Swift discovery to the sandboxed-harness note. Running the
+default battery for that change also showed `shell_helpers/script_groups`
+red since the envelope-comparison repair: its fixture list of the
+`blackbox_e2e` wrapper's children had not gained `comparison_controls.sh`,
+and no run after that commit had selected the suite; the list now names
+all five children.

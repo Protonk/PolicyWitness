@@ -61,8 +61,8 @@ the coverage table, and require Baseline suites to have default catalog cases.
 They also lock the `_test_overrides` key table in `runner/README.md` to the
 stored properties of `PWRunnerTestOverrides`, since that table is the only
 documented key list, and keep the shared first paragraph of the sandboxed-harness
-note identical across `AGENTS.md`, `runner/README.md` and `tests/README.md`,
-since that note is carried in three places on purpose.
+note identical across `AGENTS.md`, `runner/README.md`, `tests/README.md` and
+`docs/SIGNING.md`, since that note is carried in four places on purpose.
 Public-command controls separately verify selection and actual execution.
 
 Three rules read the handwritten text of `docs/ARCHITECTURE.md`: every

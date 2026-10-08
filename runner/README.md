@@ -348,9 +348,11 @@ Some automation and agent harnesses run commands under a macOS sandbox. Inside
 one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
 or error 159 “Sandbox restriction”), so no runner launches; the unified log
 tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
-cannot be captured; and `codesign --verify` can report “invalid signature (code
-or signature have been modified)” for an unchanged, validly signed app. These
-refusals can be environment constraints. Request escalation and rerun the same
+cannot be captured; `codesign --verify` can report “invalid signature (code or
+signature have been modified)” for an unchanged, validly signed app; and
+Meson's Swift compiler discovery can fail because swiftc's default module
+cache is not writable, so `meson setup` and therefore `build.sh` stop before
+compiling. These refusals can be environment constraints. Request escalation and rerun the same
 command once outside the automation sandbox against unchanged artifact bytes.
 Treat a signature failure as environmental only after the unsandboxed check
 passes; debug any failure that remains.
