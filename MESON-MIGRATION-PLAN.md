@@ -107,22 +107,21 @@ A Meson directory retains configuration as well as incremental outputs.
   and `xpc` explicitly on every setup/reconfigure. Meson maps those choices to
   target settings and membership; the shell does not repair fixed flags or
   duplicate their policy through introspection assertions.
-- **A directory belongs to its configured toolchain.** Preserve Apple's
-  `xcrun --sdk macosx` selection, including `DEVELOPER_DIR`, and check the selected
-  compiler/SDK paths and versions against the directory's recorded configuration
-  during setup/reconfiguration. Refuse a mismatch with instructions for a fresh
-  directory or explicit reset; preserve matching directories for incremental
-  builds. Check only languages needed by the selected variant: `xpc=false`
-  must not discover Swift, and first enabling XPC adds Swift to the recorded
-  configuration. Separate CLT, Xcode and experimental directories help isolation
-  but do not enforce policy by their names.
+- **Toolchain changes are an operator responsibility.** Preserve Apple's
+  `xcrun --sdk macosx` selection, including `DEVELOPER_DIR`. Use separate build
+  directories for CLT and Xcode, and require a fresh directory or explicit reset
+  when changing the selected compiler or SDK. Reuse a directory for incremental
+  builds under the same selection. This convention is documented, not enforced
+  by an automatic mismatch refusal: cached shim names and versions do not
+  identify the Apple toolchain those shims resolve. Do not add a persisted
+  toolchain fingerprint or a toolchain-identity input from `build.sh`.
 
-Apply the policy checks on setup, reconfiguration and compile-triggered
-regeneration. Supported build recipes reconfigure before reusing a directory;
-changing the shell's toolchain environment then invoking bare Ninja/compile is
-not a supported toolchain switch. Source-manifest introspection discovers
-membership across branches; configured-directory introspection reports active
-targets and configuration. Global options alone do not describe target overrides.
+Check fixed native settings on setup, reconfiguration and compile-triggered
+regeneration. Supported build recipes reconfigure to pass the current variants;
+reconfiguration alone does not validate a toolchain switch. Source-manifest
+introspection discovers membership across branches; configured-directory
+introspection reports active targets and configuration. Global options alone
+do not describe target overrides.
 
 ## Identity policy
 
@@ -257,9 +256,8 @@ tree needs its own repair before beginning this chunk.
    from the two C executables' flags and apply the settled compiler/linker
    policy. Declare C in `project()`; register Swift with
    `add_languages('swift', required: true)` only inside the `xpc` guard.
-   Implement the native configuration contract in this pilot, including
-   toolchain-directory reuse checks and writable module caches during compiler
-   discovery as well as target compilation.
+   Implement the fixed native policy checks in this pilot, and provide writable
+   module caches during compiler discovery as well as target compilation.
 2. Add reusable structural and normalized-envelope comparison scripts under
    test machinery, implementing the [shared verification procedures](#shared-verification-procedures).
    Preserve the [configuration and command receipts](#configuration-and-command-receipts),
@@ -456,9 +454,9 @@ later notarization/release run.
    Map `BUILD_XPC` to the boolean `xpc` option on every setup/reconfigure.
    Preserve conditional Swift discovery and the partial-bundle workflow;
    keep both C executables unconditional and custom `DIST_DIR` assembly working.
-   Reuse only a directory accepted by Meson's configuration controls, and
-   propagate any refusal before copying or signing native outputs. Do not
-   migrate the fixed native policy back into shell flags or assertions.
+   Propagate Meson's native policy refusals before copying or signing outputs.
+   Toolchain changes follow the operator convention above. Do not migrate the
+   fixed native policy back into shell flags or assertions.
 3. Replace the three `clang` and two `swiftc` invocations with consumption
    of the four executables. The shim is already linked into the host; it is
    not copied into the bundle. Preserve all existing binary destinations,
@@ -476,9 +474,10 @@ later notarization/release run.
    identity input list; the build-stamp contract keeps its existing owner
    and semantics. Correct `AGENTS.md`'s "Rust-only iteration" shorthand and
    document the preserved no-XPC output, tool requirements and limited checks
-   in `docs/SIGNING.md`, together with supported variants, CLT selection and
-   toolchain-directory reset requirements. If selected, add `make native` with
-   accurate header/help comments and shared generator preparation/inspection-option mapping.
+   in `docs/SIGNING.md`, together with supported variants, CLT selection and the
+   operator's responsibility to use fresh or explicitly reset directories. If
+   selected, add `make native` with accurate header/help comments and shared
+   generator preparation/inspection-option mapping.
 6. In `docs/architecture.json`, update the build node's guard description
    and add the settled source-kind `meson_build` node with an edge to
    `drift_check` labelled "source list equals the tree", citing Chunk 2's
@@ -635,11 +634,11 @@ well. Restore the accepted configuration and require a successful build followed
 by no work. These checks must work through direct Meson commands as well as the
 Chunk 3 production entry point, without a shell repair step.
 
-Exercise supported `inspection`/`xpc` changes as specified in the chunks. Change
-the developer directory or compiler/SDK context, reconfigure, and require stale
-directory reuse to be refused; a fresh directory under that selection must
-configure and compile. Preserve the old directory. Re-establish these controls
-and review argument differences after Meson/compiler upgrades.
+Exercise supported `inspection`/`xpc` changes as specified in the chunks.
+Re-establish these controls and review argument differences after Meson, compiler
+or SDK upgrades, using fresh or explicitly reset directories when the compiler or
+SDK changes. The CLT gate exercises the fresh-directory convention; there is no
+toolchain-mismatch refusal test.
 
 ### Configuration and command receipts
 
@@ -654,9 +653,9 @@ cutover record and bound to the exact compared native outputs by hashes:
   and the documented explanation of accepted differences from the old route.
 
 Capture generated commands even for a no-op build. Global build options alone
-do not describe target overrides. Receipts support provenance; configuration
-controls enforce policy. The shipped evidence manifest and runtime envelope
-remain unchanged.
+do not describe target overrides. Receipts support provenance; Meson's controls
+enforce fixed native settings. The shipped evidence manifest and runtime
+envelope remain unchanged.
 
 ### Structural and artifact comparison
 
@@ -743,7 +742,7 @@ regenerates identity as described above.
 | --- | --- |
 | Meson/Swift upgrades change implicit arguments or shim linking | Exercise both languages in Chunk 1; investigate failures or revert the migration |
 | Persistent configuration overrides fixed policy or retains an old variant | Meson target overrides/assertions plus configuration-state controls; `build.sh` explicitly maps only supported variants |
-| A directory silently carries an old compiler/SDK selection | Toolchain-context reuse checks; fresh separate directories for CLT/Xcode; preserve receipts of actual tools and commands |
+| A directory silently carries an old compiler/SDK selection | Operator convention: separate CLT/Xcode directories and a fresh directory or explicit reset on compiler/SDK changes; acceptance receipts record actual tools and commands, without automatic mismatch refusal |
 | Source readers pass with incomplete manifests or fail for unrelated missing files | Exercise Chunk 2 checks in the integration worktree before removing old readers; land only with Chunk 3 |
 | A claimed build edge becomes unchecked documentation | Architecture citations point to source-drift rules; identity controls and ABI/live-identity tests provide distinct evidence |
 | Temporary duplicate flag ownership persists | Limit the experimental chunks to one review cycle; cut over the combined graph or remove it |
