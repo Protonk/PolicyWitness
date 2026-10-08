@@ -383,7 +383,7 @@
         {"id": "manifests", "label": "hand-owned manifests", "nodes": ["contract_json", "limits_json", "matrix_json", "architecture_json", "catalog_json", "prose_baseline"]},
         {"id": "generators", "label": "generators", "nodes": ["gen_contract", "gen_limits", "gen_identity", "gen_architecture", "gen_common"]},
         {"id": "docs", "label": "documents", "nodes": ["contract_md", "limits_md", "guide", "questions_md", "failure_contract", "architecture_md", "agents_md", "controller_readme", "runner_readme", "tests_readme", "coverage_md"]},
-        {"id": "sources", "label": "sources with generated or checked regions", "nodes": ["api_swift", "json_contract_rs", "contract_py", "abi_header", "cworker_swift", "cli_rs", "identity_sources", "suites"]},
+        {"id": "sources", "label": "sources with generated or checked regions", "nodes": ["api_swift", "json_contract_rs", "contract_py", "abi_header", "cworker_swift", "cli_rs", "identity_sources", "meson_build", "suites"]},
         {"id": "checks", "label": "checks", "nodes": ["drift_check", "drift_limits", "drift_contract", "drift_architecture", "drift_generators", "preflight", "build"]}
       ],
       "nodes": [
@@ -550,6 +550,12 @@
           "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "test_every_generated_copy_is_current", "form": "test"}]
         },
         {
+          "id": "meson_build", "label": "meson.build", "kind": "source",
+          "facts": {"Carries": "the native targets and their explicit source lists"},
+          "sources": [{"path": "meson.build", "symbol": "pwrunner_core"}],
+          "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_meson_source_lists", "form": "rule"}]
+        },
+        {
           "id": "suites", "label": "tests/suites/<name>/", "kind": "source",
           "facts": {"Carries": "one run.sh and README per suite"},
           "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "suites_with_run_sh"}],
@@ -559,7 +565,7 @@
           "id": "drift_check", "label": "source_drift check.py", "kind": "check",
           "facts": {"Guards": "copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas"},
           "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement"}],
-          "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_readmes_present", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_index_vs_disk", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_baseline_in_catalog_defaults", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_runner_outcome_suites_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_normalized_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_kind_enum_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_planner", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_test_overrides_table_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_cli_surface_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_known_gap_index", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_evidence_channel_paths", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_core_ideas_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]
+          "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_readmes_present", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_index_vs_disk", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_baseline_in_catalog_defaults", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_runner_outcome_suites_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_normalized_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_outcomes_have_matrix_rows", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_attempt_kind_enum_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_prediction_unavailable_planner", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_test_overrides_table_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_cli_surface_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_known_gap_index", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_evidence_channel_paths", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_core_ideas_agreement", "form": "rule"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_meson_source_lists", "form": "rule"}, {"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]
         },
         {
           "id": "drift_limits", "label": "source_drift limits.py", "kind": "check",
@@ -605,8 +611,8 @@
         },
         {
           "id": "build", "label": "build.sh", "kind": "check",
-          "facts": {"Guards": "assembles and signs the bundle and stages the guide"},
-          "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}, {"path": "build.sh", "symbol": "--stage-guide"}],
+          "facts": {"Guards": "compiles the native executables through Meson, assembles and signs the bundle and stages the guide"},
+          "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}, {"path": "build.sh", "symbol": "meson compile"}, {"path": "build.sh", "symbol": "--stage-guide"}],
           "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "test_document_is_current", "form": "test"}]
         }
       ],
@@ -967,6 +973,13 @@
           "short": "rule list",
           "sources": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_document_graph_cites_every_drift_rule"}],
           "checks": [{"path": "tests/suites/source_drift/generators.py", "symbol": "test_document_graph_cites_every_drift_rule", "form": "test"}]
+        },
+        {
+          "id": "D52", "from": "drift_check", "to": "meson_build", "kind": "checks",
+          "label": "source list equals the tree",
+          "short": "source list",
+          "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_meson_source_lists"}],
+          "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "runner_source_manifests_agree", "form": "test"}]
         }
       ]
     },

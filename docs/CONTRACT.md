@@ -206,7 +206,8 @@ writing; direct source-test builds can regenerate with the same command without
 The digest covers sorted repository-relative paths and file contents, each
 length-framed: all `.c`, `.h` and `.swift` files under
 `controller/tools/pw_probe_runner/` and `runner/Sources/`, plus the generator,
-`build.sh` and `runner/Package.swift`. Generated identity region bodies are
+`build.sh`, `meson.build`, `meson.options` and `runner/Package.swift`.
+Generated identity region bodies are
 excluded to avoid self-reference. Discovery includes new helpers automatically.
 This conservative scope includes the C wait and publication code, Swift release
 and collection code, orchestration, ABI declarations and their host mirror.

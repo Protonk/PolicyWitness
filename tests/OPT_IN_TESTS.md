@@ -159,8 +159,12 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Opt-in reason:** Builds source mutations and signs disposable app copies;
   exact mutation anchors deliberately require review when implementation changes.
 - **Resource dependency:** Built signed app, matching Developer ID Application
-  identity, clang, Swift and unsandboxed live XPC. Identity resolution follows
+  identity, clang, Swift, Meson and unsandboxed live XPC. Identity resolution follows
   `PW_BYOXPC_IDENTITY`, `IDENTITY`, then the app's team-matched keychain identity.
+  The control compiles its unmodified and patched hosts from the source list
+  meson.build's `PWRunner` target declares, read by file-mode introspection and
+  checked against the on-disk core set, so it cannot silently diverge from the
+  production list.
 - **When to run:** After release/barrier or observer changes, and for order-plan
   Gate 3 acceptance. Select with `tests/run.sh --case witness_contract/order_barrier_mutations`.
 - **Artifacts:** `<run>/suites/witness_contract/order_barrier_mutations/artifacts/`:

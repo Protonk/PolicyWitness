@@ -29,39 +29,59 @@ Key requirements:
 
 - `IDENTITY` must be set to a **Developer ID Application** identity present in your keychain, or
   pass `YOLO=1` to auto-select the first matching identity.
-- Xcode Command Line Tools are required (`swiftc` is discovered via `xcrun`).
+- Xcode Command Line Tools are required; `clang` and `swiftc` come from the
+  selected developer directory and the macOS SDK that `xcrun --sdk macosx`
+  reports.
+- Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson ninja`)
+  compile the native executables; see [Native compile with Meson](#native-compile-with-meson).
 
-### Comparison build with Meson (optional)
+### Native compile with Meson
 
 The root [meson.build](../meson.build) and [meson.options](../meson.options)
-describe the native compile: the C worker and validator, the C shim and the
-two Swift executables. Production does not use it yet: `build.sh` still
-compiles every shipped binary itself, and the Meson files are not identity
-inputs. The manifest exists so the native source and dependency graph can be
-inspected and so comparison copies can be built outside the source tree.
+own the native compile: the C worker and validator, the C shim and the two
+Swift executables, with their source lists, module names and flags. Both
+files are host/worker identity inputs. `build.sh` runs Meson after the
+documentation checks, identity generation and Cargo, into the ignored
+`builddir/`, and copies the four executables from there into the bundle; the
+shim is linked into the host and is not a product. The order is fixed:
+documentation checks, identity generation, git stamp, signing identity,
+Cargo, Meson, bundle assembly, identity check, nested signing, evidence, outer
+seal and verification, guide, ZIP.
 
-It needs Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson
-ninja`) beside the Apple toolchain `build.sh` already requires. Select the SDK
-the way `build.sh` does, then configure and compile into the ignored
-`builddir/`:
+`build.sh` passes exactly two options on every build (`meson setup` the
+first time, `meson configure` afterwards, which regenerates only when a value
+changed), so a build directory never retains an earlier variant and an
+unchanged tree compiles nothing: `inspection` from `PW_INSPECTION` (Swift
+`-Onone -g` when set, `-O` otherwise) and `xpc` from `BUILD_XPC` (false skips
+the Swift client and host and the shim; the two C executables still build and
+no Swift compiler is discovered). Every other native setting is fixed in
+`meson.build` and checked as an effective value on setup and on every
+regeneration: `meson configure` with any other change, `-Dc_args=...`, a
+sanitizer or a different buildtype makes the next build refuse with a message
+naming the setting, before any output is copied or signed. Meson reads
+`CFLAGS` and the other environment flag variables only when a directory is
+first set up, and a fresh directory refuses them the same way. Executables are linked with `b_asneeded=false` declared per target, so
+a global value cannot add `-dead_strip_dylibs`. Meson adds
+`-headerpad_max_install_names` and `-fdiagnostics-color` of its own, compiles
+and links in separate steps and tracks included headers; those are the
+accepted backend additions, and `tests/lib/meson_receipts.py` records the
+effective commands so any further difference is visible. Because the link is
+a separate step, swiftc no longer runs `dsymutil` itself; `build.sh` runs it
+for inspection builds so each Swift executable keeps its `.dSYM` beside it in
+the bundle, as before.
+
+To build the native executables alone, run the same commands directly:
 
 ```sh
-SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir
+SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir -Dinspection=true -Dxpc=true
 meson compile -C builddir
 ```
 
-Two options are supported: `-Dinspection=false` mirrors `PW_INSPECTION=0`
-(Swift `-O` instead of `-Onone -g`), and `-Dxpc=false` mirrors `BUILD_XPC=0`
-(the two C executables only; Swift is never discovered). Every other native
-setting is fixed in `meson.build` and checked as an effective value on setup,
-reconfiguration and compile-triggered regeneration; `meson configure` with any
-other change, `CFLAGS` or `-Dc_args=...` in the environment, a sanitizer or a
-different buildtype makes the next command refuse with a message naming the
-setting. Executables are linked with `b_asneeded=false` declared per target,
-so a global value cannot add `-dead_strip_dylibs`. Meson adds
-`-headerpad_max_install_names` and `-fdiagnostics-color` of its own; those are
-the accepted backend additions, and the comparison scripts record the effective
-commands so any further difference is visible.
+With `BUILD_XPC=0`, `build.sh` still runs Cargo, builds both C executables,
+checks the signing identity and signs and packages a partial bundle without
+the XPC service, client or embedded helpers. That bundle passes evidence
+generation but not the full artifact inspection, and it cannot run specimens;
+it is an iteration convenience, never a release or test artifact.
 
 Toolchain selection is the operator's responsibility and is not fingerprinted.
 Keep separate build directories for the Command Line Tools and Xcode, and use
@@ -77,7 +97,12 @@ meson setup builddir-clt
 Meson discovers Swift by compiling a sanity program with swiftc's default
 module cache; the targets themselves use `builddir/swift-module-cache`.
 
-Four scripts under `tests/lib/` support a comparison:
+Two checks read the manifest and therefore need Meson: the `source_drift`
+suite compares the host and shim source lists with the tree, and the opt-in
+order-barrier mutation control compiles its hosts from that list.
+
+Four scripts under `tests/lib/` support comparing one native build with
+another:
 `meson_receipts.py BUILDDIR OUT` records tool versions, the resolved
 toolchain, the manifest and options, effective build options, declared and
 active targets, every compile and link command and the output hashes;

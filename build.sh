@@ -6,14 +6,24 @@ set -euo pipefail
 # Inputs (environment variables):
 #   IDENTITY   Developer ID Application identity string in your keychain.
 #   YOLO=1     Auto-select the first Developer ID Application identity.
-#   BUILD_XPC  Set to 0 to skip building the embedded XPC service/client.
-#   PW_INSPECTION=1  Keep debug info and frame pointers (default).
-#   SWIFT_MODULE_CACHE  Writable path for Swift module cache (default: .tmp/swift-module-cache).
+#   BUILD_XPC  Set to 0 to skip building/embedding the XPC service and client;
+#              mapped to Meson's xpc option. The two C executables still build.
+#   PW_INSPECTION=1  Keep debug info and frame pointers (default); mapped to
+#              Meson's inspection option (Swift -Onone -g versus -O) and to RUSTFLAGS.
+#
+# Native compilation (the C worker and validator, the C shim, the Swift client
+# and host) runs through Meson into the ignored builddir/; meson.build owns the
+# fixed native flags and refuses any other configuration. Cargo builds the Rust
+# pieces. This script maps the two knobs above onto Meson's two options, selects
+# the macOS SDK the way xcrun --sdk macosx does, and copies Meson's outputs into
+# the bundle. Changing the selected compiler or SDK needs a fresh build
+# directory (see docs/SIGNING.md).
 #
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
 #   dist/PolicyWitness.md (checked standalone user guide)
+#   builddir/ (Meson configuration and native outputs; never an input)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="PolicyWitness"
@@ -28,18 +38,6 @@ INFO_PLIST_TEMPLATE="${ROOT_DIR}/Info.plist"
 
 # Runner source layout.
 XPC_ROOT="${ROOT_DIR}/runner"
-XPC_RUNNER_API_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerAPI.swift"
-XPC_RUNNER_SANDBOX_APPLY_FILE="${XPC_ROOT}/Sources/PWRunnerCore/SandboxApply.swift"
-XPC_RUNNER_PROBE_RUNNER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ProbeRunner.swift"
-XPC_RUNNER_PATH_UTILS_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PathUtils.swift"
-XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorker.swift"
-XPC_RUNNER_DEADLINE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/MonotonicDeadline.swift"
-XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ValidatorClient.swift"
-XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
-XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerService.swift"
-XPC_RUNNER_LISTENER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerListener.swift"
-XPC_RUNNER_CWORKER_SHIM="${XPC_ROOT}/Sources/PWCWorkerShim/PWCWorkerShim.c"
-XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/Clients/PWRunnerClient/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/Services"
 XPC_SERVICE_NAMES=("PWRunner")
 
@@ -49,27 +47,26 @@ XPC_SERVICE_NAMES=("PWRunner")
 # by the outer app codesign at the end of the build.
 XPC_AUGMENTS_DIR="${XPC_ROOT}/augments"
 
+# Native outputs from Meson (see meson.build). The source lists, flags and
+# module names live there; this script only consumes the results.
+MESON_BUILD_DIR="${ROOT_DIR}/builddir"
+
 # Host-side sandbox_check cross-check helper.
-SB_API_VALIDATOR_DIR="${ROOT_DIR}/controller/tools/sb_api_validator"
-SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
-SB_API_VALIDATOR_BIN="${SB_API_VALIDATOR_DIR}/sb_api_validator"
+SB_API_VALIDATOR_BIN="${MESON_BUILD_DIR}/sb_api_validator"
 
 # Sandboxed C worker spawned by the runner host. This binary is
 # embedded INSIDE each XPC service bundle (not in the app's top-level
 # MacOS dir), so the runner host resolves it relative to its own
 # bundle and built-in vs BYOXPC runners both pick up the correct
-# copy. The single source is built once and copied into each XPC
-# service.
-PW_PROBE_RUNNER_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
-PW_PROBE_RUNNER_SRC="${PW_PROBE_RUNNER_DIR}/pw_probe_runner.c"
-PW_PROBE_RUNNER_HDR="${PW_PROBE_RUNNER_DIR}/pw_probe_runner_abi.h"
-PW_PROBE_RUNNER_BIN="${PW_PROBE_RUNNER_DIR}/pw-probe-runner"
+# copy. The single output is copied into each XPC service.
+PW_PROBE_RUNNER_BIN="${MESON_BUILD_DIR}/pw-probe-runner"
+
+# Swift NSXPCConnection client embedded at the app's top level.
+PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
 
 # Build knobs.
 BUILD_XPC="${BUILD_XPC:-1}"
 PW_INSPECTION="${PW_INSPECTION:-1}"
-# Swift module cache must be writable; sandboxed environments often block ~/.cache.
-SWIFT_MODULE_CACHE="${SWIFT_MODULE_CACHE:-${ROOT_DIR}/.tmp/swift-module-cache}"
 
 usage() {
   cat <<'USAGE'
@@ -174,15 +171,18 @@ EOM
   exit 2
 fi
 
-# Build flags tuned for inspection vs optimized builds.
-SWIFT_FLAGS=()
+# Map the two public knobs onto Meson's two options; meson.build fixes every
+# other native setting. Both options are passed on every configuration so a
+# build directory never retains an earlier variant.
+MESON_OPTIONS=("-Dinspection=false" "-Dxpc=false")
 if [[ "${PW_INSPECTION}" == "1" ]]; then
-  SWIFT_FLAGS+=("-Onone" "-g")
+  MESON_OPTIONS[0]="-Dinspection=true"
   if [[ -z "${RUSTFLAGS:-}" ]]; then
     export RUSTFLAGS="-C debuginfo=2 -C force-frame-pointers=yes -C opt-level=1"
   fi
-else
-  SWIFT_FLAGS+=("-O")
+fi
+if [[ "${BUILD_XPC}" == "1" ]]; then
+  MESON_OPTIONS[1]="-Dxpc=true"
 fi
 
 # ---- Build binaries --------------------------------------------------------
@@ -210,40 +210,37 @@ if [[ ! -x "${SBPL_CHECK_BIN}" ]]; then
   echo "ERROR: expected sbpl-check binary at ${SBPL_CHECK_BIN}" 1>&2
   exit 2
 fi
-if [[ ! -f "${SB_API_VALIDATOR_SRC}" ]]; then
-  echo "ERROR: missing sb_api_validator source at ${SB_API_VALIDATOR_SRC}" 1>&2
-  exit 2
-fi
-if [[ ! -f "${PW_PROBE_RUNNER_SRC}" ]]; then
-  echo "ERROR: missing pw_probe_runner source at ${PW_PROBE_RUNNER_SRC}" 1>&2
-  exit 2
-fi
-if [[ ! -f "${PW_PROBE_RUNNER_HDR}" ]]; then
-  echo "ERROR: missing pw_probe_runner_abi header at ${PW_PROBE_RUNNER_HDR}" 1>&2
-  exit 2
-fi
+# ---- Native executables (Meson) ---------------------------------------------
 
-echo "==> Building sb_api_validator"
-/usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
-  -o "${SB_API_VALIDATOR_BIN}" "${SB_API_VALIDATOR_SRC}"
-if [[ ! -x "${SB_API_VALIDATOR_BIN}" ]]; then
-  echo "ERROR: expected sb_api_validator binary at ${SB_API_VALIDATOR_BIN}" 1>&2
+# SDKROOT selects the macOS SDK the way the former xcrun --sdk macosx calls
+# did; DEVELOPER_DIR passes through for the toolchain choice. The first build
+# sets the directory up; later builds pass the current variants with meson
+# configure, which regenerates only when a value changed, so an unchanged
+# tree compiles nothing. meson.build's policy assertions run on setup and on
+# every regeneration, so an unsupported or injected option refuses here,
+# before any output is copied or signed. (Meson reads CFLAGS and friends only
+# when a directory is first set up; a fresh directory refuses them.) The worker
+# links libsandbox dynamically there (sandbox_apply and sandbox_compile_string
+# are SPI in /usr/lib/libsandbox.dylib); the validator does not.
+if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
+  echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md" 1>&2
   exit 2
 fi
-
-echo "==> Building pw-probe-runner"
-# Link against libsandbox so sandbox_apply / sandbox_compile_string
-# resolve at link time. Both symbols are SPI (not exposed by the
-# public sandbox.h) but live in /usr/lib/libsandbox.dylib; this is
-# the linking model R5 calls for ("dynamically against libSystem and
-# libsandbox — no static-link gymnastics").
-/usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
-  -lsandbox \
-  -o "${PW_PROBE_RUNNER_BIN}" "${PW_PROBE_RUNNER_SRC}"
-if [[ ! -x "${PW_PROBE_RUNNER_BIN}" ]]; then
-  echo "ERROR: expected pw-probe-runner binary at ${PW_PROBE_RUNNER_BIN}" 1>&2
-  exit 2
+export SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
+echo "==> Configuring native build: ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
+if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
+  meson configure "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
+else
+  meson setup "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
 fi
+echo "==> Compiling native executables"
+meson compile -C "${MESON_BUILD_DIR}"
+for native_bin in "${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}"; do
+  if [[ ! -x "${native_bin}" ]]; then
+    echo "ERROR: expected Meson output at ${native_bin}" 1>&2
+    exit 2
+  fi
+done
 
 # ---- Assemble app bundle ---------------------------------------------------
 
@@ -304,98 +301,54 @@ fi
 
 # ---- Build embedded XPC components ----------------------------------------
 
+# Inspection builds keep a .dSYM beside each Swift executable, as the former
+# one-shot `swiftc -g` link left behind. The executable's debug map points at
+# the objects under builddir/, which still exist at this point.
+embed_dsym() {
+  local target="$1"
+  rm -rf "${target}.dSYM"
+  if [[ "${PW_INSPECTION}" == "1" ]]; then
+    /usr/bin/xcrun dsymutil "${target}" -o "${target}.dSYM"
+  fi
+}
+
 if [[ "${BUILD_XPC}" == "1" ]]; then
-  SWIFTC_PATH="$(/usr/bin/xcrun --sdk macosx --find swiftc 2>/dev/null || true)"
-  if [[ -z "${SWIFTC_PATH}" ]]; then
-    echo "ERROR: BUILD_XPC=1 but swiftc was not found (install Xcode Command Line Tools)" 1>&2
+  if [[ ! -x "${PW_RUNNER_CLIENT_BIN}" ]]; then
+    echo "ERROR: expected Meson output at ${PW_RUNNER_CLIENT_BIN}" 1>&2
     exit 2
   fi
-  if [[ ! -f "${XPC_RUNNER_API_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_API_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_SANDBOX_APPLY_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_SANDBOX_APPLY_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_PROBE_RUNNER_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_PROBE_RUNNER_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_PATH_UTILS_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_PATH_UTILS_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_CWORKER_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_CWORKER_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_CWORKER_ORCH_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_CWORKER_ORCH_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_SERVICE_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_SERVICE_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_CWORKER_SHIM}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_CWORKER_SHIM}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_CLIENT_MAIN}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_CLIENT_MAIN}" 1>&2
-    exit 2
-  fi
-
-  echo "==> Building embedded PW runner client"
-  mkdir -p "${SWIFT_MODULE_CACHE}"
-  /usr/bin/xcrun --sdk macosx swiftc \
-    -module-cache-path "${SWIFT_MODULE_CACHE}" \
-    "${SWIFT_FLAGS[@]}" \
-    -o "${APP_BUNDLE}/Contents/MacOS/pw-runner-client" \
-    "${XPC_RUNNER_API_FILE}" "${XPC_RUNNER_CLIENT_MAIN}"
+  echo "==> Embedding PW runner client"
+  cp "${PW_RUNNER_CLIENT_BIN}" "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
+  embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 
-  echo "==> Building embedded PWRunner XPC services"
-  cworker_shim_obj="${SWIFT_MODULE_CACHE}/PWCWorkerShim.o"
-  /usr/bin/xcrun --sdk macosx clang -c "${XPC_RUNNER_CWORKER_SHIM}" -o "${cworker_shim_obj}"
+  echo "==> Embedding PWRunner XPC services"
   for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
     svc_dir="${XPC_SERVICES_DIR}/${svc_name}"
     svc_info="${svc_dir}/Info.plist"
-    svc_main="${svc_dir}/main.swift"
+    svc_host="${MESON_BUILD_DIR}/${svc_name}"
     svc_bundle="${APP_BUNDLE}/Contents/XPCServices/${svc_name}.xpc"
     if [[ ! -d "${svc_dir}" ]]; then
       echo "ERROR: missing ${svc_name} service dir at ${svc_dir}" 1>&2
       exit 2
     fi
-    if [[ ! -f "${svc_info}" ]] || [[ ! -f "${svc_main}" ]]; then
-      echo "ERROR: ${svc_name} service is missing Info.plist or main.swift" 1>&2
+    if [[ ! -f "${svc_info}" ]]; then
+      echo "ERROR: ${svc_name} service is missing Info.plist" 1>&2
+      exit 2
+    fi
+    if [[ ! -x "${svc_host}" ]]; then
+      echo "ERROR: expected Meson output at ${svc_host}" 1>&2
       exit 2
     fi
     mkdir -p "${svc_bundle}/Contents/MacOS"
     cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
     stamp_info_plist "${svc_bundle}/Contents/Info.plist"
 
-    /usr/bin/xcrun --sdk macosx swiftc \
-      -module-cache-path "${SWIFT_MODULE_CACHE}" \
-      "${SWIFT_FLAGS[@]}" \
-      -o "${svc_bundle}/Contents/MacOS/${svc_name}" \
-      "${XPC_RUNNER_API_FILE}" \
-      "${XPC_RUNNER_SANDBOX_APPLY_FILE}" \
-      "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
-      "${XPC_RUNNER_PATH_UTILS_FILE}" \
-      "${XPC_RUNNER_CWORKER_FILE}" \
-      "${XPC_RUNNER_DEADLINE_FILE}" \
-      "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
-      "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
-      "${XPC_RUNNER_SERVICE_FILE}" \
-      "${XPC_RUNNER_LISTENER_FILE}" \
-      "${svc_main}" "${cworker_shim_obj}"
+    # The host executable: meson.build's PWRunner target, whose source list
+    # the source_drift suite compares with the tree.
+    cp "${svc_host}" "${svc_bundle}/Contents/MacOS/${svc_name}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
+    embed_dsym "${svc_bundle}/Contents/MacOS/${svc_name}"
 
     # Embed pw-probe-runner inside the XPC service bundle so the host
     # resolves it relative to its own bundle for both built-in and

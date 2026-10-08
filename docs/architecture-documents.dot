@@ -42,6 +42,7 @@ digraph documents {
         cworker_swift;
         cli_rs;
         identity_sources;
+        meson_build;
         suites;
     }
     subgraph cluster_checks {
@@ -81,6 +82,7 @@ digraph documents {
     cworker_swift [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="CWorker.swift\ncworker_swift", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cworker_swift: CWorker.swift | the Swift identity region and the layout mirror "];
     cli_rs [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="cli.rs\ncli_rs", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cli_rs: cli.rs | the usage text the controller README mirrors "];
     identity_sources [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="worker and runner sources\nidentity_sources", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="identity_sources: worker and runner sources | every byte the identity digest covers "];
+    meson_build [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="meson.build\nmeson_build", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="meson_build: meson.build | the native targets and their explicit source lists "];
     suites [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/suites/<name>/\nsuites", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="suites: tests/suites/<name>/ | one run.sh and README per suite "];
     drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py | copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas "];
     drift_limits [shape="octagon", style="dashed", color="#8e24aa", label="source_drift limits.py\ndrift_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_limits: source_drift limits.py | the limits generator's copies and every local documentation link "];
@@ -90,7 +92,7 @@ digraph documents {
     prose_baseline [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/fixtures/docs/prose_baseline.json\nprose_baseline", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="prose_baseline: tests/fixtures/docs/prose_baseline.json | every prose site that still states a value, a count or a citation in an unverified form "];
     drift_generators [shape="octagon", style="dashed", color="#8e24aa", label="source_drift generators.py\ndrift_generators", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_generators: source_drift generators.py | the uniform generator invariants, the baseline's consistency, the drift node's rule list and the form table's copy "];
     preflight [shape="octagon", style="dashed", color="#8e24aa", label="release_preflight.py\npreflight", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="preflight: release_preflight.py | the baseline against the previous release tag "];
-    build [shape="octagon", style="dashed", color="#8e24aa", label="build.sh\nbuild", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build: build.sh | assembles and signs the bundle and stages the guide "];
+    build [shape="octagon", style="dashed", color="#8e24aa", label="build.sh\nbuild", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build: build.sh | compiles the native executables through Meson, assembles and signs the bundle and stages the guide "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
     gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract |  "];
@@ -142,4 +144,5 @@ digraph documents {
     preflight -> prose_baseline [style="dashed", color="#8e24aa", label="D49 subset", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D49: a release's baseline is a subset of the previous release's |  "];
     drift_check -> architecture_md [style="dashed", color="#8e24aa", label="D50 prose rules", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D50: Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; the principles list equals the core ideas in AGENTS.md |  "];
     drift_generators -> architecture_json [style="dashed", color="#8e24aa", label="D51 rule list", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D51: the drift node's rule citations equal the rules check.py runs |  "];
+    drift_check -> meson_build [style="dashed", color="#8e24aa", label="D52 source list", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D52: source list equals the tree |  "];
 }

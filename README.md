@@ -102,11 +102,12 @@ This repo builds a single distributable app bundle:
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
-`./build.sh` assembles the Rust, Swift and C pieces into that one bundle, signs
-it with the Developer ID Application identity named by `IDENTITY` (see
-[docs/SIGNING.md](docs/SIGNING.md)), stamps it with a version derived from the
-nearest tag, and embeds a generated manifest of every binary's hash and
-entitlements. The [distribution directory](dist/README.md) describes the
+`./build.sh` compiles the Rust pieces with Cargo and the Swift and C pieces
+with Meson (the root [meson.build](meson.build) owns their source lists and
+flags), assembles them into that one bundle, signs it with the Developer ID
+Application identity named by `IDENTITY` (see [docs/SIGNING.md](docs/SIGNING.md)),
+stamps it with a version derived from the nearest tag, and embeds a generated
+manifest of every binary's hash and entitlements. The [distribution directory](dist/README.md) describes the
 current deliverables, release evidence, and preserved archives.
 
 ## Documentation

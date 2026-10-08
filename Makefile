@@ -47,8 +47,9 @@ DIST_DIR ?= dist
 RELEASE_NOTES ?=
 VERSION ?=
 
-# build: one path through build.sh, which compiles, signs every embedded tool and
-# embeds the generated evidence. The guard mirrors build.sh's own identity
+# build: one path through build.sh, which compiles (Cargo for the Rust pieces,
+# Meson for the native executables), signs every embedded tool and embeds the
+# generated evidence. The guard mirrors build.sh's own identity
 # requirement so the message names the make invocation to use.
 build:
 	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \

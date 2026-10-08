@@ -43,7 +43,8 @@ Standalone helper tools (embedded into the `.app`):
   - Captures unified-log sandbox deny lines by PID + process name
 - `controller/src/bin/sbpl-check.rs` → `dist/PolicyWitness.app/Contents/MacOS/sbpl-check`
   - Compiles SBPL policies independently of the runner; `policy-witness run` invokes it only on the `xpc_error` fallback path, and it is also a standalone diagnostic
-- `controller/tools/sb_api_validator/sb_api_validator` — embedded inside
+- `controller/tools/sb_api_validator/sb_api_validator.c` → built by Meson
+  into `builddir/sb_api_validator` and embedded inside
   each XPC service bundle as `…/Contents/MacOS/sb_api_validator`. The
   runner host launches it once per run in `--batch` NDJSON mode to
   cross-check `sandbox_check` verdicts inline alongside the C worker.

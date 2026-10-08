@@ -62,7 +62,10 @@
       "cases": [
         {
           "id": "runner_source_manifests_agree",
-          "description": "Runner sources, test registry, shared outcome vocabularies and the CLI usage/README surface agree"
+          "description": "Runner sources, test registry, shared outcome vocabularies and the CLI usage/README surface agree",
+          "requires": [
+            "meson"
+          ]
         },
         {
           "id": "limits_documentation",
@@ -1336,7 +1339,8 @@
             "app",
             "clang",
             "swift",
-            "identity"
+            "identity",
+            "meson"
           ]
         },
         {

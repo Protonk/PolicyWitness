@@ -1,20 +1,24 @@
 # source_drift
 
 Cross-checks the runner source manifest for drift between the on-disk
-source tree and `build.sh`'s `XPC_RUNNER_*` references. The test-only
-SwiftPM package (`runner/Package.swift`) follows convention and
-auto-discovers the same files (no `sources:` arrays to drift), so the
-SwiftPM source set equals on-disk by construction; the comparison that
-can actually ship a broken `PWRunner.xpc` is build.sh vs the tree. A
-file added under `Sources/PWRunnerCore/` but not wired into build.sh
-(or vice versa) never reaches the production binary — with no other
-signal.
+source tree and the targets `meson.build` declares. The test-only SwiftPM
+package (`runner/Package.swift`) follows convention and auto-discovers the
+same files (no `sources:` arrays to drift), so the SwiftPM source set equals
+on-disk by construction; the comparison that can actually ship a broken
+`PWRunner.xpc` is meson.build vs the tree. A file added under
+`Sources/PWRunnerCore/` but not wired into meson.build (or vice versa) never
+reaches the production binary — with no other signal.
+The manifest is read with `meson introspect meson.build --targets`, which
+needs no build directory and lists the host and shim declarations
+regardless of the `xpc` option; a configured directory would list only its
+active targets. Failed introspection is a script error, never a pass.
 
 ## Invariants
 
-- The two sources of truth (the on-disk `runner/Sources/` tree and
-  build.sh's `XPC_RUNNER_*_FILE` / `XPC_RUNNER_*_SHIM` set) must agree
-  on the compiled file set, compared as `runner/`-relative paths.
+- The two sources of truth (the on-disk `runner/Sources/` tree and the
+  sources of meson.build's `PWRunner` and `PWCWorkerShim` targets) must agree
+  on the compiled file set, compared as `runner/`-relative paths. The service
+  entry point is accepted beside the core list; a missing target is named.
 - Discovery is recursive under the target dirs
   (`Sources/PWRunnerCore`, `Sources/PWCWorkerShim`), so moving a file
   within a target is
@@ -192,7 +196,9 @@ before any output publication.
   commented/string examples remain accepted. Inputs and command receipts are
   retained, and the restored fixture must pass. Additional mutations check
   native Swift bindings and C-shim calls/lookups, accepting explanatory text
-  and unrelated native APIs.
+  and unrelated native APIs. Manifest mutations drop a core file from or add
+  a missing file to meson.build's host target and rename the host and shim
+  targets; each must be named by the checker and the restored manifest passes.
 
 ## Artifacts
 
@@ -213,7 +219,8 @@ default to `tests/out/runs/direct`.
 ./tests/run.sh --suite source_drift
 ```
 
-No build required. The `limits_documentation` case checks
+No build required; the manifest reader needs Meson on `PATH`, which the
+catalog declares as equipment. The `limits_documentation` case checks
 [`docs/limits.json`](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,

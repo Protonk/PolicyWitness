@@ -18,7 +18,12 @@ except the accounted build stamps (and, for a temporary signed copy, the
 fresh bundle identifiers). Signatures and content hashes are not compared.
 
     native_compare.py exe CANDIDATE BASELINE [--out REPORT] [--expect-module NAME] [--no-sandbox-imports]
-    native_compare.py app CANDIDATE BASELINE [--out REPORT] [--temporary-copy]
+    native_compare.py app CANDIDATE BASELINE [--out REPORT] [--temporary-copy] [--across-builds]
+
+With --across-builds the two apps were built from different sources, so the
+code and data sizes are recorded rather than compared; libraries, load
+commands, segments and sections, imports, markers and entitlements are still
+compared, and a difference among them names the source change behind it.
 
 Exit 1 when a compared field differs. The report lists every difference and
 every recorded-only field so each accepted difference is visible.
@@ -103,7 +108,7 @@ def describe(path):
     )
 
 
-def compare(candidate, baseline, *, expect_module=None, no_sandbox_imports=False):
+def compare(candidate, baseline, *, expect_module=None, no_sandbox_imports=False, same_sources=True):
     left, right = describe(candidate), describe(baseline)
     differences = []
 
@@ -116,16 +121,17 @@ def compare(candidate, baseline, *, expect_module=None, no_sandbox_imports=False
     check('load_commands', left['load_commands'], right['load_commands'])
     check('segments', left['segments'], right['segments'])
     check('build_version', left['build_version'], right['build_version'])
-    for segment in STRICT_SEGMENTS:
-        check(f'segment_sizes[{segment}]', left['segment_sizes'].get(segment), right['segment_sizes'].get(segment))
-    for key in sorted(set(left['section_sizes']) | set(right['section_sizes'])):
-        if key.split(',')[0] in STRICT_SEGMENTS:
-            check(f'section_sizes[{key}]', left['section_sizes'].get(key), right['section_sizes'].get(key))
+    if same_sources:
+        for segment in STRICT_SEGMENTS:
+            check(f'segment_sizes[{segment}]', left['segment_sizes'].get(segment), right['segment_sizes'].get(segment))
+        for key in sorted(set(left['section_sizes']) | set(right['section_sizes'])):
+            if key.split(',')[0] in STRICT_SEGMENTS:
+                check(f'section_sizes[{key}]', left['section_sizes'].get(key), right['section_sizes'].get(key))
+        check('size[__TEXT]', left['size'].get('__TEXT'), right['size'].get('__TEXT'))
+        check('size[__DATA]', left['size'].get('__DATA'), right['size'].get('__DATA'))
     check('undefined', left['undefined'], right['undefined'])
     check('sandbox_imports', left['sandbox_imports'], right['sandbox_imports'])
     check('swift_modules', left['swift_modules'], right['swift_modules'])
-    check('size[__TEXT]', left['size'].get('__TEXT'), right['size'].get('__TEXT'))
-    check('size[__DATA]', left['size'].get('__DATA'), right['size'].get('__DATA'))
     requirements = []
     if expect_module is not None and expect_module not in left['swift_modules']:
         requirements.append(f'candidate lacks Swift module {expect_module!r}: {left["swift_modules"]}')
@@ -133,7 +139,7 @@ def compare(candidate, baseline, *, expect_module=None, no_sandbox_imports=False
         requirements.append(f'candidate imports libsandbox symbols: {left["sandbox_imports"]}')
     recorded = {name: dict(candidate=left[name], baseline=right[name]) for name in ('uuid', 'code_signature', 'size')}
     recorded['segment_sizes'] = {s: dict(candidate=left['segment_sizes'].get(s), baseline=right['segment_sizes'].get(s))
-                                 for s in RECORDED_SEGMENTS}
+                                 for s in (RECORDED_SEGMENTS if same_sources else RECORDED_SEGMENTS + STRICT_SEGMENTS)}
     return dict(candidate=left, baseline=right, differences=differences, requirements_failed=requirements,
                 recorded_only=recorded, equal=not differences and not requirements)
 
@@ -142,7 +148,7 @@ def plist(path):
     return plistlib.loads(Path(path).read_bytes())
 
 
-def compare_apps(candidate, baseline, *, temporary_copy=False):
+def compare_apps(candidate, baseline, *, temporary_copy=False, across_builds=False):
     candidate, baseline = Path(candidate), Path(baseline)
     differences = []
 
@@ -154,8 +160,8 @@ def compare_apps(candidate, baseline, *, temporary_copy=False):
     manifests = [json.loads((app / artifact.MANIFEST).read_text()) for app in (candidate, baseline)]
     check('manifest.entries', [sorted((e['id'], e['kind'], e['rel_path']) for e in m['entries']) for m in manifests][0],
           [sorted((e['id'], e['kind'], e['rel_path']) for e in m['entries']) for m in manifests][1])
-    check('manifest.entitlements', {e['rel_path']: e['entitlements'] for e in manifests[0]['entries']},
-          {e['rel_path']: e['entitlements'] for e in manifests[1]['entries']})
+    check('manifest.entitlements', {e['rel_path']: e.get('entitlements') for e in manifests[0]['entries']},
+          {e['rel_path']: e.get('entitlements') for e in manifests[1]['entries']})
     check('manifest.app_entitlements', manifests[0]['app_entitlements'], manifests[1]['app_entitlements'])
     check('manifest.app_binary_rel_path', manifests[0]['app_binary_rel_path'], manifests[1]['app_binary_rel_path'])
     if not temporary_copy:
@@ -165,7 +171,7 @@ def compare_apps(candidate, baseline, *, temporary_copy=False):
           {e['rel_path']: sorted(s for s in e['symbols'] if s.startswith('pw_')) for e in symbols[1]['entries']})
     executables = {}
     for relative in artifact.EXECUTABLES:
-        report = compare(candidate / relative, baseline / relative)
+        report = compare(candidate / relative, baseline / relative, same_sources=not across_builds)
         executables[relative] = report
         for difference in report['differences']:
             differences.append(dict(field=f'{relative}: {difference["field"]}', candidate=difference['candidate'],
@@ -178,7 +184,8 @@ def compare_apps(candidate, baseline, *, temporary_copy=False):
         check(f'{relative} (without {", ".join(excluded)})', {k: v for k, v in left.items() if k not in excluded},
               {k: v for k, v in right.items() if k not in excluded})
     return dict(candidate=str(candidate), baseline=str(baseline), temporary_copy=temporary_copy,
-                differences=differences, executables=executables, plists_recorded_only=plists, equal=not differences)
+                across_builds=across_builds, differences=differences, executables=executables,
+                plists_recorded_only=plists, equal=not differences)
 
 
 def main():
@@ -190,12 +197,14 @@ def main():
     parser.add_argument('--expect-module')
     parser.add_argument('--no-sandbox-imports', action='store_true')
     parser.add_argument('--temporary-copy', action='store_true')
+    parser.add_argument('--across-builds', action='store_true')
     args = parser.parse_args()
     if args.mode == 'exe':
         report = compare(args.candidate, args.baseline, expect_module=args.expect_module,
                          no_sandbox_imports=args.no_sandbox_imports)
     else:
-        report = compare_apps(args.candidate, args.baseline, temporary_copy=args.temporary_copy)
+        report = compare_apps(args.candidate, args.baseline, temporary_copy=args.temporary_copy,
+                              across_builds=args.across_builds)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(report, indent=2) + '\n')

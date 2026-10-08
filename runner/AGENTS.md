@@ -4,9 +4,9 @@ Deep contract for the runner's test machinery. The repo-root [AGENTS.md](../AGEN
 
 ## Swift runner unit tests (SwiftPM)
 
-[Package.swift](Package.swift) declares a test-only SwiftPM layout: a `PWRunnerCore` library that compiles the same source set build.sh ships in `PWRunner.xpc`, plus a `PWRunnerCoreTests` executable target. The `runner_unit` suite runs `swift run --package-path runner PWRunnerCoreTests` and asserts on the stdout summary line.
+[Package.swift](Package.swift) declares a test-only SwiftPM layout: a `PWRunnerCore` library that compiles the same source set meson.build's `PWRunner` target ships in `PWRunner.xpc`, plus a `PWRunnerCoreTests` executable target. The `runner_unit` suite runs `swift run --package-path runner PWRunnerCoreTests` and asserts on the stdout summary line.
 
-SwiftPM is test-only here. Production builds still go through [build.sh](../build.sh); the SwiftPM `.build/` tree is gitignored.
+SwiftPM is test-only here. Production builds still go through [build.sh](../build.sh), which compiles the native executables through the root [meson.build](../meson.build); the SwiftPM `.build/` tree is gitignored.
 
 **Why an executableTarget, not a testTarget.** XCTest ships with full Xcode, not Command Line Tools, and contributors frequently have only CLT. The hand-rolled [`TestKit`](Tests/PWRunnerCoreTests/TestKit.swift) harness in TestKit.swift gives us XCTest-shaped assertions (`expectEqual`, `expectThrows`, `expectContains`, etc.) without the XCTest dependency, so `swift run PWRunnerCoreTests` works against either toolchain. `PWRunnerCore` is built with `-enable-testing` so the executable can `@testable import PWRunnerCore` and reach internal symbols.
 

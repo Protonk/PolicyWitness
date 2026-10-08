@@ -66,13 +66,14 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 
 - Build: `make build` (or `./build.sh`)
   - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see [docs/SIGNING.md](docs/SIGNING.md)).
+  - Requires Meson and Ninja on `PATH`: the native executables compile through the root [meson.build](meson.build) into the ignored `builddir/` (see [docs/SIGNING.md → Native compile with Meson](docs/SIGNING.md#native-compile-with-meson)). Adding or moving a runner source file means editing its target there; the `source_drift` suite refuses a list that differs from the tree.
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun (see the harness note below).
 - If you add a helper under the app or XPC bundle `Contents/MacOS`, update the [build.sh](build.sh) signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
 Build knobs worth knowing (debugging/iteration):
 
-- `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Rust-only iteration).
+- `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Meson's `xpc=false`; the two C executables still build, no Swift compiler is discovered, and the signed partial bundle cannot run specimens).
 - The app version is derived from git (nearest `v*` tag, commit count); `PW_VERSION`/`PW_BUILD_NUMBER` override it. See [docs/CONTRACT.md → Build stamp](docs/CONTRACT.md#build-stamp).
 - `PW_INSPECTION=1` (default) keeps symbols/frame pointers; set `PW_INSPECTION=0` for a more optimized build.
 - Evidence is generated during build by [tests/build-evidence.py](tests/build-evidence.py) and embedded under `Contents/Resources/Evidence/`.

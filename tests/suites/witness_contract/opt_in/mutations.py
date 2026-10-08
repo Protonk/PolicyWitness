@@ -7,9 +7,9 @@ on these edits; source_drift separately proves both edits change the identity.
 import json
 from pathlib import Path
 import plistlib
-import re
 import secrets
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -81,20 +81,37 @@ def harness_control(harness, worker, out, expected):
     return dict(rejected=expected, early_completion=value['early_completion'], early_attempt=value['early_attempt'])
 
 
+def meson_host_sources(out):
+    """The production host source list, read from meson.build in file mode.
+
+    File-mode introspection lists the PWRunner target without a build
+    directory and regardless of the xpc option. The core sources are returned
+    runner-relative, in declaration order; the service entry point is checked
+    and returned separately."""
+    meta = command(out / 'introspect', ['meson', 'introspect', ROOT / 'meson.build', '--targets'], timeout=60)
+    targets = {t['name']: [s for g in t['target_sources'] for s in g['sources']]
+               for t in json.loads((out / 'introspect/stdout').read_text())}
+    assert 'PWRunner' in targets, f'meson.build declares no PWRunner target: {sorted(targets)}'
+    sources = [str(Path(s).resolve().relative_to((ROOT / 'runner').resolve())) for s in targets['PWRunner']]
+    core = [s for s in sources if s.startswith('Sources/PWRunnerCore/') and s.endswith('.swift')]
+    entry = [s for s in sources if s not in core]
+    assert entry == ['Services/PWRunner/main.swift'], sources
+    return core, entry[0]
+
+
 def build_host(package, work, out):
     objects = []
     for name in ('PWCWorkerShim',):
         obj = work / (name + '.o'); objects.append(obj)
         command(out / ('compile-' + name), ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-c',
             package / 'Sources' / name / (name + '.c'), '-o', obj])
-    # Follow build.sh's production source inventory, refusing silent divergence.
-    sources = re.findall(r'^XPC_RUNNER_[A-Z_]+_FILE="\$\{XPC_ROOT\}/([^"\n]+\.swift)"',
-                         (ROOT / 'build.sh').read_text(), re.M)
+    # Follow the production source inventory, refusing silent divergence from the tree.
+    sources, entry = meson_host_sources(out)
     assert set(sources) == {str(p.relative_to(package)) for p in (package / 'Sources/PWRunnerCore').glob('*.swift')}, sources
     host = work / 'PWRunner'
     command(out / 'compile-host', ['/usr/bin/xcrun', '--sdk', 'macosx', 'swiftc', '-Onone', '-g',
         '-module-cache-path', work / 'module-cache', '-o', host,
-        *[package / p for p in sources], ROOT / 'runner/Services/PWRunner/main.swift', *objects], timeout=180)
+        *[package / p for p in sources], package / entry, *objects], timeout=180)
     return host
 
 

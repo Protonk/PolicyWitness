@@ -3,16 +3,18 @@
 
 The check has two halves:
 
-1. Source-set drift between build.sh's hand-maintained swiftc invocation
-   and the on-disk runner source tree. build.sh enumerates the Swift
-   files (and C shims) that ship in PWRunner.xpc by explicit path; the
-   test-only SwiftPM package (runner/Package.swift) compiles the same set
-   but discovers it automatically by SwiftPM convention (everything under
-   Sources/PWRunnerCore and the Sources/<Shim> dir). So the SwiftPM
-   side == on-disk by construction, and the drift that can actually ship a
-   broken binary is build.sh lagging the tree: a file added under
-   Sources/PWRunnerCore but missing from build.sh never reaches the XPC
-   binary (and vice versa). We compare build.sh against disk directly.
+1. Source-set drift between meson.build's explicit host source lists and
+   the on-disk runner source tree. The PWRunner target enumerates the Swift
+   files and the PWCWorkerShim target the C shim that ship in PWRunner.xpc
+   by explicit path; the test-only SwiftPM package (runner/Package.swift)
+   compiles the same set but discovers it automatically by SwiftPM
+   convention (everything under Sources/PWRunnerCore and the Sources/<Shim>
+   dir). So the SwiftPM side == on-disk by construction, and the drift that
+   can actually ship a broken binary is the manifest lagging the tree: a
+   file added under Sources/PWRunnerCore but missing from the target never
+   reaches the XPC binary (and vice versa). We compare disk and meson.build
+   directly; the manifest is read by file-mode introspection, which needs no
+   build directory.
 
 2. Test-registry drift across what should be self-consistent project
    discipline:
@@ -53,12 +55,13 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RUNNER_DIR = REPO_ROOT / "runner"
-BUILD_SH = REPO_ROOT / "build.sh"
+MESON_BUILD = REPO_ROOT / "meson.build"
 # Runner sources live under SwiftPM-convention target dirs. The source-set
 # checks discover the on-disk set by walking these; the per-symbol contract
 # checks below read specific files out of the core target. Both reference
@@ -91,12 +94,12 @@ def fail(msg: str) -> None:
 # Source manifest checks.
 #
 # Both halves return paths relative to runner/ (POSIX), e.g.
-# "Sources/PWRunnerCore/CWorker.swift", so the disk walk and build.sh's
-# "${XPC_ROOT}/<path>" captures compare directly without name-vs-path
-# normalization. Discovery is recursive under the target dirs, so the suite
-# does not assume any particular flat layout — moving a file within a target
-# is invisible here; only adding/removing a compiled file (or forgetting to
-# wire it into build.sh) trips the diff.
+# "Sources/PWRunnerCore/CWorker.swift", so the disk walk and meson.build's
+# target sources compare directly without name-vs-path normalization.
+# Discovery is recursive under the target dirs, so the suite does not assume
+# any particular flat layout — moving a file within a target is invisible
+# here; only adding/removing a compiled file (or forgetting to wire it into
+# meson.build) trips the diff.
 # ---------------------------------------------------------------------------
 
 def disk_swift_files() -> set[str]:
@@ -110,46 +113,78 @@ def disk_c_files() -> set[str]:
     return out
 
 
-def build_sh_swift_files() -> set[str]:
-    text = BUILD_SH.read_text(encoding="utf-8")
-    decl_re = re.compile(
-        r'^XPC_RUNNER_([A-Z_]+)_FILE="\$\{XPC_ROOT\}/([^"]+\.swift)"',
-        re.MULTILINE,
-    )
-    declarations: dict[str, str] = {}
-    for match in decl_re.finditer(text):
-        declarations["XPC_RUNNER_" + match.group(1) + "_FILE"] = match.group(2)
+def meson_declared_targets() -> dict[str, list[str]]:
+    """Targets and their sources as meson.build declares them.
 
-    svc_block_re = re.compile(
-        r'echo "==> Building embedded PWRunner XPC services".*?for svc_name.*?done',
-        re.DOTALL,
-    )
-    block_match = svc_block_re.search(text)
-    if block_match is None:
-        fail("could not locate the PWRunner XPC services swiftc block in build.sh")
+    File-mode introspection reads the manifest without a build directory, so
+    the host and shim declarations are listed regardless of the `xpc` guard; a
+    configured directory would list only its active targets. Introspection
+    failure is a script error: the manifest cannot be read, so nothing about
+    its source list is known."""
+    argv = ["meson", "introspect", str(MESON_BUILD), "--targets"]
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=60, cwd=REPO_ROOT)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        fail(f"meson introspection failed: {' '.join(argv)}: {exc}")
         sys.exit(2)
-    referenced = set(re.findall(r'\$\{(XPC_RUNNER_[A-Z_]+_FILE)\}', block_match.group(0)))
+    if result.returncode != 0:
+        fail(f"meson introspection failed (rc={result.returncode}): {' '.join(argv)}\n{result.stderr.strip()}")
+        sys.exit(2)
+    try:
+        targets = json.loads(result.stdout)
+    except ValueError as exc:
+        fail(f"meson introspection returned malformed JSON: {exc}")
+        sys.exit(2)
+    return {t["name"]: [s for group in t["target_sources"] for s in group.get("sources", [])] for t in targets}
 
+
+def _meson_target_files(targets: dict[str, list[str]], name: str, domain: str, suffix: str,
+                        entry_points: set[str], problems: list[str]) -> set[str]:
+    """The runner-relative sources of one declared target inside one source domain.
+
+    `entry_points` are accepted beside the domain (the service and client
+    `main.swift` are not core sources); any other source is a problem, as is a
+    missing target."""
+    if name not in targets:
+        problems.append(f"  meson: meson.build declares no {name!r} target")
+        return set()
     files: set[str] = set()
-    for var in referenced:
-        if var not in declarations:
-            fail(f"build.sh references {var} in the swiftc call but never declares it")
-            sys.exit(2)
-        files.add(declarations[var])
+    for source in targets[name]:
+        try:
+            relative = Path(source).resolve().relative_to(RUNNER_DIR.resolve()).as_posix()
+        except ValueError:
+            problems.append(f"  meson: {name} source {source!r} is outside runner/")
+            continue
+        if relative in entry_points:
+            continue
+        if relative.startswith(domain) and relative.endswith(suffix):
+            files.add(relative)
+        else:
+            problems.append(f"  meson: {name} source {relative!r} is outside its domain {domain!r}")
     return files
 
 
-def build_sh_c_files() -> set[str]:
-    """Collect every C source file build.sh declares as an XPC_RUNNER_*_SHIM
-    relative to XPC_ROOT. Currently one: PWCWorkerShim.c (atomic + shm_open
-    helpers for the Swift CWorker driver). Adding another shim is a single
-    line edit here and a matching declaration in build.sh."""
-    text = BUILD_SH.read_text(encoding="utf-8")
-    shim_re = re.compile(
-        r'^XPC_RUNNER_(?:CWORKER)_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
-        re.MULTILINE,
-    )
-    return {m.group(1) for m in shim_re.finditer(text)}
+def check_meson_source_lists() -> list[str]:
+    """meson.build's host and shim source lists equal the tree.
+
+    The PWRunner target carries the core Swift sources plus the service entry
+    point; the PWCWorkerShim target carries the shim C sources. Each set is
+    compared with its on-disk domain; a file in one set but not the other is
+    reported by name, and a missing target is reported as such."""
+    problems: list[str] = []
+    targets = meson_declared_targets()
+    swift = _meson_target_files(targets, "PWRunner", "Sources/PWRunnerCore/", ".swift",
+                                {"Services/PWRunner/main.swift"}, problems)
+    c = _meson_target_files(targets, "PWCWorkerShim", "Sources/PWCWorkerShim/", ".c", set(), problems)
+    problems.extend(diff_sets("swift", {
+        "disk (runner/Sources/PWRunnerCore/**/*.swift)": disk_swift_files(),
+        "meson.build (PWRunner target)": swift,
+    }))
+    problems.extend(diff_sets("c", {
+        "disk (runner/Sources/<shim>/**/*.c)": disk_c_files(),
+        "meson.build (PWCWorkerShim target)": c,
+    }))
+    return problems
 
 
 def diff_sets(label: str, manifests: dict[str, set[str]]) -> list[str]:
@@ -1066,21 +1101,11 @@ def check_core_ideas_agreement() -> list[str]:
 
 def main() -> int:
     # SwiftPM auto-discovers the same files off disk (convention layout, no
-    # sources: arrays to parse), so the load-bearing comparison is build.sh
-    # vs the on-disk Sources/ tree — that is the pair that can actually ship a
-    # PWRunner.xpc missing a file.
-    swift_manifests = {
-        "disk (runner/Sources/PWRunnerCore/**/*.swift)": disk_swift_files(),
-        "build.sh (PWRunner.xpc swiftc)": build_sh_swift_files(),
-    }
-    c_manifests = {
-        "disk (runner/Sources/<shim>/**/*.c)": disk_c_files(),
-        "build.sh (XPC_RUNNER_*_SHIM)": build_sh_c_files(),
-    }
-
+    # sources: arrays to parse), so the load-bearing comparison is the on-disk
+    # Sources/ tree against the explicit list that builds a PWRunner.xpc:
+    # meson.build's PWRunner target.
     problems: list[str] = []
-    problems.extend(diff_sets("swift", swift_manifests))
-    problems.extend(diff_sets("c", c_manifests))
+    problems.extend(check_meson_source_lists())
     problems.extend(check_readmes_present())
     problems.extend(check_index_vs_disk())
     problems.extend(check_baseline_in_catalog_defaults())
@@ -1116,8 +1141,8 @@ def main() -> int:
     pu_pairs = parse_swift_prediction_unavailable_pairs()
     print(
         f"all drift checks pass: "
-        f"{len(swift_manifests['disk (runner/Sources/PWRunnerCore/**/*.swift)'])} swift, "
-        f"{len(c_manifests['disk (runner/Sources/<shim>/**/*.c)'])} c, "
+        f"{len(disk_swift_files())} swift, "
+        f"{len(disk_c_files())} c, "
         f"{suite_count} suites, "
         f"{outcome_count} normalized outcomes, "
         f"{attempt_outcome_count} attempt outcomes, "

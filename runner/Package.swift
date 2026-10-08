@@ -2,20 +2,20 @@
 //
 // PolicyWitness Swift runner — test-only SwiftPM manifest.
 //
-// This package mirrors the source set that build.sh compiles into the
-// PWRunner.xpc service binary, but as a plain library target so we can
-// run unit tests against it. Production builds continue to go through
-// build.sh; SwiftPM is *not* a parallel build path for the shipped app
-// bundle.
+// This package mirrors the source set that the root meson.build compiles
+// into the PWRunner.xpc service binary (build.sh drives Meson and assembles
+// the bundle), but as a plain library target so we can run unit tests
+// against it. Production builds continue to go through build.sh; SwiftPM
+// is *not* a parallel build path for the shipped app bundle.
 //
 // The layout follows SwiftPM convention, so the manifest does not
 // enumerate sources: each target's files are auto-discovered under
 // Sources/<TargetName>/ (and Tests/PWRunnerCoreTests for the test
 // executable). Adding a Swift file to Sources/PWRunnerCore/ needs no
-// manifest edit here — but it still must be added to build.sh's swiftc
-// invocation, and the source_drift suite enforces that build.sh and the
-// on-disk source set agree. The source set links no sandbox library: the
-// XPC host stays unsandboxed and never calls libsandbox.
+// manifest edit here — but it still must be added to meson.build's
+// PWRunner target, and the source_drift suite enforces that meson.build
+// and the on-disk source set agree. The source set links no sandbox
+// library: the XPC host stays unsandboxed and never calls libsandbox.
 //
 // The test target is an executableTarget (not a testTarget) because XCTest
 // is shipped with full Xcode, not Command Line Tools — and contributors

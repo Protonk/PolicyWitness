@@ -12,7 +12,9 @@
 
 # controller (Rust)
 controller/target
-/controller/tools/pw_probe_runner/pw-probe-runner
+
+# Output of the manual ad hoc-signed validator debugger helper
+# (controller/tools/sb_api_validator/build.sh); production builds write to builddir/.
 /controller/tools/sb_api_validator/sb_api_validator
 
 # Local scratch is disposable; keep its contributor policy.

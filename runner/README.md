@@ -109,7 +109,7 @@ External to `runner/` but conceptually part of the runner:
 ## Unit tests (SwiftPM)
 
 `Package.swift` declares a test-only SwiftPM layout that mirrors the
-source set build.sh ships in `PWRunner.xpc`. The `runner_unit` suite
+source set meson.build's `PWRunner` target ships in `PWRunner.xpc`. The `runner_unit` suite
 runs the `PWRunnerCoreTests` executable and builds its required lifecycle fixture:
 
 ```sh

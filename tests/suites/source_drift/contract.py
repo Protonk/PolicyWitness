@@ -274,6 +274,19 @@ class WorkerIdentityTests(unittest.TestCase):
                 for target in identity_generator.TARGETS:
                     self.assertIn(changed, (root / target).read_text())
 
+    def test_native_manifest_inputs_change_identity(self):
+        for name in ('meson.build', 'meson.options'):
+            with self.subTest(source=name):
+                self.assertIn(name, identity_generator.SOURCE_FILES)
+                root = self.checkout()
+                expected = identity_generator.identity(root)
+                path = root / name
+                path.write_text(path.read_text() + '\n# a comment changes the identity\n')
+                self.assertNotEqual(identity_generator.identity(root), expected)
+                self.assertEqual(self.command(root, '--check').returncode, 1)
+                self.assertEqual(self.command(root).returncode, 0)
+                self.assertEqual(self.command(root, '--check').returncode, 0)
+
     def test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs(self):
         root = self.checkout()
         expected = identity_generator.identity(root)

@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BEGIN = "BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)"
 END = "END GENERATED WORKER IDENTITY"
 SOURCE_DIRS = ("controller/tools/pw_probe_runner", "runner/Sources")
-SOURCE_FILES = ("docs/generate_worker_identity.py", "build.sh", "runner/Package.swift")
+SOURCE_FILES = ("docs/generate_worker_identity.py", "build.sh", "meson.build", "meson.options",
+                "runner/Package.swift")
 TARGETS = ("controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
            "runner/Sources/PWRunnerCore/CWorker.swift", "tests/lib/contract.py")
 

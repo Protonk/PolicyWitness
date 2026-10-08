@@ -14,7 +14,7 @@ def main(out):
     out.mkdir()
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
-    paths = ['AGENTS.md', 'build.sh', 'runner/README.md', 'tests/README.md',
+    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
              'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md',
@@ -79,12 +79,32 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     ]:
         scenarios.append((name, path, source + '\n' + snippet + '\n', expected,
                           'the XPC host never links, loads or calls libsandbox' if expected else None))
+    # The Meson reader: a core file dropped from or added to the PWRunner target is
+    # named by the diff; a missing host or shim target is named as such.
+    manifest = Path('meson.build')
+    manifest_original = (repo / manifest).read_text()
+    core_line = "    'runner/Sources/PWRunnerCore/PathUtils.swift',\n"
+    assert manifest_original.count(core_line) == 1, 'fixture requires the current PWRunner source list'
+    for name, mutated, diagnostic in [
+        ('meson-core-file-dropped', manifest_original.replace(core_line, ''),
+         "'Sources/PWRunnerCore/PathUtils.swift' is in ['disk (runner/Sources/PWRunnerCore/**/*.swift)'] but missing from ['meson.build"),
+        ('meson-core-file-added', manifest_original.replace(core_line, core_line + "    'runner/Sources/PWRunnerCore/Missing.swift',\n"),
+         "'Sources/PWRunnerCore/Missing.swift' is in ['meson.build"),
+        ('meson-host-target-missing', manifest_original.replace("executable('PWRunner',", "executable('PWRunnerRenamed',"),
+         "declares no 'PWRunner' target"),
+        ('meson-shim-target-missing', manifest_original.replace("static_library('PWCWorkerShim',", "static_library('PWCWorkerShimRenamed',"),
+         "declares no 'PWCWorkerShim' target"),
+    ]:
+        assert mutated != manifest_original, name
+        scenarios.append((name, manifest, mutated, 1, diagnostic))
+    scenarios.append(('meson-restored', manifest, manifest_original, 0, None))
     receipts = []
     for name, path, source, expected, diagnostic in scenarios:
         evidence = out / name
         evidence.mkdir()
         (repo / HOST).write_text(original)
         (repo / shim).write_text(shim_original)
+        (repo / manifest).write_text(manifest_original)
         (repo / path).write_text(source)
         (evidence / path.name).write_text(source)
         argv = [sys.executable, '-B', str(repo / 'tests/suites/source_drift/check.py')]

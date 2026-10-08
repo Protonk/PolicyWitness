@@ -9,7 +9,7 @@ PW_TEST_ID="runner_source_manifests_agree"
 
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-  test_step "diff" "compare runner/ on-disk source set against build.sh and Package.swift"
+  test_step "diff" "compare runner/ on-disk source set against meson.build"
 
   CHECK_PY="${ROOT_DIR}/tests/suites/source_drift/check.py"
   RUN_LOG="${PW_TEST_ARTIFACTS}/check.log"

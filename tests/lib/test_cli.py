@@ -53,7 +53,7 @@ def catalog(root):
             for field in ('requires', 'skip_reasons', 'depends_on'):
                 if not isinstance(case[field], list) or not all(isinstance(x, str) and x for x in case[field]):
                     raise ValueError(f'invalid {field}: {key}')
-            unknown = set(case['requires']) - {'app', 'worker', 'cargo', 'swift', 'clang', 'gui', 'identity'}
+            unknown = set(case['requires']) - {'app', 'worker', 'cargo', 'swift', 'clang', 'gui', 'identity', 'meson'}
             if unknown:
                 raise ValueError(f'unknown prerequisites for {key}: {sorted(unknown)}')
             cases[key] = case
