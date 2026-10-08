@@ -147,6 +147,14 @@ The following choices are settled and are not review items:
   wherever Meson can build at all. `build.sh` keeps the variable until then.
 - **Compilation scope.** The shim and its host consumer enter together in
   the combined Chunk 1 pilot. C-only adoption is not a fallback.
+- **Compiler/linker policy.** Make consequential settings explicit, set
+  `b_asneeded=false`, and accept only documented, inspected backend additions
+  under the [compiler/linker policy](#compilerlinker-policy). Apply this policy
+  from the pilot onward.
+- **No-XPC compatibility.** Preserve `BUILD_XPC=0`, including its lack of
+  Swift discovery and its signed partial-bundle output. Gate Swift language
+  registration and the shim/client/service targets with a boolean `xpc`
+  option, default true. Replacing this workflow is outside this migration.
 - **Architecture citations.** Chunk 3 adds a source-kind `meson_build` node
   with one edge to `drift_check`, citing `meson.build` as a source and the
   source-drift check as the verifying rule. `generator_common.FORM_RULES`
@@ -159,13 +167,10 @@ approval has already been given.
 | When | Decision | Recommended assumption |
 | --- | --- | --- |
 | Before Chunk 1 | File and output locations | Root `meson.build` and `meson.options`, ignored root `builddir/`. The manifest must be above the sources it names. |
-| Before Chunk 1 | Compiler/linker policy | Recommendation for review: make consequential settings explicit, disable `b_asneeded`, and accept only named, inspected backend additions. Resolve the policy below before accepting pilot output. |
 | Before Chunk 3 | Compile-only `make native` convenience | Optional; omit unless wanted. Add it with production integration so it can share the preparation and option mapping from the outset. Direct Meson commands suffice for the pilot. |
-| Before Chunk 3 | Developer-iteration output contract | What should the supported no-XPC workflow produce and how should success be checked: the current signed partial bundle, or compile-only Cargo/Meson outputs? The findings below frame this choice. Unconditional Swift discovery is not a behaviour-preserving simplification. |
 | Optional follow-up | Manual validator debugger script | Keep it during this migration; retirement is a separate choice. |
 
-The no-XPC question concerns the development workflow, not just compiler
-discovery cost. Today `build.sh` still builds Cargo and both standalone C
+The preserved no-XPC workflow still builds Cargo and both standalone C
 executables, checks a signing identity, recreates the app, and signs/packages
 it when `BUILD_XPC=0`. It skips the shim, Swift client and service, and never
 copies those C executables into that partial app. `build-evidence.py` tolerates
@@ -175,14 +180,10 @@ missing `pw-runner-client`. The AGENTS description "Rust-only iteration"
 therefore does not describe a complete runnable/testable app or the actual
 compile work.
 
-For migration compatibility, recommend preserving the existing switch,
-including its lack of Swift discovery, until a separately reviewed change
-replaces that workflow. If retained, gate Swift language registration and
-targets, require Swift when XPC is enabled, and reconfigure when the option
-changes. Specify a partial-build check separately from complete-app acceptance.
-Do not silently turn an optional Swift path into an unconditional prerequisite.
-Direct Cargo compilation already exists; deciding whether it and selected Meson
-targets supersede the partial-bundle workflow is the question to settle.
+Require Swift when XPC is enabled, and reconfigure when the option changes.
+Use the partial-build checks below separately from complete-app acceptance.
+Direct Cargo compilation already exists; replacing the partial-bundle workflow
+with it or selected Meson targets requires a separate change.
 
 For all chunks, use fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` directories,
 preserve receipts, and serialize test execution under the existing checkout
@@ -210,7 +211,9 @@ tree needs its own repair before beginning this chunk.
 1. Add root `meson.build`, `meson.options` and the `builddir/` ignore.
    Declare all targets below with explicit source lists, keeping the current
    host source order for straightforward review. Keep shim flags distinct
-   from the two C executables' flags.
+   from the two C executables' flags and apply the settled compiler/linker
+   policy. Declare C in `project()`; register Swift with
+   `add_languages('swift', required: true)` only inside the `xpc` guard.
 2. Add reusable structural and normalized-envelope comparison scripts under
    test machinery, implementing the [shared verification procedures](#shared-verification-procedures).
    Preserve the manifest/options, compiler commands, tool versions, binary
@@ -224,10 +227,11 @@ tree needs its own repair before beginning this chunk.
 
 | Target/setting | Required declaration |
 | --- | --- |
-| Project defaults | C and Swift; `buildtype=plain`, `warning_level=0`, `b_ndebug=false`; `meson_version: '>=1.12.1'` |
+| Project defaults | C; `buildtype=plain`, `warning_level=0`, `b_ndebug=false`, `b_asneeded=false`; `meson_version: '>=1.12.1'` |
+| XPC option | Boolean `xpc`, default true; conditionally register Swift and declare the shim, client and host. Worker and validator remain unconditional. |
 | `sb_api_validator` | Its one C source; `-Wall -Wextra -O2 -std=c11` |
 | `pw-probe-runner` | Its one C source; same flags; `-lsandbox`; compiler dependency tracking for all included headers |
-| `PWCWorkerShim` | `static_library` from `runner/Sources/PWCWorkerShim/PWCWorkerShim.c`; preserve the current shim compile settings |
+| `PWCWorkerShim` | `static_library` from `runner/Sources/PWCWorkerShim/PWCWorkerShim.c`; preserve optimization/debug/ABI settings under the compiler/linker policy; do not add an ineffective `pic: false` override on macOS |
 | `pw-runner-client` | `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` and `runner/Clients/PWRunnerClient/main.swift`; `swift_module_name: 'main'` |
 | `PWRunner` | The ten explicit `runner/Sources/PWRunnerCore/` Swift files listed by `build.sh`, plus `runner/Services/PWRunner/main.swift`; module name `PWRunner`; `link_with: cworker_shim` |
 | Both Swift targets | `-module-cache-path` under the writable build directory; boolean `inspection`, default true, selects `-Onone -g` versus `-O` |
@@ -263,6 +267,15 @@ exercise this matrix:
 
 The first five rows were exercised by the probe. Use mtime-only touches for
 these dependency checks; production source edits are outside this chunk.
+
+In a fresh build directory with Swift discovery deliberately unavailable,
+configure `xpc=false` and compile both C executables. Require no Swift discovery
+or shim/client/host targets; a fresh `xpc=true` configuration under the same
+conditions must fail for the missing compiler. With the normal toolchain,
+reconfigure one build directory through true → false → true, checking target
+membership and successful compilation at each step. Existing files from a prior
+configuration must not stand in for active targets.
+
 Run `tests/run.sh --suite source_drift` and identity `--check`; require
 unchanged generated regions. Unexplained structural differences block promotion.
 
@@ -371,9 +384,9 @@ later notarization/release run.
    steps, set up or reconfigure `builddir/` with the current options and run
    `meson compile -C builddir`. Keep `PW_INSPECTION` as the public knob;
    Meson reads its boolean option, not that environment variable.
-   Implement the no-XPC workflow selected in the review table. Preserving
-   the existing switch includes conditional Swift discovery, not just
-   skipping compilation. Keep custom `DIST_DIR` assembly working.
+   Map `BUILD_XPC` to the boolean `xpc` option on every setup/reconfigure.
+   Preserve conditional Swift discovery and the partial-bundle workflow;
+   keep both C executables unconditional and custom `DIST_DIR` assembly working.
 3. Replace the three `clang` and two `swiftc` invocations with consumption
    of the four executables. The shim is already linked into the host; it is
    not copied into the bundle. Preserve all existing binary destinations,
@@ -389,7 +402,9 @@ later notarization/release run.
    and `Package.swift` comments; and source-drift README/run descriptions
    for the final two-way comparison. Update `docs/CONTRACT.md`'s explicit
    identity input list; the build-stamp contract keeps its existing owner
-   and semantics. If selected, add `make native` with accurate header/help
+   and semantics. Correct `AGENTS.md`'s "Rust-only iteration" shorthand and
+   document the preserved no-XPC output, tool requirements and limited checks
+   in `docs/SIGNING.md`. If selected, add `make native` with accurate header/help
    comments and shared generator preparation/inspection-option mapping.
 6. In `docs/architecture.json`, update the build node's guard description
    and add the settled source-kind `meson_build` node with an edge to
@@ -415,7 +430,13 @@ distribution output; missing tools must not become the reason they pass.
 **Cheapest useful validation.** Run `make build IDENTITY=...` twice; the second
 Meson compile does no work and artifact inspection still passes. Switch
 `PW_INSPECTION=0` and back, verifying the corresponding Swift settings.
-Check `BUILD_XPC=0` retains its existing scope; a partial bundle is not a
+Repeat the pilot's missing-Swift and option-toggle checks through `build.sh`'s
+option mapping. Build with `BUILD_XPC=0` into a separate `DIST_DIR`: require
+both C outputs in the Meson directory, no shim/Swift targets, and a signed
+partial bundle without the XPC service, client or embedded C helpers. Check
+the expected partial evidence inventory and successful packaging separately;
+the full artifact inspector must still reject this incomplete app. Restore
+`BUILD_XPC=1` and verify complete-app acceptance. A partial bundle is not a
 release acceptance artifact. Run `tests/run.sh --suite source_drift`, including
 the copied-checkout, generator-order and refusal controls. In a disposable
 source copy, change a Meson identity input, regenerate, and verify that the
@@ -495,9 +516,9 @@ directory can remain inert after rollback.
 
 ## Shared verification procedures
 
-### Compiler/linker policy for review
+### Compiler/linker policy
 
-Recommend explicit consequential settings plus a documented, narrow set of
+Require explicit consequential settings plus a documented, narrow set of
 accepted backend additions. Preserve optimization/debug levels, language and
 module settings, sandbox linkage, and Apple compiler/macOS SDK selection;
 compare effective compile/link commands and platform targets as well as output
@@ -505,7 +526,7 @@ structure. Bare `clang -c` already relies on compiler/platform defaults, so
 requiring every compiler decision to appear as an explicit flag is not a
 meaningful equivalence rule.
 
-For Meson 1.12.1, recommend `b_asneeded=false` to remove the additional
+Set `b_asneeded=false` to remove Meson 1.12.1's additional
 `-dead_strip_dylibs`: unused-library removal is a semantic link decision
 that this migration does not need. Accept and document
 `-headerpad_max_install_names` as an Apple-backend addition, subject to the
@@ -520,8 +541,10 @@ The recorded shim command and a fresh minimal probe contain no added
 has no effect on macOS. Preserve the shim's existing optimization/debug/ABI
 settings and inspect the actual command; `pic: false` would add no protection.
 The [built-in options](https://mesonbuild.com/Builtin-options.html#base-options)
-describe `b_asneeded` and other configurable policies. This recommendation
-awaits review; structural similarity is not blanket acceptance of new flags.
+describe `b_asneeded` and other configurable policies. Record accepted argument
+differences with the comparison evidence and explain their purpose beside the
+manifest settings. Any new consequential difference requires explicit review;
+structural similarity is not blanket acceptance of new flags.
 
 ### Structural and artifact comparison
 
@@ -537,8 +560,8 @@ The probe reported Meson adding
 `-Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names`. Its C output bytes
 differed from the old path despite matching measured structure and behaviour.
 Repeated direct Swift builds also differed in bytes. Therefore whole-binary
-byte equality is not the acceptance gate. Recheck outputs under the chosen
-flag policy; the probe's use of defaults does not settle that policy.
+byte equality is not the acceptance gate. Recheck outputs under the settled
+flag policy; the probe's default link arguments are not the production policy.
 
 For assembled apps, require `tests/lib/artifact.py:inspect` to pass. Compare
 evidence-manifest `(id, kind, rel_path)` inventories and entitlements,
