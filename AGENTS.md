@@ -14,7 +14,7 @@ Pick what you’re changing:
 - **Runner API types** → [runner/Sources/PWRunnerCore/PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
 - **Query/attempt ordering (release barrier, `comparison.order`)** → [tests/FAILURE-PROPAGATION-CONTRACT.md → The record](tests/FAILURE-PROPAGATION-CONTRACT.md#the-record), [`wait_for_proceed`](controller/tools/pw_probe_runner/pw_probe_runner.c) in pw_probe_runner.c, the post-applied hook in [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [`ComparisonEvidence`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) in CWorkerOrchestrator.swift
 - **Runner client (NSXPCConnection wrapper)** → [runner/Clients/PWRunnerClient/](runner/Clients/PWRunnerClient/)
-- **Build + signing** → [build.sh](build.sh), [docs/SIGNING.md](docs/SIGNING.md)
+- **Build + signing** → [build.sh](build.sh), [meson.build](meson.build), [docs/SIGNING.md](docs/SIGNING.md)
 - **Release (tag preflight, notarize, archive, rotate, publish)** → [Makefile](Makefile), [docs/SIGNING.md → Release procedure](docs/SIGNING.md#release-procedure), `release_preflight.py`, `release_archive.py`, `release_runs.py`, `release_cleanup.py`, `release_rotate.py` and `release_publish.py` under [tests/lib/](tests/lib/)
 - **Scratch work** → [.tmp/AGENTS.md](.tmp/AGENTS.md); scratch contents are disposable, except that tracked policy file.
 - **Distribution output + release archives** → [dist/README.md](dist/README.md), [dist/AGENTS.md](dist/AGENTS.md)

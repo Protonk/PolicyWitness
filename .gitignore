@@ -6,6 +6,10 @@
 # da mac
 .DS_Store
 
+# Meson build directories (builddir for production, builddir-* for alternate
+# toolchains). Configuration and incremental outputs only; never an input.
+/builddir*/
+
 # controller (Rust)
 controller/target
 /controller/tools/pw_probe_runner/pw-probe-runner

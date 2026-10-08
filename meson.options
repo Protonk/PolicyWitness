@@ -1,0 +1,8 @@
+# The two supported build variants. build.sh maps its public knobs onto these:
+# PW_INSPECTION onto inspection, BUILD_XPC onto xpc. Everything else about the
+# native compile is fixed in meson.build and refused if a configured directory
+# departs from it.
+option('inspection', type: 'boolean', value: true,
+  description: 'Swift inspection build: -Onone -g (true) or -O (false)')
+option('xpc', type: 'boolean', value: true,
+  description: 'Build the embedded XPC pieces: the Swift client and host and the C shim')

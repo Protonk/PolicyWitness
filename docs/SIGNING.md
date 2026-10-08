@@ -31,6 +31,66 @@ Key requirements:
   pass `YOLO=1` to auto-select the first matching identity.
 - Xcode Command Line Tools are required (`swiftc` is discovered via `xcrun`).
 
+### Comparison build with Meson (optional)
+
+The root [meson.build](../meson.build) and [meson.options](../meson.options)
+describe the native compile: the C worker and validator, the C shim and the
+two Swift executables. Production does not use it yet: `build.sh` still
+compiles every shipped binary itself, and the Meson files are not identity
+inputs. The manifest exists so the native source and dependency graph can be
+inspected and so comparison copies can be built outside the source tree.
+
+It needs Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson
+ninja`) beside the Apple toolchain `build.sh` already requires. Select the SDK
+the way `build.sh` does, then configure and compile into the ignored
+`builddir/`:
+
+```sh
+SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir
+meson compile -C builddir
+```
+
+Two options are supported: `-Dinspection=false` mirrors `PW_INSPECTION=0`
+(Swift `-O` instead of `-Onone -g`), and `-Dxpc=false` mirrors `BUILD_XPC=0`
+(the two C executables only; Swift is never discovered). Every other native
+setting is fixed in `meson.build` and checked as an effective value on setup,
+reconfiguration and compile-triggered regeneration; `meson configure` with any
+other change, `CFLAGS` or `-Dc_args=...` in the environment, a sanitizer or a
+different buildtype makes the next command refuse with a message naming the
+setting. Executables are linked with `b_asneeded=false` declared per target,
+so a global value cannot add `-dead_strip_dylibs`. Meson adds
+`-headerpad_max_install_names` and `-fdiagnostics-color` of its own; those are
+the accepted backend additions, and the comparison scripts record the effective
+commands so any further difference is visible.
+
+Toolchain selection is the operator's responsibility and is not fingerprinted.
+Keep separate build directories for the Command Line Tools and Xcode, and use
+a fresh directory, or `meson setup --wipe`, after changing the selected
+compiler or SDK; reuse a directory for incremental builds under one selection:
+
+```sh
+DEVELOPER_DIR=/Library/Developer/CommandLineTools \
+SDKROOT="$(DEVELOPER_DIR=/Library/Developer/CommandLineTools xcrun --sdk macosx --show-sdk-path)" \
+meson setup builddir-clt
+```
+
+Meson discovers Swift by compiling a sanity program with swiftc's default
+module cache; the targets themselves use `builddir/swift-module-cache`.
+
+Four scripts under `tests/lib/` support a comparison:
+`meson_receipts.py BUILDDIR OUT` records tool versions, the resolved
+toolchain, the manifest and options, effective build options, declared and
+active targets, every compile and link command and the output hashes;
+`native_compare.py exe CANDIDATE BASELINE` compares two executables by
+structure (libraries, load commands, segments and sections, code and data
+sizes, undefined symbols, `_sandbox_*` imports and Swift module names) and
+`native_compare.py app CANDIDATE BASELINE` compares two assembled apps;
+`native_substitute.py` makes a signed, disposable copy of an app with the four
+native executables replaced, for `PW_APP_DIR` test runs; and
+`envelope_compare.py` runs the request fixtures through two apps and compares
+the envelopes with every excluded field path stated by class. Byte equality is
+not the comparison: repeated Swift builds of identical sources differ in bytes.
+
 ## What `build.sh` signs
 
 Signing is “inside-out”:
