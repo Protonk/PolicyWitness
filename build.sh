@@ -4,8 +4,8 @@ set -euo pipefail
 # Build and sign PolicyWitness.app with a clear, single-path flow.
 #
 # Inputs (environment variables):
-#   IDENTITY   Developer ID Application identity string in your keychain.
-#   YOLO=1     Auto-select the first Developer ID Application identity.
+#   IDENTITY   Developer ID Application identity string in your login keychain;
+#              any other identity class is refused and nothing is auto-selected.
 #   BUILD_XPC  Set to 0 to skip building/embedding the XPC service and client;
 #              mapped to Meson's xpc option. The two C executables still build.
 #   PW_INSPECTION=1  Keep debug info and frame pointers (default); mapped to
@@ -85,9 +85,7 @@ NINJA_MINIMUM="1.13.2"
 usage() {
   cat <<'USAGE'
 usage:
-  ./build.sh
   IDENTITY='Developer ID Application: ...' ./build.sh
-  YOLO=1 ./build.sh
   PW_INSPECTION=0 IDENTITY='Developer ID Application: ...' ./build.sh
 USAGE
 }
@@ -160,40 +158,32 @@ check_minimum_macos() {
   fi
 }
 
-# Select and verify the signing identity.
+# Select and verify the signing identity: an explicit Developer ID Application
+# identity present in the login keychain. Nothing is auto-selected, and any
+# other identity class is refused here, before Cargo runs (docs/SIGNING.md).
 IDENTITY="${IDENTITY:-}"
 if [[ -z "${IDENTITY}" ]]; then
-  if [[ "${YOLO:-}" == "1" ]]; then
-    IDENTITY="$(/usr/bin/security find-identity -v -p codesigning | /usr/bin/awk -F'"' '/Developer ID Application:/{print $2; exit}')"
-    if [[ -z "${IDENTITY}" ]]; then
-      cat <<'EOM' 1>&2
-ERROR: YOLO=1 could not find a Developer ID Application identity.
-
-Run:
-  security find-identity -v -p codesigning
-
-Then set IDENTITY explicitly or install/unlock the identity in your keychain.
-EOM
-      exit 2
-    fi
-    echo "==> Using codesign identity (YOLO=1): ${IDENTITY}"
-  else
-    cat <<'EOM' 1>&2
+  cat <<'EOM' 1>&2
 ERROR: IDENTITY is not set.
 
 Set it to your Developer ID Application identity string, for example:
   IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' ./build.sh
 
-Or re-run with YOLO=1 to auto-select the first Developer ID Application identity:
-  YOLO=1 ./build.sh
-
 You can find valid identities via:
   security find-identity -v -p codesigning
 EOM
-    exit 2
-  fi
+  exit 2
 fi
+if [[ "${IDENTITY}" != "Developer ID Application: "* ]]; then
+  cat <<EOM 1>&2
+ERROR: IDENTITY must name a Developer ID Application identity; got:
+  ${IDENTITY}
 
+Other identity classes (Apple Development, Mac Developer, ad hoc, self-signed)
+produce an app the tests and notarization reject; see docs/SIGNING.md.
+EOM
+  exit 2
+fi
 if ! /usr/bin/security find-identity -v -p codesigning 2>/dev/null | /usr/bin/grep -Fq "\"${IDENTITY}\""; then
   cat <<EOM 1>&2
 ERROR: codesigning identity not found in your keychain:
@@ -439,19 +429,26 @@ if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then
   exit 2
 fi
 
-# Sign a Mach-O binary if it exists; ignore non-binaries.
+# Sign one Mach-O named by the signing list. The list names exactly the
+# executables this build produced, so a missing or non-Mach-O target is a
+# refusal, never a skip.
 sign_macho() {
   local target="$1"
-  if [[ ! -e "${target}" ]]; then
-    return 0
+  if [[ ! -f "${target}" ]]; then
+    echo "ERROR: expected a Mach-O to sign at ${target}" 1>&2
+    exit 2
   fi
-  if /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
-    codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"
+  if ! /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
+    echo "ERROR: ${target} is not a Mach-O; the signing list names only executables" 1>&2
+    exit 2
   fi
+  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"
 }
 
 echo "==> Codesigning embedded MacOS tools"
-sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
+if [[ "${BUILD_XPC}" == "1" ]]; then
+  sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
+fi
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 
@@ -522,7 +519,7 @@ DONE:
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
 Next (see docs/SIGNING.md; make notarize builds again):
-  make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
+  make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'
   # For this existing ZIP, follow the individual steps in docs/SIGNING.md.
   # Keep their receipts in one ${DIST_DIR}/evidence/<attempt>/ directory.
 EOF

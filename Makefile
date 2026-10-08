@@ -15,8 +15,8 @@
 #   publish   Push the tag and create the GitHub release from an archive.
 #
 # Variables (set on the command line, e.g. make release NOTARY_KEYCHAIN_PROFILE=...)
-#   IDENTITY                 Developer ID Application identity in your keychain.
-#   YOLO=1                   Let build.sh pick the first such identity instead.
+#   IDENTITY                 Developer ID Application identity in your keychain;
+#                            build.sh refuses any other class and selects nothing.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
 #   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land.
 #   RELEASE_NOTES            Notes file. release archives it as evidence/release-notes.md;
@@ -42,7 +42,6 @@
 
 # Defaults. The header says what each one means; IDENTITY has no default.
 NOTARY_KEYCHAIN_PROFILE ?=
-YOLO ?=
 DIST_DIR ?= dist
 RELEASE_NOTES ?=
 VERSION ?=
@@ -52,14 +51,13 @@ VERSION ?=
 # generated evidence. The guard mirrors build.sh's own identity
 # requirement so the message names the make invocation to use.
 build:
-	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
-		echo "ERROR: set IDENTITY or opt-in to auto selection with YOLO=1"; \
+	@if [ -z "$(IDENTITY)" ]; then \
+		echo "ERROR: set IDENTITY to your Developer ID Application identity"; \
 		echo "example: make build IDENTITY='Developer ID Application: ...'"; \
-		echo "example: make build YOLO=1"; \
 		exit 2; \
 	fi
 	@echo "==> [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
-	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" YOLO="$(YOLO)" ./build.sh
+	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" ./build.sh
 
 # clean: not rm -rf. It delegates to the pruner, which removes only completed,
 # owned, unretained direct children of tests/out/runs/ and keeps release
@@ -89,13 +87,12 @@ test:
 notarize:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
 		echo "ERROR: set NOTARY_KEYCHAIN_PROFILE to your notarytool keychain profile name"; \
-		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1"; \
+		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'"; \
 		exit 2; \
 	fi
-	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
-		echo "ERROR: set IDENTITY or opt-in to auto selection with YOLO=1"; \
+	@if [ -z "$(IDENTITY)" ]; then \
+		echo "ERROR: set IDENTITY to your Developer ID Application identity"; \
 		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'"; \
-		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1"; \
 		exit 2; \
 	fi
 	@echo "==> [notarize] preflight report for $(DIST_DIR)"
@@ -128,7 +125,7 @@ notarize:
 release:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
 		echo "ERROR: set NOTARY_KEYCHAIN_PROFILE to your notarytool keychain profile name"; \
-		echo "example: make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1 RELEASE_NOTES=notes.md"; \
+		echo "example: make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...' RELEASE_NOTES=notes.md"; \
 		exit 2; \
 	fi
 # Stop before anything builds or is submitted; notarize prints the report again.

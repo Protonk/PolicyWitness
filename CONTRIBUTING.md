@@ -19,7 +19,7 @@ A release is one annotated tag on `main` plus a GitHub release made from it:
 ```sh
 git tag -a vX.Y.Z -m "PolicyWitness X.Y.Z"
 git push origin main vX.Y.Z
-make notarize NOTARY_KEYCHAIN_PROFILE=<profile> YOLO=1   # see docs/SIGNING.md
+make notarize NOTARY_KEYCHAIN_PROFILE=<profile> IDENTITY='Developer ID Application: ...'   # see docs/SIGNING.md
 gh release create vX.Y.Z PolicyWitness-X.Y.Z.zip SHA256SUMS --title "PolicyWitness X.Y.Z"
 ```
 

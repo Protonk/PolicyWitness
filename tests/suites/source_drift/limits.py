@@ -316,7 +316,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         path.write_text(path.read_text().replace('262,143', '262,144', 1))
         destination = root / 'dist'
         result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-            env={**os.environ, 'IDENTITY': '', 'YOLO': '', 'DIST_DIR': str(destination)},
+            env={**os.environ, 'IDENTITY': '', 'DIST_DIR': str(destination)},
             capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('stale PolicyWitness.md', result.stderr)

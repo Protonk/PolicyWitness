@@ -493,6 +493,42 @@ See `tests/suites/dispatcher/README.md` for the independent controls.
 controls. Existing `runner_validator_failure` and `witness_contract` retain their
 partial evidence and attribution assertions.
 
+## Comparing native builds
+
+Four scripts under `tests/lib/` compare one native build with another;
+they were written for the Meson migration and remain the way to argue that
+two builds of the same sources agree. `meson_receipts.py BUILDDIR OUT`
+records tool versions, the resolved toolchain, the manifest and options,
+effective build options, declared and active targets, every compile and link
+command, the output hashes and minimum versions, and each output's entry in
+Ninja's log. `native_compare.py exe CANDIDATE BASELINE` compares two
+executables by structure (libraries with their versions, load commands,
+segments and sections, code and data sizes, undefined symbols, `_sandbox_*`
+imports and Swift module names) and `native_compare.py app CANDIDATE
+BASELINE` compares two assembled apps; with `--across-builds` the sizes are
+recorded rather than enforced because the sources differ, and attributing
+those differences to source changes is a separate review. The offline
+`blackbox_e2e/native_comparison_controls` case checks the structural
+comparer's boundaries. `native_substitute.py` makes a signed, disposable
+copy of an app with the four native executables replaced, for `PW_APP_DIR`
+test runs. `envelope_compare.py` runs the request fixtures through two apps
+and compares their envelopes: field presence, types and list lengths must
+agree, including empty containers; permitted scalar differences are reported
+by class; client commands and arguments must agree except for the executable
+path and service name, which must match each envelope's provenance; the log
+predicate may differ only in its recorded worker PID. The offline
+`blackbox_e2e/comparison_controls` case checks those boundaries.
+
+Structural comparison does not establish behavioral equivalence: run the live
+battery against the candidate, including the worker and ordering cases that
+exercise the Swift-to-C shim. Repeated Swift builds of identical sources can
+differ in bytes.
+
+Two checks read `meson.build` and therefore need Meson on `PATH`, declared as
+equipment in the catalog: the `source_drift` suite compares every target's
+source list with the tree, and the opt-in order-barrier mutation control
+compiles its hosts from the host's list.
+
 ## Comparison evidence coverage
 
 The comparison record's scenarios live in one fixture,

@@ -16,24 +16,38 @@ builds also copy its README and AGENTS.md into a custom `DIST_DIR`.
 Preferred entrypoint:
 
 ```sh
-make build
-# or:
-make build YOLO=1
+make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 # or:
 IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
-# or:
-YOLO=1 ./build.sh
 ```
 
-Key requirements:
+Requirements:
 
-- `IDENTITY` must be set to a **Developer ID Application** identity present in your keychain, or
-  pass `YOLO=1` to auto-select the first matching identity.
-- Xcode Command Line Tools are required; `clang` and `swiftc` come from the
-  selected developer directory and the macOS SDK that `xcrun --sdk macosx`
-  reports.
-- Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson ninja`)
-  compile the native executables; see [Native compile with Meson](#native-compile-with-meson).
+- `IDENTITY` names a **Developer ID Application** identity present in your
+  login keychain. Nothing is selected automatically and any other identity
+  class is refused; the rules are under [What `build.sh` signs](#what-buildsh-signs).
+- Xcode Command Line Tools; `clang` and `swiftc` come from the selected
+  developer directory and the macOS SDK that `xcrun --sdk macosx` reports.
+- Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson ninja`).
+  `meson.build` enforces Meson's minimum and `build.sh` Ninja's.
+- The two knobs, `BUILD_XPC` and `PW_INSPECTION`, take exactly `0` or `1`; any
+  other spelling is refused rather than read as one of them.
+
+The order is fixed: documentation checks, identity generation, git stamp, the
+supported macOS from `Info.plist`, signing identity, Cargo, Meson, the
+configured source and closure check, bundle assembly, identity check, nested
+signing, evidence, outer seal and verification, the standalone observer,
+guide, ZIP. Each refusal precedes the step it protects: stale documents stop
+the build before any compile, a bad identity before Cargo, a wrong source list
+or closure before any output is copied, a wrong minimum version before
+signing.
+
+`PW_INSPECTION=1` (default) builds Swift with `-Onone -g`, gives the Rust
+tools debug info, frame pointers and `opt-level=1` unless `RUSTFLAGS` is
+already set, and leaves a `.dSYM` beside each Swift executable in the bundle;
+`PW_INSPECTION=0` builds Swift with `-O` and omits the dSYMs. The C executables
+are `-O2` without debug info in both variants. The knob is not one setting
+across languages.
 
 ### Sandboxed automation harnesses
 
@@ -65,37 +79,31 @@ introspection, which discovers no compiler at all.
 The root [meson.build](../meson.build) and [meson.options](../meson.options)
 own the native compile: the C worker and validator, the C shim and the two
 Swift executables, with their source lists, module names and flags. Both
-files are host/worker identity inputs. `build.sh` runs Meson after the
-documentation checks, identity generation and Cargo, into the ignored
-`builddir/`, and copies the four executables from there into the bundle; the
-shim is linked into the host and is not a product. The order is fixed:
-documentation checks, identity generation, git stamp, signing identity,
-Cargo, Meson, bundle assembly, identity check, nested signing, evidence, outer
-seal and verification, guide, ZIP.
+files are host/worker identity inputs. `build.sh` runs Meson after Cargo into
+the ignored `builddir/` and copies the four executables from there into the
+bundle; the shim is linked into the host and is not a product.
 
 `build.sh` passes exactly two options on every build (`meson setup` the
 first time, `meson configure` afterwards, which regenerates only when a value
 changed), so a build directory never retains an earlier variant and an
-unchanged tree compiles nothing: `inspection` from `PW_INSPECTION` (Swift
-`-Onone -g` when set, `-O` otherwise) and `xpc` from `BUILD_XPC` (false skips
-the Swift client and host and the shim; the two C executables still build and
-no Swift compiler is discovered). Every other native setting is fixed in
-`meson.build` and checked as an effective value on setup and on every
-regeneration: `meson configure` with any other change, `-Dc_args=...`, a
-sanitizer, a changed optimization or debug level or a different buildtype
-label makes the next build refuse with a message naming the setting (the
-effective values are asserted before the label), before any output is copied
-or signed. Meson reads
-`CFLAGS` and the other environment flag variables only when a directory is
-first set up, and a fresh directory refuses them the same way. Executables are linked with `b_asneeded=false` declared per target, so
-a global value cannot add `-dead_strip_dylibs`. Meson adds
-`-headerpad_max_install_names` and `-fdiagnostics-color` of its own, compiles
-and links in separate steps and tracks included headers; those are the
-accepted backend additions, and `tests/lib/meson_receipts.py` records the
-effective commands so any further difference is visible. Because the link is
-a separate step, swiftc no longer runs `dsymutil` itself; `build.sh` runs it
-for inspection builds so each Swift executable keeps its `.dSYM` beside it in
-the bundle, as before.
+unchanged tree compiles nothing: `inspection` from `PW_INSPECTION` and `xpc`
+from `BUILD_XPC` (false skips the Swift client and host and the shim; the two
+C executables still build and no Swift compiler is discovered). Every other
+native setting is fixed in `meson.build` and checked as an effective value on
+setup and on every regeneration: `meson configure` with any other change,
+`-Dc_args=...`, a sanitizer, a changed optimization or debug level or a
+different buildtype label makes the next build refuse with a message naming
+the setting (the effective values are asserted before the label), before any
+output is copied or signed. Meson reads `CFLAGS` and the other environment
+flag variables only when a directory is first set up, and a fresh directory
+refuses them the same way. Executables are linked with `b_asneeded=false`
+declared per target, so a global value cannot add `-dead_strip_dylibs`. Meson
+adds `-headerpad_max_install_names` and `-fdiagnostics-color` of its own,
+compiles and links in separate steps and tracks included headers; those are
+the accepted backend additions, and `tests/lib/meson_receipts.py` records
+the effective commands so any further difference is visible. Because the
+link is a separate step, swiftc no longer runs `dsymutil` itself; `build.sh`
+runs it for inspection builds.
 
 The supported macOS is the one this repository is tested on, declared in
 `Info.plist` as `LSMinimumSystemVersion` and pinned in `meson.build`, which
@@ -157,53 +165,65 @@ meson setup builddir-clt
 ```
 
 Meson discovers Swift by compiling a sanity program with swiftc's default
-module cache; the targets themselves use `builddir/swift-module-cache`.
-
-Two checks read the manifest and therefore need Meson: the `source_drift`
-suite compares the host and shim source lists with the tree, and the opt-in
-order-barrier mutation control compiles its hosts from that list.
-
-Four scripts under `tests/lib/` support comparing one native build with
-another:
-`meson_receipts.py BUILDDIR OUT` records tool versions, the resolved
-toolchain, the manifest and options, effective build options, declared and
-active targets, every compile and link command and the output hashes;
-`native_compare.py exe CANDIDATE BASELINE` compares two executables by
-structure (libraries, load commands, segments and sections, code and data
-sizes, undefined symbols, `_sandbox_*` imports and Swift module names) and
-`native_compare.py app CANDIDATE BASELINE` compares two assembled apps;
-`native_substitute.py` makes a signed, disposable copy of an app with the four
-native executables replaced, for `PW_APP_DIR` test runs; and
-`envelope_compare.py` runs the request fixtures through two apps and compares
-their envelopes. Field presence, types and list lengths must agree, including
-empty containers. Permitted scalar differences are reported by class. Client
-commands and arguments must agree except for the executable path and service
-name, which must match each envelope's provenance; the log predicate may differ
-only in its recorded worker PID. The offline
-`blackbox_e2e/comparison_controls` case checks these boundaries.
-
-Structural comparison does not establish behavioral equivalence: run the live
-battery against the candidate, including the worker and ordering cases that
-exercise the Swift-to-C shim. With `native_compare.py app --across-builds`, code
-and data sizes are recorded rather than enforced because the sources differ;
-source attribution of those differences requires a separate review. Repeated
-Swift builds of identical sources can differ in bytes.
+module cache; the targets themselves use `builddir/swift-module-cache`. The
+tools that compare one native build with another, and the two checks that
+read the manifest, are described under
+[comparing native builds](../tests/README.md#comparing-native-builds).
 
 ## What `build.sh` signs
 
-Signing is “inside-out”:
+**Identity.** `IDENTITY` must name a Developer ID Application identity and
+that identity must be listed by `security find-identity -v -p codesigning`.
+Any other class (Apple Development, Mac Developer, ad hoc, self-signed) is
+refused before Cargo runs, and nothing is ever selected automatically: the
+build signs with the identity you named or does not sign at all. The tests
+resolve their own identity separately (`PW_BYOXPC_IDENTITY`, then `IDENTITY`,
+then a keychain identity whose team matches the app's).
 
-1. Sign nested helper tools under the app's `Contents/MacOS/` (host-side tools).
-2. Sign helper tools embedded inside each runner service bundle, such as
-   `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner`.
-3. Sign the runner service bundle `Contents/XPCServices/PWRunner.xpc`.
-4. Sign the outer `.app` last.
+**Gates before any signature.** The three generated identity copies must be
+current (`generate_worker_identity.py --check`, refusing a source edit made
+during compilation), every shipped Mach-O must carry the plist's minimum
+macOS, and the configured source lists and closure must have matched the tree
+before assembly.
 
-Do not “fix” signing by adding `codesign --deep` to the signing steps. Explicitly sign the known nested binaries and then sign the outer app.
-When you add a new embedded helper under either the app's top-level
-`Contents/MacOS` or an XPC service's nested `Contents/MacOS`, add an
-explicit signing step in `build.sh`. Notarization will fail if any
-embedded tool remains ad hoc-signed.
+**Order.** Signing is “inside-out”, every signature with
+`--force --options runtime --timestamp` (the timestamp needs network access
+to Apple's timestamp service):
+
+1. The helper tools under the app's `Contents/MacOS/`: `pw-runner-client`
+   (when `BUILD_XPC=1`), `sandbox-log-observer`, `sbpl-check`.
+2. The helpers embedded inside each runner service bundle:
+   `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner` and
+   `sb_api_validator`.
+3. The service bundle `Contents/XPCServices/PWRunner.xpc`, with
+   `runner/Services/PWRunner/Entitlements.plist`.
+4. The evidence manifest, generated from the signed bytes of steps 1 to 3
+   (see [Evidence artifacts](#evidence-artifacts)).
+5. The outer `.app`, with `PolicyWitness.entitlements`, sealing everything
+   under `Contents/` including the manifest. The dSYM bundles beside the Swift
+   executables are sealed as resources; their DWARF files are not themselves
+   signed.
+6. `codesign --verify --deep --strict` of the result.
+7. The standalone `controller/target/release/sandbox-log-observer`, for
+   direct use from the checkout; it is not part of the bundle.
+
+`sign_macho` refuses a missing or non-Mach-O target: the signing list names
+exactly the executables this build produced. When you add a helper under
+either the app's top-level `Contents/MacOS` or an XPC service's nested
+`Contents/MacOS`, add it to that list in `build.sh`, to `EXECUTABLES` in
+`tests/lib/artifact.py`, to `tests/build-evidence.py` and to the README's
+inventory; notarization fails if any embedded tool remains ad hoc-signed.
+
+Do not “fix” signing by adding `codesign --deep` to the signing steps.
+Explicitly sign the known nested binaries and then sign the outer app.
+`--deep` would sign whatever happens to be nested, which is the opposite of
+a list.
+
+**What is never production-signed.** The manual validator debugger helper,
+`controller/tools/sb_api_validator/build.sh`, compiles the validator beside
+its source and ad hoc-signs it with `debug.ent` for local debugging. Its
+output is ignored by git, never enters the bundle, and is not the validator
+Meson builds.
 
 ## Evidence artifacts
 
@@ -212,7 +232,11 @@ During the build, `tests/build-evidence.py` generates:
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json`
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json`
 
-These are derived from the **actual signed binaries on disk** (hashes and entitlements extracted via `codesign -d --entitlements`), and are intended to make “what shipped” auditable.
+These are derived from the **actual signed binaries on disk** (hashes and
+entitlements extracted via `codesign -d --entitlements`), and are intended to
+make “what shipped” auditable. They are generated after the helpers and the
+service are signed and before the outer seal, so the manifest describes
+signed bytes and is itself sealed by the app signature.
 
 ## Release procedure
 
@@ -229,7 +253,7 @@ is reported as such; `--report` turns a growth refusal into a warning.
 
 ```sh
 git tag -a v0.2.4 -m "PolicyWitness 0.2.4"
-make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1 RELEASE_NOTES=/path/to/notes.md
+make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' RELEASE_NOTES=/path/to/notes.md
 git commit tests/RETAINED.json -m "Retain the 0.2.4 release evidence"
 make publish VERSION=0.2.4
 ```
@@ -343,8 +367,6 @@ findings as warnings rather than stopping, so a rehearsal still records what it
 stamps. For an already-built ZIP, use the individual steps below.
 
 ```sh
-make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
-# Or choose the signing identity explicitly:
 make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 ```
 
@@ -393,7 +415,7 @@ they do not cancel or classify work at Apple.
 
 ### Individual steps and manual equivalent
 
-Build once with `make build YOLO=1` (or an explicit `IDENTITY`). Then submit the
+Build once with `make build IDENTITY=...`. Then submit the
 existing ZIP with the bounded helper:
 
 ```sh

@@ -253,3 +253,17 @@ by design. In the same change `build.sh` refuses any `BUILD_XPC` or
 `PW_INSPECTION` spelling other than `0` and `1`, and refuses a Ninja older
 than the documented minimum.
 
+The audit's unnumbered signing observations were settled together. `build.sh`
+refuses any `IDENTITY` that is not a Developer ID Application identity and no
+longer selects one itself: `YOLO=1` is gone from the script, the Makefile and
+the documents. `sign_macho` refuses a missing or non-Mach-O target instead of
+skipping it, which exposed that the client's signing step ran unconditionally
+and was silently skipped under `BUILD_XPC=0`; it is now conditional. The
+signing document's build and signing sections were restructured so the
+signing contract (identity rules, the gates before any signature, the
+inside-out order including the standalone observer, what is sealed but
+unsigned, and the manual ad hoc validator helper) stands in one place; the
+comparison-tool prose moved to the tests README. A build-refusal control runs
+`build.sh` in a disposable checkout with other identity classes and requires
+the refusal after the documentation checks and before Cargo.
+

@@ -33,6 +33,17 @@ def limits_references():
     return {ref['path'] for row in manifest['limits'] for key in ('sources', 'checks') for ref in row[key]}
 
 
+def architecture_references():
+    """Everything the architecture check reads: the manifest, its generator, the document, the figures and every cited file."""
+    manifest = json.loads((ROOT / 'docs/architecture.json').read_text())
+    paths = {'docs/architecture.json', 'docs/generate_architecture.py', manifest['document']}
+    for graph in manifest['graphs']:
+        paths |= {f"docs/{graph['file']}.dot", f"docs/{graph['file']}.svg"}
+        for item in graph['nodes'] + graph['edges']:
+            paths |= {ref['path'] for key in ('sources', 'checks') for ref in item[key]}
+    return paths
+
+
 class ContractVersionTests(unittest.TestCase):
     def setUp(self):
         self.manifest_path = ROOT / 'docs/contract.json'
@@ -208,12 +219,31 @@ class ContractVersionTests(unittest.TestCase):
         self.assertIn('reply', golden['shape'])
         self.assertEqual(golden['shape']['reply']['schema_version'], 'number')
 
+    def test_build_refuses_a_non_developer_id_identity_before_cargo(self):
+        """Every check before the identity step passes in the checkout; the identity class stops the build."""
+        extra = LIMITS_FILES | limits_references() | architecture_references() | {'Info.plist', 'meson.build', 'meson.options'}
+        extra |= set(identity_generator.source_paths(ROOT)) | set(identity_generator.TARGETS)
+        root = self.checkout(extra=extra)
+        destination = root / 'dist'
+        for identity in ('Apple Development: Nobody (TEAMID00AA)', 'Mac Developer: Nobody (TEAMID00AA)', '-'):
+            with self.subTest(identity=identity):
+                result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
+                    env={**os.environ, 'IDENTITY': identity, 'DIST_DIR': str(destination)},
+                    capture_output=True, text=True, timeout=120)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn('Generating host/worker identity', result.stdout)
+                self.assertIn('Build stamp', result.stdout)
+                self.assertIn('must name a Developer ID Application identity', result.stderr)
+                self.assertNotIn('Building Rust', result.stdout)
+                self.assertFalse(destination.exists())
+                self.assertFalse((root / 'builddir').exists())
+
     def test_build_refuses_stale_contract_copy_before_signing_or_creating_output(self):
         root = self.checkout(extra=LIMITS_FILES | limits_references())
         self.stale_copy(root, 'controller/src/json_contract.rs')
         destination = root / 'dist'
         result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-            env={**os.environ, 'IDENTITY': '', 'YOLO': '', 'DIST_DIR': str(destination)},
+            env={**os.environ, 'IDENTITY': '', 'DIST_DIR': str(destination)},
             capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('Checking limits documentation', result.stdout)
