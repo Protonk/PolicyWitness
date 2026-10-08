@@ -241,3 +241,15 @@ substituted worker file in both readings. Both check membership only; the
 manifest's identity and the receipts' effective commands remain the review
 surface for what the compiler does to those files.
 
+Audit finding F8 was closed afterwards. The identity generator refuses a
+symlink under its two directories instead of walking past it, and the
+build-directory reading of `tests/lib/native_sources.py` now also checks the
+compile's closure for the worker and the shim from Ninja's dependency log:
+every repository file the compiler consumed must be a digest input, which
+names an include reaching outside the digest's directories through a symlink
+or by a relative path. The planner's configured controls compile the copied
+checkout and exercise both escapes. The validator stays outside the identity
+by design. In the same change `build.sh` refuses any `BUILD_XPC` or
+`PW_INSPECTION` spelling other than `0` and `1`, and refuses a Ninja older
+than the documented minimum.
+

@@ -112,9 +112,14 @@ After compiling, `build.sh` reads the configured directory's targets, the
 ones Meson actually evaluated, and refuses unless every target's sources are
 exactly the files the tree holds for it; a manifest that compiles a
 substitute, or a dead declaration standing in for a live one, stops there,
-before any output is copied. The `source_drift` suite applies the same
-expectation to the manifest read without a build directory, through the
-shared reader in `tests/lib/native_sources.py`. Both check membership only.
+before any output is copied. The same check reads Ninja's dependency log for
+the worker and the shim: every repository file the compiler consumed must be
+an identity digest input, so an include that reaches outside the digest's
+directories, by a relative path or through a symlink, stops the build as well.
+The `source_drift` suite applies the source-list expectation to the manifest
+read without a build directory, through the shared reader in
+`tests/lib/native_sources.py`. Both check membership, not what the compiler
+does with those files.
 
 `builddir/` and `controller/target/` are incremental build directories and
 trusted working state, like the checkout they sit in. The build reads them:

@@ -17,17 +17,27 @@ its directory, and the client, worker and validator their single known
 files. This is a membership check. What the compiler does to those files is
 the manifest's business, reviewed through its identity and the receipts.
 
+The build-directory reading also checks the compile's closure for the
+identity's C side: every repository file the compiler consumed for the worker
+and the shim, as Ninja's dependency log records it, must be an identity
+digest input. An include that reaches outside the digest's directories, by a
+relative path or through a symlink, is named; the validator is outside the
+identity by design and is not checked. Dependencies must have been recorded by
+a completed compile.
+
     native_sources.py [--manifest meson.build] [--builddir DIR]
 
-Exit 1 with one line per problem; exit 2 when Meson cannot be read.
+Exit 1 with one line per problem; exit 2 when Meson or Ninja cannot be read.
 """
 import argparse
+import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+IDENTITY_TARGETS = ('pw-probe-runner', 'PWCWorkerShim')
 CORE_DIR = 'runner/Sources/PWRunnerCore'
 SHIM_DIR = 'runner/Sources/PWCWorkerShim'
 API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
@@ -91,8 +101,61 @@ def active_targets(builddir, label='builddir'):
     info = json.loads((builddir / 'meson-info/meson-info.json').read_text())
     root = Path(info['directories']['source'])
     options = {o['name']: o['value'] for o in json.loads(introspect(['meson', 'introspect', str(builddir), '--buildoptions'], root))}
-    targets, problems = parse_targets(introspect(['meson', 'introspect', str(builddir), '--targets'], root), root, label)
-    return targets, problems, root, bool(options.get('xpc', True))
+    listing = introspect(['meson', 'introspect', str(builddir), '--targets'], root)
+    targets, problems = parse_targets(listing, root, label)
+    filenames = {t['name']: t['filename'] for t in json.loads(listing)}
+    return targets, problems, root, bool(options.get('xpc', True)), filenames
+
+
+def identity_inputs(root):
+    """The digest's input paths, read from the generator so the two cannot drift."""
+    spec = importlib.util.spec_from_file_location('generate_worker_identity', Path(root) / 'docs/generate_worker_identity.py')
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    return set(generator.source_paths(Path(root)))
+
+
+def recorded_dependencies(builddir, root):
+    """Ninja's dependency log: per object, whether it is current and what the compiler consumed."""
+    blocks, current = {}, None
+    for line in introspect(['ninja', '-C', str(builddir), '-t', 'deps'], root).splitlines():
+        if line and not line[0].isspace():
+            name, _, rest = line.partition(': #deps')
+            current = blocks[name] = dict(valid='(VALID)' in rest, deps=[])
+        elif current is not None and line.strip():
+            current['deps'].append(line.strip())
+    return blocks
+
+
+def closure_problems(builddir, root, targets, filenames, label):
+    """Every repository file the compiler consumed for an identity target is a digest input."""
+    builddir, root = Path(builddir).resolve(), Path(root).resolve()
+    try:
+        digest = identity_inputs(root)
+    except ValueError as exc:
+        return [f'  {label}: {exc}']
+    blocks = recorded_dependencies(builddir, root)
+    out = []
+    for name in IDENTITY_TARGETS:
+        if name not in targets:
+            continue
+        objdir = Path(filenames[name][0]).name + '.p/'
+        objects = {obj: block for obj, block in blocks.items() if obj.startswith(objdir)}
+        if not objects:
+            out.append(f"  {label}: no recorded dependencies for {name}; compile before checking the closure")
+        for obj, block in sorted(objects.items()):
+            if not block['valid']:
+                out.append(f"  {label}: recorded dependencies of {obj} are stale; compile before checking the closure")
+                continue
+            for dep in block['deps']:
+                path = (builddir / dep).resolve()
+                try:
+                    relative = path.relative_to(root).as_posix()
+                except ValueError:
+                    continue  # the SDK and the toolchain
+                if relative not in digest:
+                    out.append(f"  {label}: {name} consumed '{relative}' which is not an identity input")
+    return out
 
 
 def expected(root, xpc=True):
@@ -126,8 +189,9 @@ def main():
     args = parser.parse_args()
     try:
         if args.builddir:
-            targets, found, root, xpc = active_targets(args.builddir)
+            targets, found, root, xpc, filenames = active_targets(args.builddir)
             found += problems(targets, expected(root, xpc), 'builddir')
+            found += closure_problems(args.builddir, root, targets, filenames, 'builddir')
             where = f"{args.builddir} (xpc={'true' if xpc else 'false'})"
         else:
             manifest = args.manifest or ROOT / 'meson.build'
@@ -142,7 +206,8 @@ def main():
         for line in found:
             print(line, file=sys.stderr)
         return 1
-    print(f'ok: {len(targets)} native targets carry exactly the tree\'s sources ({where})')
+    closure = ' and the identity targets consumed only digest inputs' if args.builddir else ''
+    print(f'ok: {len(targets)} native targets carry exactly the tree\'s sources{closure} ({where})')
     return 0
 
 

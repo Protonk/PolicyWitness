@@ -65,9 +65,22 @@ PW_PROBE_RUNNER_BIN="${MESON_BUILD_DIR}/pw-probe-runner"
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
 
-# Build knobs.
+# Build knobs: exactly 0 or 1. Any other spelling is refused rather than read
+# as one of them.
 BUILD_XPC="${BUILD_XPC:-1}"
 PW_INSPECTION="${PW_INSPECTION:-1}"
+for knob in BUILD_XPC PW_INSPECTION; do
+  case "${!knob}" in
+    0|1) ;;
+    *)
+      echo "ERROR: ${knob} must be 0 or 1 (got '${!knob}')" 1>&2
+      exit 2
+      ;;
+  esac
+done
+
+# The Ninja minimum docs/SIGNING.md states; meson.build states Meson's own.
+NINJA_MINIMUM="1.13.2"
 
 usage() {
   cat <<'USAGE'
@@ -251,6 +264,12 @@ if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; the
   echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md" 1>&2
   exit 2
 fi
+NINJA_VERSION="$(ninja --version)"
+if ! /usr/bin/python3 -c 'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)' \
+    "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then
+  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2
+  exit 2
+fi
 export SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
   echo "==> Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
@@ -264,9 +283,12 @@ meson compile -C "${MESON_BUILD_DIR}"
 # What Meson evaluated must be the tree: every configured target's sources
 # are compared with the repository, so a manifest that compiles a substitute
 # or a dead declaration standing in for a live one refuses here, before any
-# output is copied. The source_drift suite applies the same expectation to the
-# manifest read without a build directory.
-echo "==> Checking the configured native source lists against the tree"
+# output is copied. The same check reads Ninja's dependency log: every
+# repository file the compiler consumed for the worker and the shim must be an
+# identity digest input, so an include reaching outside the digest's
+# directories refuses too. The source_drift suite applies the source-list
+# expectation to the manifest read without a build directory.
+echo "==> Checking the configured native source lists and the identity closure against the tree"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}"
 for native_bin in "${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}"; do
   if [[ ! -x "${native_bin}" ]]; then

@@ -35,10 +35,19 @@ def bounds(text):
 
 
 def source_paths(root):
+    """Every digest input. The walk covers ordinary files beneath the two
+    directories and refuses a symlink there, because the compiler would follow
+    it to bytes this digest never sees; the build separately checks that the
+    compiler consumed nothing in the repository beyond these paths."""
     paths = set(SOURCE_FILES)
     for directory in SOURCE_DIRS:
-        found = {p.relative_to(root).as_posix() for p in (root / directory).rglob("*")
-                 if p.suffix in (".c", ".h", ".swift") and p.is_file()}
+        found = set()
+        for p in (root / directory).rglob("*"):
+            if p.is_symlink():
+                raise ValueError(f"symlink under identity sources: {p.relative_to(root).as_posix()}; "
+                                 "the digest covers ordinary files beneath its directories")
+            if p.suffix in (".c", ".h", ".swift") and p.is_file():
+                found.add(p.relative_to(root).as_posix())
         if not found:
             raise ValueError(f"missing protocol sources: {directory}")
         paths.update(found)

@@ -287,6 +287,23 @@ class WorkerIdentityTests(unittest.TestCase):
                 self.assertEqual(self.command(root).returncode, 0)
                 self.assertEqual(self.command(root, '--check').returncode, 0)
 
+    def test_symlinks_under_identity_sources_are_refused(self):
+        for label, make in (('directory', lambda link: link.symlink_to('../../../outside')),
+                            ('file', lambda link: link.symlink_to('../../../outside/helper.h'))):
+            with self.subTest(symlink=label):
+                root = self.checkout()
+                (root / 'outside').mkdir()
+                (root / 'outside/helper.h').write_text('#define OUTSIDE 1\n')
+                link = root / 'controller/tools/pw_probe_runner/link.h' if label == 'file' else root / 'controller/tools/pw_probe_runner/link'
+                make(link)
+                with self.assertRaises(ValueError):
+                    identity_generator.identity(root)
+                result = self.command(root, '--check')
+                self.assertEqual(result.returncode, 1)
+                self.assertIn('symlink under identity sources: controller/tools/pw_probe_runner/link', result.stderr)
+                result = self.command(root)
+                self.assertEqual(result.returncode, 1)
+
     def test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs(self):
         root = self.checkout()
         expected = identity_generator.identity(root)

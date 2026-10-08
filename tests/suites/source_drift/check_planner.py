@@ -15,7 +15,7 @@ def main(out):
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
     paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md', 'docs/SIGNING.md',
-             'tests/lib/native_sources.py', 'controller/tools/pw_probe_runner/pw_probe_runner.c',
+             'tests/lib/native_sources.py', 'docs/generate_worker_identity.py', 'controller/tools/pw_probe_runner/pw_probe_runner.c',
              'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
              'controller/tools/sb_api_validator/sb_api_validator.c',
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
@@ -141,35 +141,65 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
 
 
 def configured_controls(repo, manifest_original, worker_line, out):
-    """The configured-directory reading build.sh uses: what Meson evaluated must be the tree.
+    """The configured-directory reading build.sh uses: what Meson evaluated must be the tree,
+    and what the compiler consumed for the worker must be in the identity.
 
-    xpc=false configures only the two C executables, so these controls need
-    no Swift discovery. The unmodified manifest passes; a worker declaration
-    pointing at a substitute file, present on disk so Meson accepts it, is
-    refused by name."""
+    xpc=false configures and compiles only the two C executables, so these
+    controls need no Swift discovery. The unmodified manifest passes; a worker
+    declaration pointing at a substitute file, present on disk so Meson accepts
+    it, is refused by name; a worker include reaching outside the digest's
+    directories through a symlinked directory, or by a relative path, is
+    refused by the closure check."""
     checker = repo / 'tests/lib/native_sources.py'
     substitute = repo / 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'
     substitute.parent.mkdir()
     shutil.copy2(repo / 'controller/tools/pw_probe_runner/pw_probe_runner.c', substitute)
+    for header in (repo / 'controller/tools/pw_probe_runner').glob('*.h'):
+        shutil.copy2(header, substitute.parent / header.name)
+    worker = repo / 'controller/tools/pw_probe_runner/pw_probe_runner.c'
+    worker_original = worker.read_text()
+    escape = repo / 'controller/src/escape.h'
+    escape.parent.mkdir(exist_ok=True)
+    escape.write_text('#define PW_AUDIT_ESCAPE 1\n')
+    (repo / 'audit-headers').mkdir()
+    (repo / 'audit-headers/audit.h').write_text('#define PW_AUDIT_VALUE 17\n')
+    link = repo / 'controller/tools/pw_probe_runner/audit-link'
+    include_line = '#include "pw_probe_runner_abi.h"\n'
+    assert worker_original.count(include_line) == 1
     receipts = []
-    for name, manifest, expected, diagnostic in [
-        ('configured-unmodified', manifest_original, 0, None),
+    for name, manifest, source, symlink, expected, diagnostic in [
+        ('configured-unmodified', manifest_original, worker_original, False, 0, None),
         ('configured-worker-substituted',
          manifest_original.replace(worker_line, "  files('controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'),"),
-         1, "pw-probe-runner has 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c' which the tree does not expect"),
+         worker_original, False, 1,
+         "pw-probe-runner has 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c' which the tree does not expect"),
+        ('configured-symlinked-include', manifest_original,
+         worker_original.replace(include_line, include_line + '#include "audit-link/audit.h"\n'), True, 1,
+         "symlink under identity sources: controller/tools/pw_probe_runner/audit-link"),
+        ('configured-relative-escape', manifest_original,
+         worker_original.replace(include_line, include_line + '#include "../../src/escape.h"\n'), False, 1,
+         "pw-probe-runner consumed 'controller/src/escape.h' which is not an identity input"),
+        ('configured-restored', manifest_original, worker_original, False, 0, None),
     ]:
         evidence = out / name
         evidence.mkdir()
         (repo / 'meson.build').write_text(manifest)
         (evidence / 'meson.build').write_text(manifest)
+        worker.write_text(source)
+        (evidence / 'pw_probe_runner.c').write_text(source)
+        if link.is_symlink():
+            link.unlink()
+        if symlink:
+            link.symlink_to('../../../audit-headers')
         builddir = repo / 'builddir'
         shutil.rmtree(builddir, ignore_errors=True)
-        setup = ['meson', 'setup', str(builddir), str(repo), '-Dxpc=false']
-        result = subprocess.run(setup, cwd=repo, capture_output=True, text=True, timeout=120)
-        (evidence / 'setup.stdout').write_text(result.stdout)
-        (evidence / 'setup.stderr').write_text(result.stderr)
-        if result.returncode != 0:
-            raise AssertionError(f'{name}: meson setup failed: {result.stderr}')
+        for step, argv in (('setup', ['meson', 'setup', str(builddir), str(repo), '-Dxpc=false']),
+                           ('compile', ['meson', 'compile', '-C', str(builddir)])):
+            result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=300)
+            (evidence / f'{step}.stdout').write_text(result.stdout)
+            (evidence / f'{step}.stderr').write_text(result.stderr)
+            if result.returncode != 0:
+                raise AssertionError(f'{name}: meson {step} failed: {result.stderr}')
         argv = [sys.executable, '-B', str(checker), '--builddir', str(builddir)]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
         (evidence / 'stdout').write_text(result.stdout)
@@ -181,6 +211,7 @@ def configured_controls(repo, manifest_original, worker_line, out):
             raise AssertionError(f'{name}: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
         receipts.append(record)
     (repo / 'meson.build').write_text(manifest_original)
+    worker.write_text(worker_original)
     return receipts
 
 
