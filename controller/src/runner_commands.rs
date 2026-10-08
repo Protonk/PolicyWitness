@@ -864,14 +864,26 @@ mod verify_tests {
     #[test]
     fn documented_verification_wait() {
         let manifest: Value = serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
-        let owned: Vec<_> = manifest["limits"].as_array().unwrap().iter().filter(|row| {
-            row["checks"].as_array().unwrap().iter().any(|check| {
-                check["path"] == "controller/src/runner_commands.rs" && check["kind"] == "value"
+        let owned: Vec<_> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/runner_commands.rs" && check["kind"] == "value"
+                })
             })
-        }).collect();
-        assert_eq!(owned.len(), 1, "every declared verify value owner is exercised");
+            .collect();
+        assert_eq!(
+            owned.len(),
+            1,
+            "every declared verify value owner is exercised"
+        );
         assert_eq!(owned[0]["id"], "runner_verify_wait");
-        assert_eq!(owned[0]["value"].as_u64(), Some(RUNNER_VERIFY_DEFAULT_TIMEOUT_MS));
+        assert_eq!(
+            owned[0]["value"].as_u64(),
+            Some(RUNNER_VERIFY_DEFAULT_TIMEOUT_MS)
+        );
         assert_eq!(owned[0]["unit"], "milliseconds");
     }
 
