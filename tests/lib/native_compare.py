@@ -22,8 +22,9 @@ fresh bundle identifiers). Signatures and content hashes are not compared.
 
 With --across-builds the two apps were built from different sources, so the
 code and data sizes are recorded rather than compared; libraries, load
-commands, segments and sections, imports, markers and entitlements are still
-compared, and a difference among them names the source change behind it.
+commands, segment and section names, imports, markers and entitlements are
+still compared. Reports identify differing fields, not their source causes;
+source attribution and live behavioral validation require separate review.
 
 Exit 1 when a compared field differs. The report lists every difference and
 every recorded-only field so each accepted difference is visible.

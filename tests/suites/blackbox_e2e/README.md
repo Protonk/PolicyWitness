@@ -149,3 +149,15 @@ are constructed inputs, without historical helper fixtures or schema readers.
 Observer controls admit both version markers before nested shape validation,
 retain rejected JSON unchanged, reject recovered log claims and malformed
 wrappers, and continue validating admitted report bodies.
+
+`comparison_controls` exercises `tests/lib/envelope_compare.py` through its CLI
+using the checked-in live envelope and constructed mutations. It runs offline
+without a built app or migration output. Changed commands, flags, timeouts,
+request arguments, argument order and list lengths must fail. Only executable
+relocation and service renaming corroborated by each envelope's provenance may
+pass. Predicate changes must retain the same filter apart from the recorded
+worker PID. Structural controls reject missing empty containers, added fields,
+container and scalar type changes, and missing or null volatile values. Each
+control retains its inputs, report and diagnostics; negative controls must
+reach comparison and name the expected difference, rather than merely fail
+schema validation.

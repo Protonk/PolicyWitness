@@ -943,6 +943,15 @@
       ],
       "cases": [
         {
+          "id": "comparison_controls",
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/comparison_controls.sh"
+          ],
+          "requires": [],
+          "description": "Envelope comparisons reject structural and command changes while allowing provenance-matched relocation"
+        },
+        {
           "id": "checker_controls",
           "command": [
             "bash",

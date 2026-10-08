@@ -160,14 +160,14 @@
     {
       "path": "runs/meson-cutover-default",
       "run_id": "20261008T072250Z_ab1c28e9",
-      "reason": "Meson cutover local gate, first battery attempt: 167 of 168 against the same dist app; the Rust observer timing test both_raw_streams_are_bounded_at_exact_edges failed on pipe_open_after_exit in code the migration does not touch. Kept as the superseded attempt that records/MESON-CUTOVER-OBSERVATIONS.md cites; the full rerun is runs/meson-cutover-default-2.",
+      "reason": "Meson cutover local gate, first battery attempt: 167 of 168 against the same dist app; the Rust observer timing test both_raw_streams_are_bounded_at_exact_edges failed on pipe_open_after_exit in code the migration does not touch. Preserved as an unresolved intermittent supervision failure; the passing full rerun at runs/meson-cutover-default-2 does not establish its cause or resolution.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
     },
     {
       "path": "runs/meson-cutover-default-2",
       "run_id": "20261008T073413Z_cbb0345c",
-      "reason": "Meson cutover local gate: the default battery against the dist app compiled through Meson by build.sh, built from f69a7e3 plus the cutover diff recorded in records/MESON-CUTOVER-OBSERVATIONS.md; migration/ holds the build-chain receipts, the released-app comparison and the envelope comparison.",
+      "reason": "Meson cutover local gate: the default battery against the dist app compiled through Meson by build.sh, built from f69a7e3 plus the cutover diff retained in migration/source/tracked.diff; migration/ holds the build-chain receipts, the released-app comparison and the envelope comparison.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
     },
@@ -189,6 +189,20 @@
       "path": "runs/meson-cutover-drift",
       "run_id": "20261008T074401Z_6a0369d1",
       "reason": "Meson cutover local gate: the source_drift suite on the cutover tree (two-way manifest reader, planner manifest mutations, identity input tests, generator controls).",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/meson-comparison-repair-final",
+      "run_id": "20261008T150147Z_198a7af6",
+      "reason": "Envelope comparison repair verification, sandboxed attempt: 11 of 12 cases passed; dispatcher/cancellation_controls could not bind its test socket. Preserved beside the same selection passing outside the sandbox in meson-comparison-repair-final-2.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/meson-comparison-repair-final-2",
+      "run_id": "20261008T150415Z_85099588",
+      "reason": "Envelope comparison repair verification: 12 of 12 selected cases, including 32 comparison controls, source drift and dispatcher controls. review/ retains source snapshots, original-comparator false acceptances, strict pilot and released-envelope rechecks, dSYM symbolication and audit receipts. No app rebuild or release acceptance claimed.",
       "source": null,
       "app_inventory": null
     }

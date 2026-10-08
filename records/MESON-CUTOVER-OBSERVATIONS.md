@@ -45,6 +45,15 @@ errors and the unchanged-app check. The commands were
 `PW_TEST_OUT_DIR=tests/out/runs/<name> tests/run.sh` with the selectors above,
 from an unsandboxed, logged-in GUI session.
 
+The first battery's `pipe_open_after_exit` failure remains unexplained. The
+supervision source is byte-identical to the pre-migration baseline at
+`14252b0`; 50 subsequent standalone repetitions of that unit test passed.
+Neither the passing repetitions nor the full battery rerun establishes the
+cause or proves an independently flaky test. Keep this as an unresolved
+intermittent supervision failure, not a resolved or discarded failure. The
+audit repetition receipt is retained under
+`tests/out/runs/meson-comparison-repair-final-2/review/observer-repetitions.json`.
+
 Build-chain controls through `make build`, with logs under
 `tests/out/runs/meson-cutover-default-2/migration/` (`chain.log` and the
 numbered step logs): a second build after a source change leaves Meson with
@@ -76,11 +85,65 @@ difference is the released app's `Contents/CodeResources`, which stapling
 adds. Code and data sizes were recorded, not compared, because the sources
 differ between 0.2.7 and the candidate.
 
+Inspection of that retained report finds equal aggregate `__TEXT` and
+`__DATA` sizes for all seven executables, but these section-size differences
+(candidate minus release, in bytes):
+
+| Executable | Section | Delta |
+| --- | --- | ---: |
+| `policy-witness` | `__TEXT,__const` | +16 |
+| `sandbox-log-observer` | `__TEXT,__const` | +32 |
+| `sbpl-check` | `__TEXT,__const` | +32 |
+| `sbpl-check` | `__TEXT,__text` | +64 |
+| `PWRunner` | `__TEXT,__text` | +12 |
+
+The original gate contains no source-attributed explanation of those deltas.
+They remain measured differences with unestablished causes; equal segment
+sizes do not establish equal code. The structural comparison checks undefined
+symbols and selected exported markers, not the entire defined-symbol set or
+initializer order. The live worker and ordering cases supply behavioral
+coverage of the shim's shared-memory creation, acquire loads and release
+stores; there is no dedicated initializer-order test.
+
 The five request fixtures under `tests/fixtures/pw_runner/` ran through both
 apps (`migration/envelopes-candidate/`, `migration/envelopes-released/`) and
 were compared by `tests/lib/envelope_compare.py compare --across-builds
 --expect-identity e2ffb11905ed22af49ad80dcc37fc08664dd067b3b5c5452da2b5b373ce7e4da` (`migration/envelope-compare-released.json`):
-all five fixtures equal under the declared volatile classes and the four stamp values, with the worker identity equal to the candidate's (attempt 2, `envelope-compare-released.json`). Attempt 1 (`envelope-compare-released-attempt1.json`, `envelopes-candidate-attempt1/`) differed for `specimen_mach_deny`, `specimen_path_diagnostics_strict`: the candidate's log capture saw no kernel deny line in its window while the released app's run did. The candidate's rerun captured them; the difference was unified-log latency, which the log channel documents as early or late availability, not a difference in the apps.
+all five fixtures equal under the declared volatile classes and the four stamp values, with the worker identity equal to the candidate's (attempt 2, `envelope-compare-released.json`). Attempt 1 (`envelope-compare-released-attempt1.json`, `envelopes-candidate-attempt1/`) differed for `specimen_mach_deny`, `specimen_path_diagnostics_strict`: the candidate's log capture saw no kernel deny line in its window while the released app's run did. The candidate's rerun captured them. This is consistent with the log channel's documented early or late availability, but the rerun alone does not establish the cause.
+
+The comparison audit found that the original comparator accepted arbitrary
+client argument changes and lost empty containers. The repaired comparator
+checks structure before classifying scalar differences; client relocation and
+service renaming require matching provenance, and predicates may differ only
+in the recorded worker PID. The retained second-attempt envelopes still pass
+for all five fixtures with these stricter rules. The recheck report and the
+comparer/control source snapshots are under
+`tests/out/runs/meson-comparison-repair-final-2/review/`; the original envelopes
+and comparison reports are unchanged. The registered offline
+`blackbox_e2e/comparison_controls` case exercises positive controls and
+refusals without relying on these gitignored migration inputs.
+
+Repair verification is retained at
+`tests/out/runs/meson-comparison-repair-final-2`: all 12 selected cases pass
+(the comparison case, five source-drift cases and six dispatcher cases).
+The comparison case has 32 controls; replaying its negative inputs against
+the original comparator demonstrates 21 false acceptances. Both the pilot
+and released-app retained envelope pairs pass the repaired comparator. The
+first verification selection at `meson-comparison-repair-final` passed 11 of
+12 cases; its cancellation control was refused permission to bind a test
+socket inside the automation sandbox. The same selection passed outside the
+sandbox with unchanged implementation. Both runs are pinned; these checks
+exercise test machinery and retained JSON, not a rebuilt application or a
+new release gate.
+
+Inspection-build dSYMs were also checked using a clean source copy of
+`1c12f1c`, Meson compilation and the production `dsymutil` recipe, followed by
+deletion of that copy's build directory. Representative instruction addresses
+still resolve to `runCWorker(_:postApplied:)` at `CWorker.swift:607` and client
+source lines. Both shipped Swift executables' UUIDs match their bundled dSYMs,
+and their addresses resolve as well. This checks symbolication without the
+original objects; it is not an induced-crash test. The receipt and isolated
+build logs are retained under the same `review/` directory.
 
 ## Earlier chunks
 

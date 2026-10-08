@@ -4,12 +4,15 @@
 `run` executes every request under tests/fixtures/pw_runner/ through one app's
 controller and retains the raw envelope, stderr and exit status per fixture.
 `compare` validates each retained envelope with the shared consumer, then
-compares the two apps' envelopes leaf by leaf. Only leaves at the explicit
-field paths below may differ, and each such difference is reported with its
-class: process identifiers; wall-clock and monotonic times and deadlines;
+compares the two apps' envelopes recursively. Keys, container types, list
+lengths and scalar types must agree, including empty containers. Only scalar
+values at the explicit field paths below may differ. Each difference is
+reported by class: process identifiers; wall-clock and monotonic times and deadlines;
 durations; the observer's raw log output and deny lines; temporary-copy
-bundle and service names and paths; the client argv; byte counts affected by
-longer identifiers; and, with --across-builds, the four build stamp values.
+bundle and service names and paths; provenance-matched client executable and
+service arguments; byte counts affected by longer identifiers; and, with
+--across-builds, the four build stamp values. The log predicate may differ only
+in its embedded worker PID, corroborated by the observer's recorded PID.
 The worker identity is compared with --expect-identity when given and must be
 equal otherwise. Everything else, including every comparison record, verdict,
 attempt outcome and disposition, must be equal.
@@ -46,7 +49,6 @@ VOLATILE = {
         'data.sandbox_log_capture.observer.data.collection.cleanup.target',
         'data.sandbox_log_capture.observer.data.collection.process.pid',
         'data.sandbox_log_capture.supervision.cleanup.target', 'data.sandbox_log_capture.supervision.process.pid',
-        'data.sandbox_log_capture.observer.data.predicate',  # the log predicate embeds the worker PID
     ),
     'time': (
         'generated_at_unix_ms', 'data.runner_client.started_at_unix_ms', 'data.runner_client.ended_at_unix_ms',
@@ -76,7 +78,6 @@ VOLATILE = {
         'data.specimen.app_provenance.evidence_manifest_path', 'data.specimen.runner_provenance.runner_bundle_path',
         'data.specimen.runner_provenance.runner_executable_path',
     ),
-    'client_argv': ('data.runner_client.argv[]',),
     'bytes': (
         'data.runner_client.stdout_bytes_received', 'data.runner_client.stdout_bytes_retained',
         'data.sandbox_log_capture.stdout_bytes_received', 'data.sandbox_log_capture.stdout_bytes_retained',
@@ -92,15 +93,76 @@ IDENTITY = 'data.runner_result.runner_subprocess.worker_evidence.abi_identity'
 GENERIC_INDEX = re.compile(r'\[\d+\]')
 
 
-def leaves(value, path=''):
-    if isinstance(value, dict):
-        for key, item in value.items():
-            yield from leaves(item, f'{path}.{key}' if path else key)
-    elif isinstance(value, list):
-        for index, item in enumerate(value):
-            yield from leaves(item, f'{path}[{index}]')
-    else:
-        yield path, value
+def differences(left, right, path=''):
+    """Keep presence and structure separate from permitted scalar variation."""
+    def record(a, b, change):
+        return dict(path=path, candidate=a, baseline=b, change=change)
+
+    if type(left) is not type(right):
+        yield record(left, right, 'type')
+    elif isinstance(left, dict):
+        for key in sorted(left.keys() | right.keys()):
+            child = f'{path}.{key}' if path else key
+            if key not in left or key not in right:
+                yield dict(path=child, candidate=left.get(key, '<absent>'),
+                           baseline=right.get(key, '<absent>'), change='presence')
+            else:
+                yield from differences(left[key], right[key], child)
+    elif isinstance(left, list):
+        if len(left) != len(right):
+            yield record(len(left), len(right), 'length')
+        for index, (a, b) in enumerate(zip(left, right)):
+            yield from differences(a, b, f'{path}[{index}]')
+    elif left != right:
+        yield record(left, right, 'value')
+
+
+def field(document, path):
+    for key in path.split('.'):
+        if not isinstance(document, dict):
+            return None
+        document = document.get(key)
+    return document
+
+
+def client_argument_class(path, candidate, baseline):
+    """Only relocate known arguments, corroborated by each envelope's provenance."""
+    arguments = [field(d, 'data.runner_client.argv') for d in (candidate, baseline)]
+    # Built-in, user Mach service, and privileged Mach service command shapes.
+    for argv in arguments:
+        if (not isinstance(argv, list) or len(argv) < 7 or argv[1:3] != ['run', '--timeout-ms']
+                or argv[-3:-1] != ['--request', '-']
+                or argv[4:-3] not in ([], ['--mach-service'], ['--mach-service', '--privileged'])):
+            return None
+    if len(arguments[0]) != len(arguments[1]):
+        return None
+    if path == 'data.runner_client.argv[0]':
+        suffix = '/Contents/Resources/Evidence/manifest.json'
+        for document, argv in zip((candidate, baseline), arguments):
+            manifest = field(document, 'data.specimen.app_provenance.evidence_manifest_path')
+            if (not isinstance(manifest, str) or not manifest.endswith(suffix)
+                    or argv[0] != manifest[:-len(suffix)] + '/Contents/MacOS/pw-runner-client'):
+                return None
+        return 'client_executable_path'
+    if path == f'data.runner_client.argv[{len(arguments[0]) - 1}]':
+        for document, argv in zip((candidate, baseline), arguments):
+            service = field(document, 'data.specimen.runner_provenance.runner_service_name')
+            if not isinstance(service, str) or not service or argv[-1] != service:
+                return None
+        return 'client_service_name'
+    return None
+
+
+def predicate_without_pid(document):
+    predicate = field(document, 'data.sandbox_log_capture.observer.data.predicate')
+    pid = field(document, 'data.sandbox_log_capture.observer.data.pid')
+    if not isinstance(predicate, str) or type(pid) is not int or pid <= 0:
+        return None
+    # The log predicate embeds the worker PID in escaped parentheses. Retain
+    # the rest of the predicate so changed filters cannot pass as PID variation.
+    normalized, count = re.subn(r'(\\+\()' + str(pid) + r'(\\+\))',
+                                lambda m: m[1] + '<worker-pid>' + m[2], predicate)
+    return normalized if count == 1 else None
 
 
 def run_fixtures(app, out):
@@ -120,11 +182,15 @@ def run_fixtures(app, out):
     return results
 
 
-def classify(generic):
+def classify(path, candidate, baseline):
+    generic = GENERIC_INDEX.sub('[]', path)
     for klass, paths in VOLATILE.items():
         if generic in paths:
             return klass
-    return None
+    if path == 'data.sandbox_log_capture.observer.data.predicate':
+        left, right = predicate_without_pid(candidate), predicate_without_pid(baseline)
+        return 'pid' if left is not None and left == right else None
+    return client_argument_class(path, candidate, baseline) if path.startswith('data.runner_client.argv[') else None
 
 
 def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity=None):
@@ -145,23 +211,22 @@ def compare(candidate_dir, baseline_dir, *, across_builds=False, expect_identity
             report['fixtures'][name] = entry
             report['ok'] = False
             continue
-        left = dict(leaves(documents['candidate']))
-        right = dict(leaves(documents['baseline']))
-        for path in sorted(set(left) | set(right)):
-            if path in left and path in right and left[path] == right[path]:
+        candidate, baseline = documents['candidate'], documents['baseline']
+        for record in differences(candidate, baseline):
+            path = record['path']
+            if record['change'] != 'value':
+                entry['unexplained'].append(record)
                 continue
-            generic = GENERIC_INDEX.sub('[]', path)
-            record = dict(path=path, candidate=left.get(path, '<absent>'), baseline=right.get(path, '<absent>'))
-            if generic == IDENTITY:
+            if path == IDENTITY:
                 continue  # checked below
-            klass = classify(generic)
-            if klass is None and across_builds and generic in STAMPS:
+            klass = classify(path, candidate, baseline)
+            if klass is None and across_builds and path in STAMPS:
                 klass = 'stamp'
             if klass is None:
                 entry['unexplained'].append(record)
             else:
                 entry['explained'].append(dict(record, **{'class': klass}))
-        identity = dict(candidate=left.get(IDENTITY), baseline=right.get(IDENTITY))
+        identity = dict(candidate=field(candidate, IDENTITY), baseline=field(baseline, IDENTITY))
         if expect_identity is not None:
             identity['expected'] = expect_identity
             identity['ok'] = identity['candidate'] == expect_identity

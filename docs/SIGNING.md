@@ -113,8 +113,19 @@ sizes, undefined symbols, `_sandbox_*` imports and Swift module names) and
 `native_substitute.py` makes a signed, disposable copy of an app with the four
 native executables replaced, for `PW_APP_DIR` test runs; and
 `envelope_compare.py` runs the request fixtures through two apps and compares
-the envelopes with every excluded field path stated by class. Byte equality is
-not the comparison: repeated Swift builds of identical sources differ in bytes.
+their envelopes. Field presence, types and list lengths must agree, including
+empty containers. Permitted scalar differences are reported by class. Client
+commands and arguments must agree except for the executable path and service
+name, which must match each envelope's provenance; the log predicate may differ
+only in its recorded worker PID. The offline
+`blackbox_e2e/comparison_controls` case checks these boundaries.
+
+Structural comparison does not establish behavioral equivalence: run the live
+battery against the candidate, including the worker and ordering cases that
+exercise the Swift-to-C shim. With `native_compare.py app --across-builds`, code
+and data sizes are recorded rather than enforced because the sources differ;
+source attribution of those differences requires a separate review. Repeated
+Swift builds of identical sources can differ in bytes.
 
 ## What `build.sh` signs
 
