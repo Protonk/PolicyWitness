@@ -16,8 +16,16 @@ that, but signing, evidence generation and packaging will still run.
 | Chunk | Scope and resulting ownership | Promotion gate | Difficulty confidence |
 | --- | --- | --- | --- |
 | 1: native pilot | Meson builds comparison copies of all four executables and the shim. Production still uses `build.sh` compiles. | Structural/incremental checks and the default battery on a signed copy | Medium: both languages compiled in the probe; its signed-copy rehearsal replaced only the C executables. |
-| 2: manifest integration | Source checks compare disk, `build.sh` and Meson; the mutation control reads the new manifest. Production is unchanged. | Source-drift and barrier controls; applicable signed-copy regression checks | Medium: the three readers and their disposable checkouts remain to be changed. |
+| 2: manifest integration | Source checks compare disk, `build.sh` and Meson in the integration worktree; the mutation control reads the new manifest. This checkpoint does not land separately. | Source-drift and barrier controls; applicable signed-copy regression checks | Medium: the three readers and their disposable checkouts remain to be changed. |
 | 3: cutover | `build.sh` consumes Meson outputs; Meson files enter the identity digest. | Local signed-artifact and behavioural checks before landing; user-run release validation afterward | Medium: integration is small; artifact and release acceptance are the substantial work. |
+
+**Landing units.** Chunk 1 may land independently as an optional experiment.
+Chunks 2 and 3 are sequential implementation/validation steps that land together
+as one production-integration commit. The three-way source check is exercised
+in the integration worktree before removing the old reader. Main never has
+a state where its default test battery requires Meson but its production build
+does not; the combined commit introduces the build/test tool prerequisites
+together. Do not make failed introspection optional to bridge that transition.
 
 Adopt Swift and C together or abandon the migration. The recorded C compiles
 total about 0.25 s; the Swift compiles total about 4.6 s. More significantly,
@@ -151,9 +159,30 @@ approval has already been given.
 | When | Decision | Recommended assumption |
 | --- | --- | --- |
 | Before Chunk 1 | File and output locations | Root `meson.build` and `meson.options`, ignored root `builddir/`. The manifest must be above the sources it names. |
+| Before Chunk 1 | Compiler/linker policy | Recommendation for review: make consequential settings explicit, disable `b_asneeded`, and accept only named, inspected backend additions. Resolve the policy below before accepting pilot output. |
 | Before Chunk 3 | Compile-only `make native` convenience | Optional; omit unless wanted. Add it with production integration so it can share the preparation and option mapping from the outset. Direct Meson commands suffice for the pilot. |
-| Before Chunk 3 | `BUILD_XPC=0` scope under Meson | Deferred to implementation. Preserving the Swift discovery skip needs a Meson option gating `add_languages('swift')` and a reconfigure on toggle; skipping only the Swift compile is simpler. Prefer the simpler form unless discovery proves costly. Either way a `BUILD_XPC=0` bundle is not a release artifact. |
+| Before Chunk 3 | Developer-iteration output contract | What should the supported no-XPC workflow produce and how should success be checked: the current signed partial bundle, or compile-only Cargo/Meson outputs? The findings below frame this choice. Unconditional Swift discovery is not a behaviour-preserving simplification. |
 | Optional follow-up | Manual validator debugger script | Keep it during this migration; retirement is a separate choice. |
+
+The no-XPC question concerns the development workflow, not just compiler
+discovery cost. Today `build.sh` still builds Cargo and both standalone C
+executables, checks a signing identity, recreates the app, and signs/packages
+it when `BUILD_XPC=0`. It skips the shim, Swift client and service, and never
+copies those C executables into that partial app. `build-evidence.py` tolerates
+missing components, but `artifact.py:inspect` requires them for normal
+artifact-dependent tests. Specimen execution, including BYOXPC, uses the
+missing `pw-runner-client`. The AGENTS description "Rust-only iteration"
+therefore does not describe a complete runnable/testable app or the actual
+compile work.
+
+For migration compatibility, recommend preserving the existing switch,
+including its lack of Swift discovery, until a separately reviewed change
+replaces that workflow. If retained, gate Swift language registration and
+targets, require Swift when XPC is enabled, and reconfigure when the option
+changes. Specify a partial-build check separately from complete-app acceptance.
+Do not silently turn an optional Swift path into an unconditional prerequisite.
+Direct Cargo compilation already exists; deciding whether it and selected Meson
+targets supersede the partial-bundle workflow is the question to settle.
 
 For all chunks, use fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` directories,
 preserve receipts, and serialize test execution under the existing checkout
@@ -267,8 +296,9 @@ its disposable-checkout control and the barrier mutation control. This isolates
 the check machinery from the compiler experiment and from production cutover.
 
 **Prerequisites.** Chunk 1 accepted; read `runner/AGENTS.md` and the existing
-readers/controls. Meson becomes required for these checks, although
-`make build` still uses the old native compile route.
+readers/controls. Develop this checkpoint in the same integration worktree as
+Chunk 3. Its checks require Meson while the intermediate build still uses the
+old compiler route; that temporary state is never a standalone commit on main.
 
 **Work, in order:**
 
@@ -311,16 +341,19 @@ identify changed readers/fixtures and rerun their affected cases. Rebuild the
 copy and repeat affected artifact checks if any compilation input changed.
 Do not automatically repeat unrelated cases or silently reuse changed ones.
 
-**Rollback/stop.** Revert the reader/control and documentation changes.
-If integration is abandoned, also revert Chunk 1; do not retain a permanent
-parallel compiler route. Keep Chunks 1 and 2 within one review cycle before
-cutover or removal.
+**Completion/stop.** Keep this checkpoint's validation receipts, then proceed
+directly to Chunk 3 in the integration worktree. Do not land Chunk 2 by itself.
+If integration is abandoned, discard its reader/control changes and revert
+Chunk 1; do not retain a permanent parallel compiler route. Keep the
+experimental period within one review cycle before cutover or removal.
 
 ## Chunk 3: production cutover
 
 **Scope and rationale.** Make `build.sh` consume the accepted Meson outputs
-and remove its native compile commands in one reversible commit. This is
-the first change to the compiler route used by the shipped app.
+and remove its native compile commands. Land these changes with Chunk 2 as
+one reversible commit, introducing the production and default-test Meson
+requirements together. This is the first change to the compiler route used
+by the shipped app.
 
 **Prerequisites.** Chunks 1 and 2 accepted, a green current baseline, and the
 Chunk 3 review choices settled. Signing credentials and a logged-in GUI
@@ -338,9 +371,9 @@ later notarization/release run.
    steps, set up or reconfigure `builddir/` with the current options and run
    `meson compile -C builddir`. Keep `PW_INSPECTION` as the public knob;
    Meson reads its boolean option, not that environment variable.
-   Preserve `BUILD_XPC=0` skipping the client/service build, with the
-   discovery scope chosen in the review table, and keep custom `DIST_DIR`
-   assembly working.
+   Implement the no-XPC workflow selected in the review table. Preserving
+   the existing switch includes conditional Swift discovery, not just
+   skipping compilation. Keep custom `DIST_DIR` assembly working.
 3. Replace the three `clang` and two `swiftc` invocations with consumption
    of the four executables. The shim is already linked into the host; it is
    not copied into the bundle. Preserve all existing binary destinations,
@@ -403,8 +436,8 @@ Restore the candidate state before artifact acceptance.
    and record the actual release baseline at implementation time.
 4. Finish the handoff record below, preserving exact tested source and
    artifact provenance. Once these local gates pass, the cutover may be
-   committed and land on main even though release validation is pending.
-   Do not leave an uncommitted implementation waiting for the user.
+   committed with Chunk 2 and land on main even though release validation
+   is pending. Do not leave an uncommitted implementation waiting for the user.
 
 **Handoff and where pending is recorded.** At cutover, create the tracked
 `records/MESON-CUTOVER-OBSERVATIONS.md` and link it from this plan only, following
@@ -450,8 +483,9 @@ release validation outstanding; it does not retroactively erase the local
 gate. A migration-caused failure must be fixed and revalidated or rolled back.
 No publication is part of this migration.
 
-**Cutover and rollback.** Land the production switch as one commit. Reverting
-it restores the `build.sh` native compiles; regenerate identity and rebuild
+**Cutover and rollback.** Land Chunks 2 and 3 as one commit. Reverting the
+combined implementation restores both the `build.sh` native compiles and
+the original source-list/mutation readers; regenerate identity and rebuild
 the app afterward. Preserve the factual cutover/release record and evidence
 pins when reverting implementation changes; record the rollback and any failed
 acceptance rather than erasing those observations. The existing delete-and-recreate
@@ -461,19 +495,50 @@ directory can remain inert after rollback.
 
 ## Shared verification procedures
 
+### Compiler/linker policy for review
+
+Recommend explicit consequential settings plus a documented, narrow set of
+accepted backend additions. Preserve optimization/debug levels, language and
+module settings, sandbox linkage, and Apple compiler/macOS SDK selection;
+compare effective compile/link commands and platform targets as well as output
+structure. Bare `clang -c` already relies on compiler/platform defaults, so
+requiring every compiler decision to appear as an explicit flag is not a
+meaningful equivalence rule.
+
+For Meson 1.12.1, recommend `b_asneeded=false` to remove the additional
+`-dead_strip_dylibs`: unused-library removal is a semantic link decision
+that this migration does not need. Accept and document
+`-headerpad_max_install_names` as an Apple-backend addition, subject to the
+artifact checks; there is no independent header-padding switch in that backend.
+Do not replace native Meson targets with custom compiler wrappers merely to
+make argument strings identical.
+
+The shim's proposed PIC discrepancy does not occur on this Darwin toolchain.
+The recorded shim command and a fresh minimal probe contain no added
+`-fPIC`; bare Apple clang already selects PIC. Meson's
+[static-library `pic` option](https://mesonbuild.com/Reference-manual_functions.html#static_library)
+has no effect on macOS. Preserve the shim's existing optimization/debug/ABI
+settings and inspect the actual command; `pic: false` would add no protection.
+The [built-in options](https://mesonbuild.com/Builtin-options.html#base-options)
+describe `b_asneeded` and other configurable policies. This recommendation
+awaits review; structural similarity is not blanket acceptance of new flags.
+
 ### Structural and artifact comparison
 
 For native outputs, compare `otool -L` dynamic libraries, `otool -l`
 load-command/segment/section structure, `size`, and undefined `_sandbox_*`
 imports from `nm -u`. For Swift, also check the module names in mangled
 symbols. Preserve the comparison as a script from Chunk 1 onward and rerun
-it when toolchains change. A compile success alone is insufficient.
+it when toolchains change, including a review of effective compiler/linker
+argument differences against the agreed policy. A compile success alone is
+insufficient.
 
 The probe reported Meson adding
 `-Wl,-dead_strip_dylibs -Wl,-headerpad_max_install_names`. Its C output bytes
 differed from the old path despite matching measured structure and behaviour.
 Repeated direct Swift builds also differed in bytes. Therefore whole-binary
-byte equality is not the acceptance gate.
+byte equality is not the acceptance gate. Recheck outputs under the chosen
+flag policy; the probe's use of defaults does not settle that policy.
 
 For assembled apps, require `tests/lib/artifact.py:inspect` to pass. Compare
 evidence-manifest `(id, kind, rel_path)` inventories and entitlements,
@@ -543,7 +608,7 @@ regenerates identity as described above.
 | --- | --- |
 | Meson/Swift upgrades change implicit arguments or shim linking | Exercise both languages in Chunk 1; investigate failures or revert the migration |
 | Configuration retains the previous inspection setting | Explicit reconfiguration and option-switch checks in Chunk 3 |
-| Source readers pass with incomplete manifests or fail for unrelated missing files | Chunk 2 three-way comparison, copied-checkout controls and barrier mutations before removing old readers |
+| Source readers pass with incomplete manifests or fail for unrelated missing files | Exercise Chunk 2 checks in the integration worktree before removing old readers; land only with Chunk 3 |
 | A claimed build edge becomes unchecked documentation | Architecture citations point to source-drift rules; identity controls and ABI/live-identity tests provide distinct evidence |
 | Temporary duplicate flag ownership persists | Limit the experimental chunks to one review cycle; cut over the combined graph or remove it |
 | An early comment or helper edit changes identity | Keep existing digest inputs unchanged through Chunk 2; defer `Package.swift` comments and generator edits to cutover |
@@ -565,6 +630,20 @@ changed it. Extending `SOURCE_FILES` with both Meson files changed the digest,
 and subsequent edits to either file changed it again. This supports postponing
 both new membership and existing-input edits to cutover. Repository source
 and generated regions were untouched.
+
+**Flag and optional-language checks.** The retained probe's compile database
+has no PIC flag on the shim. Installed Meson 1.12.1's `GnuLikeCompiler.get_pic_args`
+returns no arguments on Darwin; `BuildTarget._extract_pic_pie` treats PIC as
+always enabled there. In a fresh disposable C project using the existing
+`xcrun --sdk macosx clang` route, default linking added both
+`-dead_strip_dylibs` and header padding; `b_asneeded=false` removed only
+the former. Both default and `pic: false` shim declarations added no PIC flag,
+and Apple's `clang -### -c` reported PIC relocation.
+
+The same project configured successfully with Swift explicitly unavailable
+and its language-registration guard off; reconfiguration with that guard on
+refused the missing compiler. This verifies the configuration mechanism,
+not a full `BUILD_XPC=0` signed build. No app or repository source was modified.
 
 **Release/record grounding.** `release_preflight.py:inspect` requires a clean,
 tagged source for release; the Makefile uses its report mode for a notarization
