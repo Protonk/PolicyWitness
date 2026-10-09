@@ -20,6 +20,8 @@ v0.2.7 plus the commits on main since that tag.
 - [x] Step 0: survey the build as it stands (2026-10-08; the register below
   is the survey's record)
 - [ ] Step 1: assess claims, probe uncertainties, adjudicate findings
+  (initial pass executed 2026-10-09; evidence and recommended dispositions
+  are under Register details; adjudication pending)
 - [ ] Step 2: carry out and revalidate the adjudicated changes
 - [ ] Step 3a: the manifest, generator, figure, drift case and controls, from
   the script
@@ -411,22 +413,449 @@ survey; later rows can capture any documentation, build or verification
 finding. The Disposition column is empty until step 1. Evidence is what the
 survey saw; verify it before deciding. Add the detail entries described in
 the working method as rows are investigated. A disposition is a decision,
-not proof that its implementation or validation is complete.
+not proof that its implementation or validation is complete. Rows 13 to 16
+were found during the step 1 pass.
 
 | # | Candidate issue | Where it shows | Survey evidence | Disposition | Wording, change scope or follow-up |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Three inventories must agree and nothing checks the script's | `build.sh` signing list; `EXECUTABLES` in `tests/lib/artifact.py`; README "What ships"; `tests/build-evidence.py` | [AGENTS.md](../AGENTS.md) says the three lists must agree and the preflight suite fails a build that does not match `EXECUTABLES`, but the script's `sign_macho` calls are compared with nothing. A helper copied but not listed for signing is caught only when the inspector runs. | | |
-| 2 | A refusal carries one of two exit statuses | `build.sh` under `set -e` | The script's own refusals exit `2`; a generator check that fails propagates `1`. The build controls assert the specific status, so the document would either state both or the script would harmonize. | | |
-| 3 | Build-time checks live under `tests/` | `tests/lib/native_sources.py`, `tests/lib/meson_receipts.py`, `tests/build-evidence.py` | `build.sh` invokes two of them as production steps and the receipts describe build provenance, yet all three sit in the test tree with the suites' helpers. The generators the build runs live under `docs/`. | | |
-| 4 | The identity's place in the build order is owned twice | [CONTRACT.md](CONTRACT.md) "Internal host/worker identity"; `build.sh` | The contract says the build generates before compiling and checks before signing; the script does it; the signing document repeats it. Which document owns the ordering claim. | | |
-| 5 | The Makefile carries a second prose account of the sequence | Makefile header comments | The header describes each target's sequence and boundaries in prose that no rule reads; the `release` recipe's comment and the signing document's procedure describe the same chain. | | |
-| 6 | The partial bundle is a parallel output with weaker checks | `BUILD_XPC=0` in `build.sh`; the signing document | It passes evidence generation and packaging, fails the full inspector, cannot run specimens, and is called an iteration convenience. Every inventory and every refusal table must say whether it covers the partial bundle. | | |
-| 7 | A parallel compile path for the validator | `controller/tools/sb_api_validator/build.sh` | Compiles the validator beside its source with `cc` and ad hoc-signs it with debug entitlements; its output is ignored and never enters the bundle. The signing document now says so; a build document must repeat or own it. | | |
-| 8 | The harness note is carried in four places | [AGENTS.md](../AGENTS.md), `runner/README.md`, `tests/README.md`, [SIGNING.md](SIGNING.md) | The copy in the signing document says which build steps need an unsandboxed shell. Moving that copy into the build document keeps four copies; adding one would make five. The drift rule's file list names the copies. | | |
-| 9 | Cargo's inputs are the one part of the build no manifest describes | `controller/build.rs`; `build.sh` | The stamp variables, `RUSTFLAGS` when inspection is on and the deployment target reach Cargo through the environment; `build.rs` declares the stamp variables for rebuilds and Cargo tracks the deployment target itself. Nothing in `docs/` lists them. | | |
-| 10 | The receipts are described as a build artifact but produced by a test tool | `tests/lib/meson_receipts.py`; `tests/README.md` "Comparing native builds" | The signing document tells the reader what the receipt pairs and records; the tool that writes it is documented with the comparison tools under the tests README. A build document would describe it a third time. | | |
-| 11 | The supported macOS is declared in two places and enforced in a third | `Info.plist`, `meson.build`, `build.sh` | The plist declares it, the manifest pins it, the script checks every shipped Mach-O against the plist and exports it to Cargo. The signing document says to change the plist and the manifest together; no rule compares the two declarations. | | |
-| 12 | The steps a human must run are mixed with the steps the script runs | [SIGNING.md](SIGNING.md) "Build" and the release procedure | Toolchain resets after a compiler or SDK change, fresh directories, the keychain, and the unsandboxed shell are operator steps stated beside the script's automatic ones. The document needs a line between them. | | |
+| 1 | Three inventories must agree and nothing checks the script's | `build.sh` signing list; `EXECUTABLES` in `tests/lib/artifact.py`; README "What ships"; `tests/build-evidence.py` | [AGENTS.md](../AGENTS.md) says the three lists must agree and the preflight suite fails a build that does not match `EXECUTABLES`, but the script's `sign_macho` calls are compared with nothing. A helper copied but not listed for signing is caught only when the inspector runs. | Recommended: strengthen verification; correct the documentation. Awaiting adjudication. | The step 3a drift rule compares the parsed signing calls with `EXECUTABLES`, `helper_names` in the evidence generator and the README, seals apart from signatures. The survey's last sentence is wrong in both directions (detail 1); the signer gap is row 13. |
+| 2 | A refusal carries one of two exit statuses | `build.sh` under `set -e` | The script's own refusals exit `2`; a generator check that fails propagates `1`. The build controls assert the specific status, so the document would either state both or the script would harmonize. | Recommended: correct the documentation. Awaiting adjudication. | State the rule: the script's own refusals exit 2; a check or tool refusal propagates that tool's status (1 for a stale document or source list, 2 for a check that could not run, Cargo's 101, codesign's 1). The manifest records each refusal's status. Harmonizing would only rewrite two control assertions. |
+| 3 | Build-time checks live under `tests/` | `tests/lib/native_sources.py`, `tests/lib/meson_receipts.py`, `tests/build-evidence.py` | `build.sh` invokes two of them as production steps and the receipts describe build provenance, yet all three sit in the test tree with the suites' helpers. The generators the build runs live under `docs/`. | Recommended: accept and explain. Awaiting adjudication. | The build runs two helpers that live with the tests because the suites import the same code; the receipts tool is not a build step (row 10). A move is churn without a behavior change; the human may still prefer a build-side directory. |
+| 4 | The identity's place in the build order is owned twice | [CONTRACT.md](CONTRACT.md) "Internal host/worker identity"; `build.sh` | The contract says the build generates before compiling and checks before signing; the script does it; the signing document repeats it. Which document owns the ordering claim. | Recommended: correct the documentation (ownership). Awaiting adjudication. | The generated step table in `BUILD.md` owns the ordering; the contract keeps the definition and digest scope and points at the build document; the signing document's sentence moves with its Build section. Whether the pre-compile step should generate or check is row 14. |
+| 5 | The Makefile carries a second prose account of the sequence | Makefile header comments | The header describes each target's sequence and boundaries in prose that no rule reads; the `release` recipe's comment and the signing document's procedure describe the same chain. | Recommended: correct the documentation. Awaiting adjudication. | The header matches the recipes (detail 5) and stays as the Makefile's own micro account. The manifest's steps begin at `make build`, whose guard is the public entry's first refusal; an optional rule compares the `==> [build]` phase line with the manifest. The release chain stays in the signing document. |
+| 6 | The partial bundle is a parallel output with weaker checks | `BUILD_XPC=0` in `build.sh`; the signing document | It passes evidence generation and packaging, fails the full inspector, cannot run specimens, and is called an iteration convenience. Every inventory and every refusal table must say whether it covers the partial bundle. | Recommended: correct the documentation; accept the limitation; optional small build fix. Awaiting adjudication. | Observed (detail 6). Every manifest item carries its variants; the partial bundle's refusal set is explicit, including that nothing Meson-built is minimum-checked in it (row 11). Optional: skip the ZIP and the notarize hint when `BUILD_XPC=0`. |
+| 7 | A parallel compile path for the validator | `controller/tools/sb_api_validator/build.sh` | Compiles the validator beside its source with `cc` and ad hoc-signs it with debug entitlements; its output is ignored and never enters the bundle. The signing document now says so; a build document must repeat or own it. | Recommended: correct the documentation (ownership). Awaiting adjudication. | The "never production-signed" paragraph moves to the build document's signing section and is stated once. No code change. |
+| 8 | The harness note is carried in four places | [AGENTS.md](../AGENTS.md), `runner/README.md`, `tests/README.md`, [SIGNING.md](SIGNING.md) | The copy in the signing document says which build steps need an unsandboxed shell. Moving that copy into the build document keeps four copies; adding one would make five. The drift rule's file list names the copies. | Recommended: correct the documentation; update the rule's list at step 5. Awaiting adjudication. | The signing copy and its second paragraph move to `BUILD.md`; `HARNESS_NOTE_FILES`, the comment above it, the rule's "four places" message and the AGENTS.md pointer change in the same commit. Count stays four. |
+| 9 | Cargo's inputs are the one part of the build no manifest describes | `controller/build.rs`; `build.sh` | The stamp variables, `RUSTFLAGS` when inspection is on and the deployment target reach Cargo through the environment; `build.rs` declares the stamp variables for rebuilds and Cargo tracks the deployment target itself. Nothing in `docs/` lists them. | Recommended: correct the documentation. Awaiting adjudication. | The inputs section lists them (detail 9). Observed: a plain `cargo build` yields 11.0 binaries; a reused target directory follows the current deployment target; `SDKROOT` is exported after Cargo. No code change proposed. |
+| 10 | The receipts are described as a build artifact but produced by a test tool | `tests/lib/meson_receipts.py`; `tests/README.md` "Comparing native builds" | The signing document tells the reader what the receipt pairs and records; the tool that writes it is documented with the comparison tools under the tests README. A build document would describe it a third time. | Recommended: correct the documentation. Awaiting adjudication. | The build writes no receipt; `BUILD.md` says so and links the comparison tools. The two signing-document passages that narrate "the receipts" are reworded when the sections move. |
+| 11 | The supported macOS is declared in two places and enforced in a third | `Info.plist`, `meson.build`, `build.sh` | The plist declares it, the manifest pins it, the script checks every shipped Mach-O against the plist and exports it to Cargo. The signing document says to change the plist and the manifest together; no rule compares the two declarations. | Recommended: strengthen verification; correct the documentation. Awaiting adjudication. | Observed (detail 11): the declarations are compared only through shipped Meson outputs, so only in `BUILD_XPC=1` builds and only at assembly; a partial bundle declaring 15.0 built and signed against a manifest pinned at 26.0. Compare the two literals directly, in `build.sh` at the plist step or as a drift rule. |
+| 12 | The steps a human must run are mixed with the steps the script runs | [SIGNING.md](SIGNING.md) "Build" and the release procedure | Toolchain resets after a compiler or SDK change, fresh directories, the keychain, and the unsandboxed shell are operator steps stated beside the script's automatic ones. The document needs a line between them. | Recommended: correct the documentation. Awaiting adjudication. | `BUILD.md` separates what the operator must ensure (unenforced, each item marked so) from what the build refuses; the manifest carries the prerequisites apart from the refusals so the generated table cannot blur them (detail 12). |
+| 13 | No local check reads the signer; an ad hoc-signed embedded tool passes the seal, the deep verify and the inspector | `build.sh` seal and verify steps; `tests/lib/artifact.py`; notarization | Found in step 1 (detail 13). Every compiler output arrives ad hoc-signed by the linker. A listed or unlisted ad hoc helper seals, verifies and inspects clean; only notarization refuses it, as the documents say. | Recommended: strengthen verification. Awaiting adjudication. | After the outer seal, `build.sh` checks that every Mach-O under the two nested-code directories carries the app's team identifier; the inspector stays signer-agnostic because test tools inspect ad hoc copies. Regression control on a disposable copy, as `check_signed_artifacts.py` does. |
+| 14 | A stale committed identity is regenerated by the build and the stamp becomes dirty | `build.sh` identity generation; [CONTRACT.md](CONTRACT.md) | Found in step 1 (detail 14). A clean checkout whose committed identity copies are stale builds with a `-dirty` stamp and a modified tree instead of refusing; the release path checks cleanliness before the build and never looks at the stamp afterwards. | Recommended: fix the build, or accept and document; human decides. | Fix: the pre-compile step runs `--check` like the other generators and the contract sentence says "checks before compiling and again before signing"; regeneration stays a developer command; a `contract.py` control asserts the refusal. Accept: the build document states that the build may write the identity copies and that the stamp reveals it. |
+| 15 | A refusal after assembly leaves an unsigned partial bundle at the output path | `build.sh` assembly (`rm -rf` of the previous app) | Found in step 1 (detail 15). The previous app is removed before the minimum, identity and signing refusals can fire; what remains is ad hoc-signed by the linker, unsealed and without evidence. | Recommended: accept and document, or fix; human decides. | Accept: the inspector and the controller both refuse the remains (observed). Fix: assemble under a staging path and move into place after verification. |
+| 16 | The build trusts the build directory's recorded source directory | `build.sh` `meson configure`; `tests/lib/native_sources.py` | Found in step 1 (detail 16). Meson accepts a copied build directory and keeps compiling the checkout it was set up for; the configured-source check compares against that recorded directory, not the running checkout; only swiftc's module-cache path check stopped the copied build, by accident. | Recommended: fix the build. Awaiting adjudication. | Before `meson configure`, refuse when `meson-info.json`'s source directory is not this checkout, naming both; a `source_drift` build control exercises it on a copied build directory; the build document states the trust in the build directory precisely. |
+
+## Register details
+
+Initial pass executed 2026-10-09 at 209e11c (the commit that holds this plan)
+on a clean tree; no build file changed between the survey and the pass, so
+the survey's rows were refreshed only by verification. Probe logs and scripts
+are local and disposable under `.tmp/probe-row1/`, `.tmp/probe-row1b/`,
+`.tmp/probe-row6/`, `.tmp/probe-row9/` and `.tmp/probe-row11/` (the clone
+probes: `run.sh`, `run2.sh`, `run3.sh` and their logs); the commands and the
+decisive outputs are transcribed below so the conclusions survive their loss.
+The `source_drift` suite passed at this revision into
+`tests/out/runs/build-doc-step1-drift` (five cases), which is the baseline
+for step 2. Every disposition below is a recommendation; the human's
+adjudication replaces the "awaiting" marker in the table.
+
+Signing in the clone probes used the real Developer ID identity, so the
+keychain was exercised unattended; the ad hoc seals in the row 1 probes are
+noted where they limit a conclusion.
+
+### 1. The signing list and the other inventories
+
+- **Claim.** The script's signing list is compared with nothing; a helper
+  copied but not listed for signing is caught only when the inspector runs.
+  Variants: both. Consequence if the survey were right: an unsigned or
+  ad hoc-signed tool ships unnoticed until notarization.
+- **Source.** `build.sh` signs five Mach-Os through `sign_macho`
+  (`pw-runner-client` only under `BUILD_XPC=1`, `sandbox-log-observer`,
+  `sbpl-check`, and per service `pw-probe-runner` and `sb_api_validator`),
+  seals the service bundle and the app, and signs the out-of-bundle observer
+  last. `policy-witness` and `PWRunner` are signed by their seals only.
+  `EXECUTABLES` lists seven paths; the README lists the same seven plus the
+  evidence directory; `tests/build-evidence.py` hardcodes three top-level
+  names in `helper_names` and discovers the service's siblings by walking its
+  `MacOS` directory. No rule compares the four. The inspector's
+  `manifest_missing` requires `EXECUTABLES[1:]` plus the symbols file, so a
+  helper absent from both `EXECUTABLES` and `helper_names` is silently absent
+  from the evidence manifest.
+- **Probe (unsigned helpers), `.tmp/probe-row1/probe.log`.** Four copies of
+  `dist/PolicyWitness.app` (valid at start): a control; a listed helper with
+  its signature removed; an unlisted, unsigned Mach-O added as
+  `Contents/MacOS/extra-tool`; a service helper with its signature removed.
+  Each was sealed ad hoc with the app entitlements, then verified with
+  `codesign --verify --deep --strict`. Control: seal 0, verify 0. Unsigned
+  listed helper: the seal itself refused, "code object is not signed at all,
+  In subcomponent: .../Contents/MacOS/sbpl-check", status 1. Unsigned extra
+  tool: the seal refused the same way. Unsigned service helper: the service
+  seal refused; the outer seal then succeeded over the service's old seal and
+  the deep verify failed. Under `set -e` the build stops at the first of
+  these. Limit: the outer identity was ad hoc; the refusal is codesign's
+  nested-code rule under the default resource rules and does not depend on
+  the signer. A Mach-O placed outside a nested-code directory (for example
+  under `Resources`) would be sealed as a resource; not probed.
+- **Probe (ad hoc helpers), `.tmp/probe-row1b/probe.log`.** Every compiler
+  output is ad hoc-signed by the linker: `codesign -dvv` reports
+  `Signature=adhoc` for `builddir/sb_api_validator`, `pw-probe-runner`,
+  `pw-runner-client`, `controller/target/release/sbpl-check` and
+  `policy-witness`. A listed helper re-signed ad hoc, and an unlisted
+  `extra-tool` copied straight from `builddir`, each under an outer seal with
+  the Developer ID identity (`--timestamp=none`): seal 0, deep verify 0, and
+  `tests/lib/artifact.py` returned 0 for the extra tool (1 for the re-signed
+  listed helper only because its manifest hash changed, which a real build
+  would not show). No test or release check reads `Authority` or
+  `TeamIdentifier` (grep over `tests/lib`, the preflight checks and
+  `tests/accept-release.sh`: none).
+- **Conclusion.** The survey sentence is wrong in both directions: an unsigned
+  nested Mach-O is refused by the seal, before the inspector; an ad hoc-signed
+  one is refused by nothing local, and notarization is the gate the documents
+  name. What remains of row 1 is the inventory agreement, which nothing
+  checks. The signer gap is row 13.
+- **State.** Awaiting adjudication. **Recommended:** strengthen verification
+  through the step 3a drift rule (parsed `sign_macho` and `codesign` calls,
+  with branch scope, against `EXECUTABLES`, `helper_names` and the README,
+  seals distinguished from signatures) and correct the documentation
+  (`BUILD.md` states what the seal refuses and what only notarization
+  refuses). Affected: survey item 2; the "add it to that list" paragraph
+  under "What `build.sh` signs"; row 13.
+
+### 2. Two exit statuses
+
+- **Claim.** A refusal carries one of two exit statuses. Variants: both.
+- **Source.** All 24 `ERROR:` sites in `build.sh` are followed by `exit 2`;
+  the Makefile guards exit 2. Checks the script runs: the four generators'
+  `--check` return 1 on a stale copy and `generate_architecture.py` returns 2
+  from its `except` branch; `tests/lib/native_sources.py` returns 1 for a
+  list or closure problem and 2 when Meson or Ninja cannot be read;
+  `tests/build-evidence.py` returns 2 for a missing `Contents`. Tools: Cargo
+  101, Meson and Ninja 1, codesign 1, PlistBuddy 1. Under `set -e` the script
+  exits with the failing command's status.
+- **Assertion coverage.** `contract.py`
+  `test_build_refuses_a_non_developer_id_identity_before_cargo` asserts 2;
+  `test_build_refuses_stale_contract_copy_before_signing_or_creating_output`
+  asserts 1; `limits.py`
+  `test_build_refuses_stale_guide_before_signing_or_creating_output` asserts
+  1. Observed in the clone probes: identity refusal 2 (adverse C), minimum
+  refusal 2 (adverse A2), Ninja failure 1 (probe K), Cargo failure 101 (the
+  invalid-version probes A and B).
+- **Classification.** Supported behavior needing explanation.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation: the manifest records each refusal's status; the prose states
+  the rule (the script's own refusals exit 2; a check's or a tool's refusal
+  propagates that tool's status). Harmonizing would wrap every check to exit
+  2 and rewrite two control assertions for no behavioral gain.
+
+### 3. Build-time checks under `tests/`
+
+- **Source.** `build.sh` runs `tests/lib/native_sources.py --builddir` after
+  compiling and `tests/build-evidence.py` after the nested signatures.
+  `tests/lib/meson_receipts.py` is run by nothing in the build, the Makefile
+  or the default battery (its only references are documentation). The source
+  check is shared with `tests/suites/source_drift/check.py` and
+  `check_planner.py`; the evidence manifest is read back by
+  `tests/lib/artifact.py` and by the controller's provenance checks.
+- **Classification.** Documentation ownership; supported behavior.
+- **State.** Awaiting adjudication. **Recommended:** accept and explain: the
+  build runs two helpers that live with the tests because the suites import
+  the same code. A move to a build-side directory is possible and changes no
+  behavior; the manifest cites the helpers where they live.
+
+### 4. The identity's place in the build order
+
+- **Source.** Generation at `build.sh` line 114, after the three document
+  checks and before the stamp, the plist, the identity and Cargo; the check at
+  line 425, after assembly and before the entitlements check and the first
+  signature. The contract's sentence and the signing document's order list
+  agree with the script.
+- **Observed.** Control build (`.tmp/probe-row11/control.log`): the banners
+  in that order, and "ok: worker identity …; all generated copies current"
+  immediately before "Codesigning embedded MacOS tools".
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation (ownership): the generated step table owns the ordering; the
+  contract keeps the definition and digest scope and points at the build
+  document for when the build runs it; the signing document's sentence moves
+  with its Build section. Whether the pre-compile step should generate or
+  check is row 14.
+
+### 5. The Makefile's prose account
+
+- **Source.** The header's per-target sequence matches the recipes: `build`
+  guards `IDENTITY` and runs `build.sh`; `notarize` guards two variables, runs
+  the preflight in report mode, `$(MAKE) build`, then the evidence directory,
+  submission, staple, validation, Gatekeeper, re-zip and acceptance in one
+  shell; `release` runs the strict preflight, `$(MAKE) notarize`, the battery,
+  the archive and the rotation; `publish` guards `VERSION`. The `build` guard
+  refuses an empty `IDENTITY` with its own message and status 2 before
+  `build.sh` can. Twelve `==> [target]` phase lines; no rule reads them.
+- **Classification.** Documentation; no behavioral issue.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation: the manifest's steps begin at `make build` and its guard is
+  the first refusal of the public entry; the header stays as the Makefile's
+  own micro account, like the comments in `meson.build`; an optional grounding
+  rule compares the `==> [build]` line with the manifest. The release chain
+  stays in the signing document.
+
+### 6. The partial bundle
+
+- **Observed (adverse B2, clone at 209e11c, reused directories,
+  `.tmp/probe-row11/probe2.log`, `adverseB2.log`).** `BUILD_XPC=0` with the
+  plist at 15.0 (see row 11): status 0; `meson configure` with `xpc=false`;
+  the source check passed with two targets; "Skipping embedded XPC build";
+  two helper signatures; evidence; seal; verify; observer; guide; ZIP; and the
+  closing text recommends `make notarize`. The bundle holds three Mach-Os;
+  the evidence manifest lists `sandbox-log-observer`, `sbpl-check`, the
+  augment and the symbols file; `codesign --verify --deep --strict` returned
+  0; `tests/lib/artifact.py` returned 1 with `required_component` for
+  `pw-runner-client`, `PWRunner`, `pw-probe-runner`, `sb_api_validator` and
+  the service `Info.plist`, plus `manifest_missing` for the four executables.
+- **Observed (specimen run, earlier partial bundle at 5e5f86d,
+  `.tmp/dist-noxpc`, `.tmp/probe-row6/probe.log`).** `policy-witness run
+  tests/fixtures/pw_runner/specimen_exec_spawn.json` exits 2 with
+  `result.error` "built-in runner unavailable: … evidence manifest has no
+  entry at Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"; no
+  runner is launched.
+- **Variant facts the document must carry.** The minimum-version check runs
+  only on the three Rust binaries, because nothing Meson-built ships; the
+  signing list is two signatures, the app seal and the observer; the
+  configured-source check expects two targets (the worker and the validator);
+  no Swift compiler is discovered; the dSYM step does not run; the ZIP is
+  still written under the release name.
+- **Classification.** Supported behavior needing explanation; one coverage
+  gap (the minimum agreement, row 11).
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation (every manifest item carries its variants; the partial
+  bundle's refusal set is explicit) and accept the limitation. Optional small
+  build fix for the human to decide: skip the ZIP and the notarize hint when
+  `BUILD_XPC=0`, so the partial bundle cannot be submitted by habit.
+
+### 7. The validator's parallel compile path
+
+- **Source.** `controller/tools/sb_api_validator/build.sh` compiles with
+  `cc -Wall -Wextra -O2 -std=c11` beside the source and ad hoc-signs with
+  `debug.ent`; `.gitignore` ignores the output; an ignored output dated
+  2026-10-07 exists locally. The shipped validator is Meson's
+  (`builddir/sb_api_validator`, copied into the service in the control build).
+  The signing document's "never production-signed" paragraph is accurate.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation (ownership): the paragraph moves to the build document's
+  signing section and is stated once. No code change.
+
+### 8. The harness note
+
+- **Source.** `check_harness_note_agreement` in
+  `tests/suites/source_drift/check.py` compares the whitespace-normalized
+  first paragraph under the heading across `HARNESS_NOTE_FILES` (AGENTS.md
+  canonical, `runner/README.md`, `tests/README.md`, `docs/SIGNING.md`); each
+  copy adds a local paragraph, and the signing document's addition is the
+  "two build steps need an unsandboxed shell" paragraph. AGENTS.md's second
+  paragraph names the four copies and what each adds. The architecture
+  document's generated table cites the AGENTS, runner and tests copies;
+  `docs/architecture.json` does not reference `SIGNING.md`.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation and update the rule at step 5: the signing copy and its
+  second paragraph move to `BUILD.md`; `HARNESS_NOTE_FILES`, the comment above
+  it, the rule's "four places" message and the AGENTS.md pointer change in the
+  same commit; the count stays four. No issue.
+
+### 9. Cargo's inputs
+
+- **Source.** Cargo receives `PW_BUILD_VERSION`, `PW_BUILD_NUMBER`,
+  `PW_BUILD_DESCRIBE` and `PW_BUILD_COMMIT` (declared `rerun-if-env-changed`
+  in `controller/build.rs`, which also declares `../docs/contract.json`),
+  `MACOSX_DEPLOYMENT_TARGET` exported from the plist, `RUSTFLAGS`
+  `-C debuginfo=2 -C force-frame-pointers=yes -C opt-level=1` only when
+  `PW_INSPECTION=1` and the caller left it unset (a caller's value wins
+  silently, as the signing document says), `--release` and three `--bin`s.
+  `SDKROOT` is exported at line 263, after Cargo at line 219, so Cargo's link
+  resolves the SDK through `cc` and `xcrun`'s default rather than through the
+  script's variable; `DEVELOPER_DIR` passes through.
+- **Probe, `.tmp/probe-row9/probe.log` (corrected series; the first series
+  used 25.0, which clang rejects as an invalid version).** `cargo build
+  --release --bin sbpl-check` into a scratch target directory: variable unset,
+  minos 11.0 (rustc's default for `aarch64-apple-darwin`, not the SDK's 27.0);
+  26.0, minos 26.0; then 15.0 on the same directory recompiled `objc2`,
+  `block2`, `dispatch2`, `ctrlc` and `controller` and relinked to 15.0; 15.0
+  again did no work; 26.0 again recompiled the same five and relinked to
+  26.0. So the crates that read the variable at compile time are
+  re-fingerprinted and the link always applies the current value; the pure
+  Rust dependencies are not rebuilt and carry no minimum.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation: the inputs section lists them; it states that a reused
+  `controller/target` follows the current deployment target (observed) and
+  that a plain `cargo build` outside the script yields 11.0 binaries, which
+  the minimum check would refuse if copied. No code change proposed; exporting
+  `SDKROOT` before Cargo would be uniformity, not a fix.
+
+### 10. The receipts
+
+- **Source.** Nothing in `build.sh`, the Makefile or the default battery
+  writes a receipt; `tests/lib/meson_receipts.py` is a comparison tool
+  documented under "Comparing native builds". The signing document's "Native
+  compile with Meson" section narrates "the receipts record each output's
+  minimum version" and "The receipt pairs each output's hash and mtime…"
+  inside the build account.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation: `BUILD.md` says the build writes no receipt and that the
+  comparison tools can record one from the build directory afterwards, linking
+  the tests README; the two passages are reworded when the sections move.
+
+### 11. The supported macOS
+
+- **Claim.** Declared in two places, enforced in a third; no rule compares the
+  two declarations. Consequence if the declarations disagree: binaries built
+  for one minimum ship under a plist that declares another.
+- **Source.** `Info.plist` declares 26.0; `meson.build` pins
+  `macos_minimum = '26.0'` at compile and link; `build.sh` reads the plist
+  (refusing a value that is not major.minor), exports it to Cargo, and
+  `check_minimum_macos` requires the first `LC_BUILD_VERSION` minos to equal
+  the plist for every copied Mach-O: the three Rust binaries at assembly, the
+  client and the three service binaries inside the XPC block. A binary without
+  the load command yields "?" and is refused.
+- **Probes (clone of 209e11c, `.tmp/probe-row11/`).** Control: plist 26.0,
+  `BUILD_XPC=1`, fresh directories, status 0, every shipped Mach-O 26.0
+  (`probe.log`). Adverse A2 (`probe2.log`, `adverseA2.log`): plist 15.0,
+  `BUILD_XPC=1`, reused directories: Cargo rebuilt five crates and the Rust
+  binaries came out 15.0; the refusal was "pw-runner-client is built for
+  macOS 26.0; Info.plist declares 15.0", status 2, before any signature.
+  Adverse B2: plist 15.0, `BUILD_XPC=0`: status 0; a signed bundle declaring
+  15.0 with three 15.0 Mach-Os while the manifest pins 26.0 and the C outputs
+  in `builddir` are 26.0. (Adverse A and B at 25.0 were invalid probes: clang
+  rejects the value and Cargo exits 101 before any check of ours runs.)
+- **Conclusion.** The two declarations are compared only through shipped
+  Meson outputs: only in `BUILD_XPC=1` builds and only at assembly. The
+  signing document's "changing the plist and the manifest together" is an
+  unenforced rule in the partial variant.
+- **State.** Awaiting adjudication. **Recommended:** strengthen verification:
+  compare the `macos_minimum` literal with the plist directly, either in
+  `build.sh` at the plist step (before Cargo, both variants) or as a
+  `source_drift` rule, keeping the per-binary check as the behavioral guard;
+  regression control through the drift case's mutation of the literal. Correct
+  the documentation to state the mechanism and its variant scope.
+
+### 12. Operator steps and automatic steps
+
+- **Classification of the signing document's Build section.** Operator,
+  unenforced: the toolchain (Command Line Tools or Xcode, `DEVELOPER_DIR`, the
+  SDK `xcrun` reports), separate build directories per toolchain and a fresh
+  one after a toolchain change ("not fingerprinted"), an unsandboxed shell,
+  network for the timestamp service, and a clean checkout at the release
+  commit (enforced only by the release preflight). Enforced by the build: the
+  document checks, the knob values, the Ninja minimum, Meson and Ninja
+  present, the identity's class and presence in the keychain (not that the
+  keychain is unlocked), Cargo's outputs present, Meson's policy assertions,
+  the configured source lists and closure, the minimum version, identity
+  currency, the entitlements file, the `sign_macho` target rules, the seals
+  and the deep verify.
+- **State.** Awaiting adjudication. **Recommended:** correct the
+  documentation: `BUILD.md` separates what the operator must ensure, each item
+  marked unenforced, from what the build refuses; the manifest keeps
+  prerequisites apart from refusals so the generated table cannot blur them.
+
+### 13. No local check reads the signer (found in step 1)
+
+- **Claim.** Every embedded tool is production-signed before the seal; an
+  embedded tool left ad hoc-signed is refused. Variants: both. Consequence:
+  an ad hoc-signed tool ships in the ZIP and is refused only by notarization.
+- **Evidence.** The row 1 ad hoc probe: the linker leaves every compiler
+  output ad hoc-signed; a listed helper re-signed ad hoc and an unlisted ad
+  hoc helper both pass the Developer ID seal, the deep verify and the
+  inspector. After the seal, `build.sh` runs only the deep verify and an
+  entitlements display; neither reads the authority. AGENTS.md and the signing
+  document say notarization fails in this case, which is accurate and is the
+  whole of the guard.
+- **Classification.** Evidence and coverage gap.
+- **State.** Awaiting adjudication. **Recommended:** strengthen verification:
+  after the outer seal, `build.sh` checks that every Mach-O under the app's
+  and the service's `Contents/MacOS` carries the app's team identifier (one
+  `codesign -dvv` loop), so the refusal is local and before the ZIP; the
+  inspector stays signer-agnostic because `native_substitute.py` and the
+  BYOXPC controls legitimately inspect ad hoc copies. Regression control on a
+  disposable copy of the built app with one helper re-signed ad hoc, as
+  `check_signed_artifacts.py` does. The human decides whether this belongs in
+  the build or in release acceptance.
+
+### 14. A stale committed identity is regenerated, not refused (found in step 1)
+
+- **Claim.** The build refuses stale generated copies before compiling. For
+  the identity it does not: line 114 regenerates, and only line 425 checks.
+- **Probe (adverse C, `.tmp/probe-row11/probe.log`, `adverseC.log`).** In the
+  clone, the identity in `tests/lib/contract.py` was replaced with zeros and
+  committed, giving a clean tree at `v0.2.7-39-g5026b47`. `build.sh` with a
+  non-Developer-ID identity: the generation step rewrote the file, the stamp
+  line read `v0.2.7-39-g5026b47-dirty`, the identity refusal followed with
+  status 2, and `git status` showed `M tests/lib/contract.py`. The
+  `--check` afterwards reported every copy current.
+- **Consequence.** A clean checkout whose committed identity copies are stale
+  builds with a `-dirty` stamp and a modified tree. The release preflight
+  checks cleanliness before the build and nothing afterwards reads the stamp
+  (grep for "dirty" in the release helpers: only the preflight's own
+  `describe`), so a notarization submission could be spent on a dirty-stamped
+  app and the archive would record it. The `source_drift` suite does catch the
+  stale copies, but `make release` runs the battery after notarization.
+- **Classification.** Build defect against the "every refusal precedes the
+  step it protects" promise, or intended convenience: the contract says the
+  build "generates … before compilation" so a worker edit never needs a manual
+  regeneration.
+- **State.** Awaiting adjudication. **Recommended:** fix the build: the
+  pre-compile step runs `--check` like the other three generators,
+  regeneration stays a developer command, the contract sentence becomes
+  "checks before compiling and again before signing", and a `contract.py`
+  control asserts the refusal before Cargo on a stale committed copy.
+  Alternative the human may prefer: keep regeneration and document that the
+  build may write the three identity copies and that the stamp reveals it.
+
+### 15. A refusal after assembly leaves a partial bundle (found in step 1)
+
+- **Observed (adverse A2).** `rm -rf` of the previous app happens at assembly,
+  before the minimum, identity and signing refusals. After the minimum
+  refusal, `dist-a2/PolicyWitness.app` held `policy-witness`,
+  `pw-runner-client`, `sbpl-check` and `sandbox-log-observer` with the
+  linker's ad hoc signatures, `Info.plist` and the augment; no evidence, no
+  service, no seal, no ZIP. The previous build at that path is gone.
+- **Consequence.** A battery or a user pointing at the output path after a
+  failed build finds the remains; the dispatcher's inspector refuses them
+  (`signature` and `required_component`), and the controller refuses to run
+  a specimen without an evidence manifest (row 6). Nothing silently uses
+  them, but the last good app is destroyed by a refusal that comes later.
+- **Classification.** Supported behavior needing explanation, or a small
+  build fix.
+- **State.** Awaiting adjudication. **Recommended:** accept and document
+  ("a refusal after assembly leaves an unsigned partial bundle at the output
+  path; the previous app is not preserved"), or fix by assembling under a
+  staging path and moving into place after verification. The human decides.
+
+### 16. The build trusts the build directory's recorded source (found in step 1)
+
+- **Claim.** `builddir/` is trusted working state like the checkout, and the
+  configured-source check guarantees that what Meson evaluated is the tree.
+  Consequence if false: the bundle carries binaries compiled from another
+  checkout while every check passes.
+- **Probe K (`.tmp/probe-row11/probe2.log`, `probeK.log`).** The clone with
+  its configured `builddir` was copied to `src2` (excluding
+  `controller/target`), a live marker symbol was appended to the worker source
+  and the identity regenerated and committed there (identity `e3f00bf1…`
+  against the original's `52f1dc03…`). `meson-info.json` in the copy still
+  recorded the original as its source directory. `build.sh` ran `meson
+  configure` without complaint; Meson printed "Source dir: …/src"; Ninja
+  compiled `…/src/controller/tools/pw_probe_runner/pw_probe_runner.c`; the
+  build then stopped in the Swift targets only because the copied module
+  cache's precompiled files record their own path, status 1.
+- **Probe K2 (`probe3.log`, `probeK2.log`).** With `src2/builddir/
+  swift-module-cache` removed, the same build completed with status 0. The
+  configured-source check printed "ok: 5 native targets carry exactly the
+  tree's sources and the identity targets consumed only digest inputs
+  (…/src2/builddir (xpc=true))", because it compares against the source
+  directory the build directory records. The identity check in `src2`
+  passed. The shipped worker contained no marker and carried the identity
+  `52f1dc03…`; `src2`'s tree says `e3f00bf1…`. Deep verify 0, inspector 0,
+  ZIP written. A signed, packaged bundle built from the wrong checkout, with
+  every check clean.
+- **Limits.** Reached by copying a checkout together with its build
+  directory, which the harness rerun guidance and this plan's own
+  "disposable copies" instruction both invite. Not reached by a fresh clone
+  or a worktree, which have no build directory. The incidental Swift stop
+  protects only full builds with an untouched module cache.
+- **Classification.** Build defect against the "what Meson evaluated must be
+  the tree" promise.
+- **State.** Awaiting adjudication. **Recommended:** fix the build: before
+  `meson configure`, refuse when the build directory's recorded source
+  directory is not this checkout, naming both paths (and the same check in
+  `native_sources.py --builddir` against the caller's root rather than the
+  recorded one); a `source_drift` build control exercises it on a copied build
+  directory; the build document states the trust placed in the build directory
+  precisely, including that Meson itself does not refuse a moved directory.
 
 ## Proposed shape of the document
 
