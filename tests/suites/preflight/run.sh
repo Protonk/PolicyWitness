@@ -62,5 +62,5 @@ SIGNING_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "signed artifact controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/check_signed_artifacts.py" \
   "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
-test_pass "real signatures and manifest hashes independently reject corrupted copies"
+test_pass "real signatures and manifest hashes independently reject corrupted copies; the signer check names an ad hoc helper"
 fi

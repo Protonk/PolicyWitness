@@ -19,6 +19,9 @@ set -euo pipefail
 # the bundle. Changing the selected compiler or SDK needs a fresh build
 # directory (see docs/SIGNING.md).
 #
+# The build writes nothing into the tree: every generated copy is checked and
+# a stale one is refused with the command that regenerates it.
+#
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
@@ -31,6 +34,7 @@ APP_NAME="PolicyWitness"
 DIST_DIR="${DIST_DIR:-${ROOT_DIR}/dist}"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 ZIP_NAME="${DIST_DIR}/${APP_NAME}.zip"
+GUIDE_NAME="${DIST_DIR}/${APP_NAME}.md"
 
 # Repo paths.
 RUNNER_MANIFEST="${ROOT_DIR}/controller/Cargo.toml"
@@ -65,10 +69,10 @@ PW_PROBE_RUNNER_BIN="${MESON_BUILD_DIR}/pw-probe-runner"
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
 
-# Build knobs: exactly 0 or 1. Any other spelling is refused rather than read
-# as one of them.
-BUILD_XPC="${BUILD_XPC:-1}"
-PW_INSPECTION="${PW_INSPECTION:-1}"
+# Build knobs: exactly 0 or 1, and an unset knob means 1. Any other value,
+# including an empty one, is refused rather than read as one of them.
+BUILD_XPC="${BUILD_XPC-1}"
+PW_INSPECTION="${PW_INSPECTION-1}"
 for knob in BUILD_XPC PW_INSPECTION; do
   case "${!knob}" in
     0|1) ;;
@@ -104,14 +108,19 @@ if [[ $# -gt 0 ]]; then
   esac
 fi
 
-# Check documentation before any build/signing work; staging checks again.
+# Check the documentation and the identity copies before any build or signing
+# work; the identity is checked again before signing and the guide again when
+# it is staged. The build writes nothing into the tree: a stale copy is
+# refused, and the generator the refusal names regenerates it.
 echo "==> Checking limits documentation"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
 echo "==> Checking contract versions"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_contract.py" --check
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_architecture.py" --check
-echo "==> Generating host/worker identity"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py"
+echo "==> Checking build documentation"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_build.py" --check
+echo "==> Checking host/worker identity"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 
 # ---- Build stamp -------------------------------------------------------------
 # The app version is a coordinate derived from git, never edited by hand:
@@ -140,15 +149,17 @@ stamp_info_plist() {
 # compile and link to the same value, Cargo's Apple targets read it from this
 # variable, and every shipped Mach-O is checked against the plist below.
 PW_MINIMUM_MACOS="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "${INFO_PLIST_TEMPLATE}")"
+echo "==> Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}"
 if [[ ! "${PW_MINIMUM_MACOS}" =~ ^[0-9]+\.[0-9]+$ ]]; then
   echo "ERROR: Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'" 1>&2
   exit 2
 fi
 export MACOSX_DEPLOYMENT_TARGET="${PW_MINIMUM_MACOS}"
-echo "==> Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}"
 
-# A shipped Mach-O must carry that minimum; a stale output or a toolchain
-# default that moved refuses here rather than shipping a disagreement.
+# Every Cargo and Meson output that can ship must carry that minimum, in both
+# variants and before assembly; a stale output, a toolchain default that moved
+# or a manifest pinned to another version than the plist refuses here rather
+# than shipping a disagreement.
 check_minimum_macos() {
   local target="$1" minos
   minos="$(/usr/bin/otool -l "${target}" | /usr/bin/awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
@@ -158,9 +169,41 @@ check_minimum_macos() {
   fi
 }
 
+# ---- Toolchain and build-directory admission --------------------------------
+
+# One SDK for Cargo and Meson, selected the way xcrun --sdk macosx does, before
+# any compile; DEVELOPER_DIR passes through for the toolchain choice. The
+# selection is checked here because set -e would see export's status, not
+# xcrun's.
+echo "==> Selecting the macOS SDK (xcrun --sdk macosx)"
+if ! SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path 2>/dev/null)" || [[ ! -d "${SDKROOT}" ]]; then
+  echo "ERROR: xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})" 1>&2
+  exit 2
+fi
+export SDKROOT
+echo "    ${SDKROOT}"
+
+# A build directory is trusted incremental state for this checkout and no
+# other. Meson keeps compiling the source directory a build directory was set
+# up for, so one configured elsewhere (copied along with a checkout, say)
+# would compile that other tree and pass every later check against it. Refuse
+# it here, before Cargo; the configured source check repeats the comparison.
+echo "==> Checking the native build directory: ${MESON_BUILD_DIR}"
+if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
+  if ! MESON_SOURCE_DIR="$(/usr/bin/python3 -c 'import json, os, sys; print(os.path.realpath(json.load(open(sys.argv[1]))["directories"]["source"]))' "${MESON_BUILD_DIR}/meson-info/meson-info.json" 2>/dev/null)"; then
+    echo "ERROR: ${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory" 1>&2
+    exit 2
+  fi
+  if [[ "${MESON_SOURCE_DIR}" != "$(cd "${ROOT_DIR}" && pwd -P)" ]]; then
+    echo "ERROR: ${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory" 1>&2
+    exit 2
+  fi
+fi
+
 # Select and verify the signing identity: an explicit Developer ID Application
 # identity present in the login keychain. Nothing is auto-selected, and any
 # other identity class is refused here, before Cargo runs (docs/SIGNING.md).
+echo "==> Checking the signing identity"
 IDENTITY="${IDENTITY:-}"
 if [[ -z "${IDENTITY}" ]]; then
   cat <<'EOM' 1>&2
@@ -213,17 +256,22 @@ fi
 
 # ---- Build binaries --------------------------------------------------------
 
+# The output directory is pinned on the command line, so a CARGO_TARGET_DIR
+# or a Cargo configuration value cannot send the outputs elsewhere while the
+# copies below read these fixed paths.
+CARGO_TARGET_DIR_PINNED="${ROOT_DIR}/controller/target"
 echo "==> Building Rust controller + tools"
 PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
   cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
+  --target-dir "${CARGO_TARGET_DIR_PINNED}" \
   --bin policy-witness \
   --bin sandbox-log-observer \
   --bin sbpl-check
 
-RUNNER_BIN="${ROOT_DIR}/controller/target/release/policy-witness"
-SANDBOX_LOG_OBSERVER_BIN="${ROOT_DIR}/controller/target/release/sandbox-log-observer"
-SBPL_CHECK_BIN="${ROOT_DIR}/controller/target/release/sbpl-check"
+RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
+SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
+SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
 if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2
@@ -236,10 +284,12 @@ if [[ ! -x "${SBPL_CHECK_BIN}" ]]; then
   echo "ERROR: expected sbpl-check binary at ${SBPL_CHECK_BIN}" 1>&2
   exit 2
 fi
+for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
+  check_minimum_macos "${rust_bin}"
+done
 # ---- Native executables (Meson) ---------------------------------------------
 
-# SDKROOT selects the macOS SDK the way the former xcrun --sdk macosx calls
-# did; DEVELOPER_DIR passes through for the toolchain choice. The first build
+# The SDK was selected above. The first build
 # sets the directory up; later builds pass the current variants with meson
 # configure, which regenerates only when a value changed, so an unchanged
 # tree compiles nothing. meson.build's policy assertions run on setup and on
@@ -250,6 +300,7 @@ fi
 # caller's working directory. The worker links libsandbox dynamically there
 # (sandbox_apply and sandbox_compile_string are SPI in
 # /usr/lib/libsandbox.dylib); the validator does not.
+echo "==> Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer)"
 if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
   echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md" 1>&2
   exit 2
@@ -260,7 +311,6 @@ if ! /usr/bin/python3 -c 'import sys; v, m = (tuple(int(p) for p in a.split(".")
   echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2
   exit 2
 fi
-export SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
   echo "==> Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
   meson configure "${MESON_BUILD_DIR}" "${MESON_OPTIONS[@]}"
@@ -276,15 +326,24 @@ meson compile -C "${MESON_BUILD_DIR}"
 # output is copied. The same check reads Ninja's dependency log: every
 # repository file the compiler consumed for the worker and the shim must be an
 # identity digest input, so an include reaching outside the digest's
-# directories refuses too. The source_drift suite applies the source-list
+# directories refuses too. The check is told which checkout the directory
+# must be configured for. The source_drift suite applies the source-list
 # expectation to the manifest read without a build directory.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}"
-for native_bin in "${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}"; do
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
+NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}")
+if [[ "${BUILD_XPC}" == "1" ]]; then
+  NATIVE_OUTPUTS+=("${PW_RUNNER_CLIENT_BIN}")
+  for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
+    NATIVE_OUTPUTS+=("${MESON_BUILD_DIR}/${svc_name}")
+  done
+fi
+for native_bin in "${NATIVE_OUTPUTS[@]}"; do
   if [[ ! -x "${native_bin}" ]]; then
     echo "ERROR: expected Meson output at ${native_bin}" 1>&2
     exit 2
   fi
+  check_minimum_macos "${native_bin}"
 done
 
 # ---- Assemble app bundle ---------------------------------------------------
@@ -296,7 +355,11 @@ for document in README.md AGENTS.md; do
     cp "${ROOT_DIR}/dist/${document}" "${DIST_DIR}/${document}"
   fi
 done
+# From here on a refusal leaves only what this build got to: the previous app,
+# ZIP and guide at the output path are removed together, and nothing is
+# preserved.
 rm -rf "${APP_BUNDLE}"
+rm -f "${ZIP_NAME}" "${GUIDE_NAME}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 
 if [[ ! -f "${INFO_PLIST_TEMPLATE}" ]]; then
@@ -314,9 +377,6 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 
 cp "${SBPL_CHECK_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
-for rust_bin in policy-witness sandbox-log-observer sbpl-check; do
-  check_minimum_macos "${APP_BUNDLE}/Contents/MacOS/${rust_bin}"
-done
 
 # sb_api_validator is embedded only INSIDE each XPC service bundle (see
 # the XPC build loop below) and resolved relative to that bundle by the
@@ -361,14 +421,13 @@ embed_dsym() {
 }
 
 if [[ "${BUILD_XPC}" == "1" ]]; then
+  echo "==> Embedding PW runner client"
   if [[ ! -x "${PW_RUNNER_CLIENT_BIN}" ]]; then
     echo "ERROR: expected Meson output at ${PW_RUNNER_CLIENT_BIN}" 1>&2
     exit 2
   fi
-  echo "==> Embedding PW runner client"
   cp "${PW_RUNNER_CLIENT_BIN}" "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
-  check_minimum_macos "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 
   echo "==> Embedding PWRunner XPC services"
@@ -411,9 +470,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     # The orchestrator checks bundle-local first.
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
-    for svc_bin in "${svc_name}" pw-probe-runner sb_api_validator; do
-      check_minimum_macos "${svc_bundle}/Contents/MacOS/${svc_bin}"
-    done
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
@@ -421,7 +477,10 @@ fi
 
 # ---- Codesign --------------------------------------------------------------
 
-# Refuse a source edit during compilation instead of signing mixed components.
+# Refuse an identity input edited during the build without regeneration,
+# instead of signing mixed components; the build otherwise trusts the checkout
+# not to change under it.
+echo "==> Checking host/worker identity again, before signing"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 
 if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then
@@ -496,6 +555,15 @@ echo "==> Verifying signature + entitlements"
 codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}"
 codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 
+# Every executable under the app's and each service's Contents/MacOS must
+# carry the named identity with the hardened runtime, whether or not the
+# signing list named it. The linker leaves every compiler output ad hoc-signed,
+# and an ad hoc executable passes the seal and the verification above and
+# fails only at notarization. The dSYM bundles are sealed resources, not
+# executables, and are not checked.
+echo "==> Checking every executable's signer"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
+
 # Keep the standalone observer tool signed for direct use.
 echo "==> Codesigning observer tool (not embedded)"
 sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
@@ -504,7 +572,7 @@ sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
 
 echo "==> Staging checked user guide"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" \
-  --stage-guide "${DIST_DIR}/PolicyWitness.md"
+  --stage-guide "${GUIDE_NAME}"
 
 echo "==> Creating zip (for notarization): ${ZIP_NAME}"
 rm -f "${ZIP_NAME}"
@@ -515,7 +583,7 @@ cat <<EOF
 DONE:
   - ${APP_BUNDLE}
   - ${ZIP_NAME}
-  - ${DIST_DIR}/PolicyWitness.md
+  - ${GUIDE_NAME}
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
 Next (see docs/SIGNING.md; make notarize builds again):

@@ -80,6 +80,10 @@
           "description": "Architecture manifest, dot files, SVG stamps and document regions agree; citation, stale-copy and refusal controls pass"
         },
         {
+          "id": "build_documentation",
+          "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, parser refusals and mutation controls pass"
+        },
+        {
           "id": "generator_contract",
           "description": "Uniform generator ownership, citation and prose contracts with mutation controls"
         }

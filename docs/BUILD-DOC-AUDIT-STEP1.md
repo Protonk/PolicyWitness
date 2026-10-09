@@ -319,8 +319,8 @@ report. Exit 0; all five cases passed, with five completed, zero skipped and
 zero unrun in `tests/out/runs/build-doc-audit1-report/run.json`. This managed
 output is retained in place under the usual test-output rules. `git diff
 --check` passed. A Python byte-prefix comparison with `git show
-0e48cde:docs/BUILD-DOC-AUDIT-STEP1.md` confirmed the original 9,665-byte prompt
-is unchanged. `git status --short` showed only this audit file modified.
+0e48cde:docs/BUILD-DOC-AUDIT-STEP1.md` confirmed the original prompt's bytes
+are unchanged. `git status --short` showed only this audit file modified.
 
 ## 2. Rows 1 to 16
 

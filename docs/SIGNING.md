@@ -28,19 +28,25 @@ Requirements:
   class is refused; the rules are under [What `build.sh` signs](#what-buildsh-signs).
 - Xcode Command Line Tools; `clang` and `swiftc` come from the selected
   developer directory and the macOS SDK that `xcrun --sdk macosx` reports.
+  The build selects that SDK once, as `SDKROOT`, before Cargo and Meson run,
+  and refuses when `xcrun` cannot.
 - Meson 1.12.1 or newer and Ninja 1.13.2 or newer (`brew install meson ninja`).
   `meson.build` enforces Meson's minimum and `build.sh` Ninja's.
-- The two knobs, `BUILD_XPC` and `PW_INSPECTION`, take exactly `0` or `1`; any
-  other spelling is refused rather than read as one of them.
+- The two knobs, `BUILD_XPC` and `PW_INSPECTION`, take exactly `0` or `1`,
+  and an unset knob means `1`; any other value, including an empty one, is
+  refused rather than read as one of them.
 
-The order is fixed: documentation checks, identity generation, git stamp, the
-supported macOS from `Info.plist`, signing identity, Cargo, Meson, the
-configured source and closure check, bundle assembly, identity check, nested
-signing, evidence, outer seal and verification, the standalone observer,
-guide, ZIP. Each refusal precedes the step it protects: stale documents stop
-the build before any compile, a bad identity before Cargo, a wrong source list
-or closure before any output is copied, a wrong minimum version before
-signing.
+The order is fixed: documentation and identity checks, git stamp, the
+supported macOS from `Info.plist`, the SDK, the build directory, signing
+identity, Cargo and the minimum-version check of its outputs, Meson, the
+configured source and closure check and the minimum-version check of its
+outputs, bundle assembly, identity check, nested signing, evidence, outer
+seal, verification and the signer check, the standalone observer, guide, ZIP.
+Each refusal precedes the step it protects: a stale document or identity copy
+stops the build before any compile, a build directory configured for another
+checkout and a bad identity before Cargo, a wrong source list or closure
+before any output is copied, a wrong minimum version before assembly, an
+executable that does not carry the named identity before the ZIP.
 
 `PW_INSPECTION=1` (default) builds Swift with `-Onone -g`, gives the Rust
 tools debug info, frame pointers and `opt-level=1` unless `RUSTFLAGS` is
@@ -83,16 +89,16 @@ files are host/worker identity inputs. `build.sh` runs Meson after Cargo into
 the ignored `builddir/` and copies the four executables from there into the
 bundle; the shim is linked into the host and is not a product.
 
-`build.sh` passes exactly two options on every build (`meson setup` the
-first time, `meson configure` afterwards, which regenerates only when a value
+`build.sh` passes exactly two options on every build (`meson setup` the first
+time, `meson configure` afterwards, which regenerates only when a value
 changed), so a build directory never retains an earlier variant and an
 unchanged tree compiles nothing: `inspection` from `PW_INSPECTION` and `xpc`
 from `BUILD_XPC` (false skips the Swift client and host and the shim; the two
-C executables still build and no Swift compiler is discovered). Every other
-native setting is fixed in `meson.build` and checked as an effective value on
-setup and on every regeneration: `meson configure` with any other change,
-`-Dc_args=...`, a sanitizer, a changed optimization or debug level or a
-different buildtype label makes the next build refuse with a message naming
+C executables still build and no Swift compiler is discovered). The native
+settings `meson.build` enumerates are fixed there and checked as effective
+values on setup and on every regeneration: `meson configure` with any other
+change, `-Dc_args=...`, a sanitizer, a changed optimization or debug level or
+a different buildtype label makes the next build refuse with a message naming
 the setting (the effective values are asserted before the label), before any
 output is copied or signed. Meson reads `CFLAGS` and the other environment
 flag variables only when a directory is first set up, and a fresh directory
@@ -100,45 +106,51 @@ refuses them the same way. Executables are linked with `b_asneeded=false`
 declared per target, so a global value cannot add `-dead_strip_dylibs`. Meson
 adds `-headerpad_max_install_names` and `-fdiagnostics-color` of its own,
 compiles and links in separate steps and tracks included headers; those are
-the accepted backend additions, and `tests/lib/meson_receipts.py` records
-the effective commands so any further difference is visible. Because the
-link is a separate step, swiftc no longer runs `dsymutil` itself; `build.sh`
-runs it for inspection builds.
+the accepted backend additions, and `tests/lib/meson_receipts.py` records the
+effective commands so any further difference is visible. Because the link is a
+separate step, swiftc no longer runs `dsymutil` itself; `build.sh` runs it for
+inspection builds.
 
 The supported macOS is the one this repository is tested on, declared in
 `Info.plist` as `LSMinimumSystemVersion` and pinned in `meson.build`, which
 passes it at compile and at link for the C and Swift executables; `build.sh`
-exports the same value to Cargo for the Rust ones and refuses to sign a bundle
-in which any Mach-O's minimum version differs from the plist. The selected
-SDK's default and an inherited `MACOSX_DEPLOYMENT_TARGET` cannot change the
-native outputs, and the receipts record each output's minimum version.
-Changing the supported version means changing the plist and the manifest
-together; building for an older macOS from a checkout is possible that way but
-not supported.
+exports the same value to Cargo for the Rust ones and refuses, before assembly
+and in both variants, any Cargo or Meson output whose minimum version differs
+from the plist, so the two declarations cannot disagree in a build that
+completes. The selected SDK's default and an inherited
+`MACOSX_DEPLOYMENT_TARGET` cannot change the native outputs, and the receipts
+record each output's minimum version. Changing the supported version means
+changing the plist and the manifest together; building for an older macOS from
+a checkout is possible that way but not supported.
 
-After compiling, `build.sh` reads the configured directory's targets, the
-ones Meson actually evaluated, and refuses unless every target's sources are
-exactly the files the tree holds for it; a manifest that compiles a
-substitute, or a dead declaration standing in for a live one, stops there,
-before any output is copied. The same check reads Ninja's dependency log for
-the worker and the shim: every repository file the compiler consumed must be
-an identity digest input, so an include that reaches outside the digest's
-directories, by a relative path or through a symlink, stops the build as well.
-The `source_drift` suite applies the source-list expectation to the manifest
-read without a build directory, through the shared reader in
+Before Cargo, `build.sh` refuses a build directory whose recorded source
+directory is not this checkout, because Meson keeps compiling the directory it
+was set up for; the configured source check repeats that comparison. After
+compiling, `build.sh` reads the configured directory's targets, the ones Meson
+actually evaluated, and refuses unless every target's sources are exactly the
+files the tree holds for it; a manifest that compiles a substitute, or a dead
+declaration standing in for a live one, stops there, before any output is
+copied. The same check reads Ninja's dependency log for the worker and the
+shim: every repository file the compiler consumed must be an identity digest
+input, so an include that reaches outside the digest's directories, by a
+relative path or through a symlink, stops the build as well. The
+`source_drift` suite applies the source-list expectation to the manifest read
+without a build directory, through the shared reader in
 `tests/lib/native_sources.py`. Both check membership, not what the compiler
 does with those files.
 
 `builddir/` and `controller/target/` are incremental build directories and
-trusted working state, like the checkout they sit in. The build reads them:
-Meson, Ninja and Cargo decide what is up to date from their own records, and
-nothing attests that an output came from the current sources beyond those
-records. Reproducibility rests on the source identity and a clean checkout at
-the release commit, which the release procedure requires; reset a directory
-after a toolchain change. The receipt pairs each output's hash and mtime with
-its entry in Ninja's log; the recorded time precedes the file's by a few tens
-of milliseconds for a cc rule, so a lag of seconds means the output changed
-after Ninja produced it. That is evidence to read, not a verdict.
+trusted working state, like the checkout they sit in, and for that checkout
+only: a build directory configured for another is refused, and Cargo's output
+directory is pinned to the checkout's. The build reads them: Meson, Ninja and
+Cargo decide what is up to date from their own records, and nothing attests
+that an output came from the current sources beyond those records.
+Reproducibility rests on the source identity and a clean checkout at the
+release commit, which the release procedure requires; reset a directory after
+a toolchain change. The receipt pairs each output's hash and mtime with its
+entry in Ninja's log; the recorded time precedes the file's by a few tens of
+milliseconds for a cc rule, so a lag of seconds means the output changed after
+Ninja produced it. That is evidence to read, not a verdict.
 
 To build the native executables alone, run the same commands directly:
 
@@ -147,11 +159,12 @@ SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir -Dinspectio
 meson compile -C builddir
 ```
 
-With `BUILD_XPC=0`, `build.sh` still runs Cargo, builds both C executables,
-checks the signing identity and signs and packages a partial bundle without
-the XPC service, client or embedded helpers. That bundle passes evidence
-generation but not the full artifact inspection, and it cannot run specimens;
-it is an iteration convenience, never a release or test artifact.
+With `BUILD_XPC=0`, `build.sh` still runs Cargo, builds and minimum-checks
+both C executables, checks the signing identity and signs and packages a
+partial bundle without the XPC service, client or embedded helpers. That
+bundle passes evidence generation but not the full artifact inspection, and it
+cannot run specimens; it is an iteration convenience, never a release or test
+artifact.
 
 Toolchain selection is the operator's responsibility and is not fingerprinted.
 Keep separate build directories for the Command Line Tools and Xcode, and use
@@ -181,10 +194,12 @@ resolve their own identity separately (`PW_BYOXPC_IDENTITY`, then `IDENTITY`,
 then a keychain identity whose team matches the app's).
 
 **Gates before any signature.** The three generated identity copies must be
-current (`generate_worker_identity.py --check`, refusing a source edit made
-during compilation), every shipped Mach-O must carry the plist's minimum
-macOS, and the configured source lists and closure must have matched the tree
-before assembly.
+current (`generate_worker_identity.py --check`, run before compiling and again
+before signing, where it refuses an identity input edited during the build
+without regeneration; the build otherwise trusts the checkout not to change
+under it), every Cargo and Meson output must have carried the plist's minimum
+macOS, and the configured source lists and closure must have matched the tree,
+all before assembly.
 
 **Order.** Signing is “inside-out”, every signature with
 `--force --options runtime --timestamp` (the timestamp needs network access
@@ -203,7 +218,11 @@ to Apple's timestamp service):
    under `Contents/` including the manifest. The dSYM bundles beside the Swift
    executables are sealed as resources; their DWARF files are not themselves
    signed.
-6. `codesign --verify --deep --strict` of the result.
+6. `codesign --verify --deep --strict` of the result, then the signer check:
+   every executable directly under the app's and the service's
+   `Contents/MacOS`, whether or not the list named it, must carry the named
+   identity with the hardened runtime; the dSYM bundles are resources, not
+   executables.
 7. The standalone `controller/target/release/sandbox-log-observer`, for
    direct use from the checkout; it is not part of the bundle.
 
@@ -212,7 +231,9 @@ exactly the executables this build produced. When you add a helper under
 either the app's top-level `Contents/MacOS` or an XPC service's nested
 `Contents/MacOS`, add it to that list in `build.sh`, to `EXECUTABLES` in
 `tests/lib/artifact.py`, to `tests/build-evidence.py` and to the README's
-inventory; notarization fails if any embedded tool remains ad hoc-signed.
+inventory; a helper left off the list arrives with the linker's ad hoc
+signature, passes the seal and the deep verification, and is refused by the
+signer check before the ZIP, as notarization would refuse it later.
 
 Do not “fix” signing by adding `codesign --deep` to the signing steps.
 Explicitly sign the known nested binaries and then sign the outer app.

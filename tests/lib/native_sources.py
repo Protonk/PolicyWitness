@@ -25,7 +25,13 @@ relative path or through a symlink, is named; the validator is outside the
 identity by design and is not checked. Dependencies must have been recorded by
 a completed compile.
 
-    native_sources.py [--manifest meson.build] [--builddir DIR]
+The build-directory reading also requires that the directory was configured
+for the checkout being checked (`--root`, this repository by default). Meson
+keeps compiling the source directory a build directory was set up for, so a
+copied build directory would otherwise pass every comparison against that
+other tree; the mismatch is named and nothing else is compared.
+
+    native_sources.py [--manifest meson.build] [--builddir DIR [--root CHECKOUT]]
 
 Exit 1 with one line per problem; exit 2 when Meson or Ninja cannot be read.
 """
@@ -186,12 +192,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--manifest', type=Path, help='check the manifest in file mode (default when no --builddir)')
     parser.add_argument('--builddir', type=Path, help='check the targets a configured directory actually evaluated')
+    parser.add_argument('--root', type=Path, help='the checkout the build directory must be configured for (default: this repository)')
     args = parser.parse_args()
     try:
         if args.builddir:
             targets, found, root, xpc, filenames = active_targets(args.builddir)
-            found += problems(targets, expected(root, xpc), 'builddir')
-            found += closure_problems(args.builddir, root, targets, filenames, 'builddir')
+            checkout = (args.root or ROOT).resolve()
+            if Path(root).resolve() != checkout:
+                found = [f"  builddir: configured for {Path(root).resolve()}, not {checkout}; use a fresh build directory"]
+            else:
+                found += problems(targets, expected(root, xpc), 'builddir')
+                found += closure_problems(args.builddir, root, targets, filenames, 'builddir')
             where = f"{args.builddir} (xpc={'true' if xpc else 'false'})"
         else:
             manifest = args.manifest or ROOT / 'meson.build'

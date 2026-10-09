@@ -85,7 +85,7 @@ rules this script runs, and the form table below to the shared module's rules.
 ### Generator contracts
 
 The `generator_contract` case in [generators.py](generators.py) holds these
-invariants across the generators. Per-generator cases retain their shape,
+invariants across the five generators. Per-generator cases retain their shape,
 stale-copy, marker and build-refusal controls.
 
 - **G1. One owner, nothing outside.** Every region (including an authored
@@ -99,7 +99,7 @@ stale-copy, marker and build-refusal controls.
 - **G4. Citations resolve.** Every citation names a repository-relative file
   that exists and a symbol that occurs in it.
 - **G5. Check citations have a form and a definition.** Every check citation
-  in both manifests carries a form. A `test` is defined in the cited file, in
+  in every manifest carries a form. A `test` is defined in the cited file, in
   that file's language; a `rule` is a drift-rule function; a `control` is a
   fixture, golden, helper or compiled C control a test compares against.
   Every node, edge and limit cites at least one `test` or `rule`. A common
@@ -225,6 +225,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
+- `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log` and `build.log`
 - `<run>/suites/source_drift/generator_contract/artifacts/generators.log`
 
 ## Run
@@ -266,6 +267,26 @@ citations, unknown references, duplicate ids, stale dot text, a stale table, a
 stale SVG stamp, regeneration without Graphviz, idempotence and refusal before
 any write. An SVG is checked by the stamp naming the hash of its dot text, so
 the check needs no Graphviz; rendering does.
+
+The `build_documentation` case checks [`docs/build.json`](../../../docs/build.json)
+against the dot file, SVG stamp and generated table regions of
+[`docs/BUILD.md`](../../../docs/BUILD.md), and runs the grounding rules in
+[build_rules.py](build_rules.py), which parse `build.sh` and compare its
+banner order, refusal messages, statuses and steps, knob values, signing
+calls and helper invocations with the manifest, compare the Makefile's build
+entry, the Meson policy assertions and the signed inventory (against
+`EXECUTABLES`, the evidence generator and the README), and require the
+baseline in `tests/fixtures/docs/build_baseline.json` to list exactly the
+refusals without a behavioral or helper control. Controls mutate a disposable
+copy of the script (a reordered or removed banner, an added, removed or moved
+refusal, a changed status, a renamed knob, a removed or moved signing call, a
+moved helper), its neighbours (a Meson option, the Makefile guard, the three
+inventories, the baseline) and the forms the parser refuses (a banner in a
+function, a refusal without an exit, an elif, an unknown codesign form), and
+each must be named by its rule. Agreement is textual: it does not establish
+that a refusal fires or precedes the operation it protects; the manifest's
+behavioral and helper citations and the baseline carry that distinction, and
+release preflight refuses a grown baseline.
 
 The same case checks the generated host/worker source identity and exercises
 relocation, deterministic regeneration, stale generated values, malformed

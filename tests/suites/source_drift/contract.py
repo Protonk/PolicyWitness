@@ -33,6 +33,18 @@ def limits_references():
     return {ref['path'] for row in manifest['limits'] for key in ('sources', 'checks') for ref in row[key]}
 
 
+def build_references():
+    """Everything the build generator's check reads: its manifest, script inputs, inventories, baseline, copies and every cited file."""
+    manifest = json.loads((ROOT / 'docs/build.json').read_text())
+    paths = {'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
+             'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
+             'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py'}
+    for group in ('steps', 'refusals', 'signing', 'invocations', 'knobs', 'directories'):
+        for item in manifest[group]:
+            paths.update(ref['path'] for key in ('sources', 'checks') for ref in item[key])
+    return paths
+
+
 def architecture_references():
     """Everything the architecture check reads: the manifest, its generator, the document, the figures and every cited file."""
     manifest = json.loads((ROOT / 'docs/architecture.json').read_text())
@@ -219,24 +231,96 @@ class ContractVersionTests(unittest.TestCase):
         self.assertIn('reply', golden['shape'])
         self.assertEqual(golden['shape']['reply']['schema_version'], 'number')
 
+    def build_checkout(self):
+        """A checkout in which every check before the signing identity passes."""
+        extra = LIMITS_FILES | limits_references() | architecture_references() | build_references() | {'Info.plist', 'meson.build', 'meson.options'}
+        extra |= set(identity_generator.source_paths(ROOT)) | set(identity_generator.TARGETS)
+        return self.checkout(extra=extra)
+
+    def build(self, root, env, timeout=120):
+        """Run build.sh in a checkout with the knobs unset unless env sets them; return the result and the output path."""
+        destination = root / 'dist'
+        base = {name: value for name, value in os.environ.items() if name not in ('BUILD_XPC', 'PW_INSPECTION')}
+        result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
+            env={**base, 'DIST_DIR': str(destination), **env}, capture_output=True, text=True, timeout=timeout)
+        return result, destination
+
     def test_build_refuses_a_non_developer_id_identity_before_cargo(self):
         """Every check before the identity step passes in the checkout; the identity class stops the build."""
-        extra = LIMITS_FILES | limits_references() | architecture_references() | {'Info.plist', 'meson.build', 'meson.options'}
-        extra |= set(identity_generator.source_paths(ROOT)) | set(identity_generator.TARGETS)
-        root = self.checkout(extra=extra)
-        destination = root / 'dist'
+        root = self.build_checkout()
         for identity in ('Apple Development: Nobody (TEAMID00AA)', 'Mac Developer: Nobody (TEAMID00AA)', '-'):
             with self.subTest(identity=identity):
-                result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-                    env={**os.environ, 'IDENTITY': identity, 'DIST_DIR': str(destination)},
-                    capture_output=True, text=True, timeout=120)
+                result, destination = self.build(root, {'IDENTITY': identity})
                 self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-                self.assertIn('Generating host/worker identity', result.stdout)
+                self.assertIn('Checking host/worker identity', result.stdout)
                 self.assertIn('Build stamp', result.stdout)
+                self.assertIn('Selecting the macOS SDK', result.stdout)
                 self.assertIn('must name a Developer ID Application identity', result.stderr)
                 self.assertNotIn('Building Rust', result.stdout)
                 self.assertFalse(destination.exists())
                 self.assertFalse((root / 'builddir').exists())
+
+    def test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing(self):
+        """A committed stale copy is refused with the regenerating command; the build repairs nothing itself."""
+        root = self.build_checkout()
+        target = root / 'tests/lib/contract.py'
+        value = identity_generator.identity(root)
+        self.assertIn(value, target.read_text())
+        target.write_text(target.read_text().replace(value, '0' * 64))
+        before = {name: (root / name).read_bytes() for name in identity_generator.TARGETS}
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('Checking host/worker identity', result.stdout)
+        self.assertIn('stale tests/lib/contract.py; run python3 docs/generate_worker_identity.py', result.stderr)
+        self.assertNotIn('Build stamp', result.stdout)
+        self.assertNotIn('Building Rust', result.stdout)
+        self.assertEqual({name: (root / name).read_bytes() for name in before}, before)
+        self.assertFalse(destination.exists())
+        self.assertFalse((root / 'builddir').exists())
+
+    def test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check(self):
+        root = self.checkout(extra={'build.sh'})
+        for knob in ('BUILD_XPC', 'PW_INSPECTION'):
+            for value in ('', '2', ' 1', 'true'):
+                with self.subTest(knob=knob, value=value):
+                    result, destination = self.build(root, {knob: value, 'IDENTITY': ''}, timeout=10)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn(f"{knob} must be 0 or 1 (got '{value}')", result.stderr)
+                    self.assertNotIn('Checking limits documentation', result.stdout)
+                    self.assertFalse(destination.exists())
+        # Unset, 0 and 1 pass the gate: the first documentation check runs next.
+        for env in ({}, {'BUILD_XPC': '0', 'PW_INSPECTION': '0'}, {'BUILD_XPC': '1', 'PW_INSPECTION': '1'}):
+            with self.subTest(env=env):
+                result, _ = self.build(root, {**env, 'IDENTITY': ''}, timeout=10)
+                self.assertIn('Checking limits documentation', result.stdout)
+
+    def test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo(self):
+        """Meson keeps compiling the directory a build directory was set up for; the script compares before Cargo."""
+        root = self.build_checkout()
+        builddir = root / 'builddir'
+        (builddir / 'meson-info').mkdir(parents=True)
+        (builddir / 'build.ninja').write_text('# control\n')
+        other = tempfile.TemporaryDirectory(prefix='pw-other-checkout-')
+        self.addCleanup(other.cleanup)
+        info = builddir / 'meson-info/meson-info.json'
+        info.write_text(json.dumps({'directories': {'source': other.name}}))
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('Selecting the macOS SDK', result.stdout)
+        self.assertIn(f'is configured for {os.path.realpath(other.name)}, not this checkout', result.stderr)
+        self.assertNotIn('IDENTITY is not set', result.stderr)
+        self.assertNotIn('Building Rust', result.stdout)
+        self.assertFalse(destination.exists())
+        # The same record naming this checkout passes the gate; the next refusal is the identity's.
+        info.write_text(json.dumps({'directories': {'source': str(root)}}))
+        result, _ = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('IDENTITY is not set', result.stderr)
+        # A configured directory whose record cannot be read is refused too.
+        info.unlink()
+        result, _ = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('has no readable meson-info', result.stderr)
 
     def test_build_refuses_stale_contract_copy_before_signing_or_creating_output(self):
         root = self.checkout(extra=LIMITS_FILES | limits_references())

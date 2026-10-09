@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture')
+GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build')
 
 
 def module(name, path):
@@ -30,7 +30,7 @@ def build_checks(text):
 
 def ownership(root, name):
     regions, whole = region_ownership(root, name)
-    if name in {'limits', 'architecture'}:
+    if name in {'limits', 'architecture', 'build'}:
         gen = module('span_owner_' + name, root / f'docs/generate_{name}.py')
         common = module('span_common', root / 'docs/generator_common.py')
         for document in gen.SPAN_DOCUMENTS:
@@ -61,6 +61,9 @@ def region_ownership(root, name):
                     (gen.GUIDE_QUESTIONS_START, gen.GUIDE_QUESTIONS_END),
                     (gen.GUIDE_RULES_START, gen.GUIDE_RULES_END)]}, set()
     data = json.loads((root / gen.MANIFEST_NAME).read_text())
+    if name == 'build':
+        return {data['document']: [(gen.REGION_START.format(region=r), gen.REGION_END.format(region=r)) for r in gen.REGIONS]}, {
+            str(Path(data['document']).parent / (data['figure'] + suffix)) for suffix in ('.dot', '.svg')}
     return {data['document']: [(gen.REGION_START.format(graph=g['id']),
                                 gen.REGION_END.format(graph=g['id'])) for g in data['graphs']]}, {
         str(Path(data['document']).parent / (g['file'] + suffix))
@@ -283,11 +286,13 @@ class GeneratorContractTests(unittest.TestCase):
                         data['versions']['response_schema'] += 1
                     elif name == 'limits':
                         data['limits'][0]['value'] += 1
+                    elif name == 'build':
+                        data['steps'][2]['reads'] += ' (property control)'
                     else:
                         data['graphs'][0]['nodes'][0]['label'] += ' property control'
                     path.write_text(json.dumps(data))
                 before = self.snapshot(root)
-                result = self.command(root, name, *(['--skip-svg'] if name == 'architecture' else []))
+                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else []))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 after = self.snapshot(root)
                 self.assertNotEqual(before, after)
@@ -299,7 +304,7 @@ class GeneratorContractTests(unittest.TestCase):
                     'code = main()\n    target = ROOT / ' + repr(target) +
                     '\n    target.write_text(target.read_text() + "x")\n    sys.exit(code)'))
                 before = self.snapshot(root)
-                result = self.command(root, name, *(['--skip-svg'] if name == 'architecture' else []))
+                result = self.command(root, name, *(['--skip-svg'] if name in ('architecture', 'build') else []))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(changed_outside(before, self.snapshot(root), regions, whole), [target])
 
@@ -310,7 +315,7 @@ class GeneratorContractTests(unittest.TestCase):
         mutate(data)
         path.write_text(json.dumps(data))
         before = self.snapshot(root)
-        for args in [('--check',), ('--skip-svg',) if name == 'architecture' else ()]:
+        for args in [('--check',), ('--skip-svg',) if name in ('architecture', 'build') else ()]:
             result = self.command(root, name, *args)
             self.assertNotEqual(result.returncode, 0, result.stdout)
             self.assertIn(expected, result.stderr)
@@ -497,7 +502,7 @@ class GeneratorContractTests(unittest.TestCase):
     def test_every_span_prefix_has_one_registered_owner(self):
         common = module('prefix_checks', ROOT / 'docs/generator_common.py')
         owners = {}
-        for name in ('limits', 'architecture'):
+        for name in ('limits', 'architecture', 'build'):
             gen = module('prefix_' + name, ROOT / f'docs/generate_{name}.py')
             self.assertNotIn(name, owners)
             owners[name] = set(gen.SPAN_DOCUMENTS)
@@ -690,7 +695,7 @@ class GeneratorContractTests(unittest.TestCase):
                     owners.setdefault(path, []).append((name, a, b))
         self.assertFalse(set(owners) & set(whole_files))
         authored = common.authored_spans('<!-- span unknown.value -->1<!-- /span -->')
-        self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits'} for m in authored))
+        self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits', 'build'} for m in authored))
 
 
 

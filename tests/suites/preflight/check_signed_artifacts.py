@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 from bundle import command, inventory, save, sign
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from artifact import inspect
+import signer_check
 
 
 def main(source, out, identity):
@@ -45,6 +46,22 @@ def main(source, out, identity):
             assert not damaged['ok'] and any(e['code'] == 'signature' for e in damaged['errors'])
             shutil.copy2(original, helper)
             assert observe('restored')['ok'], 'restoration must recover the original valid copy'
+
+            # The signer check build.sh runs after the seal: the copy's own leaf
+            # identity signs every executable; a helper re-signed ad hoc, which
+            # the seal, the deep verification and the inspector all accept, is
+            # named, and nothing else is.
+            leaf = signer_check.signature(app / 'Contents/MacOS/policy-witness')['leaf']
+            assert leaf and signer_check.problems(app, leaf) == [], 'every executable must carry the app leaf identity'
+            top_helper = app / 'Contents/MacOS/sbpl-check'
+            command(out / 'adhoc-helper', ['/usr/bin/codesign', '--force', '--options', 'runtime', '-s', '-', top_helper])
+            assert observe('adhoc_helper_inspected')['ok'], 'the inspector is signer-agnostic by design'
+            named = signer_check.problems(app, leaf)
+            save(out / 'signer-adhoc.json', named)
+            scenarios.append('adhoc_helper_named')
+            assert named == [f'Contents/MacOS/sbpl-check: signed by ad hoc, not {leaf}'], named
+            shutil.copy2(source / top_helper.relative_to(app), top_helper)
+            assert signer_check.problems(app, leaf) == [], 'restoration must recover the signer check'
 
             service = app / 'Contents/XPCServices/PWRunner.xpc'
             info_path = service / 'Contents/Info.plist'

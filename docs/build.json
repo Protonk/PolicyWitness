@@ -1,0 +1,3740 @@
+{
+  "schema_version": 2,
+  "document": "docs/BUILD.md",
+  "script": "build.sh",
+  "makefile": "Makefile",
+  "figure": "build-steps",
+  "knobs": [
+    {
+      "id": "build_xpc",
+      "name": "BUILD_XPC",
+      "default": "1",
+      "values": {
+        "1": "build and embed the Swift client, the XPC host and the C shim (Meson xpc=true)",
+        "0": "skip them; the two C executables still build and nothing Meson-built ships (Meson xpc=false)"
+      },
+      "governs": "Meson's xpc option, the embed and service-signing steps, and which Meson outputs are minimum-checked and signed",
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "BUILD_XPC=\"${BUILD_XPC-1}\""
+        },
+        {
+          "path": "meson.options",
+          "symbol": "option('xpc'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_knobs",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "pw_inspection",
+      "name": "PW_INSPECTION",
+      "default": "1",
+      "values": {
+        "1": "Swift -Onone -g with a dSYM beside each Swift executable; RUSTFLAGS with debug info, frame pointers and opt-level 1 when RUSTFLAGS was unset or empty (Meson inspection=true)",
+        "0": "Swift -O and no dSYM; RUSTFLAGS untouched (Meson inspection=false)"
+      },
+      "governs": "Meson's inspection option, RUSTFLAGS and the dSYM step; the C executables are -O2 without debug info in both",
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "PW_INSPECTION=\"${PW_INSPECTION-1}\""
+        },
+        {
+          "path": "meson.options",
+          "symbol": "option('inspection'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_knobs",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "make_build",
+      "banners": [
+        "[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "IDENTITY and DIST_DIR from the make command line",
+      "writes": "nothing; runs build.sh with them",
+      "refusals": [
+        "make_identity_unset"
+      ],
+      "sources": [
+        {
+          "path": "Makefile",
+          "symbol": "[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_makefile_entry",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ],
+      "where": "Makefile"
+    },
+    {
+      "id": "admission",
+      "banners": [],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "BUILD_XPC, PW_INSPECTION and the argument list",
+      "writes": "nothing",
+      "refusals": [
+        "knob_value",
+        "unknown_argument"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "must be 0 or 1"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "check_limits",
+      "banners": [
+        "Checking limits documentation"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "docs/limits.json and the documents it renders",
+      "writes": "nothing",
+      "refusals": [
+        "stale_limits"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking limits documentation"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "check_contract",
+      "banners": [
+        "Checking contract versions"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "docs/contract.json, docs/architecture.json and their generated copies",
+      "writes": "nothing",
+      "refusals": [
+        "stale_contract",
+        "stale_architecture"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking contract versions"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "check_build_doc",
+      "banners": [
+        "Checking build documentation"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "docs/build.json, build.sh, meson.build, the Makefile, the inventories, the baseline and the generated copies",
+      "writes": "nothing",
+      "refusals": [
+        "stale_build_doc"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking build documentation"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "check_identity",
+      "banners": [
+        "Checking host/worker identity"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the identity inputs and the three generated copies",
+      "writes": "nothing",
+      "refusals": [
+        "stale_identity"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking host/worker identity"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "stamp",
+      "banners": [
+        "Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment",
+      "writes": "the four stamp variables for Cargo and the plists",
+      "refusals": [],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "minimum",
+      "banners": [
+        "Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "LSMinimumSystemVersion in Info.plist",
+      "writes": "MACOSX_DEPLOYMENT_TARGET for Cargo",
+      "refusals": [
+        "plist_minimum_malformed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sdk",
+      "banners": [
+        "Selecting the macOS SDK (xcrun --sdk macosx)"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the SDK path xcrun reports under DEVELOPER_DIR",
+      "writes": "SDKROOT for Cargo and Meson",
+      "refusals": [
+        "sdk_unavailable"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Selecting the macOS SDK (xcrun --sdk macosx)"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "builddir",
+      "banners": [
+        "Checking the native build directory: ${MESON_BUILD_DIR}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "builddir/meson-info/meson-info.json when the directory is configured",
+      "writes": "nothing",
+      "refusals": [
+        "builddir_unreadable",
+        "builddir_other_checkout"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking the native build directory: ${MESON_BUILD_DIR}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "banners": [
+        "Checking the signing identity"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "IDENTITY and the keychain listing; the two knobs, for Meson's options and RUSTFLAGS",
+      "writes": "RUSTFLAGS, when inspection is on and it was unset or empty",
+      "refusals": [
+        "identity_unset",
+        "identity_class",
+        "identity_absent"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking the signing identity"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "cargo",
+      "banners": [
+        "Building Rust controller + tools"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS",
+      "writes": "controller/target/release/, the pinned output directory",
+      "refusals": [
+        "missing_controller",
+        "missing_observer",
+        "missing_sbpl_check",
+        "minimum_mismatch",
+        "cargo_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Building Rust controller + tools"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "toolchain",
+      "banners": [
+        "Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer)"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "meson and ninja on PATH and ninja's version",
+      "writes": "nothing",
+      "refusals": [
+        "meson_ninja_missing",
+        "ninja_old"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer)"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "configure",
+      "banners": [
+        "Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}",
+        "Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two knobs as Meson options",
+      "writes": "builddir/ configuration",
+      "refusals": [
+        "meson_optimization",
+        "meson_debug",
+        "meson_warning_level",
+        "meson_werror",
+        "meson_strip",
+        "meson_unity",
+        "meson_b_ndebug",
+        "meson_b_lto",
+        "meson_b_coverage",
+        "meson_b_pgo",
+        "meson_b_bitcode",
+        "meson_b_pie",
+        "meson_b_staticpic",
+        "meson_b_lundef",
+        "meson_b_sanitize",
+        "meson_c_std",
+        "meson_c_args",
+        "meson_c_link_args",
+        "meson_buildtype",
+        "meson_swift_args",
+        "meson_swift_link_args",
+        "meson_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "compile",
+      "banners": [
+        "Compiling native executables"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the native sources through builddir/",
+      "writes": "builddir/ outputs and the Swift module cache under it",
+      "refusals": [
+        "meson_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Compiling native executables"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "native_check",
+      "banners": [
+        "Checking the configured native source lists and the identity closure against the tree"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "Meson's introspection of builddir/, Ninja's dependency log, the identity inputs and the Meson outputs' load commands",
+      "writes": "nothing",
+      "refusals": [
+        "minimum_mismatch",
+        "missing_native_output",
+        "native_sources_differ",
+        "native_sources_unreadable"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking the configured native source lists and the identity closure against the tree"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "assemble",
+      "banners": [
+        "Assembling app bundle: ${APP_BUNDLE}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md",
+      "writes": "the two documents under DIST_DIR; removes the previous app, ZIP and guide; the stamped Info.plist, the three Rust executables and the augments under the new app",
+      "refusals": [
+        "missing_info_plist",
+        "missing_augments_dir"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Assembling app bundle: ${APP_BUNDLE}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "embed_client",
+      "banners": [
+        "Embedding PW runner client"
+      ],
+      "variants": [
+        "full"
+      ],
+      "reads": "builddir/pw-runner-client",
+      "writes": "Contents/MacOS/pw-runner-client and its dSYM in inspection builds",
+      "refusals": [
+        "missing_client_output"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Embedding PW runner client"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "embed_services",
+      "banners": [
+        "Embedding PWRunner XPC services"
+      ],
+      "variants": [
+        "full"
+      ],
+      "reads": "each service's Info.plist and builddir/ host, the worker and the validator",
+      "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker and the validator",
+      "refusals": [
+        "missing_service_dir",
+        "missing_service_plist",
+        "missing_host_output"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Embedding PWRunner XPC services"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "skip_xpc",
+      "banners": [
+        "Skipping embedded XPC build (BUILD_XPC=0)"
+      ],
+      "variants": [
+        "partial"
+      ],
+      "reads": "nothing",
+      "writes": "nothing",
+      "refusals": [],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Skipping embedded XPC build (BUILD_XPC=0)"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "presign",
+      "banners": [
+        "Checking host/worker identity again, before signing"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the identity inputs and copies, and whether PolicyWitness.entitlements exists",
+      "writes": "nothing",
+      "refusals": [
+        "missing_entitlements",
+        "stale_identity_presign"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking host/worker identity again, before signing"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sign_tools",
+      "banners": [
+        "Codesigning embedded MacOS tools"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the copied top-level helpers",
+      "writes": "signatures on the top-level helpers",
+      "refusals": [
+        "sign_target_missing",
+        "sign_target_not_macho",
+        "codesign_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Codesigning embedded MacOS tools"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sign_services",
+      "banners": [
+        "Codesigning embedded XPC services"
+      ],
+      "variants": [
+        "full"
+      ],
+      "reads": "each service's Entitlements.plist and bundle",
+      "writes": "signatures on the nested helpers, then each service seal",
+      "refusals": [
+        "sign_target_missing",
+        "sign_target_not_macho",
+        "missing_service_bundle",
+        "missing_service_entitlements",
+        "codesign_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Codesigning embedded XPC services"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "evidence",
+      "banners": [
+        "Writing evidence manifest (signed BOM)"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments",
+      "writes": "Contents/Resources/Evidence/manifest.json and symbols.json",
+      "refusals": [
+        "evidence_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Writing evidence manifest (signed BOM)"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "seal",
+      "banners": [
+        "Codesigning app bundle"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "PolicyWitness.entitlements",
+      "writes": "the app seal over everything under Contents/",
+      "refusals": [
+        "codesign_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Codesigning app bundle"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "banners": [
+        "Verifying signature + entitlements"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the sealed app",
+      "writes": "nothing",
+      "refusals": [
+        "verify_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Verifying signature + entitlements"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "signer",
+      "banners": [
+        "Checking every executable's signer"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "every regular file under the app's and each service's Contents/MacOS",
+      "writes": "nothing",
+      "refusals": [
+        "signer_mismatch"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking every executable's signer"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sign_observer",
+      "banners": [
+        "Codesigning observer tool (not embedded)"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "controller/target/release/sandbox-log-observer",
+      "writes": "that executable's signature, in place",
+      "refusals": [
+        "sign_target_missing",
+        "sign_target_not_macho",
+        "codesign_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Codesigning observer tool (not embedded)"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "guide",
+      "banners": [
+        "Staging checked user guide"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "docs/PolicyWitness.md and its inputs",
+      "writes": "PolicyWitness.md under DIST_DIR",
+      "refusals": [
+        "stale_guide"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Staging checked user guide"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "zip",
+      "banners": [
+        "Creating zip (for notarization): ${ZIP_NAME}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the sealed app",
+      "writes": "PolicyWitness.zip under DIST_DIR",
+      "refusals": [],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Creating zip (for notarization): ${ZIP_NAME}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    }
+  ],
+  "refusals": [
+    {
+      "id": "knob_value",
+      "message": "${knob} must be 0 or 1 (got '${!knob}')",
+      "kind": "script",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${knob} must be 0 or 1 (got '${!knob}')"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "unknown_argument",
+      "message": "unknown argument: $1",
+      "kind": "script",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "unknown argument: $1"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "plist_minimum_malformed",
+      "message": "Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'",
+      "kind": "script",
+      "steps": [
+        "minimum"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sdk_unavailable",
+      "message": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})",
+      "kind": "script",
+      "steps": [
+        "sdk"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "builddir_unreadable",
+      "message": "${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory",
+      "kind": "script",
+      "steps": [
+        "builddir"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "builddir_other_checkout",
+      "message": "${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory",
+      "kind": "script",
+      "steps": [
+        "builddir"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "identity_unset",
+      "message": "IDENTITY is not set.",
+      "kind": "script",
+      "steps": [
+        "identity"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "IDENTITY is not set."
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "identity_class",
+      "message": "IDENTITY must name a Developer ID Application identity; got:",
+      "kind": "script",
+      "steps": [
+        "identity"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "IDENTITY must name a Developer ID Application identity; got:"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_non_developer_id_identity_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "identity_absent",
+      "message": "codesigning identity not found in your keychain:",
+      "kind": "script",
+      "steps": [
+        "identity"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "codesigning identity not found in your keychain:"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_controller",
+      "message": "expected policy-witness binary at ${RUNNER_BIN}",
+      "kind": "script",
+      "steps": [
+        "cargo"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected policy-witness binary at ${RUNNER_BIN}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_observer",
+      "message": "expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}",
+      "kind": "script",
+      "steps": [
+        "cargo"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_sbpl_check",
+      "message": "expected sbpl-check binary at ${SBPL_CHECK_BIN}",
+      "kind": "script",
+      "steps": [
+        "cargo"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected sbpl-check binary at ${SBPL_CHECK_BIN}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "minimum_mismatch",
+      "message": "${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}",
+      "kind": "script",
+      "steps": [
+        "cargo",
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_ninja_missing",
+      "message": "meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md",
+      "kind": "script",
+      "steps": [
+        "toolchain"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "ninja_old",
+      "message": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md",
+      "kind": "script",
+      "steps": [
+        "toolchain"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_native_output",
+      "message": "expected Meson output at ${native_bin}",
+      "kind": "script",
+      "steps": [
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected Meson output at ${native_bin}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_info_plist",
+      "message": "missing ${INFO_PLIST_TEMPLATE} at repo root",
+      "kind": "script",
+      "steps": [
+        "assemble"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "missing ${INFO_PLIST_TEMPLATE} at repo root"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_augments_dir",
+      "message": "missing augments source dir at ${XPC_AUGMENTS_DIR}",
+      "kind": "script",
+      "steps": [
+        "assemble"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "missing augments source dir at ${XPC_AUGMENTS_DIR}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_client_output",
+      "message": "expected Meson output at ${PW_RUNNER_CLIENT_BIN}",
+      "kind": "script",
+      "steps": [
+        "embed_client"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected Meson output at ${PW_RUNNER_CLIENT_BIN}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_service_dir",
+      "message": "missing ${svc_name} service dir at ${svc_dir}",
+      "kind": "script",
+      "steps": [
+        "embed_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "missing ${svc_name} service dir at ${svc_dir}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_service_plist",
+      "message": "${svc_name} service is missing Info.plist",
+      "kind": "script",
+      "steps": [
+        "embed_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${svc_name} service is missing Info.plist"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_host_output",
+      "message": "expected Meson output at ${svc_host}",
+      "kind": "script",
+      "steps": [
+        "embed_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected Meson output at ${svc_host}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_entitlements",
+      "message": "missing entitlements plist: ${ENTITLEMENTS_PLIST}",
+      "kind": "script",
+      "steps": [
+        "presign"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "missing entitlements plist: ${ENTITLEMENTS_PLIST}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sign_target_missing",
+      "message": "expected a Mach-O to sign at ${target}",
+      "kind": "script",
+      "steps": [
+        "sign_tools",
+        "sign_services",
+        "sign_observer"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected a Mach-O to sign at ${target}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sign_target_not_macho",
+      "message": "${target} is not a Mach-O; the signing list names only executables",
+      "kind": "script",
+      "steps": [
+        "sign_tools",
+        "sign_services",
+        "sign_observer"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${target} is not a Mach-O; the signing list names only executables"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_service_bundle",
+      "message": "expected XPC service bundle at ${svc_bundle}",
+      "kind": "script",
+      "steps": [
+        "sign_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected XPC service bundle at ${svc_bundle}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "missing_service_entitlements",
+      "message": "${svc_name} service is missing Entitlements.plist at ${svc_entitlements}",
+      "kind": "script",
+      "steps": [
+        "sign_services"
+      ],
+      "status": "2",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${svc_name} service is missing Entitlements.plist at ${svc_entitlements}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "make_identity_unset",
+      "message": "set IDENTITY to your Developer ID Application identity",
+      "kind": "make",
+      "steps": [
+        "make_build"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "Makefile",
+          "symbol": "set IDENTITY to your Developer ID Application identity"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_makefile_entry",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_optimization",
+      "message": "fixed native policy: optimization must be 'plain'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'optimization'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_debug",
+      "message": "fixed native policy: debug must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'debug'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_warning_level",
+      "message": "fixed native policy: warning_level must be '0'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'warning_level'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_werror",
+      "message": "fixed native policy: werror must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'werror'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_strip",
+      "message": "fixed native policy: strip must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'strip'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_unity",
+      "message": "fixed native policy: unity must be 'off'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'unity'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_ndebug",
+      "message": "fixed native policy: b_ndebug must be 'false'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_ndebug'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_lto",
+      "message": "fixed native policy: b_lto must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_lto'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_coverage",
+      "message": "fixed native policy: b_coverage must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_coverage'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_pgo",
+      "message": "fixed native policy: b_pgo must be 'off'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_pgo'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_bitcode",
+      "message": "fixed native policy: b_bitcode must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_bitcode'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_pie",
+      "message": "fixed native policy: b_pie must be false",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_pie'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_staticpic",
+      "message": "fixed native policy: b_staticpic must be true",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_staticpic'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_lundef",
+      "message": "fixed native policy: b_lundef must be true",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_lundef'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_b_sanitize",
+      "message": "fixed native policy: b_sanitize must be 'none'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'b_sanitize'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_c_std",
+      "message": "fixed native policy: c_std must be 'none'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'c_std'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_c_args",
+      "message": "fixed native policy: c_args must be []",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'c_args'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_c_link_args",
+      "message": "fixed native policy: c_link_args must be []",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'c_link_args'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_buildtype",
+      "message": "fixed native policy: buildtype must be 'plain'",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'buildtype'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_swift_args",
+      "message": "fixed native policy: swift_args must be []",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'swift_args'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_swift_link_args",
+      "message": "fixed native policy: swift_link_args must be []",
+      "kind": "meson",
+      "steps": [
+        "configure"
+      ],
+      "status": "1",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "'swift_link_args'"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "stale_limits",
+      "message": "stale <copy>; run python3 docs/generate_limits.py",
+      "kind": "propagated",
+      "steps": [
+        "check_limits"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_limits.py"
+        },
+        {
+          "path": "docs/generate_limits.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/limits.py",
+          "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "stale_contract",
+      "message": "stale <copy>; run python3 docs/generate_contract.py",
+      "kind": "propagated",
+      "steps": [
+        "check_contract"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_contract.py"
+        },
+        {
+          "path": "docs/generate_contract.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_stale_contract_copy_before_signing_or_creating_output",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "stale_architecture",
+      "message": "architecture documentation is stale",
+      "kind": "propagated",
+      "steps": [
+        "check_contract"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_architecture.py"
+        },
+        {
+          "path": "docs/generate_architecture.py",
+          "symbol": "architecture documentation is stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "stale_build_doc",
+      "message": "build documentation is stale",
+      "kind": "propagated",
+      "steps": [
+        "check_build_doc"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_build.py"
+        },
+        {
+          "path": "docs/generate_build.py",
+          "symbol": "build documentation is stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "stale_identity",
+      "message": "stale <copy>; run python3 docs/generate_worker_identity.py",
+      "kind": "propagated",
+      "steps": [
+        "check_identity"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_worker_identity.py"
+        },
+        {
+          "path": "docs/generate_worker_identity.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "stale_identity_presign",
+      "message": "stale <copy>; run python3 docs/generate_worker_identity.py",
+      "kind": "propagated",
+      "steps": [
+        "presign"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "generate_worker_identity.py"
+        },
+        {
+          "path": "docs/generate_worker_identity.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "cargo_failed",
+      "message": "Cargo's own diagnostic",
+      "kind": "propagated",
+      "steps": [
+        "cargo"
+      ],
+      "status": "101",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo build"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "meson_failed",
+      "message": "Meson's or Ninja's own diagnostic",
+      "kind": "propagated",
+      "steps": [
+        "configure",
+        "compile"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "meson compile"
+        },
+        {
+          "path": "build.sh",
+          "symbol": "meson setup"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "native_sources_differ",
+      "message": "native source lists differ from the tree",
+      "kind": "propagated",
+      "steps": [
+        "native_check"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "native_sources.py"
+        },
+        {
+          "path": "tests/lib/native_sources.py",
+          "symbol": "native source lists differ from the tree"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/check_planner.py",
+          "symbol": "configured_controls",
+          "form": "rule",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "native_sources_unreadable",
+      "message": "native sources: meson introspection failed",
+      "kind": "propagated",
+      "steps": [
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "native_sources.py"
+        },
+        {
+          "path": "tests/lib/native_sources.py",
+          "symbol": "meson introspection failed"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "codesign_failed",
+      "message": "codesign's own diagnostic",
+      "kind": "propagated",
+      "steps": [
+        "sign_tools",
+        "sign_services",
+        "seal",
+        "sign_observer"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "codesign --force"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "evidence_failed",
+      "message": "missing app bundle Contents",
+      "kind": "propagated",
+      "steps": [
+        "evidence"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build-evidence.py"
+        },
+        {
+          "path": "tests/build-evidence.py",
+          "symbol": "missing app bundle Contents"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "verify_failed",
+      "message": "codesign's own diagnostic",
+      "kind": "propagated",
+      "steps": [
+        "verify"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "codesign --verify"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "signer_mismatch",
+      "message": "executables not signed by <identity> with the hardened runtime",
+      "kind": "propagated",
+      "steps": [
+        "signer"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "signer_check.py"
+        },
+        {
+          "path": "tests/lib/signer_check.py",
+          "symbol": "executables not signed by"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/run.sh",
+          "symbol": "signed_artifact_controls",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "stale_guide",
+      "message": "stale PolicyWitness.md",
+      "kind": "propagated",
+      "steps": [
+        "guide"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage-guide"
+        },
+        {
+          "path": "docs/generate_limits.py",
+          "symbol": "stale"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/limits.py",
+          "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    }
+  ],
+  "signing": [
+    {
+      "id": "sig_client",
+      "target": "${APP_BUNDLE}/Contents/MacOS/pw-runner-client",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": null,
+      "step": "sign_tools",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sig_observer",
+      "target": "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": null,
+      "step": "sign_tools",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sig_sbpl_check",
+      "target": "${APP_BUNDLE}/Contents/MacOS/sbpl-check",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": null,
+      "step": "sign_tools",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sig_worker",
+      "target": "${svc_bundle}/Contents/MacOS/pw-probe-runner",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": "XPC_SERVICE_NAMES",
+      "step": "sign_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sig_validator",
+      "target": "${svc_bundle}/Contents/MacOS/sb_api_validator",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": "XPC_SERVICE_NAMES",
+      "step": "sign_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${svc_bundle}/Contents/MacOS/sb_api_validator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "seal_service",
+      "target": "${svc_bundle}",
+      "kind": "seal",
+      "entitlements": "${svc_entitlements}",
+      "loop": "XPC_SERVICE_NAMES",
+      "step": "sign_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "-s \"${IDENTITY}\" \"${svc_bundle}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "seal_app",
+      "target": "${APP_BUNDLE}",
+      "kind": "seal",
+      "entitlements": "${ENTITLEMENTS_PLIST}",
+      "loop": null,
+      "step": "seal",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "-s \"${IDENTITY}\" \"${APP_BUNDLE}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "sig_observer_standalone",
+      "target": "${SANDBOX_LOG_OBSERVER_BIN}",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": null,
+      "step": "sign_observer",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "sign_macho \"${SANDBOX_LOG_OBSERVER_BIN}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    }
+  ],
+  "invocations": [
+    {
+      "id": "inv_limits_check",
+      "command": "docs/generate_limits.py --check",
+      "step": "check_limits",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_limits.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_contract_check",
+      "command": "docs/generate_contract.py --check",
+      "step": "check_contract",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_contract.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_architecture_check",
+      "command": "docs/generate_architecture.py --check",
+      "step": "check_contract",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_architecture.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_check",
+      "command": "docs/generate_build.py --check",
+      "step": "check_build_doc",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_build.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/generators.py",
+          "symbol": "test_build_checks_every_generator_before_signing",
+          "form": "test",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_identity_check",
+      "command": "docs/generate_worker_identity.py --check",
+      "step": "check_identity",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_worker_identity.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_cargo",
+      "command": "cargo build",
+      "step": "cargo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo build"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_minimum_cargo",
+      "command": "check_minimum_macos",
+      "step": "cargo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "check_minimum_macos \"${rust_bin}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_meson_configure",
+      "command": "meson configure",
+      "step": "configure",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "meson configure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_meson_setup",
+      "command": "meson setup",
+      "step": "configure",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "meson setup"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_meson_compile",
+      "command": "meson compile",
+      "step": "compile",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "meson compile"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_native_sources",
+      "command": "tests/lib/native_sources.py --builddir",
+      "step": "native_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "native_sources.py"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/check_planner.py",
+          "symbol": "configured_controls",
+          "form": "rule",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_minimum_native",
+      "command": "check_minimum_macos",
+      "step": "native_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "check_minimum_macos \"${native_bin}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_stamp_app",
+      "command": "stamp_info_plist",
+      "step": "assemble",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp_info_plist \"${APP_BUNDLE}/Contents/Info.plist\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_dsym_client",
+      "command": "embed_dsym",
+      "step": "embed_client",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "embed_dsym \"${APP_BUNDLE}/Contents/MacOS/pw-runner-client\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_stamp_service",
+      "command": "stamp_info_plist",
+      "step": "embed_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp_info_plist \"${svc_bundle}/Contents/Info.plist\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_dsym_host",
+      "command": "embed_dsym",
+      "step": "embed_services",
+      "variants": [
+        "full"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "embed_dsym \"${svc_bundle}/Contents/MacOS/${svc_name}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_identity_presign",
+      "command": "docs/generate_worker_identity.py --check",
+      "step": "presign",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "docs/generate_worker_identity.py\" --check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_evidence",
+      "command": "tests/build-evidence.py --app-bundle",
+      "step": "evidence",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build-evidence.py"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/run.sh",
+          "symbol": "signed_artifact_controls",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_verify",
+      "command": "codesign --verify",
+      "step": "verify",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "codesign --verify --deep --strict"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_display",
+      "command": "codesign --display",
+      "step": "verify",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "codesign --display --entitlements"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_signer",
+      "command": "tests/lib/signer_check.py",
+      "step": "signer",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "signer_check.py"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/run.sh",
+          "symbol": "signed_artifact_controls",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_guide",
+      "command": "docs/generate_limits.py --stage-guide",
+      "step": "guide",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage-guide"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/limits.py",
+          "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "inv_zip",
+      "command": "ditto",
+      "step": "zip",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "/usr/bin/ditto"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    }
+  ],
+  "directories": [
+    {
+      "id": "builddir",
+      "path": "builddir/",
+      "facts": {
+        "Trusted as": "Meson's configuration and incremental native outputs for this checkout",
+        "Refused when": "its recorded source directory is not this checkout, or its meson-info cannot be read"
+      },
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "MESON_SOURCE_DIR"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "controller_target",
+      "path": "controller/target/",
+      "facts": {
+        "Trusted as": "Cargo's incremental outputs, pinned by --target-dir so the environment cannot move them",
+        "Refused when": "never as a directory; a stale output is caught only by the minimum-version check and Cargo's own fingerprints"
+      },
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "CARGO_TARGET_DIR_PINNED"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "dist",
+      "path": "dist/ (DIST_DIR)",
+      "facts": {
+        "Trusted as": "the output directory; the previous app, ZIP and guide are removed at assembly and nothing is preserved",
+        "Refused when": "never; a refusal after assembly leaves the partial, unsealed bundle this build got to"
+      },
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "rm -f \"${ZIP_NAME}\" \"${GUIDE_NAME}\""
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    }
+  ]
+}

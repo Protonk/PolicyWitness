@@ -1,0 +1,474 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "refusal": "unknown_argument",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'unknown argument: $1' and does not perform the operation the refusal protects",
+      "control": "invoke build.sh with an unknown argument and valid knobs; assert the usage text, status 2 and no documentation check"
+    },
+    {
+      "refusal": "plist_minimum_malformed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'' and does not perform the operation the refusal protects",
+      "control": "a disposable checkout whose Info.plist declares a non major.minor value; assert the refusal after the banner and no Cargo"
+    },
+    {
+      "refusal": "sdk_unavailable",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})' and does not perform the operation the refusal protects",
+      "control": "an xcrun that cannot select the SDK (a DEVELOPER_DIR without one); assert the refusal before the signing identity"
+    },
+    {
+      "refusal": "identity_absent",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'codesigning identity not found in your keychain:' and does not perform the operation the refusal protects",
+      "control": "a Developer ID class identity string the keychain does not list; assert the refusal and no Cargo"
+    },
+    {
+      "refusal": "missing_controller",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'expected policy-witness binary at ${RUNNER_BIN}' and does not perform the operation the refusal protects",
+      "control": "a Cargo invocation that omits the controller output; assert the named path and no Meson"
+    },
+    {
+      "refusal": "missing_observer",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}' and does not perform the operation the refusal protects",
+      "control": "a Cargo invocation that omits the observer output; assert the named path and no Meson"
+    },
+    {
+      "refusal": "missing_sbpl_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'expected sbpl-check binary at ${SBPL_CHECK_BIN}' and does not perform the operation the refusal protects",
+      "control": "a Cargo invocation that omits sbpl-check; assert the named path and no Meson"
+    },
+    {
+      "refusal": "minimum_mismatch",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with '${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}' and does not perform the operation the refusal protects",
+      "control": "a real build with one output at another minimum, in both variants; assert the named binary and no assembly (probes A2, A3, B3 in the plan)"
+    },
+    {
+      "refusal": "meson_ninja_missing",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose ninja_missing departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "ninja_old",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md' and does not perform the operation the refusal protects",
+      "control": "a ninja reporting a version below the minimum; assert the refusal and no configure"
+    },
+    {
+      "refusal": "missing_native_output",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'expected Meson output at ${native_bin}' and does not perform the operation the refusal protects",
+      "control": "a configured directory with one C output removed after the source check; assert no assembly"
+    },
+    {
+      "refusal": "missing_info_plist",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'missing ${INFO_PLIST_TEMPLATE} at repo root' and does not perform the operation the refusal protects",
+      "control": "Info.plist removed after the minimum step; assert the refusal and no copy"
+    },
+    {
+      "refusal": "missing_augments_dir",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'missing augments source dir at ${XPC_AUGMENTS_DIR}' and does not perform the operation the refusal protects",
+      "control": "runner/augments/ removed; assert the refusal before the embed steps"
+    },
+    {
+      "refusal": "missing_client_output",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with 'expected Meson output at ${PW_RUNNER_CLIENT_BIN}' and does not perform the operation the refusal protects",
+      "control": "builddir/pw-runner-client removed after the native check; assert the refusal and no client copy"
+    },
+    {
+      "refusal": "missing_service_dir",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with 'missing ${svc_name} service dir at ${svc_dir}' and does not perform the operation the refusal protects",
+      "control": "runner/Services/PWRunner removed after compile; assert the refusal and no service assembly"
+    },
+    {
+      "refusal": "missing_service_plist",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with '${svc_name} service is missing Info.plist' and does not perform the operation the refusal protects",
+      "control": "the service Info.plist removed; assert the refusal and no service copy"
+    },
+    {
+      "refusal": "missing_host_output",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with 'expected Meson output at ${svc_host}' and does not perform the operation the refusal protects",
+      "control": "builddir/PWRunner removed after the native check; assert the refusal and no host copy"
+    },
+    {
+      "refusal": "missing_entitlements",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'missing entitlements plist: ${ENTITLEMENTS_PLIST}' and does not perform the operation the refusal protects",
+      "control": "PolicyWitness.entitlements removed; assert the refusal after assembly and no signature (probe R3 in the plan)"
+    },
+    {
+      "refusal": "sign_target_missing",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'expected a Mach-O to sign at ${target}' and does not perform the operation the refusal protects",
+      "control": "a signing list entry whose file is absent; assert the refusal and no later signature"
+    },
+    {
+      "refusal": "sign_target_not_macho",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with '${target} is not a Mach-O; the signing list names only executables' and does not perform the operation the refusal protects",
+      "control": "a signing list entry naming a non-Mach-O file; assert the refusal and no later signature"
+    },
+    {
+      "refusal": "missing_service_bundle",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with 'expected XPC service bundle at ${svc_bundle}' and does not perform the operation the refusal protects",
+      "control": "the assembled service bundle removed before service signing; assert the refusal and no seal"
+    },
+    {
+      "refusal": "missing_service_entitlements",
+      "variants": [
+        "full"
+      ],
+      "claim": "the build refuses with '${svc_name} service is missing Entitlements.plist at ${svc_entitlements}' and does not perform the operation the refusal protects",
+      "control": "the service Entitlements.plist removed; assert the refusal and no service signature"
+    },
+    {
+      "refusal": "make_identity_unset",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'set IDENTITY to your Developer ID Application identity' and does not perform the operation the refusal protects",
+      "control": "make build without IDENTITY; assert the message, status 2 and that build.sh never runs"
+    },
+    {
+      "refusal": "meson_optimization",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose optimization departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_debug",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose debug departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_warning_level",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose warning_level departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_werror",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose werror departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_strip",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose strip departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_unity",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose unity departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_ndebug",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_ndebug departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_lto",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_lto departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_coverage",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_coverage departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_pgo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_pgo departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_bitcode",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_bitcode departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_pie",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_pie departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_staticpic",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_staticpic departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_lundef",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_lundef departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_b_sanitize",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose b_sanitize departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_c_std",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose c_std departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_c_args",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose c_args departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_c_link_args",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose c_link_args departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_buildtype",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose buildtype departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_swift_args",
+      "variants": [
+        "full"
+      ],
+      "claim": "Meson refuses a configured directory whose swift_args departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "meson_swift_link_args",
+      "variants": [
+        "full"
+      ],
+      "claim": "Meson refuses a configured directory whose swift_link_args departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "stale_architecture",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'architecture documentation is stale' and does not perform the operation the refusal protects",
+      "control": "a stale architecture copy in a disposable checkout; assert the build refuses before Cargo"
+    },
+    {
+      "refusal": "stale_build_doc",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'build documentation is stale' and does not perform the operation the refusal protects",
+      "control": "a stale build document copy in a disposable checkout; assert the build refuses before Cargo"
+    },
+    {
+      "refusal": "stale_identity_presign",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'stale <copy>; run python3 docs/generate_worker_identity.py' and does not perform the operation the refusal protects",
+      "control": "an identity input edited after the first check without regeneration; assert the refusal before any signature"
+    },
+    {
+      "refusal": "cargo_failed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'Cargo's own diagnostic' and does not perform the operation the refusal protects",
+      "control": "a Cargo failure (a source that does not compile) in a disposable checkout; assert status 101 and no Meson"
+    },
+    {
+      "refusal": "meson_failed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "Meson refuses a configured directory whose failed departs from the fixed policy",
+      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
+    },
+    {
+      "refusal": "native_sources_unreadable",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'native sources: meson introspection failed' and does not perform the operation the refusal protects",
+      "control": "a build directory whose meson-info cannot be introspected after the build-directory check; assert status 2"
+    },
+    {
+      "refusal": "codesign_failed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'codesign's own diagnostic' and does not perform the operation the refusal protects",
+      "control": "a reached codesign failure (an unsigned nested helper at the seal); assert no ZIP"
+    },
+    {
+      "refusal": "evidence_failed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'missing app bundle Contents' and does not perform the operation the refusal protects",
+      "control": "an app whose Contents directory is missing at evidence time; assert status 2 and no seal"
+    },
+    {
+      "refusal": "verify_failed",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'codesign's own diagnostic' and does not perform the operation the refusal protects",
+      "control": "a tampered sealed resource before verification; assert the refusal and no ZIP"
+    }
+  ]
+}

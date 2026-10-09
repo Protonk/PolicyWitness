@@ -66,6 +66,22 @@ if test_selected "${PW_TEST_ID}"; then
   test_pass "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
+PW_TEST_ID="build_documentation"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step rules "compare the build manifest with build.sh, meson.build, the Makefile, the inventories and the baseline"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/build-rules.log"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/build_rules.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "build documentation rules disagree" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_step build "check the build manifest against its dot, SVG stamp and document copies; citation, stale-copy, parser and mutation controls"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/build.log"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/build.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "build documentation controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "build manifest, dot file, SVG stamp and document regions agree with the script; grounding rules, parser refusals and mutation controls pass" "{\"log\":\"${RUN_LOG}\"}"
+fi
+
 PW_TEST_ID="generator_contract"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

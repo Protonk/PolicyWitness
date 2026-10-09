@@ -149,7 +149,9 @@ def configured_controls(repo, manifest_original, worker_line, out):
     declaration pointing at a substitute file, present on disk so Meson accepts
     it, is refused by name; a worker include reaching outside the digest's
     directories through a symlinked directory, or by a relative path, is
-    refused by the closure check."""
+    refused by the closure check. Finally the configured directory is copied
+    along with the checkout, as build.sh invokes the check: the copy is named
+    as the checkout and the directory's recorded source is refused."""
     checker = repo / 'tests/lib/native_sources.py'
     substitute = repo / 'controller/tools/pw_probe_runner/substitute/pw_probe_runner.c'
     substitute.parent.mkdir()
@@ -200,7 +202,7 @@ def configured_controls(repo, manifest_original, worker_line, out):
             (evidence / f'{step}.stderr').write_text(result.stderr)
             if result.returncode != 0:
                 raise AssertionError(f'{name}: meson {step} failed: {result.stderr}')
-        argv = [sys.executable, '-B', str(checker), '--builddir', str(builddir)]
+        argv = [sys.executable, '-B', str(checker), '--builddir', str(builddir), '--root', str(repo)]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
         (evidence / 'stdout').write_text(result.stdout)
         (evidence / 'stderr').write_text(result.stderr)
@@ -212,6 +214,21 @@ def configured_controls(repo, manifest_original, worker_line, out):
         receipts.append(record)
     (repo / 'meson.build').write_text(manifest_original)
     worker.write_text(worker_original)
+    copy = out / 'copied-checkout'
+    shutil.copytree(repo, copy, symlinks=True)
+    evidence = out / 'configured-copied-checkout'
+    evidence.mkdir()
+    argv = [sys.executable, '-B', str(copy / 'tests/lib/native_sources.py'), '--builddir', str(copy / 'builddir'), '--root', str(copy)]
+    result = subprocess.run(argv, cwd=copy, capture_output=True, text=True, timeout=60)
+    (evidence / 'stdout').write_text(result.stdout)
+    (evidence / 'stderr').write_text(result.stderr)
+    diagnostic = f'builddir: configured for {repo.resolve()}, not {copy.resolve()}'
+    record = dict(scenario='configured-copied-checkout', argv=argv, returncode=result.returncode,
+                  expected_returncode=1, expected_diagnostic=diagnostic)
+    (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+    if result.returncode != 1 or diagnostic not in result.stderr:
+        raise AssertionError(f'copied checkout: unexpected configured check result: {record}\n{result.stdout}\n{result.stderr}')
+    receipts.append(record)
     return receipts
 
 

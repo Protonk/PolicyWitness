@@ -1,8 +1,9 @@
 """Required barrier controls; only disposable source and signed app copies mutate.
 
 These deliberate implementation faults retain the baseline generated identity
-to reach the ordering oracle beyond the mismatch guard. Normal builds regenerate
-on these edits; source_drift separately proves both edits change the identity.
+to reach the ordering oracle beyond the mismatch guard. A normal build refuses
+these edits until the identity is regenerated; source_drift separately proves
+both edits change the identity.
 """
 import json
 from pathlib import Path

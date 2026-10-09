@@ -18,6 +18,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
 BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
+BUILD_BASELINE_NAME = 'tests/fixtures/docs/build_baseline.json'
 
 
 def git(root, *args, check=True):
@@ -46,6 +47,55 @@ def baseline_entries(text):
         if (row['invariant'], row['kind']) not in {('G9', 'literal'), ('G9', 'count'), ('G11', 'citation_pair')}:
             raise ValueError('unknown baseline invariant or kind')
     return Counter(tuple(row[k] for k in keys) for row in data['entries'])
+
+
+def build_baseline_entries(text):
+    """One entry per uncovered refusal; a rewritten claim or control is a new entry."""
+    data = json.loads(text)
+    if not isinstance(data, dict) or set(data) != {'schema_version', 'entries'} or data['schema_version'] != 1:
+        raise ValueError('expected build baseline schema_version 1')
+    if not isinstance(data['entries'], list):
+        raise ValueError('build baseline entries must be a list')
+    keys = ('refusal', 'variants', 'claim', 'control')
+    for row in data['entries']:
+        if not isinstance(row, dict) or set(row) != set(keys) or not isinstance(row['variants'], list):
+            raise ValueError('malformed build baseline entry')
+        if any(not isinstance(row[k], str) or not row[k] for k in ('refusal', 'claim', 'control')):
+            raise ValueError('malformed build baseline entry')
+    return Counter((row['refusal'], tuple(row['variants']), row['claim'], row['control']) for row in data['entries'])
+
+
+def previous_release(root, tag):
+    """The previous annotated release reachable before this commit, if any."""
+    parent = git(root, 'rev-parse', '--verify', 'HEAD^', check=False)
+    previous, excluded = None, []
+    while parent:
+        candidate = git(root, 'describe', '--abbrev=0', '--match', 'v[0-9]*',
+                        *excluded, parent, check=False)
+        if candidate is None:
+            break
+        if RELEASE_TAG.fullmatch(candidate) and candidate != tag:
+            previous = candidate
+            break
+        excluded += ['--exclude', candidate]
+    return previous
+
+
+def inspect_build_baseline(root, tag):
+    """The build baseline against the previous release: it may shrink, never grow or rewrite an entry."""
+    previous = previous_release(root, tag)
+    current = git(root, 'show', f'HEAD:{BUILD_BASELINE_NAME}', check=False)
+    prior = git(root, 'show', f'{previous}:{BUILD_BASELINE_NAME}', check=False) if previous else None
+    report = dict(previous_tag=previous, status='no previous release' if previous is None else 'previous release predates baseline')
+    now = build_baseline_entries(current) if current is not None else None
+    if prior is None:
+        return report, []
+    before = build_baseline_entries(prior)
+    if now is None:
+        return dict(report, status='missing baseline'), ['release removed the build baseline']
+    added = now - before
+    report.update(status='grown' if added else 'non-growing', additions=sum(added.values()))
+    return report, ([f'build baseline grew against {previous}: {sum(added.values())} added or rewritten entries'] if added else [])
 
 
 def inspect_baseline(root, tag):
@@ -108,6 +158,8 @@ def inspect(root, *, remote='origin', dist='dist'):
             problems.append(f'{remote} already holds a different {tag}')
     stamp['prose_baseline'], baseline_problems = inspect_baseline(root, tag)
     problems.extend(baseline_problems)
+    stamp['build_baseline'], build_problems = inspect_build_baseline(root, tag)
+    problems.extend(build_problems)
     archive = root / dist / 'archive' / tag
     if archive.exists():
         problems.append(f'{archive} already exists; a version is released once')
