@@ -6,7 +6,8 @@
 #
 # Targets
 #   build     Compile, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app.
-#   test      Run the default battery into tests/out/runs/default.
+#   test      Run the default battery against $(DIST_DIR)/PolicyWitness.app into
+#             tests/out/runs/default. Does not build.
 #   clean     Prune completed, owned, unretained test runs. Nothing else.
 #   notarize  The rehearsable lower-level chain: preflight report, build, submit,
 #             staple, validate, Gatekeeper, re-zip, accept the final ZIP.
@@ -18,7 +19,11 @@
 #   IDENTITY                 Developer ID Application identity in your keychain;
 #                            build.sh refuses any other class and selects nothing.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
-#   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land.
+#   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land,
+#                            and where test looks for the app.
+#   PW_APP_DIR               Environment, not a make variable: an app for test other
+#                            than DIST_DIR's. PW_TEST_OUT_DIR likewise names the run
+#                            directory; both are described in tests/README.md.
 #   RELEASE_NOTES            Notes file. release archives it as evidence/release-notes.md;
 #                            publish uses it in place of the archived copy.
 #   VERSION                  Which archived release publish acts on. Only publish reads
@@ -32,12 +37,17 @@
 #   release calls notarize, and notarize calls build, through $(MAKE) rather than
 #   prerequisites so each target's guards and preflight run before anything builds.
 #   $(if $(RELEASE_NOTES),...) passes --notes only when notes were given.
+#   make exits 2 for any failed target; the recipe's own status is in make's
+#   last line ("Error N").
 #
 # Boundaries
 #   Acceptance, the battery, archiving and rotation each hold tests/.checkout.lock;
 #   run no other battery during make release.
-#   Nothing leaves the machine except the notarization submission. publish is the
-#   only outward target.
+#   Only notarize and publish send anything: notarize uploads the ZIP to Apple
+#   once; publish pushes the tag and creates the GitHub release. Signing requests
+#   Apple timestamps and release's preflight reads the remote tag.
+#   Inside a sandboxed automation harness the keychain, Swift discovery, signature
+#   checks and live XPC can refuse; see AGENTS.md.
 .PHONY: build clean test notarize release publish
 
 # Defaults. The header says what each one means; IDENTITY has no default.
@@ -69,19 +79,27 @@ clean:
 	@echo "==> [clean] prune completed, owned, unretained runs under tests/out/runs" >&2
 	@./tests/run.sh --prune --apply
 
-# test: the default battery against the built app, into tests/out/runs/default.
-# For separate evidence run tests/run.sh directly with PW_TEST_OUT_DIR set.
+# test: the default battery against $(DIST_DIR)/PolicyWitness.app, so that build
+# and test compose under one DIST_DIR, into tests/out/runs/default. An app named
+# by PW_APP_DIR, PW_BIN or PW_BIN_PATH wins, and PW_TEST_OUT_DIR chooses the run
+# directory; the dispatcher owns selection, inspection and refusals. It does not
+# build.
 test:
 	@echo "==> [test] run the default battery"
-	@./tests/run.sh
+	@if [ -z "$${PW_APP_DIR+x}$${PW_BIN+x}$${PW_BIN_PATH+x}" ]; then \
+		dist="$(DIST_DIR)"; PW_APP_DIR="$${dist:-dist}/PolicyWitness.app" ./tests/run.sh; \
+	else \
+		./tests/run.sh; \
+	fi
 
 # notarize: the lower-level chain, usable on its own as a rehearsal. The preflight
 # runs in --report mode, so its findings are warnings and a rehearsal still
 # records the stamp it notarized. It builds again on purpose: what this chain
 # submits, staples and accepts must come from the tree the preflight just
 # inspected, not from an earlier build. release_evidence.py opens the attempt
-# directory; every later step runs through release_commands.py with a 60 s bound
-# and leaves a receipt there. The pre-staple ZIP is removed before re-zip so
+# directory; notarize.py bounds its own upload and wait, and staple, validation,
+# Gatekeeper and re-zip run through release_commands.py with a 60 s bound, each
+# leaving a receipt there. The pre-staple ZIP is removed before re-zip so
 # acceptance can only ever see the stapled artifact, and the last step tests
 # that actual ZIP.
 notarize:

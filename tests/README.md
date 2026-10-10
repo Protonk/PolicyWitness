@@ -38,7 +38,7 @@ no acceptance document or generated test output is required to run them.
 Build first (signed pipeline):
 
 ```sh
-make build
+make build IDENTITY='Developer ID Application: ...'
 ```
 
 Then run tests:
@@ -133,7 +133,9 @@ dependency-analysis framework.
 
 ## Configuration
 
-- `PW_APP_DIR`: app bundle to test; defaults to `dist/PolicyWitness.app`.
+- `PW_APP_DIR`: app bundle to test; defaults to `dist/PolicyWitness.app` when
+  using `tests/run.sh` directly. `make test` uses `$(DIST_DIR)/PolicyWitness.app`
+  unless `PW_APP_DIR`, `PW_BIN` or `PW_BIN_PATH` is supplied.
 - `PW_BIN` and `PW_BIN_PATH`: compatibility aliases for the controller inside
   that bundle. Either can infer the app when `PW_APP_DIR` is absent. All supplied
   paths must agree after resolution; a standalone controller is rejected because
