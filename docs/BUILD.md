@@ -179,7 +179,8 @@ what makes that rule honest. Variants are `full` (`BUILD_XPC=1`) and `partial`
 (`BUILD_XPC=0`); a row marked `both` runs in either. `--help` prints the usage
 and exits before any check, once the knobs are validated. The script prints
 one warning that is not a refusal, when the augments directory holds no
-augment; warnings are not in the tables.
+augment; warnings are not in the tables. Reads and Writes are the manifest's
+description of each step, and nothing compares them to the script.
 
 What the order establishes. The documentation and identity checks precede
 every compile, each compile's own checks follow it and precede any copy, the

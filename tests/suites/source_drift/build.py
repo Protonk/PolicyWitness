@@ -265,7 +265,7 @@ class BuildDocumentationTests(unittest.TestCase):
              'signing order: entry 1'),
             ('seal without entitlements', generator.signing_problems,
              self.mutated('codesign --force --options runtime --timestamp \\\n  --entitlements "${ENTITLEMENTS_PLIST}" \\\n  -s "${IDENTITY}" "${APP_BUNDLE}"', 'codesign --force --options runtime --timestamp -s "${IDENTITY}" "${APP_BUNDLE}"'),
-             'signing order: entry 7'),
+             f"signing order: entry {next(i for i, row in enumerate(manifest['signing'], 1) if row['id'] == 'seal_app')}"),
             ('helper moved to another step', generator.invocation_problems,
              self.mutated('echo "==> Checking every executable\'s signer"\n/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 'echo "==> Checking every executable\'s signer"\n')
                  .replace('echo "==> Verifying signature + entitlements"\n', 'echo "==> Verifying signature + entitlements"\n/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 1),
@@ -320,11 +320,11 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertEqual(generator.inventory_problems(manifest, model, ROOT), [])
         root = self.checkout()
         artifact = root / 'tests/lib/artifact.py'
-        artifact.write_text(artifact.read_text().replace("'sbpl-check'))", "'sbpl-check', 'extra-tool'))", 1))
+        artifact.write_text(self.mutated("'sbpl-check'", "'sbpl-check', 'extra-tool'", text=artifact.read_text()))
         self.assertTrue(any('EXECUTABLES lists' in p for p in generator.inventory_problems(manifest, model, root)))
         artifact.write_text((ROOT / 'tests/lib/artifact.py').read_text())
         evidence = root / 'tests/build-evidence.py'
-        evidence.write_text(evidence.read_text().replace('"sbpl-check",\n    ]', '"sbpl-check",\n        "extra-tool",\n    ]', 1))
+        evidence.write_text(self.mutated('"sbpl-check",', '"sbpl-check",\n        "extra-tool",', text=evidence.read_text()))
         self.assertTrue(any('helper_names' in p for p in generator.inventory_problems(manifest, model, root)))
         evidence.write_text((ROOT / 'tests/build-evidence.py').read_text())
         readme = root / 'README.md'
@@ -358,7 +358,7 @@ class BuildDocumentationTests(unittest.TestCase):
             self.addCleanup(directory.cleanup)
             builddir = Path(directory.name) / 'builddir'
             setup = subprocess.run(['meson', 'setup', str(builddir), str(ROOT), f'-Dxpc={xpc}'], capture_output=True, text=True, timeout=300)
-            self.assertEqual(setup.returncode, 0, setup.stderr)
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
             configure = subprocess.run(['meson', 'configure', str(builddir), f'-D{name}={value}'], capture_output=True, text=True, timeout=300)
             self.assertEqual(configure.returncode, 0, 'meson configure records the value; the assertion runs at the next regeneration')
             compile_ = subprocess.run(['meson', 'compile', '-C', str(builddir)], capture_output=True, text=True, timeout=300)

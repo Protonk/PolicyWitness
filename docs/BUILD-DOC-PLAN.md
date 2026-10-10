@@ -32,6 +32,9 @@ v0.2.7 plus the commits on main since that tag.
 - [x] Step 4: challenge the draft's claims and review with a human (the
   agent's reading, the plan-blind audit and its remediation, 2026-10-09; the
   record is under Step 4 below)
+- [x] Narrative audit: a newcomer added a fourth helper through the whole build
+  and attempted one challenge (2026-10-10; record below; the four test-side
+  fixes it exposed are landed)
 - [ ] Step 5: integrate, move the build sections out of the signing document,
   verify, close out
 
@@ -1242,6 +1245,53 @@ Validation of the remediation:
   dispatcher and shell helpers suites then passed alone, and the full battery
   into `tests/out/runs/build-doc-step4-default-2` passed 171 of 171, none
   skipped or unrun, no harness errors, app unchanged.
+### Narrative audit record
+
+A third audit followed step 4: a newcomer's narrative of adding a fourth
+top-level helper, `pw-stamp`, through the whole build in a disposable copy,
+logging every expectation with its outcome and each surprise with a valence,
+plus a challenge to do one non-obvious thing with the build machinery. Its
+prompt and report are local under `.tmp/audits/`; the report arrived as
+commit 4442751 under `docs/` and was moved out because its measured
+durations trip the prose baseline.
+
+Result. The helper came back to green: `make build`, the inspector and, once
+the one file the prompt's copy recipe had excluded was restored, all six
+`source_drift` cases. The auditor recorded twenty-one calibrations and eleven
+surprises. Four of the surprises belong to this repository, all in test
+machinery and none in the script, the manifest or the document:
+
+- the planner fixture staged a literal list of C sources beside the
+  expectation in `native_sources.py`, and nothing pointed to it;
+- two inventory mutation controls replaced text without asserting its
+  presence, and the seal control hardcoded its entry number, so a moved
+  needle failed by blaming the generator;
+- the Meson policy control needs Swift discovery, which the tests README
+  harness note did not say;
+- that control showed only stderr on a setup failure, which Meson leaves
+  blank.
+
+The challenge, an exact coverage query over the manifest, established that
+the sixteen cited controls partition the thirty-seven covered refusals and
+that one helper control, the Meson policy test, supplies twenty of them;
+behavioral coverage is fourteen rows of sixty-five. The query was not kept.
+The generator's comparison functions were used as an import by the auditor;
+that surface stays undeclared on purpose, since its only supported consumers
+are the rules and the drift case, which pin it through the suite.
+
+Fixes, landed with this record: the two inventory mutations use the
+presence-asserting helper and the seal index comes from the manifest; the
+setup assertion shows stdout with stderr; the planner fixture derives its C
+sources from the native expectation; the tests README names the case;
+BUILD.md says Reads and Writes are description; the AGENTS.md shipped-paths
+line names the manifest row, the native target and the regeneration.
+Validated: the build-document tests, the planner controls and the six
+`source_drift` cases. Deferred to step 5: thinning spelled-out counts such as
+"the two C executables" to inventory references, since the prose baseline
+sees numbers with units, not words. Unmeasured by this engagement: the
+refusals a maintainer who edits before reading would meet, because the
+auditor read first and made every edit in one action.
+
 ## Proposed shape of the document
 
 Spine: one build in time, step by step, the way the architecture document

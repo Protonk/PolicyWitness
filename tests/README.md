@@ -436,7 +436,10 @@ with the case unrun. Neither is a PolicyWitness defect. Suites that declare no
 directly, though the cancellation and
 process-observation controls among them may still need escalation for local
 sockets and exit events. Run everything that declares `app` or `worker` from an
-unsandboxed Terminal; `--all --list` shows each case's requirements.
+unsandboxed Terminal; `--all --list` shows each case's requirements. One case
+that declares neither still needs the unsandboxed shell: `build_documentation`
+under `source_drift` runs `meson setup` with Swift enabled for its two
+Swift-option controls, and that is the Swift discovery a harness can refuse.
 
 ## Output contract (`tests/out/`)
 

@@ -6,6 +6,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import native_sources  # noqa: E402
 HOST = Path('runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift')
 CALL = 'if predictionUnavailableOpFilters.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {'
 
@@ -15,9 +17,8 @@ def main(out):
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
     paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md', 'docs/SIGNING.md',
-             'tests/lib/native_sources.py', 'docs/generate_worker_identity.py', 'controller/tools/pw_probe_runner/pw_probe_runner.c',
+             'tests/lib/native_sources.py', 'docs/generate_worker_identity.py',
              'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
-             'controller/tools/sb_api_validator/sb_api_validator.c',
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
@@ -25,6 +26,9 @@ def main(out):
              'tests/fixtures/contract/response_shape.json',
              'tests/fixtures/contract/envelope_shape.json',
              'tests/suites/source_drift/check.py']
+    # The C sources are whatever the native expectation names for a C-only configuration,
+    # so a new C target cannot be left out of the fixture.
+    paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
     paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
     paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
               for p in (ROOT / 'tests/suites').glob(pattern)]
