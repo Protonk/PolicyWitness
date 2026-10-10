@@ -29,8 +29,9 @@ This supplies a deterministic opportunity for a leak. Setting a variable or
 opening a descriptor in the CLI process alone would not establish that it
 reached the launchd-managed XPC host. Only the worker adapter depends on the
 current ABI; the observer and contract assertions can survive a worker rewrite.
-The adapter's helper path must fit the worker's 128-byte argv entry, and it
-fails explicitly if the checkout/output path is too long.
+The adapter's helper path must fit the worker's 128-byte argv entry; the
+harness refuses a longer one, naming the length and the bound, and the check
+reports that message.
 
 Artifacts include specimens/envelopes, raw inspection output, the worker's
 launch-state report, parsed observations, and build/assertion logs. Snapshots

@@ -407,7 +407,12 @@ int main(int argc, char **argv) {
 
     if (argc == 6 && strcmp(argv[2], "exec_inheritance") == 0) {
         exec_helper = argv[3]; exec_nonce = argv[4]; exec_canary_fd = argv[5];
-        if (strlen(exec_helper) >= PW_SHM_ARGV_BYTES || strlen(exec_nonce) > 64) return 2;
+        if (strlen(exec_helper) >= PW_SHM_ARGV_BYTES || strlen(exec_nonce) > 64) {
+            fprintf(stderr, "harness: exec_inheritance helper path is %zu bytes and the worker's argv entry holds"
+                            " at most %u; use a shorter checkout or output path (nonce %zu bytes, at most 64)\n",
+                    strlen(exec_helper), PW_SHM_ARGV_BYTES - 1u, strlen(exec_nonce));
+            return 2;
+        }
     } else if (argc != 3 || strcmp(argv[2], "exec_inheritance") == 0) {
         fprintf(stderr, "usage: %s <worker_path> <scenario>\n", argv[0]);
         fprintf(stderr, "       %s <worker_path> exec_inheritance <helper> <nonce> <canary-fd>\n", argv[0]);

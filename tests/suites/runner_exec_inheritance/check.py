@@ -68,7 +68,7 @@ def run_worker(worker, helper, harness, out):
                                      stdout=stdout, stderr=stderr, timeout=20)
         finally:
             os.close(high_fd)
-    assert run.returncode == 0, f'worker harness exited {run.returncode}'
+    assert run.returncode == 0, f"worker harness exited {run.returncode}: {(out / 'harness.stderr').read_text().strip()}"
     launch_raw, result_raw = (out / 'harness.jsonl').read_text().splitlines()
     launch = parse_report(launch_raw, nonce, high_fd)
     result = json.loads(result_raw)
