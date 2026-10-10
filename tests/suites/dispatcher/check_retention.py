@@ -81,10 +81,18 @@ class Controls:
                 child_pid = None
                 try:
                     deadline = time.monotonic() + 10
-                    while not receipt.exists():
+                    # The receipt exists before its first line is complete; wait for the line, not the file.
+                    first = None
+                    while first is None:
                         require(process.poll() is None and time.monotonic() < deadline, 'held fixture did not reach execution')
-                        time.sleep(0.02)
-                    child_pid = json.loads(receipt.read_text().splitlines()[0])['pid']
+                        lines = receipt.read_text().splitlines() if receipt.exists() else []
+                        try:
+                            first = json.loads(lines[0]) if lines else None
+                        except ValueError:
+                            first = None
+                        if first is None:
+                            time.sleep(0.02)
+                    child_pid = first['pid']
                     lock = repo / 'tests/.checkout.lock'
                     inode = lock.stat().st_ino
                     self.call(repo, ['--help'], readonly=True)
