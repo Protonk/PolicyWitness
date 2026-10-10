@@ -17,19 +17,18 @@ working material: nothing links them and they are deleted later.
 
 ## Setup
 
-Copy the working tree, not a clone of a commit, because the tree holds
-uncommitted work. The exclusions drop build products, scratch and test
-output; three tracked files under the excluded directories are copied back
-because the build and the drift suite need them:
+Clone the checkout. The tree is clean, so a clone of the current commit is
+what the repository is, and it carries the tags the version stamp reads and
+every tracked file the build and the drift suite need, with no build products
+or test output to exclude:
 
 ```sh
 mkdir -p .tmp/audit-makefile
-rsync -a --exclude 'builddir*' --exclude controller/target --exclude dist \
-  --exclude .tmp --exclude tests/out . .tmp/audit-makefile/src/
-mkdir -p .tmp/audit-makefile/src/dist .tmp/audit-makefile/src/.tmp
-cp -p dist/README.md dist/AGENTS.md .tmp/audit-makefile/src/dist/
-cp -p .tmp/AGENTS.md .tmp/audit-makefile/src/.tmp/AGENTS.md
+git clone . .tmp/audit-makefile/src
 ```
+
+If `git status` in the original checkout shows anything before you clone,
+stop and report it instead of cloning.
 
 Work only inside that copy. Builds need `PATH=/opt/homebrew/opt/rustup/bin:$PATH`
 for Cargo and an explicit `IDENTITY` naming the Developer ID Application
