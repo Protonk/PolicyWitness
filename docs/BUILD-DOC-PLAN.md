@@ -35,6 +35,9 @@ v0.2.7 plus the commits on main since that tag.
 - [x] Narrative audit: a newcomer added a fourth helper through the whole build
   and attempted one challenge (2026-10-10; record below; the four test-side
   fixes it exposed are landed)
+- [x] Makefile audit: the six verbs measured under a conditions matrix
+  (2026-10-10; findings fixed; the two adopted design proposals have their own
+  plan in [MAKEFILE-PLAN.md](MAKEFILE-PLAN.md))
 - [ ] Step 5: integrate, move the build sections out of the signing document,
   verify, close out
 
