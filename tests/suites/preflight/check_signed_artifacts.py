@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import plistlib
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -55,13 +56,22 @@ def main(source, out, identity):
             assert leaf and signer_check.problems(app, leaf) == [], 'every executable must carry the app leaf identity'
             top_helper = app / 'Contents/MacOS/sbpl-check'
             command(out / 'adhoc-helper', ['/usr/bin/codesign', '--force', '--options', 'runtime', '-s', '-', top_helper])
-            assert observe('adhoc_helper_inspected')['ok'], 'the inspector is signer-agnostic by design'
+            # The inspector's signer-consistency rule names the one executable whose signer differs from the controller's.
+            inconsistent = observe('adhoc_helper_inspected')
+            assert not inconsistent['ok'] and [e['path'] for e in inconsistent['errors'] if e['code'] == 'signer'] == ['Contents/MacOS/sbpl-check'], inconsistent['errors']
             named = signer_check.problems(app, leaf)
             save(out / 'signer-adhoc.json', named)
             scenarios.append('adhoc_helper_named')
             assert named == [f'Contents/MacOS/sbpl-check: signed by ad hoc, not {leaf}'], named
+            # The command build.sh runs: status 1 and the header naming the identity, over the same copy.
+            cli = subprocess.run([sys.executable, '-B', str(ROOT / 'tests/lib/signer_check.py'), str(app), leaf],
+                                 capture_output=True, text=True, timeout=120)
+            save(out / 'signer-cli.json', dict(argv=cli.args, returncode=cli.returncode, stdout=cli.stdout, stderr=cli.stderr))
+            scenarios.append('signer_cli_refuses')
+            assert cli.returncode == 1 and f'executables not signed by {leaf} with the hardened runtime' in cli.stderr and 'sbpl-check' in cli.stderr, cli.stderr
             shutil.copy2(source / top_helper.relative_to(app), top_helper)
             assert signer_check.problems(app, leaf) == [], 'restoration must recover the signer check'
+            assert observe('adhoc_helper_restored')['ok']
 
             service = app / 'Contents/XPCServices/PWRunner.xpc'
             info_path = service / 'Contents/Info.plist'

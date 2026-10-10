@@ -21,7 +21,7 @@ def main(out):
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
-             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md',
+             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md', 'docs/BUILD.md',
              'tests/fixtures/contract/response_shape.json',
              'tests/fixtures/contract/envelope_shape.json',
              'tests/suites/source_drift/check.py']
@@ -149,7 +149,9 @@ def configured_controls(repo, manifest_original, worker_line, out):
     declaration pointing at a substitute file, present on disk so Meson accepts
     it, is refused by name; a worker include reaching outside the digest's
     directories through a symlinked directory, or by a relative path, is
-    refused by the closure check. Finally the configured directory is copied
+    refused by the closure check, and so is an include of an absolute path
+    outside the checkout that is neither the SDK nor the developer directory.
+    Finally the configured directory is copied
     along with the checkout, as build.sh invokes the check: the copy is named
     as the checkout and the directory's recorded source is refused."""
     checker = repo / 'tests/lib/native_sources.py'
@@ -165,6 +167,9 @@ def configured_controls(repo, manifest_original, worker_line, out):
     escape.write_text('#define PW_AUDIT_ESCAPE 1\n')
     (repo / 'audit-headers').mkdir()
     (repo / 'audit-headers/audit.h').write_text('#define PW_AUDIT_VALUE 17\n')
+    outside = out / 'outside-checkout'
+    outside.mkdir()
+    (outside / 'escape.h').write_text('#define PW_OUTSIDE_VALUE 23\n')
     link = repo / 'controller/tools/pw_probe_runner/audit-link'
     include_line = '#include "pw_probe_runner_abi.h"\n'
     assert worker_original.count(include_line) == 1
@@ -181,6 +186,9 @@ def configured_controls(repo, manifest_original, worker_line, out):
         ('configured-relative-escape', manifest_original,
          worker_original.replace(include_line, include_line + '#include "../../src/escape.h"\n'), False, 1,
          "pw-probe-runner consumed 'controller/src/escape.h' which is not an identity input"),
+        ('configured-absolute-escape', manifest_original,
+         worker_original.replace(include_line, include_line + f'#include "{(outside / "escape.h").resolve()}"\n'), False, 1,
+         f"pw-probe-runner consumed '{(outside / 'escape.h').resolve()}' outside the checkout, the SDK and the developer directory"),
         ('configured-restored', manifest_original, worker_original, False, 0, None),
     ]:
         evidence = out / name

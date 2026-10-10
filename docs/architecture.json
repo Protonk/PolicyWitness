@@ -4198,6 +4198,27 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "D61",
+          "from": "drift_check",
+          "to": "build_md",
+          "kind": "checks",
+          "label": "Known gap paragraphs equal the index, as in the architecture document",
+          "short": "known gaps",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "known_gap_index_problems"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/run.sh",
+              "symbol": "runner_source_manifests_agree",
+              "form": "test"
+            }
+          ]
         }
       ]
     },

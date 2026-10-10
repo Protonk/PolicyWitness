@@ -27,8 +27,11 @@ v0.2.7 plus the commits on main since that tag.
 - [x] Step 3a: the manifest, generator, figure, drift case and controls, from
   the script (2026-10-09; the record is under Step 3a below; paused for the
   human's review of the rendered tables and the baseline before any prose)
-- [ ] Step 3b: the prose, from the script and the manifest
-- [ ] Step 4: challenge the draft's claims and review with a human
+- [x] Step 3b: the prose, from the script and the manifest (drafted
+  2026-10-09; the drafting log is under Step 3b below)
+- [x] Step 4: challenge the draft's claims and review with a human (the
+  agent's reading, the plan-blind audit and its remediation, 2026-10-09; the
+  record is under Step 4 below)
 - [ ] Step 5: integrate, move the build sections out of the signing document,
   verify, close out
 
@@ -445,6 +448,12 @@ were found during the step 1 pass.
 | 19 | SDK selection was neither uniform nor a checked assignment | `build.sh` `export SDKROOT` | Proposed by the audit. Cargo ran before the export and inherited any caller `SDKROOT`; `export VAR="$(cmd)"` returns the builtin's status, so a failed `xcrun` left an empty `SDKROOT` under `set -e`. | Adjudicated 2026-10-09: fix the build. | Implemented: the SDK is selected once, before Cargo and Meson, with an explicit refusal when `xcrun` fails or returns no directory; the selection is printed. The intended contract is one SDK for every compiler (detail 19). |
 | 20 | Empty knobs were defaults, and "every other native setting" overstates an enumerated list | `build.sh` knobs; [SIGNING.md](SIGNING.md) | Proposed by the audit. `${BUILD_XPC:-1}` read an empty value as `1` despite "any other spelling is refused"; Meson's assertions enumerate specific options, so "every other native setting is fixed" claimed more than the list. | Adjudicated 2026-10-09: fix the knob; correct the documentation. | Implemented: an unset knob means `1` and an empty one is refused with the other spellings; the signing document now says "the native settings `meson.build` enumerates". Control in `contract.py`. |
 | 21 | The identity check before signing is a copy-currency check, not a binary snapshot | `build.sh` pre-sign identity check; [SIGNING.md](SIGNING.md) | Proposed by the audit. An edit to an identity input during the build followed by regeneration passes the late check, so "refusing a source edit made during compilation" promised more than the mechanism. | Adjudicated 2026-10-09: accept as a trust bound; correct the documentation. | The signing document and the script's comment now say the check refuses an edit made during the build without regeneration and that the build otherwise trusts the checkout not to change under it. No mechanism change. |
+| 22 | A build that fails after the seal leaves a sealed app the inspector accepted | `build.sh` after the app seal; `tests/lib/artifact.py` | Plan-blind audit (W1, D1). Verification, the signer check, the observer's signature and packaging can fail after the seal; the residue is a sealed, evidenced app, and the inspector was signer-agnostic by design, so a build that failed at the signer check left an app the battery would accept. | Adjudicated 2026-10-09: fix the inspector; correct the documentation. | Implemented: `artifact.py` requires every executable to carry the controller's signer, so an ad hoc helper inside a production-signed app is refused while an ad hoc test copy stays consistent; the preflight control observes it and runs the signer command line (G5). The prose states what each phase's refusal leaves behind. |
+| 23 | A Cargo target triple could move the outputs away from the paths the script copies | `build.sh` Cargo step | Plan-blind audit (D2). `--target-dir` pins the root, but `CARGO_BUILD_TARGET` or a configuration file adds a triple subdirectory, and a reused directory could then ship a stale controller that passes the minimum check. | Adjudicated 2026-10-09: fix the build. | Implemented: Cargo runs with JSON messages into a file under the pinned directory, `tests/lib/cargo_artifacts.py` reports the executable each binary was written to, and the script refuses one that is not the pinned path before any copy. Baseline entry for the refusal; row 17 reopened and closed with it. |
+| 24 | An include of an absolute path outside the checkout escaped the identity closure | `tests/lib/native_sources.py` closure check | Plan-blind audit (W4, D3). Every dependency outside the checkout was taken for the SDK or the toolchain and skipped, so a fresh compile could consume bytes the identity never hashes. | Adjudicated 2026-10-09: fix the build; correct the documentation. | Implemented: a dependency outside the checkout must lie under the selected SDK or the developer directory, from `SDKROOT`, `DEVELOPER_DIR` or `xcode-select -p`; anything else is named. Control: `configured-absolute-escape` in `check_planner.py`. The signing document and the contract state the boundary. |
+| 25 | The parser's textual agreement was selective | `docs/generate_build.py` | Plan-blind audit (G1). A dropped `--timestamp`, a dropped `--target-dir` and a dropped `set -e` left every rule satisfied; a propagated status is the tool's, not parsed. | Adjudicated 2026-10-09: strengthen verification; correct the documentation. | Implemented: the parser records the signing commands' flags and the tool invocations' flags and compares them, requires `set -euo pipefail` as the first instruction, and the drift case names each of the three mutations; the manifest's cargo invocation lists its flags; the captions and the prose say what is compared and that propagated statuses are the tools' documented ones. |
+| 26 | Two citations claimed more than their controls observe | `docs/build.json` (`stale_guide`, `signer_mismatch`) | Plan-blind audit (G2, G5). The guide-staging refusal cited a control that stops at the first limits check; the signer row cited a control that calls the helper's function, not its command line. | Adjudicated 2026-10-09: correct the manifest; strengthen the control. | Implemented: `stale_guide` cites the staging helper's own refusal control as helper coverage; the preflight control now also runs `signer_check.py` on the mutated copy and asserts its status and header. |
+| 27 | The draft overstated six claims and omitted four facts | `docs/BUILD.md` | Plan-blind audit (W2, W3, W5, W6, O1 to O4, G3, G4). "Checks before compiles" held only for the documentation and identity checks; "writes nothing into the tree" meant no tracked file; guide staging checks sources, not the staged copy; the figure chained mutually exclusive steps, mislabeled its legend and linked to a missing anchor; `set -e` stops without rows, best-effort evidence fields, `--help` and Cargo's ambient inputs, and sequential removals at assembly were unstated; the inputs list had been merged into one item by a reflow. | Adjudicated 2026-10-09: correct the documentation. | Implemented in the prose and the generator: the figure follows each variant's path with a correct legend and link, an invocations table renders the manifest's invocations, and the inputs list is a list again. The authored prose grew past the size target with the added precision. |
 
 ## Register details
 
@@ -457,9 +466,7 @@ probes: `run.sh`, `run2.sh`, `run3.sh` and their logs); the commands and the
 decisive outputs are transcribed below so the conclusions survive their loss.
 The `source_drift` suite passed at this revision into
 `tests/out/runs/build-doc-step1-drift` (five cases), which is the baseline for
-step 2. The pass was audited the same day; the report is appended to
-`docs/BUILD-DOC-AUDIT-STEP1.md`, its fourteen text corrections are applied
-below and its verdict is noted in the table. Adjudicated 2026-10-09: rows 11,
+step 2. The pass was audited the same day; the audit prompt and its appended report were a working file, since removed from the tree at the user's request (its text survives in the repository's history before 2026-10-10), and its fourteen text corrections are applied below with its verdict noted in the table. Adjudicated 2026-10-09: rows 11,
 13, 14, 16, 17, 18, 19 and 20 are build fixes, implemented in step 2 with the
 controls the table names; the rest are documentation, accepted limitations or
 stated trust bounds. Step 2 validation is recorded at the end of this section.
@@ -1128,12 +1135,113 @@ the build-directory guard moved after the signing identity by its control
 signer check moved to another step are caught only textually, by the
 invocation rule, and remain baseline entries for behavioral coverage.
 
-Open for the human at this pause: whether the step table should begin at
-`make build` (as built) or at the script; which baseline entries to retire in
-this pass, with one public-path Meson policy control as the candidate the
-survey named; and whether the generated tables read as the account the prose
-should follow, before any of that prose is written.
+### Tier-one retirements
 
+Adjudicated 2026-10-09 at the step 3a pause: the step table begins at
+`make build`, as built, so the Makefile's targets stay in the account for the
+people and agents who choose to learn them; and the baseline's cheap tier is
+retired now, the stub-Cargo tier is decided separately, and the rest stays
+listed. Retired, each control observing the diagnostic and the operation it
+prevented beside the valid run:
+
+- In `contract.py`: an unknown argument (and `--help` as the one accepted
+  argument), a malformed plist minimum after its banner and before the SDK,
+  a Developer ID string the keychain lacks before Cargo, a stale architecture
+  copy and a stale build-document copy before compiling, and the Makefile's
+  guard, which stops before a stub `build.sh` runs and otherwise passes the
+  identity and `DIST_DIR` through.
+- In `build.py`: every Meson policy assertion but the label, driven directly:
+  a fresh configured directory, `meson configure` with another value, then
+  `meson compile`. Coverage kind `helper`, since Meson is driven, not the
+  script.
+
+Found while retiring: `meson configure` with a refused value exits 0 and
+records the value; the assertion runs at the next regeneration, which the
+compile step triggers (or at setup, for a fresh directory). The manifest had
+placed Meson's refusals under the configure step alone; they now name
+configure and compile, and the step facts say so. The `buildtype` assertion
+cannot fire on its own because Meson derives the label from optimization and
+debug, whose assertions fire first; its baseline entry says so, and the
+public-path placement proof for the whole group waits for the stub-Cargo
+tier. The baseline holds twenty-seven entries after this pass.
+
+Open for the human at the step 3a pause were the two questions settled
+above and whether the generated tables read as the account the prose should
+follow; the prose was started on that basis.
+
+### Step 3b drafting log and the step 4 reading
+
+The prose was written 2026-10-09 from `build.sh`, `meson.build` and the
+manifest, in the proposed shape, around the generated regions. Every claim
+links its symbol and its check in the verified form or names its gap; counts
+reach the prose through the build spans; the three accepted limitations are
+"Known gap" paragraphs indexed by the last section, and the known-gap index
+rule in `check.py` now covers this document as it covers the architecture
+document (the planner control's copied checkout holds it too). The authored
+prose is a little over the size target: about two thousand seven hundred
+words against a target of two thirds of the architecture document's. Found
+while drafting, keyed to the register:
+
+- **Row 9.** The signing document said `RUSTFLAGS` is filled "unless it is
+  already set"; the script fills it when the variable is unset or empty.
+  Corrected to "set to a nonempty value". The build document states the
+  script's behavior.
+- **Row 9.** `PW_BUILD_DESCRIBE` and `PW_BUILD_COMMIT` are not overridable;
+  only `PW_VERSION` and `PW_BUILD_NUMBER` are (observed in probe T3, which
+  first tried the describe variable as a marker). The build document says
+  so; the script's own comment says only that the two overrides exist.
+- **Row 6.** The partial bundle's specimen refusal was observed against an
+  older build; the current claim rests on the controller's manifest lookup
+  in source. The prose states the mechanism, not a fresh observation.
+- **Rows 15 and 18.** The prose states what a refusal leaves behind in both
+  halves: before assembly the previous outputs are untouched; after it, no
+  seal, no evidence and no ZIP.
+- **Row 16.** The prose scopes the "belongs to another checkout" refusal to
+  the Meson build directory; Cargo's directory is pinned, not checked.
+- **Forward walk.** Two facts the tables could not hold were missing from
+  the prose: the one warning the script prints that is not a refusal (an
+  empty augments directory) and the packaging step with its second guide
+  check. Both are stated now.
+- **Universal words.** "Every Cargo and Meson output" became "every Cargo
+  and Meson executable", since the shim is neither shipped nor checked.
+  "Leaves nothing that looks finished" became the precise statement above.
+
+The agent's step 4 reading found no counterexample that returns to step 1.
+A plan-blind audit prompt was written for the pause; its reading and the human review followed.
+
+### Step 4 record: the plan-blind audit and its remediation
+
+The plan-blind reader worked from a prompt that was committed and then moved out of the tree with its report, both local under `.tmp/audits/` at the user's choice; it reported six wrong claims, four omissions, five unestablished guarantees,
+three defect candidates and five claims that held, and rows 22 to 27 carry its substance.
+Every finding was accepted. The three build changes were adjudicated as the
+agent recommended: the inspector's signer consistency instead of a cleanup
+trap, Cargo's reported artifact paths, and the closure bounded to the SDK and
+the developer directory. The reader's own suite run inside its sandbox failed
+the two Swift-option Meson controls at `meson setup`, and passed them outside
+the sandbox against unchanged files, which is the harness constraint the
+documents describe.
+
+Validation of the remediation:
+
+- Unit: the `build_documentation` case passes with the three new script
+  mutations, the errexit refusal and the figure control; the preflight signer
+  control passes nine scenarios against the real app, including the
+  inspector naming the ad hoc helper and the signer command line refusing it;
+  the configured-source check on the real build directory passes under the
+  bounded closure.
+- Suite: `tests/run.sh --suite source_drift` into
+  `tests/out/runs/build-doc-step4-drift`, six cases green.
+- Rebuild: `make build` through the changed script, with Cargo's reported
+  artifact paths accepted, the build documentation check and the signer check
+  clean.
+- Battery: the first run into `tests/out/runs/build-doc-step4-default` failed
+  six cases on one cause of this pass, the fixture runner copying the
+  inspector without its new module; the fixture copies it now, and the
+  consistency rule was narrowed to signed executables because a fixture's
+  only signed executable is a linker-signed stub beside shell scripts. The
+  dispatcher and shell helpers suites then passed alone, and the full battery
+  into `tests/out/runs/build-doc-step4-default-2` passed 171 of 171, none
+  skipped or unrun, no harness errors, app unchanged.
 ## Proposed shape of the document
 
 Spine: one build in time, step by step, the way the architecture document

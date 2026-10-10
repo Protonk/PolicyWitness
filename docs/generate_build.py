@@ -26,10 +26,12 @@ The parser accepts the forms build.sh uses and refuses any other: a banner is
 `echo "==> ..."` outside a function; a refusal is `echo "ERROR: ..." 1>&2` or
 a stderr heredoc whose first ERROR line is the message, followed within three
 lines by `exit N`; a signature is a `sign_macho "..."` call and a seal a
-`codesign --force` command; helpers run as `"${ROOT_DIR}/<path>"`; branches
+`codesign --force` command; helpers run as `"${ROOT_DIR}/<path>"`, bare or captured into a variable; branches
 are `if`/`else`/`fi`, loops `for`/`done`, and `case`/`esac` may hold refusals
 but no banners. A refusal inside a function belongs to the steps that call
-the function.
+the function. The script's first instruction must be `set -euo pipefail`,
+on which every propagated status depends; the signing commands' flags and
+the tool invocations' flags are recorded and compared, not only their names.
 
 Generator invariants: this generator holds G1 to G10 directly and G11 through
 the shared prose-link rule, as stated under Generator contracts in
@@ -53,7 +55,7 @@ MANIFEST_NAME = "docs/build.json"
 GENERATOR_NAME = "docs/generate_build.py"
 BASELINE_NAME = "tests/fixtures/docs/build_baseline.json"
 SPAN_DOCUMENTS = ("docs/BUILD.md",)
-REGIONS = ("FIGURE", "STEPS", "REFUSALS", "SIGNING", "KNOBS", "DIRECTORIES")
+REGIONS = ("FIGURE", "STEPS", "REFUSALS", "SIGNING", "INVOCATIONS", "KNOBS", "DIRECTORIES")
 REGION_START = "<!-- BEGIN GENERATED BUILD {region} -->"
 REGION_END = "<!-- END GENERATED BUILD {region} -->"
 STAMP_RE = re.compile(r"<!-- build\.json figure (\S+); dot sha256 ([0-9a-f]{64}) -->")
@@ -88,11 +90,33 @@ def logical_lines(text):
     return out
 
 
+def codesign_flags(line):
+    """A codesign command's flags apart from the identity and the entitlements, which are recorded separately."""
+    tokens = re.findall(r'"[^"]*"|\S+', line)[1:]
+    target = tokens[-1].strip('"')
+    entitlements, flags, skip = None, [], False
+    for index, token in enumerate(tokens[:-1]):
+        if skip:
+            skip = False
+            continue
+        if token == "-s":
+            skip = True
+        elif token == "--entitlements":
+            entitlements = tokens[index + 1].strip('"')
+            skip = True
+        else:
+            flags.append(token)
+    return flags, entitlements, target
+
+
 def parse_script(text):
     """The banners, refusals, signing calls, helper invocations and knobs of build.sh, in order."""
     lines = logical_lines(text)
+    first = next((line.strip() for _, line in lines if line.strip() and not line.lstrip().startswith("#")), "")
+    if first != "set -euo pipefail":
+        raise ParseError(f"the script must begin with 'set -euo pipefail', on which every propagated status depends; found {first!r}")
     model = dict(banners=[], refusals=[], signing=[], invocations=[], knobs=dict(names=[], defaults={}, accepted=[]),
-                 arrays={}, functions={})
+                 arrays={}, functions={}, sign_macho_flags=None)
     stack = []          # frames: dict(kind=if|loop|case|func, cond, else_branch, name)
     step = None         # index into model['banners'] of the last top-level banner
     i = 0
@@ -172,7 +196,7 @@ def parse_script(text):
                 if match.group(1) == "knob":
                     model["knobs"]["names"] = match.group(2).split()
             stack.append(dict(kind="loop", name=name, cond=line, else_branch=False)); i += 1; continue
-        if stripped == "done":
+        if re.match(r"^done(\s|$)", stripped):  # a loop may end with a redirection or a here-string
             if not stack or stack[-1]["kind"] != "loop":
                 raise ParseError(f"line {number}: unbalanced done")
             stack.pop(); i += 1; continue
@@ -215,14 +239,12 @@ def parse_script(text):
             if function():
                 if function() != "sign_macho" or not re.match(r"^\s*codesign --force", line):
                     raise ParseError(f"line {number}: a codesign command inside a function other than sign_macho")
+                model["sign_macho_flags"] = codesign_flags(line)[0]
                 i += 1
                 continue
             if re.match(r"^\s*codesign --force", line):
-                tokens = re.findall(r'"[^"]*"|\S+', line)
-                entitlements = None
-                if "--entitlements" in tokens:
-                    entitlements = tokens[tokens.index("--entitlements") + 1].strip('"')
-                model["signing"].append(dict(kind="seal", target=tokens[-1].strip('"'), entitlements=entitlements, **context(number)))
+                flags, entitlements, target = codesign_flags(line)
+                model["signing"].append(dict(kind="seal", target=target, entitlements=entitlements, flags=flags, **context(number)))
             elif re.match(r"^\s*codesign --(verify|display)", line):
                 model["invocations"].append(dict(command="codesign " + stripped.split()[1], **context(number)))
             else:
@@ -230,14 +252,15 @@ def parse_script(text):
             i += 1
             continue
         match = re.search(r'"\$\{ROOT_DIR\}/([^"]+)"(.*)$', line)
-        if match and re.match(r"^\s*/usr/bin/python3\b", line):
+        if match and re.match(r'^\s*(?:\w+="\$\()?/usr/bin/python3\b', line):  # a helper may run inside an assignment
             flags = [a for a in match.group(2).split() if a.startswith("--")]
             model["invocations"].append(dict(command=" ".join([match.group(1), *flags[:1]]), **context(number)))
             i += 1
             continue
         match = re.match(r'^\s*(?:\w+="[^"]*"\s+)*(cargo build|meson setup|meson configure|meson compile|/usr/bin/ditto)\b', line)
         if match:
-            model["invocations"].append(dict(command=match.group(1).replace("/usr/bin/", ""), **context(number)))
+            flags = [tok.split("=")[0] for tok in re.findall(r'"[^"]*"|\S+', line) if tok.startswith("-")]
+            model["invocations"].append(dict(command=match.group(1).replace("/usr/bin/", ""), flags=flags, **context(number)))
             i += 1
             continue
         match = re.match(r"^\s*(check_minimum_macos|embed_dsym|stamp_info_plist) ", line)
@@ -252,9 +275,13 @@ def parse_script(text):
         i += 1
     if stack:
         raise ParseError(f"unbalanced block at end of script: {stack[-1]['kind']}")
-    # Calls of sign_macho are signing records; refusals inside functions belong to their callers' steps.
+    # Calls of sign_macho are signing records carrying the function's flags; refusals inside functions
+    # belong to their callers' steps.
     for record in model["signing"]:
         if record["kind"] == "signature":
+            if model["sign_macho_flags"] is None:
+                raise ParseError("sign_macho is called but its codesign command was not found")
+            record["flags"] = model["sign_macho_flags"]
             model["functions"].setdefault("sign_macho", dict(refusals=[], calls=[]))["calls"].append(record)
     for refusal in model["refusals"]:
         if refusal["function"]:
@@ -381,10 +408,12 @@ def load_manifest(path: Path, root: Path = ROOT):
             refusal = next(r for r in data["refusals"] if r["id"] == rid)
             if step["id"] not in refusal["steps"]:
                 raise ValueError(f"step {step['id']}: refusal {rid} does not name it")
-    _ids("signing", data["signing"], ("id", "target", "kind", "entitlements", "loop", "step", "variants", "sources", "checks"))
+    _ids("signing", data["signing"], ("id", "target", "kind", "entitlements", "loop", "step", "variants", "flags", "sources", "checks"))
     for entry in data["signing"]:
         owner = f"signing {entry['id']}"
         _text(owner, entry, "target")
+        if not isinstance(entry["flags"], list) or not entry["flags"] or any(not isinstance(f, str) or not f for f in entry["flags"]):
+            raise ValueError(f"{owner}: flags must be a nonempty list of strings")
         if entry["kind"] not in ("signature", "seal"):
             raise ValueError(f"{owner}: kind must be signature or seal")
         _text(owner, entry, "entitlements", optional=True); _text(owner, entry, "loop", optional=True)
@@ -392,10 +421,12 @@ def load_manifest(path: Path, root: Path = ROOT):
             raise ValueError(f"{owner}: unknown step")
         _variants(owner, entry["variants"])
         _citations(owner, entry, root)
-    _ids("invocations", data["invocations"], ("id", "command", "step", "variants", "sources", "checks"))
+    _ids("invocations", data["invocations"], ("id", "command", "step", "variants", "sources", "checks"), ("flags",))
     for item in data["invocations"]:
         owner = f"invocation {item['id']}"
         _text(owner, item, "command")
+        if "flags" in item and (not isinstance(item["flags"], list) or any(not isinstance(f, str) or not f for f in item["flags"])):
+            raise ValueError(f"{owner}: flags must be a list of strings")
         if item["step"] not in step_ids:
             raise ValueError(f"{owner}: unknown step")
         _variants(owner, item["variants"])
@@ -557,8 +588,8 @@ def knob_problems(manifest, model):
 
 
 def signing_problems(manifest, model):
-    expected = [(e["kind"], e["target"], e["entitlements"], e["loop"], e["step"], sorted(e["variants"])) for e in manifest["signing"]]
-    actual = [(r["kind"], r["target"], r["entitlements"], r["loop"], _step_of(manifest, model, r["step"]), r["variants"]) for r in model["signing"]]
+    expected = [(e["kind"], e["target"], e["entitlements"], e["loop"], e["step"], sorted(e["variants"]), tuple(e["flags"])) for e in manifest["signing"]]
+    actual = [(r["kind"], r["target"], r["entitlements"], r["loop"], _step_of(manifest, model, r["step"]), r["variants"], tuple(r["flags"])) for r in model["signing"]]
     for index, (want, have) in enumerate(zip(expected, actual)):
         if want != have:
             return [f"signing order: entry {index + 1}: manifest {want}, script {have}"]
@@ -572,6 +603,13 @@ def invocation_problems(manifest, model):
     actual = {(r["command"], _step_of(manifest, model, r["step"]), tuple(r["variants"])) for r in model["invocations"]}
     out = [f"invocation {c!r} in step {s} ({', '.join(v)}): not in the manifest" for c, s, v in sorted(actual - expected, key=str)]
     out += [f"invocation {c!r} in step {s} ({', '.join(v)}): not made by the script" for c, s, v in sorted(expected - actual, key=str)]
+    for item in manifest["invocations"]:
+        if "flags" not in item:
+            continue
+        records = [r for r in model["invocations"] if r["command"] == item["command"] and _step_of(manifest, model, r["step"]) == item["step"]]
+        for record in records:
+            if record.get("flags", []) != item["flags"]:
+                out.append(f"invocation {item['id']}: manifest flags {item['flags']}, script {record.get('flags', [])}")
     return out
 
 
@@ -725,8 +763,8 @@ def render_dot(manifest):
         label = re.sub(r"\$\{[^}]+\}", "…", label)
         label = re.sub(r"\$\([^)]+\)", "…", label)
         refusals = len(step["refusals"])
-        attrs = {"label": f"{step['id']}\\n{label}" + (f"\\n{refusals} refusal(s)" if refusals else ""),
-                 "URL": f"{document}#{arch.anchor('build steps')}",
+        attrs = {"label": f"{step['id']}\n{label}" + (f"\n{refusals} refusal(s)" if refusals else ""),
+                 "URL": f"{document}#{arch.anchor('One build in time')}",
                  "tooltip": f"{step['id']}: reads {step['reads']}; writes {step['writes']}"}
         if step["variants"] == ["full"]:
             attrs["fillcolor"] = "#e8f0fe"
@@ -736,11 +774,21 @@ def render_dot(manifest):
         if step.get("where") == "Makefile":
             attrs["fillcolor"] = "#fff4e0"
         lines.append(f"    {step['id']} [{arch._attr_text(attrs)}];")
-    previous = None
+    # One edge per variant path: a step follows the last step that runs in the same variant.
+    previous, drawn = {variant: None for variant in VARIANTS}, []
     for step in steps:
-        if previous is not None:
-            lines.append(f"    {previous} -> {step['id']};")
-        previous = step["id"]
+        for variant in step["variants"]:
+            if previous[variant] is not None:
+                drawn.append((previous[variant], step["id"], variant))
+            previous[variant] = step["id"]
+    for source, target in dict.fromkeys((s, t) for s, t, _ in drawn):
+        variants = sorted({v for s, t, v in drawn if (s, t) == (source, target)})
+        if variants == ["full"]:
+            lines.append(f'    {source} -> {target} [color="#1f5fbf"];')
+        elif variants == ["partial"]:
+            lines.append(f'    {source} -> {target} [style=dashed];')
+        else:
+            lines.append(f"    {source} -> {target};")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -759,10 +807,10 @@ def svg_stamp_matches(svg_text, dot_text):
     return bool(match) and match.group(1) == "steps" and match.group(2) == arch.dot_hash(dot_text)
 
 
-VERIFIED = ("Symbol presence and test definition are verified, and the banner order, refusal messages, "
-            "statuses and steps, knob values, signing calls, helper invocations and the signing inventory are "
-            "compared with the script by the build_documentation case; whether a test asserts the row, or a "
-            "refusal fires before the operation it protects, is not verified.")
+VERIFIED = ("Symbol presence and test definition are verified, and the banner order, the refusal messages with the "
+            "script's own statuses and steps, knob values, signing calls with their flags, helper and tool invocations "
+            "with their listed flags, and the signing inventory are compared with the script by the build_documentation "
+            "case; whether a test asserts the row, or a refusal fires before the operation it protects, is not verified.")
 
 
 def _cites(item):
@@ -779,7 +827,8 @@ def render_figure(manifest):
         f"![One build in time]({figure}.svg)", "",
         f"*Figure: one build in time, step by step. Generated from [{manifest_name}]({manifest_name}) by "
         f"[{generator}]({generator}); dot source in [{figure}.dot]({figure}.dot). The ids in the figure are the "
-        f"ids in the step table; a filled node runs only in a full build, a dashed one only in a partial build. {VERIFIED}*"])
+        f"ids in the step table; a blue node and a blue edge belong only to a full build, a dashed node or edge only to a partial "
+        f"build, and the two paths rejoin where both variants run. {VERIFIED}*"])
 
 
 def render_steps(manifest):
@@ -816,14 +865,24 @@ def render_refusals(manifest):
 
 
 def render_signing(manifest):
-    rows = [[str(index), entry["target"], entry["kind"], entry["entitlements"] or "none",
+    rows = [[str(index), entry["target"], entry["kind"], " ".join(entry["flags"]), entry["entitlements"] or "none",
              entry["loop"] or "no", entry["step"], _variant_cell(entry["variants"]), *_cites(entry)]
             for index, entry in enumerate(manifest["signing"], start=1)]
     summary = (f"<summary>{len(manifest['signing'])} signing calls in order, with symbol presence and test definition "
                f"verified and the calls, their targets and entitlements compared with the script and the signed inventory "
                f"with EXECUTABLES, the evidence generator and the README; whether a test asserts the row is not verified</summary>")
     return "\n".join(["<details>", summary, "", arch._table(
-        ["#", "Target", "Kind", "Entitlements", "In the service loop", "Step", "Variants", "Sources", "Checks"], rows), "", "</details>"])
+        ["#", "Target", "Kind", "Flags", "Entitlements", "In the service loop", "Step", "Variants", "Sources", "Checks"], rows), "", "</details>"])
+
+
+def render_invocations(manifest):
+    rows = [[item["id"], item["command"], " ".join(item.get("flags", [])) or "(not compared)", item["step"],
+             _variant_cell(item["variants"]), *_cites(item)] for item in manifest["invocations"]]
+    summary = (f"<summary>{len(manifest['invocations'])} helper and tool invocations, with symbol presence and test definition "
+               f"verified and each command's name, step and listed flags compared with the script; whether a test asserts the row "
+               f"is not verified</summary>")
+    return "\n".join(["<details>", summary, "", arch._table(
+        ["Id", "Command", "Flags compared", "Step", "Variants", "Sources", "Checks"], rows), "", "</details>"])
 
 
 def render_knobs(manifest):
@@ -838,7 +897,7 @@ def render_directories(manifest):
 
 
 RENDERERS = {"FIGURE": render_figure, "STEPS": render_steps, "REFUSALS": render_refusals,
-             "SIGNING": render_signing, "KNOBS": render_knobs, "DIRECTORIES": render_directories}
+             "SIGNING": render_signing, "INVOCATIONS": render_invocations, "KNOBS": render_knobs, "DIRECTORIES": render_directories}
 
 
 def span_values(manifest):

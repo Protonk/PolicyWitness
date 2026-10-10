@@ -22,8 +22,11 @@ identity's C side: every repository file the compiler consumed for the worker
 and the shim, as Ninja's dependency log records it, must be an identity
 digest input. An include that reaches outside the digest's directories, by a
 relative path or through a symlink, is named; the validator is outside the
-identity by design and is not checked. Dependencies must have been recorded by
-a completed compile.
+identity by design and is not checked. A dependency outside the checkout must
+lie under the selected SDK (`SDKROOT`) or the developer directory
+(`DEVELOPER_DIR`, else what `xcode-select -p` prints); any other file outside
+the checkout is named too, since the identity never hashes it. Dependencies
+must have been recorded by a completed compile.
 
 The build-directory reading also requires that the directory was configured
 for the checkout being checked (`--root`, this repository by default). Meson
@@ -38,6 +41,7 @@ Exit 1 with one line per problem; exit 2 when Meson or Ninja cannot be read.
 import argparse
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -133,14 +137,27 @@ def recorded_dependencies(builddir, root):
     return blocks
 
 
+def toolchain_roots():
+    """Where a dependency outside the checkout may legitimately come from: the selected SDK and the developer directory."""
+    roots = [Path(value).resolve() for value in (os.environ.get('SDKROOT'), os.environ.get('DEVELOPER_DIR')) if value]
+    try:
+        selected = subprocess.run(['/usr/bin/xcode-select', '-p'], capture_output=True, text=True, timeout=30)
+        if selected.returncode == 0 and selected.stdout.strip():
+            roots.append(Path(selected.stdout.strip()).resolve())
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return roots
+
+
 def closure_problems(builddir, root, targets, filenames, label):
-    """Every repository file the compiler consumed for an identity target is a digest input."""
+    """Every file the compiler consumed for an identity target is a digest input, the SDK or the toolchain."""
     builddir, root = Path(builddir).resolve(), Path(root).resolve()
     try:
         digest = identity_inputs(root)
     except ValueError as exc:
         return [f'  {label}: {exc}']
     blocks = recorded_dependencies(builddir, root)
+    roots = toolchain_roots()
     out = []
     for name in IDENTITY_TARGETS:
         if name not in targets:
@@ -158,7 +175,9 @@ def closure_problems(builddir, root, targets, filenames, label):
                 try:
                     relative = path.relative_to(root).as_posix()
                 except ValueError:
-                    continue  # the SDK and the toolchain
+                    if not any(path == base or base in path.parents for base in roots):
+                        out.append(f"  {label}: {name} consumed '{path}' outside the checkout, the SDK and the developer directory")
+                    continue
                 if relative not in digest:
                     out.append(f"  {label}: {name} consumed '{relative}' which is not an identity input")
     return out

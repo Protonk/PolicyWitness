@@ -50,10 +50,10 @@ executable that does not carry the named identity before the ZIP.
 
 `PW_INSPECTION=1` (default) builds Swift with `-Onone -g`, gives the Rust
 tools debug info, frame pointers and `opt-level=1` unless `RUSTFLAGS` is
-already set, and leaves a `.dSYM` beside each Swift executable in the bundle;
-`PW_INSPECTION=0` builds Swift with `-O` and omits the dSYMs. The C executables
-are `-O2` without debug info in both variants. The knob is not one setting
-across languages.
+already set to a nonempty value, and leaves a `.dSYM` beside each Swift
+executable in the bundle; `PW_INSPECTION=0` builds Swift with `-O` and omits
+the dSYMs. The C executables are `-O2` without debug info in both variants.
+The knob is not one setting across languages.
 
 ### Sandboxed automation harnesses
 
@@ -132,12 +132,13 @@ files the tree holds for it; a manifest that compiles a substitute, or a dead
 declaration standing in for a live one, stops there, before any output is
 copied. The same check reads Ninja's dependency log for the worker and the
 shim: every repository file the compiler consumed must be an identity digest
-input, so an include that reaches outside the digest's directories, by a
-relative path or through a symlink, stops the build as well. The
-`source_drift` suite applies the source-list expectation to the manifest read
-without a build directory, through the shared reader in
-`tests/lib/native_sources.py`. Both check membership, not what the compiler
-does with those files.
+input, so an include that reaches a repository file outside the digest's
+inputs, by a relative path or through a symlink, or a file outside the
+checkout that is not under the selected SDK or the developer directory, stops
+the build as well. The `source_drift` suite applies the source-list
+expectation to the manifest read without a build directory, through the shared
+reader in `tests/lib/native_sources.py`. Both check membership, not what the
+compiler does with those files.
 
 `builddir/` and `controller/target/` are incremental build directories and
 trusted working state, like the checkout they sit in, and for that checkout

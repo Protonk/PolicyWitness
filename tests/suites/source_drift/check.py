@@ -939,11 +939,18 @@ SHAPE_GOLDENS = {"reply": REPO_ROOT / "tests/fixtures/contract/response_shape.js
                  "envelope": REPO_ROOT / "tests/fixtures/contract/envelope_shape.json"}
 
 
+BUILD_DOC = REPO_ROOT / "docs/BUILD.md"
+
+
 def architecture_prose() -> str:
     """The handwritten text of the architecture document: no generated regions, no fenced blocks."""
-    text = ARCHITECTURE_DOC.read_text()
-    text = re.sub(r"<!-- BEGIN GENERATED ARCHITECTURE GRAPH \S+ -->.*?<!-- END GENERATED ARCHITECTURE GRAPH \S+ -->",
-                  "", text, flags=re.S)
+    return document_prose(ARCHITECTURE_DOC)
+
+
+def document_prose(path: Path) -> str:
+    """The handwritten text of a generated document: no generated regions, no fenced blocks."""
+    text = path.read_text()
+    text = re.sub(r"<!-- BEGIN GENERATED ([^>]+?) -->.*?<!-- END GENERATED \1 -->", "", text, flags=re.S)
     kept, fence = [], None
     for line in text.splitlines():
         match = re.match(r"^\s*(`{3,}|~{3,})", line)
@@ -968,27 +975,37 @@ def section(prose: str, heading: str) -> str | None:
 
 
 def check_known_gap_index() -> list[str]:
-    """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else."""
-    prose = architecture_prose()
+    """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else.
+
+    The convention holds in the architecture document and the build document alike."""
+    problems = []
+    for document in (ARCHITECTURE_DOC, BUILD_DOC):
+        problems.extend(known_gap_index_problems(document))
+    return problems
+
+
+def known_gap_index_problems(document: Path) -> list[str]:
+    name = document.relative_to(REPO_ROOT).as_posix()
+    prose = document_prose(document)
     headings = [(m.start(), m.group(1).strip()) for m in re.finditer(r"^## (.+?)\s*$", prose, re.M)]
     if not headings or headings[-1][1] != "Known gaps":
-        return ["  known gaps: docs/ARCHITECTURE.md must end with a '## Known gaps' section"]
+        return [f"  known gaps: {name} must end with a '## Known gaps' section"]
     index_start = headings[-1][0]
     gaps = []
     for paragraph in re.finditer(r"(?:(?<=\n\n)|^)Known gap[^\n]*(?:\n(?!\n)[^\n]*)*", prose, re.M):
         owner = [h for h in headings if h[0] < paragraph.start()]
         if paragraph.start() >= index_start or not owner:
-            return [f"  known gaps: a Known gap paragraph must sit under the section whose promise it limits: {paragraph.group(0)[:60]!r}"]
+            return [f"  known gaps: {name}: a Known gap paragraph must sit under the section whose promise it limits: {paragraph.group(0)[:60]!r}"]
         gaps.append(heading_anchor(owner[-1][1]))
     bullets = re.findall(r"^- (.*)$", prose[index_start:], re.M)
     linked = []
     for bullet in bullets:
         match = re.match(r"\[[^\]]+\]\(#([^)]+)\)", bullet)
         if not match:
-            return [f"  known gaps: an index bullet must open with a link to its section: {bullet[:60]!r}"]
+            return [f"  known gaps: {name}: an index bullet must open with a link to its section: {bullet[:60]!r}"]
         linked.append(match.group(1))
     if linked != gaps:
-        return [f"  known gaps: the index lists {linked} but the Known gap paragraphs sit under {gaps}"]
+        return [f"  known gaps: {name}: the index lists {linked} but the Known gap paragraphs sit under {gaps}"]
     return []
 
 

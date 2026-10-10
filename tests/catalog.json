@@ -81,7 +81,10 @@
         },
         {
           "id": "build_documentation",
-          "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, parser refusals and mutation controls pass"
+          "description": "Build manifest, dot file, SVG stamp and document regions agree with build.sh; grounding rules over the script, meson.build, the Makefile, the inventories and the baseline, parser refusals, mutation controls and the Meson policy controls pass",
+          "requires": [
+            "meson"
+          ]
         },
         {
           "id": "generator_contract",

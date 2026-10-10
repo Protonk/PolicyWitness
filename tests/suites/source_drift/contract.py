@@ -3,6 +3,7 @@ import copy
 import importlib.util
 import json
 import os
+import plistlib
 import re
 import shutil
 import subprocess
@@ -237,11 +238,11 @@ class ContractVersionTests(unittest.TestCase):
         extra |= set(identity_generator.source_paths(ROOT)) | set(identity_generator.TARGETS)
         return self.checkout(extra=extra)
 
-    def build(self, root, env, timeout=120):
+    def build(self, root, env, timeout=120, args=()):
         """Run build.sh in a checkout with the knobs unset unless env sets them; return the result and the output path."""
         destination = root / 'dist'
         base = {name: value for name, value in os.environ.items() if name not in ('BUILD_XPC', 'PW_INSPECTION')}
-        result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
+        result = subprocess.run(['bash', str(root / 'build.sh'), *args], cwd=root,
             env={**base, 'DIST_DIR': str(destination), **env}, capture_output=True, text=True, timeout=timeout)
         return result, destination
 
@@ -321,6 +322,92 @@ class ContractVersionTests(unittest.TestCase):
         result, _ = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn('has no readable meson-info', result.stderr)
+
+    def test_build_refuses_an_unknown_argument_before_any_check(self):
+        root = self.checkout(extra={'build.sh'})
+        result, destination = self.build(root, {'IDENTITY': ''}, timeout=10, args=('--bogus',))
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('unknown argument: --bogus', result.stderr)
+        self.assertIn('usage:', result.stderr)
+        self.assertNotIn('Checking limits documentation', result.stdout)
+        self.assertFalse(destination.exists())
+        # The one accepted argument prints the usage and stops before any check.
+        result, _ = self.build(root, {'IDENTITY': ''}, timeout=10, args=('--help',))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('usage:', result.stdout)
+        self.assertNotIn('Checking limits documentation', result.stdout)
+
+    def test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk(self):
+        root = self.build_checkout()
+        plist = root / 'Info.plist'
+        data = plistlib.loads(plist.read_bytes())
+        data['LSMinimumSystemVersion'] = '26'
+        plist.write_bytes(plistlib.dumps(data))
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("Info.plist LSMinimumSystemVersion is not a major.minor version: '26'", result.stderr)
+        self.assertIn('Supported macOS (Info.plist LSMinimumSystemVersion): 26', result.stdout)
+        self.assertNotIn('Selecting the macOS SDK', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo(self):
+        root = self.build_checkout()
+        result, destination = self.build(root, {'IDENTITY': 'Developer ID Application: Nobody (TEAMID00AA)'})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('codesigning identity not found in your keychain', result.stderr)
+        self.assertIn('Checking the signing identity', result.stdout)
+        self.assertNotIn('Building Rust', result.stdout)
+        self.assertFalse(destination.exists())
+        self.assertFalse((root / 'builddir').exists())
+
+    def test_build_refuses_a_stale_architecture_copy_before_compiling(self):
+        root = self.build_checkout()
+        document = root / 'docs/ARCHITECTURE.md'
+        node = json.loads((ROOT / 'docs/architecture.json').read_text())['graphs'][0]['nodes'][0]['id']
+        text = document.read_text()
+        self.assertIn(f'| {node} |', text)
+        document.write_text(text.replace(f'| {node} |', f'| {node}x |', 1))
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('architecture documentation is stale', result.stderr)
+        self.assertIn('Checking contract versions', result.stdout)
+        self.assertNotIn('Checking build documentation', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_build_refuses_a_stale_build_document_copy_before_compiling(self):
+        root = self.build_checkout()
+        document = root / 'docs/BUILD.md'
+        text = document.read_text()
+        self.assertIn('| admission |', text)
+        document.write_text(text.replace('| admission |', '| admissionx |', 1))
+        result, destination = self.build(root, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('build documentation is stale', result.stderr)
+        self.assertIn('Checking build documentation', result.stdout)
+        self.assertNotIn('Checking host/worker identity', result.stdout)
+        self.assertFalse(destination.exists())
+
+    def test_make_build_refuses_without_an_identity_and_never_runs_the_script(self):
+        """The Makefile's guard stops before build.sh; with an identity the recipe passes it and DIST_DIR through."""
+        directory = tempfile.TemporaryDirectory(prefix='pw-make-build-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        shutil.copy2(ROOT / 'Makefile', root / 'Makefile')
+        marker = root / 'ran.json'
+        script = root / 'build.sh'
+        script.write_text('#!/usr/bin/env bash\nprintf \'{"IDENTITY": "%s", "DIST_DIR": "%s"}\' "${IDENTITY:-}" "${DIST_DIR:-}" > ran.json\n')
+        script.chmod(0o755)
+        env = {name: value for name, value in os.environ.items() if name != 'IDENTITY'}
+        result = subprocess.run(['make', 'build'], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('ERROR: set IDENTITY to your Developer ID Application identity', result.stdout)
+        self.assertFalse(marker.exists(), 'the guard must stop before build.sh runs')
+        identity = 'Developer ID Application: Control (TEAMID00AA)'
+        result = subprocess.run(['make', 'build', f'IDENTITY={identity}', 'DIST_DIR=out'], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('==> [build] build, sign and embed evidence into out/PolicyWitness.app', result.stdout)
+        self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': identity, 'DIST_DIR': 'out'})
 
     def test_build_refuses_stale_contract_copy_before_signing_or_creating_output(self):
         root = self.checkout(extra=LIMITS_FILES | limits_references())

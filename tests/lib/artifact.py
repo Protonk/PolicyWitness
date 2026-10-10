@@ -1,7 +1,11 @@
 """Read-only bundle inspection and inventories shared by test equipment.
 
 No signing, rebuilding, or manifest repair belongs here. Signature verification
-is local codesign verification, not notarization or release acceptance.
+is local codesign verification, not notarization or release acceptance. One
+consistency rule reads signers: every executable must carry the signer the
+controller carries, so an executable left ad hoc-signed inside a
+production-signed app is refused while a copy signed ad hoc throughout, as
+test equipment is, stays consistent.
 """
 import argparse
 import hashlib
@@ -11,6 +15,10 @@ from pathlib import Path, PurePosixPath
 import plistlib
 import stat
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import signer_check
 
 CODESIGN = '/usr/bin/codesign'
 NM = '/usr/bin/nm'
@@ -124,6 +132,22 @@ def inspect(app):
             error('signature', relative, str(exc))
             receipt['error'] = str(exc)
         report['signatures'].append(receipt)
+
+    # Signer consistency: every signed executable carries one signer, the controller's when the
+    # controller is signed. An ad hoc helper inside a production-signed app is refused; an app signed
+    # ad hoc throughout, or a fixture whose only signed executable is a linker-signed stub, is consistent.
+    try:
+        signers = {}
+        for relative in EXECUTABLES:
+            found = signer_check.signature(contained(relative))
+            if found['leaf'] or found['adhoc']:
+                signers[relative] = (found['leaf'], found['adhoc'])
+        reference = signers.get(CONTROLLER) or next(iter(signers.values()), None)
+        for relative, signer in signers.items():
+            if signer != reference:
+                error('signer', relative, f"signed by {signer[0] or 'ad hoc'}, not {reference[0] or 'ad hoc'} like the other signed executables")
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        error('signer', CONTROLLER, str(exc))
 
     # Host invariance: the XPC host never links, loads or calls libsandbox. Its
     # undefined symbols must carry no sandbox_* import; the worker and the

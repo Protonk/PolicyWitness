@@ -101,6 +101,12 @@
           "symbol": "check_makefile_entry",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_make_build_refuses_without_an_identity_and_never_runs_the_script",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ],
       "where": "Makefile"
@@ -112,7 +118,7 @@
         "full",
         "partial"
       ],
-      "reads": "BUILD_XPC, PW_INSPECTION and the argument list",
+      "reads": "BUILD_XPC, PW_INSPECTION and the argument list; --help prints the usage and exits before any check, after the knobs are validated",
       "writes": "nothing",
       "refusals": [
         "knob_value",
@@ -134,6 +140,12 @@
         {
           "path": "tests/suites/source_drift/contract.py",
           "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_an_unknown_argument_before_any_check",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -411,12 +423,13 @@
         "full",
         "partial"
       ],
-      "reads": "controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS",
-      "writes": "controller/target/release/, the pinned output directory",
+      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths Cargo reports",
+      "writes": "controller/target/release/ under the pinned output directory, and the messages file Cargo reports its artifacts in",
       "refusals": [
         "missing_controller",
         "missing_observer",
         "missing_sbpl_check",
+        "cargo_artifact_elsewhere",
         "minimum_mismatch",
         "cargo_failed"
       ],
@@ -475,8 +488,8 @@
         "full",
         "partial"
       ],
-      "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two knobs as Meson options",
-      "writes": "builddir/ configuration",
+      "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two knobs as Meson options; a fresh setup also reads CFLAGS and the other flag variables",
+      "writes": "builddir/ configuration; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers",
       "refusals": [
         "meson_optimization",
         "meson_debug",
@@ -525,9 +538,30 @@
         "full",
         "partial"
       ],
-      "reads": "the native sources through builddir/",
+      "reads": "the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first",
       "writes": "builddir/ outputs and the Swift module cache under it",
       "refusals": [
+        "meson_optimization",
+        "meson_debug",
+        "meson_warning_level",
+        "meson_werror",
+        "meson_strip",
+        "meson_unity",
+        "meson_b_ndebug",
+        "meson_b_lto",
+        "meson_b_coverage",
+        "meson_b_pgo",
+        "meson_b_bitcode",
+        "meson_b_pie",
+        "meson_b_staticpic",
+        "meson_b_lundef",
+        "meson_b_sanitize",
+        "meson_c_std",
+        "meson_c_args",
+        "meson_c_link_args",
+        "meson_buildtype",
+        "meson_swift_args",
+        "meson_swift_link_args",
         "meson_failed"
       ],
       "sources": [
@@ -1046,6 +1080,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_an_unknown_argument_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1073,6 +1113,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1259,6 +1305,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1332,6 +1384,33 @@
         {
           "path": "build.sh",
           "symbol": "expected sbpl-check binary at ${SBPL_CHECK_BIN}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "cargo_artifact_elsewhere",
+      "message": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it",
+      "kind": "script",
+      "steps": [
+        "cargo"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it"
         }
       ],
       "checks": [
@@ -1771,6 +1850,12 @@
           "symbol": "check_makefile_entry",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_make_build_refuses_without_an_identity_and_never_runs_the_script",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1779,7 +1864,8 @@
       "message": "fixed native policy: optimization must be 'plain'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1798,6 +1884,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1806,7 +1898,8 @@
       "message": "fixed native policy: debug must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1825,6 +1918,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1833,7 +1932,8 @@
       "message": "fixed native policy: warning_level must be '0'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1852,6 +1952,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1860,7 +1966,8 @@
       "message": "fixed native policy: werror must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1879,6 +1986,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1887,7 +2000,8 @@
       "message": "fixed native policy: strip must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1906,6 +2020,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1914,7 +2034,8 @@
       "message": "fixed native policy: unity must be 'off'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1933,6 +2054,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1941,7 +2068,8 @@
       "message": "fixed native policy: b_ndebug must be 'false'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1960,6 +2088,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1968,7 +2102,8 @@
       "message": "fixed native policy: b_lto must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -1987,6 +2122,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -1995,7 +2136,8 @@
       "message": "fixed native policy: b_coverage must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2014,6 +2156,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2022,7 +2170,8 @@
       "message": "fixed native policy: b_pgo must be 'off'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2041,6 +2190,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2049,7 +2204,8 @@
       "message": "fixed native policy: b_bitcode must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2068,6 +2224,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2076,7 +2238,8 @@
       "message": "fixed native policy: b_pie must be false",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2095,6 +2258,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2103,7 +2272,8 @@
       "message": "fixed native policy: b_staticpic must be true",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2122,6 +2292,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2130,7 +2306,8 @@
       "message": "fixed native policy: b_lundef must be true",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2149,6 +2326,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2157,7 +2340,8 @@
       "message": "fixed native policy: b_sanitize must be 'none'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2176,6 +2360,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2184,7 +2374,8 @@
       "message": "fixed native policy: c_std must be 'none'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2203,6 +2394,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2211,7 +2408,8 @@
       "message": "fixed native policy: c_args must be []",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2230,6 +2428,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2238,7 +2442,8 @@
       "message": "fixed native policy: c_link_args must be []",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2257,6 +2462,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2265,7 +2476,8 @@
       "message": "fixed native policy: buildtype must be 'plain'",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2292,7 +2504,8 @@
       "message": "fixed native policy: swift_args must be []",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2310,6 +2523,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2318,7 +2537,8 @@
       "message": "fixed native policy: swift_link_args must be []",
       "kind": "meson",
       "steps": [
-        "configure"
+        "configure",
+        "compile"
       ],
       "status": "1",
       "variants": [
@@ -2336,6 +2556,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -2447,6 +2673,12 @@
           "symbol": "test_build_checks_every_generator_before_signing",
           "form": "test",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_stale_architecture_copy_before_compiling",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2484,6 +2716,12 @@
           "symbol": "test_build_checks_every_generator_before_signing",
           "form": "test",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_stale_build_document_copy_before_compiling",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2838,9 +3076,9 @@
         },
         {
           "path": "tests/suites/source_drift/limits.py",
-          "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
+          "symbol": "test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing",
           "form": "test",
-          "coverage": "behavioral"
+          "coverage": "helper"
         }
       ]
     }
@@ -2855,6 +3093,12 @@
       "step": "sign_tools",
       "variants": [
         "full"
+      ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
       ],
       "sources": [
         {
@@ -2888,6 +3132,12 @@
         "full",
         "partial"
       ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -2920,6 +3170,12 @@
         "full",
         "partial"
       ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -2950,6 +3206,12 @@
       "step": "sign_services",
       "variants": [
         "full"
+      ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
       ],
       "sources": [
         {
@@ -2982,6 +3244,12 @@
       "variants": [
         "full"
       ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -3012,6 +3280,12 @@
       "step": "sign_services",
       "variants": [
         "full"
+      ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
       ],
       "sources": [
         {
@@ -3045,6 +3319,12 @@
         "full",
         "partial"
       ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -3076,6 +3356,12 @@
       "variants": [
         "full",
         "partial"
+      ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
       ],
       "sources": [
         {
@@ -3239,6 +3525,38 @@
         {
           "path": "build.sh",
           "symbol": "cargo build"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ],
+      "flags": [
+        "--manifest-path",
+        "--release",
+        "--target-dir",
+        "--message-format",
+        "--bin",
+        "--bin",
+        "--bin"
+      ]
+    },
+    {
+      "id": "inv_cargo_artifacts",
+      "command": "tests/lib/cargo_artifacts.py",
+      "step": "cargo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo_artifacts.py"
         }
       ],
       "checks": [
@@ -3633,9 +3951,9 @@
         },
         {
           "path": "tests/suites/source_drift/limits.py",
-          "symbol": "test_build_refuses_stale_guide_before_signing_or_creating_output",
+          "symbol": "test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing",
           "form": "test",
-          "coverage": "behavioral"
+          "coverage": "helper"
         }
       ]
     },
@@ -3696,8 +4014,8 @@
       "id": "controller_target",
       "path": "controller/target/",
       "facts": {
-        "Trusted as": "Cargo's incremental outputs, pinned by --target-dir so the environment cannot move them",
-        "Refused when": "never as a directory; a stale output is caught only by the minimum-version check and Cargo's own fingerprints"
+        "Trusted as": "Cargo's incremental outputs under the pinned --target-dir",
+        "Refused when": "Cargo reports an executable at another path than the pinned one; otherwise a stale output is caught only by the minimum-version check and Cargo's own fingerprints"
       },
       "sources": [
         {
@@ -3718,8 +4036,8 @@
       "id": "dist",
       "path": "dist/ (DIST_DIR)",
       "facts": {
-        "Trusted as": "the output directory; the previous app, ZIP and guide are removed at assembly and nothing is preserved",
-        "Refused when": "never; a refusal after assembly leaves the partial, unsealed bundle this build got to"
+        "Trusted as": "the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved",
+        "Refused when": "never; a failure between those removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a refusal after it leaves a sealed app the test inspector refuses"
       },
       "sources": [
         {

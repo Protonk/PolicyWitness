@@ -208,15 +208,15 @@ The digest covers sorted repository-relative paths and file contents, each
 length-framed: all `.c`, `.h` and `.swift` files under
 `controller/tools/pw_probe_runner/` and `runner/Sources/`, plus the generator,
 `build.sh`, `meson.build`, `meson.options` and `runner/Package.swift`.
-Generated identity region bodies are
-excluded to avoid self-reference. Discovery includes new helpers automatically
-when they are ordinary files beneath those directories; a symlink there is
-refused, and the build reads Ninja's dependency log to check that the compiler
-consumed no repository file outside these inputs for the worker and the shim.
-This conservative scope includes the C wait and publication code, Swift release
-and collection code, orchestration, ABI declarations and their host mirror.
-Even comments or unrelated changes within those files change the identity;
-there is no manual semantic-version judgment to make.
+Generated identity region bodies are excluded to avoid self-reference.
+Discovery includes new helpers automatically when they are ordinary files
+beneath those directories; a symlink there is refused, and the build reads
+Ninja's dependency log to check that the compiler consumed nothing for the
+worker and the shim beyond these inputs, the selected SDK and the developer
+directory. This conservative scope includes the C wait and publication code,
+Swift release and collection code, orchestration, ABI declarations and their
+host mirror. Even comments or unrelated changes within those files change the
+identity; there is no manual semantic-version judgment to make.
 
 The shared header has a fixed bootstrap magic at byte 0 and 32 identity bytes
 at byte 64. The worker checks the mapped region's size and these fields before

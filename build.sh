@@ -258,20 +258,41 @@ fi
 
 # The output directory is pinned on the command line, so a CARGO_TARGET_DIR
 # or a Cargo configuration value cannot send the outputs elsewhere while the
-# copies below read these fixed paths.
+# copies below read these fixed paths. Cargo is asked to report what it
+# produced: a target triple or another setting that placed an executable
+# under a different directory refuses here, before a stale file at the pinned
+# path could be copied in its place.
 CARGO_TARGET_DIR_PINNED="${ROOT_DIR}/controller/target"
+CARGO_MESSAGES="${CARGO_TARGET_DIR_PINNED}/pw-build-messages.jsonl"
+RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
+SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
+SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
 echo "==> Building Rust controller + tools"
+mkdir -p "${CARGO_TARGET_DIR_PINNED}"
+rm -f "${CARGO_MESSAGES}"
 PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
   cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --target-dir "${CARGO_TARGET_DIR_PINNED}" \
+  --message-format=json-render-diagnostics \
   --bin policy-witness \
   --bin sandbox-log-observer \
-  --bin sbpl-check
+  --bin sbpl-check \
+  > "${CARGO_MESSAGES}"
+CARGO_BUILT="$(/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/cargo_artifacts.py" "${CARGO_MESSAGES}" policy-witness sandbox-log-observer sbpl-check)"
+while IFS=$'\t' read -r bin_name bin_path; do
+  case "${bin_name}" in
+    policy-witness) bin_expected="${RUNNER_BIN}" ;;
+    sandbox-log-observer) bin_expected="${SANDBOX_LOG_OBSERVER_BIN}" ;;
+    sbpl-check) bin_expected="${SBPL_CHECK_BIN}" ;;
+    *) continue ;;
+  esac
+  if [[ "${bin_path}" != "${bin_expected}" ]]; then
+    echo "ERROR: cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it" 1>&2
+    exit 2
+  fi
+done <<< "${CARGO_BUILT}"
 
-RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
-SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
-SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
 if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2

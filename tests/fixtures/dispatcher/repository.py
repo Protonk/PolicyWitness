@@ -7,7 +7,7 @@ import shutil
 def install_runner(source, destination, suites, *, signed_fixtures=False):
     for relative in ('tests/run.sh', 'tests/lib/test_cli.py', 'tests/lib/suite_run.py',
                      'tests/lib/testlib.sh', 'tests/lib/case.sh', 'tests/lib/artifact.py',
-                     'tests/lib/retention.py', 'tests/RETAINED.json'):
+                     'tests/lib/signer_check.py', 'tests/lib/retention.py', 'tests/RETAINED.json'):
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source / relative, target)

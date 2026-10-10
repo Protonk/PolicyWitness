@@ -2,24 +2,6 @@
   "schema_version": 1,
   "entries": [
     {
-      "refusal": "unknown_argument",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'unknown argument: $1' and does not perform the operation the refusal protects",
-      "control": "invoke build.sh with an unknown argument and valid knobs; assert the usage text, status 2 and no documentation check"
-    },
-    {
-      "refusal": "plist_minimum_malformed",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'' and does not perform the operation the refusal protects",
-      "control": "a disposable checkout whose Info.plist declares a non major.minor value; assert the refusal after the banner and no Cargo"
-    },
-    {
       "refusal": "sdk_unavailable",
       "variants": [
         "full",
@@ -27,15 +9,6 @@
       ],
       "claim": "the build refuses with 'xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})' and does not perform the operation the refusal protects",
       "control": "an xcrun that cannot select the SDK (a DEVELOPER_DIR without one); assert the refusal before the signing identity"
-    },
-    {
-      "refusal": "identity_absent",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'codesigning identity not found in your keychain:' and does not perform the operation the refusal protects",
-      "control": "a Developer ID class identity string the keychain does not list; assert the refusal and no Cargo"
     },
     {
       "refusal": "missing_controller",
@@ -63,6 +36,15 @@
       ],
       "claim": "the build refuses with 'expected sbpl-check binary at ${SBPL_CHECK_BIN}' and does not perform the operation the refusal protects",
       "control": "a Cargo invocation that omits sbpl-check; assert the named path and no Meson"
+    },
+    {
+      "refusal": "cargo_artifact_elsewhere",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "claim": "the build refuses with 'cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it' and does not perform the operation the refusal protects",
+      "control": "a Cargo target triple selected through the environment or configuration in a disposable checkout; assert the refusal names the reported path and no copy follows (Cargo must run, so this needs a real or stub Cargo)"
     },
     {
       "refusal": "minimum_mismatch",
@@ -194,218 +176,13 @@
       "control": "the service Entitlements.plist removed; assert the refusal and no service signature"
     },
     {
-      "refusal": "make_identity_unset",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'set IDENTITY to your Developer ID Application identity' and does not perform the operation the refusal protects",
-      "control": "make build without IDENTITY; assert the message, status 2 and that build.sh never runs"
-    },
-    {
-      "refusal": "meson_optimization",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose optimization departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_debug",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose debug departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_warning_level",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose warning_level departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_werror",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose werror departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_strip",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose strip departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_unity",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose unity departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_ndebug",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_ndebug departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_lto",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_lto departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_coverage",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_coverage departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_pgo",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_pgo departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_bitcode",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_bitcode departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_pie",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_pie departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_staticpic",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_staticpic departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_lundef",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_lundef departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_b_sanitize",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose b_sanitize departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_c_std",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose c_std departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_c_args",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose c_args departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_c_link_args",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "Meson refuses a configured directory whose c_link_args departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
       "refusal": "meson_buildtype",
       "variants": [
         "full",
         "partial"
       ],
-      "claim": "Meson refuses a configured directory whose buildtype departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_swift_args",
-      "variants": [
-        "full"
-      ],
-      "claim": "Meson refuses a configured directory whose swift_args departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "meson_swift_link_args",
-      "variants": [
-        "full"
-      ],
-      "claim": "Meson refuses a configured directory whose swift_link_args departs from the fixed policy",
-      "control": "meson configure of a copied directory with the option changed, through make build; assert the assertion message names the option and nothing is copied or signed"
-    },
-    {
-      "refusal": "stale_architecture",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'architecture documentation is stale' and does not perform the operation the refusal protects",
-      "control": "a stale architecture copy in a disposable checkout; assert the build refuses before Cargo"
-    },
-    {
-      "refusal": "stale_build_doc",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with 'build documentation is stale' and does not perform the operation the refusal protects",
-      "control": "a stale build document copy in a disposable checkout; assert the build refuses before Cargo"
+      "claim": "Meson refuses a configured directory whose buildtype label departs from the fixed policy",
+      "control": "not reachable on its own: Meson derives the buildtype label from optimization and debug, whose assertions fire first (the policy control shows -Dbuildtype=debug refused by the optimization assertion); a public-path control through make build with a poisoned directory would show placement before any copy for the whole group"
     },
     {
       "refusal": "stale_identity_presign",

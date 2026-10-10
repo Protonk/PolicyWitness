@@ -117,6 +117,8 @@ class BuildDocumentationTests(unittest.TestCase):
             self.assertIn(f"| {refusal['id']} |", regions['REFUSALS'], refusal['id'])
         for index, entry in enumerate(self.manifest['signing'], start=1):
             self.assertIn(f"| {index} | {generator.arch.cell(entry['target'])} |", regions['SIGNING'], entry['id'])
+        for item in self.manifest['invocations']:
+            self.assertIn(f"| {item['id']} |", regions['INVOCATIONS'], item['id'])
         for knob in self.manifest['knobs']:
             self.assertIn(f"| {knob['name']} |", regions['KNOBS'])
         for directory in self.manifest['directories']:
@@ -141,6 +143,24 @@ class BuildDocumentationTests(unittest.TestCase):
         svg = self.figures[1].read_text(errors='replace')
         self.assertTrue(generator.svg_stamp_matches(svg, dot_text))
         self.assertFalse(generator.svg_stamp_matches(svg, dot_text + '\n'))
+
+    def test_figure_labels_links_and_paths_render_as_claimed(self):
+        """Labels break on real newlines, every node links to an existing heading, and the edges follow each variant's path."""
+        import importlib.util as util
+        spec_common = util.spec_from_file_location('generator_common_figure', ROOT / 'docs/generator_common.py')
+        common = util.module_from_spec(spec_common)
+        spec_common.loader.exec_module(common)
+        dot_text = generator.render_dot(self.manifest)
+        svg = self.figures[1].read_text(errors='replace')
+        self.assertNotIn('\\n', svg, 'a literal backslash-n reached the rendered figure')
+        anchors = common.heading_anchors(self.document.read_text())
+        for anchor in set(re.findall(r'URL="BUILD\.md#([^"]+)"', dot_text)):
+            self.assertIn(anchor, anchors)
+        self.assertIn('assemble -> embed_client [color=', dot_text)
+        self.assertIn('assemble -> skip_xpc [style=dashed]', dot_text)
+        self.assertIn('skip_xpc -> presign [style=dashed]', dot_text)
+        self.assertNotIn('embed_services -> skip_xpc', dot_text)
+        self.assertIn('sign_tools -> evidence [style=dashed]', dot_text)
 
     def test_stale_copies_are_refused_then_regenerated_idempotently(self):
         root = self.checkout()
@@ -252,6 +272,11 @@ class BuildDocumentationTests(unittest.TestCase):
              "invocation 'tests/lib/signer_check.py' in step verify"),
             ('generator check removed', generator.invocation_problems,
              self.mutated('/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_build.py" --check\n', ''), "invocation 'docs/generate_build.py --check' in step check_build_doc"),
+            ('timestamp dropped from the signatures', generator.signing_problems,
+             self.mutated('  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"', '  codesign --force --options runtime -s "${IDENTITY}" "${target}"'),
+             'signing order: entry 1'),
+            ('target directory dropped from cargo', generator.invocation_problems,
+             self.mutated('  --target-dir "${CARGO_TARGET_DIR_PINNED}" \\\n', ''), 'invocation inv_cargo: manifest flags'),
         ]
         for name, rule, text, expected in cases:
             with self.subTest(mutation=name):
@@ -270,6 +295,7 @@ class BuildDocumentationTests(unittest.TestCase):
             ('unknown codesign form', self.mutated('codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}"', 'codesign --remove-signature "${APP_BUNDLE}"'), 'neither a seal nor a verification'),
             ('refusal in an uncalled function', SCRIPT + 'orphan() {\n  echo "ERROR: never" 1>&2\n  exit 2\n}\n', 'never called'),
             ('unterminated heredoc', self.mutated("cat <<'USAGE'\n", "cat <<'USAGX'\n"), 'unterminated heredoc'),
+            ('errexit dropped', self.mutated('set -euo pipefail', 'set -uo pipefail'), "must begin with 'set -euo pipefail'"),
         ]
         for name, text, expected in cases:
             with self.subTest(form=name):
@@ -312,6 +338,43 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertTrue(any('now has a control' in p for p in generator.baseline_problems(manifest, longer)))
         with self.assertRaises(ValueError):
             generator.load_baseline(root / 'docs/build.json')
+
+    def test_meson_policy_assertions_refuse_each_option(self):
+        """Every option meson.build asserts: a configured directory accepts the changed value, and the regeneration
+        the next compile triggers refuses it by name, before anything compiles. The label option is reached only
+        through the effective options it is derived from."""
+        other = {'optimization': '2', 'debug': 'true', 'warning_level': '1', 'werror': 'true', 'strip': 'true',
+                 'unity': 'on', 'b_ndebug': 'true', 'b_lto': 'true', 'b_coverage': 'true', 'b_pgo': 'generate',
+                 'b_bitcode': 'true', 'b_pie': 'true', 'b_staticpic': 'false', 'b_lundef': 'false',
+                 'b_sanitize': 'address', 'c_std': 'c11', 'c_args': '-DPROBE=1',
+                 'c_link_args': '-Wl,-headerpad_max_install_names', 'swift_args': '-DPROBE',
+                 'swift_link_args': '-Xlinker -headerpad_max_install_names'}
+        assertions = dict(generator.meson_assertions((ROOT / 'meson.build').read_text()))
+        self.assertEqual(sorted(other), sorted(name for name in assertions if name != 'buildtype'))
+        self.assertIn('buildtype', assertions)
+
+        def poisoned(name, value, xpc):
+            directory = tempfile.TemporaryDirectory(prefix='pw-meson-policy-')
+            self.addCleanup(directory.cleanup)
+            builddir = Path(directory.name) / 'builddir'
+            setup = subprocess.run(['meson', 'setup', str(builddir), str(ROOT), f'-Dxpc={xpc}'], capture_output=True, text=True, timeout=300)
+            self.assertEqual(setup.returncode, 0, setup.stderr)
+            configure = subprocess.run(['meson', 'configure', str(builddir), f'-D{name}={value}'], capture_output=True, text=True, timeout=300)
+            self.assertEqual(configure.returncode, 0, 'meson configure records the value; the assertion runs at the next regeneration')
+            compile_ = subprocess.run(['meson', 'compile', '-C', str(builddir)], capture_output=True, text=True, timeout=300)
+            self.assertNotEqual(compile_.returncode, 0, name)
+            return compile_.stdout + compile_.stderr
+
+        for name, value in other.items():
+            with self.subTest(option=name):
+                output = poisoned(name, value, 'true' if name.startswith('swift') else 'false')
+                self.assertIn(f'Assert failed: fixed native policy: {name} must be', output, output[-800:])
+                self.assertIn('(got ', output)
+                self.assertNotIn('Compiling C object', output)
+        with self.subTest(option='buildtype'):
+            output = poisoned('buildtype', 'debug', 'false')
+            self.assertRegex(output, r'fixed native policy: (optimization|debug) must be')
+            self.assertNotIn('fixed native policy: buildtype must be', output)
 
     def test_release_preflight_refuses_a_grown_build_baseline(self):
         release_spec = importlib.util.spec_from_file_location('preflight_build_baseline', ROOT / 'tests/lib/release_preflight.py')

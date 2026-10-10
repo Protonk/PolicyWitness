@@ -163,4 +163,5 @@ digraph documents {
     drift_build -> build_baseline [style="dashed", color="#8e24aa", label="D58 baseline", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D58: the listed refusals equal the uncovered ones; growth only by an explicit entry, refused at release |  "];
     gen_common -> gen_build [style="solid", color="#8a7400", label="D59 shared", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D59: shared citation, placeholder and span rules; the architecture generator's table and stamp rendering |  "];
     drift_generators -> gen_build [style="dashed", color="#8e24aa", label="D60 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D60: nothing changes outside its regions; --check before signing; one span owner |  "];
+    drift_check -> build_md [style="dashed", color="#8e24aa", label="D61 known gaps", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D61: Known gap paragraphs equal the index, as in the architecture document |  "];
 }
