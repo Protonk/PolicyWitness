@@ -227,15 +227,24 @@ produce an app the tests and notarization reject; see docs/SIGNING.md.
 EOM
   exit 2
 fi
-if ! /usr/bin/security find-identity -v -p codesigning 2>/dev/null | /usr/bin/grep -Fq "\"${IDENTITY}\""; then
+# One listing, read twice: whether this identity is in it, and whether it holds any
+# identity at all. An empty listing is what a sandboxed harness shows for a keychain
+# it cannot open, which is a different problem from a missing identity.
+IDENTITY_LISTING="$(/usr/bin/security find-identity -v -p codesigning 2>/dev/null || true)"
+if ! /usr/bin/grep -Fq "\"${IDENTITY}\"" <<< "${IDENTITY_LISTING}"; then
+  if /usr/bin/grep -Eq '^ *[1-9][0-9]* valid identities found' <<< "${IDENTITY_LISTING}"; then
+    IDENTITY_HINT="The keychain lists other codesigning identities; set IDENTITY to one of them or install this one."
+  else
+    IDENTITY_HINT="The keychain listed no codesigning identities at all. Inside a sandboxed automation harness the login keychain can be unreadable; rerun the same command outside it (AGENTS.md, Sandboxed automation harnesses)."
+  fi
   cat <<EOM 1>&2
 ERROR: codesigning identity not found in your keychain:
   ${IDENTITY}
 
+${IDENTITY_HINT}
+
 Run:
   security find-identity -v -p codesigning
-
-Then ensure the identity is installed/unlocked (or set IDENTITY to one of the listed identities).
 EOM
   exit 2
 fi
