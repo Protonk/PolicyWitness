@@ -188,9 +188,13 @@ func runOrderingTests(_ tk: TestKit) {
             var records = [ValidatorVerdict]()
             // Actual native records on either side of observed death; no
             // particular native answer for a dead PID is assumed.
-            let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-                .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            let validatorPath = root.appendingPathComponent("dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator").path
+            // The app under test is the dispatcher's PW_APP_DIR, as in CWorkerTests;
+            // dist/ under the checkout is the fallback for a direct swift run.
+            let appDir = ProcessInfo.processInfo.environment["PW_APP_DIR"]
+                ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+                    .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                    .appendingPathComponent("dist/PolicyWitness.app").path
+            let validatorPath = appDir + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
             var childDied = false
             let out = try orderingWorker("signal_awaiting_proceed|" + receipt) { pid in
                 _ = waitForReceipt(receipt, "waiting")
