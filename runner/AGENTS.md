@@ -1,19 +1,47 @@
-# runner/AGENTS.md
+# Working in `runner/`
 
-Use [runner/README.md](README.md) for implementation and test-harness details.
-Follow these rules when adding runner tests or a `_test_overrides` boundary,
-including tests maintained outside this directory.
+Read [README.md](README.md) for the source map, lifecycle and test seams. These
+rules supplement the [root guidance](../AGENTS.md) for runner work, including
+native helpers under `controller/tools/` and runner tests elsewhere in the tree.
+
+## Preserve the runner boundaries
+
+Keep sandbox API calls out of the host. The C worker compiles and applies the
+specimen; the validator queries it. Preserve fresh hosts/workers, shared
+single-use admission across connections and exit scheduling by the terminal
+request owner. Keep orchestration in the host and post-apply attempts in the worker.
+
+Preserve collection closure, release publication and worker acknowledgement.
+Do not infer `query_first` from paired fields alone. Changes to the worker wait,
+release store or eligibility rule require
+[the ordering mutation control](../tests/OPT_IN_TESTS.md), as specified by the
+root guidance. Retain partial native observations and independent cleanup
+facts; a summary or requested signal must not replace an observed effect.
+
+For request or evidence changes, update affected admission, producers, transport,
+independent readers, fixtures and documentation together. Follow the
+[wire contract](../docs/CONTRACT.md) and
+[evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for versions and
+claim ownership. Edit generator inputs and regenerate through the
+[owning tools](../tests/suites/source_drift/README.md#generator-contracts).
+Native source additions/moves require the Meson target; identity/layout changes
+also require worker-identity regeneration, C/Swift agreement and layout-golden
+review.
+
+Before adding or changing an excluded pair in `predictionUnavailableOpFilters`,
+retain empirical evidence
+using [verify_filter_id.sh](../tests/suites/witness_contract/harness/verify_filter_id.sh)
+and independent native observations. Read the tool's stated limits: candidate
+filter matches do not establish general prediction/enforcement agreement.
+Update the user guide's exclusion pairs and planner/unit controls together.
 
 ## Swift runner unit tests (SwiftPM)
 
-**When to add a unit test rather than an e2e suite.** Follow
-[test-selection guidance](../tests/AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior):
-use the CLI or `_test_overrides` when the behavior is reachable there. Use
-`runner_unit` for internal helper branches or observations an ordinary specimen
-cannot reliably produce, such as failed host kill/reap or publication followed
-by abnormal exit. Keep behavior requiring XPC, launchd or the kernel sandbox
-in the corresponding e2e suites. Constructed classifier inputs establish
-interpretation separately from live observations.
+Follow [test-selection guidance](../tests/AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior):
+use the public CLI or an existing override when it can establish the behavior.
+Use unit controls for internal branches or observations an ordinary specimen
+cannot reliably produce. Constructed classifier inputs establish interpretation;
+live XPC, launchd and kernel behavior require their corresponding suites.
 
 **Adding a new unit test file.**
 
@@ -21,64 +49,94 @@ interpretation separately from live observations.
    exporting `runFooTests(_ tk: TestKit)`.
 2. Group assertions with `tk.group("name") { tk.run("case") { try expect...(...) } }`.
 3. Register `runFooTests(tk)` in [main.swift](Tests/PWRunnerCoreTests/main.swift)
-   with a one-line comment describing what it pins. File discovery alone does
-   not run the tests.
+   with a one-line comment describing what it pins. Discovery alone does not
+   run the tests.
 4. Run `tests/run.sh --suite runner_unit --suite runner_c_worker_harness`
-   against a signed build. Use the suite wrapper for fixture setup and result
-   checking; [the suite README](../tests/suites/runner_unit/README.md#run)
-   describes direct SwiftPM setup when needed.
+   against a signed build. The [suite wrapper](../tests/suites/runner_unit/README.md#run)
+   provides fixture setup and result checks.
 
-**Rules for lifecycle and evidence tests.**
+Driver tests use the app selected by `PW_APP_DIR`, defaulting to the distribution.
+Build a matching candidate through the [signed pipeline](../docs/BUILD.md):
+successful Swift compilation alone does not establish worker ABI/source-identity
+agreement. Use [tests/AGENTS.md](../tests/AGENTS.md) for coordinated suite
+selection, fresh output directories, evidence reuse and cleanup.
 
-- Build fixtures outside the inspected app. The lifecycle fixture never applies
-  a sandbox, so tests using it cannot claim a policy cause.
-- A test injecting `kill`/`waitpid` faults through `ChildProcessCalls` owns
-  independent cleanup of any fixture child it leaves unreaped.
-- Treat controlled native-call failures and malformed validator output as
-  transport and lifecycle evidence; they do not establish kernel attribution.
-
-**Promoting `private` symbols to `internal`.** When a unit test needs an internal
-helper, drop `private` so `@testable import` can reach it. Keep production
-behavior unchanged.
+Build fixtures outside the inspected app. The lifecycle fixture never applies
+a sandbox; controlled native-call failures and malformed validator output
+establish transport/lifecycle behavior, not kernel attribution. Tests injecting
+`kill`/`waitpid` faults through `ChildProcessCalls` own independent cleanup of
+children they leave unreaped. When internal access is needed, use
+`@testable import` and the narrowest necessary visibility change without
+changing production behavior.
 
 ## Testing `normalized_outcome` failure paths via `_test_overrides`
 
-Use [the test seam](README.md#test-seam-_test_overrides) to steer a real failure
-at a production boundary. Never add an override that fabricates a result such
-as `force_normalized_outcome`. If a boundary cannot be exercised this way,
-use a unit test against the classifier.
+Use [the test seam](README.md#test-seam-_test_overrides) to steer an input at a
+real production boundary. Never add an override that fabricates a result such
+as `force_normalized_outcome`; use a classifier unit test when the boundary
+cannot be exercised.
 
-**Anatomy of an override-driven test.** Construct a normal specimen with a
-`_test_overrides` block and run it through `policy-witness run`. Assert:
+For an override-driven CLI specimen, assert the expected outcome, supporting
+native/transport evidence and the applicable override echo. The
+[pre-application witness](../tests/suites/witness_contract/README.md#failure-before-published-application)
+documents its bounded outcome alternatives. Diagnostics should identify the
+real failed boundary without requiring exact English wording.
 
-- `data.runner_result.normalized_outcome == "<expected>"`.
-- `data.runner_result.error` names a real artifact of the failure, such as the
-  hostile path or syscall.
-- `data.runner_result.test_overrides.<key>` equals the submitted value, proving
-  the override was admitted and retained.
-- Downstream structural fields reflect the failure boundary, such as
-  `runner_subprocess == null` when no worker was observed and `steps == []`.
-
-The sole exception to the exact-outcome assertion is documented in
-[Failure before published application](../tests/suites/witness_contract/README.md#failure-before-published-application).
+Check structural fields for that boundary. No observed worker means no
+`runner_subprocess`; it does not generally mean `steps == []`. Admission refusals
+have no steps, while a spawn failure with a nonempty plan retains synthetic
+step records. Verify withheld and retained evidence independently.
 
 **Adding a new override.**
 
 1. Update the optional property, initializer, `CodingKeys` and decoding in
-   [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerAPI.swift) together.
-   Preserve existing requests and meanings; see [request contract evolution](../docs/CONTRACT.md#accepted-input-contract).
-2. Document the key in [the test-seam table](README.md#test-seam-_test_overrides).
-   `source_drift` checks property/table agreement, not admission or decoding.
-3. Plumb it from request handling to the real OS-call boundary, defaulting to
-   production behavior when unset. Host controls must travel in the request;
-   launchd does not preserve the invoking shell's environment.
-4. Mirror it into every result on the affected path with
-   `test_overrides: parsed._test_overrides`.
-5. Add an integrated case using the assertions above, in an existing suite when
-   appropriate. Register it in [the catalog](../tests/catalog.json); keep new
-   suite or outcome descriptions in [suite coverage](../tests/README.md#suite-coverage)
-   and [outcome coverage](../tests/COVERAGE.md).
+   [`PWRunnerTestOverrides`](Sources/PWRunnerCore/PWRunnerAPI.swift) together,
+   preserving accepted requests and meanings.
+2. Update [the key table](README.md#test-seam-_test_overrides). Source drift
+   verifies property/table agreement, not admission or behavior.
+3. Pass the control through the request to the real boundary, preserving
+   default behavior when absent. Launchd does not preserve the invoking shell's
+   environment.
+4. Retain the supplied control on applicable reply paths and preserve bounded
+   refusal sanitization; invalid paths must not be echoed to satisfy a test.
+5. Add an integrated case in an appropriate suite and update the
+   [catalog](../tests/catalog.json), owning suite description and affected
+   [outcome coverage](../tests/COVERAGE.md).
 
-**Auditing override usage.** Inspect `data.runner_result.test_overrides` in the
-retained envelope. A non-null value marks a steered run: its outcome is evidence
-about classifier and error-handling behavior, not the specimen's policy.
+**Reading override evidence.** A non-null `test_overrides` object records
+supplied controls, not proof they changed execution. Empty/default controls can
+be inert; an earlier failure can prevent the selected boundary from running.
+Admission refusals may omit unsafe echoed values. Use the actual observations
+to establish the intervention and keep steered failure-handling evidence
+separate from claims about the specimen's policy.
+
+## Sandboxed automation harnesses
+
+An automation harness's macOS sandbox can block runner XPC lookup
+(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
+(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
+discovery when swiftc cannot write its module cache. It can also make
+`codesign --verify` report an invalid signature for unchanged bytes. Request
+escalation and rerun the same failing command once outside the automation
+sandbox, without changing the artifact under investigation. Treat a signature
+failure as environmental only if the unsandboxed verification passes;
+investigate any failure that remains.
+
+This warning is intentionally repeated for agents entering through different
+workflows who may mistake harness restrictions for product defects.
+[source_drift](../tests/suites/source_drift/README.md#intentional-guidance-agreement)
+compares the first paragraph in all four locations; edit those copies together.
+The explanations that follow it are local to each document.
+
+When the harness blocks XPC lookup before host launch, the envelope reports
+`normalized_outcome: "xpc_error"`, an error diagnostic, empty `steps` and no
+`runner_subprocess`. The controller's fallback `sbpl-check` result in
+`data.policy_check` establishes only whether the policy compiles; it says nothing
+about worker execution. An `xpc_error` alone does not establish that the harness
+caused it; use the diagnostic and the unsandboxed retry.
+
+Log access can fail even when execution succeeds. A
+`sandbox_log_capture.capture_status` of `blocked` with
+`blocked_reason: "Cannot run while sandboxed"` leaves the execution result
+unchanged and makes log correlation unavailable. Use `--no-log-capture` when
+log capture is unnecessary for the runner behavior being investigated.

@@ -109,3 +109,11 @@ writes, zero progress, clock loss and failed cleanup. Its actual encoded replies
 are replayed through Rust assembly and the Python consumer by the wrapper.
 The exact Rust replay is ignored in standalone Cargo runs because it requires
 those fresh driver receipts; it is mandatory in the default `runner_unit` case.
+
+`AppliedProfileCaptureTests` constructs receipt bytes independently of the
+reader. Changed selected bytes or consumed inputs must change their digests;
+padding, unselected bytes and parameter-pair order must not. Corrupt identity,
+extent or integrity fields, failed application and incomplete/abnormal worker
+completion withhold the bytecode. The
+[ABI suite](../runner_abi_layout/README.md#compiled-object-capture) separately
+checks the C capture helper against constructed objects.

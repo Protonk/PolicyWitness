@@ -547,7 +547,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 44 nodes and 62 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 45 nodes and 62 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -570,7 +570,8 @@ which copies a rule keeps equal, and where the build runs the checks.
 | architecture_md | docs/ARCHITECTURE.md | document |  | these figures and their tables |  | [`REGION_START`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
 | agents_md | AGENTS.md | document |  | the reference copy of the intentionally repeated sandbox warning |  | [`Sandboxed automation harnesses`](../AGENTS.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | controller_readme | controller/README.md | document |  | the CLI surface block and the version sentence |  | [`CLI surface (contract)`](../controller/README.md); [`BEGIN GENERATED CONTRACT VERSIONS`](../controller/README.md) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |  |
-| runner_readme | runner/README.md | document |  | the harness-note copy, the test-seam table and the version sentence |  | [`Sandboxed automation harnesses`](../runner/README.md); [`_test_overrides`](../runner/README.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
+| runner_readme | runner/README.md | document |  | the test-seam table and the version sentence |  | [`_test_overrides`](../runner/README.md); [`BEGIN GENERATED CONTRACT VERSIONS`](../runner/README.md) | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
+| runner_agents | runner/AGENTS.md | document |  | runner working rules and the harness-note copy |  | [`Sandboxed automation harnesses`](../runner/AGENTS.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | tests_readme | tests/README.md | document |  | the harness reference and suite table |  | [`Suite coverage`](../tests/README.md) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
 | tests_agents | tests/AGENTS.md | document |  | test working rules and the harness-note copy |  | [`Sandboxed automation harnesses`](../tests/AGENTS.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | coverage_md | tests/COVERAGE.md | document |  | the outcome coverage matrices |  | [`Normalized outcome coverage matrix`](../tests/COVERAGE.md) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |
@@ -623,7 +624,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D19 | gen_identity | contract_py | writes | identity hex | [`TARGETS`](../docs/generate_worker_identity.py) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | D20 | architecture_json | gen_architecture | reads | nodes, edges, styles and citations | [`load_manifest`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
 | D21 | gen_architecture | architecture_md | writes | figure regions; dot and stamped SVG files beside the document | [`expected_outputs`](../docs/generate_architecture.py); [`render_region`](../docs/generate_architecture.py); [`stamp_svg`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
-| D22 | agents_md | runner_readme | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
+| D22 | agents_md | runner_agents | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | D23 | agents_md | tests_agents | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | D24 | cli_rs | controller_readme | copies | usage text | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |  |
 | D25 | api_swift | coverage_md | copies | one matrix row per outcome constant | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |

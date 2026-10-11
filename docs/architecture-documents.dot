@@ -33,6 +33,7 @@ digraph documents {
         agents_md;
         controller_readme;
         runner_readme;
+        runner_agents;
         tests_readme;
         tests_agents;
         coverage_md;
@@ -78,7 +79,8 @@ digraph documents {
     architecture_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/ARCHITECTURE.md\narchitecture_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="architecture_md: docs/ARCHITECTURE.md | these figures and their tables "];
     agents_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="AGENTS.md\nagents_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="agents_md: AGENTS.md | the reference copy of the intentionally repeated sandbox warning "];
     controller_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="controller/README.md\ncontroller_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="controller_readme: controller/README.md | the CLI surface block and the version sentence "];
-    runner_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="runner/README.md\nrunner_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="runner_readme: runner/README.md | the harness-note copy, the test-seam table and the version sentence "];
+    runner_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="runner/README.md\nrunner_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="runner_readme: runner/README.md | the test-seam table and the version sentence "];
+    runner_agents [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="runner/AGENTS.md\nrunner_agents", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="runner_agents: runner/AGENTS.md | runner working rules and the harness-note copy "];
     tests_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/README.md\ntests_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="tests_readme: tests/README.md | the harness reference and suite table "];
     tests_agents [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/AGENTS.md\ntests_agents", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="tests_agents: tests/AGENTS.md | test working rules and the harness-note copy "];
     coverage_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/COVERAGE.md\ncoverage_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="coverage_md: tests/COVERAGE.md | the outcome coverage matrices "];
@@ -126,7 +128,7 @@ digraph documents {
     gen_identity -> contract_py [style="bold", color="#2e7d32", label="D19 identity", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D19: identity hex |  "];
     architecture_json -> gen_architecture [style="solid", color="#8a7400", label="D20 nodes, edges", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D20: nodes, edges, styles and citations |  "];
     gen_architecture -> architecture_md [style="bold", color="#2e7d32", label="D21 regions, dot, svg", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D21: figure regions; dot and stamped SVG files beside the document |  "];
-    agents_md -> runner_readme [style="dotted", color="#444444", label="D22 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D22: manually repeated warning; first paragraph agrees after whitespace normalization |  "];
+    agents_md -> runner_agents [style="dotted", color="#444444", label="D22 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D22: manually repeated warning; first paragraph agrees after whitespace normalization |  "];
     agents_md -> tests_agents [style="dotted", color="#444444", label="D23 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D23: manually repeated warning; first paragraph agrees after whitespace normalization |  "];
     cli_rs -> controller_readme [style="dotted", color="#444444", label="D24 usage text", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D24: usage text |  "];
     api_swift -> coverage_md [style="dotted", color="#444444", label="D25 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D25: one matrix row per outcome constant |  "];

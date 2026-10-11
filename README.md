@@ -148,5 +148,6 @@ preserved release archives.
   - Working guidance: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
   - Working on the controller: [controller/AGENTS.md](controller/AGENTS.md)
+  - Working on the runner and native helpers: [runner/AGENTS.md](runner/AGENTS.md)
   - Test harness and coverage: [tests/README.md](tests/README.md)
   - Working on tests: [tests/AGENTS.md](tests/AGENTS.md)

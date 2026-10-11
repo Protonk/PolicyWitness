@@ -36,7 +36,7 @@ The check has two halves:
         every row names a property. That table is the only documented
         key list; runner/AGENTS.md points at it rather than carrying one.
      i. The first paragraph under "Sandboxed automation harnesses" agrees
-        after whitespace normalization in AGENTS.md, runner/README.md,
+        after whitespace normalization in AGENTS.md, runner/AGENTS.md,
         tests/AGENTS.md and docs/BUILD.md. Agents need the warning at each
         workflow entry point; later local explanations are independent.
      j. Host invariance: no file under runner/Sources binds or calls a
@@ -850,7 +850,7 @@ def check_test_overrides_table_agreement() -> list[str]:
 # ---------------------------------------------------------------------------
 
 HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
-HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, REPO_ROOT / "tests/AGENTS.md", REPO_ROOT / "docs/BUILD.md"]
+HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", REPO_ROOT / "runner/AGENTS.md", REPO_ROOT / "tests/AGENTS.md", REPO_ROOT / "docs/BUILD.md"]
 
 
 def parse_harness_note_paragraph(path: Path) -> str:
@@ -880,7 +880,7 @@ def check_harness_note_agreement() -> list[str]:
                 f"{canonical_path.relative_to(REPO_ROOT)} and {path.relative_to(REPO_ROOT)}. "
                 "The warning is intentionally repeated at agent workflow entry points. "
                 "Update the first paragraph under 'Sandboxed automation harnesses' together in "
-                "AGENTS.md, runner/README.md, tests/AGENTS.md and docs/BUILD.md. "
+                "AGENTS.md, runner/AGENTS.md, tests/AGENTS.md and docs/BUILD.md. "
                 "Whitespace is ignored; later local explanations are not compared."
             )
     return problems

@@ -77,8 +77,7 @@ complementary; both belong in the default tier.
 ```
 
 No app-bundle dependency — only requires the Xcode CommandLineTools
-clang + macOS SDK. Fast (compiles ~50 LOC, prints ~40 lines, diffs
-in Python).
+clang + macOS SDK.
 
 ## Artifacts
 
@@ -111,3 +110,12 @@ The geometry harvest must equal `tests/fixtures/contract/abi_layout.txt`. A
 change writes `abi_layout.candidate.txt` for review. The identity is excluded
 from this golden, so a protocol-only edit requires no manual layout update or
 ordinal bump. See [the contract](../../../docs/CONTRACT.md#internal-hostworker-identity).
+
+## Compiled-object capture
+
+[capture.c](capture.c) exercises the production capture helper against
+independently constructed bounded objects. It checks selected bytes, rejected
+extents and unreadable inputs, plus parameter-digest sensitivity to changed
+values and invariance under pair reordering. These controls compile or apply
+no sandbox policy; [runner_unit](../runner_unit/README.md) checks the Swift
+receipt reader and its availability gates.

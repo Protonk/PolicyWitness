@@ -7,8 +7,8 @@ This file governs how contributors and agents work here.
 
 - CLI and request handling: [controller/AGENTS.md](controller/AGENTS.md) and
   the [implementation reference](controller/README.md).
-- Runner implementation: [runner/README.md](runner/README.md). For runner tests,
-  including work under `tests/` or the C worker, read [runner/AGENTS.md](runner/AGENTS.md).
+- Runner implementation and native helpers: [runner/AGENTS.md](runner/AGENTS.md)
+  and the [implementation reference](runner/README.md).
 - Build and release work: [docs/BUILD.md](docs/BUILD.md) and
   [docs/SIGNING.md](docs/SIGNING.md#release-procedure).
 - Test work and evidence: [tests/AGENTS.md](tests/AGENTS.md); the
@@ -91,7 +91,7 @@ workflows who may mistake harness restrictions for product defects.
 compares the first paragraph in all four locations; edit those copies together.
 The explanations that follow it are local to each document.
 
-For workflow-specific diagnostics, see [runner envelopes](runner/README.md#sandboxed-automation-harnesses),
+For workflow-specific diagnostics, see [runner diagnostics](runner/AGENTS.md#sandboxed-automation-harnesses),
 [test execution](tests/AGENTS.md#sandboxed-automation-harnesses), and
 [signing and compiler discovery](docs/BUILD.md#sandboxed-automation-harnesses).
 

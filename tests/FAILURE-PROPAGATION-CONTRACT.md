@@ -695,8 +695,8 @@ counts forbidden embedded NULs in native C-string fields against maximum zero. L
 args <!-- span limits.exec_arguments.value -->15<!-- /span --> of <!-- span limits.exec_argument.value_unit -->127 UTF-8 bytes<!-- /span --> each, the host-only `sandbox_check.operation` and
 `sandbox_check.filter.value` strings 127/511, the filter kind and attempt
 kind/action labels 127 each (unrecognized labels included), `specimen_id` 255,
-`run_kind` and `policy.format` 63 each, and the three `_test_overrides`
-executable paths 1023 each. A refusal never repeats the string it refused: the
+`run_kind` and `policy.format` 63 each, and the worker/validator executable
+override paths 1023 each. A refusal never repeats the string it refused: the
 reply carries no steps, `step_index` names the position of a refused step ID
 and `step_id` is omitted, a refused parameter key is omitted, a refused
 `specimen_id` reads `<admission_refused>`, a refused `run_kind` is omitted, a

@@ -62,12 +62,6 @@
       "text": "once with `--timeout 5m`, with a 330-second local backstop. The tool does its own"
     },
     {
-      "document": "runner/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "The worker ABI places a pre-touched progress/failure header and a 4,096-byte text"
-    },
-    {
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
       "invariant": "G9",
       "kind": "literal",

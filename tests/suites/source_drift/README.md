@@ -86,7 +86,7 @@ rules this script runs, and the form table below to the shared module's rules.
 
 Agents enter through different workflows and repeatedly mistake automation
 sandbox restrictions for product defects. The warning is therefore deliberately
-visible in `AGENTS.md`, `runner/README.md`, `tests/AGENTS.md` and `docs/BUILD.md`.
+visible in `AGENTS.md`, `runner/AGENTS.md`, `tests/AGENTS.md` and `docs/BUILD.md`.
 The first paragraph after `Sandboxed automation harnesses` is shared; later
 paragraphs explain the local workflow and are not compared.
 

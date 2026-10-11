@@ -1807,6 +1807,7 @@
             "agents_md",
             "controller_readme",
             "runner_readme",
+            "runner_agents",
             "tests_readme",
             "tests_agents",
             "coverage_md",
@@ -2223,27 +2224,43 @@
           "label": "runner/README.md",
           "kind": "document",
           "facts": {
-            "Carries": "the harness-note copy, the test-seam table and the version sentence"
+            "Carries": "the test-seam table and the version sentence"
           },
           "sources": [
             {
               "path": "runner/README.md",
-              "symbol": "Sandboxed automation harnesses"
+              "symbol": "_test_overrides"
             },
             {
               "path": "runner/README.md",
-              "symbol": "_test_overrides"
+              "symbol": "BEGIN GENERATED CONTRACT VERSIONS"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_test_overrides_table_agreement",
+              "form": "rule"
+            }
+          ]
+        },
+        {
+          "id": "runner_agents",
+          "label": "runner/AGENTS.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "runner working rules and the harness-note copy"
+          },
+          "sources": [
+            {
+              "path": "runner/AGENTS.md",
+              "symbol": "Sandboxed automation harnesses"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_harness_note_agreement",
-              "form": "rule"
-            },
-            {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_test_overrides_table_agreement",
               "form": "rule"
             }
           ]
@@ -3379,7 +3396,7 @@
         {
           "id": "D22",
           "from": "agents_md",
-          "to": "runner_readme",
+          "to": "runner_agents",
           "kind": "copies",
           "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
           "short": "harness note",
