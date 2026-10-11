@@ -1,66 +1,38 @@
 # AGENTS.md
 
-This file is for contributors and agents. It says how to act in this repository. What is here is described in [README.md](README.md); this file points at those descriptions rather than repeating them.
-
-PolicyWitness is a sandbox witness harness. Each run hands a specimen (an SBPL policy plus a probe plan) to a fresh, unsandboxed XPC host, which spawns one sandboxed worker and one validator child, joins their outputs into one JSON reply, replies, and exits; the controller wraps that reply in the envelope it prints. The architecture and the path from specimens to evidence are in [README.md → Flow](README.md#flow).
+Read [README.md](README.md) for repository orientation and the documentation index.
+This file governs how contributors and agents work here.
 
 ## Quick Router (open first)
 
-Pick what you’re changing:
-
-- **CLI behavior / JSON contract** → [controller/README.md](controller/README.md), [controller/src/cli.rs](controller/src/cli.rs), [controller/src/run_flow.rs](controller/src/run_flow.rs)
-- **Runner service (self-sandboxing witness)** → [runner/README.md](runner/README.md), [runner/Services/PWRunner/](runner/Services/PWRunner/)
-- **Runner test machinery (unit tests, `_test_overrides`)** → [runner/AGENTS.md](runner/AGENTS.md)
-- **Runner API types** → [runner/Sources/PWRunnerCore/PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
-- **Query/attempt ordering (release barrier, `comparison.order`)** → [tests/FAILURE-PROPAGATION-CONTRACT.md → The record](tests/FAILURE-PROPAGATION-CONTRACT.md#the-record), [`wait_for_proceed`](controller/tools/pw_probe_runner/pw_probe_runner.c) in pw_probe_runner.c, the post-applied hook in [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [`ComparisonEvidence`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) in CWorkerOrchestrator.swift
-- **Runner client (NSXPCConnection wrapper)** → [runner/Clients/PWRunnerClient/](runner/Clients/PWRunnerClient/)
-- **Build + signing** → [docs/BUILD.md](docs/BUILD.md), [docs/build.json](docs/build.json), [docs/generate_build.py](docs/generate_build.py), [build.sh](build.sh), [meson.build](meson.build)
-- **Release (tag preflight, notarize, archive, rotate, publish)** → [Makefile](Makefile), [docs/SIGNING.md → Release procedure](docs/SIGNING.md#release-procedure), `release_preflight.py`, `release_archive.py`, `release_runs.py`, `release_cleanup.py`, `release_rotate.py` and `release_publish.py` under [tests/lib/](tests/lib/)
-- **Scratch work** → [.tmp/AGENTS.md](.tmp/AGENTS.md); scratch contents are disposable, except that tracked policy file.
-- **Distribution output + release archives** → [dist/README.md](dist/README.md), [dist/AGENTS.md](dist/AGENTS.md)
-- **Evidence generation / manifests** → [tests/build-evidence.py](tests/build-evidence.py)
-- **Tests** → [tests/README.md](tests/README.md), [tests/run.sh](tests/run.sh)
-- **Opt-in tests registry** → [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md)
-- **Limits and their documentation** → [docs/LIMITS.md](docs/LIMITS.md), [docs/limits.json](docs/limits.json), [docs/generate_limits.py](docs/generate_limits.py)
-- **Wire contracts (request/response schema, worker identity, envelope)** → [docs/CONTRACT.md](docs/CONTRACT.md), [docs/contract.json](docs/contract.json), [docs/generate_contract.py](docs/generate_contract.py)
-- **Architecture (one run in time, boundaries, the document graph, BYOXPC)** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); its figures come from [docs/architecture.json](docs/architecture.json) through [docs/generate_architecture.py](docs/generate_architecture.py). Behavior that falls short of a stated promise is written there inline as a paragraph opening with "Known gap" and indexed in its last section.
-- **Generators and the regions they write (invariants G1 to G11)** → [tests/suites/source_drift/README.md → Generator contracts](tests/suites/source_drift/README.md#generator-contracts)
-- **Accepted-input teaching examples and refusal diagnostics** → [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md), [tests/fixtures/request_contract/examples.json](tests/fixtures/request_contract/examples.json)
-- **User guide** → [docs/PolicyWitness.md](docs/PolicyWitness.md); its Limits and Questions sections are copied from [docs/LIMITS.md](docs/LIMITS.md) and [docs/QUESTIONS.md](docs/QUESTIONS.md) by [docs/generate_limits.py](docs/generate_limits.py)
-
-## Vocabulary (repo-anchored)
-
-- **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
-- **Controller**: the host-side orchestrator (`policy-witness`) that drives the runner and prints a JSON envelope.
-- **Runner**: the ephemeral XPC service (`PWRunner.xpc`) described above. All processes are single-use per specimen.
-- **Probe step**: a `sandbox_check` query paired with an attempted operation. The attempt kinds the worker implements are listed in [the user guide](docs/PolicyWitness.md#attempt-kinds-the-runner-implements).
-
-## Bundle layout is a contract
-
-Tests and evidence generation assume fixed paths inside `dist/PolicyWitness.app`. The inventory lives in three places, and they must agree:
-
-- [README.md → Build and bundle](README.md#build-and-bundle) is the readable list.
-- [tests/lib/artifact.py](tests/lib/artifact.py) (`EXECUTABLES`) is the machine-checked list; the `preflight` suite fails a build that does not match it.
-- [build.sh](build.sh) holds the signing list; notarization fails if any embedded tool is left ad hoc-signed.
-
-Read those before adding, renaming, or moving anything under `Contents/`. One convention is not obvious from the list. The C worker and the validator are embedded inside each XPC service bundle rather than at the app's top level, so the built-in runner and a BYOXPC copy each resolve their own helpers relative to their own bundle. What to update when a path changes is in the maintenance checklist below.
-
-## CLI surface is a contract
-
-The shipped CLI is intentionally small: `run` plus the `runner` management subcommands. The exact surface and flags are in [controller/README.md → CLI surface](controller/README.md#cli-surface-contract). Adding a flag or subcommand means updating that section and the usage text in [controller/src/cli.rs](controller/src/cli.rs) in the same change.
+- CLI and request handling: [controller/README.md](controller/README.md).
+- Runner implementation: [runner/README.md](runner/README.md). For runner tests,
+  including work under `tests/` or the C worker, read [runner/AGENTS.md](runner/AGENTS.md).
+- Build and release work: [docs/BUILD.md](docs/BUILD.md) and
+  [docs/SIGNING.md](docs/SIGNING.md#release-procedure).
+- Test selection and evidence: [tests/README.md](tests/README.md) and
+  [the opt-in registry](tests/OPT_IN_TESTS.md).
+- Local artifacts: follow [scratch guidance](.tmp/AGENTS.md) or
+  [distribution guidance](dist/AGENTS.md) before cleanup.
 
 ## Documentation
 
-Describe current behavior. Don't add change-history notes to docs — `git log` is authoritative.
+Describe current behavior. Don't add change-history notes to docs — `git log`
+is authoritative. Put directory descriptions in READMEs and working rules in
+AGENTS files, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Core ideas
 
-- **One-way sandbox per process**: the worker applies exactly one sandbox to itself and exits. A new specimen means a fresh XPC host plus a fresh worker.
-- **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
-- **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
-- **Predictions precede attempts**: the worker attempts nothing until the host has closed validator collection and stored `proceed`; `comparison.order: "query_first"` claims only that interval, never equal state or runtime identity; no record asserts agreement or disagreement between the channels. Changes to the wait, the release store or the eligibility rule must rerun the opt-in `witness_contract/order_barrier_mutations` control.
-- **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
-- **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift` and `CWorkerOrchestrator.swift`; post-apply work belongs in `pw-probe-runner` (the C worker).
+- **One-way sandbox per process**: preserve a fresh host and worker per specimen; never reuse a sandboxed process.
+- **Host/worker split**: keep sandbox API calls and specimen application out of the XPC host so its reply path stays available.
+- **Witness over interpretation**: record the observation supporting an effect; `rc == 0` alone is insufficient.
+- **Predictions precede attempts**: preserve the collection/release barrier and the limited meaning of `query_first`. Rerun the opt-in `witness_contract/order_barrier_mutations` control whenever the wait, release store or eligibility rule changes.
+- **No dishonest attribution**: never turn a permission-shaped failure into a sandbox-cause claim without supporting evidence, or claim agreement or disagreement between prediction and enforcement.
+- **Runner simplicity**: keep orchestration in the host and post-apply work in the C worker; avoid clever abstractions and hidden pre-sandbox resource acquisition.
+
+The [architecture principles](docs/ARCHITECTURE.md#principles-as-enforced-constraints)
+explain the implementation and evidence. `source_drift` checks that these
+principle labels match in order; each document's explanatory prose is independent.
 
 ## Dev Workflow (fast path)
 
@@ -68,73 +40,80 @@ Run from the repository root:
 
 ```sh
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
-# or:
-IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
 ```
 
-Install the Rust toolchain with Cargo, Xcode Command Line Tools (or Xcode),
-Meson and Ninja on `PATH` (`brew install meson ninja`). Meson's minimum is
-pinned by [`meson_version`](meson.build), and Ninja's by
-[`NINJA_MINIMUM`](build.sh). The selected developer directory supplies
-`clang`, `swiftc` and the SDK. The signing identity must already be in the
-login keychain; the [signing contract](docs/BUILD.md#the-signing-contract) describes its
-checks. Bare `make` and `make help` print the Makefile's operator card.
-
-The native executables compile through the root [meson.build](meson.build)
-into the ignored `builddir/` (see [docs/BUILD.md → Native compile with Meson](docs/BUILD.md#native-compile-with-meson)).
-Adding or moving a runner source file means editing its target there; the
-`source_drift` suite refuses a list that differs from the tree.
-If you are in a sandboxed automation harness, signing/keychain access may
-fail; ask for approval/escalation and rerun (see the harness note below).
-
-- If you add a helper under the app or XPC bundle `Contents/MacOS`, update the [build.sh](build.sh) signing list; notarization fails if any embedded tool is left ad hoc-signed.
-- Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
-
-Build knobs worth knowing (debugging/iteration):
-
-- `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Meson's `xpc=false`; the C executables still build, no Swift compiler is discovered, and the signed partial bundle cannot run specimens).
-- The app version is derived from git (nearest `v*` tag, commit count); `PW_VERSION`/`PW_BUILD_NUMBER` override it. See [docs/CONTRACT.md → Build stamp](docs/CONTRACT.md#build-stamp).
-- `PW_INSPECTION=1` (default) keeps symbols/frame pointers; set `PW_INSPECTION=0` for a more optimized build.
-- Evidence is generated during build by [tests/build-evidence.py](tests/build-evidence.py) and embedded under `Contents/Resources/Evidence/`.
+Use [the build guide](docs/BUILD.md) for prerequisites, settings and diagnostics;
+`make help` lists the operator commands. Adding or moving a native source requires
+updating its Meson target. Build and test checks diagnose source-list, bundle
+inventory and signing inconsistencies.
 
 ## External runner workflow (agents)
 
-Use this when you are asked to install, verify, or clean up BYOXPC runners.
+For BYOXPC installation, verification or cleanup, follow
+[the runner commands](controller/README.md) and
+[the external-runner guide](docs/PolicyWitness.md#external-runners-byoxpc).
 
-The `runner` subcommands (install/list/status/verify/remove/validate/reconcile) and the manual launchctl/plist cleanup recipes for both user and system scope live in [controller/README.md](controller/README.md) and [docs/PolicyWitness.md](docs/PolicyWitness.md). Agent-specific guidance:
-
-- Inspect first: `policy-witness runner list` and `runner reconcile`; note `service_name`, `scope`, `bundle_path` and pending-cleanup ownership before acting. Removal warnings or `cleanup_retained: true` require recovery; keep test staging and its durable session record until absence is verified. A label prefix alone never establishes cleanup ownership.
-- User-scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed (see the harness note below).
+Inspect `policy-witness runner list` and `runner reconcile` first. Record
+`service_name`, `scope`, `bundle_path` and pending-cleanup ownership. Removal
+warnings or `cleanup_retained: true` require recovery: retain staging and its
+durable session record until absence is verified. A label prefix alone never
+establishes cleanup ownership. User-scope installation needs a logged-in GUI
+session; use the harness guidance below when launchctl or log access is refused.
 
 ## Testing
 
-- Default battery: `tests/run.sh` (or `make test`)
-- Every registered case, including opt-ins: `tests/run.sh --all`
-- Inspect selection without execution: `tests/run.sh --all --list`
-- Smoke only: `tests/run.sh --suite smoke`
-- Preview cleanup: `make prune` (or `tests/run.sh --prune`); apply: `make prune APPLY=1` (or `tests/run.sh --prune --apply`). Only completed, owned, unretained direct children of `tests/out/runs/` are disposable. Standalone files, release acceptance and unmanaged output are preserved.
-- After inspecting unfinished managed output, remove it explicitly with `tests/run.sh --prune --apply --unfinished <name>`. This command retains overlap checks and checkout locking; completed or retained targets are rejected.
-- Opt-in tests (signing, launchd, and implementation-mutation controls) live under `tests/suites/<suite>/opt_in/` with wrappers under [tests/suites/opt_in/](tests/suites/opt_in/), and are documented in [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md).
-- Execution defaults to `tests/out/runs/default`; use fresh explicit `PW_TEST_OUT_DIR=tests/out/runs/<name>` paths for separate evidence. `tests/RETAINED.json` protects indexed paths, including absent local copies. Only completed, owned, unretained output can be replaced; interrupted, ambiguous and unmanaged evidence is preserved.
-- Successful release packaging is the automatic test-cleanup checkpoint. Keep the latest release's acceptance and battery plus the newest completed local output, including failures; create fresh run directories freely during development. Cleanup also retires older owned interrupted output, but preserves active acceptance and pending external-runner recovery. Explicit pins have an omitted or null `release`; routine release entries rotate. No test-start, time-based or size-based cleanup runs. Preserve `tests/out/.release-rotation/` after an interruption and resume the archive's `release_rotate.py --apply` transaction; see [the cleanup procedure](docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
-- Execution holds `tests/.checkout.lock` across revalidation, execution and finalization. Competing runs fail with checkout-busy even for another output path; use a second worktree for parallel execution. Never unlink the lock file: a new inode would bypass an existing holder. Help and `--list` remain read-only and available.
+- Default battery: `tests/run.sh` or `make test`.
+- Include opt-ins: `tests/run.sh --all`; inspect selection with `--all --list`.
+- Select a suite: `tests/run.sh --suite smoke`.
+- Use a fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` for separate evidence.
+- Use `make prune` to preview cleanup and `make prune APPLY=1` to apply it.
+  Inspect unfinished output before explicitly removing it through
+  [the pruner](tests/README.md#pruning-disposable-output).
 
-### Runner test machinery (deep contract)
-
-Two runner-specific testing contracts live in [runner/AGENTS.md](runner/AGENTS.md): the **Swift runner unit tests (SwiftPM)** layout (when to add a `runner_unit` test vs an e2e suite, stubbing `@convention(c)` pointers, adding a test file) and **`normalized_outcome` failure paths via `_test_overrides`** (the four-assertion recipe, where the supported keys are tabulated, and the rules for adding a new override). Read that file before touching either.
+Follow [retention and locking rules](tests/README.md#retention-ownership-and-execution-locking).
+Never unlink `tests/.checkout.lock`; use a second worktree for concurrent runs.
+Preserve interrupted release rotation's `tests/out/.release-rotation/` and
+resume the archive's `release_rotate.py --apply` transaction through
+[the recovery procedure](docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
+Do not bypass the helpers to remove protected evidence or resource-cleanup records.
 
 ## Sandboxed automation harnesses
 
-Some automation and agent harnesses run commands under a macOS sandbox. Inside one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099, or error 159 “Sandbox restriction”), so no runner launches; the unified log tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured; `codesign --verify` can report “invalid signature (code or signature have been modified)” for an unchanged, validly signed app; and Meson's Swift compiler discovery can fail because swiftc's default module cache is not writable, so `meson setup` and therefore `build.sh` stop before compiling. These refusals can be environment constraints. Request escalation and rerun the same command once outside the automation sandbox against unchanged artifact bytes. Treat a signature failure as environmental only after the unsandboxed check passes; debug any failure that remains.
+An automation harness's macOS sandbox can block runner XPC lookup
+(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
+(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
+discovery when swiftc cannot write its module cache. It can also make
+`codesign --verify` report an invalid signature for unchanged bytes. Request
+escalation and rerun the same failing command once outside the automation
+sandbox, without changing the artifact under investigation. Treat a signature
+failure as environmental only if the unsandboxed verification passes;
+investigate any failure that remains.
 
-From here, the constraint touches three workflows in this file: building (keychain access for signing and Meson's Swift discovery), external runners (launchctl and a GUI session), and testing (signature verification, live XPC and log capture). The copy of this note in [runner/README.md](runner/README.md#sandboxed-automation-harnesses) says what the refusal looks like in the envelope. The copy in [tests/README.md](tests/README.md#sandboxed-automation-harnesses) says what the dispatcher can detect and which suites never launch the XPC service. The copy in [docs/BUILD.md](docs/BUILD.md#sandboxed-automation-harnesses) says which build steps need an unsandboxed shell.
+This warning is intentionally repeated for agents entering through different
+workflows who may mistake harness restrictions for product defects.
+[source_drift](tests/suites/source_drift/README.md#intentional-guidance-agreement)
+compares the first paragraph in all four locations; edit those copies together.
+The explanations that follow it are local to each document.
+
+For workflow-specific diagnostics, see [runner envelopes](runner/README.md#sandboxed-automation-harnesses),
+[test equipment](tests/README.md#sandboxed-automation-harnesses), and
+[signing and compiler discovery](docs/BUILD.md#sandboxed-automation-harnesses).
 
 ## Maintenance checklist (when changing things)
 
-- If a build step, refusal, knob, check or signing call changes: update [docs/build.json](docs/build.json) and run `python3 docs/generate_build.py`; review the generated account in [docs/BUILD.md](docs/BUILD.md).
-- If host/worker protocol sources, `build.sh`, `meson.build` or `meson.options` change: regenerate the exact identity with `python3 docs/generate_worker_identity.py` and commit the three copies with the change; the build refuses a stale copy before compiling and writes nothing itself. Layout changes still require C/Swift agreement and review of the layout golden.
-- If a wire contract version changes: edit [docs/contract.json](docs/contract.json) and run `python3 docs/generate_contract.py`; never edit a generated copy. Semantic response and envelope readers accept exactly the current versions; request admission and the worker ABI follow their own contracts (see [docs/CONTRACT.md](docs/CONTRACT.md)).
-- If you change the specimen schema: update [PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift), [PWRunnerService.swift](runner/Sources/PWRunnerCore/PWRunnerService.swift), the worker plumbing ([CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [ValidatorClient.swift](runner/Sources/PWRunnerCore/ValidatorClient.swift), plus [pw_probe_runner.c](controller/tools/pw_probe_runner/pw_probe_runner.c) and [sb_api_validator.c](controller/tools/sb_api_validator/sb_api_validator.c) if the C side is affected), fixtures under [tests/fixtures/](tests/fixtures/), and any controller parsing assumptions.
-- If you change shipped paths: update [build.sh](build.sh), [tests/build-evidence.py](tests/build-evidence.py), the [`EXECUTABLES`](tests/lib/artifact.py) list in tests/lib/artifact.py, [README.md → Build and bundle](README.md#build-and-bundle), tests that locate binaries, and any docs that enumerate the bundle layout. A signed helper also needs its row in [docs/build.json](docs/build.json), a Meson-built one its target in [`expected`](tests/lib/native_sources.py), and then `python3 docs/generate_build.py`.
-- If you change evidence fields: update the envelope assembly in [controller/src/run_flow.rs](controller/src/run_flow.rs) and [controller/src/evidence.rs](controller/src/evidence.rs), any tests that validate output, and the docs that describe evidence channels.
-- If you change who spawns whom, a channel between processes, or the guard on a boundary: update [docs/architecture.json](docs/architecture.json) and run `python3 docs/generate_architecture.py` (rendering needs Graphviz; `--check` does not). Every node and edge cites a source symbol and a check, and the generator refuses a citation it cannot find.
+- Edit generator inputs, regenerate with the owning tool and review the result;
+  never edit generated copies. The build checks them but does not regenerate
+  them. [Generator contracts](tests/suites/source_drift/README.md#generator-contracts)
+  identify ownership and checks; a stale-copy refusal names its generator.
+- Keep build behavior and its account in [docs/build.json](docs/build.json)
+  aligned. Protocol or build-input changes require worker-identity regeneration;
+  layout changes also require C/Swift agreement and review of the layout golden.
+- For request or evidence changes, update affected admission, transport, readers,
+  fixtures and documentation together. Use [the wire contract](docs/CONTRACT.md)
+  to decide version changes; its manifest owns the version values.
+- For process, channel or boundary changes, update [docs/architecture.json](docs/architecture.json)
+  and regenerate the architecture account. Citation checks establish that sources
+  and checks exist; review whether they support the behavior being described.
+
+Build and `source_drift` checks enforce mechanical agreement. They do not replace
+review of changed semantics or the integrated tests that establish behavior.

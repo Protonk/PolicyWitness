@@ -2176,7 +2176,7 @@
           "label": "AGENTS.md",
           "kind": "document",
           "facts": {
-            "Carries": "the canonical sandboxed-harness note"
+            "Carries": "the reference copy of the intentionally repeated sandbox warning"
           },
           "sources": [
             {
@@ -3364,7 +3364,7 @@
           "from": "agents_md",
           "to": "runner_readme",
           "kind": "copies",
-          "label": "harness note, first paragraph",
+          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
           "short": "harness note",
           "sources": [
             {
@@ -3385,7 +3385,7 @@
           "from": "agents_md",
           "to": "tests_readme",
           "kind": "copies",
-          "label": "harness note, first paragraph",
+          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
           "short": "harness note",
           "sources": [
             {
@@ -3511,7 +3511,7 @@
           "from": "drift_check",
           "to": "agents_md",
           "kind": "checks",
-          "label": "harness note equality across four copies",
+          "label": "first warning paragraph agrees across four workflow entry points; local explanations are independent",
           "short": "note equality",
           "sources": [
             {
@@ -3952,7 +3952,7 @@
           "from": "drift_check",
           "to": "architecture_md",
           "kind": "checks",
-          "label": "Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; the principles list equals the core ideas in AGENTS.md",
+          "label": "Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; principle labels match Core ideas in AGENTS.md in order; explanatory prose is independent",
           "short": "prose rules",
           "sources": [
             {
@@ -4217,6 +4217,27 @@
               "path": "tests/suites/source_drift/run.sh",
               "symbol": "runner_source_manifests_agree",
               "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D62",
+          "from": "agents_md",
+          "to": "build_md",
+          "kind": "copies",
+          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
+          "short": "harness note",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "HARNESS_NOTE_FILES"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_harness_note_agreement",
+              "form": "rule"
             }
           ]
         }

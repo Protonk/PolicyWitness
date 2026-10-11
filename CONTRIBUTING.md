@@ -10,4 +10,8 @@ The more integrated the test, the less surface for the test itself to be wrong. 
 
 Guidance in this repository is aimed at human and non-human agents. Don't assume that the contents of layered agent guidance are for others to worry about; we put useful direction in there.
 
+READMEs describe what is here; AGENTS files explain how to work here. Keep
+implementation inventories and directory descriptions in the READMEs, and use
+agent guidance for decisions, working rules and links to the relevant details.
+
 `CLAUDE.md` at the repo root and under `runner/` are symlinks to the `AGENTS.md` beside them, so Claude Code loads the same guidance without a branded copy. Edit the `AGENTS.md` files; they are the source of truth.

@@ -145,6 +145,6 @@ preserved release archives.
   - Runner service architecture: [runner/README.md](runner/README.md)
   - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Contributing:
-  - Repo orientation: [AGENTS.md](AGENTS.md)
+  - Working guidance: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
   - Testing: [tests/README.md](tests/README.md)

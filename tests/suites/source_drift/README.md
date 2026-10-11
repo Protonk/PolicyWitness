@@ -69,18 +69,47 @@ The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
 They also lock the `_test_overrides` key table in `runner/README.md` to the
 stored properties of `PWRunnerTestOverrides`, since that table is the only
-documented key list, and keep the shared first paragraph of the sandboxed-harness
-note identical across `AGENTS.md`, `runner/README.md`, `tests/README.md` and
-`docs/BUILD.md`, since that note is carried in four places on purpose.
+documented key list. Property/table agreement does not verify request admission
+or decoding; integrated override cases exercise those boundaries.
 Public-command controls separately verify selection and actual execution.
 
 Three rules read the handwritten text of `docs/ARCHITECTURE.md`: every
 paragraph opening with "Known gap" is indexed, in order, by the document's
 last section, which lists nothing else; every landing path in the
 evidence-channels table is a key of the reply or envelope shape golden; and
-the principles list names the core ideas of `AGENTS.md`, lead-in by lead-in.
+the principles list matches the bold labels and order in `AGENTS.md`'s Core
+ideas. Explanatory prose can differ between the documents.
 The `generator_contract` case holds the document graph's drift node to the
 rules this script runs, and the form table below to the shared module's rules.
+
+### Intentional guidance agreement
+
+Agents enter through different workflows and repeatedly mistake automation
+sandbox restrictions for product defects. The warning is therefore deliberately
+visible in `AGENTS.md`, `runner/README.md`, `tests/README.md` and `docs/BUILD.md`.
+The first paragraph after `Sandboxed automation harnesses` is shared; later
+paragraphs explain the local workflow and are not compared.
+
+[`check_harness_note_agreement`](check.py) extracts that first paragraph from
+each document, normalizes whitespace and compares it with the root AGENTS copy.
+Different line wrapping passes. Change the warning in all four places together;
+there is no generator that propagates it. The rule verifies agreement, not the
+correctness or completeness of the advice.
+
+[`check_core_ideas_agreement`](check.py) likewise keeps the principle labels and
+their order aligned between root AGENTS and the architecture document. The
+former gives working instructions; the latter explains implementation and
+evidence. The check does not require identical explanatory prose or establish
+that a principle is enforced at runtime.
+
+Both checks run in `source_drift/runner_source_manifests_agree`, included in the
+default battery. They are not direct `build.sh` gates. Disposable-checkout
+controls run the real checker: a changed warning copy or missing heading fails,
+while rewrapping, local continuation edits and coordinated warning edits pass.
+Independent principle prose edits pass; a removed, renamed or reordered label
+on one side fails. Every touched input is restored between controls and the
+restored documents must pass. Inputs and command receipts are retained alongside
+the planner controls.
 
 ### Generator contracts
 
@@ -236,7 +265,7 @@ default to `tests/out/runs/direct`.
 
 No build required; the manifest reader needs Meson on `PATH`, which the
 catalog declares as equipment. The `limits_documentation` case checks
-[`docs/limits.json`](../../../docs/limits.json), generated tables (the limits
+[docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
 `tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
 questions and comparison reading rules, and local documentation links. Controls exercise the real
@@ -248,19 +277,19 @@ would otherwise copy them consistently. A build control proves stale guide
 content stops before signing or output creation. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
 `runner_unit` and the Rust unit tests. See the maintenance instructions in
-[`docs/LIMITS.md`](../../../docs/LIMITS.md).
+[docs/LIMITS.md](../../../docs/LIMITS.md).
 
-The `contract_versions` case checks [`docs/contract.json`](../../../docs/contract.json)
+The `contract_versions` case checks [docs/contract.json](../../../docs/contract.json)
 against every generated copy in code and documents, exercises the real generator in
 a disposable checkout with changed, stale, broken-marker and malformed inputs, and
 proves a stale copy stops the build before signing. Compiled values are compared
 elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
-See [`docs/CONTRACT.md`](../../../docs/CONTRACT.md).
+See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
 
 The `architecture_documentation` case checks
-[`docs/architecture.json`](../../../docs/architecture.json) against the dot
+[docs/architecture.json](../../../docs/architecture.json) against the dot
 files, SVG stamps and generated table regions of
-[`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md). The generator refuses
+[docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md). The generator refuses
 a node or edge whose cited source file or symbol does not exist, or whose
 check lacks an allowed definition and form; controls exercise broken
 citations, unknown references, duplicate ids, stale dot text, a stale table, a
@@ -268,9 +297,9 @@ stale SVG stamp, regeneration without Graphviz, idempotence and refusal before
 any write. An SVG is checked by the stamp naming the hash of its dot text, so
 the check needs no Graphviz; rendering does.
 
-The `build_documentation` case checks [`docs/build.json`](../../../docs/build.json)
+The `build_documentation` case checks [docs/build.json](../../../docs/build.json)
 against the dot file, SVG stamp and generated table regions of
-[`docs/BUILD.md`](../../../docs/BUILD.md), and runs the grounding rules in
+[docs/BUILD.md](../../../docs/BUILD.md), and runs the grounding rules in
 [build_rules.py](build_rules.py), which parse `build.sh` and compare its
 banner order, refusal messages, statuses and steps, knob values, signing
 calls and helper invocations with the manifest, compare the Makefile's build

@@ -203,30 +203,31 @@ The harness constraints below apply to signing and compiler discovery.
 
 ### Sandboxed automation harnesses
 
-Some automation and agent harnesses run commands under a macOS sandbox. Inside
-one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
-or error 159 “Sandbox restriction”), so no runner launches; the unified log
-tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
-cannot be captured; `codesign --verify` can report “invalid signature (code or
-signature have been modified)” for an unchanged, validly signed app; and
-Meson's Swift compiler discovery can fail because swiftc's default module
-cache is not writable, so `meson setup` and therefore `build.sh` stop before
-compiling. These refusals can be environment constraints. Request escalation
-and rerun the same command once outside the automation sandbox against
-unchanged artifact bytes. Treat a signature failure as environmental only
-after the unsandboxed check passes; debug any failure that remains.
+An automation harness's macOS sandbox can block runner XPC lookup
+(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
+(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
+discovery when swiftc cannot write its module cache. It can also make
+`codesign --verify` report an invalid signature for unchanged bytes. Request
+escalation and rerun the same failing command once outside the automation
+sandbox, without changing the artifact under investigation. Treat a signature
+failure as environmental only if the unsandboxed verification passes;
+investigate any failure that remains.
 
-Signing and Swift discovery need an unsandboxed shell. The signing identity
-lives in the login keychain, which the sandbox may not open, and Meson's Swift discovery
-compiles a sanity program with swiftc's default per-user module cache, which
-the sandbox may not let it write; the targets themselves use the cache under
-`builddir/`, but discovery runs first and only once per build directory. These
-prerequisite refusals happen before anything is copied or signed; signing
-itself can still fail later. `BUILD_XPC=0` discovers no Swift compiler.
-The manifest-only source-list checks use file-mode
-introspection, which discovers no compiler; the `build_documentation` case
-in `source_drift` also configures Swift to exercise its policy assertions
-and therefore needs the unsandboxed shell.
+This warning is intentionally repeated for agents entering through different
+workflows who may mistake harness restrictions for product defects.
+[source_drift](../tests/suites/source_drift/README.md#intentional-guidance-agreement)
+compares the first paragraph in all four locations; edit those copies together.
+The explanations that follow it are local to each document.
+
+Use an unsandboxed shell for signing and Swift discovery. The harness may
+block the login keychain or swiftc's default per-user module cache. Meson uses
+that cache for discovery before the targets can use `builddir/`; discovery
+and identity prerequisites can fail before copying or signing, and signing
+itself can fail later. `BUILD_XPC=0` skips Swift discovery.
+
+Manifest-only source checks use introspection without compiler discovery.
+The `source_drift/build_documentation` controls also configure Swift to test
+its policy assertions, so they need the unsandboxed shell.
 
 ## Refusals
 

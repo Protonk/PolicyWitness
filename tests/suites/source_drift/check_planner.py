@@ -1,6 +1,7 @@
-"""Run the real source checker against disposable planner and host API mutations."""
+"""Run the real source checker against disposable source and guidance mutations."""
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -118,15 +119,22 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         assert mutated != manifest_original, name
         scenarios.append((name, manifest, mutated, 1, diagnostic))
     scenarios.append(('meson-restored', manifest, manifest_original, 0, None))
+    scenarios = [(name, {path: source}, expected, diagnostic)
+                 for name, path, source, expected, diagnostic in scenarios]
+    scenarios += guidance_scenarios(repo)
+    originals = {path: (repo / path).read_text()
+                 for _, changes, _, _ in scenarios for path in changes}
     receipts = []
-    for name, path, source, expected, diagnostic in scenarios:
+    for name, changes, expected, diagnostic in scenarios:
         evidence = out / name
         evidence.mkdir()
-        (repo / HOST).write_text(original)
-        (repo / shim).write_text(shim_original)
-        (repo / manifest).write_text(manifest_original)
-        (repo / path).write_text(source)
-        (evidence / path.name).write_text(source)
+        for path, source in originals.items():
+            (repo / path).write_text(source)
+        for path, source in changes.items():
+            (repo / path).write_text(source)
+            captured = evidence / path
+            captured.parent.mkdir(parents=True, exist_ok=True)
+            captured.write_text(source)
         argv = [sys.executable, '-B', str(repo / 'tests/suites/source_drift/check.py')]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=30)
         (evidence / 'stdout').write_text(result.stdout)
@@ -137,11 +145,65 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
             raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
         receipts.append(record)
-    if (ROOT / HOST).read_text() != original:
-        raise AssertionError('source controls changed the working planner')
+    for path, source in originals.items():
+        (repo / path).write_text(source)
+        if (ROOT / path).read_text() != source:
+            raise AssertionError(f'source controls changed the working input: {path}')
     receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
-    print(f'{len(receipts)} planner and host source controls passed')
+    print(f'{len(receipts)} source and guidance controls passed')
+
+
+def guidance_scenarios(repo):
+    """Distinguish intentional agreement from independent explanatory prose."""
+    paths = [Path(p) for p in ('AGENTS.md', 'runner/README.md', 'tests/README.md', 'docs/BUILD.md')]
+    documents = {path: (repo / path).read_text() for path in paths}
+    scenarios, coordinated = [], {}
+    heading = 'Sandboxed automation harnesses'
+    for path, source in documents.items():
+        match = re.search(r'^#{2,6} ' + heading + r'\n\n(.*?)(?=\n\n)', source, re.M | re.S)
+        assert match, f'fixture requires the warning in {path}'
+        paragraph = match.group(1)
+        start, end = match.span(1)
+        name = str(path).replace('/', '-').replace('.', '-')
+        changed = source[:end] + ' Coordinated warning control.' + source[end:]
+        coordinated[path] = changed
+        # The reference copy's mismatch names its first disagreeing peer.
+        diagnostic = f'AGENTS.md and {paths[1] if path == paths[0] else path}'
+        scenarios += [
+            (f'guidance-warning-changed-{name}', {path: changed}, 1, diagnostic),
+            (f'guidance-heading-missing-{name}',
+             {path: source.replace(heading, 'Harness warning control', 1)}, 2,
+             f"{path} has no '{heading}' heading"),
+            (f'guidance-warning-rewrapped-{name}',
+             {path: source[:start] + ' '.join(paragraph.split()) + source[end:]}, 0, None),
+            (f'guidance-local-prose-{name}',
+             {path: source[:end] + '\n\nLocal explanation control.' + source[end:]}, 0, None),
+        ]
+    scenarios.append(('guidance-warning-coordinated', coordinated, 0, None))
+
+    agents = paths[0]
+    architecture = Path('docs/ARCHITECTURE.md')
+    documents[architecture] = (repo / architecture).read_text()
+    for path, label in [(agents, '- **One-way sandbox per process**:'),
+                        (architecture, '- **One-way sandbox per process.**')]:
+        source = documents[path]
+        assert source.count(label) == 1
+        scenarios.append((f'guidance-principle-prose-{path.stem}',
+                          {path: source.replace(label, label + ' Independent explanation control.')}, 0, None))
+    source = documents[agents]
+    lines = source.splitlines(keepends=True)
+    first = next(i for i, line in enumerate(lines) if line.startswith('- **One-way sandbox per process**:'))
+    second = next(i for i, line in enumerate(lines) if line.startswith('- **Host/worker split**:'))
+    removed = ''.join(lines[:second] + lines[second + 1:])
+    reordered = lines.copy()
+    reordered[first], reordered[second] = reordered[second], reordered[first]
+    for name, changed in [('removed', removed),
+                          ('renamed', source.replace('**Host/worker split**', '**Host separation**', 1)),
+                          ('reordered', ''.join(reordered))]:
+        scenarios.append((f'guidance-principle-label-{name}', {agents: changed}, 1, 'core ideas:'))
+    scenarios.append(('guidance-restored', documents, 0, None))
+    return scenarios
 
 
 def configured_controls(repo, manifest_original, worker_line, out):

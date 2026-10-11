@@ -417,35 +417,35 @@ suite invariants and fixtures.
 
 ### Sandboxed automation harnesses
 
-Some automation and agent harnesses run commands under a macOS sandbox. Inside
-one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
-or error 159 “Sandbox restriction”), so no runner launches; the unified log
-tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
-cannot be captured; `codesign --verify` can report “invalid signature (code or
-signature have been modified)” for an unchanged, validly signed app; and
-Meson's Swift compiler discovery can fail because swiftc's default module
-cache is not writable, so `meson setup` and therefore `build.sh` stop before
-compiling. These refusals can be environment constraints. Request escalation and rerun the same
-command once outside the automation sandbox against unchanged artifact bytes.
-Treat a signature failure as environmental only after the unsandboxed check
-passes; debug any failure that remains.
+An automation harness's macOS sandbox can block runner XPC lookup
+(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
+(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
+discovery when swiftc cannot write its module cache. It can also make
+`codesign --verify` report an invalid signature for unchanged bytes. Request
+escalation and rerun the same failing command once outside the automation
+sandbox, without changing the artifact under investigation. Treat a signature
+failure as environmental only if the unsandboxed verification passes;
+investigate any failure that remains.
 
-The dispatcher checks the equipment it can see: the built app and worker
-binaries, toolchains, a GUI session, a signing identity. XPC reachability and
-log access are not prerequisites, so inside a harness a live case runs and fails
-as an ordinary failure, with the `xpc_error` envelope in its artifacts, while a
-`gui` prerequisite that cannot be confirmed is reported as missing equipment
-with the case unrun. Neither is a PolicyWitness defect. Suites that declare no
-`app` or `worker` requirement (`source_drift`, `shell_helpers`, `dispatcher`,
-`run_capture`, `unit` and `exec_fixture`) never launch the XPC service, and
-`runner_unit` declares `app` only to exec the embedded worker and validator
-directly, though the cancellation and
-process-observation controls among them may still need escalation for local
-sockets and exit events. Run everything that declares `app` or `worker` from an
-unsandboxed Terminal; `--all --list` shows each case's requirements. One case
-that declares neither still needs the unsandboxed shell: `build_documentation`
-under `source_drift` runs `meson setup` with Swift enabled for its two
-Swift-option controls, and that is the Swift discovery a harness can refuse.
+This warning is intentionally repeated for agents entering through different
+workflows who may mistake harness restrictions for product defects.
+[source_drift](suites/source_drift/README.md#intentional-guidance-agreement)
+compares the first paragraph in all four locations; edit those copies together.
+The explanations that follow it are local to each document.
+
+The dispatcher checks visible equipment, including app and worker binaries,
+toolchains, a GUI session and a signing identity. It does not preflight XPC
+reachability or log access: a blocked live case runs and fails with evidence,
+while an unconfirmed `gui` prerequisite leaves the case explicitly unrun.
+Inspect the diagnostic before attributing either result to the product or the
+harness.
+
+Use an unsandboxed shell for cases requiring `app` or `worker`;
+`tests/run.sh --all --list` shows requirements. `runner_unit` executes embedded
+children directly without XPC. Cases without an app requirement can still need
+escalation: cancellation and process-observation controls use local sockets and
+exit events, and `source_drift/build_documentation` exercises Meson's Swift
+compiler discovery.
 
 ## Output contract (`tests/out/`)
 

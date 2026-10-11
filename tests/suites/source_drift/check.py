@@ -35,11 +35,10 @@ The check has two halves:
         has a row in the `_test_overrides` table in runner/README.md, and
         every row names a property. That table is the only documented
         key list; runner/AGENTS.md points at it rather than carrying one.
-     i. The first paragraph under the "Sandboxed automation harnesses"
-        heading is identical in AGENTS.md, runner/README.md and
-        tests/README.md and docs/BUILD.md. The note is carried in four
-        places on purpose; each copy adds its own local paragraph after the
-        shared one.
+     i. The first paragraph under "Sandboxed automation harnesses" agrees
+        after whitespace normalization in AGENTS.md, runner/README.md,
+        tests/README.md and docs/BUILD.md. Agents need the warning at each
+        workflow entry point; later local explanations are independent.
      j. Host invariance: no file under runner/Sources binds or calls a
         libsandbox entry point or loads the library. The XPC host never
         links, loads or calls libsandbox; the worker and the validator do.
@@ -841,13 +840,13 @@ def check_test_overrides_table_agreement() -> list[str]:
 # ---------------------------------------------------------------------------
 # Sandboxed-harness note agreement.
 #
-# The note under "Sandboxed automation harnesses" is carried in four files on
-# purpose: AGENTS.md (orientation), runner/README.md (what the refusal looks
-# like in the envelope), tests/README.md (what the dispatcher can detect) and
-# docs/BUILD.md (which build steps need an unsandboxed shell).
-# Each copy adds a local paragraph; the first paragraph is shared and must stay
-# identical so the copies read as one maintained note rather than drift.
-# Whitespace is normalized because the READMEs hard-wrap and AGENTS.md does not.
+# Agents enter through different workflows and repeatedly mistake harness
+# restrictions for product defects. Keep the warning visible in each entry
+# document. Compare only the first paragraph after the named heading, using
+# AGENTS.md as the reference and normalizing whitespace to permit rewrapping.
+# Later paragraphs are local explanations. No generator propagates the text;
+# agreement does not establish that the advice is correct or complete. This
+# rule runs in runner_source_manifests_agree, part of the default test battery.
 # ---------------------------------------------------------------------------
 
 HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
@@ -879,7 +878,10 @@ def check_harness_note_agreement() -> list[str]:
             problems.append(
                 f"  harness note: the shared first paragraph differs between "
                 f"{canonical_path.relative_to(REPO_ROOT)} and {path.relative_to(REPO_ROOT)}. "
-                f"This note is carried in four places on purpose; edit all four copies together or none."
+                "The warning is intentionally repeated at agent workflow entry points. "
+                "Update the first paragraph under 'Sandboxed automation harnesses' together in "
+                "AGENTS.md, runner/README.md, tests/README.md and docs/BUILD.md. "
+                "Whitespace is ignored; later local explanations are not compared."
             )
     return problems
 
@@ -1034,7 +1036,7 @@ def check_evidence_channel_paths() -> list[str]:
 
 
 def check_core_ideas_agreement() -> list[str]:
-    """The principles list in the architecture document names the core ideas of AGENTS.md, in order."""
+    """Match principle labels and order; each document's explanatory prose is independent."""
     ideas = section((REPO_ROOT / "AGENTS.md").read_text(), "Core ideas")
     principles = section(architecture_prose(), "Principles as enforced constraints")
     if ideas is None or principles is None:
@@ -1042,7 +1044,8 @@ def check_core_ideas_agreement() -> list[str]:
     expected = re.findall(r"^- \*\*(.+?)\*\*", ideas, re.M)
     actual = [lead.rstrip(".") for lead in re.findall(r"^- \*\*(.+?)\*\*", principles, re.M)]
     if not expected or expected != actual:
-        return [f"  core ideas: AGENTS.md lists {expected} but the architecture principles are {actual}"]
+        return [f"  core ideas: AGENTS.md lists {expected} but the architecture principles are {actual}. "
+                "Keep the bold principle labels in the same order; explanatory prose is not compared."]
     return []
 
 

@@ -136,6 +136,12 @@ Every honored override is mirrored back into
 `data.runner_result.test_overrides`; production runs leave that field
 unset.
 
+Host controls travel in the request because launchd does not preserve the
+invoking shell's environment. An override changes an input to the real boundary:
+a nonexistent executable path fails at `posix_spawn`, and a short worker
+deadline paired with a post-apply hang exercises timeout handling. The production
+classifier still determines the result.
+
 | Key | Type | Default | Re-routed boundary | Outcome it lets you reach |
 | --- | --- | --- | --- | --- |
 | `worker_executable_path` | string | bundle-local `pw-probe-runner` | `posix_spawn(path, ...)` inside `CWorker.spawn` | `worker_spawn_failed` |
@@ -344,32 +350,34 @@ these services and to enforce entitlements supersets before dispatch.
 
 ## Sandboxed automation harnesses
 
-Some automation and agent harnesses run commands under a macOS sandbox. Inside
-one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
-or error 159 “Sandbox restriction”), so no runner launches; the unified log
-tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
-cannot be captured; `codesign --verify` can report “invalid signature (code or
-signature have been modified)” for an unchanged, validly signed app; and
-Meson's Swift compiler discovery can fail because swiftc's default module
-cache is not writable, so `meson setup` and therefore `build.sh` stop before
-compiling. These refusals can be environment constraints. Request escalation and rerun the same
-command once outside the automation sandbox against unchanged artifact bytes.
-Treat a signature failure as environmental only after the unsandboxed check
-passes; debug any failure that remains.
+An automation harness's macOS sandbox can block runner XPC lookup
+(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
+(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
+discovery when swiftc cannot write its module cache. It can also make
+`codesign --verify` report an invalid signature for unchanged bytes. Request
+escalation and rerun the same failing command once outside the automation
+sandbox, without changing the artifact under investigation. Treat a signature
+failure as environmental only if the unsandboxed verification passes;
+investigate any failure that remains.
 
-The name “nested sandbox” fits: the harness's sandbox sits outside the one the
-worker would apply to itself, and it wins first, at XPC lookup, before any code
-in this directory runs. In the envelope the refusal is `normalized_outcome:
-"xpc_error"` with `error` carrying the domain, code and message, empty `steps`,
-and no `runner_subprocess`, because no host ran. The controller then runs
-`sbpl-check` as a fallback and records it in `data.policy_check`, so a
-`compiled: true` there says only that the policy compiles; it says
-nothing about the worker. Nothing here produced that outcome and nothing here
-can fix it. The other symptom is the controller's, not the runner's: if the
-runner does launch but `sandbox_log_capture.capture_status` is `blocked` with
-`blocked_reason: "Cannot run while sandboxed"`, the run's execution status and
-cause are unchanged and only log correlation is unavailable. Pass
-`--no-log-capture` to take that variable out while you work on the runner.
+This warning is intentionally repeated for agents entering through different
+workflows who may mistake harness restrictions for product defects.
+[source_drift](../tests/suites/source_drift/README.md#intentional-guidance-agreement)
+compares the first paragraph in all four locations; edit those copies together.
+The explanations that follow it are local to each document.
+
+When the harness blocks XPC lookup before host launch, the envelope reports
+`normalized_outcome: "xpc_error"`, an error diagnostic, empty `steps` and no
+`runner_subprocess`. The controller's fallback `sbpl-check` result in
+`data.policy_check` establishes only whether the policy compiles; it says nothing
+about worker execution. An `xpc_error` alone does not establish that the harness
+caused it; use the diagnostic and the unsandboxed retry.
+
+Log access can fail even when execution succeeds. A
+`sandbox_log_capture.capture_status` of `blocked` with
+`blocked_reason: "Cannot run while sandboxed"` leaves the execution result
+unchanged and makes log correlation unavailable. Use `--no-log-capture` when
+log capture is unnecessary for the runner behavior being investigated.
 
 ## Evidence contract pointers
 

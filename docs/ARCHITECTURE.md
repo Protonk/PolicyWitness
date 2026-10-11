@@ -430,9 +430,10 @@ kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 ## Principles as enforced constraints
 
 The core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
-instructions, and a drift rule keeps the list below equal to that one. Each
-is also a constraint on a particular phase above, and each has a mechanism
-that enforces it.
+instructions. A drift rule compares the bold labels and their order with the
+list below; explanatory prose is independent. The mechanisms described here
+support the constraints on each phase; label agreement alone establishes no
+runtime guarantee.
 
 - **One-way sandbox per process.** Every authorized connection shares the
   host's [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
@@ -546,7 +547,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 43 nodes and 61 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 43 nodes and 62 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -567,7 +568,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | questions_md | docs/QUESTIONS.md | document |  | the shared questions the guide copies |  | [`BEGIN SHARED QUESTIONS`](../docs/QUESTIONS.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | failure_contract | tests/FAILURE-PROPAGATION-CONTRACT.md | document |  | the generated scenario matrix and the shared reading rules |  | [`BEGIN GENERATED SCENARIO MATRIX`](../tests/FAILURE-PROPAGATION-CONTRACT.md); [`BEGIN SHARED READING RULES`](../tests/FAILURE-PROPAGATION-CONTRACT.md) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | architecture_md | docs/ARCHITECTURE.md | document |  | these figures and their tables |  | [`REGION_START`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
-| agents_md | AGENTS.md | document |  | the canonical sandboxed-harness note |  | [`Sandboxed automation harnesses`](../AGENTS.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
+| agents_md | AGENTS.md | document |  | the reference copy of the intentionally repeated sandbox warning |  | [`Sandboxed automation harnesses`](../AGENTS.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | controller_readme | controller/README.md | document |  | the CLI surface block and the version sentence |  | [`CLI surface (contract)`](../controller/README.md); [`BEGIN GENERATED CONTRACT VERSIONS`](../controller/README.md) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |  |
 | runner_readme | runner/README.md | document |  | the harness-note copy, the test-seam table and the version sentence |  | [`Sandboxed automation harnesses`](../runner/README.md); [`_test_overrides`](../runner/README.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
 | tests_readme | tests/README.md | document |  | the harness-note copy and the suite table |  | [`Sandboxed automation harnesses`](../tests/README.md) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
@@ -621,14 +622,14 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D19 | gen_identity | contract_py | writes | identity hex | [`TARGETS`](../docs/generate_worker_identity.py) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | D20 | architecture_json | gen_architecture | reads | nodes, edges, styles and citations | [`load_manifest`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
 | D21 | gen_architecture | architecture_md | writes | figure regions; dot and stamped SVG files beside the document | [`expected_outputs`](../docs/generate_architecture.py); [`render_region`](../docs/generate_architecture.py); [`stamp_svg`](../docs/generate_architecture.py) | [`test_document_and_figures_are_current`](../tests/suites/source_drift/architecture.py) |  |
-| D22 | agents_md | runner_readme | copies | harness note, first paragraph | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
-| D23 | agents_md | tests_readme | copies | harness note, first paragraph | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
+| D22 | agents_md | runner_readme | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
+| D23 | agents_md | tests_readme | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_HEADING`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | D24 | cli_rs | controller_readme | copies | usage text | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |  |
 | D25 | api_swift | coverage_md | copies | one matrix row per outcome constant | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) |  |
 | D26 | api_swift | runner_readme | copies | test-seam table from PWRunnerTestOverrides | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) | [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py) |  |
 | D27 | suites | tests_readme | copies | one suite-table row per suite | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
 | D28 | suites | catalog_json | copies | suite directories equal catalog suites | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
-| D29 | drift_check | agents_md | checks | harness note equality across four copies | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D29 | drift_check | agents_md | checks | first warning paragraph agrees across four workflow entry points; local explanations are independent | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D30 | drift_check | controller_readme | checks | CLI surface block equals cli.rs usage | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D31 | drift_check | coverage_md | checks | every outcome constant has a row and every row a constant | [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D32 | drift_check | tests_readme | checks | suite table equals suites and catalog | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
@@ -649,7 +650,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D47 | drift_generators | gen_architecture | checks | ownership, spans, placeholders, declared columns, captions and render refusal | [`test_architecture_render_failure_leaves_every_copy_untouched`](../tests/suites/source_drift/generators.py) | [`test_captions_state_the_verified_guarantee`](../tests/suites/source_drift/generators.py) |  |
 | D48 | drift_generators | prose_baseline | checks | the listed sites equal the scanned sites; growth only by an explicit entry | [`baseline_problems`](../tests/suites/source_drift/generators.py) | [`test_prose_baseline_is_consistent_and_growth_is_explicit`](../tests/suites/source_drift/generators.py) |  |
 | D49 | preflight | prose_baseline | checks | a release's baseline is a subset of the previous release's | [`inspect_baseline`](../tests/lib/release_preflight.py) | [`test_release_preflight_refuses_a_grown_baseline`](../tests/suites/source_drift/generators.py) |  |
-| D50 | drift_check | architecture_md | checks | Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; the principles list equals the core ideas in AGENTS.md | [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D50 | drift_check | architecture_md | checks | Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; principle labels match Core ideas in AGENTS.md in order; explanatory prose is independent | [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D51 | drift_generators | architecture_json | checks | the drift node's rule citations equal the rules check.py runs | [`test_document_graph_cites_every_drift_rule`](../tests/suites/source_drift/generators.py) | [`test_document_graph_cites_every_drift_rule`](../tests/suites/source_drift/generators.py) |  |
 | D52 | drift_check | meson_build | checks | source list equals the tree | [`check_meson_source_lists`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D53 | build_json | gen_build | reads | steps, refusals, knobs, signing, invocations, directories and citations | [`load_manifest`](../docs/generate_build.py) | [`test_document_and_figure_are_current_and_the_rules_agree`](../tests/suites/source_drift/build.py) |  |
@@ -661,6 +662,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D59 | gen_common | gen_build | reads | shared citation, placeholder and span rules; the architecture generator's table and stamp rendering | [`from generator_common import`](../docs/generate_build.py); [`import generate_architecture as arch`](../docs/generate_build.py) | [`test_document_and_figure_are_current_and_the_rules_agree`](../tests/suites/source_drift/build.py) |  |
 | D60 | drift_generators | gen_build | checks | nothing changes outside its regions; --check before signing; one span owner | [`test_regeneration_changes_nothing_outside_regions`](../tests/suites/source_drift/generators.py) | [`test_regeneration_changes_nothing_outside_regions`](../tests/suites/source_drift/generators.py) |  |
 | D61 | drift_check | build_md | checks | Known gap paragraphs equal the index, as in the architecture document | [`known_gap_index_problems`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D62 | agents_md | build_md | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_FILES`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 
 Every node and edge above cites at least one test or rule.
 

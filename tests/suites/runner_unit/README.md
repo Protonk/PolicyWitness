@@ -50,8 +50,8 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
   not sandbox attribution or real C-worker publication coverage.
 - Required real-worker deadline/grace and polling-reap controls use the signed
   app selected by `PW_APP_DIR` (default `dist/PolicyWitness.app`). Missing required
-  equipment fails. Other live tests can print internal `SKIP`; inspect the log
-  before crediting them, regardless of the summary.
+  equipment fails. The wrapper also rejects internal `SKIP` or `FAIL` lines
+  before crediting the summary.
 
 ## Artifacts
 
@@ -70,9 +70,13 @@ default to `tests/out/runs/direct`.
 ./tests/run.sh --suite runner_unit --suite runner_c_worker_harness
 ```
 
-Requires Swift and clang. Selecting an app-dependent suite alongside it records
-the signed app's integrity. Direct SwiftPM execution requires first building the
-fixture and exporting its path as `PW_LIFECYCLE_WORKER_FIXTURE`.
+Requires Swift, clang, Cargo and a signed app. The catalog declares the app
+requirement for `runner_unit` itself, so the dispatcher records its integrity.
+The wrapper builds and warms the lifecycle fixture and exports its path.
+For direct SwiftPM execution, first run
+`tests/fixtures/worker_lifecycle/build.sh <output>` outside the inspected app
+and export that executable path as `PW_LIFECYCLE_WORKER_FIXTURE`. Direct
+execution omits the wrapper's result checks and Rust reader replay below.
 
 `WorkerEvidenceTests` requires the lifecycle builder's companion producers. It
 checks actual C-main publication for controlled parameter/apply failures, open
