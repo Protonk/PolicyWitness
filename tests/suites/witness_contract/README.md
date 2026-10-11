@@ -298,9 +298,7 @@ That suite owns the deliberately empty-plan timeout control;
 
 ## Attempt in flight at the deadline
 
-`worker_attempt_in_flight_at_deadline` holds the area A tests of
-[controller/DISPOSITION-RECORD-PLAN.md](../../../controller/DISPOSITION-RECORD-PLAN.md).
-It runs three specimens
+`worker_attempt_in_flight_at_deadline` runs three specimens
 under `(version 1) (allow default)` with `--no-log-capture`:
 
 - `a1`: a FIFO with no writer, then `/etc/hosts`, with `worker_timeout_ms: 2000`.

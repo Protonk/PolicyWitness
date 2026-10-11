@@ -1149,9 +1149,9 @@ and encoder, the Rust controller (`unsupported_runner_response`,
 diagnostics or log capture; a delivery failure takes precedence as
 `tool_error`), and `tests/lib/consumer.py` (`unsupported`). Raw transport
 (`pw-runner-client` and the Rust capture) retains received bytes without
-interpreting them. Stored evidence under `records/`, retained test output and
-release acceptance artifacts keeps its bytes. Request admission and the worker
-ABI follow their own contracts; the ABI's equality tripwire is independent.
+interpreting them. Retained test output and release acceptance artifacts keep
+their bytes. Request admission and the worker ABI follow their own contracts;
+the ABI's equality tripwire is independent.
 Acceptance selects every registered canonical case in [the catalog](catalog.json),
 including opt-ins and both runner contexts; required skips or unrun cases
 prevent completion.

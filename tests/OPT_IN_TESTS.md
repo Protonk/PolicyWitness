@@ -19,9 +19,9 @@ Any of the following is usually sufficient:
 - Requires a **Developer ID identity** or notarization.
 - Takes a long time or is intentionally heavy (multi-minute).
 - Reads from **Unified Logging** or other sandbox-sensitive telemetry streams.
-- Is a specified red test for planned behavior. `controller/DISPOSITION-RECORD-PLAN.md`
-  registers its reds as non-default until each turns green, so the default battery
-  stays green on main while the red is demonstrable through explicit selection.
+- Is a specified red test for planned behavior. Keep it non-default until it
+  turns green, so the default battery stays green on main while the red is
+  demonstrable through explicit selection.
 
 If the test depends on one of these, make it opt-in and document the dependency.
 

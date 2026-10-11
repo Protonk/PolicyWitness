@@ -2,8 +2,8 @@ import Darwin
 import Foundation
 @testable import PWRunnerCore
 
-// Disposition record (controller/DISPOSITION-RECORD-PLAN.md, areas B, C and D;
-// contract in tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record").
+// Disposition record contract: tests/FAILURE-PROPAGATION-CONTRACT.md,
+// "Worker disposition record".
 //
 // Three kinds of control. Fixture observations drive the production driver
 // against the ABI fixture (no sandbox is applied, so no policy cause is
