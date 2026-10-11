@@ -25,6 +25,16 @@ Offline release controls also exercise the release procedure's decision points.
   matching Developer ID while retaining the old manifest. All signatures must
   verify, but inspection must reject the stale runner hash. No copy is launched;
   cleanup removes only the temporary directory and checks the source inventory.
+- `build_guard_controls` runs the unchanged build script in a disposable
+  checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
+  last checked Cargo or native output with a real Mach-O for a different macOS
+  minimum, or sign `sbpl-check` ad hoc. Both full and partial builds must refuse
+  wrong minima before assembly while preserving previous distribution bytes.
+  The ad hoc helper must pass deep verification and then fail the signer check
+  before the standalone observer is signed, the guide is staged or the ZIP is
+  created. Successful siblings must package both variants. Raw command and tool
+  receipts survive temporary-checkout cleanup. This case requires the full
+  toolchain and a Developer ID identity, and is opt-in.
 - `release_controls` accepts a recognized Apple acceptance with extra fields and
   stops on agreement errors, unknown responses, pending/rejected/unknown status,
   wrong submission IDs, ambiguous duplicate fields, simulated timeouts, and changed input archives. Independent
@@ -87,6 +97,8 @@ Offline release controls also exercise the release procedure's decision points.
 ## Fixtures
 
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
+- `tests/fixtures/build_guards/tools.py`: real-tool delegation with one output
+  replacement or ad hoc signature at the selected boundary.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles
@@ -109,6 +121,7 @@ Run:
 ```
 ./tests/run.sh --case preflight/codesign.preflight
 ./tests/run.sh --case preflight/signed_artifact_controls
+./tests/run.sh --case preflight/build_guard_controls
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls
 ./tests/run.sh --case preflight/release_publish_controls

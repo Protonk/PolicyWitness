@@ -17,7 +17,7 @@ implements it and the test or rule that covers it; a citation is a place to
 look, not proof that a test asserts the row. The build has
 <!-- span build.steps -->30<!-- /span --> steps,
 <!-- span build.refusals -->65<!-- /span --> refusals, of which
-<!-- span build.uncovered -->28<!-- /span --> have no control that produces
+<!-- span build.uncovered -->27<!-- /span --> have no control that produces
 them, <!-- span build.signing -->8<!-- /span --> signing calls and
 <!-- span build.knobs -->2<!-- /span --> knobs.
 
@@ -70,8 +70,8 @@ directories, to the standalone observer's signature inside Cargo's, and to the
 output directory, which defaults to the ignored `dist/` but can be placed
 elsewhere with `DIST_DIR`. The build is a function of the checkout, its two
 build directories and the inputs the next
-section lists; it trusts the directories as it trusts the checkout, and it
-refuses a Meson build directory that belongs to another checkout.
+section lists. It relies on the tools' records to decide whether cached outputs
+are current, and refuses a Meson build directory that belongs to another checkout.
 
 `make build` is the documented entry and the first row of the step table. It
 is the caller, not the unit: the release targets reach the same row through
@@ -261,7 +261,7 @@ writes; the staged copy itself is compared by a test, not by the build.
 
 <!-- BEGIN GENERATED BUILD REFUSALS -->
 <details>
-<summary>65 refusals (28 the script's own, 21 Meson assertions, 15 propagated from a check or a tool, 1 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; 28 have no control that produces them and are listed in the baseline; whether a test asserts the row is not verified</summary>
+<summary>65 refusals (28 the script's own, 21 Meson assertions, 15 propagated from a check or a tool, 1 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; 27 have no control that produces them and are listed in the baseline; whether a test asserts the row is not verified</summary>
 
 | Id | Message | Steps | Status | Kind | Variants | Coverage | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -278,7 +278,7 @@ writes; the staged copy itself is compared by a test, not by the build.
 | missing_observer | expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN} | cargo | 2 | script | both | none; listed in the baseline | [`expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
 | missing_sbpl_check | expected sbpl-check binary at ${SBPL_CHECK_BIN} | cargo | 2 | script | both | none; listed in the baseline | [`expected sbpl-check binary at ${SBPL_CHECK_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
 | cargo_artifact_elsewhere | cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it | cargo | 2 | script | both | none; listed in the baseline | [`cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
-| minimum_mismatch | ${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS} | cargo, native_check | 2 | script | both | none; listed in the baseline | [`${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
+| minimum_mismatch | ${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS} | cargo, native_check | 2 | script | both | a control produces it | [`${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
 | meson_ninja_missing | meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md | toolchain | 2 | script | both | none; listed in the baseline | [`meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
 | ninja_old | ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md | toolchain | 2 | script | both | none; listed in the baseline | [`ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
 | missing_native_output | expected Meson output at ${native_bin} | native_check | 2 | script | both | none; listed in the baseline | [`expected Meson output at ${native_bin}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py) |
@@ -328,7 +328,7 @@ writes; the staged copy itself is compared by a test, not by the build.
 | codesign_failed | codesign's own diagnostic | sign_tools, sign_services, seal, sign_observer | 1 | propagated | both | none; listed in the baseline | [`codesign --force`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py) |
 | evidence_failed | missing app bundle Contents | evidence | 2 | propagated | both | none; listed in the baseline | [`build-evidence.py`](../build.sh); [`missing app bundle Contents`](../tests/build-evidence.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py) |
 | verify_failed | codesign's own diagnostic | verify | 1 | propagated | both | none; listed in the baseline | [`codesign --verify`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py) |
-| signer_mismatch | executables not signed by <identity> with the hardened runtime | signer | 1 | propagated | both | a control produces it in the helper, not through the script | [`signer_check.py`](../build.sh); [`executables not signed by`](../tests/lib/signer_check.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh) |
+| signer_mismatch | executables not signed by <identity> with the hardened runtime | signer | 1 | propagated | both | a control produces it | [`signer_check.py`](../build.sh); [`executables not signed by`](../tests/lib/signer_check.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
 | stale_guide | stale PolicyWitness.md | guide | 1 | propagated | both | a control produces it in the helper, not through the script | [`--stage-guide`](../build.sh); [`stale`](../docs/generate_limits.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing`](../tests/suites/source_drift/limits.py) |
 
 </details>
@@ -357,17 +357,21 @@ that would retire it, and
 whose baseline grew or rewrote an entry since the previous release, as it does
 for the prose baseline.
 
-Known gap: <!-- span build.uncovered -->28<!-- /span --> of the
+Known gap: <!-- span build.uncovered -->27<!-- /span --> of the
 <!-- span build.refusals -->65<!-- /span --> refusals have no control that
 produces them, so for those rows the table establishes that the message
 exists in the script under that banner, not that the build stops there. The
 baseline names them.
 
-Known gap: the minimum checks after Cargo and after the native check, and the
-signer check after verification, are placed before the operations they
-protect in the text, and the invocation rule would name a move; no control
-drives the build through a wrong minimum or an ad hoc helper to observe the
-stop.
+The opt-in [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py)
+control drives the unchanged build script with real compilers and signing
+tools in a disposable checkout. In both variants, a tool wrapper substitutes
+a wrong-minimum Cargo or native output; the build must name it and exit 2
+before assembly, leaving previous distribution bytes intact. Another wrapper
+signs a helper ad hoc: deep verification must succeed, then the signer check
+must name the helper and exit 1 before observer signing, guide staging or ZIP
+creation. Successful sibling builds package both variants. The control
+observes those boundaries; it does not simulate the checks that enforce them.
 
 ## What Meson owns and what the script owns
 
@@ -496,21 +500,24 @@ equal [`EXECUTABLES`](../tests/lib/artifact.py), the helper list in
 add `--deep` to a signing step; it would sign whatever happens to be nested,
 which is the opposite of a list.
 
-After the seal. `codesign --verify --deep --strict` checks the seal, and then
-[`signer_check.py`](../tests/lib/signer_check.py) requires every regular file
-directly under the app's and each service's `Contents/MacOS`, whether or not
-the list named it, to be a Mach-O signed by the named identity with the
-hardened runtime. The linker leaves every compiler output ad hoc-signed, and
-an ad hoc executable can pass the seal and deep verification. This build
-check refuses it before the ZIP. The test inspector separately refuses a
-listed helper whose signer differs from the controller's; a test copy signed
-ad hoc throughout stays consistent. The build check reads the leaf authority
-and the runtime flag, not the certificate's class or the timestamp.
+After the seal. `codesign --verify --deep --strict` checks the bundle seal.
+Then [signer_check.py](../tests/lib/signer_check.py) examines every regular
+file directly inside the app's `Contents/MacOS` directory and the corresponding
+directory in each XPC service, including files absent from the signing list.
+Each file must be a Mach-O signed by the named identity with the hardened
+runtime. The check reads the leaf authority and the runtime flag; it does not
+check the certificate's class or the timestamp.
 
-What is never production-signed. The manual validator helper,
-`controller/tools/sb_api_validator/build.sh`, compiles the validator beside
-its source and ad hoc-signs it with `debug.ent` for local debugging; its
-output is ignored by git and never enters the bundle.
+The linker leaves every compiler output ad hoc-signed, and an ad hoc
+executable can pass the seal and deep verification. The build's signer check
+refuses it before the ZIP. The test inspector separately refuses a listed
+helper whose signer differs from the controller's; a test copy signed ad hoc
+throughout stays consistent.
+
+The standalone validator build script,
+`controller/tools/sb_api_validator/build.sh`, supports local debugging. It
+compiles the validator beside its source and signs the result ad hoc with
+`debug.ent`. That output is ignored by git and never copied into the app bundle.
 
 ## The evidence the build embeds
 
@@ -559,12 +566,12 @@ The helpers and tools the build invokes, with the step each runs in:
 | inv_identity_check | docs/generate_worker_identity.py --check | (not compared) | check_identity | both | [`docs/generate_worker_identity.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_cargo | cargo build | --manifest-path --release --target-dir --message-format --bin --bin --bin | cargo | both | [`cargo build`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_cargo_artifacts | tests/lib/cargo_artifacts.py | (not compared) | cargo | both | [`cargo_artifacts.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
-| inv_minimum_cargo | check_minimum_macos | (not compared) | cargo | both | [`check_minimum_macos "${rust_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_minimum_cargo | check_minimum_macos | (not compared) | cargo | both | [`check_minimum_macos "${rust_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
 | inv_meson_configure | meson configure | (not compared) | configure | both | [`meson configure`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_meson_setup | meson setup | (not compared) | configure | both | [`meson setup`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_meson_compile | meson compile | (not compared) | compile | both | [`meson compile`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_native_sources | tests/lib/native_sources.py --builddir | (not compared) | native_check | both | [`native_sources.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`configured_controls`](../tests/suites/source_drift/check_planner.py) |
-| inv_minimum_native | check_minimum_macos | (not compared) | native_check | both | [`check_minimum_macos "${native_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_minimum_native | check_minimum_macos | (not compared) | native_check | both | [`check_minimum_macos "${native_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
 | inv_stamp_app | stamp_info_plist | (not compared) | assemble | both | [`stamp_info_plist "${APP_BUNDLE}/Contents/Info.plist"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_dsym_client | embed_dsym | (not compared) | embed_client | full | [`embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_stamp_service | stamp_info_plist | (not compared) | embed_services | full | [`stamp_info_plist "${svc_bundle}/Contents/Info.plist"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
@@ -573,7 +580,7 @@ The helpers and tools the build invokes, with the step each runs in:
 | inv_evidence | tests/build-evidence.py --app-bundle | (not compared) | evidence | both | [`build-evidence.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh) |
 | inv_verify | codesign --verify | (not compared) | verify | both | [`codesign --verify --deep --strict`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_display | codesign --display | (not compared) | verify | both | [`codesign --display --entitlements`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
-| inv_signer | tests/lib/signer_check.py | (not compared) | signer | both | [`signer_check.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh) |
+| inv_signer | tests/lib/signer_check.py | (not compared) | signer | both | [`signer_check.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
 | inv_guide | docs/generate_limits.py --stage-guide | (not compared) | guide | both | [`--stage-guide`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing`](../tests/suites/source_drift/limits.py) |
 | inv_zip | ditto | (not compared) | zip | both | [`/usr/bin/ditto`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 
@@ -589,10 +596,11 @@ disposable copy of the script show each rule naming its mutation. The parser
 accepts the forms the script uses and refuses the rest, which the generator's
 docstring lists.
 
-The behavioral controls the refusals table cites drive the build itself, each
-in a disposable checkout that stops at the targeted refusal with nothing
-compiled or written; the helper controls drive Meson, the configured source
-check and the signer check directly.
+The behavioral controls the refusals table cites drive the build itself in
+disposable checkouts and observe the targeted refusal and the operation it
+prevents. Early refusals stop before compilation; the opt-in build guard
+controls compile and sign to reach later refusals. The helper controls drive
+Meson, the configured source check and the signer check directly.
 
 What none of this establishes: that a refusal precedes the operation it
 protects, except for the rows a behavioral control observes; that the
@@ -600,10 +608,11 @@ compiler used the files the membership checks name; or that the build
 directories hold outputs of the current sources, which rests on Meson's,
 Ninja's and Cargo's own records.
 
-Known gap: the build directories are trusted as the checkout is. Nothing
-attests that an output in `builddir/` or `controller/target/` came from the
-current sources beyond the tools' own fingerprints; reproducibility rests on
-the source identity and a clean checkout at the release commit.
+Known gap: the build relies on Cargo, Meson and Ninja to determine whether
+cached outputs match the current sources. It does not independently verify
+that binaries in `builddir/` or `controller/target/` were produced from those
+sources. A clean checkout and a matching source identity do not establish
+binary provenance or reproducibility.
 
 ## Known gaps
 
@@ -612,7 +621,5 @@ only points there, in document order.
 
 - [Refusals](#refusals): the refusals without a control establish a message
   under a banner, not a stop.
-- [Refusals](#refusals): the minimum and signer checks are placed by text,
-  not by an observed stop.
 - [How the build verifies itself](#how-the-build-verifies-itself): the build
-  directories are trusted as the checkout is.
+  relies on the tools' records to establish whether cached outputs are current.

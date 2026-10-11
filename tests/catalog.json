@@ -25,6 +25,19 @@
           ]
         },
         {
+          "id": "build_guard_controls",
+          "description": "Wrong Cargo and native minima stop before assembly; an ad hoc helper passes deep verification but stops before packaging, in both build variants",
+          "default": false,
+          "requires": [
+            "app",
+            "identity",
+            "cargo",
+            "meson",
+            "clang",
+            "swift"
+          ]
+        },
+        {
           "id": "byoxpc_verification_controls",
           "description": "Installation refuses, and validation reports, a never-launched copy whose worker code changed after sealing",
           "requires": [
@@ -1564,6 +1577,7 @@
     "opt_in": {
       "include": [
         "preflight/signed_artifact_controls",
+        "preflight/build_guard_controls",
         "runner_exec_inheritance/mutation_controls",
         "smoke/runner_caller_auth",
         "runner_byoxpc/runner_auth_external",

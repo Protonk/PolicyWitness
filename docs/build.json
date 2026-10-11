@@ -1447,6 +1447,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -3042,6 +3048,12 @@
           "symbol": "signed_artifact_controls",
           "form": "test",
           "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -3588,6 +3600,12 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -3709,6 +3727,12 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -3925,6 +3949,12 @@
           "symbol": "signed_artifact_controls",
           "form": "test",
           "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },

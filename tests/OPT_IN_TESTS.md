@@ -57,6 +57,25 @@ selection, deduplication, configuration validation, and complete accounting.
   copies under `/private/tmp`; never launches or modifies the selected source app.
 - **When to run:** After changing artifact inspection, inventory, or signing setup.
 
+### build guard controls
+
+- **Case:** `preflight/build_guard_controls`
+- **Location:** `tests/suites/preflight/opt_in/build_guards.py`
+- **Purpose:** Drive the unchanged build script through Cargo and native minimum
+  mismatches and an ad hoc helper after successful deep verification. Assert the
+  diagnostics, statuses and preserved or absent outputs, alongside successful
+  full and partial builds.
+- **Resource dependency:** Built app for identity resolution, matching Developer
+  ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
+  Builds run offline in a disposable checkout under `/private/tmp`; signing
+  still needs the timestamp service and an unsandboxed shell. No app is launched.
+- **Opt-in reason:** Runs multiple builds and signs both variants with keychain
+  access. The source checkout's caches and distribution are untouched.
+- **When to run:** After changing minimum-version checks, signing checks or their
+  placement relative to compilation, assembly and packaging.
+- **Artifacts:** `<run>/suites/preflight/build_guard_controls/artifacts/` holds
+  each build's raw output, status, tool and injection receipts, and output hashes.
+
 ### BYOXPC dossier witness
 
 - **Case:** `witness_contract/dossier_witness_byoxpc`

@@ -47,15 +47,6 @@
       "control": "a Cargo target triple selected through the environment or configuration in a disposable checkout; assert the refusal names the reported path and no copy follows (Cargo must run, so this needs a real or stub Cargo)"
     },
     {
-      "refusal": "minimum_mismatch",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "claim": "the build refuses with '${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}' and does not perform the operation the refusal protects",
-      "control": "a real build with one output at another minimum, in both variants; assert the named binary and no assembly (probes A2, A3, B3 in the plan)"
-    },
-    {
       "refusal": "meson_ninja_missing",
       "variants": [
         "full",

@@ -64,3 +64,15 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "signed artifact control
   "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
 test_pass "real signatures and manifest hashes independently reject corrupted copies; the signer check names an ad hoc helper"
 fi
+
+if test_selected build_guard_controls; then
+test_begin preflight build_guard_controls
+test_step build "observe minimum-version and signer refusals through the unchanged build script in both variants"
+test_require_pw
+SIGNING_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
+[[ -n "${SIGNING_IDENTITY}" ]] || test_fail "matching signing identity required"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build guard controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/opt_in/build_guards.py" \
+  "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
+test_pass "wrong minima preserve previous outputs; an ad hoc helper passes deep verification but stops before packaging"
+fi
