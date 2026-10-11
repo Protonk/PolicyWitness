@@ -50,7 +50,7 @@ the install recipe and the signing constraints.
 
 Download a notarized release from
 [GitHub Releases](https://github.com/Protonk/PolicyWitness/releases), or build
-one as described under [What ships](#what-ships). Releases and builds target
+one as described under [Build and bundle](#build-and-bundle). Releases and builds target
 macOS 26, the version this repository is tested on; `Info.plist` and
 `meson.build` declare that minimum together. Run it from a normal
 Terminal; a sandboxed automation harness can refuse the XPC lookup.
@@ -90,9 +90,27 @@ observed.
 > Short answers to common questions, including who needs this and what it can
 > attribute, are in [QUESTIONS.md](docs/QUESTIONS.md).
 
-## What ships
+## Build and bundle
 
-This repo builds a single distributable app bundle:
+Building PolicyWitness requires Rust with Cargo, Xcode Command Line Tools
+(or Xcode), and Meson and Ninja on `PATH` (`brew install meson ninja`).
+The Developer ID Application signing identity must already be in your
+login keychain. From the repository root:
+
+```sh
+make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
+```
+
+The build writes `dist/PolicyWitness.app`, a ZIP ready for notarization at
+`dist/PolicyWitness.zip`, and the standalone user guide at
+`dist/PolicyWitness.md`.
+
+`build.sh` compiles the Rust components with Cargo and the Swift and C
+components with Meson, assembles them into one app bundle, and signs it
+with the supplied identity. The app carries a version derived from git
+and generated evidence recording its binaries' hashes and entitlements.
+
+The app contains:
 
 - `dist/PolicyWitness.app`
   - `Contents/MacOS/policy-witness` (Rust controller)
@@ -104,13 +122,12 @@ This repo builds a single distributable app bundle:
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
-`./build.sh` compiles the Rust pieces with Cargo and the Swift and C pieces
-with Meson (the root [meson.build](meson.build) owns their source lists and
-flags), assembles them into that one bundle, signs it with the Developer ID
-Application identity named by `IDENTITY` (see [docs/SIGNING.md](docs/SIGNING.md)),
-stamps it with a version derived from the nearest tag, and embeds a generated
-manifest of every binary's hash and entitlements. The [distribution directory](dist/README.md) describes the
-current deliverables, release evidence, and preserved archives.
+The [build tour](docs/BUILD.md) describes the toolchain, build settings and
+signing checks. Building produces a signed app; the
+[release procedure](docs/SIGNING.md#release-procedure) covers notarization,
+acceptance testing and publication. The
+[distribution directory](dist/README.md) describes the deliverables and
+preserved release archives.
 
 ## Documentation
 

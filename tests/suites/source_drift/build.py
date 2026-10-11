@@ -329,7 +329,7 @@ class BuildDocumentationTests(unittest.TestCase):
         evidence.write_text((ROOT / 'tests/build-evidence.py').read_text())
         readme = root / 'README.md'
         readme.write_text(readme.read_text().replace('  - `Contents/MacOS/sbpl-check`', '  - `Contents/MacOS/sbpl-checker`', 1))
-        self.assertTrue(any("README 'What ships'" in p for p in generator.inventory_problems(manifest, model, root)))
+        self.assertTrue(any("README 'Build and bundle'" in p for p in generator.inventory_problems(manifest, model, root)))
         baseline = generator.load_baseline(ROOT / generator.BASELINE_NAME)
         self.assertEqual(generator.baseline_problems(manifest, baseline), [])
         shorter = {'schema_version': 1, 'entries': baseline['entries'][1:]}

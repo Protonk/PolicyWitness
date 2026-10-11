@@ -348,7 +348,7 @@ observes those boundaries; it does not simulate the checks that enforce them.
 
 [meson.build](../meson.build) owns the native compile: source lists, module
 names and flags, the supported macOS passed at compile and at link, and the
-fixed policy for the targets in the [shipped inventory](../README.md#what-ships).
+fixed policy for the targets in the [shipped inventory](../README.md#build-and-bundle).
 The C shim is linked into the host and is not a standalone product. Both
 `meson.build` and `meson.options` are host/worker identity inputs. The policy is
 an enumerated list of options asserted as effective values

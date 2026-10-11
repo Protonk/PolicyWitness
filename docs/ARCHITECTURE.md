@@ -69,7 +69,7 @@ that is enforced rather than assumed (see [Principles](#principles-as-enforced-c
 Who starts whom, over what channel, with what lifetime. Locations are given
 at the granularity of "app top level" and "inside the XPC bundle"; the exact
 bundle paths are the contract in the README's
-[What ships](../README.md#what-ships). The C worker and the validator sit
+[Build and bundle](../README.md#build-and-bundle). The C worker and the validator sit
 inside the XPC bundle so that the built-in runner and a BYOXPC copy each
 resolve their own helpers relative to their own bundle.
 

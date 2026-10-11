@@ -667,9 +667,9 @@ def bundle_paths(manifest, model, root):
 
 
 def readme_inventory(text):
-    section = re.search(r"^## What ships\n(.*?)^## ", text, re.S | re.M)
+    section = re.search(r"^## Build and bundle\n(.*?)^## ", text, re.S | re.M)
     if not section:
-        raise ParseError("README.md: no 'What ships' section")
+        raise ParseError("README.md: no 'Build and bundle' section")
     paths, services, service = [], [], None
     for line in section.group(1).splitlines():
         match = re.match(r"^(\s*)- `([^`]+)`", line)
@@ -711,7 +711,7 @@ def inventory_problems(manifest, model, root):
             readme.append(f"{bundle}/Contents/MacOS/" + plistlib.load(stream)["CFBundleExecutable"])
     readme.sort()
     if readme != executables:
-        out.append(f"inventory: README 'What ships' lists {readme} but EXECUTABLES lists {executables}")
+        out.append(f"inventory: README 'Build and bundle' lists {readme} but EXECUTABLES lists {executables}")
     return out
 
 
