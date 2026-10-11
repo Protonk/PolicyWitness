@@ -52,8 +52,9 @@ Keep permanent documentation focused on current behavior, with history in git.
   class. Broader classes, process-bound issuance, overlapping grants, and arbitrary
   stateful programs remain outside initial scope without being declared impossible.
 - Keep ordinary stateless specimens simple. Use one canonical execution model
-  with a one-phase path in which all eligible queries finish collection before
-  any attempt begins. Do not introduce historical schema translation.
+  with a one-phase path in which query collection closes before any attempt
+  begins, including on timeout or failure. Closure does not require a verdict
+  for every eligible query. Do not introduce historical schema translation.
 - Limit the initial model to a bounded sequence of phases, queries, and ordered
   actions. Exclude branches, loops, arbitrary dependency graphs, and user-defined
   conditions. Token/handle references and a release that cannot run after failed
@@ -113,10 +114,14 @@ general product acceptance.
 
 Use a bounded sequence of phases. At each phase entry the worker publishes its
 arrival and waits. The host observes arrival and worker ownership, plans and
-collects eligible queries for that phase, closes collection on every terminal
-path, and publishes release. The worker acknowledges that release before running
-the phase's declared actions in order. It then publishes arrival at the next
-boundary or final completion.
+collects eligible queries for that phase, and closes collection before considering
+release. Every started collection closes on success, timeout, or failure, with
+missing predictions retained as unavailable. The host publishes release only
+when the phase and worker-ownership checks permit progression. Observed worker
+loss, an invalid boundary, or an expired worker wait ends progression with the
+available evidence preserved. On normal progression, the worker acknowledges
+release before running the phase's declared actions in order, then publishes
+arrival at the next boundary or final completion.
 
 Use numbered boundaries and immutable phase/event publications so a previous
 release or acknowledgement cannot satisfy a later phase. Distinguish reaching a
@@ -147,13 +152,35 @@ evaluate. Use a dedicated bounded transient channel for tokens, separate from
 retained evidence. Choose issuance timing and helper lifetime from M1 evidence;
 do not assume the issuer must stay alive or can safely exit before consumption.
 Keep the worker's handle table limited to routing references and observed call
-outcomes. It must not model kernel permission state.
+outcomes.
 
 Initially prefer a fresh validator collection per phase, reusing the current
 bounded driver. Measure the cost and cleanup behavior before considering a
 persistent validator protocol. Each accepted native record must be associated
 with its phase, query, and observed worker lifetime; late records cannot migrate
 into a subsequent collection.
+
+## Shared verification requirements
+
+The controls below belong to the earliest indicated milestone. Each case must
+establish its intervention independently and assert retained observations as
+well as withheld claims. Milestone gates apply these controls to their delivered
+boundaries; M4 extends them with combinations and adversarial conditions.
+
+| Boundary | First required | Required controls |
+| --- | --- | --- |
+| Phase admission | M2 | Duplicate/unknown phase or action identities, unsupported combinations, oversized counts/strings, embedded NUL |
+| Extension admission | M3 | Duplicate/unknown references, forward/invalid handle use, unsupported combinations, unavailable helper/API |
+| Issuance and delivery | M3, building on M1 native refusals | Native refusal, issuer death, timeout, partial/oversized token transfer, delivery without consumption, unknown cleanup |
+| Consumption and release | M3, building on M1 native calls | Rejected token, failed consume without a handle, failed release, repeated release policy, missing result publication |
+| Phase ordering | M2 | Delayed/missing predictions, validator failure, late/wrong-phase records, stale release/acknowledgement, phase exhaustion, host loss while worker waits |
+| Worker lifetime | M2 for phase interruption; M3 for native calls | Death before/inside/after consume or release, death before acknowledgement, failure after a completed earlier phase, unresolved termination/reap |
+| Independent readers | M2 for phases; M3 for extensions | Reject fabricated lifecycle success, cross-phase prediction association, unsupported versions, and unsupported ordering claims while retaining raw evidence |
+| Optional logs | M3 with multi-phase CLI integration | Repeated target/PID across phases remains ambiguous unless evidence narrows it; log presence, absence, or capture failure cannot change execution |
+
+Observe native-call failures through controlled seams where live reproduction
+is unreliable; do not confuse injected return values with kernel behavior.
+Do not infer explicit release from worker exit or successful cleanup from EOF.
 
 ## M1 Native feasibility and independent controls
 
@@ -233,9 +260,10 @@ provisional wire formats still require explicit versioning and coordinated reade
 C/Swift phase protocol with multiple real boundaries in one worker, mutation
 controls that reject premature execution, and interruption controls that withhold
 unsupported phase completion while retaining earlier evidence. A signed CLI
-one-phase regression must establish that every eligible query finishes collection
-before any attempt begins. A multi-phase public CLI experiment is required in M3;
-it need not force a public grammar commitment in M2.
+one-phase regression must establish that query collection closes before any
+attempt begins on success, timeout, and failure, including missing-verdict cases.
+A multi-phase public CLI experiment is required in M3; it need not force a public
+grammar commitment in M2.
 
 ## M3 Minimal extension experiment through PW
 
@@ -248,8 +276,7 @@ checks before treating the interface as final.
 
 Provide the access evidence established in M1. If a new action or changed action
 meaning is needed, apply the request-contract rules rather than silently
-reinterpreting `open_read`. Preserve native results and local handle association
-without treating them as a permission state.
+reinterpreting `open_read`. Preserve native results and local handle association.
 
 Add the issuer to Meson, bundle assembly, signing, evidence inventories, native
 source checks, helper resolution, and BYOXPC signing/read-back as applicable.
@@ -279,31 +306,19 @@ observations; the producer and independent readers reject invented completion.
 
 ## M4 Failure combinations and adversarial coverage
 
-The boundary controls below belong to the earliest indicated milestone. M4
-extends them with combined faults, adversarial timing and inputs, and failures
-that are difficult to reproduce naturally. Each case must establish its
-intervention independently and assert retained observations as well as withheld
-claims. Revisit the interface if these controls expose an unrepresentable outcome.
+Extend the shared boundary controls with combined faults, adversarial timing and
+inputs, and failures that are difficult to reproduce naturally. Cover material
+interactions such as worker death during partial token delivery and validator
+timeout followed by late output and unconfirmed cleanup. Select additional
+combinations from the implemented boundaries and record what each establishes.
+Revisit the interface if these controls expose an unrepresentable outcome.
 
-| Boundary | First required | Required controls |
-| --- | --- | --- |
-| Phase admission | M2 | Duplicate/unknown phase or action identities, unsupported combinations, oversized counts/strings, embedded NUL |
-| Extension admission | M3 | Duplicate/unknown references, forward/invalid handle use, unsupported combinations, unavailable helper/API |
-| Issuance and delivery | M3, building on M1 native refusals | Native refusal, issuer death, timeout, partial/oversized token transfer, delivery without consumption, unknown cleanup |
-| Consumption and release | M3, building on M1 native calls | Rejected token, failed consume without a handle, failed release, repeated release policy, missing result publication |
-| Phase ordering | M2 | Delayed/missing predictions, validator failure, late/wrong-phase records, stale release/acknowledgement, phase exhaustion, host loss while worker waits |
-| Worker lifetime | M2 for phase interruption; M3 for native calls | Death before/inside/after consume or release, death before acknowledgement, failure after a completed earlier phase, unresolved termination/reap |
-| Independent readers | M2 for phases; M3 for extensions | Reject fabricated lifecycle success, cross-phase prediction association, unsupported versions, and unsupported ordering claims while retaining raw evidence |
-| Optional logs | M3 with multi-phase CLI integration | Repeated target/PID across phases remains ambiguous unless evidence narrows it; log presence, absence, or capture failure cannot change execution |
-
-Observe native-call failures through controlled seams where live reproduction
-is unreliable; do not confuse injected return values with kernel behavior.
-Preserve an observed call boundary without a published native result as unresolved.
-Do not infer explicit release from worker exit or successful cleanup from EOF.
-
-**Completion gate:** failures at every new boundary retain the evidence they
-actually produced, prevent unsupported claims, and leave explicit cleanup facts.
-All token confinement controls pass without retaining real token bytes.
+**Completion gate:** combined-fault controls retain each independently supported
+failure and earlier observation without one fault masking another. Adversarial
+timing cannot admit late records to another phase or invent completion, and
+malformed or interrupted token delivery preserves token confinement. Producer
+and independent-reader checks agree on the supported evidence and withheld
+claims for these cases.
 
 ## M5 Contract completion and integrated acceptance
 
@@ -317,26 +332,20 @@ review generated layout, identity, diagrams, and shape changes. Update the user
 guide, request grammar, FAQ, failure contract, test catalog, coverage, and opt-in
 guidance with implementation-grounded claims and independent checks.
 
-Follow [test guidance](tests/AGENTS.md) throughout. For changed admission and
-transport, run `failure_boundaries`, `runner_unit`, `runner_abi_layout`,
+Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
+provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
+admission and transport, run `failure_boundaries`, `runner_unit`, `runner_abi_layout`,
 `runner_c_worker_harness`, and `unit`, plus affected validator and witness cases.
 Run the signed default battery against the final candidate, the new lifecycle
 cases, the required ordering mutation control, and applicable BYOXPC controls.
 Select signing/build/maximum-reply controls when their boundaries changed.
 Verify aggregate limits and the largest admitted reply through real transport.
 
-Use fresh `PW_TEST_OUT_DIR` directories. For each credited case retain its
-canonical ID, command/configuration, source snapshot, applicable signed build,
-and independent observations. Reuse results only under the documented evidence
-reuse rules. Never remove the checkout lock or bypass cleanup ownership. Follow
-the sandboxed-harness retry guidance before attributing environmental failures
-to the product; retain failed runs and unresolved resource ownership.
-
 **Completion gate:** PW demonstrates the controlled experiment under its supported
 signing environment, all applicable checks pass against the accepted source and
 build, and the investigative record identifies empirical findings, design
 decisions, and accepted limitations. Predictions may remain unavailable or
 unchanged, and release may leave access observable; those outcomes must remain
-informative. Report the implementation commits and evidence locations without
-claiming a reconstructed kernel permission state. Packaging or publishing a
-release is separate from this implementation plan.
+informative. Report the implementation commits, evidence locations, and
+unresolved findings. Packaging or publishing a release is separate from this
+implementation plan.
