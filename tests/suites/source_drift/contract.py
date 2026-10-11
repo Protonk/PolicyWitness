@@ -395,7 +395,7 @@ class ContractVersionTests(unittest.TestCase):
         text = (ROOT / 'Makefile').read_text()
         self.assertIn('Operator entry points', text, 'the header mutation must change its input')
         env = {name: value for name, value in os.environ.items()
-               if name not in ('MAKEFLAGS', 'MFLAGS', 'APPLY')}
+               if name not in ('MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES', 'MAKELEVEL', 'APPLY')}
         env.update(IDENTITY='Developer ID Application: Control (TEAMID00AA)', NOTARY_KEYCHAIN_PROFILE='control')
         for name in ('build.sh', 'tests/run.sh'):
             script = root / name
@@ -428,7 +428,10 @@ class ContractVersionTests(unittest.TestCase):
         script = root / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"IDENTITY": "%s", "DIST_DIR": "%s"}\' "${IDENTITY:-}" "${DIST_DIR:-}" > ran.json\n')
         script.chmod(0o755)
-        env = {name: value for name, value in os.environ.items() if name != 'IDENTITY'}
+        # make release exports command-line assignments through MAKEFLAGS as
+        # well as individual variables; removing IDENTITY alone is insufficient.
+        env = {name: value for name, value in os.environ.items()
+               if name not in ('IDENTITY', 'MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES', 'MAKELEVEL')}
         result = subprocess.run(['make', 'build'], cwd=root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn('ERROR: set IDENTITY to your Developer ID Application identity', result.stdout)
