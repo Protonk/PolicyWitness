@@ -64,10 +64,29 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 
 ## Dev Workflow (fast path)
 
-- Build: `make build` (or `./build.sh`)
-  - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see [docs/BUILD.md](docs/BUILD.md#the-signing-contract)).
-  - Requires Meson and Ninja on `PATH`: the native executables compile through the root [meson.build](meson.build) into the ignored `builddir/` (see [docs/BUILD.md → Native compile with Meson](docs/BUILD.md#native-compile-with-meson)). Adding or moving a runner source file means editing its target there; the `source_drift` suite refuses a list that differs from the tree.
-  - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun (see the harness note below).
+Run from the repository root:
+
+```sh
+make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
+# or:
+IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
+```
+
+Install the Rust toolchain with Cargo, Xcode Command Line Tools (or Xcode),
+Meson and Ninja on `PATH` (`brew install meson ninja`). Meson's minimum is
+pinned by [`meson_version`](meson.build), and Ninja's by
+[`NINJA_MINIMUM`](build.sh). The selected developer directory supplies
+`clang`, `swiftc` and the SDK. The signing identity must already be in the
+login keychain; the [signing contract](docs/BUILD.md#the-signing-contract) describes its
+checks. Bare `make` and `make help` print the Makefile's operator card.
+
+The native executables compile through the root [meson.build](meson.build)
+into the ignored `builddir/` (see [docs/BUILD.md → Native compile with Meson](docs/BUILD.md#native-compile-with-meson)).
+Adding or moving a runner source file means editing its target there; the
+`source_drift` suite refuses a list that differs from the tree.
+If you are in a sandboxed automation harness, signing/keychain access may
+fail; ask for approval/escalation and rerun (see the harness note below).
+
 - If you add a helper under the app or XPC bundle `Contents/MacOS`, update the [build.sh](build.sh) signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 

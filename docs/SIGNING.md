@@ -13,8 +13,9 @@ builds also copy its README and AGENTS.md into a custom `DIST_DIR`.
 
 ## Build
 
-See [BUILD.md](BUILD.md#build) for the entrypoint, prerequisites, inputs and
-account of one build in time.
+See [the developer workflow](../AGENTS.md#dev-workflow-fast-path) for the
+build command and toolchain prerequisites, and [BUILD.md](BUILD.md) for the
+inputs and account of one build in time.
 
 ### Sandboxed automation harnesses
 
