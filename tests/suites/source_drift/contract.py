@@ -387,6 +387,37 @@ class ContractVersionTests(unittest.TestCase):
         self.assertNotIn('Checking host/worker identity', result.stdout)
         self.assertFalse(destination.exists())
 
+    def test_make_default_and_help_print_the_header_without_running_other_targets(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-make-help-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        makefile = root / 'Makefile'
+        text = (ROOT / 'Makefile').read_text()
+        self.assertIn('Operator entry points', text, 'the header mutation must change its input')
+        env = {name: value for name, value in os.environ.items()
+               if name not in ('MAKEFLAGS', 'MFLAGS', 'APPLY')}
+        env.update(IDENTITY='Developer ID Application: Control (TEAMID00AA)', NOTARY_KEYCHAIN_PROFILE='control')
+        for name in ('build.sh', 'tests/run.sh'):
+            script = root / name
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text('#!/bin/sh\ntouch unexpected-target\nexit 97\n')
+            script.chmod(0o755)
+        for header in (text, text.replace('Operator entry points', 'Edited operator entry points', 1)):
+            makefile.write_text(header)
+            lines = []
+            for line in header.splitlines():
+                if not line.startswith('#'):
+                    break
+                lines.append(line[2:] if line.startswith('# ') else line[1:])
+            expected = '\n'.join(lines) + '\n'
+            before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            for args in ([], ['help']):
+                result = subprocess.run(['make', *args], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stdout, expected)
+                self.assertEqual(result.stderr, '')
+                self.assertEqual({p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}, before)
+
     def test_make_build_refuses_without_an_identity_and_never_runs_the_script(self):
         """The Makefile's guard stops before build.sh; with an identity the recipe passes it and DIST_DIR through."""
         directory = tempfile.TemporaryDirectory(prefix='pw-make-build-')

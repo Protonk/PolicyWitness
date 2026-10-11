@@ -6,8 +6,9 @@ the regular files directly under the app's Contents/MacOS and under each XPC
 service's Contents/MacOS, whether or not the signing list named them, and
 requires each to be a Mach-O whose signature names IDENTITY as its leaf
 authority with the hardened runtime. The linker leaves every compiler output
-ad hoc-signed, and an ad hoc executable passes the bundle seal, the deep
-verification and the artifact inspector; only notarization would refuse it.
+ad hoc-signed, and an ad hoc executable can pass the bundle seal and deep
+verification. This check refuses it before packaging; the artifact inspector
+separately rejects listed executables whose signer differs from the controller's.
 The dSYM bundles beside the Swift executables are sealed resources, not
 executables, and are not listed.
 

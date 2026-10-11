@@ -49,14 +49,14 @@ class Controls:
             path=path, run_id='accepted', reason='fixture acceptance', source=None, app_inventory=None)])))
 
     def env(self, repo, output='tests/out/runs/default', **values):
-        env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
+        env = {k: v for k, v in os.environ.items() if not k.startswith('PW_') and k not in ('APPLY', 'MAKEFLAGS', 'MFLAGS')}
         env.update(PW_TEST_OUT_DIR=output, PW_TEST_RUN_ID='fixture', PYTHONDONTWRITEBYTECODE='1',
                    RETENTION_RECEIPT=str(repo.parent / 'receipts.jsonl'), **values)
         return env
 
     def call(self, repo, args=(), *, output='tests/out/runs/default', code=0, readonly=False, make=False, **values):
         before = artifact.inventory(repo) if readonly else None
-        argv = ['make', 'clean'] if make else ['bash', repo / 'tests/run.sh', *args]
+        argv = ['make', *args] if make else ['bash', repo / 'tests/run.sh', *args]
         result = subprocess.run(argv, cwd=repo,
                                 env=self.env(repo, output, **values), capture_output=True, timeout=30)
         self.count += 1
@@ -198,15 +198,34 @@ class Controls:
             require(before == artifact.inventory(candidate), 'failed unlink silently changed evidence')
         finally:
             candidate.chmod(0o700)
-        cleaned = json.loads(self.call(repo, make=True).stdout)
-        require('runs/undeletable' in cleaned['removed'] and not candidate.exists(), 'make clean did not delegate to prune')
+        preview = json.loads(self.call(repo, ['prune'], make=True, readonly=True).stdout)
+        require(any(row['path'] == 'runs/undeletable' and row['disposition'] == 'delete' for row in preview['runs']),
+                'make prune did not print the preview report')
+        # Invalid APPLY values and the removed verb must stop before the dispatcher runs.
+        runner = repo / 'tests/run.sh'
+        original = runner.read_bytes()
+        marker = repo / 'unexpected-prune'
+        runner.write_text('#!/bin/sh\ntouch unexpected-prune\nexit 97\n')
+        try:
+            for value in ('', '0', '2', 'true', '1 '):
+                result = self.call(repo, ['prune', 'APPLY=' + value], make=True, code=2, readonly=True)
+                require(b'APPLY must be 1' in result.stderr, 'invalid APPLY diagnostic missing')
+            # Make strips leading whitespace in command-line assignments; environment values retain it.
+            for value in ('', ' 1', '1 '):
+                self.call(repo, ['prune'], make=True, code=2, readonly=True, APPLY=value)
+            self.call(repo, ['clean'], make=True, code=2, readonly=True)
+            require(not marker.exists(), 'invalid prune request invoked the dispatcher')
+        finally:
+            runner.write_bytes(original)
+        cleaned = json.loads(self.call(repo, ['prune', 'APPLY=1'], make=True).stdout)
+        require('runs/undeletable' in cleaned['removed'] and not candidate.exists(), 'make prune APPLY=1 did not delegate to prune')
         require(retained == artifact.inventory(base / 'runs/retained') and outside == artifact.inventory(base / 'release-acceptance'),
-                'make clean changed retained/release inventories')
+                'make prune changed retained/release inventories')
         self.index(repo, 'runs')
         all_runs = artifact.inventory(base / 'runs')
         result = json.loads(self.call(repo, ['--prune', '--apply']).stdout)
         require(not result['removed'] and all_runs == artifact.inventory(base / 'runs'), 'retained ancestor did not protect runs')
-        self.completed.append('prune dispositions, changed eligibility, unfinished, deletion failure and make clean')
+        self.completed.append('prune dispositions, changed eligibility, unfinished, deletion failure and make prune preview/apply/refusals')
 
     def run(self):
         repo = self.fixture('retained-and-completed')

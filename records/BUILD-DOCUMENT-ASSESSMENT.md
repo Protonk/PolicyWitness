@@ -1,459 +1,161 @@
-# Build document and assessment plan
+# Build documentation assessment and Makefile closeout
 
-This plan builds `docs/BUILD.md`. It is committed so the work can span
-sessions, and it is deleted at closeout. Nothing permanent links here: not the
-README, not an AGENTS router, not the build document itself. When the plan is
-gone, the repository reads as though it never existed.
+Record, 2026-10-10. This preserves the investigation, adjudications and probe
+results behind the build-document and Makefile plans. It is historical evidence,
+not the current behavior contract or an active plan. The starting revision for
+closeout was `1c3ec36a9c83a302f4126f9f1b20482d7157eaab`; the commit carrying this
+record contains the closeout edits. Earlier revisions are named in the probe
+accounts below. The deleted working plans and audit prompt remain recoverable
+from that starting revision with `git show`.
 
-Writing the document is also an assessment of the build. Reconcile the
-promises in existing documents, the implementation, and observed behavior;
-where they disagree, investigate and adjudicate the disagreement before
-changing the account or the build. A mechanically current document is not
-enough if it explains a bug as intended behavior or claims a guarantee the
-checks do not establish.
+All evidence paths under `.tmp/` and `tests/out/` below are gitignored and
+available only in the local checkout. The transcribed commands and outcomes
+preserve the conclusions independently of the scratch logs. Selected managed
+validation output is pinned in `tests/RETAINED.json`.
 
-Started 2026-10-08, after the Meson cutover and its audit repairs, at
-v0.2.7 plus the commits on main since that tag.
+## Closeout reconciliation
 
-## Status
+The original rows are resolved by implemented guards and controls, corrected
+explanations, or explicit accepted limits. The native source and dependency
+checks remain membership checks, and incremental build directories remain
+trusted working state. The refusal coverage baseline remains unchanged at
+28 rows without a producing control; 14 rows have build-path controls and
+23 more have helper-only controls. Further refusal controls, including the
+stub-Cargo tier, belong to the sketches in
+[the build baseline](../tests/fixtures/docs/build_baseline.json) and the gaps
+in [BUILD.md](../docs/BUILD.md#known-gaps). No new build guarantee is inferred
+from a generator check or a passing suite.
 
-- [x] Step 0: survey the build as it stands (2026-10-08; the register below
-  is the survey's record)
-- [x] Step 1: assess claims, probe uncertainties, adjudicate findings
-  (initial pass 2026-10-09, audited the same day, adjudicated the same day;
-  the register and its details are the record)
-- [x] Step 2: carry out and revalidate the adjudicated changes (implemented
-  and validated 2026-10-09; the record is under Step 2 validation)
-- [x] Step 3a: the manifest, generator, figure, drift case and controls, from
-  the script (2026-10-09; the record is under Step 3a below; paused for the
-  human's review of the rendered tables and the baseline before any prose)
-- [x] Step 3b: the prose, from the script and the manifest (drafted
-  2026-10-09; the drafting log is under Step 3b below)
-- [x] Step 4: challenge the draft's claims and review with a human (the
-  agent's reading, the plan-blind audit and its remediation, 2026-10-09; the
-  record is under Step 4 below)
-- [x] Narrative audit: a newcomer added a fourth helper through the whole build
-  and attempted one challenge (2026-10-10; record below; the four test-side
-  fixes it exposed are landed)
-- [x] Makefile audit: the six verbs measured under a conditions matrix
-  (2026-10-10; findings fixed; the two adopted design proposals have their own
-  plan in [MAKEFILE-PLAN.md](MAKEFILE-PLAN.md))
-- [ ] Step 5: integrate, move the build sections out of the signing document,
-  verify, close out
+Closeout consolidates the build instructions in BUILD.md, retains short
+SIGNING.md pointers at the old anchors, moves the shared harness note and its
+checker together, and updates routing and maintenance guidance. The final
+prose and manifest correct two remaining claims from row 22/27: an ad hoc
+listed helper in a production-signed app fails the inspector's signer
+consistency check; however, a later failure signing the standalone observer,
+staging the guide or creating the ZIP can leave an app that passes inspection.
+The inspector establishes bundle properties, not build completion. These
+corrections are grounded in `artifact.inspect`, `signer_check.problems` and
+the post-seal sequence in `build.sh`; they require no build semantic change.
+The copied signing-helper docstring is corrected too. The output-directory
+account now allows a caller's DIST_DIR outside the checkout.
 
-Steps 1 and 2 recur during drafting and review. Their boxes record completion
-of the initial pass; later findings remain open in the register until their
-own evidence, decision and validation are complete.
+The build script, Meson files, worker protocol sources, membership checker,
+Cargo artifact reader and inspector implementation are unchanged by closeout.
+Their earlier reproductions remain bounded observations at the named revisions;
+new validation checks the integrated documentation and the existing guards,
+rather than presenting those historical probes as fresh executions. The moved
+prose retains operator responsibilities, partial-bundle limits, external SDK
+and developer-directory boundaries, and the distinction between receipts and
+attestation. The native direct-compile commands remain development equipment.
 
-## The document being built
+## Makefile decisions and observations
 
-`docs/BUILD.md` is the account of one build in time: what each step reads,
-writes and refuses; the two knobs and what each governs per language; what
-`meson.build` owns and what `build.sh` owns; the trust placed in the build
-directories; the signing contract; the evidence the build embeds; and how the
-build verifies itself. It does not ship. It does not supplant the
-[user guide](PolicyWitness.md), which keeps its one sentence on the supported
-macOS, and it does not replace [CONTRACT.md](CONTRACT.md), which keeps the
-identity's definition, or [SIGNING.md](SIGNING.md), which keeps evidence,
-notarization, release and the archives.
+The Makefile audit's measured defects were fixed before closeout: test follows
+DIST_DIR, the ordering control uses the dispatcher's app, the worker harness
+names its argv bound, the keychain refusal distinguishes an empty listing, and
+the header describes network use and per-step bounds accurately. Its local
+report is `.tmp/audits/BUILD-DOC-AUDIT-MAKEFILE-REPORT.md`; the audit prompt is
+recoverable as `docs/BUILD-DOC-AUDIT-MAKEFILE.md` at the starting revision.
 
-Today the build is described at three altitudes. [AGENTS.md](../AGENTS.md)
-gives the fast path and the maintenance checklist; [SIGNING.md](SIGNING.md)
-carries the build requirements, the fixed order of steps, the native compile,
-the trust in the build directories and the signing contract, in prose that
-grew during the Meson migration until it was the largest part of a document
-titled for signing; the script itself and the comments in `meson.build` are
-the micro account. What is missing is a single account that is generated from
-the script where the script can be read mechanically, cited to a symbol and a
-check everywhere else, and refused by a test when it drifts. That is the
-document's job, and it is the same job [ARCHITECTURE.md](ARCHITECTURE.md)
-does for a run.
+The adopted changes are default help printed from the header itself and a
+preview-first prune verb with no clean alias. Omitted APPLY previews; exactly
+1 applies; other supplied values, including empty, refuse before delegation.
+The help control checks both entrypoints with a changed header and executable
+sentinels for other targets. Retention controls compare real fixture inventories
+before and after preview/apply, preserve retained and release output, and prove
+invalid APPLY values and the removed verb cannot invoke a sentinel dispatcher.
+GNU Make strips leading whitespace from command-line assignments before exposing
+the variable; the control uses environment values to test retained leading
+whitespace. No raw command-line parser was added.
 
-Audience: a collaborator about to change `build.sh`, `meson.build`,
-`meson.options` or the Makefile, and a reader trying to make the signing flow
-do something it should not. The document is not a field reference, not a
-contract, not a release procedure and not a test map; each of those exists
-and is linked instead.
+The audit's other proposals remain deferred here as the follow-up destination:
+a test selector interface, retiring notarize as a verb, and a check-build verb.
+None is required by an existing behavior promise; reopen only when a concrete
+operator need justifies changing the corresponding boundary. No automated
+cache-removal verb is added; BUILD.md names the manual reset command.
 
-## What no single document states today
+## Closeout validation
 
-The survey assembled each of the following from two or more places. These
-are candidate claims to verify, not conclusions of an executed audit. The
-document's job is to state the adjudicated account in one place, generated
-where possible.
+All closeout gates passed on the starting revision plus the edits in this
+commit, outside the automation sandbox where compiler, keychain, signature,
+socket or live XPC access required it:
 
-1. **The order of steps and the refusal that precedes each.** The script
-   prints a `==>` banner at every step and an `ERROR:` line at every
-   refusal; the signing document states the order in one paragraph and the
-   refusals across several. Nothing ties the paragraph to the banners.
-2. **The signing list.** `sign_macho` calls and two `codesign` invocations
-   in `build.sh`, [`EXECUTABLES`](../tests/lib/artifact.py), the README's
-   inventory under "What ships" and the evidence generator's walk must
-   agree. [AGENTS.md](../AGENTS.md) says so; no check compares
-   the script's list with the others.
-3. **The knobs.** `BUILD_XPC` and `PW_INSPECTION` accept exactly `0` and `1`,
-   an unset knob meaning `1` and an empty one refused, and map onto Meson's
-   `xpc` and `inspection` options, `RUSTFLAGS` when it is unset or empty, the
-   dSYM step and nothing else. The mapping is in the script, the options'
-   descriptions in `meson.options` and a paragraph in the signing document.
-4. **What Meson owns and what the script owns.** The fixed native policy and
-   the pinned minimum macOS live in `meson.build`; the plist's declaration,
-   the per-binary check, the configured source and closure check, Cargo's
-   environment and the dSYM step live in `build.sh`. The boundary is stated in
-   comments on both sides.
-5. **The checks the build runs and when.** Four generator checks before any
-   compile, the SDK selection and the build-directory check before Cargo, the
-   minimum-version check of Cargo's outputs before Meson, the configured
-   source and closure check and the minimum-version check of Meson's outputs
-   before assembly, the identity check again before signing, evidence after
-   the helpers are signed and before the outer seal, the signer check after
-   verification and before the ZIP. Each is a line in the script and a
-   sentence somewhere; the sequence is nowhere as a table.
-6. **The trust boundaries.** `builddir/` and `controller/target/` are
-   incremental and trusted like the checkout, for this checkout only; the
-   receipts record but do not attest; the identity covers two directories and
-   the build checks the compile's closure against them; the validator is
-   outside the identity by design. Stated across the signing document, the
-   contract and the identity generator's docstring.
-7. **The build's own inputs beyond the tree.** The git stamp, the supported
-   macOS from the plist, the SDK that `xcrun --sdk macosx` reports,
-   `DEVELOPER_DIR`, the keychain identity, and Cargo's stamp variables and
-   deployment target. No document lists them together.
+- `python3 -B docs/generate_limits.py --check`, `generate_contract.py --check`,
+  `generate_worker_identity.py --check`, `generate_architecture.py --check`
+  and `generate_build.py --check`: current. The build generator was run after
+  editing the directory description and removing an inventory count; the
+  worker identity did not change.
+- `PW_TEST_OUT_DIR=tests/out/runs/build-make-closeout-drift ./tests/run.sh --suite source_drift`:
+  six of six cases passed, with no skips or harness errors.
+- `PW_TEST_OUT_DIR=tests/out/runs/build-make-closeout-dispatcher ./tests/run.sh --suite dispatcher`:
+  six of six cases passed, including the changed pruning controls.
+- `PATH="/opt/homebrew/opt/rustup/bin:$PATH" make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'`:
+  completed; all seven executables passed the signer check and the app, ZIP
+  and guide were produced. The first attempt without the PATH prefix stopped
+  because Cargo was absent from PATH (make status 2, recipe status 127),
+  before compilation or assembly. Adding the installed toolchain to PATH
+  required no repository repair.
+- `PATH="/opt/homebrew/opt/rustup/bin:$PATH" PW_TEST_OUT_DIR=tests/out/runs/build-make-closeout-default ./tests/run.sh`:
+  171 of 171 cases passed, none skipped or unrun, no harness errors, selected
+  app valid before and unchanged afterwards. The Swift unit batch passed
+  385 of 385 internal tests. This includes another complete drift and
+  dispatcher pass against the integrated tree.
+- A fresh `/bin/zsh -f -c make` with APPLY and Make flags removed from the
+  environment printed the header and exited zero. Direct `make prune` and
+  `make prune APPLY=1` calls in a disposable dispatcher fixture returned JSON,
+  first preserving and then removing its completed owned run. The detailed
+  retention control also preserved retained/release inventories and proved
+  all invalid-value and removed-target refusals happened before delegation.
+- Final generator currency, prose-baseline, link and whitespace checks passed
+  after retiring the working plans and audit prompt. The help/explicit-build
+  controls were rerun after adding a presence assertion for the header
+  mutation. Final prose also scopes copy ordering to bundle copies and calls
+  the inputs list working state rather than claiming every input is outside
+  the checkout. These final edits change no production behavior.
 
-## Working method: assess, probe, adjudicate, change, recheck
+The managed outputs above are pinned, together with the earlier step-four
+battery `tests/out/runs/build-doc-step4-default-2`. Build logs and manual
+help/pruning receipts are retained in
+`tests/out/runs/build-make-closeout-default/closeout/`. All are local,
+gitignored evidence. The built app carries the development stamp
+`v0.2.7-55-g1c3ec36-dirty`; this was a local verification build, not a release.
+Notarization, release acceptance and publication were not invoked.
 
-Treat documentation work as a source of hypotheses about the build. The
-initial register is a starting set, not the assessment's boundary. Follow
-contradictions and unproved claims found in the script, manifests, tests,
-draft or probe results, including build-process bugs that would remain even
-if every document were removed. Prior audit repairs are relevant leads;
-recheck them against the current revision before relying on them.
+Both working plans and the remaining Makefile audit prompt are removed after
+the gates. The retained record, regression controls, baseline sketches and
+current documentation carry their outcomes and ongoing obligations.
 
-Keep three kinds of evidence distinct:
+## Historical assessment register
 
-- **Mechanical grounding:** a symbol or test definition exists, a table
-  matches parsed script text, generated regions are current. This detects
-  specific forms of drift; it does not prove execution order or behavior.
-- **Assertion coverage:** reading a cited check shows what it actually
-  asserts, in which configurations, and what it leaves untested. A test's
-  name or a successful run of its suite is not sufficient coverage evidence.
-- **Observed behavior:** a recorded probe reaches the relevant path and
-  observes the promised effect or refusal. Its conclusion is limited to the
-  revision, inputs, environment and build-directory state exercised.
-
-For each finding, move through `open -> investigating -> awaiting adjudication
--> implementing -> validating -> closed`; a documentation-only resolution
-may skip implementation of code, but still needs validation. An accepted
-limitation can close the investigation while remaining an explicit gap in
-the document. A blocked probe stays unverified, with the missing prerequisite
-recorded. Reopen a finding when new evidence contradicts its decision or a
-change invalidates the evidence on which that decision rested.
-
-Keep decisions and supporting evidence together under the register's row id.
-Use a detail entry for each investigated row rather than widening the table:
-
-- Claim, source of the expectation, affected build variants and consequence
-  if false; classification as a documentation defect, build defect,
-  evidence/coverage gap, supported behavior needing explanation, or no issue.
-  A finding can have more than one classification.
-- Source revision and local changes, implementing symbols, cited checks and
-  their actual assertions; hypothesis and the observation that would refute
-  it; exact probe inputs/command, expected and actual results, evidence path,
-  and limits or blockers. Mark source-only conclusions as such.
-- State, recommended disposition, human adjudication and rationale, scope of
-  the authorized change or exact explanatory text, and affected claims to
-  recheck. Record validation and any residual gap before closing the row.
-
-The table summarizes findings; the details make them reviewable. Do not
-discard a counterexample because the normal build or a broad suite passes.
-Do not weaken a promise or expand a baseline merely to make the new document
-and tests agree. Those are substantive decisions to adjudicate.
-
-## Sequence
-
-### Step 0: survey (done)
-
-Read `build.sh`, `meson.build`, `meson.options`, the Makefile,
-[SIGNING.md](SIGNING.md), [AGENTS.md](../AGENTS.md), the identity generator
-and its contract section, `tests/lib/native_sources.py`,
-`tests/lib/meson_receipts.py`, `tests/build-evidence.py`, and the build
-controls under `tests/suites/source_drift/`. Nothing was executed for the
-survey. The register below is its record, not runtime verification. At the
-start of execution, record the current revision and worktree state and
-refresh claims affected by changes since this survey.
-
-### Step 1: assess, probe and adjudicate
-
-For each candidate claim, trace the promise to the implementing branch and
-the asserted check. Separate a confusing explanation from a wrong operation,
-an unenforced promise or an intentional trust boundary. Prioritize claims
-whose failure could compile, copy, sign or describe the wrong artifact, then
-refusal ordering, variant coverage and documentation ownership.
-
-Where inspection cannot settle a material claim, design a discriminating
-probe before proposing a fix:
-
-1. Write the expected result and the observation that distinguishes the
-   competing explanations. For a refusal, identify both the diagnostic and
-   the operation it must prevent; a nonzero exit alone proves neither.
-2. Choose the smallest relevant cases. Consider full and `BUILD_XPC=0`
-   builds, both inspection settings, fresh and reused build directories,
-   direct native compilation and the public `make build` path, and relevant
-   environment overrides. Exercise the dimensions that can change the
-   claim; do not require an indiscriminate product of every setting.
-3. Use disposable copies for source mutations or poisoned build state, and
-   preserve the user's existing artifacts. Pair the adverse case with a
-   valid control so that an unrelated prerequisite failure cannot masquerade
-   as the promised guard. Inspect effective commands or output artifacts
-   where the claim concerns what was compiled, copied or signed.
-4. Record the result, including which path was reached and whether the
-   protected side effect occurred. An unrelated harness, keychain or
-   toolchain refusal blocks that observation; it does not exercise the
-   intended guard. Follow the
-   repository's harness rerun guidance when it applies. Use fresh managed
-   test output and the checkout-lock/retention rules in
-   [tests/README.md](../tests/README.md); do not run competing batteries in
-   the same checkout.
-
-Bring the evidence, its limits, and a recommended disposition to the human.
-Adjudicate the intended behavior and scope before changing build semantics;
-the present implementation is evidence of what happens, not by itself the
-authority for what should happen. The agent should also say when evidence
-does not establish a defect.
-
-Dispositions:
-
-- **Correct or clarify documentation:** behavior is accepted; change the
-  inaccurate claim or state the missing boundary. Record the owning document
-  and proposed wording. A footnote is one possible form, not a verdict that
-  the implementation is sound.
-- **Fix the build:** evidence establishes a defect against an adjudicated
-  expectation. Record the behavior to restore, scope and acceptance check;
-  implementation happens in step 2. Awkward prose alone is not a reason to
-  redesign the build.
-- **Strengthen verification:** behavior may be correct but the cited guard,
-  test or observation does not establish it. Record the missing assertion or
-  control, without calling unobserved behavior verified.
-- **Accept a limitation or defer work:** record the consequence, rationale,
-  owner or follow-up destination, and the bounded claim the document can
-  make. A shortfall against a stated promise becomes a Known gap; an
-  intentional trust assumption is explained as an assumption.
-- **No issue:** retain the row with the evidence and reason that resolved it.
-
-Dispositions may be combined, for example a build fix plus a regression
-control and corrected prose. Routine investigation and work within an
-already adjudicated scope proceed under the existing authorization; bring
-new behavior choices or expanded scope back for adjudication. The initial
-pass ends when every survey row has a supported disposition or an explicit
-unresolved question with its next action. An unresolved question does not
-count as an accepted limitation.
-
-### Step 2: implement and revalidate adjudicated changes
-
-Carry out each adjudicated change as a reviewable unit. For a build defect,
-retain the failing reproduction, make the scoped fix, and add a durable
-regression control where it protects meaningful behavior. Check that the
-control distinguishes the original defect from the corrected behavior; do
-not derive its expected result solely from the new manifest or implementation.
-Documentation-only corrections need an evidence readback and applicable
-documentation checks, not a new runtime test for every sentence.
-
-Re-run the decisive probe and its valid control against the changed revision,
-then the gates its files require: the maintenance checklist in
-[AGENTS.md](../AGENTS.md), the `source_drift` suite, a rebuild and the default
-battery when `build.sh`, `meson.build`, `meson.options` or the Makefile changes.
-Revisit dependent claims, variants and earlier decisions affected by the
-change; a green broad suite does not replace the specific reproduction.
-Record the validation and residual limits, then update the manifest and prose
-to describe the resulting behavior. Unexpected results return to step 1.
-
-Independent document work can proceed while a finding is investigated.
-Keep dependent wording provisional until the finding is resolved; no final
-table or guarantee may present an intended fix as current behavior.
-
-### Step 3a: manifest, generator, figure, drift case and controls
-
-Build the machinery before the prose, from the script and the adjudicated
-claims. Its design is subject to the same assessment loop: a parser that
-cannot substantiate a promised grounding rule is a finding, not a reason to
-overstate what the generator checks.
-
-- **Manifest.** `docs/build.json`, reviewed, owning the document's structured
-  account of the facts; it does not define correct build behavior. Steps in
-  order, each with an id, its banner text, what it reads, what it writes and
-  the refusals that can stop it. Refusals, each with its message prefix, the
-  step it protects, the exit status and the check that exercises it. Knobs,
-  each with its accepted values and what each value maps to. The signing
-  list in order, with the entitlements file where one applies. The checks the
-  build invokes, with the step before which each runs. Applicable branches
-  and variants are explicit, including the partial bundle. The trust
-  boundaries as facts on the directories they concern. Every item cites a
-  source symbol and a test or rule in the citation form the other manifests
-  use, so G4, G5 and G6 apply unchanged. Identify whether the cited assertion
-  checks textual grounding or behavior; record missing behavioral coverage
-  in the baseline below. A grounding citation cannot fill that coverage gap.
-- **Generator.** `docs/generate_build.py`, registered as the fifth generator
-  in the generator contract and reusing the architecture generator's graph,
-  table, region, span and stamp rendering rather than copying it. It writes
-  regions into `BUILD.md`: a dot figure of the steps in order, a step table,
-  a refusal table and a signing table, each captioned with what was verified
-  and nothing stronger. It has `--check`, and `build.sh` runs it beside the
-  other generator checks before compiling.
-- **Grounding rules.** Drift rules that read `build.sh` itself and compare
-  it with the manifest, so the document cannot drift from the script without
-  the suite saying so: the sequence of `==>` banners equals the manifest's
-  step order; the set of `ERROR:` messages equals the manifest's refusals;
-  the `sign_macho` and `codesign` calls, including loop expansion and branch
-  scope, match the signing table in order and cover the appropriate executable
-  inventory for each variant; distinguish executable signatures from bundle
-  seals when comparing with `EXECUTABLES` and the README; the knob names and
-  accepted values match; every generator and check the manifest names is
-  invoked at the step it names. Each rule names the differing item. State
-  the parser's supported forms and reject forms it cannot account for.
-  Matching banners, error strings or call sites establishes textual
-  consistency, not that a guard runs or precedes its protected side effect.
-  Use behavioral controls for those claims, or identify the coverage gap.
-- **Behavioral coverage baseline.** Each refusal row either cites a control
-  that produces it or is listed as uncovered in a committed baseline that the
-  rule refuses to see grow, as the prose baseline works. Apply the same
-  treatment to other behavioral claims with missing controls, so textual
-  grounding cannot conceal missing verification. The controls that exist
-  (stale documents, a non-Developer-ID identity, a stale identity copy, the
-  knob values, a build directory configured for another checkout, the
-  configured source and closure checks, the signer check) cite directly as
-  helper-level or build-path controls; build-path ordering is a separate
-  claim. No durable Ninja-guard or Meson-policy control exists; the audit's
-  baseline tables (its sections 3) list every uncovered refusal and assertion
-  with a control sketch, and the native policy refusals through `make build`
-  and the partial bundle are the first entries to retire. Each baseline entry
-  identifies the unproved claim, variant and planned control. A baseline entry
-  records missing verification; it does not authorize a stronger guarantee.
-- **Drift case.** `tests/suites/source_drift/build.py`, registered as the
-  `build_documentation` case: manifest current, idempotent regeneration,
-  stale-copy refusal, broken citations refused, the grounding rules, and
-  mutation controls over a disposable copy of `build.sh` (a reordered banner,
-  an added refusal, a removed signing call, a renamed knob) that each rule
-  must name. Separately challenge behavioral controls with mutations that
-  preserve the recognizable text but bypass a guard or move it after its
-  protected operation. Choose these from the assessed claims and risks,
-  record which control should catch each, and distinguish detection by the
-  intended assertion from failure at an unrelated prerequisite. Route any
-  missed claim back through adjudication; not every behavioral control needs
-  to live in the documentation drift case.
-
-Gate: `tests/run.sh --suite source_drift` with the new case green and the
-generator contract green with five generators, plus the targeted behavioral
-controls selected by adjudication. Passing mechanical checks alone does not
-close findings about build behavior.
-
-### Step 3b: draft the prose from the script
-
-Write the document from `build.sh`, `meson.build` and the manifest, not from
-the signing document. For every claim, name the symbol that implements it
-and the check that covers it, in the verified link form, or state the
-specific coverage gap. Match the strength of the wording to the evidence:
-symbol presence is not an assertion, and an assertion about membership is
-not proof of the bytes a compiler used. Explain operator prerequisites
-separately from automatic enforcement.
-
-Keep a drafting log keyed to register ids. A contradiction, surprising
-implementation choice, missing assertion or needed qualification becomes a
-new row marked "found while drafting" and goes through steps 1 and 2. Compare
-against [SIGNING.md](SIGNING.md), [AGENTS.md](../AGENTS.md) and the relevant
-contract sections as claims are drafted, not only when the draft is complete.
-Resolve which account is correct before consolidating text. Counts and
-values reach the prose through spans; durations and sizes through limit
-placeholders.
-
-### Step 4: challenge the draft and review with a human
-
-Read in both directions: for each consequential draft claim, find the
-implementation, inspect the actual assertions and review the observations;
-then walk the build from its public entry point and look for operations,
-inputs, branches and refusals the account omits. Challenge universal words
-such as "every", "before" and "only", especially across partial builds and
-reused directories. New counterexamples return to step 1 rather than being
-edited away as prose problems.
-
-Review the draft with a human alongside the register's decisions, remaining
-uncertainties and changes made. Adjudicate newly discovered findings and
-route fixes through step 2. A shortfall accepted for this document is written
-as a paragraph opening with "Known gap" and indexed by the document's last
-section, as the architecture document does. Ordinary trust assumptions need
-clear boundaries rather than being mislabeled as bugs.
-
-This phase ends when every material claim has a supported account or an
-explicitly accepted limitation, each implemented fix has its validation,
-and no unadjudicated finding could change the account being published.
-
-### Step 5: integrate and close out
-
-- Move the "Build", "Sandboxed automation harnesses" and "Native compile with
-  Meson" sections and "What `build.sh` signs" out of [SIGNING.md](SIGNING.md)
-  into the new document, leaving one pointer each; the harness note's copy
-  moves with them, so the note stays in four places and the drift rule's
-  file list changes with it. [SIGNING.md](SIGNING.md) keeps evidence,
-  notarization, release and the archives.
-- Add a router row in [AGENTS.md](../AGENTS.md) for the document, the
-  manifest and the generator; a maintenance-checklist line (a changed step,
-  refusal, knob, check or signing call updates `docs/build.json` and
-  regenerates); and a line under the README's implementation details.
-- Run every generator's `--check` and `tests/run.sh --suite source_drift`;
-  rebuild and run the default battery, since `build.sh` gains a check.
-- Reconcile the final register against the final revision: re-run targeted
-  probes whose premises changed during integration and confirm the moved
-  prose retains its qualifications. Carry earlier evidence forward only
-  after confirming that the relevant code and assumptions still hold.
-  Record actual checks and blockers; skipped or environment-blocked
-  execution is not a pass.
-- Confirm the document contains no change-history notes, no contract version
-  numbers in prose, no enumerated bundle paths that duplicate the README's
-  inventory, and no link to `records/`.
-- Before deleting the plan, preserve useful reproductions, adjudications and
-  validation in an associated investigation record under `records/`, following
-  [records/AGENTS.md](../records/AGENTS.md). Identify revision and commands so
-  conclusions survive loss of local logs; identify any gitignored evidence
-  as local and retain managed output under the test retention rules where
-  needed. Durable regression controls and the document's accepted gaps carry
-  the ongoing obligations. Deferred work needs a named follow-up destination;
-  unresolved questions cannot disappear with the plan.
-- Delete this plan in the same change, or the next one, only after those
-  closeout conditions hold. The build document must not cite it or the
-  investigation record.
-
-## Assessment register
-
-Each row is a place where a parsimonious account needed a footnote during the
-survey; later rows can capture any documentation, build or verification
-finding. The Disposition column is empty until step 1. Evidence is what the
-survey saw; verify it before deciding. Add the detail entries described in
-the working method as rows are investigated. A disposition is a decision,
-not proof that its implementation or validation is complete. Rows 13 to 16
-were found during the step 1 pass.
+The register and probe details below preserve the assessment as it developed.
+Later rows supersede earlier decisions where stated, especially row 22 over
+row 13 and row 23 over row 17. References to steps describe the completed
+work sequence, not outstanding instructions. The closeout reconciliation
+above states the final account.
 
 | # | Candidate issue | Where it shows | Survey evidence | Disposition | Wording, change scope or follow-up |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Three inventories must agree and nothing checks the script's | `build.sh` signing list; `EXECUTABLES` in `tests/lib/artifact.py`; README "What ships"; `tests/build-evidence.py` | [AGENTS.md](../AGENTS.md) says the three lists must agree and the preflight suite fails a build that does not match `EXECUTABLES`, but the script's `sign_macho` calls are compared with nothing. A helper copied but not listed for signing is caught only when the inspector runs. | Adjudicated 2026-10-09: strengthen verification (step 3a); correct the documentation. Audit: supported with limits. | The step 3a drift rule compares the parsed signing calls with `EXECUTABLES`, `helper_names` in the evidence generator and the README, distinguishing five embedded signatures, two seal-signed mains and the standalone observer. The survey's last sentence is wrong in both directions (detail 1); the signer gap was row 13 and is now enforced. |
 | 2 | A refusal carries one of two exit statuses | `build.sh` under `set -e` | The script's own refusals exit `2`; a generator check that fails propagates `1`. The build controls assert the specific status, so the document would either state both or the script would harmonize. | Adjudicated 2026-10-09: correct the documentation. Audit: supported. | State the rule: the script's own refusals exit 2; a check's or a tool's refusal propagates that tool's status. The manifest records each refusal's status; the controls keep asserting each diagnostic and protected operation separately. |
 | 3 | Build-time checks live under `tests/` | `tests/lib/native_sources.py`, `tests/lib/meson_receipts.py`, `tests/build-evidence.py` | `build.sh` invokes two of them as production steps and the receipts describe build provenance, yet all three sit in the test tree with the suites' helpers. The generators the build runs live under `docs/`. | Adjudicated 2026-10-09: accept and explain. Audit: supported. | The build runs three helpers that live with the tests (`native_sources.py`, `build-evidence.py` and now `signer_check.py`) because the suites import the same code; the receipts tool is not a build step (row 10). No move. |
-| 4 | The identity's place in the build order is owned twice | [CONTRACT.md](CONTRACT.md) "Internal host/worker identity"; `build.sh` | The contract says the build generates before compiling and checks before signing; the script does it; the signing document repeats it. Which document owns the ordering claim. | Adjudicated 2026-10-09: correct the documentation (ownership). Audit: supported. | The generated step table in `BUILD.md` owns the ordering; the contract keeps the definition and digest scope. Both now say the build checks before compiling and again before signing (row 14). |
+| 4 | The identity's place in the build order is owned twice | [CONTRACT.md](../docs/CONTRACT.md) "Internal host/worker identity"; `build.sh` | The contract says the build generates before compiling and checks before signing; the script does it; the signing document repeats it. Which document owns the ordering claim. | Adjudicated 2026-10-09: correct the documentation (ownership). Audit: supported. | The generated step table in `BUILD.md` owns the ordering; the contract keeps the definition and digest scope. Both now say the build checks before compiling and again before signing (row 14). |
 | 5 | The Makefile carries a second prose account of the sequence | Makefile header comments | The header describes each target's sequence and boundaries in prose that no rule reads; the `release` recipe's comment and the signing document's procedure describe the same chain. | Adjudicated 2026-10-09: correct the documentation. Audit: supported with limits. | The header matches the recipes and stays as the Makefile's micro account. The manifest's steps begin at `make build`, whose guard is the public entry's first refusal. The release boundary records the second strict preflight after notarization (detail 5). |
 | 6 | The partial bundle is a parallel output with weaker checks | `BUILD_XPC=0` in `build.sh`; the signing document | It passes evidence generation and packaging, fails the full inspector, cannot run specimens, and is called an iteration convenience. Every inventory and every refusal table must say whether it covers the partial bundle. | Adjudicated 2026-10-09: correct the documentation; accept the limitation; the ZIP and hint stay. Audit: supported with limits. | Every manifest item carries its variants. The partial bundle's two C executables are now minimum-checked (row 11); its specimen refusal is recorded against an older build and the fresh no-Swift claim as source-grounded. |
 | 7 | A parallel compile path for the validator | `controller/tools/sb_api_validator/build.sh` | Compiles the validator beside its source with `cc` and ad hoc-signs it with debug entitlements; its output is ignored and never enters the bundle. The signing document now says so; a build document must repeat or own it. | Adjudicated 2026-10-09: correct the documentation (ownership). Audit: supported. | The "never production-signed" paragraph moves to the build document's signing section and is stated once. No code change. |
-| 8 | The harness note is carried in four places | [AGENTS.md](../AGENTS.md), `runner/README.md`, `tests/README.md`, [SIGNING.md](SIGNING.md) | The copy in the signing document says which build steps need an unsandboxed shell. Moving that copy into the build document keeps four copies; adding one would make five. The drift rule's file list names the copies. | Adjudicated 2026-10-09: correct the documentation; update the rule's list at step 5. Audit: supported. | The signing copy and its second paragraph move to `BUILD.md`; `HARNESS_NOTE_FILES`, the comment above it, the rule's message, the AGENTS.md pointer and the planner control's copied-file list change in the same commit. Count stays four. |
+| 8 | The harness note is carried in four places | [AGENTS.md](../AGENTS.md), `runner/README.md`, `tests/README.md`, [SIGNING.md](../docs/SIGNING.md) | The copy in the signing document says which build steps need an unsandboxed shell. Moving that copy into the build document keeps four copies; adding one would make five. The drift rule's file list names the copies. | Adjudicated 2026-10-09: correct the documentation; update the rule's list at step 5. Audit: supported. | The signing copy and its second paragraph move to `BUILD.md`; `HARNESS_NOTE_FILES`, the comment above it, the rule's message, the AGENTS.md pointer and the planner control's copied-file list change in the same commit. Count stays four. |
 | 9 | Cargo's inputs are the one part of the build no manifest describes | `controller/build.rs`; `build.sh` | The stamp variables, `RUSTFLAGS` when inspection is on and the deployment target reach Cargo through the environment; `build.rs` declares the stamp variables for rebuilds and Cargo tracks the deployment target itself. Nothing in `docs/` lists them. | Adjudicated 2026-10-09: correct the documentation. Audit: supported with limits. | The inputs section lists them (detail 9): the stamp variables, the deployment target from the plist, `RUSTFLAGS` when unset or empty, the pinned output directory (row 17) and one `SDKROOT` selected before Cargo (row 19). Observations are bounded to this target and toolchain. |
 | 10 | The receipts are described as a build artifact but produced by a test tool | `tests/lib/meson_receipts.py`; `tests/README.md` "Comparing native builds" | The signing document tells the reader what the receipt pairs and records; the tool that writes it is documented with the comparison tools under the tests README. A build document would describe it a third time. | Adjudicated 2026-10-09: correct the documentation. Audit: supported. | The build writes no receipt; `BUILD.md` says so and links the comparison tools. The two signing-document passages are reworded when the sections move. |
 | 11 | The supported macOS is declared in two places and enforced in a third | `Info.plist`, `meson.build`, `build.sh` | The plist declares it, the manifest pins it, the script checks every shipped Mach-O against the plist and exports it to Cargo. The signing document says to change the plist and the manifest together; no rule compares the two declarations. | Adjudicated 2026-10-09: fix the build. Audit: supported with limits. | Implemented: every Cargo output is minimum-checked right after Cargo and every Meson output right after the configured source check, in both variants and before assembly, so the two declarations cannot disagree in a build that completes. No literal is parsed. Validation in detail 11. |
-| 12 | The steps a human must run are mixed with the steps the script runs | [SIGNING.md](SIGNING.md) "Build" and the release procedure | Toolchain resets after a compiler or SDK change, fresh directories, the keychain, and the unsandboxed shell are operator steps stated beside the script's automatic ones. The document needs a line between them. | Adjudicated 2026-10-09: correct the documentation. Audit: supported with limits. | `BUILD.md` separates what the operator must ensure (unenforced, each item marked so) from what the build refuses; the manifest keeps prerequisites apart from refusals, names the exact Meson options asserted, and claims neither keychain unlock nor arbitrary-option refusal. |
+| 12 | The steps a human must run are mixed with the steps the script runs | [SIGNING.md](../docs/SIGNING.md) "Build" and the release procedure | Toolchain resets after a compiler or SDK change, fresh directories, the keychain, and the unsandboxed shell are operator steps stated beside the script's automatic ones. The document needs a line between them. | Adjudicated 2026-10-09: correct the documentation. Audit: supported with limits. | `BUILD.md` separates what the operator must ensure (unenforced, each item marked so) from what the build refuses; the manifest keeps prerequisites apart from refusals, names the exact Meson options asserted, and claims neither keychain unlock nor arbitrary-option refusal. |
 | 13 | No local check reads the signer; an ad hoc-signed embedded tool passes the seal, the deep verify and the inspector | `build.sh` seal and verify steps; `tests/lib/artifact.py`; notarization | Found in step 1 (detail 13). Every compiler output arrives ad hoc-signed by the linker. A listed or unlisted ad hoc helper seals, verifies and inspects clean; only notarization refuses it, as the documents say. The audit reproduced it in a real build. | Adjudicated 2026-10-09: fix the build. Audit: supported with limits. | Implemented: `tests/lib/signer_check.py`, run by `build.sh` after the deep verify, requires every regular file directly under the app's and each service's `Contents/MacOS` to be a Mach-O signed by the named identity with the hardened runtime; the dSYM bundles are outside those directories. The inspector stays signer-agnostic. Control in `check_signed_artifacts.py`. |
-| 14 | A stale committed identity is regenerated by the build and the stamp becomes dirty | `build.sh` identity generation; [CONTRACT.md](CONTRACT.md) | Found in step 1 (detail 14). A clean checkout whose committed identity copies are stale builds with a `-dirty` stamp and a modified tree instead of refusing; the release path checks cleanliness before the build and again after notarization and acceptance, before the battery; the later archive step independently refuses a dirty stamp. | Adjudicated 2026-10-09: fix the build, refusing in ordinary builds. Audit: supported with limits. | Implemented: the pre-compile step runs `--check` like the other three generators and the build writes nothing into the tree; regeneration is a developer command the refusal names; the contract, the signing document and the AGENTS.md checklist say so. Control in `contract.py`. The release-specific check was not added. |
+| 14 | A stale committed identity is regenerated by the build and the stamp becomes dirty | `build.sh` identity generation; [CONTRACT.md](../docs/CONTRACT.md) | Found in step 1 (detail 14). A clean checkout whose committed identity copies are stale builds with a `-dirty` stamp and a modified tree instead of refusing; the release path checks cleanliness before the build and again after notarization and acceptance, before the battery; the later archive step independently refuses a dirty stamp. | Adjudicated 2026-10-09: fix the build, refusing in ordinary builds. Audit: supported with limits. | Implemented: the pre-compile step runs `--check` like the other three generators and the build writes nothing into the tree; regeneration is a developer command the refusal names; the contract, the signing document and the AGENTS.md checklist say so. Control in `contract.py`. The release-specific check was not added. |
 | 15 | A refusal after assembly leaves a partial bundle at the output path | `build.sh` assembly (`rm -rf` of the previous app) | Found in step 1 (detail 15). The previous app is removed at assembly; what a later refusal leaves is unsealed and, in the observed case, ad hoc-signed by the linker. The previous ZIP and guide used to survive beside it. | Adjudicated 2026-10-09: accept and document; small fix for the stale siblings (row 18). Audit: supported with limits. | Implemented: assembly removes the previous app, ZIP and guide together, so a failed build leaves no release-named artifact beside its residue. The minimum checks moved before assembly, so fewer refusals reach that point. Transactional replacement was not adopted. |
 | 16 | The build trusts the build directory's recorded source directory | `build.sh` `meson configure`; `tests/lib/native_sources.py` | Found in step 1 (detail 16). Meson accepts a copied build directory and keeps compiling the checkout it was set up for; the configured-source check compared against that recorded directory, not the running checkout; only swiftc's module-cache path check stopped the copied build, by accident. | Adjudicated 2026-10-09: fix the build. Audit: supported with limits. | Implemented: `build.sh` refuses before Cargo when the build directory's recorded source directory is not this checkout (canonical paths, both named), and `native_sources.py --root` repeats the comparison in the configured reading. Controls in `contract.py` and `check_planner.py`. |
 | 17 | Cargo's output directory can diverge from the paths assembly reads | `build.sh` Cargo step | Proposed by the audit. `CARGO_TARGET_DIR` or a Cargo configuration value sends the outputs elsewhere while the script copies fixed `controller/target/release/` paths, so a build could package stale Rust tools under a new stamp. | Adjudicated 2026-10-09: fix the build. | Implemented: `cargo build --target-dir` pins the output directory to the checkout's, which overrides the environment and configuration; the copy paths derive from the same variable. Validation in detail 17. |
 | 18 | A failed build left the previous ZIP and guide beside new partial output | `build.sh` assembly and packaging | Proposed by the audit as an extension of row 15: the ZIP was removed only at packaging and the guide staged late, so a manual step could pick up the previous artifact after a failed build. | Adjudicated 2026-10-09: fix the build (folded into row 15). | Implemented with row 15: assembly removes the ZIP and the guide with the previous app. `make notarize` always rebuilds, so the automated chain never submitted stale bytes; the manual steps now cannot either. |
 | 19 | SDK selection was neither uniform nor a checked assignment | `build.sh` `export SDKROOT` | Proposed by the audit. Cargo ran before the export and inherited any caller `SDKROOT`; `export VAR="$(cmd)"` returns the builtin's status, so a failed `xcrun` left an empty `SDKROOT` under `set -e`. | Adjudicated 2026-10-09: fix the build. | Implemented: the SDK is selected once, before Cargo and Meson, with an explicit refusal when `xcrun` fails or returns no directory; the selection is printed. The intended contract is one SDK for every compiler (detail 19). |
-| 20 | Empty knobs were defaults, and "every other native setting" overstates an enumerated list | `build.sh` knobs; [SIGNING.md](SIGNING.md) | Proposed by the audit. `${BUILD_XPC:-1}` read an empty value as `1` despite "any other spelling is refused"; Meson's assertions enumerate specific options, so "every other native setting is fixed" claimed more than the list. | Adjudicated 2026-10-09: fix the knob; correct the documentation. | Implemented: an unset knob means `1` and an empty one is refused with the other spellings; the signing document now says "the native settings `meson.build` enumerates". Control in `contract.py`. |
-| 21 | The identity check before signing is a copy-currency check, not a binary snapshot | `build.sh` pre-sign identity check; [SIGNING.md](SIGNING.md) | Proposed by the audit. An edit to an identity input during the build followed by regeneration passes the late check, so "refusing a source edit made during compilation" promised more than the mechanism. | Adjudicated 2026-10-09: accept as a trust bound; correct the documentation. | The signing document and the script's comment now say the check refuses an edit made during the build without regeneration and that the build otherwise trusts the checkout not to change under it. No mechanism change. |
+| 20 | Empty knobs were defaults, and "every other native setting" overstates an enumerated list | `build.sh` knobs; [SIGNING.md](../docs/SIGNING.md) | Proposed by the audit. `${BUILD_XPC:-1}` read an empty value as `1` despite "any other spelling is refused"; Meson's assertions enumerate specific options, so "every other native setting is fixed" claimed more than the list. | Adjudicated 2026-10-09: fix the knob; correct the documentation. | Implemented: an unset knob means `1` and an empty one is refused with the other spellings; the signing document now says "the native settings `meson.build` enumerates". Control in `contract.py`. |
+| 21 | The identity check before signing is a copy-currency check, not a binary snapshot | `build.sh` pre-sign identity check; [SIGNING.md](../docs/SIGNING.md) | Proposed by the audit. An edit to an identity input during the build followed by regeneration passes the late check, so "refusing a source edit made during compilation" promised more than the mechanism. | Adjudicated 2026-10-09: accept as a trust bound; correct the documentation. | The signing document and the script's comment now say the check refuses an edit made during the build without regeneration and that the build otherwise trusts the checkout not to change under it. No mechanism change. |
 | 22 | A build that fails after the seal leaves a sealed app the inspector accepted | `build.sh` after the app seal; `tests/lib/artifact.py` | Plan-blind audit (W1, D1). Verification, the signer check, the observer's signature and packaging can fail after the seal; the residue is a sealed, evidenced app, and the inspector was signer-agnostic by design, so a build that failed at the signer check left an app the battery would accept. | Adjudicated 2026-10-09: fix the inspector; correct the documentation. | Implemented: `artifact.py` requires every executable to carry the controller's signer, so an ad hoc helper inside a production-signed app is refused while an ad hoc test copy stays consistent; the preflight control observes it and runs the signer command line (G5). The prose states what each phase's refusal leaves behind. |
 | 23 | A Cargo target triple could move the outputs away from the paths the script copies | `build.sh` Cargo step | Plan-blind audit (D2). `--target-dir` pins the root, but `CARGO_BUILD_TARGET` or a configuration file adds a triple subdirectory, and a reused directory could then ship a stale controller that passes the minimum check. | Adjudicated 2026-10-09: fix the build. | Implemented: Cargo runs with JSON messages into a file under the pinned directory, `tests/lib/cargo_artifacts.py` reports the executable each binary was written to, and the script refuses one that is not the pinned path before any copy. Baseline entry for the refusal; row 17 reopened and closed with it. |
 | 24 | An include of an absolute path outside the checkout escaped the identity closure | `tests/lib/native_sources.py` closure check | Plan-blind audit (W4, D3). Every dependency outside the checkout was taken for the SDK or the toolchain and skipped, so a fresh compile could consume bytes the identity never hashes. | Adjudicated 2026-10-09: fix the build; correct the documentation. | Implemented: a dependency outside the checkout must lie under the selected SDK or the developer directory, from `SDKROOT`, `DEVELOPER_DIR` or `xcode-select -p`; anything else is named. Control: `configured-absolute-escape` in `check_planner.py`. The signing document and the contract state the boundary. |
@@ -1294,32 +996,3 @@ Validated: the build-document tests, the planner controls and the six
 sees numbers with units, not words. Unmeasured by this engagement: the
 refusals a maintainer who edits before reading would meet, because the
 auditor read first and made every edit in one action.
-
-## Proposed shape of the document
-
-Spine: one build in time, step by step, the way the architecture document
-follows one run. Each step carries the same sidebar: what it reads, what it
-writes, what refuses it and where that refusal is pinned.
-
-Sections in order:
-
-1. Why the build is shaped this way: a coherent signed specimen; the host and
-   worker's exact source identity; every refusal before the step it protects.
-2. Inputs beyond the tree: the git stamp, the plist's minimum macOS, the SDK
-   and developer directory, the keychain identity, Cargo's environment, and
-   the two build directories as trusted working state.
-3. One build in time, with the generated figure and step table.
-4. Refusals, generated: message, step, status, the control that produces it,
-   or the baseline entry that admits none exists.
-5. What Meson owns and what the script owns: the fixed policy, the two
-   options, the pinned minimum, the configured source and closure check.
-6. The signing contract, generated where it is a list: identity rules, the
-   gates before any signature, the inside-out order, what is sealed but
-   unsigned, what is never production-signed.
-7. The evidence the build embeds and the receipts it can produce.
-8. How the build verifies itself: the generator checks, the drift rules that
-   read the script, the build controls, and what none of them establish.
-9. Known gaps.
-
-Size target: a third shorter than the architecture document. Current behavior
-only.

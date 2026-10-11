@@ -16,7 +16,7 @@ def main(out):
     out.mkdir()
     repo = out / 'repo'
     # Copy only the checker's inputs, never build products or previous runs.
-    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md', 'docs/SIGNING.md',
+    paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'tests/README.md',
              'tests/lib/native_sources.py', 'docs/generate_worker_identity.py',
              'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',

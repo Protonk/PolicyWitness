@@ -37,7 +37,7 @@ The check has two halves:
         key list; runner/AGENTS.md points at it rather than carrying one.
      i. The first paragraph under the "Sandboxed automation harnesses"
         heading is identical in AGENTS.md, runner/README.md and
-        tests/README.md and docs/SIGNING.md. The note is carried in four
+        tests/README.md and docs/BUILD.md. The note is carried in four
         places on purpose; each copy adds its own local paragraph after the
         shared one.
      j. Host invariance: no file under runner/Sources binds or calls a
@@ -844,14 +844,14 @@ def check_test_overrides_table_agreement() -> list[str]:
 # The note under "Sandboxed automation harnesses" is carried in four files on
 # purpose: AGENTS.md (orientation), runner/README.md (what the refusal looks
 # like in the envelope), tests/README.md (what the dispatcher can detect) and
-# docs/SIGNING.md (which build steps need an unsandboxed shell).
+# docs/BUILD.md (which build steps need an unsandboxed shell).
 # Each copy adds a local paragraph; the first paragraph is shared and must stay
 # identical so the copies read as one maintained note rather than drift.
 # Whitespace is normalized because the READMEs hard-wrap and AGENTS.md does not.
 # ---------------------------------------------------------------------------
 
 HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
-HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, TESTS_README, REPO_ROOT / "docs/SIGNING.md"]
+HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, TESTS_README, REPO_ROOT / "docs/BUILD.md"]
 
 
 def parse_harness_note_paragraph(path: Path) -> str:

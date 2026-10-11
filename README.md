@@ -123,6 +123,7 @@ current deliverables, release evidence, and preserved archives.
   - Wire contracts (request, reply, envelope): [docs/CONTRACT.md](docs/CONTRACT.md)
   - Accepted requests and refusal diagnostics: [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md)
 - Implementation details:
+  - Build tour, native compilation and signing: [docs/BUILD.md](docs/BUILD.md)
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
   - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)

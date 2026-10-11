@@ -202,7 +202,8 @@ ABI ordinal or compatibility negotiation. The build checks the C, Swift and
 test copies before compilation and again before signing, and never writes
 them; `python3 docs/generate_worker_identity.py` regenerates them after an
 edit to any input, and `--check` verifies them without writing. Direct
-source-test builds regenerate the same way.
+source-test builds regenerate the same way. The [build account](BUILD.md#one-build-in-time)
+owns the sequence of checks and signatures.
 
 The digest covers sorted repository-relative paths and file contents, each
 length-framed: all `.c`, `.h` and `.swift` files under

@@ -14,7 +14,7 @@ Pick what you’re changing:
 - **Runner API types** → [runner/Sources/PWRunnerCore/PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
 - **Query/attempt ordering (release barrier, `comparison.order`)** → [tests/FAILURE-PROPAGATION-CONTRACT.md → The record](tests/FAILURE-PROPAGATION-CONTRACT.md#the-record), [`wait_for_proceed`](controller/tools/pw_probe_runner/pw_probe_runner.c) in pw_probe_runner.c, the post-applied hook in [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [`ComparisonEvidence`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) in CWorkerOrchestrator.swift
 - **Runner client (NSXPCConnection wrapper)** → [runner/Clients/PWRunnerClient/](runner/Clients/PWRunnerClient/)
-- **Build + signing** → [build.sh](build.sh), [meson.build](meson.build), [docs/SIGNING.md](docs/SIGNING.md)
+- **Build + signing** → [docs/BUILD.md](docs/BUILD.md), [docs/build.json](docs/build.json), [docs/generate_build.py](docs/generate_build.py), [build.sh](build.sh), [meson.build](meson.build)
 - **Release (tag preflight, notarize, archive, rotate, publish)** → [Makefile](Makefile), [docs/SIGNING.md → Release procedure](docs/SIGNING.md#release-procedure), `release_preflight.py`, `release_archive.py`, `release_runs.py`, `release_cleanup.py`, `release_rotate.py` and `release_publish.py` under [tests/lib/](tests/lib/)
 - **Scratch work** → [.tmp/AGENTS.md](.tmp/AGENTS.md); scratch contents are disposable, except that tracked policy file.
 - **Distribution output + release archives** → [dist/README.md](dist/README.md), [dist/AGENTS.md](dist/AGENTS.md)
@@ -65,15 +65,15 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 ## Dev Workflow (fast path)
 
 - Build: `make build` (or `./build.sh`)
-  - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see [docs/SIGNING.md](docs/SIGNING.md)).
-  - Requires Meson and Ninja on `PATH`: the native executables compile through the root [meson.build](meson.build) into the ignored `builddir/` (see [docs/SIGNING.md → Native compile with Meson](docs/SIGNING.md#native-compile-with-meson)). Adding or moving a runner source file means editing its target there; the `source_drift` suite refuses a list that differs from the tree.
+  - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see [docs/BUILD.md](docs/BUILD.md#the-signing-contract)).
+  - Requires Meson and Ninja on `PATH`: the native executables compile through the root [meson.build](meson.build) into the ignored `builddir/` (see [docs/BUILD.md → Native compile with Meson](docs/BUILD.md#native-compile-with-meson)). Adding or moving a runner source file means editing its target there; the `source_drift` suite refuses a list that differs from the tree.
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun (see the harness note below).
 - If you add a helper under the app or XPC bundle `Contents/MacOS`, update the [build.sh](build.sh) signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
 Build knobs worth knowing (debugging/iteration):
 
-- `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Meson's `xpc=false`; the two C executables still build, no Swift compiler is discovered, and the signed partial bundle cannot run specimens).
+- `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Meson's `xpc=false`; the C executables still build, no Swift compiler is discovered, and the signed partial bundle cannot run specimens).
 - The app version is derived from git (nearest `v*` tag, commit count); `PW_VERSION`/`PW_BUILD_NUMBER` override it. See [docs/CONTRACT.md → Build stamp](docs/CONTRACT.md#build-stamp).
 - `PW_INSPECTION=1` (default) keeps symbols/frame pointers; set `PW_INSPECTION=0` for a more optimized build.
 - Evidence is generated during build by [tests/build-evidence.py](tests/build-evidence.py) and embedded under `Contents/Resources/Evidence/`.
@@ -93,7 +93,7 @@ The `runner` subcommands (install/list/status/verify/remove/validate/reconcile) 
 - Every registered case, including opt-ins: `tests/run.sh --all`
 - Inspect selection without execution: `tests/run.sh --all --list`
 - Smoke only: `tests/run.sh --suite smoke`
-- Preview cleanup: `tests/run.sh --prune`; apply: `tests/run.sh --prune --apply` (also `make clean`). Only completed, owned, unretained direct children of `tests/out/runs/` are disposable. Standalone files, release acceptance and unmanaged output are preserved.
+- Preview cleanup: `make prune` (or `tests/run.sh --prune`); apply: `make prune APPLY=1` (or `tests/run.sh --prune --apply`). Only completed, owned, unretained direct children of `tests/out/runs/` are disposable. Standalone files, release acceptance and unmanaged output are preserved.
 - After inspecting unfinished managed output, remove it explicitly with `tests/run.sh --prune --apply --unfinished <name>`. This command retains overlap checks and checkout locking; completed or retained targets are rejected.
 - Opt-in tests (signing, launchd, and implementation-mutation controls) live under `tests/suites/<suite>/opt_in/` with wrappers under [tests/suites/opt_in/](tests/suites/opt_in/), and are documented in [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md).
 - Execution defaults to `tests/out/runs/default`; use fresh explicit `PW_TEST_OUT_DIR=tests/out/runs/<name>` paths for separate evidence. `tests/RETAINED.json` protects indexed paths, including absent local copies. Only completed, owned, unretained output can be replaced; interrupted, ambiguous and unmanaged evidence is preserved.
@@ -108,10 +108,11 @@ Two runner-specific testing contracts live in [runner/AGENTS.md](runner/AGENTS.m
 
 Some automation and agent harnesses run commands under a macOS sandbox. Inside one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099, or error 159 “Sandbox restriction”), so no runner launches; the unified log tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured; `codesign --verify` can report “invalid signature (code or signature have been modified)” for an unchanged, validly signed app; and Meson's Swift compiler discovery can fail because swiftc's default module cache is not writable, so `meson setup` and therefore `build.sh` stop before compiling. These refusals can be environment constraints. Request escalation and rerun the same command once outside the automation sandbox against unchanged artifact bytes. Treat a signature failure as environmental only after the unsandboxed check passes; debug any failure that remains.
 
-From here, the constraint touches three workflows in this file: building (keychain access for signing and Meson's Swift discovery), external runners (launchctl and a GUI session), and testing (signature verification, live XPC and log capture). The copy of this note in [runner/README.md](runner/README.md#sandboxed-automation-harnesses) says what the refusal looks like in the envelope. The copy in [tests/README.md](tests/README.md#sandboxed-automation-harnesses) says what the dispatcher can detect and which suites never launch the XPC service. The copy in [docs/SIGNING.md](docs/SIGNING.md#sandboxed-automation-harnesses) says which build steps need an unsandboxed shell.
+From here, the constraint touches three workflows in this file: building (keychain access for signing and Meson's Swift discovery), external runners (launchctl and a GUI session), and testing (signature verification, live XPC and log capture). The copy of this note in [runner/README.md](runner/README.md#sandboxed-automation-harnesses) says what the refusal looks like in the envelope. The copy in [tests/README.md](tests/README.md#sandboxed-automation-harnesses) says what the dispatcher can detect and which suites never launch the XPC service. The copy in [docs/BUILD.md](docs/BUILD.md#sandboxed-automation-harnesses) says which build steps need an unsandboxed shell.
 
 ## Maintenance checklist (when changing things)
 
+- If a build step, refusal, knob, check or signing call changes: update [docs/build.json](docs/build.json) and run `python3 docs/generate_build.py`; review the generated account in [docs/BUILD.md](docs/BUILD.md).
 - If host/worker protocol sources, `build.sh`, `meson.build` or `meson.options` change: regenerate the exact identity with `python3 docs/generate_worker_identity.py` and commit the three copies with the change; the build refuses a stale copy before compiling and writes nothing itself. Layout changes still require C/Swift agreement and review of the layout golden.
 - If a wire contract version changes: edit [docs/contract.json](docs/contract.json) and run `python3 docs/generate_contract.py`; never edit a generated copy. Semantic response and envelope readers accept exactly the current versions; request admission and the worker ABI follow their own contracts (see [docs/CONTRACT.md](docs/CONTRACT.md)).
 - If you change the specimen schema: update [PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift), [PWRunnerService.swift](runner/Sources/PWRunnerCore/PWRunnerService.swift), the worker plumbing ([CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [ValidatorClient.swift](runner/Sources/PWRunnerCore/ValidatorClient.swift), plus [pw_probe_runner.c](controller/tools/pw_probe_runner/pw_probe_runner.c) and [sb_api_validator.c](controller/tools/sb_api_validator/sb_api_validator.c) if the C side is affected), fixtures under [tests/fixtures/](tests/fixtures/), and any controller parsing assumptions.

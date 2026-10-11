@@ -145,7 +145,8 @@ read-only snapshot; `--prune --apply` revalidates and deletes eligible completed
 runs under the lock. `--prune --apply --unfinished <name>` is the deliberate
 cleanup path for one interrupted/ambiguous managed run after inspection.
 Selection/prune combinations and unfinished removal of retained, completed or
-unmanaged output are rejected. `make clean` delegates to the apply command.
+unmanaged output are rejected. `make prune` delegates to preview; `make prune APPLY=1` delegates to apply.
+Every other supplied `APPLY` value refuses, and there is no `clean` target.
 
 Preview briefly probes the same nonblocking lock before classification. A
 simultaneous execution can receive checkout-busy from that probe and must be
@@ -155,7 +156,7 @@ preview's busy observation is a snapshot, not a reservation or readiness promise
 Controls retain independent execution receipts and verify preview/apply changes,
 completed failed runs, all keep dispositions, preview under a held lock,
 `--unfinished` against each disposition, invalid indexes, retained ancestors and
-descendants, symlink redirects, lock contention, and make-clean preservation.
+descendants, symlink redirects, lock contention, and Makefile preview/apply preservation and refusal before delegation.
 An actual directory-permission restriction forces unlink failure; the test
 checks a nonzero apply exit, the reported error and the remaining inventory.
 Standalone files and release acceptance output survive every cleanup operation.

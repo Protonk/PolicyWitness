@@ -5,10 +5,11 @@
 # output ownership and retention in tests/README.md.
 #
 # Targets
+#   help      Print this card (also the default for bare make).
 #   build     Compile, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app.
 #   test      Run the default battery against $(DIST_DIR)/PolicyWitness.app into
 #             tests/out/runs/default. Does not build.
-#   clean     Prune completed, owned, unretained test runs. Nothing else.
+#   prune     Preview eligible test runs; APPLY=1 removes them. Nothing else.
 #   notarize  The rehearsable lower-level chain: preflight report, build, submit,
 #             staple, validate, Gatekeeper, re-zip, accept the final ZIP.
 #   release   The whole procedure: strict preflight, notarize, battery, archive,
@@ -16,6 +17,8 @@
 #   publish   Push the tag and create the GitHub release from an archive.
 #
 # Variables (set on the command line, e.g. make release NOTARY_KEYCHAIN_PROFILE=...)
+#   APPLY                    For prune: omit to preview, set exactly 1 to remove;
+#                            every other supplied value, including empty, refuses.
 #   IDENTITY                 Developer ID Application identity in your keychain;
 #                            build.sh refuses any other class and selects nothing.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
@@ -30,6 +33,7 @@
 #                            it; release derives the version from the annotated tag.
 #
 # Conventions
+#   Bare make prints this card; make build builds.
 #   Every target is phony; make tracks no outputs here.
 #   /usr/bin/python3 -B is deliberate: the system interpreter, writing no bytecode.
 #   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version
@@ -48,13 +52,18 @@
 #   Apple timestamps and release's preflight reads the remote tag.
 #   Inside a sandboxed automation harness the keychain, Swift discovery, signature
 #   checks and live XPC can refuse; see AGENTS.md.
-.PHONY: build clean test notarize release publish
+.DEFAULT_GOAL := help
+.PHONY: help build prune test notarize release publish
 
 # Defaults. The header says what each one means; IDENTITY has no default.
 NOTARY_KEYCHAIN_PROFILE ?=
 DIST_DIR ?= dist
 RELEASE_NOTES ?=
 VERSION ?=
+
+# help: print the opening comment itself, stopping at the first non-comment.
+help:
+	@sed -n '/^\#/!q; s/^\# \{0,1\}//p' Makefile
 
 # build: one path through build.sh, which compiles (Cargo for the Rust pieces,
 # Meson for the native executables), signs every embedded tool and embeds the
@@ -69,15 +78,23 @@ build:
 	@echo "==> [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
 	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" ./build.sh
 
-# clean: not rm -rf. It delegates to the pruner, which removes only completed,
+# prune: preview by default. The pruner removes only completed,
 # owned, unretained direct children of tests/out/runs/ and keeps release
 # acceptance, retained and unfinished output. dist/ and .tmp/ are untouched.
 # Older runs are otherwise retired only when a release is packaged (see release).
 # The phase line goes to stderr: stdout is the pruner's JSON report, which the
 # dispatcher retention control reads back.
-clean:
-	@echo "==> [clean] prune completed, owned, unretained runs under tests/out/runs" >&2
+prune:
+ifeq ($(origin APPLY),undefined)
+	@echo "==> [prune] preview eligible runs under tests/out/runs" >&2
+	@./tests/run.sh --prune
+else ifeq ($(APPLY),1)
+	@echo "==> [prune] remove eligible runs under tests/out/runs" >&2
 	@./tests/run.sh --prune --apply
+else
+	@echo "ERROR: APPLY must be 1 when supplied; omit APPLY to preview" >&2
+	@exit 2
+endif
 
 # test: the default battery against $(DIST_DIR)/PolicyWitness.app, so that build
 # and test compose under one DIST_DIR, into tests/out/runs/default. An app named

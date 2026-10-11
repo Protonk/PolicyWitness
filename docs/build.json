@@ -11,7 +11,7 @@
       "default": "1",
       "values": {
         "1": "build and embed the Swift client, the XPC host and the C shim (Meson xpc=true)",
-        "0": "skip them; the two C executables still build and nothing Meson-built ships (Meson xpc=false)"
+        "0": "skip them; the C executables still build and nothing Meson-built ships (Meson xpc=false)"
       },
       "governs": "Meson's xpc option, the embed and service-signing steps, and which Meson outputs are minimum-checked and signed",
       "sources": [
@@ -4037,7 +4037,7 @@
       "path": "dist/ (DIST_DIR)",
       "facts": {
         "Trusted as": "the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved",
-        "Refused when": "never; a failure between those removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a refusal after it leaves a sealed app the test inspector refuses"
+        "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation"
       },
       "sources": [
         {

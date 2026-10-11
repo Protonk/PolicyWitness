@@ -21,6 +21,24 @@ look, not proof that a test asserts the row. The build has
 them, <!-- span build.signing -->8<!-- /span --> signing calls and
 <!-- span build.knobs -->2<!-- /span --> knobs.
 
+## Build
+
+Run from the repository root:
+
+```sh
+make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
+# or:
+IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
+```
+
+Install the Rust toolchain with Cargo, Xcode Command Line Tools (or Xcode),
+Meson and Ninja on `PATH` (`brew install meson ninja`). Meson's minimum is
+pinned by [`meson_version`](../meson.build), and Ninja's by
+[`NINJA_MINIMUM`](../build.sh). The selected developer directory supplies
+`clang`, `swiftc` and the SDK. The signing identity must already be in the
+login keychain; the [signing contract](#the-signing-contract) describes its
+checks. Bare `make` and `make help` print the Makefile's operator card.
+
 ## Why the build is shaped this way
 
 Three ideas shape the script. The app is a coherent signed specimen: one
@@ -33,21 +51,25 @@ identity of the sources in the tree; that the binaries were compiled from
 those sources rests on the build directories' own records, as the last section
 says. And every refusal precedes the step it protects: the documentation and
 identity checks run before any compile, each compile is followed by its own
-checks before anything is copied, every copy precedes every signature, and the
+checks before anything is copied, every bundle copy precedes every signature, and the
 signatures precede the ZIP. A refusal before assembly leaves the previous
 distribution outputs untouched, though the build directories change as the
 compiles run; a refusal between assembly and the seal leaves an unsealed
 partial app and no ZIP; a refusal after the seal leaves a sealed app that
 failed verification, the signer check, the observer's signature or packaging,
-and no ZIP or a partial one. The test inspector refuses that last residue,
-because it requires every executable to carry the controller's signer.
+and no ZIP or a partial one. The test inspector checks the app's signatures,
+its inventory and evidence, including signer consistency for the listed
+executables ([`inspect`](../tests/lib/artifact.py)); it does not certify that
+the build completed. A failure signing the standalone observer, staging the
+guide or writing the ZIP can leave an app that passes inspection.
 
 Two consequences follow. The build writes no tracked file: a stale generated
 copy is refused with the command that regenerates it, never repaired in place,
 so a clean checkout builds with a clean stamp; its writes go to the two build
 directories, to the standalone observer's signature inside Cargo's, and to the
-output directory, all inside the checkout and ignored by git. And the build is
-a function of the checkout, its two build directories and the inputs the next
+output directory, which defaults to the ignored `dist/` but can be placed
+elsewhere with `DIST_DIR`. The build is a function of the checkout, its two
+build directories and the inputs the next
 section lists; it trusts the directories as it trusts the checkout, and it
 refuses a Meson build directory that belongs to another checkout.
 
@@ -58,7 +80,7 @@ meets the script's own.
 
 ## Inputs beyond the tree
 
-The build reads these outside the checkout, in the order it meets them.
+The build depends on these inputs and working state, in the order it meets them.
 
 - **The git stamp.** `git describe`, `rev-parse` and `rev-list` give the
   version, the commit count, the describe string and the commit
@@ -105,8 +127,14 @@ The build reads these outside the checkout, in the order it meets them.
 | --- | --- | --- | --- | --- |
 | builddir/ | Meson's configuration and incremental native outputs for this checkout | its recorded source directory is not this checkout, or its meson-info cannot be read | [`MESON_SOURCE_DIR`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py) |
 | controller/target/ | Cargo's incremental outputs under the pinned --target-dir | Cargo reports an executable at another path than the pinned one; otherwise a stale output is caught only by the minimum-version check and Cargo's own fingerprints | [`CARGO_TARGET_DIR_PINNED`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
-| dist/ (DIST_DIR) | the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved | never; a failure between those removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a refusal after it leaves a sealed app the test inspector refuses | [`rm -f "${ZIP_NAME}" "${GUIDE_NAME}"`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| dist/ (DIST_DIR) | the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved | never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation | [`rm -f "${ZIP_NAME}" "${GUIDE_NAME}"`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 <!-- END GENERATED BUILD DIRECTORIES -->
+
+To discard incremental build state, remove `builddir/` and
+`controller/target/` from the repository root with
+`rm -rf builddir controller/target` while no build or test is running; the
+next `make build` recreates them. `make prune` manages test output only and
+does not remove either cache or the distribution directory.
 
 Some prerequisites are the operator's and are not checked. Meson and Ninja
 must be installed; their presence and Ninja's version are checked, the
@@ -115,8 +143,34 @@ directory, because nothing fingerprints the toolchain. Signing needs an
 unsandboxed shell with the login keychain and network access for the
 timestamp service. A release needs a clean checkout at the release commit,
 which the release preflight checks and an ordinary build does not.
-[SIGNING.md](SIGNING.md#sandboxed-automation-harnesses) says which refusals
-a sandboxed harness produces.
+The harness constraints below apply to signing and compiler discovery.
+
+### Sandboxed automation harnesses
+
+Some automation and agent harnesses run commands under a macOS sandbox. Inside
+one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
+or error 159 “Sandbox restriction”), so no runner launches; the unified log
+tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
+cannot be captured; `codesign --verify` can report “invalid signature (code or
+signature have been modified)” for an unchanged, validly signed app; and
+Meson's Swift compiler discovery can fail because swiftc's default module
+cache is not writable, so `meson setup` and therefore `build.sh` stop before
+compiling. These refusals can be environment constraints. Request escalation
+and rerun the same command once outside the automation sandbox against
+unchanged artifact bytes. Treat a signature failure as environmental only
+after the unsandboxed check passes; debug any failure that remains.
+
+Signing and Swift discovery need an unsandboxed shell. The signing identity
+lives in the login keychain, which the sandbox may not open, and Meson's Swift discovery
+compiles a sanity program with swiftc's default per-user module cache, which
+the sandbox may not let it write; the targets themselves use the cache under
+`builddir/`, but discovery runs first and only once per build directory. These
+prerequisite refusals happen before anything is copied or signed; signing
+itself can still fail later. `BUILD_XPC=0` discovers no Swift compiler.
+The manifest-only source-list checks use file-mode
+introspection, which discovers no compiler; the `build_documentation` case
+in `source_drift` also configures Swift to exercise its policy assertions
+and therefore needs the unsandboxed shell.
 
 ## One build in time
 
@@ -190,7 +244,7 @@ fires and stops the next operation is established only where a control drives
 the build and observes it; the refusals table says which rows have one.
 
 The partial build. With `BUILD_XPC=0` the script still runs Cargo, builds and
-minimum-checks the two C executables, checks the signing identity, and signs
+minimum-checks the C executables, checks the signing identity, and signs
 and packages a bundle without the client, the service or the embedded helpers;
 the `skip_xpc` row stands in for the embed and service-signing rows it skips.
 That bundle passes evidence generation and the seal, fails the full inspector,
@@ -317,11 +371,13 @@ stop.
 
 ## What Meson owns and what the script owns
 
-[meson.build](../meson.build) owns the native compile: the source lists of
-the C worker and validator, the C shim and the two Swift executables, their
-module names and flags, the supported macOS passed at compile and at link,
-and the fixed policy. The policy is an enumerated list of options asserted
-as effective values ([`fixed_options`](../meson.build)), with two more inside
+[meson.build](../meson.build) owns the native compile: source lists, module
+names and flags, the supported macOS passed at compile and at link, and the
+fixed policy for the targets in the [shipped inventory](../README.md#what-ships).
+The C shim is linked into the host and is not a standalone product. Both
+`meson.build` and `meson.options` are host/worker identity inputs. The policy is
+an enumerated list of options asserted as effective values
+([`fixed_options`](../meson.build)), with two more inside
 the Swift branch; every option it names is refused at any other value, and
 an option it does not name is not policed. The two public knobs are the only
 configuration the script passes:
@@ -329,7 +385,7 @@ configuration the script passes:
 <!-- BEGIN GENERATED BUILD KNOBS -->
 | Knob | Values | Unset means | Governs | Sources | Checks |
 | --- | --- | --- | --- | --- | --- |
-| BUILD_XPC | `1`: build and embed the Swift client, the XPC host and the C shim (Meson xpc=true); `0`: skip them; the two C executables still build and nothing Meson-built ships (Meson xpc=false) | 1 | Meson's xpc option, the embed and service-signing steps, and which Meson outputs are minimum-checked and signed | [`BUILD_XPC="${BUILD_XPC-1}"`](../build.sh); [`option('xpc'`](../meson.options) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
+| BUILD_XPC | `1`: build and embed the Swift client, the XPC host and the C shim (Meson xpc=true); `0`: skip them; the C executables still build and nothing Meson-built ships (Meson xpc=false) | 1 | Meson's xpc option, the embed and service-signing steps, and which Meson outputs are minimum-checked and signed | [`BUILD_XPC="${BUILD_XPC-1}"`](../build.sh); [`option('xpc'`](../meson.options) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
 | PW_INSPECTION | `1`: Swift -Onone -g with a dSYM beside each Swift executable; RUSTFLAGS with debug info, frame pointers and opt-level 1 when RUSTFLAGS was unset or empty (Meson inspection=true); `0`: Swift -O and no dSYM; RUSTFLAGS untouched (Meson inspection=false) | 1 | Meson's inspection option, RUSTFLAGS and the dSYM step; the C executables are -O2 without debug info in both | [`PW_INSPECTION="${PW_INSPECTION-1}"`](../build.sh); [`option('inspection'`](../meson.options) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
 <!-- END GENERATED BUILD KNOBS -->
 
@@ -342,8 +398,12 @@ compile step triggers before anything compiles, or at setup for a fresh
 directory. Meson reads `CFLAGS` and the other flag variables only at setup,
 so a fresh directory refuses them the same way. Executables are linked with
 `b_asneeded=false` declared per target; Meson's own additions to the compile
-and link lines are accepted, and recorded by the comparison tools rather than
-by the build.
+and link lines (`-headerpad_max_install_names` and `-fdiagnostics-color`)
+are accepted, and recorded by the comparison tools rather than by the build.
+Compilation and linking are separate steps; the script runs `dsymutil` for
+inspection builds. Changing the supported macOS requires changing the plist
+and Meson's pinned minimum together. Building for an older macOS this way is
+possible but unsupported.
 
 The script owns everything around the compile: the plist's declaration and the
 per-output minimum check, the build-directory guard, the configured source and
@@ -361,11 +421,37 @@ inputs or of a file outside the checkout that is not under the selected SDK or
 the developer directory, and repeats the checkout comparison. Both are
 membership checks: what the compiler did with those files is not established.
 
+### Native compile with Meson
+
+To compile the native targets alone, without assembly or signing:
+
+```sh
+SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir -Dinspection=true -Dxpc=true
+meson compile -C builddir
+```
+
+Toolchain selection is the operator's responsibility and is not fingerprinted.
+Use separate build directories for different toolchains, and a fresh directory
+or `meson setup --wipe` after changing the compiler or SDK. For example:
+
+```sh
+DEVELOPER_DIR=/Library/Developer/CommandLineTools \
+SDKROOT="$(DEVELOPER_DIR=/Library/Developer/CommandLineTools xcrun --sdk macosx --show-sdk-path)" \
+meson setup builddir-clt
+```
+
+`build.sh` uses `builddir/`; a separately named directory is for direct Meson
+work. Swift discovery uses swiftc's default module cache, while the targets
+use `builddir/swift-module-cache`. The [comparison tools](../tests/README.md#comparing-native-builds)
+can record effective commands and output metadata after compilation; the
+build itself writes no receipt.
+
 ## The signing contract
 
 Identity. `IDENTITY` must name a Developer ID Application identity that the
 keychain lists, and the script signs with that identity or not at all. The
-tests resolve their own identity separately.
+tests resolve their own identity separately: `PW_BYOXPC_IDENTITY`, then
+`IDENTITY`, then a keychain identity whose team matches the app's.
 
 Gates before any signature. The generated identity copies must be current,
 checked again after assembly so an identity input edited during the build
@@ -403,7 +489,7 @@ direct use; it is not part of the bundle.
 The list and the inventory. [`sign_macho`](../build.sh) refuses a missing or
 non-Mach-O target: the list names exactly the executables this build
 produced. The grounding rule expands the list, through the service loop, into
-bundle paths and requires them, plus the two bundle mains the seals sign, to
+bundle paths and requires them, plus the bundle mains the seals sign, to
 equal [`EXECUTABLES`](../tests/lib/artifact.py), the helper list in
 [build-evidence.py](../tests/build-evidence.py) and the README's inventory
 ([`check_inventory`](../tests/suites/source_drift/build_rules.py)). Do not
@@ -415,10 +501,11 @@ After the seal. `codesign --verify --deep --strict` checks the seal, and then
 directly under the app's and each service's `Contents/MacOS`, whether or not
 the list named it, to be a Mach-O signed by the named identity with the
 hardened runtime. The linker leaves every compiler output ad hoc-signed, and
-an ad hoc executable passes the seal, the deep verify and the inspector;
-without this check only notarization would refuse it. The check reads the
-leaf authority and the runtime flag, not the certificate's class or the
-timestamp.
+an ad hoc executable can pass the seal and deep verification. This build
+check refuses it before the ZIP. The test inspector separately refuses a
+listed helper whose signer differs from the controller's; a test copy signed
+ad hoc throughout stays consistent. The build check reads the leaf authority
+and the runtime flag, not the certificate's class or the timestamp.
 
 What is never production-signed. The manual validator helper,
 `controller/tools/sb_api_validator/build.sh`, compiles the validator beside
@@ -428,8 +515,8 @@ output is ignored by git and never enters the bundle.
 ## The evidence the build embeds
 
 After the nested signatures and before the app seal,
-[build-evidence.py](../tests/build-evidence.py) writes
-`Contents/Resources/Evidence/manifest.json` and `symbols.json`: the hash of
+[build-evidence.py](../tests/build-evidence.py) writes the manifest and symbols
+files in the [evidence inventory](SIGNING.md#evidence-artifacts): the hash of
 every helper and of each service's main executable as signed, with each one's
 load-command UUID, entitlements and exported marker symbols as far as the
 tools can read them (a tool's failure is recorded in the entry, not refused),

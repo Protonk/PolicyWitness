@@ -12,7 +12,8 @@ Related docs:
 
 - CLI contract: `controller/README.md`
 - Runner architecture: `runner/README.md`
-- Signing/build: [docs/SIGNING.md](../docs/SIGNING.md)
+- Build and signing: [docs/BUILD.md](../docs/BUILD.md)
+- Release and notarization: [docs/SIGNING.md](../docs/SIGNING.md)
 - Limits inventory and checks: [docs/LIMITS.md](../docs/LIMITS.md)
 - Executable request-contract lesson: [docs/REQUEST-GRAMMAR.md](../docs/REQUEST-GRAMMAR.md)
 - Outcome coverage matrices: `tests/COVERAGE.md`
@@ -229,7 +230,8 @@ tests/run.sh --prune
 tests/run.sh --prune --apply
 # After inspecting an interrupted or ambiguous managed run:
 tests/run.sh --prune --apply --unfinished <name>
-make clean
+make prune
+make prune APPLY=1
 ```
 
 Preview prints a read-only JSON snapshot with `delete`, `keep: retained`,
@@ -260,9 +262,11 @@ contention exit 2. `--apply` requires `--prune`, `--unfinished` also requires
 
 Standalone files anywhere in `tests/out`, including inventory JSON files, are
 preserved. Output outside `runs/`, including release acceptance, is reported as
-unmanaged and kept. Symlink redirects are never traversed or deleted. `make
-clean` delegates to `tests/run.sh --prune --apply` and follows exactly these
-rules; it preserves release acceptance, retained and unfinished evidence.
+unmanaged and kept. Symlink redirects are never traversed or deleted.
+`make prune` delegates to the preview command; `make prune APPLY=1` delegates
+to `tests/run.sh --prune --apply` and follows exactly these rules. Any other
+supplied `APPLY` value, including an empty value, refuses before the pruner
+runs. Release acceptance, retained and unfinished evidence stay protected.
 
 Successful release packaging invokes `tests/lib/release_rotate.py` once, after
 verifying the new archive. It keeps that release's working acceptance and
