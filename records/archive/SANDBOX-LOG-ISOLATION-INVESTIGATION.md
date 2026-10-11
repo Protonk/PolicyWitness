@@ -13,7 +13,7 @@ late denial unrecorded: the unified log holds no deny record for the worker's
 final denied read inside the scanned span
 ```
 
-The [case](../tests/suites/witness_contract/check_deny_capture_window.py) denies an
+The [case](../../tests/suites/witness_contract/check_deny_capture_window.py) denies an
 early read, holds two `/bin/sleep` children to their exec deadlines, then denies
 a late read about twenty seconds later. It checks the complete runner-client
 scan interval, associations and missing-record diagnostics. Its final assertion
@@ -48,7 +48,7 @@ unconditional worker-log availability guarantee has been established.
 Use the built app at `dist/PolicyWitness.app` from an unsandboxed session. In
 the automation harness, `log show` returned `Cannot run while sandboxed`;
 live investigation commands were rerun with escalation as described in
-[tests/AGENTS.md](../tests/AGENTS.md#sandboxed-automation-harnesses). Missing
+[tests/AGENTS.md](../../tests/AGENTS.md#sandboxed-automation-harnesses). Missing
 equipment or blocked capture is distinct from a successful query with no record.
 Preserve each execution and scan; these steps do not retry a failure until green.
 
@@ -477,23 +477,23 @@ The third measurement's `timed` residual was logged at 18:29 UTC.
 ### Source audit: authority and collection boundaries
 
 The source review found substantial semantic separation:
-[run_flow.rs](../controller/src/run_flow.rs) obtains the runner reply and derives
+[run_flow.rs](../../controller/src/run_flow.rs) obtains the runner reply and derives
 `runner_outcome` and `ok` before invoking the collector. Association and log
 diagnostics subsequently read the runner result. The Python consumer exposes
 denial evidence separately.
 
 The same review found a resource-isolation gap.
-[sandbox_log.rs](../controller/src/sandbox_log.rs) waits for the observer using
+[sandbox_log.rs](../../controller/src/sandbox_log.rs) waits for the observer using
 `Command::output()`, and the observer's normal `log show` path does likewise in
-[sandbox-log-observer.rs](../controller/src/bin/sandbox-log-observer.rs). Neither
+[sandbox-log-observer.rs](../../controller/src/bin/sandbox-log-observer.rs). Neither
 call supplies a collection deadline. The 8 MiB observer retention cap in
-[utils.rs](../controller/src/utils.rs) applies after complete output buffering;
+[utils.rs](../../controller/src/utils.rs) applies after complete output buffering;
 it does not bound collection memory. The final envelope is printed afterward.
 Consequently, semantic independence alone does not protect delivery of the
 execution result from a stalled or excessively verbose logging subprocess.
 
 Scouting found a clean field-level split with one shared object:
-[run_flow.rs](../controller/src/run_flow.rs) derives `result` (`ok`,
+[run_flow.rs](../../controller/src/run_flow.rs) derives `result` (`ok`,
 `exit_code`, `normalized_outcome`, `error`) from the runner reply and the runner
 client's own output capture alone; `data.sandbox_log_capture` is written only by
 collector processing; `data.runner_sandbox_diagnostics` mixes six disposition
@@ -505,7 +505,7 @@ fields projected from the runner reply (`worker_pid`, `process_disposition`,
 inputs. Log processing reads the reply (steps, submitted plan, disposition
 record) but no execution field reads the capture.
 
-The in-repository consumer review covered [consumer.py](../tests/lib/consumer.py),
+The in-repository consumer review covered [consumer.py](../../tests/lib/consumer.py),
 whose `denials` block is separate from its comparison and failure groups; the
 lifecycle oracle, adapter and contract modules, which read only the disposition
 fields out of the shared object; the blackbox checker and disposition controls;
@@ -523,7 +523,7 @@ not an exhaustive audit of field writes and readers.
 
 Scope: the 163 cases `tests/run.sh --list` selects by default, the Rust unit
 batch (`cargo test --bins`), the Rust CLI integration batch
-([cli_contract.rs](../controller/integration/cli_contract.rs)), and the libraries
+([cli_contract.rs](../../controller/integration/cli_contract.rs)), and the libraries
 and fixtures under `tests/lib` and `tests/fixtures`. Method: every reference to a
 log-evidence field, the observer, the `log show` tool or the `--no-log-capture`
 flag was located and read; catalog descriptions, suite READMEs and the evidence
@@ -533,18 +533,18 @@ or fixture test does either.
 
 | Relationship to the log channel | Default cases | Observed behavior |
 | --- | --- | --- |
-| Requires the OS store to hold a record | `witness_contract/deny_capture_covers_the_run` | It requires the final denied read to have a captured record and is the only test that parses `raw_line` timestamps ([check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) lines 49–56): every worker read must satisfy `start_s <= at <= end_s`, and reads displayed before the retired interval must be disjoint from the retired replay. With the measured +10 to +36 ms display offset, a record of an attempt in the run's final tens of milliseconds can display past `end_s` and fail the membership assertion while present, a second failure path independent of omission. |
-| Capture enabled, channel asserted, no record required | `witness_contract/worker_termination_and_log_correlation`, `witness_contract/max_targets_reply_survives` | [check_termination_correlation.py](../tests/suites/witness_contract/check_termination_correlation.py) requires the observer to be invoked and the window mirrored, then branches: `captured` with an events list checks presence-dependent status, `permission_failures_without_record == ([] if matches else ids)` and ambiguous associations; every other status only requires `correlation_status == "unavailable"` (lines 171–174), so an equipment or observer failure passes silently there. [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py) lines 159–165 require `capture_status != "capture_error"` and an untruncated observer reply for 256-step workloads; any bounded-retention policy must account for that existing assertion. Neither parses timestamps. |
-| Capture enabled, nothing asserted about it | `smoke/*` (2), `blackbox_e2e/BBX-001`, `BBX-002`, `runner_apply_isolation_v2/*`, `runner_apply_isolation_v3/*`, the eight live `blackbox_menagerie/*` cases ([run_case.py](../tests/suites/blackbox_menagerie/run_case.py)), and the `cli_contract` functions that omit the flag | They pay the `log show` cost and depend on the channel only through the CLI exit status, which [run_flow.rs](../controller/src/run_flow.rs) derives before capture. A stalled collector delays their envelopes; an absent record cannot fail them. |
-| Capture disabled with `--no-log-capture` | 26 case scripts: twelve in `witness_contract` (including the drift seam script), three in `run_effects`, two each in `runner_exec_dac`, `runner_exec_lifecycle` and `runner_validator_failure`, and one each in `runner_exec_inheritance`, `runner_live_worker_identity`, `runner_outcome_runner_timeout`, `runner_outcome_validator_no_reply`, `runner_specimen_isolation`, `sbpl_allowdeny_consistency` and `failure_boundaries` | Log-independent by construction. `check_pre_apply_failure.py` asserts `sandbox_log_capture is None`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) expects the disabled projection (`disabled`, `not_attempted`, null list). |
-| Constructed evidence, no live log | `blackbox_e2e/checker_controls`, `unit/rust.unit`, `unit/rust.disposition_reds` | [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) drives the consumer with captured/no_match, blocked/unavailable and disabled envelopes, a dropped `operation_source` and a forged `exact_run_membership`. `sandbox_log::tests` run the real argv against [observer.py](../tests/fixtures/deny_capture/observer.py), whose fixed event times are independent of the requested bounds (window selection, not attempt timing). The observer's parser test asserts that a parsed event carries no timestamp field. These provide existing controlled-input coverage. |
+| Requires the OS store to hold a record | `witness_contract/deny_capture_covers_the_run` | It requires the final denied read to have a captured record and is the only test that parses `raw_line` timestamps ([check_deny_capture_window.py](../../tests/suites/witness_contract/check_deny_capture_window.py) lines 49–56): every worker read must satisfy `start_s <= at <= end_s`, and reads displayed before the retired interval must be disjoint from the retired replay. With the measured +10 to +36 ms display offset, a record of an attempt in the run's final tens of milliseconds can display past `end_s` and fail the membership assertion while present, a second failure path independent of omission. |
+| Capture enabled, channel asserted, no record required | `witness_contract/worker_termination_and_log_correlation`, `witness_contract/max_targets_reply_survives` | [check_termination_correlation.py](../../tests/suites/witness_contract/check_termination_correlation.py) requires the observer to be invoked and the window mirrored, then branches: `captured` with an events list checks presence-dependent status, `permission_failures_without_record == ([] if matches else ids)` and ambiguous associations; every other status only requires `correlation_status == "unavailable"` (lines 171–174), so an equipment or observer failure passes silently there. [check_max_target_reply.py](../../tests/suites/witness_contract/check_max_target_reply.py) lines 159–165 require `capture_status != "capture_error"` and an untruncated observer reply for 256-step workloads; any bounded-retention policy must account for that existing assertion. Neither parses timestamps. |
+| Capture enabled, nothing asserted about it | `smoke/*` (2), `blackbox_e2e/BBX-001`, `BBX-002`, `runner_apply_isolation_v2/*`, `runner_apply_isolation_v3/*`, the eight live `blackbox_menagerie/*` cases ([run_case.py](../../tests/suites/blackbox_menagerie/run_case.py)), and the `cli_contract` functions that omit the flag | They pay the `log show` cost and depend on the channel only through the CLI exit status, which [run_flow.rs](../../controller/src/run_flow.rs) derives before capture. A stalled collector delays their envelopes; an absent record cannot fail them. |
+| Capture disabled with `--no-log-capture` | 26 case scripts: twelve in `witness_contract` (including the drift seam script), three in `run_effects`, two each in `runner_exec_dac`, `runner_exec_lifecycle` and `runner_validator_failure`, and one each in `runner_exec_inheritance`, `runner_live_worker_identity`, `runner_outcome_runner_timeout`, `runner_outcome_validator_no_reply`, `runner_specimen_isolation`, `sbpl_allowdeny_consistency` and `failure_boundaries` | Log-independent by construction. `check_pre_apply_failure.py` asserts `sandbox_log_capture is None`; [lifecycle_oracle.py](../../tests/lib/lifecycle_oracle.py) expects the disabled projection (`disabled`, `not_attempted`, null list). |
+| Constructed evidence, no live log | `blackbox_e2e/checker_controls`, `unit/rust.unit`, `unit/rust.disposition_reds` | [checker_controls.py](../../tests/suites/blackbox_e2e/checker_controls.py) drives the consumer with captured/no_match, blocked/unavailable and disabled envelopes, a dropped `operation_source` and a forged `exact_run_membership`. `sandbox_log::tests` run the real argv against [observer.py](../../tests/fixtures/deny_capture/observer.py), whose fixed event times are independent of the requested bounds (window selection, not attempt timing). The observer's parser test asserts that a parsed event carries no timestamp field. These provide existing controlled-input coverage. |
 
 Other findings:
 
-- The remaining `raw_line` references ([failure_boundaries/check.py](../tests/suites/failure_boundaries/check.py), [check_diagnostic_transport.py](../tests/suites/witness_contract/check_diagnostic_transport.py)) are validator transcript records, unrelated to the log channel.
-- `tests/lib/testlib.sh` defines `skip_sandbox_log_observer_unavailable`, but no case calls it; a missing observer binary is a preflight failure through `EXECUTABLES` in [artifact.py](../tests/lib/artifact.py).
-- Text that states the mandatory-presence or timing claim: the `deny_capture_covers_the_run` description in [tests/catalog.json](../tests/catalog.json), the "Deny capture covers the run" section of [tests/suites/witness_contract/README.md](../tests/suites/witness_contract/README.md) ("the final denied read is the minimum witness … fails the case with a named reason"; "test-only parsing of raw event timestamps checks membership in both intervals"), and the case's module docstring.
-- [docs/PolicyWitness.md](../docs/PolicyWitness.md#denial-log-correlation) and [controller/README.md](../controller/README.md) already state that `captured` does not certify every denial was logged, that parsed events have no structured timestamps and that a complete interval does not guarantee delivery. No permanent documentation claims record presence. The window wording in [docs/LIMITS.md](../docs/LIMITS.md) and the user guide ("widened to whole seconds") describes the unpadded interval.
+- The remaining `raw_line` references ([failure_boundaries/check.py](../../tests/suites/failure_boundaries/check.py), [check_diagnostic_transport.py](../../tests/suites/witness_contract/check_diagnostic_transport.py)) are validator transcript records, unrelated to the log channel.
+- `tests/lib/testlib.sh` defines `skip_sandbox_log_observer_unavailable`, but no case calls it; a missing observer binary is a preflight failure through `EXECUTABLES` in [artifact.py](../../tests/lib/artifact.py).
+- Text that states the mandatory-presence or timing claim: the `deny_capture_covers_the_run` description in [tests/catalog.json](../../tests/catalog.json), the "Deny capture covers the run" section of [tests/suites/witness_contract/README.md](../../tests/suites/witness_contract/README.md) ("the final denied read is the minimum witness … fails the case with a named reason"; "test-only parsing of raw event timestamps checks membership in both intervals"), and the case's module docstring.
+- [docs/PolicyWitness.md](../../docs/PolicyWitness.md#denial-log-correlation) and [controller/README.md](../../controller/README.md) already state that `captured` does not certify every denial was logged, that parsed events have no structured timestamps and that a complete interval does not guarantee delivery. No permanent documentation claims record presence. The window wording in [docs/LIMITS.md](../../docs/LIMITS.md) and the user guide ("widened to whole seconds") describes the unpadded interval.
 
 ## Open questions
 
@@ -616,21 +616,21 @@ than a dispatcher-owned completed run.
 
 | Evidence | Route and contents |
 | --- | --- |
-| Original failed case and app inventory | [exec-budget-robust](../tests/out/runs/exec-budget-robust/): case artifacts under `suites/witness_contract/deny_capture_covers_the_run/artifacts/`; app inventory under `artifact-integrity/`. |
-| Original immediate passing rerun | [exec-budget-robust-rerun](../tests/out/runs/exec-budget-robust-rerun/), same case artifact layout. |
-| Independent registered reruns | [crosscheck A](../tests/out/runs/sandbox-log-crosscheck-20260928-a/) and [crosscheck B](../tests/out/runs/sandbox-log-crosscheck-20260928-b/), each with observations and artifact-integrity receipts. |
-| Initial independent investigation | [INVESTIGATION.md](../tests/out/sandbox-log-crosscheck-20260928/INVESTIGATION.md) indexes the original-failure re-queries, platform/C controls, tighter worker replay, delayed scans, unconfined read controls, and their scripts. |
-| New experiment driver and summarized results | [experiment.py](../tests/out/sandbox-log-troubleshooting-20260928/experiment.py), [analysis.json](../tests/out/sandbox-log-troubleshooting-20260928/analysis.json), [analyze.py](../tests/out/sandbox-log-troubleshooting-20260928/analyze.py). |
-| Short matrix | [matrix/](../tests/out/sandbox-log-troubleshooting-20260928/matrix/): `rows.json`, `initial-summary.json`, `block-*-initial.json`, `loss.json`, and per-case `specimen.json`, `command.json`, `envelope.json`. Counterexamples: `b2-17-n1-p0.5` and `b3-08-n32-p0.5`. |
-| Twenty-second runs | [long/](../tests/out/sandbox-log-troubleshooting-20260928/long/): the same per-case receipts, `*-initial.json` raw scans and `initial-summary.json`; [long-timing-checks.json](../tests/out/sandbox-log-troubleshooting-20260928/long-timing-checks.json) records interval/phase timestamp checks. Counterexamples include `b0-n8`, `b1-n1`, `b1-n8`, and `b2-n32`. |
-| Stream comparison and receipt times | [stream/](../tests/out/sandbox-log-troubleshooting-20260928/stream/): `stream-receipts.jsonl`, `stream-command.json`, `stream-summary.json`, `initial-path.json`, per-case envelopes and `timestamp-comparison.json`; [stream-timing.json](../tests/out/sandbox-log-troubleshooting-20260928/stream-timing.json) gives parsed receipt timing. |
-| Delayed wider queries and exact comparisons | [rescan/](../tests/out/sandbox-log-troubleshooting-20260928/rescan/): `*-path-wide.json` commands/results and `summaries.json`; [cross-channel-checks.json](../tests/out/sandbox-log-troubleshooting-20260928/cross-channel-checks.json) records exact target-membership and app-inventory equality checks. |
-| Coverage audit and controlled replay | [COVERAGE-AUDIT.md](../tests/out/sandbox-log-troubleshooting-20260928/COVERAGE-AUDIT.md), [replay.py](../tests/out/sandbox-log-troubleshooting-20260928/replay.py), [replay_test.rs](../tests/out/sandbox-log-troubleshooting-20260928/replay_test.rs), and [replay/](../tests/out/sandbox-log-troubleshooting-20260928/replay/): input envelope/specimen, source hashes, receipts, baseline/restored consumer outputs and all three rejected-mutation logs. |
-| Provenance and fixture locations | [provenance.json](../tests/out/sandbox-log-troubleshooting-20260928/provenance.json); each live cohort's `environment.json` names its retained `/private/tmp/pw-log-…` target tree, and its `app-before.json`, `app-after.json`, `completion.json` record integrity and timing. |
-| Evidence review of the first round | [EVIDENCE-REVIEW.md](../tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
-| Follow-up archive checks | [archive/](../tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
-| Instrumented unconfined control | [latency/](../tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
-| Offset mechanism, third measurement | [sandbox-log-troubleshooting-20260928-c/](../tests/out/sandbox-log-troubleshooting-20260928-c/): `marker.c` (userland `os_log` marker printing `CLOCK_REALTIME` and `mach_continuous_time`), `offset_probe.py`, `receipts.json`, `scan.ndjson` with `scan-command.json`, `summary.json`; `timesync-24h.ndjson` and `timed-24h.ndjson` with `timed-summary.json` (logd timesync events and `timed` adjustments over 24 h). Target tree `/private/tmp/pw-log-offset-…` named in `receipts.json`. |
+| Original failed case and app inventory | [exec-budget-robust](../../tests/out/runs/exec-budget-robust/): case artifacts under `suites/witness_contract/deny_capture_covers_the_run/artifacts/`; app inventory under `artifact-integrity/`. |
+| Original immediate passing rerun | [exec-budget-robust-rerun](../../tests/out/runs/exec-budget-robust-rerun/), same case artifact layout. |
+| Independent registered reruns | [crosscheck A](../../tests/out/runs/sandbox-log-crosscheck-20260928-a/) and [crosscheck B](../../tests/out/runs/sandbox-log-crosscheck-20260928-b/), each with observations and artifact-integrity receipts. |
+| Initial independent investigation | [INVESTIGATION.md](../../tests/out/sandbox-log-crosscheck-20260928/INVESTIGATION.md) indexes the original-failure re-queries, platform/C controls, tighter worker replay, delayed scans, unconfined read controls, and their scripts. |
+| New experiment driver and summarized results | [experiment.py](../../tests/out/sandbox-log-troubleshooting-20260928/experiment.py), [analysis.json](../../tests/out/sandbox-log-troubleshooting-20260928/analysis.json), [analyze.py](../../tests/out/sandbox-log-troubleshooting-20260928/analyze.py). |
+| Short matrix | [matrix/](../../tests/out/sandbox-log-troubleshooting-20260928/matrix/): `rows.json`, `initial-summary.json`, `block-*-initial.json`, `loss.json`, and per-case `specimen.json`, `command.json`, `envelope.json`. Counterexamples: `b2-17-n1-p0.5` and `b3-08-n32-p0.5`. |
+| Twenty-second runs | [long/](../../tests/out/sandbox-log-troubleshooting-20260928/long/): the same per-case receipts, `*-initial.json` raw scans and `initial-summary.json`; [long-timing-checks.json](../../tests/out/sandbox-log-troubleshooting-20260928/long-timing-checks.json) records interval/phase timestamp checks. Counterexamples include `b0-n8`, `b1-n1`, `b1-n8`, and `b2-n32`. |
+| Stream comparison and receipt times | [stream/](../../tests/out/sandbox-log-troubleshooting-20260928/stream/): `stream-receipts.jsonl`, `stream-command.json`, `stream-summary.json`, `initial-path.json`, per-case envelopes and `timestamp-comparison.json`; [stream-timing.json](../../tests/out/sandbox-log-troubleshooting-20260928/stream-timing.json) gives parsed receipt timing. |
+| Delayed wider queries and exact comparisons | [rescan/](../../tests/out/sandbox-log-troubleshooting-20260928/rescan/): `*-path-wide.json` commands/results and `summaries.json`; [cross-channel-checks.json](../../tests/out/sandbox-log-troubleshooting-20260928/cross-channel-checks.json) records exact target-membership and app-inventory equality checks. |
+| Coverage audit and controlled replay | [COVERAGE-AUDIT.md](../../tests/out/sandbox-log-troubleshooting-20260928/COVERAGE-AUDIT.md), [replay.py](../../tests/out/sandbox-log-troubleshooting-20260928/replay.py), [replay_test.rs](../../tests/out/sandbox-log-troubleshooting-20260928/replay_test.rs), and [replay/](../../tests/out/sandbox-log-troubleshooting-20260928/replay/): input envelope/specimen, source hashes, receipts, baseline/restored consumer outputs and all three rejected-mutation logs. |
+| Provenance and fixture locations | [provenance.json](../../tests/out/sandbox-log-troubleshooting-20260928/provenance.json); each live cohort's `environment.json` names its retained `/private/tmp/pw-log-…` target tree, and its `app-before.json`, `app-after.json`, `completion.json` record integrity and timing. |
+| Evidence review of the first round | [EVIDENCE-REVIEW.md](../../tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
+| Follow-up archive checks | [archive/](../../tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
+| Instrumented unconfined control | [latency/](../../tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
+| Offset mechanism, third measurement | [sandbox-log-troubleshooting-20260928-c/](../../tests/out/sandbox-log-troubleshooting-20260928-c/): `marker.c` (userland `os_log` marker printing `CLOCK_REALTIME` and `mach_continuous_time`), `offset_probe.py`, `receipts.json`, `scan.ndjson` with `scan-command.json`, `summary.json`; `timesync-24h.ndjson` and `timed-24h.ndjson` with `timed-summary.json` (logd timesync events and `timed` adjustments over 24 h). Target tree `/private/tmp/pw-log-offset-…` named in `receipts.json`. |
 
 The new driver refuses to reuse an existing mode directory. To repeat it, copy
 `experiment.py` and `analyze.py` into a fresh direct child of `tests/out/`, then

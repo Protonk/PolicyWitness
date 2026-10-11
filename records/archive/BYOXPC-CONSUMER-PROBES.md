@@ -26,8 +26,8 @@ No request used `_test_overrides`.
 
 All linked output below is gitignored, local-only evidence, pinned in
 `tests/RETAINED.json`, under
-[byoxpc-consumer-probes-20261006](../tests/out/runs/byoxpc-consumer-probes-20261006/).
-It includes the [probe driver](../tests/out/runs/byoxpc-consumer-probes-20261006/probes.py),
+[byoxpc-consumer-probes-20261006](../../tests/out/runs/byoxpc-consumer-probes-20261006/).
+It includes the [probe driver](../../tests/out/runs/byoxpc-consumer-probes-20261006/probes.py),
 the copied ownership/signing driver it imports, exact specimens, command
 streams, read-backs, independent file observations and checksums.
 
@@ -76,7 +76,7 @@ turn pre-invocation binary hashes into runtime attestation.
 The **false-valued host key satisfied `required_entitlements`**. The saved
 signature read-back contains the boolean `false`, and the service-name request
 requiring that key was admitted. This matches `entitlements_superset` in
-[runner_manager.rs](../controller/src/runner_manager.rs), which tests key
+[runner_manager.rs](../../controller/src/runner_manager.rs), which tests key
 membership. Admission therefore does not establish a true entitlement value,
 worker possession, or the intended operation's capability.
 
@@ -86,9 +86,9 @@ diagnostic was `external runner does not satisfy required entitlements`.
 There was no observed fallback execution.
 
 Receipts: the `move-*` directories, particularly
-[move-false](../tests/out/runs/byoxpc-consumer-probes-20261006/move-false/),
+[move-false](../../tests/out/runs/byoxpc-consumer-probes-20261006/move-false/),
 and the checked
-[move matrix](../tests/out/runs/byoxpc-consumer-probes-20261006/final/move-matrix.json).
+[move matrix](../../tests/out/runs/byoxpc-consumer-probes-20261006/final/move-matrix.json).
 Each invocation has its specimen, raw envelope, before/after file snapshots,
 summary and validation result. External copies also have per-binary signing
 read-backs, registry records and verified cleanup receipts.
@@ -97,7 +97,7 @@ read-backs, registry records and verified cleanup receipts.
 
 ### Procedure
 
-Build the existing [exec fixture](../tests/fixtures/exec/build.sh) and make
+Build the existing [exec fixture](../../tests/fixtures/exec/build.sh) and make
 three copies: Developer ID with an empty entitlement dictionary; Developer ID
 with the DYLD-environment exception; and ad-hoc with that same exception.
 All use hardened runtime. Direct Python launches supply exactly a plain
@@ -136,9 +136,9 @@ failed child operation. The query, run summary and helper's internal operation
 answer distinct questions.
 
 Receipts: the direct controls under
-[baseline](../tests/out/runs/byoxpc-consumer-probes-20261006/baseline/),
+[baseline](../../tests/out/runs/byoxpc-consumer-probes-20261006/baseline/),
 the `helper-*` directories, and the checked
-[helper reports](../tests/out/runs/byoxpc-consumer-probes-20261006/final/helper-matrix.json).
+[helper reports](../../tests/out/runs/byoxpc-consumer-probes-20261006/final/helper-matrix.json).
 The reports include actual environment counts, descriptor observations and
 child PIDs, not an interpretation of missing stdout.
 
@@ -189,8 +189,8 @@ property. The successful serial specimens demonstrate the route can support
 a batch with sufficient client budgets, while immediate use after verification
 can still reach the retiring host's terminal admission state.
 
-Receipts: the [batch directory](../tests/out/runs/byoxpc-consumer-probes-20261006/batch/)
-and [watch summary](../tests/out/runs/byoxpc-consumer-probes-20261006/final/batch-watches.json).
+Receipts: the [batch directory](../../tests/out/runs/byoxpc-consumer-probes-20261006/batch/)
+and [watch summary](../../tests/out/runs/byoxpc-consumer-probes-20261006/final/batch-watches.json).
 Raw watches retain every file observation, and each command records its exact
 argv, exit status and elapsed time. No outer harness timeout occurred.
 
