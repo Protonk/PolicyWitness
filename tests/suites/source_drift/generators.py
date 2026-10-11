@@ -101,7 +101,7 @@ def changed_outside(before, after, regions, whole):
 def scanned_documents(root=ROOT):
     """Historical routing/docs scan plus every Markdown generator target."""
     paths = set((root / 'docs').glob('*.md'))
-    paths.update(root / name for name in ['README.md', 'AGENTS.md', 'runner/AGENTS.md', 'tests/README.md'])
+    paths.update(root / name for name in ['README.md', 'AGENTS.md', 'runner/AGENTS.md', 'tests/README.md', 'tests/AGENTS.md'])
     for name in GENERATORS:
         regions, _ = region_ownership(root, name)
         paths.update(root / name for name in regions if name.endswith('.md'))

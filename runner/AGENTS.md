@@ -7,7 +7,7 @@ including tests maintained outside this directory.
 ## Swift runner unit tests (SwiftPM)
 
 **When to add a unit test rather than an e2e suite.** Follow
-[CONTRIBUTING.md](../CONTRIBUTING.md#write-the-most-integrated-test-you-can):
+[test-selection guidance](../tests/AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior):
 use the CLI or `_test_overrides` when the behavior is reachable there. Use
 `runner_unit` for internal helper branches or observations an ordinary specimen
 cannot reliably produce, such as failed host kill/reap or publication followed

@@ -4,7 +4,10 @@ Rust unit tests and formatting for the controller crate.
 
 ## Invariants
 
-- `rust.unit` runs `cargo test --bins` only.
+- `rust.unit` runs `cargo test --bins`. Controlled orchestration checks count
+  manifest loads and client calls through the real `run` path. The field-complete
+  envelope is compared with `tests/fixtures/contract/envelope_shape.json`;
+  helper binaries check their nested subtrees.
 - `rust.fmt` runs `cargo fmt -- --check` and fails on any difference; fix with
   `cargo fmt` in `controller/`.
 - `rust.disposition_reds` selects the four disposition record controller tests by

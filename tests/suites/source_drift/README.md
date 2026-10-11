@@ -86,7 +86,7 @@ rules this script runs, and the form table below to the shared module's rules.
 
 Agents enter through different workflows and repeatedly mistake automation
 sandbox restrictions for product defects. The warning is therefore deliberately
-visible in `AGENTS.md`, `runner/README.md`, `tests/README.md` and `docs/BUILD.md`.
+visible in `AGENTS.md`, `runner/README.md`, `tests/AGENTS.md` and `docs/BUILD.md`.
 The first paragraph after `Sandboxed automation harnesses` is shared; later
 paragraphs explain the local workflow and are not compared.
 
@@ -172,7 +172,7 @@ the baseline, it reports that fact. `--report` turns a growth refusal into a
 warning. This baseline is retained even when empty.
 
 The prose scan includes `docs/*.md`, the root README and AGENTS files,
-`runner/AGENTS.md`, `tests/README.md`, and every Markdown document a generator
+`runner/AGENTS.md`, `tests/README.md`, `tests/AGENTS.md`, and every Markdown document a generator
 writes. It ignores fenced examples; authored spans are processed in the
 documents each generator names in its `SPAN_DOCUMENTS`. The guide receives span comments
 and values only by copying its shared source. Other generated or copied

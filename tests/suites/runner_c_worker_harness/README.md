@@ -6,15 +6,15 @@ state through the shared fixture, execs the worker in the same PID, and returns
 three exec-child reports. Its assertions live with that suite; the harness
 provides only the adapter to the worker ABI.
 
-Proves the C probe-runner (`pw-probe-runner`) in isolation. The
-harness drives the same shared-memory ABI the production runner
-host uses, so a failure here is a clean signal that the worker ABI
-itself broke rather than the host wiring around it.
+Exercises the C probe-runner (`pw-probe-runner`) directly through the same
+shared-memory ABI the production host uses. Failures retain worker-side
+observations without involving the XPC host.
 
 ## What's pinned
 
-Twenty-nine scenarios, each driven by `harness.c`: six core lifecycle cases,
-thirteen attempt and pre-apply cases, and ten release controls listed below.
+`harness.c` drives the lifecycle, attempt, pre-apply and release scenarios
+below. The separate `exec_control_states` case exercises production exec
+control flow with deterministic native-call equipment.
 
 ### Core lifecycle
 
@@ -129,6 +129,8 @@ sentinel and no ready byte (except compile_failure, which flips `done`).
     polling, and the worker still `_exit(0)`s on the exit byte instead of
     dying. The "honest even on bad input" contract.
 11. **abi_mismatch** — header ABI identity ≠ the worker's build → exit 4.
+    The same case also runs `abi_magic_mismatch`: a correct identity with an
+    incompatible magic prefix must refuse before publishing shared evidence.
 12. **prepared_unset** — host never set `prepared=1` → exit 5.
 13. **step_count_overflow** — header `step_count > PW_SHM_MAX_STEPS` → exit 6.
 14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7.

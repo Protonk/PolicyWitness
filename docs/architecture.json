@@ -1808,6 +1808,7 @@
             "controller_readme",
             "runner_readme",
             "tests_readme",
+            "tests_agents",
             "coverage_md",
             "build_md"
           ]
@@ -2252,11 +2253,32 @@
           "label": "tests/README.md",
           "kind": "document",
           "facts": {
-            "Carries": "the harness-note copy and the suite table"
+            "Carries": "the harness reference and suite table"
           },
           "sources": [
             {
               "path": "tests/README.md",
+              "symbol": "Suite coverage"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_index_vs_disk",
+              "form": "rule"
+            }
+          ]
+        },
+        {
+          "id": "tests_agents",
+          "label": "tests/AGENTS.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "test working rules and the harness-note copy"
+          },
+          "sources": [
+            {
+              "path": "tests/AGENTS.md",
               "symbol": "Sandboxed automation harnesses"
             }
           ],
@@ -2264,11 +2286,6 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_harness_note_agreement",
-              "form": "rule"
-            },
-            {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_index_vs_disk",
               "form": "rule"
             }
           ]
@@ -3383,7 +3400,7 @@
         {
           "id": "D23",
           "from": "agents_md",
-          "to": "tests_readme",
+          "to": "tests_agents",
           "kind": "copies",
           "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
           "short": "harness note",

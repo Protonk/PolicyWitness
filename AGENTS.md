@@ -10,8 +10,8 @@ This file governs how contributors and agents work here.
   including work under `tests/` or the C worker, read [runner/AGENTS.md](runner/AGENTS.md).
 - Build and release work: [docs/BUILD.md](docs/BUILD.md) and
   [docs/SIGNING.md](docs/SIGNING.md#release-procedure).
-- Test selection and evidence: [tests/README.md](tests/README.md) and
-  [the opt-in registry](tests/OPT_IN_TESTS.md).
+- Test work and evidence: [tests/AGENTS.md](tests/AGENTS.md); the
+  [harness reference](tests/README.md) describes commands and coverage.
 - Local artifacts: follow [scratch guidance](.tmp/AGENTS.md) or
   [distribution guidance](dist/AGENTS.md) before cleanup.
 
@@ -62,20 +62,15 @@ session; use the harness guidance below when launchctl or log access is refused.
 
 ## Testing
 
-- Default battery: `tests/run.sh` or `make test`.
-- Include opt-ins: `tests/run.sh --all`; inspect selection with `--all --list`.
-- Select a suite: `tests/run.sh --suite smoke`.
-- Use a fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` for separate evidence.
-- Use `make prune` to preview cleanup and `make prune APPLY=1` to apply it.
-  Inspect unfinished output before explicitly removing it through
-  [the pruner](tests/README.md#pruning-disposable-output).
+Follow [tests/AGENTS.md](tests/AGENTS.md) for selection, evidence reuse, output
+ownership and cleanup. The default battery is `tests/run.sh` or `make test`;
+`tests/run.sh --all --list` shows all cases and their requirements. Use a fresh
+`PW_TEST_OUT_DIR=tests/out/runs/<name>` for separate evidence.
 
-Follow [retention and locking rules](tests/README.md#retention-ownership-and-execution-locking).
 Never unlink `tests/.checkout.lock`; use a second worktree for concurrent runs.
-Preserve interrupted release rotation's `tests/out/.release-rotation/` and
-resume the archive's `release_rotate.py --apply` transaction through
-[the recovery procedure](docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
-Do not bypass the helpers to remove protected evidence or resource-cleanup records.
+Do not bypass the helpers to remove protected evidence or resource-cleanup
+records. Preserve interrupted release rotation and follow the
+[test cleanup guidance](tests/AGENTS.md#preserve-and-clean-up-output).
 
 ## Sandboxed automation harnesses
 
@@ -96,7 +91,7 @@ compares the first paragraph in all four locations; edit those copies together.
 The explanations that follow it are local to each document.
 
 For workflow-specific diagnostics, see [runner envelopes](runner/README.md#sandboxed-automation-harnesses),
-[test equipment](tests/README.md#sandboxed-automation-harnesses), and
+[test execution](tests/AGENTS.md#sandboxed-automation-harnesses), and
 [signing and compiler discovery](docs/BUILD.md#sandboxed-automation-harnesses).
 
 ## Maintenance checklist (when changing things)

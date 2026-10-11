@@ -6,6 +6,9 @@ and invoked by the BYOXPC runner suite.
 ## Invariants
 
 - Runs the CLI against small fixtures using the runner selected by the suite.
+- The specimen checks compare the built app's response schema with
+  `docs/contract.json`, its worker identity with the generated source identity,
+  and the envelope build stamp with the app's Info.plist.
 - `runner_caller_auth` first exercises the selected, unmodified app and inspects
   its signing arrangement, then uses its real client in disposable, signed app
   copies under `/private/tmp`. A same-team client with a disallowed identifier
@@ -47,6 +50,13 @@ Run:
 
 ```
 ./tests/run.sh --suite smoke
+```
+
+Whole-suite selection includes the opt-in caller-auth case and requires a
+matching Developer ID signing identity. The ordinary specimen checks alone are:
+
+```sh
+tests/run.sh --case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard
 ```
 
 The caller-auth checker also requires the current response schema from both

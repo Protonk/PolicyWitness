@@ -6,63 +6,62 @@ This directory contains the repository test harness. The test suite is organized
 2. Did we break a contract (CLI shape, evidence artifacts, JSON output schema)?
 3. Do queries, attempts and their comparison records retain the observations each scenario establishes?
 
-The harness is machine-readable: every test writes structured JSONL events and a per-run summary under `tests/out/`.
+Cases write structured JSONL events and reports; the public dispatcher assembles
+a per-run summary under `tests/out/`. [AGENTS.md](AGENTS.md) explains how to
+choose checks, change tests, evaluate evidence and clean up output.
+
+## Directory map
+
+| Path | Contents |
+| --- | --- |
+| [run.sh](run.sh) and [catalog.json](catalog.json) | Public command and case membership, prerequisites and dependencies. |
+| [suites/](suites/) | Suite entrypoints, assertions and local READMEs; indexed in [suite coverage](#suite-coverage). |
+| [fixtures/](fixtures/README.md) | Specimens, independent observations and fixture builders. |
+| [lib/](lib/) | Shared dispatch, capture, validation, artifact and cleanup helpers. |
+| [COVERAGE.md](COVERAGE.md) and [FAILURE-PROPAGATION-CONTRACT.md](FAILURE-PROPAGATION-CONTRACT.md) | Outcome coverage and evidence ownership. |
+| [OPT_IN_TESTS.md](OPT_IN_TESTS.md) | Resource-sensitive and mutation controls. |
+| [RETAINED.json](RETAINED.json) | Committed retention index, outside disposable output. |
+| `out/` | Local run and release-acceptance evidence, including cleanup staging. |
 
 Related docs:
 
-- CLI contract: `controller/README.md`
-- Runner architecture: `runner/README.md`
+- CLI contract: [controller/README.md](../controller/README.md)
+- Runner architecture: [runner/README.md](../runner/README.md)
 - Build and signing: [docs/BUILD.md](../docs/BUILD.md)
 - Release and notarization: [docs/SIGNING.md](../docs/SIGNING.md)
 - Limits inventory and checks: [docs/LIMITS.md](../docs/LIMITS.md)
 - Executable request-contract lesson: [docs/REQUEST-GRAMMAR.md](../docs/REQUEST-GRAMMAR.md)
-- Outcome coverage matrices: `tests/COVERAGE.md`
-- Fixtures catalog: `tests/fixtures/README.md`
-- Opt-in registry: `tests/OPT_IN_TESTS.md`
-
-Consumer evidence tests follow the
-[comparison record ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
-`tests/lib/consumer.py` validates one envelope and selects steps by field
-using explicit classification tables over the raw channel fields, without
-consulting specimen policies or calling the runner classifier.
-Recovered spawn-failure records retain their numeric codes, paths and
-diagnostic text. Explicit evidence-loss replies omit that record along with
-steps and subprocesses. Controlled
-scenario expectations stay in the CLI/witness cases; Swift tests enforce
-encoding and absence, and Rust tests enforce receiver/correlation preservation.
-Shared blackbox checks enforce universal version/shape guarantees. The blackbox
-checker controls retain rejected meaning-loss fixtures beside passing controls;
-no acceptance document or generated test output is required to run them.
 
 ## How to run
 
-Build first (signed pipeline):
+The default battery requires a signed app. The build command is:
 
 ```sh
 make build IDENTITY='Developer ID Application: ...'
 ```
 
-Then run tests:
+The public test commands include:
 
 ```sh
 make test
 # or:
 ./tests/run.sh
-./tests/run.sh --suite preflight
-./tests/run.sh --suite unit
 ./tests/run.sh --suite integration
-./tests/run.sh --suite runner_byoxpc
-./tests/run.sh --suite sbpl_allowdeny_consistency
+./tests/run.sh --suite unit
 ./tests/run.sh --all --list
 ./tests/run.sh --case blackbox_menagerie/validation_controls
 ```
+
+Offline selections, such as `unit` and the menagerie validation controls, do
+not require an app. Each selection's `--list` plan gives its prerequisites.
+Build setup and signing requirements are in [docs/BUILD.md](../docs/BUILD.md).
 
 `tests/run.sh` is the public selection and reporting interface. With no selectors
 it runs the default battery. `--all` selects every registered case, including
 opt-ins. Repeated `--suite NAME` and `--case SUITE/CASE` selectors form a union;
 order and repetitions do not change the work. A suite selects all its members,
-including any opt-in members. Case IDs are exact harness identifiers, not patterns. Rust and Swift unit
-methods remain inside their respective batch cases.
+including any opt-in members. Case IDs are exact harness identifiers, not
+patterns. Rust and Swift unit methods remain inside their respective batch cases.
 
 `--list` prints the selected plan as JSON, including descriptions, default
 membership, prerequisites, runner contexts, dependencies, and configuration.
@@ -90,13 +89,12 @@ cases can still run. A shared read-only inspector also backs `preflight`.
 The dispatcher inventories the selected app before testing and again during
 finalization, including after case failures or Ctrl-C. Added, removed, or changed
 files, modes, directories, and symlink targets fail the run with a retained diff.
-Inspection never repairs the app. Rebuild through `build.sh` to replace a stale
-artifact; regenerating evidence over a mutated app would hide the defect.
+Inspection never repairs the app or regenerates its evidence.
 These checks do not certify notarization and cannot detect a transient mutation
 restored before the final inventory. Direct suite scripts do not have this guard.
 
-Opt-in cases are documented in `tests/OPT_IN_TESTS.md`; use an exact case, an
-owning suite, `--suite opt_in`, or `--all` to select them. Direct suite scripts
+[Opt-in cases](OPT_IN_TESTS.md) are selectable by exact case, owning suite,
+`--suite opt_in`, or `--all`. Direct suite scripts
 remain developer entrypoints, but do not provide the public command's planning,
 configuration validation, or completion guarantees.
 
@@ -109,28 +107,6 @@ part of the notarization chain, then runs the default battery against the final
 app and archives the release; `make publish` publishes an archived release. See
 [docs/SIGNING.md](../docs/SIGNING.md) for the complete release procedure and the
 handling of delayed or uncertain Apple replies.
-
-## Reusing verification results
-
-For each credited case, record its canonical ID, command/configuration, source
-snapshot and applicable build or equipment. Trace the command's scripts, shared
-helpers and fixtures conservatively, then compare their file snapshots with the
-accepted implementation. A case not requiring the app can still depend on changed
-test code; app independence alone does not justify reusing its result.
-
-Rerun a case when a dependency changed or applicability is uncertain. If an
-earlier result is retained despite a changed file, identify the exact delta,
-explain why the executed path and inputs are unaffected, and label this as a
-reviewed exception. Hash checks establish file identity; they do not establish
-complete dependency coverage or prove program reachability. An allowlist of
-changed files is likewise a review aid, not proof that every retained case is
-unaffected. Acceptance summaries must distinguish mechanically checked facts
-from these applicability judgments.
-
-Keep original runs and snapshots intact. Record corrections and replacement
-credits explicitly, including the reason for each rerun; do not turn an earlier
-failure into a passing historical run. This procedure does not require a generic
-dependency-analysis framework.
 
 ## Configuration
 
@@ -162,7 +138,7 @@ working directory. The effective paths are recorded in `plan.json` and
 `run.json`. Runner-mode/service overrides, suite aliases, case selection state,
 and event paths (`PW_TEST_RUNNER_*`, `PW_TEST_SUITE_OVERRIDE`, `PW_TEST_CASES`,
 `PW_TEST_EVENTS`) belong to child execution and are rejected as public settings.
-Select BYOXPC cases through the catalog instead.
+The catalog selects BYOXPC runner contexts.
 
 ## Retention, ownership and execution locking
 
@@ -178,8 +154,7 @@ output is changed. Symlink redirects and path escapes are rejected.
 An optional `release` field marks a direct managed run or acceptance directory
 for release-checkpoint cleanup: a `v<major>.<minor>.<patch>` value identifies its
 release. An omitted or null value explicitly pins the entry. The archive helper
-marks both the release battery and acceptance; existing release entries should
-carry their established tag so they expire at a later checkpoint.
+marks both the release battery and acceptance for expiration at a later checkpoint.
 Ordinary pruning protects all indexed entries, regardless of this field.
 Archive helpers replace the validated index atomically while holding the
 checkout lock.
@@ -189,22 +164,19 @@ and start time. Only a matching, valid terminal `run.json` establishes completed
 output. Failed cases and ordinary Ctrl-C cancellation still produce terminal
 records and are disposable when unretained. A missing terminal record leaves an
 interrupted run; malformed or inconsistent evidence leaves ambiguous output.
-Nonempty output without ownership is unmanaged. Replacement refuses all three;
-inspect the evidence and choose a fresh output directory or use the explicit
-unfinished-prune command below. Placement under
-`runs/` alone does not establish ownership. Planning refusals exit 2.
+Nonempty output without ownership is unmanaged. Replacement refuses all three.
+The explicit unfinished-prune command below handles owned unfinished output.
+Placement under `runs/` alone does not establish ownership. Planning refusals exit 2.
 
 After read-only planning, execution takes an OS-held advisory lock on
 `tests/.checkout.lock`, rechecks retention and output eligibility, and holds the
-lock through finalization. The file stays in place between operations. Never
-unlink it: the held lock belongs to its inode, so a replacement file would let
-later operations bypass the holder. PID and start information is diagnostic;
-process exit releases the lock, while run records determine completion.
+lock through finalization. The file stays in place between operations; the held
+lock belongs to its inode. PID and start information is diagnostic; process exit
+releases the lock, while run records determine completion.
 
 One checkout runs one execution at a time. Competing execution gets a
-checkout-busy error even with a different output path. A smoke run must wait
-for a long `--all` to finish before retrying; parallel work needs a second
-worktree. Help and `--list` remain available while execution holds the lock.
+checkout-busy error even with a different output path. Separate worktrees have
+independent locks. Help and `--list` remain available while execution holds the lock.
 
 Direct shell entrypoints default to `tests/out/runs/direct`; they do not replace
 output or provide dispatcher ownership/completion guarantees. Release acceptance
@@ -212,16 +184,7 @@ keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
 `tests` output passes the same dispatcher checks. An outer `owner.json` and
 `acceptance.lock` protect extraction, tests and finalization as one lifetime;
 process exit releases the lock, and normal return records the completion time.
-Passing acceptance prints a
-suggested index entry. Record source provenance only when established; the
-commit that adds an index entry is not the source of an earlier build.
-
-For a console transcript, capture to a temporary file outside `tests/out/runs/`
-and attach it to the completed run under the checkout lock after verifying the
-run ID. Do not create or redirect into the selected output directory before
-startup: a preexisting transcript makes fresh output unmanaged, and replacement
-of an eligible old run would unlink an already-open transcript. If execution
-never creates owned output, keep the temporary transcript for diagnosis.
+Passing acceptance prints a suggested index entry.
 
 ## Pruning disposable output
 
@@ -242,8 +205,7 @@ record are labeled `keep: active or interrupted`.
 
 Preview briefly takes and releases the same nonblocking lock to observe
 contention. An execution starting during that probe can receive checkout-busy
-and exit 2; retry it after preview finishes. This safe refusal is an accepted
-tradeoff of the probe. The reported busy state is a snapshot and can change
+and exit 2. The reported busy state is a snapshot and can change
 before classification or a later apply operation.
 
 Apply takes the checkout lock and re-evaluates eligibility. It removes only
@@ -285,8 +247,9 @@ ownership rules and does not select a newest run to keep.
 
 The durable cleanup journal lives at `dist/archive/<tag>/evidence/rotation.json`;
 staged deletions live under `tests/out/.release-rotation/`, which ordinary
-pruning preserves. Resume with the same archived release and `--apply`; completed
-journals are no-ops. See [the release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
+pruning preserves. Reapplying the same archived release resumes the transaction;
+completed journals are no-ops. [The release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup)
+describes recovery.
 Scratch contents follow [.tmp/AGENTS.md](../.tmp/AGENTS.md) and are outside this operation.
 
 ## Tiers
@@ -299,81 +262,76 @@ Scratch contents follow [.tmp/AGENTS.md](../.tmp/AGENTS.md) and are outside this
 
 ## Suite coverage
 
-The default `runner_unit` cases also enforce host-wide single-use admission,
-owner-only retirement and bounded policy delivery. Real transfer receipts pass
-through Rust assembly and the shared Python consumer; disposable service-source
-reversions must restore the original defects. `runner_byoxpc/single_use` is the
-explicit live two-client acceptance gate, with owned installation and cleanup.
+This map summarizes each suite's observations and limits. Linked suite READMEs
+own detailed assertions and fixtures; [COVERAGE.md](COVERAGE.md) maps outcome
+values to their checks. [catalog.json](catalog.json) and the selected `--list`
+plan are authoritative for exact membership, prerequisites and dependencies.
+Equipment below is an overview: cases within a suite can have different needs.
 
-This is the canonical map of what each suite covers, what you can claim when it
-passes, and when it legitimately skips. For exact invariants and fixtures, see
-the per-suite README files under `tests/suites/<suite>/`. For the per-outcome
-coverage matrices (which suite exercises each `NormalizedOutcome` /
-`AttemptOutcome` value), see `tests/COVERAGE.md`.
+Missing prerequisites fail the public run with explicit unrun cases. The only
+supported live skip is an absent annotated menagerie mismatch after the other
+evidence checks pass, including when those cases run through BYOXPC.
 
-A blank **Skips when** cell means the suite has no expected skips: missing
-prerequisites should fail, not skip.
+| Suite | Tier | Coverage and limits | Equipment overview | Reference |
+| --- | --- | --- | --- | --- |
+| `preflight` | Baseline + opt-in | Bundle signatures, layout and evidence hashes; release acceptance, publication and cleanup controls. Inspection is read-only; mutations use copies. | App for inspection; signing identity/toolchains for opt-ins; offline release controls vary. | [Suite](suites/preflight/README.md) |
+| `source_drift` | Baseline | Source manifests, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
+| `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
+| `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
+| `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |
+| `runner_unit` | Baseline | Swift host admission, drivers, lifecycle and evidence encoding; actual transfer replies cross Rust/Python readers. Internal SKIP/FAIL output fails the wrapper. | Swift; driver case also needs clang, Cargo and a signed app, without XPC. | [Suite](suites/runner_unit/README.md) |
+| `integration` | Baseline | CLI and runner envelopes for the request fixtures. | App and XPC. | [Suite](suites/integration/README.md) |
+| `runner_apply_isolation_v2` | Baseline | Empty-plan SBPL v2 deny-default application, surviving reply, worker PID consistency and clean exit. No populated attempt results. | App and XPC. | [Suite](suites/runner_apply_isolation_v2/README.md) |
+| `runner_apply_isolation_v3` | Baseline | The same empty-plan application and reply contract using SBPL v3. | App and XPC. | [Suite](suites/runner_apply_isolation_v3/README.md) |
+| `runner_outcome_worker_spawn_failed` | Baseline | A nonexistent worker path retains the real spawn failure, admitted override and absence of a worker. | App and XPC. | [Suite](suites/runner_outcome_worker_spawn_failed/README.md) |
+| `runner_outcome_runner_timeout` | Baseline | Empty-plan timeout retains termination evidence, diagnostics and empty steps; populated-plan controls live elsewhere. | App and XPC. | [Suite](suites/runner_outcome_runner_timeout/README.md) |
+| `runner_outcome_bad_request` | Baseline | CLI/direct-XPC admission refusals, current accepted requests, and independent effects only for admitted plans. | App and XPC. | [Suite](suites/runner_outcome_bad_request/README.md) |
+| `runner_ready_byte_resilience` | Baseline | A delayed ready-byte write survives a closed reader and still permits application, prediction and a clean reply. | App and XPC. | [Suite](suites/runner_ready_byte_resilience/README.md) |
+| `runner_filter_iokit_registry_entry_class` | Baseline | Unavailable prediction with retained file-open attempt evidence; does not establish IOKit enforcement. | App and XPC. | [Suite](suites/runner_filter_iokit_registry_entry_class/README.md) |
+| `runner_filter_sysctl_name` | Baseline | Unavailable prediction beside a real denied sysctl attempt; independent checker controls cover all filter callers. | App/XPC for live case; Python for controls. | [Suite](suites/runner_filter_sysctl_name/README.md) |
+| `runner_filter_iokit_user_client_class` | Baseline | Unavailable prediction with a file-open placeholder; does not establish IOKit enforcement. | App and XPC. | [Suite](suites/runner_filter_iokit_user_client_class/README.md) |
+| `validator_bridge` | Baseline | Native query forwarding and acknowledged query/emission/closure gates, with independent native/process observations. | clang and macOS SDK. | [Suite](suites/validator_bridge/README.md) |
+| `validator_batch_mode` | Baseline | Batch framing, per-query outcomes and continued processing after errors; native calls retain the no-report flag. | App. | [Suite](suites/validator_batch_mode/README.md) |
+| `failure_boundaries` | Baseline | Admission capacities, receiver structure/association, escaped strings, refused-plan effect exclusion and independent helper admission. | App and XPC. | [Suite](suites/failure_boundaries/README.md) |
+| `runner_outcome_validator_no_reply` | Baseline | A real validator deadline retains a partial ordered prediction and releases both independently observed attempts. | App, XPC and Python. | [Suite](suites/runner_outcome_validator_no_reply/README.md) |
+| `runner_validator_failure` | Baseline | Partial replies retain step association and completed effects across shortfall, malformed output and signal termination. | App, XPC and Python. | [Suite](suites/runner_validator_failure/README.md) |
+| `runner_abi_layout` | Baseline | Compiled C layout agrees with Swift, identity copies and the golden; validator query boundaries and Unicode round trips. | clang and macOS SDK; no app. | [Suite](suites/runner_abi_layout/README.md) |
+| `runner_c_worker_harness` | Baseline | Direct worker application, shared-memory publication, release barrier, refusal and exec-resource/budget controls. Separate deterministic exec controls do not launch processes. | App, embedded worker and clang. | [Suite](suites/runner_c_worker_harness/README.md) |
+| `runner_use_c_worker` | Baseline | CLI-to-worker evidence, request refusals, timeout with completed effects, query planning and exec arguments/streams. | App and XPC. | [Suite](suites/runner_use_c_worker/README.md) |
+| `runner_mach_service_liveness` | Baseline | Direct Mach-service host launch stays alive; does not establish that it services a connection. | App. | [Suite](suites/runner_mach_service_liveness/README.md) |
+| `runner_byoxpc` | Opt-in | Owned external-runner installation, shared smoke/blackbox contracts, authentication, entitlements and registry recovery. Cleanup verifies removal. | App, GUI launchd session and matching signing identity for installation. | [Suite](suites/runner_byoxpc/README.md) |
+| `smoke` | Baseline + opt-in | Built-app contract versions, build stamp and ordinary specimens; opt-in caller-auth checks use identical-client controls and independent effects. | App and XPC; whole-suite selection also needs a matching signing identity. | [Suite](suites/smoke/README.md) |
+| `blackbox_e2e` | Baseline | Complete correlated envelopes and separate prediction/attempt assertions; independent checker and build-comparison controls. | App/XPC for live cases; controls have separate equipment. | [Suite](suites/blackbox_e2e/README.md) |
+| `blackbox_menagerie` | Baseline | Local PAWL policy fixtures, evidence correlation and annotated canonicalization mismatches; checker controls run independently. | App/XPC for live cases; Python for validation controls. | [Suite](suites/blackbox_menagerie/README.md) |
+| `sbpl_allowdeny_consistency` | Baseline | Independent file snapshots across restored seeds and reversed policy bindings, then JSON evidence checks. Mach steps establish presence only. | App and XPC. | [Suite](suites/sbpl_allowdeny_consistency/README.md) |
+| `runner_live_worker_identity` | Baseline | Kernel socket identity and ancestry locate live worker/host processes; independent sandbox queries are compared with reported records. | App, XPC and clang. | [Suite](suites/runner_live_worker_identity/README.md) |
+| `runner_exec_dac` | Baseline | Direct and PW execution retain permission failures without sandbox attribution; native scope controls distinguish target admission and exec prerequisites. | App and XPC. | [Suite](suites/runner_exec_dac/README.md) |
+| `exec_fixture` | Baseline | Independent helper output, process identity/exit, state forwarding and file-write controls; tree cleanup must leave unrelated trees alive. | clang, Python and macOS process/socket observation; no app. | [Suite](suites/exec_fixture/README.md) |
+| `run_capture` | Baseline | Exact CLI bytes/arguments/status, separate harness deadlines, overlapping captures and cleanup after failure. | Python and macOS process/socket observation; no app. | [Suite](suites/run_capture/README.md) |
+| `runner_specimen_isolation` | Baseline | Overlapping specimens with identical step IDs retain separate process identities, file effects and evidence; controls reject swaps and combined faults. | App, XPC, clang and Python. | [Suite](suites/runner_specimen_isolation/README.md) |
+| `run_effects` | Baseline | Independent before/after file observations for allowed/denied attempts; plain runs leave the runner registry and launchd plists unchanged. | App/XPC and fixtures for live cases; Python for controls. | [Suite](suites/run_effects/README.md) |
+| `runner_exec_lifecycle` | Baseline | CLI exec deadlines stop observed helper trees, preserve output and allow later effects; early EOF, surviving descendants and worker death are covered. | App, XPC, clang and Python. | [Suite](suites/runner_exec_lifecycle/README.md) |
+| `runner_exec_inheritance` | Baseline + opt-in | Children report isolated environments/descriptors and usable streams; controlled resources and opt-in mutations establish leak detection. | App/XPC for CLI cases; clang/Python for worker and mutation controls. | [Suite](suites/runner_exec_inheritance/README.md) |
+| `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Registry](OPT_IN_TESTS.md) |
+| `witness_contract` | Baseline + opt-in | Ordering, independent query/attempt effects, comparison limits, partial evidence, diagnostics, dossier and log correlation; opt-in barrier mutations and BYOXPC dossier. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
 
-| Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
-| --- | --- | --- | --- | --- | --- |
-| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; BYOXPC recursive-verification controls on never-launched ad-hoc copies (install refuses, validate reports a worker changed after sealing); release continuation, real deadline, and offline tag/archive/publish controls | Built app for inspection; signing controls also need matching Developer ID; release controls need no app but need clang for the fixture host stubs (`tests/fixtures/dispatcher/build.sh`), with macOS socket/process observation for deadlines | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
-| `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and the targets `meson.build` declares. (The SwiftPM package auto-discovers by convention, so its set equals disk; meson.build vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other, a target pointed at a substitute file, or a duplicated declaration before the drift ships; `build.sh` applies the same expectation to the configured build directory. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`, the shared paragraph of the sandboxed-harness note across its four copies, the `policy-witness` usage lines in `cli.rs` against the README's CLI surface block, the host invariance rule (no libsandbox binding, call or dynamic lookup under `runner/Sources/`, with controls), the contract version manifest (`docs/contract.json`) against every generated copy in code and documents, the architecture manifest (`docs/architecture.json`) against its dot files, SVG stamps and the generated regions of `docs/ARCHITECTURE.md`, and three prose rules over that document (the Known gap index, the evidence-channel landing paths against the shape goldens, and the principles list against the core ideas in `AGENTS.md`). The `generator_contract` case holds the uniform generator invariants with mutation controls. | Python 3; Meson for the manifest reader | — | `tests/out/runs/default/suites/source_drift/.../check.log` |
-| `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3; macOS codesign for mutation prerequisite control | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No built app or toolchain; mutation prerequisites inspect an unsigned fixture and forbid later builds; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
-| `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3 + clang (the artifact, cancellation and selection controls lay fake bundles whose XPC host must be a real Mach-O for the inspector's `nm -u` check; the wrapper builds the stubs with `tests/fixtures/dispatcher/build.sh`); cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app. |
-| `unit` | Baseline | Controller logic is correct at the unit level, the controlled orchestration tests count manifest loads and client calls through the real `run`, the field-complete envelope agrees with the golden `tests/fixtures/contract/envelope_shape.json` (the helper binaries check their nested subtrees), and the controller crate is rustfmt-clean | Cargo toolchain with rustfmt | — | `tests/out/runs/default/suites/unit/.../cargo-test-bins.log`, `cargo-fmt-check.log` `rust.disposition_reds` runs the four disposition record controller tests by exact name and separates their assertions from equipment failures. |
-| `runner_unit` | Baseline | Swift runner internals: `CWorkerOrchestrator` envelope invariants, scoped comparison and consumer-encoding guarantees, `classify` worker/validator→normalized-outcome table, `buildAttemptResult` (kind, action, slot)→attempt-outcome table, shared prediction_unavailable exclusions and query planning, and CWorker + ValidatorClient drivers. Lifecycle controls retain independent polling, termination and confirmed-reap observations through the driver and JSON assembler. Native spawn controls retain unfamiliar return codes through release, worker-failure precedence and reply degradation. `ContractVersionTests` compares the generated Swift versions with `docs/contract.json` and the encoded reply shape with the golden `tests/fixtures/contract/response_shape.json`. `WorkerEvidenceTests` covers worker evidence publication, native call failures, diagnostic availability, cleanup-time snapshots, missing steps and EPIPE partial output. `HostOutcomeClassifierTests` exercises the production classifier with constructed results. `ComparisonEvidenceTests` reads every row of `tests/fixtures/comparison/matrix.json` and checks the encoder's record for constructed inputs; `source_drift` and the artifact inspection separately enforce that the host never touches libsandbox. | Swift + clang + cargo + signed app: the lifecycle, deadline and validator controls exec the embedded worker and validator directly, without the XPC service | — | `tests/out/runs/default/suites/runner_unit/.../pwrunner_core_tests.log`. Wrapper builds and warms `worker_lifecycle`; inspect the Swift log for internal SKIP. |
-| `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | — | Uses fixtures under `tests/fixtures/pw_runner/` |
-| `runner_apply_isolation_v2` | Baseline | v2 deny-default specimens complete cleanly: the unsandboxed XPC host posix_spawns the C worker, the worker applies the policy and writes its slot results to shared memory, and the host replies with a full envelope | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |
-| `runner_apply_isolation_v3` | Baseline | Same shape as `runner_apply_isolation_v2` but with SBPL v3 grammar, which has stricter validation | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |
-| `runner_outcome_worker_spawn_failed` | Baseline | `_test_overrides.worker_executable_path=/nonexistent` makes `posix_spawn` return `ENOENT`; host returns `normalized_outcome="worker_spawn_failed"` | Built app + XPC | — | Asserts `runner_subprocess` is null (no worker observed) and override is mirrored back |
-| `runner_outcome_runner_timeout` | Baseline | Deliberate empty-plan timeout control: host SIGKILL, failure diagnostic, honored overrides, explicit empty steps, and no validator metadata | Built app + XPC | — | Shares a focused checker with the single-write and mixed-outcome timeout cases; populated plans independently verify file effects and retained step evidence. Uses a 2s worker deadline and 8s hang; no log capture or tight wall-clock assertion. |
-| `runner_outcome_bad_request` | Baseline | Three e2e cases cover Swift decode failure, filter validation, and the accepted input contract through the CLI and direct XPC. Current requests have an independent file effect; malformed versions, unknown fields and malformed controller options fail before attempts. | Built app + XPC | — | Asserts no worker subprocess is reported and the error identifies the rejected field |
-| `runner_ready_byte_resilience` | Baseline | `_test_overrides.worker_pre_ready_hang_ms=2000` makes the C worker write its pre-apply ready byte after the host's 1000ms `readyByteTimeout` has closed `--ready-fd`. The worker must survive that SIGPIPE-prone write (SIGPIPE is ignored), still `sandbox_apply`, and score the probe — `normalized_outcome="ok"`. Regression guard for the `com.apple.WebProcess` slow-compile SIGPIPE bug. | Built app + XPC | — | Runs ~2-3s. Asserts `term_signal=null`, `exit_code=0`, validator ran, and the override is mirrored back. The seam delays after compilation/capture; this case has sufficient sentinel budget. The pre-apply witness uses a short budget and requires `runner_timeout`. |
-| `runner_filter_iokit_registry_entry_class` | Baseline | The `(iokit-open-service, iokit_registry_entry_class)` pair returns `prediction_unavailable` with explicit sentinel/null evidence and the exact requested step. A supported file `open_read` placeholder retains attempt evidence; it does not establish IOKit enforcement. | Built app + XPC | — | Documents the prediction-unavailable op+filter pair contract (`query_plan:prediction_unavailable_pair`) |
-| `runner_filter_sysctl_name` | Baseline | The `(sysctl-read, sysctl_name)` pair retains unavailable-prediction evidence and a real denied `sysctl` / `read` attempt against `kern.osrelease`. Independent checker controls exercise all three filter callers. | Built app + XPC; controls need only Python 3 | — | Shared envelope/step checks plus supported-file and sysctl-denial contracts |
-| `runner_filter_iokit_user_client_class` | Baseline | `(iokit-open-user-client, iokit_user_client_class)` pair. Same `prediction_unavailable` contract; complements `runner_filter_iokit_registry_entry_class` to cover both registry-entry and user-client class matching modes. Same attempt placeholder caveat. | Built app + XPC | — | |
-| `validator_bridge` | Baseline | Native query forwarding and acknowledged query/emission/closure gates, with independent native and process observations. | clang + macOS SDK | — | Test equipment; see [suite contract](suites/validator_bridge/README.md). |
-| `validator_batch_mode` | Baseline | Pins the `sb_api_validator --batch <pid>` NDJSON-over-stdin/stdout contract and, with a recording `sandbox_check` compiled around the production source, that every query carries `SANDBOX_CHECK_NO_REPORT` so predictions never write deny lines against the worker PID: 10 mixed-filter probes against a `sandbox-exec` child cover all four verdict outcomes (3 allow + 1 deny + 1 error + 1 bad_filter + 4 parse_error including trailing-garbage + overlong-line regressions). Per-probe failures don't abort the run; step_id is preserved when known. The production runner uses this shape per run. Per-probe CLI mode preserved unchanged for diagnostic tooling. | Built app | — | |
-| `failure_boundaries` | Baseline | Every capacity limit (worker, host-only plan strings, top-level and test-seam strings) with capacity-before-shape precedence and no echo of the refused string, validator UTF-8/structure/association, admission refusal of an overlong query with the largest admitted probe measured, control-character round trip through the real validator, submitted-ID join after unlink, and independent helper admission. | Built app + XPC | — | [Suite contract](suites/failure_boundaries/README.md); raw requests, producer transcripts and CLI envelopes are retained per case. Driver lifecycle and receiver byte accounting have separate Swift/Rust controls. |
-| `runner_outcome_validator_no_reply` | Baseline | A real validator I/O deadline closes collection, preserves one ordered prediction and releases both attempts. | Built app + XPC + Python 3 | — | Exact outcome, diagnostic, override echo, cleanup and independent file effects. |
-| `runner_validator_failure` | Baseline | Partial validator replies survive clean shortfall, malformed JSON or a real signal, attach to the correct step IDs, and preserve all completed attempts. The unanswered prediction has an explicit error and missing reason; its comparison stays `unestablished` beside the completed attempt's observation. | Built app + XPC + Python 3 | — | Checked-in validator transcripts have direct controls; CLI cases independently check file effects, degradation, honored overrides, and subprocess completion. Shared with the corresponding `witness_contract` entry points. |
-| `runner_abi_layout` | Baseline | Layout-drift guard between the C ABI header and Swift `PWShmLayout`. Compiles a tiny `printer.c` against `pw_probe_runner_abi.h` at test time, harvests every `sizeof`/`offsetof`/macro value, parses the mirrored Swift enum, and asserts bidirectional agreement. Catches what parser-only `source_drift` can't model (compiler struct padding). Checks compiled C values against the limits inventory and exercises the validator query-size boundary and the control-character round trip (escaped input decoded, output re-escaped, surrogate pairs, malformed escapes as per-probe parse errors). Checks the compiled full source identity against the generated Swift/Python copies, and compares layout geometry with `tests/fixtures/contract/abi_layout.txt` without an ordinal bump. | `xcrun clang` + macOS SDK; no app | — | Companion to `source_drift`'s enum-agreement check; both belong in the Baseline tier. |
-| `runner_c_worker_harness` | Baseline | Proves `pw-probe-runner` (the C worker) in isolation across 29 hand-built-shm scenarios, including ten release-barrier controls, two exec resource controls (32 execs around a system import and file reads under a 64-descriptor hard ceiling; post-apply setup under bare `(deny default)` failing at `posix_spawn`) and two exec attempt-budget controls (deadline-hitting helpers cut at the budget, later execs refused before spawn, a trailing read still completing): `(allow default)` happy path, bare `(deny default)` isolation, clean exit-byte teardown, SIGKILL fallback, a 256-slot multi-page shared-memory run, an SBPL-params round-trip that proves `policy.params` reach the kernel (kernel-observed deny on `/etc/hosts` when `TARGET=/private/etc` is passed through `sandbox_create_params` + `sandbox_set_param`), the file unlink/create attempt kinds (allow + deny), and the worker's pre-apply self-defense exits (compile failure survives with `apply_rc=-1`; abi/prepared/step_count/param_count/policy-overflow refusals → exit 4/5/6/7/8). | Built app + harness | — | Compiles `harness.c` once per suite run into `tests/out/.../harness.runner_c_worker` |
-| `runner_use_c_worker` | Baseline | End-to-end coverage of the runner's C code path. Drives real specimens through `controller → XPC service → CWorkerOrchestrator → pw-probe-runner + sb_api_validator --batch` normally without `_test_overrides` (the timeout case deliberately uses the deadline and hang seams). Covers: the envelope shape (`validator_subprocess` populated, comparison records present, prediction_unavailable answers synthesized locally), bug-report `(deny default)` survival, and regression cases for duplicate step_ids (plan-killer), unsupported attempt combos (whole-specimen refusal), worker timeout with completed write evidence and independent file effects, sandbox_check.pid = worker PID, the access_failed outcome, bare `process-exec` queries, unresolved planning paths, and exec argument, stream and truncation round trips. | Built app + XPC | — | |
-| `runner_mach_service_liveness` | Baseline | The built `PWRunner` executable, launched directly with `--mach-service <name>` (the BYOXPC LaunchAgent launch shape), binds `NSXPCListener(machServiceName:)` and stays alive instead of aborting under `xpc_main`. Regression guard for the BYOXPC `xpc_timeout` crash: a host that calls `NSXPCListener.service()` for this launch aborts immediately (`"An XPC Service cannot be run directly."`), which is what made `runner verify` time out. Complements `runner_unit`'s `pwListenerConfig` table (which pins the argv→listener selection) by asserting the shipped binary itself does not abort. | Built app | — | Launches the host binary without launchd, so it never services a connection here — it only asserts the process does not abort. `tests/out/runs/default/suites/runner_mach_service_liveness/.../artifacts/pwrunner.stderr.log` |
-| `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Annotated mismatch condition in shared menagerie cases only | Uses an owned, uniquely named runner copy; signing preserves the selected app and cleanup verifies removal. Shared smoke/blackbox assertions include checker controls. BBX expectation failures do not suppress attempt validation. |
-| `smoke` | Baseline + opt-in caller-auth case | Quick end-to-end checks against a built app bundle; the default case is also the one exact contract check (`docs/contract.json` versus the built app's reported response schema and worker ABI) and verifies the envelope build stamp against the app's Info.plist | Built app + XPC; selecting the whole suite also requires a matching Developer ID | — | `--suite smoke` includes `runner_caller_auth`. For ordinary smoke without signing equipment, select `--case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard`. Ordinary specimens also run under `runner_byoxpc`. Caller-auth checks use signed app copies, identical-client restricted/relaxed controls, independent file effects, and a missing-service control. |
-| `blackbox_e2e` | Baseline | End-to-end black-box cases (BBX-*) validate the returned JSON envelope, attempts, and step identity/order. Expected answers and attempts are asserted by field; independent checker controls ensure one failure cannot hide another; offline comparison controls reject structural and command differences between envelopes and name library, version, size and import differences between executables. | Envelope comparison controls need only Python 3 and the executable controls clang. Live cases need a built app + XPC; the checker controls need Python 3 and the shipped client inside the bundle, and launch no XPC service | — | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` `checker_controls` also runs the disposition contract's structural self-check and the independent lifecycle oracle's self-check (`tests/lib/lifecycle_oracle.py`): hand-reviewed rows reproduced, built records accepted, mutations rejected, D-model total. |
-| `blackbox_menagerie` | Baseline | Real SBPL fixtures exercising specimen ingestion and evidence correlation; controls drive both black-box checkers against independent envelopes and faults | Built app + XPC; validation controls need only Python 3 | Annotated mismatch is absent after all evidence checks pass | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
-| `sbpl_allowdeny_consistency` | Baseline | Independently reads randomized file targets after writes, checks changed/nonempty bytes vs byte-for-byte preservation, restores seeds and reverses policy parameter bindings with the same probe plan, then cross-checks JSON verdicts. The fixture retains two Mach steps, checked for presence only. | Built app + XPC | — | Two specimens/envelopes plus external before/after byte snapshots; no log dependency or test overrides. |
-| `runner_live_worker_identity` | Baseline | Test-owned observer obtains the exec helper PID from the kernel socket peer, follows OS ancestry to the worker and host, independently queries libsandbox while they live, and checks PW reports that worker and those verdicts. | Built app + XPC + macOS C toolchain | — | Bounded handshake; no PW source dependencies or test overrides. `observer.json` records independent PIDs, start times, and raw queries. |
-| `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt retains its raw evidence as a `permission_failure` observation without sandbox attribution. | Built app + XPC | — | Native exec scope controls separate target admission from fork/interpreter prerequisites, preserve child failure after spawn, and record a different submitted target as `different_submitted`. Direct permission controls retain unattributed EACCES. |
-| `exec_fixture` | Baseline | Independently verifies the shared helper's output/status, socket rendezvous, OS process identity/exit observation, environment/descriptor inspection, state-preserving exec forwarding, and the `--write` marker mode (exact bytes at 0600, exclusive-create refusal, missing-directory failure). A leader-only kill must be rejected while its child still answers; releasing one tree must leave another alive. | macOS C toolchain + Python 3 | — | Direct controls; no app dependency. Normal release and group kill must pass the same exit assertion. |
-| `run_capture` | Baseline | Shared CLI capture preserves exact bytes, arguments and exit/signal status; distinguishes harness deadlines from PW results; keeps overlapping runs separate; and reaps the CLI after assertion failure | macOS + Python 3, Unix sockets and OS exit observation | — | No app or C compilation. Independent fixture, socket acknowledgements and exec fixture exit observer. Retains raw output and `capture.json`, including launch/JSON/cleanup errors. |
-| `runner_specimen_isolation` | Baseline | Two bundled-runner specimens with identical step IDs overlap; B completes while A remains held. OS identities, independent file effects, and each run's output/attempt/prediction evidence stay separate. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared envelope/step validation plus independent observations. Controls cover cross-run swaps, missing/invalid evidence, legitimate optional fields, and combined failures; direct release controls live in `exec_fixture`. |
-| `run_effects` | Baseline | Each file attempt action has one exact, externally observed effect: `open_write` truncates the target in place to one byte, `create` produces an empty 0600 file or leaves an existing one untouched, `unlink` removes it, `open_read`/`access` change nothing; a denied twin of each mutating action leaves the target identical. An allowed exec helper's own file write is real and a denied helper runs but leaves no file. A plain run adds no launchd plist and does not change the runner registry. | Built app + XPC + macOS C toolchain + Python 3; controls need only Python 3 | — | Snapshots (bytes, size, mode, device/inode, links, mtime/ctime) are taken outside PW before and after each run, retained, and checked before the envelope is decoded. Expectations are pure functions with direct controls that must reject fabricated wrong observations. Allowed unlink records its native answer and `query_first` order beside the observed removal. `launchctl list` labels are recorded as diagnostics only. |
-| `runner_exec_lifecycle` | Baseline | A public CLI exec deadline stops both observed helper processes, preserves output, and permits a subsequent file write with independently checked effects. | Built app + XPC + macOS C toolchain + Python 3 | — | No test overrides or worker ABI dependency. Includes early stream EOF, leader exit with a live descendant, and worker death during an unpublished exec. Artifacts retain PID/group/exit observations and before/after bytes. |
-| `runner_exec_inheritance` | Baseline | Exec children report empty environments, only standard descriptors, stdin EOF, and usable output. The CLI case uses ordinary specimens; a controlled worker launch proves random environment/descriptor resources existed to leak. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared observer and assertions have direct contamination controls. The worker adapter owns the ABI dependency; opt-in mutation checks verify real leak detection. |
-| `opt_in` | Opt-in | Select all non-default catalog cases | See registry | — | `tests/OPT_IN_TESTS.md` |
-| `witness_contract` | Baseline | Ordered native queries, held-collection file/process effects, interval/state limits, 256-step and deny-default witnesses; required opt-in worker/host bypass controls. Pins verdicts, attempts, independent query/attempt routing, removed-target mutation uncertainty, validator-failure attribution, completed observations after worker timeout, absence of policy claims before application, existing-file create semantics, rejected fields, test seams, and audit rules. | Built app + XPC; clang for the comparison matrix's exit-status helpers (`tests/fixtures/comparison/build.sh`) and the exec fixtures | — | The routing case swaps real prediction targets while independently observed writes stay fixed; its intentional target mismatch must retain both channels without claiming a comparison. The pre-apply case requires the current response schema and no invented library/policy result, with a populated positive control. `worker_termination_and_log_correlation` combines denied writes with self-signal, capture disabled/enabled, successful-run capture, and ambiguous event references; Rust controls pin captured-event association independently of log availability. `deny_capture_covers_the_run` holds a run past twenty seconds and checks the requested client interval through the real observer, using allowed queries; one denied read goes through a symlinked directory and must resolve through the host's attempt path forms; it records early/late availability without requiring emission, checks the padded bounds and collection/cleanup facts, and, for complete collection, requires `permission_failures_without_record` to name exactly the unrecorded reads; incomplete collection leaves it null. The offline `log_capture_controls` case rejects unsupported unavailable/budget claims. Deterministic Rust controls require full/early/late/empty preservation, padding-boundary exclusion, rollback refusal, and mismatched-window suppression through parsing, serialization and consumer recovery. `comparison_matrix` runs the live specimens of `tests/fixtures/comparison/matrix.json`, including the steered-validator specimen, and checks every live row's record, raw fields and independently observed file effects; S09 remains constructed-only Swift coverage; `dossier_witness` checks `data.specimen` across ordinary, import, augmented, refused, no-source, controller-refusal and executable-override runs (`dossier_witness_byoxpc` is the opt-in BYOXPC copy). `worker_progress_and_failure` checks real compiler diagnostics and opaque fixture-code forwarding. `worker_sparse_failure` checks admitted-size transfer interruption and EPIPE, absent reports/mapping failure, and retained completed file effects. `unfamiliar_diagnostic_transport` checks two open diagnostic codes through worker and validator forwarding, independent failures, publication rejection and text truncation. `max_targets_reply_survives` covers five complete 256-step workloads (denials, escaped paths, 511-byte independent query paths, 256 execs with output, and 256 execs with control-character query paths and streams, the worst admitted escaping) and requires 32,768-byte query values and filter/attempt labels to be refused at admission with no reply loss or file effects. `max_exec_steps_spawn` requires every exec step of a 256-step plan to spawn, which the worker's pre-apply descriptor-limit raise makes possible. `happy_path_baseline` is the regression sentinel. `worker_attempt_in_flight_at_deadline` blocks attempt 0 on a writerless FIFO until the host deadline and requires the controller to project the witnessed deadline, SIGKILL request and reaped signal as `termination_cause: host_sentinel_deadline`, the completed prefix and voluntary exit during grace to survive, and every lifecycle claim to satisfy the independent oracle (`tests/lib/lifecycle_oracle.py`); after CLI launch, FIFO staging is removed only on the envelope's `reaped: true` with a valid worker PID. |
-
-## Conventions
+## Shared test infrastructure
 
 ### Shell case setup and checking
 
 Shared shell startup rejects Python with assertions disabled (for example,
-`PYTHONOPTIMIZE=1`) with exit 2 before changing output or running cases. Unset
-`PYTHONOPTIMIZE` to run tests. Direct Python helper invocations bypass shell
-startup; invoke those with assertions enabled. Independent startup controls live
-in `shell_helpers`.
+`PYTHONOPTIMIZE=1`) with exit 2 before changing output or running cases. Direct
+Python helper invocations bypass shell startup. Independent startup controls
+live in `shell_helpers`.
 
 `tests/lib/case.sh` provides baseline prerequisite checks, logged command
 execution, fixture builds through their existing scripts, and Python checker
 invocation. Cases retain their steps, argument lists, artifact paths, and final
 pass statements. A failed stage writes a failed report and exits immediately;
-it does not depend on the wrapper's `set -e`. Direct scripts retain the optional-app helpers in `testlib.sh`; the public
-dispatcher enforces catalog prerequisites and rejects undeclared skips. Direct controls live
-in `shell_helpers`; see `tests/suites/shell_helpers/README.md` for the API.
+it does not depend on the wrapper's `set -e`. Direct scripts retain the optional-app
+helpers in `testlib.sh`; the public dispatcher enforces catalog prerequisites and
+rejects undeclared skips. [shell_helpers](suites/shell_helpers/README.md) documents
+the API and independent controls.
 
 ### CLI capture
 
@@ -382,18 +340,16 @@ CLI command, raw stdout/stderr, exit status, timing, and harness intervention.
 Separate start/wait operations support overlapping runs. The caller supplies CLI
 arguments and a test-side wait deadline, decides when to decode JSON, and owns
 all outcome assertions and independent observations. Cleanup runs after those
-observations. The initial users are `runner_validator_failure`,
-`runner_exec_lifecycle`, and `runner_specimen_isolation`; independent controls
-live in `run_capture`. See `tests/suites/run_capture/README.md` for the API and
-artifact contract.
+observations. [run_capture](suites/run_capture/README.md) documents the API,
+artifact contract and independent controls.
 
 ### Black-box validation
 
 `blackbox_e2e`, `blackbox_menagerie`, `runner_specimen_isolation`, the
 `witness_contract` prediction-target case, and the three `runner_filter_*` suites
 share `tests/lib/blackbox.py` for envelope checks, step
-identity/order, evidence fields and types, and explicit per-step expectations. Each suite owns its
-policy, file-observation, denial, and skip rules. The helper only collects
+identity/order, evidence fields and types, and explicit per-step expectations.
+Each suite owns its policy, file-observation, denial, and skip rules. The helper only collects
 errors; it neither runs PolicyWitness nor chooses expectations. Nullable path
 fields remain present, while attempt `error` text is optional.
 Black-box and filter controls exercise checker CLIs without importing the helper
@@ -406,54 +362,35 @@ The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
 step identity, operation, filter value and either a supported file-open or
 denied-sysctl attempt contract; the adapter accepts only the current response
 and envelope versions. Their independent controls run through
-`runner_filter_sysctl_name` before its optional app check; see its README.
+[runner_filter_sysctl_name](suites/runner_filter_sysctl_name/README.md) before
+its optional app check.
 
 The menagerie's end-to-end specimens come from local copies of PAWL evidence.
 It covers SBPL ingestion, probe execution, and evidence correlation, including
 negative controls and canonicalization-boundary cases where mismatches are
 recorded as evidence. An absent annotated mismatch can skip only after all
-evidence checks pass. See `tests/suites/blackbox_menagerie/README.md` for
-suite invariants and fixtures.
+evidence checks pass. Its [suite README](suites/blackbox_menagerie/README.md)
+describes the invariants and fixtures.
 
-### Sandboxed automation harnesses
-
-An automation harness's macOS sandbox can block runner XPC lookup
-(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
-(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
-discovery when swiftc cannot write its module cache. It can also make
-`codesign --verify` report an invalid signature for unchanged bytes. Request
-escalation and rerun the same failing command once outside the automation
-sandbox, without changing the artifact under investigation. Treat a signature
-failure as environmental only if the unsandboxed verification passes;
-investigate any failure that remains.
-
-This warning is intentionally repeated for agents entering through different
-workflows who may mistake harness restrictions for product defects.
-[source_drift](suites/source_drift/README.md#intentional-guidance-agreement)
-compares the first paragraph in all four locations; edit those copies together.
-The explanations that follow it are local to each document.
+### Equipment checks
 
 The dispatcher checks visible equipment, including app and worker binaries,
 toolchains, a GUI session and a signing identity. It does not preflight XPC
 reachability or log access: a blocked live case runs and fails with evidence,
 while an unconfirmed `gui` prerequisite leaves the case explicitly unrun.
-Inspect the diagnostic before attributing either result to the product or the
-harness.
-
-Use an unsandboxed shell for cases requiring `app` or `worker`;
-`tests/run.sh --all --list` shows requirements. `runner_unit` executes embedded
-children directly without XPC. Cases without an app requirement can still need
-escalation: cancellation and process-observation controls use local sockets and
-exit events, and `source_drift/build_documentation` exercises Meson's Swift
-compiler discovery.
+[Automation guidance](AGENTS.md#sandboxed-automation-harnesses) covers diagnosis
+and rerunning under an unsandboxed shell.
 
 ## Output contract (`tests/out/`)
 
-An executing invocation of `tests/run.sh` replaces its output directory so tooling
-can read stable paths. Help, `--list`, and rejected commands preserve it:
+An executing invocation of `tests/run.sh` replaces eligible output in its selected
+directory so tooling can read stable paths. `<run>` defaults to
+`tests/out/runs/default` and is configurable through `PW_TEST_OUT_DIR`. Help,
+`--list`, and rejected commands preserve it:
 
 ```text
-tests/out/
+<run>/
+  owner.json
   plan.json
   run.json
   dispatch.json
@@ -469,6 +406,8 @@ tests/out/
     artifacts/...
 ```
 
+`owner.json` establishes run ownership as described in the
+[retention contract](#retention-ownership-and-execution-locking).
 `plan.json` records the selection before execution. `dispatch.json` journals each
 command invocation, expected cases, execution status, report snapshots, and
 harness errors. Most cases execute in separate processes; BYOXPC leaves share
@@ -494,19 +433,12 @@ unrun selections, and undeclared skips fail. A declared skip requires a matching
 absent annotated mismatch after evidence validation. There is no skip-policy flag.
 `run.json.ok` and the shell exit agree: zero failed reports and zero harness
 errors. Exit 2 means planning/configuration was rejected before execution.
-See `tests/suites/dispatcher/README.md` for the independent controls.
-
-`failure_boundaries` covers the admission and validator receiver routes in
-[the receiver contract](FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). Run it with `runner_unit`,
-`runner_abi_layout`, `runner_c_worker_harness` and `unit` for driver/ABI/controller
-controls. Existing `runner_validator_failure` and `witness_contract` retain their
-partial evidence and attribution assertions.
+The [dispatcher suite](suites/dispatcher/README.md) documents the independent controls.
 
 ## Comparing native builds
 
-Four scripts under `tests/lib/` compare one native build with another;
-they were written for the Meson migration and remain the way to argue that
-two builds of the same sources agree. `meson_receipts.py BUILDDIR OUT`
+Four scripts under `tests/lib/` record build inputs, prepare candidate apps
+and compare their structure and observed envelopes. `meson_receipts.py BUILDDIR OUT`
 records tool versions, the resolved toolchain, the manifest and options,
 effective build options, declared and active targets, every compile and link
 command, the output hashes and minimum versions, and each output's entry in
@@ -528,10 +460,8 @@ path and service name, which must match each envelope's provenance; the log
 predicate may differ only in its recorded worker PID. The offline
 `blackbox_e2e/comparison_controls` case checks those boundaries.
 
-Structural comparison does not establish behavioral equivalence: run the live
-battery against the candidate, including the worker and ordering cases that
-exercise the Swift-to-C shim. Repeated Swift builds of identical sources can
-differ in bytes.
+Structural comparison does not establish behavioral equivalence. Repeated Swift
+builds of identical sources can differ in bytes.
 
 Two checks read `meson.build` and therefore need Meson on `PATH`, declared as
 equipment in the catalog: the `source_drift` suite compares every target's
@@ -540,14 +470,27 @@ compiles its hosts from the host's list.
 
 ## Comparison evidence coverage
 
+Consumer evidence coverage follows the
+[comparison record ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
+`tests/lib/consumer.py` validates one envelope and selects steps by field
+using explicit classification tables over the raw channel fields, without
+consulting specimen policies or calling the runner classifier.
+Recovered spawn-failure records retain their numeric codes, paths and
+diagnostic text. Explicit evidence-loss replies omit that record along with
+steps and subprocesses. Controlled scenario expectations stay in the CLI/witness
+cases; Swift tests enforce
+encoding and absence, and Rust tests enforce receiver/correlation preservation.
+Shared blackbox checks enforce universal version/shape guarantees. The blackbox
+checker controls retain rejected meaning-loss fixtures beside passing controls.
+
 The comparison record's scenarios live in one fixture,
 [tests/fixtures/comparison/matrix.json](fixtures/comparison/matrix.json):
-every row names a live or constructed step, the expected six-field record, the raw fields
-it rests on and an independent control. `witness_contract/comparison_matrix`
+every row names a live or constructed step, the expected six-field record, the
+raw fields it rests on and an independent control. `witness_contract/comparison_matrix`
 runs the live specimens through the CLI and checks every live row's record, raw
 fields and file effects; S09 is constructed-only defensive coverage because
-public admission refuses unsupported attempts. `runner_unit`'s `ComparisonEvidenceTests` reads the
-same rows against the Swift encoder; the shared `tests/lib/consumer.py`
+public admission refuses unsupported attempts. `runner_unit`'s
+`ComparisonEvidenceTests` reads the same rows against the Swift encoder; the shared `tests/lib/consumer.py`
 validates every record against its raw channel fields and `order` against the
 ordering chain. The [failure contract](FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
 names which case owns which rows and invariants. Step identity, independent
@@ -556,5 +499,5 @@ remain separately asserted.
 
 The default `witness_contract/log_query_predicate_archive` case requires the
 committed [query archive and independent manifest](fixtures/deny_capture/README.md).
-It performs read-only OS queries; no default case may generate or download a
-replacement fixture. Missing data or incompatible readers fail explicitly.
+It performs read-only OS queries against that fixture. Missing data or
+incompatible readers fail explicitly.

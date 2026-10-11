@@ -147,4 +147,5 @@ preserved release archives.
 - Contributing:
   - Working guidance: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-  - Testing: [tests/README.md](tests/README.md)
+  - Test harness and coverage: [tests/README.md](tests/README.md)
+  - Working on tests: [tests/AGENTS.md](tests/AGENTS.md)

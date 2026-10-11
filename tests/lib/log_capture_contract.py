@@ -143,7 +143,7 @@ def check_observer_report(observer, pid, start, end, *, timeout_ms=10000, timeou
     require(isinstance(data, dict) and type(data.get('observer_schema_version')) is int and data['observer_schema_version'] == 2 and data.get('mode') == 'show', 'malformed observer reply')
     require(data.get('pid') == pid and data.get('process_name') == 'pw-probe-runner', 'wrong observer identity')
     require((data.get('start'), data.get('end'), data.get('last')) == (start, end, None), 'wrong observer query bounds')
-    require(data.get('blocked_reason') is None, 'required unified-log access blocked; see tests/README.md sandboxed-harness procedure')
+    require(data.get('blocked_reason') is None, 'required unified-log access blocked; see tests/AGENTS.md sandboxed-harness procedure')
     cutoff = check_supervision(data.get('collection'), 'log_show', timeout_ms, timeout_source, now_ns)
     report = data['collection']
     require(data.get('log_rc') == report['process']['exit_code'], 'log exit differs from wait result')

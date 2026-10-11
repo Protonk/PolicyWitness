@@ -48,7 +48,7 @@ unconditional worker-log availability guarantee has been established.
 Use the built app at `dist/PolicyWitness.app` from an unsandboxed session. In
 the automation harness, `log show` returned `Cannot run while sandboxed`;
 live investigation commands were rerun with escalation as described in
-[tests/README.md](../tests/README.md#sandboxed-automation-harnesses). Missing
+[tests/AGENTS.md](../tests/AGENTS.md#sandboxed-automation-harnesses). Missing
 equipment or blocked capture is distinct from a successful query with no record.
 Preserve each execution and scan; these steps do not retry a failure until green.
 
