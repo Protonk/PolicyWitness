@@ -72,8 +72,9 @@ tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt
 ## Deny capture covers the run
 
 `deny_capture_covers_the_run` denies one read, holds two `/bin/sleep` exec
-children to the worker's exec deadline, then denies another read. Its metadata
-queries are allowed, avoiding query-generated denials for the attempted reads.
+children to the worker's exec deadline, then denies another read. Its allowed
+metadata queries are independent of those read attempts; all validator queries
+use `SANDBOX_CHECK_NO_REPORT` and produce no denial records.
 The native attempts, worker exit and elapsed span are mandatory witnesses.
 One denied read goes through a symlinked directory: the policy names the
 resolved path, the attempt names the link, and the host's

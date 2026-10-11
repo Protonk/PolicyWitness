@@ -2,30 +2,6 @@
   "schema_version": 1,
   "entries": [
     {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "  For ordered endpoints the bounds are `floor(client start) - 2 s` and"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "  `ceil(client end) + 2 s`; `window.pad_seconds` records the pad. The raw"
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "- The generated launchd plist sets `ThrottleInterval` to                                                                                (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default."
-    },
-    {
-      "document": "controller/README.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to                                                                                             of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown."
-    },
-    {
       "document": "docs/LIMITS.md",
       "invariant": "G9",
       "kind": "literal",

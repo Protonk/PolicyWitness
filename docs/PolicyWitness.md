@@ -1684,12 +1684,12 @@ step-ID joins stay unmatched. Create can create a new file or open an existing
 one for writing. A missing completed attempt does not prevent a candidate
 association: a denial can precede interrupted publication.
 
-Validator `sandbox_check` queries can generate denial records naming the worker
-PID before any attempt begins. A matching target is therefore not proof that a
-record came from its paired attempt, and a PID match can reflect an ordinary
-denied probe followed by an unrelated self-signal or crash. Some denied attempts
-have no available log record; requesting the full interval does not guarantee
-complete delivery.
+Validator `sandbox_check` queries use `SANDBOX_CHECK_NO_REPORT` and produce no
+denial records. A matching target still does not prove that a record came from
+its paired attempt: repeated attempts and PID reuse prevent unique attribution,
+and a PID match can reflect an ordinary denied probe followed by an unrelated
+self-signal or crash. Some denied attempts have no available log record;
+requesting the full interval does not guarantee complete delivery.
 
 ### Running specimens in parallel
 

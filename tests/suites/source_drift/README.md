@@ -172,9 +172,10 @@ the baseline, it reports that fact. `--report` turns a growth refusal into a
 warning. This baseline is retained even when empty.
 
 The prose scan includes `docs/*.md`, the root README and AGENTS files,
-`runner/AGENTS.md`, `tests/README.md`, `tests/AGENTS.md`, and every Markdown document a generator
-writes. It ignores fenced examples; authored spans are processed in the
-documents each generator names in its `SPAN_DOCUMENTS`. The guide receives span comments
+`controller/AGENTS.md`, `runner/AGENTS.md`, `tests/README.md`, `tests/AGENTS.md`,
+and every Markdown document a generator writes. It ignores fenced examples;
+authored spans are processed in the documents each generator names in its
+`SPAN_DOCUMENTS`. The guide receives span comments
 and values only by copying its shared source. Other generated or copied
 regions are opaque to the span pass. A backticked link label into a non-Markdown
 file denotes a symbol; use a plain filename label for an ordinary file link.

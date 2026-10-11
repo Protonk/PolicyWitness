@@ -19,6 +19,18 @@ Rust unit tests and formatting for the controller crate.
   refused, naming the worker and the key); promoted from red.
 - No case requires a built `.app` bundle.
 
+`collector_states_preserve_the_serialized_execution_half` in
+[run_flow.rs](../../../controller/src/run_flow.rs) runs production completion,
+log attachment and serialization with eventful, empty and unrelated successful
+captures, supported collection failures and disabled capture. After removing
+only log-owned fields and the envelope timestamp, execution bytes and CLI status
+must remain unchanged. It also checks correlation gating and diagnostic-event
+retention, including disposition, withheld-comparison and absent-worker cases.
+Supplied-text and window controls in
+[log_replay_tests.rs](../../../controller/src/log_replay_tests.rs) carry production
+output through the independent Python consumer; their
+[fixture reference](../../fixtures/deny_capture/README.md) describes the inputs.
+
 ## Success criteria
 
 - All unit tests pass (exit code 0) and the crate is rustfmt-clean.

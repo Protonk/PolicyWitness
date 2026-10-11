@@ -5,7 +5,8 @@ This file governs how contributors and agents work here.
 
 ## Quick Router (open first)
 
-- CLI and request handling: [controller/README.md](controller/README.md).
+- CLI and request handling: [controller/AGENTS.md](controller/AGENTS.md) and
+  the [implementation reference](controller/README.md).
 - Runner implementation: [runner/README.md](runner/README.md). For runner tests,
   including work under `tests/` or the C worker, read [runner/AGENTS.md](runner/AGENTS.md).
 - Build and release work: [docs/BUILD.md](docs/BUILD.md) and

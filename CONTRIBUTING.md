@@ -55,7 +55,7 @@ READMEs describe what is here; AGENTS files explain how to work here. Keep
 implementation inventories and directory descriptions in the READMEs, and use
 agent guidance for decisions, working rules and links to the relevant details.
 
-`CLAUDE.md` at the repo root and under `runner/` and `tests/` are symlinks to
-the `AGENTS.md` beside them, so Claude Code loads the same guidance without
-a branded copy.
+`CLAUDE.md` at the repo root and under `controller/`, `runner/` and `tests/` are
+symlinks to the `AGENTS.md` beside them, so Claude Code loads the same guidance
+without a branded copy.
 Edit the `AGENTS.md` files; they are the source of truth.

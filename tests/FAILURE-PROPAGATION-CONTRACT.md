@@ -456,10 +456,10 @@ observer mirrors the interval it scanned; any other interval is
 `step_denies`; correlation is `unavailable`. Reversed client clock
 readings produce `invalid_window`, retaining the raw milliseconds with null
 `start`/`end` and no observer invocation. Ordered endpoints do not establish clock
-continuity. Validator queries can generate worker-PID denial records before
-attempts begin, and some denied attempts have no available log record. Neither
-path matching nor interval coverage establishes a record's origin or complete
-log delivery.
+continuity. Validator queries use `SANDBOX_CHECK_NO_REPORT` and produce no denial
+records. Repeated attempts and PID reuse still prevent unique attribution, and
+some denied attempts have no available log record. Neither path matching nor
+interval coverage establishes a record's origin or complete log delivery.
 Raw lines remain available. The observer preserves the full remaining target,
 including spaces; it does not shorten a path into a different target. PID
 matching alone never establishes a termination cause or exact run membership.
