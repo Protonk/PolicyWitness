@@ -16,11 +16,12 @@ contracts until each implementation increment changes them.
 When instructed to execute this plan, implement M0 through M5.6 and complete
 their acceptance checks. Milestone gates are evidence checks to evaluate autonomously.
 When a gate passes, update the checkpoint, commit a coherent verified increment,
-and proceed without requesting routine milestone approval, except at the two
-[out-of-band audit handoffs](#out-of-band-audit-handoffs). At those boundaries,
-commit the handoff and pause for the auditor's response. Diagnose and repair
-failures before advancing dependent work. Outside those handoffs, progress reports
-communicate findings and do not end execution while authorized work remains.
+and proceed without requesting routine milestone approval. Observe the
+[out-of-band audit handoffs](#out-of-band-audit-handoffs) and
+[human review pauses](#human-review): commit the prepared handoff or briefing and
+checkpoint, then wait for the auditor or user as specified there. Diagnose and
+repair failures before advancing dependent work. Outside those pauses, progress
+reports communicate findings and do not end execution while authorized work remains.
 
 Choose and revise implementation details within the stated scope and evidence
 constraints, including the provisional grammar, helper lifetime, reference
@@ -34,9 +35,9 @@ for investigation rather than routine user approval.
 Reserve user decisions for the issuer-authority expansion specified in M1,
 material scope changes, changes to the evidence requirements, or findings that
 make an essential success criterion unattainable within the authorized scope.
-Never satisfy a gate by weakening its evidence requirements. Continue independent
-work while a decision or required access is pending, preserving the evidence and
-the exact condition blocking dependent work.
+Never satisfy a gate by weakening its evidence requirements. Outside explicit
+review pauses, continue independent work while a decision or required access is
+pending, preserving the evidence and the exact condition blocking dependent work.
 
 Execution authorizes local edits and commits, signed builds using the existing
 development signing identity, required live and mutation tests, and installation
@@ -57,7 +58,8 @@ outside this plan.
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
-| M4 Failure combinations and adversarial coverage | Pending | Requires M3 and A1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
+| H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
+| M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
 | M5.2 Limits account | Pending | Requires M5.1 |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
@@ -69,7 +71,7 @@ outside this plan.
 Each implementation gate includes its
 [rendered documentation assessment](#rendered-documentation-assessment) waypoint
 and the lead agent's disposition of the findings. A1 and A2 use the separate
-out-of-band handoff below.
+out-of-band handoff below; H1 uses the prepared human review briefing.
 
 **Execution state:** implementation has not started. The development signing
 identity and candidate build have not been selected. This plan has created no
@@ -444,7 +446,7 @@ separate from the implementation's rendered-documentation sub-agent reviews.
 
 | Audit | Handoff point | Resume condition |
 | --- | --- | --- |
-| A1 Middle | After M3 and its documentation assessment, before M4. The real CLI lifecycle, public grammar, BYOXPC integration and their contract increments are available to inspect together. | Auditor answers are returned and dispositioned; findings that invalidate M3 or block dependent work are resolved before M4 proceeds. |
+| A1 Middle | After M3 and its documentation assessment, before H1 and M4. The real CLI lifecycle, public grammar, BYOXPC integration and their contract increments are available to inspect together. | Auditor answers are returned and dispositioned; findings that invalidate M3 or block dependent work are resolved. Then prepare H1. |
 | A2 Final | After M5.6 and its documentation assessment, before declaring the plan complete. The complete account and integrated acceptance evidence identify the candidate under review. | Auditor answers are returned and dispositioned, required corrections are verified, and the audit and acceptance evidence apply to the final candidate. |
 
 At each handoff, identify the exact source commit, build identity, rendered
@@ -466,6 +468,47 @@ and auditor follow-up stay in the relevant section of this same document. If
 repairs change the reviewed candidate, refresh affected checks, generated accounts
 and review references, and obtain any needed follow-up there. These are two audit
 waypoints in total; follow-up does not create an additional audit milestone.
+
+## Human review
+
+The executing agent owns the API, design, diagnosis and proposed response to
+findings. Human review examines the necessity and coherence of the implemented
+machinery through the documentation assessments and the agent's reasoning.
+
+**H1 prepared pause:** after M3's documentation assessment and A1 have been
+reconciled and closed, prepare a conversation with the user before starting M4.
+Use the existing rendered views and recorded findings, including concerns already
+resolved by the agent when they expose consequential complexity. Give a short
+briefing containing:
+
+- The rendered passage, diagram or omission that prompted the concern.
+- The reviewer's finding and the executing agent's assessment of it.
+- The disputed mechanism's responsibility and any existing mechanism that could
+  serve it, with the relevant implementation evidence.
+- The agent's recommendation and the consequences of retaining or changing it.
+
+If the assessments reveal no substantial complexity concern, say so and give
+the basis for retaining the implemented design. Prepare a recommendation before
+the pause; routine API decisions and unfinished diagnosis remain the agent's work.
+Keep the briefing and its evidence references in the checkpoint and associated
+investigative record, without creating another review document. Commit that
+preparation, mark H1 awaiting the user, present the briefing, and pause execution.
+Resume only when the user's response permits continuation. Record any redirection,
+update the plan and affected evidence, and close H1 before starting M4. Individual
+API decisions do not require separate approval. The final handoff invites user
+review without adding a scheduled human approval gate.
+
+**Later review trigger:** pause when a documentation assessment exposes
+substantial duplication, competing models of the same behavior, or a new general
+mechanism whose necessity remains doubtful after the lead's bounded investigation.
+First trace the relevant code, existing mechanisms and evidence, establish the
+facts, and prepare a recommended response using the same briefing above. Pause
+before expanding the disputed mechanism; record the trigger, affected work and
+recommendation in the checkpoint, commit the preparation, and await the user's
+response under the same resume rule as H1. Routine documentation repairs, test
+failures, API choices and uncertain native behavior do not by themselves trigger
+this pause. The issuer-authority and other reserved decisions in the execution
+mandate continue to apply.
 
 ## M0 Run-stage vocabulary
 
@@ -672,8 +715,8 @@ the producer and independent readers reject invented completion. The contract
 increment above is complete, `source_drift` and `preflight` pass against a
 signed build, and neither baseline gained an entry.
 
-Complete and close A1 before advancing to M4, under
-[the out-of-band audit rules](#out-of-band-audit-handoffs).
+Complete and close A1 under [the out-of-band audit rules](#out-of-band-audit-handoffs),
+then complete [H1's prepared human review](#human-review) before advancing to M4.
 
 ## M4 Failure combinations and adversarial coverage
 
