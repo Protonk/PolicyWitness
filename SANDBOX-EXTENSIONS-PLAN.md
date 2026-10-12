@@ -11,6 +11,40 @@ status as work proceeds. It carries the requirements of the initial agent brief;
 the brief is retired. Current behavior remains defined by the repository's
 contracts until each implementation increment changes them.
 
+## Execution mandate
+
+When instructed to execute this plan, implement M1 through M5 and complete their
+acceptance checks. Milestone gates are evidence checks to evaluate autonomously.
+When a gate passes, update the checkpoint, commit a coherent verified increment,
+and proceed without requesting routine milestone approval. Diagnose and repair
+failures before advancing dependent work. Progress reports communicate findings
+and do not end execution while authorized work remains.
+
+Choose and revise implementation details within the stated scope and evidence
+constraints, including the provisional grammar, helper arrangement, reference
+representation, limits, and failure behavior. Schema changes under the wire
+contract and an evidence-backed revision of the worker allocation claim are
+within scope. When experiments contradict a proposed choice, update the plan
+and investigative record with the evidence and rationale, then continue. A
+failed test, unexpected native result, or unresolved implementation detail calls
+for investigation rather than routine user approval.
+
+Reserve user decisions for the issuer-authority expansion specified in M1,
+material scope changes, changes to the evidence requirements, or findings that
+make an essential success criterion unattainable within the authorized scope.
+Never satisfy a gate by weakening its evidence requirements. Continue independent
+work while a decision or required access is pending, preserving the evidence and
+the exact condition blocking dependent work.
+
+Execution authorizes local edits and commits, signed builds using the existing
+development signing identity, required live and mutation tests, and installation
+and removal of test-owned user-scope BYOXPC fixtures under the repository's
+ownership and cleanup rules. Establish and record the signing identity and
+required environment early. Tool permissions and macOS authorization remain
+separate from this task authorization; follow the repository's harness retry
+guidance and report access that cannot be obtained. Release publication remains
+outside this plan.
+
 ## Current checkpoint
 
 | Milestone | Status | Completion evidence |
@@ -22,15 +56,24 @@ contracts until each implementation increment changes them.
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3; extends the boundary controls already required in M2 and M3 |
 | M5 Contract completion and integrated acceptance | Pending | Requires all preceding milestones |
 
-**Next action:** build the M1 native experiment and its independent controls,
-starting with a controlled read-only file extension and an ordinary unprivileged
-issuer. Establish the actual signing and entitlement baseline before interpreting
-any outcome.
+**Execution state:** implementation has not started. The development signing
+identity and candidate build have not been selected. This plan has created no
+implementation processes or BYOXPC cleanup obligations. Credited investigation
+checks and their source baseline are listed below.
 
-After each increment, update this table and next action, link the implementation
-commit and applicable evidence, and state unresolved decisions. Put detailed
-empirical findings, negative results, and reproduction instructions in an
-associated `records/SANDBOX-EXTENSIONS.md` record when M1 produces evidence.
+**Next action on execution:** establish the development signing identity and
+required environment, then build the M1 native experiment and its independent
+controls. Start with a controlled read-only file extension and an ordinary
+unprivileged issuer. Establish the actual signing and entitlement baseline before
+interpreting any outcome.
+
+After each increment and before any planned stopping point, update this table and
+execution state so another session can resume safely. Record the implementation
+commit and any relevant uncommitted source snapshot, candidate build identity,
+credited test runs, unresolved findings and decisions, active processes or cleanup
+ownership, and the exact next action. Put detailed empirical findings, negative results,
+decision rationale, and reproduction instructions in an associated
+`records/SANDBOX-EXTENSIONS.md` record when M1 produces evidence.
 Follow [record guidance](records/AGENTS.md); link that record from this plan.
 Keep permanent documentation focused on current behavior, with history in git.
 
@@ -223,9 +266,12 @@ If evidence indicates that issuance requires elevated privileges, a privileged
 service, or an entitlement unavailable to ordinary PW distribution, report the
 finding and obtain an explicit user decision before designing or implementing
 that authority expansion. Continue independent diagnostics that do not require
-it. Any other failed essential premise also requires reporting the evidence and
-revising this plan before building dependent features. Retaining access after
-release or unchanged queries does not by itself invalidate the witness objective.
+it. For other contradicted implementation assumptions, report the evidence and
+revise this plan autonomously before building dependent features, provided the
+objective and constraints remain intact. If an essential success criterion is
+unattainable within those constraints, seek the reserved user decision under the
+execution mandate. Retaining access after release or unchanged queries does not
+by itself invalidate the witness objective.
 
 ## M2 Ordered phases in the existing worker
 
