@@ -58,7 +58,7 @@ outside this plan.
 | --- | --- | --- |
 | Repository investigation | Complete | Baseline and findings below |
 | M0 Run-stage vocabulary | Pending | Prose rename only; no wire or source change |
-| M1 Native feasibility and independent controls | Pending | Required before settling issuer authority and native integration |
+| M1 Native feasibility and independent controls | In progress | Native experiment and controls; see the [investigative record](records/SANDBOX-EXTENSIONS.md) |
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
@@ -77,17 +77,19 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** implementation has not started. The development signing
-identity and candidate build have not been selected. This plan has created no
-implementation processes or BYOXPC cleanup obligations. Credited investigation
-checks and their source baseline are listed below.
+**Execution state:** the user directed this turn to M1 only, leaving M0 pending.
+M1 starts from `fb2750d5abddb81291086cc3ae590a9ca7d3e1d2` with a clean tree.
+The development identity is `Developer ID Application: Adam Hyland (42D369QV8E)`;
+unsandboxed keychain discovery confirms it. No production candidate has been
+built and no BYOXPC installation or cleanup obligation has been created.
+The [investigative record](records/SANDBOX-EXTENSIONS.md) owns current findings,
+reproduction instructions and evidence, independently of commit history.
 
-**Next action on execution:** complete M0, the run-stage vocabulary rename, as
-one commit. Then establish the development signing identity and required
-environment, and build the M1 native experiment and its independent controls.
-Start with a controlled read-only file extension and an ordinary unprivileged
-issuer. Establish the actual signing and entitlement baseline before
-interpreting any outcome.
+**Next action on execution:** build and register the independent M1 native
+experiment, beginning with a controlled read-only file extension and an ordinary
+unprivileged issuer. Read back fixture signatures and entitlements before
+interpreting outcomes. Complete M1's controls and rendered assessment; stop at
+M1 for this turn. M0 remains owed before later implementation.
 
 After each increment and before any planned stopping point, update this table and
 execution state so another session can resume safely. Record the implementation
