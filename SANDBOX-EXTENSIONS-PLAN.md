@@ -59,7 +59,7 @@ outside this plan.
 | Repository investigation | Complete | Baseline and findings below |
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
-| M2 Ordered phases in the existing worker | In progress | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
+| M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
@@ -78,17 +78,15 @@ and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
 **Execution state:** the user authorized completion through the A1 audit
-boundary, then standing by without further assessment. M0 and M1 are complete.
-M2's phase protocol, public ordinary grammar, coordinated response/ABI/readers,
-bounded collection and current documentation are implemented; the coordinated
-signed gate is running in `tests/out/runs/extensions-m2-gate-20261012`.
+boundary, then standing by without further assessment. M0, M1 and M2 are complete.
+M2's consolidated signed acceptance passed at `ac9c3b5` in
+`tests/out/runs/extensions-m2-accepted-20261012` (113/113 cases).
 Its worker identity is `78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d`.
 Diagnostic results, fixture provenance and remaining checks are in the
 [investigative record](records/SANDBOX-EXTENSIONS.md). The development identity
 remains `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** resolve the M2 gate results and perform the fresh rendered
-assessment, then implement and verify M3. Commit the A1 handoff only after M3's
+**Next action:** implement and verify M3. Commit the A1 handoff only after M3's
 gate and assessment, mark A1 awaiting response, and stand by. Test-owned BYOXPC
 resources remain governed by their durable session records; the pre-gate registry
 and reconciliation inspection were empty. M3 has not begun.

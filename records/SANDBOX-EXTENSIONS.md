@@ -433,3 +433,72 @@ dossier fixture), and source_drift. Registry list/reconcile before installation
 reported no runners, pending cleanup, candidates or inspection errors. The
 harness owns any subsequent fixture session record and cleanup. No M2 gate or
 rendered assessment is yet claimed complete. M3 has not begun.
+
+## M2 gate closure
+
+Implementation commit `66d41b5` and corrections commit `ac9c3b5` are accepted by
+one consolidated run at the latter source, with no concurrent source edits:
+`extensions-m2-accepted-20261012`, run ID `20261012T224802Z_44df7a6f`.
+All 113 selected cases completed and passed, with no skips or unrun cases.
+The command was `tests/run.sh --suite runner_unit --suite runner_abi_layout
+--suite runner_c_worker_harness --suite failure_boundaries
+--suite runner_outcome_bad_request --suite runner_validator_failure --suite unit
+--suite blackbox_e2e --suite witness_contract --suite source_drift
+--suite runner_ready_byte_resilience --suite runner_outcome_validator_no_reply
+--suite runner_filter_sysctl_name --suite runner_exec_dac --suite blackbox_menagerie`,
+with `PW_TEST_OUT_DIR=tests/out/runs/extensions-m2-accepted-20261012` and Rust's
+rustup bin on PATH, outside the automation sandbox. The full command/configuration,
+case IDs, source snapshots, equipment and unchanged signed app inventories are
+in its [managed run](../tests/out/runs/extensions-m2-accepted-20261012/).
+This is local-only, gitignored evidence, now protected in the retention index.
+
+The app is build 547, with worker identity
+`78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d`, signed with
+the established development identity. Its build stamp predates the implementation
+commit (`d0b692e-dirty`); product sources match `66d41b5` and are unchanged in
+`ac9c3b5`. The consolidated run established valid signatures before execution
+and byte-for-byte inventory equality afterward. Its Swift suite passed 396
+checks; compiled C/Swift ABI agreement covered 99 values. Real maximum-input
+transport, one-phase success/failure/deadline controls, multi-phase collection,
+fresh eligibility, interruptions and both ordering bypass mutations passed.
+The test-owned BYOXPC dossier fixture confirmed removal through its owned
+cleanup session. No remaining external resource obligation was reported.
+
+Earlier `extensions-m2-gate-20261012` (92/99) and
+`extensions-m2-corrections-20261012` (26/29) retain their original failures.
+They exposed a test-only Swift helper visibility error and readers/fixtures
+still using the preceding response shape. The ordering controls also needed
+synchronization: the worker mutant now waits for independently held collection
+before bypassing the barrier; the host mutant accepts the actual query count
+when its premature unlink changes fresh eligibility. The baseline still requires
+both queries. Neither timeout nor connection failure counts as a detected bypass.
+`extensions-m2-final-checks-20261012` passed all ten selected checks after those
+repairs; the consolidated run replaces earlier results for gate credit, avoiding
+dependency-reuse exceptions.
+
+Fresh read-only Astra reviewer `/root/m2_rendered_review` inspected immutable
+[M2 rendered artifacts](../tests/out/runs/extensions-m2-accepted-20261012/reviews/).
+The retained snapshot, source diff, hashes, HTML, PDFs and PNGs use Pandoc 3.12,
+WeasyPrint 70.0 and Poppler 26.10.0. Actual image inspection covered root README
+pages 1–2; architecture 2–10; contract 1 (remaining contract via extracted text);
+limits 1, 3–4 and 8; grammar 1–2; runner reference 1–2; failure contract 11 and
+16–21; guide 4, 18–20 and 22–23. Unrelated guide/BYOXPC pages, full grounding
+tables, document graph and a separate staged-guide rendering were outside scope.
+The staged guide was mechanically byte-identical to the source guide; this is
+not separate visual inspection.
+
+The reviewer raised two documentation findings. F1: shared reading rule 6's
+“any step” wording could incorrectly reject later-phase `query_first` after an
+earlier unlink. The owning failure-contract text and generated guide copy now
+limit that claim to its own phase, distinguish cross-phase completion/arrival,
+and make no stable-object claim. A real unlink/recreate/later-query experiment
+was added to the public phase case and passed. F2: “All queries are collected”
+implied complete verdict acquisition; the guide now states that collection
+closes, retaining unavailable predictions. An editorial correction joined two
+paragraphs split by inline generated limit spans. The reviewer rechecked actual
+images of failure contract 18, guide 4/19/22 and witness README 1/3 and closed all
+findings. Lead disposition: accepted; no implementation or investigation finding
+remains. The review does not substitute for runtime evidence or A1.
+
+Both baselines gained no entries. M2 is complete. M3 begins from the accepted
+source, retaining one applied policy/worker and the established phase protocol.
