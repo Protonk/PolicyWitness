@@ -7,8 +7,7 @@ predictions, and fresh access attempts as independent observations. Successful
 native calls do not establish the worker's effective permissions.
 
 This is the active implementation plan. Update its checkpoint and milestone
-status as work proceeds. It carries the requirements of the initial agent brief;
-the brief is retired. Current behavior remains defined by the repository's
+status as work proceeds. Current behavior remains defined by the repository's
 contracts until each implementation increment changes them.
 
 ## Execution mandate
@@ -22,6 +21,11 @@ and proceed without requesting routine milestone approval. Observe the
 checkpoint, then wait for the auditor or user as specified there. Diagnose and
 repair failures before advancing dependent work. Outside those pauses, progress
 reports communicate findings and do not end execution while authorized work remains.
+
+Use the shared instructions, preceding evidence and the current milestone as its
+execution checklist. Keep implementation, documentation and validation requirements
+in the milestone that introduces the behavior; later milestones verify those
+deliverables without supplying prerequisites for earlier work.
 
 Choose and revise implementation details within the stated scope and evidence
 constraints, including the provisional grammar, helper lifetime, reference
@@ -181,10 +185,8 @@ The following findings determine the work:
 - A prior [project investigation](https://github.com/Protonk/PolicyWitness/issues/1)
   reports release calls without reliable access revocation on Sonoma 14.4.1.
   Treat this as a lead for controls, not a finding about the current host.
-- Documentation here is generated and checked: five generators, four manifests,
-  the comparison scenario matrix, two baselines, two shape goldens and the drift
-  rules, with every generator's check run by the build before compiling. Their
-  preconditions are listed under
+- The build checks generated documentation before compiling. Input ownership
+  and update rules are listed under
   [Contract increments at each gate](#contract-increments-at-each-gate).
 - The reply keys `path_diagnostics.phase`, `wait_errors[].phase` and the worker
   progress field, and the architecture prose, use `phase` for a stage of one
@@ -285,6 +287,21 @@ into a subsequent collection.
 
 ## Shared verification requirements
 
+Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
+provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
+admission and transport, run `failure_boundaries`, `runner_unit`, `runner_abi_layout`,
+`runner_c_worker_harness`, and `unit`, plus affected validator and witness cases.
+Select signing, build and maximum-reply controls in the increment that changes
+their boundaries. Verify changed aggregate limits and the largest admitted reply
+through real transport. Credit reusable evidence only under the test guidance;
+record its source/build identity and the checks still owed by the current increment.
+
+Register each new case in the catalog, owning suite README, coverage account and
+opt-in registry as applicable, and update the test suite map when its entries
+change. Every implementation gate from M2 onward includes a signed build and a
+passing `source_drift` suite; neither the prose nor build baseline gains an entry.
+Each milestone below names its additional controls and acceptance evidence.
+
 The controls below belong to the earliest indicated milestone. Each case must
 establish its intervention independently and assert retained observations as
 well as withheld claims. Milestone gates apply these controls to their delivered
@@ -311,35 +328,17 @@ Do not infer explicit release from worker exit or successful cleanup from EOF.
 
 ## Contract increments at each gate
 
-The repository's documentation is machinery. Five generators with `--check`,
-run by `build.sh` before compiling, render four hand-owned manifests
-([architecture](docs/architecture.json), [build](docs/build.json),
-[contract](docs/contract.json) and [limits](docs/limits.json)) and the
-comparison [scenario matrix](tests/fixtures/comparison/matrix.json) into marked
-regions; the prose and build baselines list what those mechanisms do not yet
-cover; two shape goldens are the allowlists the independent consumer reads; and
-the drift rules in [check.py](tests/suites/source_drift/check.py) compare
-handwritten text with sources. Each has a precondition that only code or tests
-can satisfy: an architecture node must cite an existing test or rule and may
-state a duration only through a limit placeholder; a limit must cite its source
-symbol and a value test in a listed owner file; a reply key reaches readers only
-through the field-complete fixture that records it; the signing list must agree
-with the artifact inspector, the evidence generator and the README inventory at
-once; and the native_check build step pins every Meson target by name. A signed
-build already refuses a stale copy or a build manifest that disagrees with
-`build.sh`.
+Update these inputs and regenerate their outputs in the milestone that changes
+the behavior. Mechanical checks establish agreement within their coverage;
+rendered assessment checks the account against implementation evidence.
 
-Every implementation gate from M2 onward therefore includes a signed build and a
-passing `source_drift` suite, and neither baseline gains an entry. These checks
-establish agreement within their coverage. Rendered documentation assessment at
-each gate checks for missing coverage, misleading accounts and evidence gaps;
-corrections needed by the increment belong to that gate.
-
-| Gate | Forced by | Increment owed |
-| --- | --- | --- |
-| M2 | the response bump, the consumer allowlist, the layout golden, the drift rules | the contract manifest and its generated copies; the response shape golden from the field-complete fixture; the ABI header with its static assert, the layout golden and the identity together; every new `limitations` or lifecycle vocabulary string in the encoder, the consumer and the matrix fixture in one commit; the test-override table for new seams; COVERAGE rows for new outcome values; the failure contract's ordering-states, protocol-names and worker-evidence prose |
-| M3 | the native_check build step, `build_documentation`, `preflight`, registry read-back | the issuer's Meson target in `tests/lib/native_sources.py`; its `build.sh` signing call with `build.json`, regenerated BUILD.md, the README inventory, `tests/lib/artifact.py` and `tests/build-evidence.py`; limits rows with value owners for every new cap, wait and byte bound; attempt-kind enum agreement and a COVERAGE row for any new action; request-contract corpus examples for each new refusal code; the registry's issuer fields in the guide's BYOXPC section |
-| M4 | matrix ownership, architecture citations | a scenario-matrix row for each combined fault, read by the live case and the Swift comparison tests; the tests that M5.4's architecture nodes will cite; catalog, coverage and opt-in registry entries for every new case |
+| Owner | Account and required agreement |
+| --- | --- |
+| [Contract manifest](docs/contract.json), field-complete fixtures and shape goldens | Versions and reply fields agree with producers and independent readers. Update ABI layout, its static assert and golden, and generated worker identity with protocol changes. |
+| [Limits manifest](docs/limits.json) | Each bound has a source symbol, value test in a listed owner file, and boundary or path control. Render values into tables, spans and guide copies. |
+| [Build manifest](docs/build.json) | Build and signing steps agree with `build.sh`, Meson targets, `tests/lib/native_sources.py`, artifact inspection, evidence generation and README inventories. |
+| [Architecture manifest](docs/architecture.json) | Topology, boundaries, BYOXPC and document graphs agree with implementation and cite existing tests or rules. Durations and sizes use limit placeholders. |
+| [Scenario matrix](tests/fixtures/comparison/matrix.json) and [failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md) | Evidence vocabulary and reading rules agree with the encoder, consumer, live cases and Swift comparison tests; regenerate matrix views and shared guide sections. |
 
 Standing rules for these increments:
 
@@ -352,7 +351,12 @@ Standing rules for these increments:
 - The failure contract states header offsets and sizes as prose. When the header
   changes, cite the layout golden instead of restating literals.
 - An architecture node or edge is added in the milestone whose tests it cites.
-  The manifest grows per milestone and is reviewed whole in M5.4.
+  Update its generated graph and table, the run timeline and evidence-channel
+  landing paths, and affected principles and known gaps in the same increment.
+- When documentation regions or drift rules change, update the architecture
+  document graph and keep its drift-node check list equal to what
+  [check.py](tests/suites/source_drift/check.py) runs. Update affected controller
+  and runner READMEs and AGENTS files when behavior or working instructions change.
 - Regenerate the worker identity in every commit that touches a protocol source.
 - Before adding explanatory prose, identify facts that belong in manifests,
   fixtures, shared source sections or generated views. Extend the owning generator
@@ -426,7 +430,7 @@ An unperformed inspection remains pending, not passed.
 | M0 | Rendered architecture and failure-contract vocabulary and their affected copies: run stages remain distinct from specimen phases, and descriptions of unchanged wire keys remain accurate. |
 | M1 | Rendered feasibility findings and any affected generated/shared accounts: issuer authority, native results and allocation evidence remain distinct from assumptions and unimplemented product behavior. No production documentation is invented solely for this review. |
 | M2 | Generated contract/version views, response shapes and matrix, ordering/progress account and architecture additions: phase association, stage keys, eligibility and incomplete publication agree with reader and control evidence. |
-| M3 | Generated build/signing inventories, limits, topology and boundary views, plus their guide copies: issuer authority, BYOXPC provenance, token handling, placement caps and new refusals have complete owners and supporting controls. |
+| M3 | Generated build/signing inventories, limits, topology and boundary views, plus the guide and grammar: lifecycle records, public examples, issuer authority, BYOXPC provenance, token handling, placement caps and new refusals have complete owners and supporting controls. |
 | M4 | Rendered combined-fault matrix, coverage and architecture citations: partial and unresolved outcomes remain visible; cited controls support each claimed boundary rather than merely existing. |
 | M5.1 | Completed evidence account and copied reading rules: lifecycle records, phase ordering, vocabulary and consumer meaning agree across generated and handwritten regions. |
 | M5.2 | Limits tables, spans and copied budget explanations: value owners, units and interactions describe the implemented waits and transport bounds without unsupported arithmetic or guarantees. |
@@ -587,16 +591,21 @@ integrated in M3 to settle that syntax; provisional wire formats still require
 explicit versioning and coordinated readers.
 
 - Define phase/action identities, legal ordering, reference admission, and the
-  ordinary one-phase authoring path. Decide request and response version changes
-  through [the wire contract](docs/CONTRACT.md); change the envelope version only
-  if its reading rules require it.
+  ordinary one-phase authoring path. Bump the response contract for the new
+  phase records and the `phase`-to-`stage` key rename. Apply
+  [the wire contract](docs/CONTRACT.md) to determine request and envelope version
+  changes; change the envelope version only if its reading rules require it.
 - Implement phase arrival, collection closure, release, acknowledgement, and
   terminal handling in C and Swift. Associate predictions and comparisons with
   the correct phase. Apply the phase-local eligibility rules above and preserve
   unavailable queries separately from access attempts.
 - Bound phase count, total actions/queries, publication storage, and total
   collection time as well as individual waits. Specify how phase waits interact
-  with worker execution, cleanup, exec budgets, and the client RPC timeout.
+  with worker execution, cleanup, exec budgets, and the client RPC timeout. Add
+  limits rows with source and value-test owners and boundary/path controls for
+  every new bound. Update the Interactions and Premises in `docs/LIMITS.md`, the
+  architecture budget account and their guide copies for per-phase waits against
+  worker/sentinel and client windows. Render new values through manifest spans.
 - Update producers and independent readers together, including lifecycle
   interpretation, shape fixtures, ABI layout, and generated worker identity.
 - Use independently observed file effects and held validator gates to establish
@@ -606,18 +615,34 @@ explicit versioning and coordinated readers.
   must not produce a fictitious completed phase. Extend and run
   `witness_contract/order_barrier_mutations` whenever its governed code changes.
 
-Contract increment for this gate: bump the response contract and regenerate its
-copies. In the same bump rename the three reply keys named `phase` to `stage`
-and update their readers, fixtures and descriptions. Record every new reply key
+Contract increment for this gate: regenerate the response contract's copies.
+Rename the three reply keys named `phase` to `stage` and update their readers,
+fixtures and descriptions. Record every new reply key
 in the field-complete fixture and the shape golden. Change the ABI header and
 its static assert, the layout golden and the identity together, and replace the
 failure contract's literal offsets with a citation of the layout golden. Add
 each new `limitations` or lifecycle vocabulary string to the encoder, the
 consumer and the matrix fixture in one commit. Extend the test-override table
-for new seams and add COVERAGE rows for new outcome values. Rewrite the
-ordering-states and protocol-names tables for phases. Fixture directories are
-named by response version, so the bump creates the new version's directories
+for new seams and add COVERAGE rows for new outcome values. Fixture directories
+are named by response version, so the bump creates the new version's directories
 rather than editing retained ones.
+
+Document phase ordering, protocol names, worker evidence operations and progress,
+claim ownership, incomplete publication and phase association in the failure
+contract and independent-reader rules. Regenerate the matrix and the guide's
+shared reading rules. Describe the implemented response shapes and ordinary
+one-phase behavior and any authoring syntax exposed by this increment. Keep
+the request grammar and corpus current for new public admission refusals;
+keep internal-only provisional syntax in the investigative record. Update the
+architecture manifest and generated views for phase barriers, validator
+collections and worker lifetime, with the timeline, evidence landing paths and
+operational-state principle matching them.
+
+Validation for this gate: run the shared admission/transport suites and affected
+validator/witness cases, including `witness_contract/order_barrier_mutations`.
+Include the independent blackbox checker controls, Swift comparison tests, and
+Swift/C limit contract tests for the new phase records and bounds. Establish
+aggregate storage and reply bounds through real transport.
 
 **Completion gate:** independently controlled execution through the production
 C/Swift phase protocol with multiple real boundaries in one worker, mutation
@@ -691,17 +716,41 @@ publication. Use observations to distinguish the test intervention from what PW
 can know. No published native result means the result remains unresolved even
 when the test knows the call returned.
 
-Contract increment for this gate: add the issuer's Meson target to
-`tests/lib/native_sources.py`, and its signing call to `build.json`, the README
-inventory, `tests/lib/artifact.py` and `tests/build-evidence.py`, then
-regenerate BUILD.md. Give each new build refusal a behavioral control. Add
-limits rows with value owners for the declaration and action caps, the phase
-and action bounds, token size and issuer waits. Keep the attempt-kind enums in
-agreement and add a COVERAGE row for any new action. Add request-contract corpus
-examples for each new refusal code, including the capability refusal. Record the
-registry's issuer fields and the capability refusal in the guide's BYOXPC
-section. Add the topology, boundary and BYOXPC architecture nodes whose tests
-now exist.
+Contract increment for this gate:
+
+- Add the issuer's Meson target to `tests/lib/native_sources.py`, and its signing
+  call to `docs/build.json`, the README inventory, `tests/lib/artifact.py` and
+  `tests/build-evidence.py`, then regenerate BUILD.md. Update signing and embedded
+  evidence explanations, `docs/SIGNING.md`, distribution and preflight READMEs,
+  and build known gaps. Give each new build refusal a behavioral control.
+- Add limits rows with source and value-test owners and boundary/path controls
+  for the extension declaration/action caps, token size and issuer waits. Update
+  the existing phase/budget account for their interactions and regenerate copies.
+- Define the lifecycle event shapes, native result validity, missing-publication
+  semantics and evidence ownership in the failure contract and consumer rules.
+  Coordinate versions, fixtures, vocabulary and matrix entries with the encoder
+  and readers, and regenerate shared reading rules. Keep attempt-kind enums in
+  agreement and add a COVERAGE row for any new action.
+- Document the public phase grammar, ordinary pairs, extension declaration,
+  lifecycle placement, response shapes and access-action meaning in the guide
+  and request-grammar lesson. Add examples for supported ordinary and extension
+  specimens and corpus cases for each new refusal, including the capability
+  refusal. Document target resolution and metadata evidence, BYOXPC installation,
+  issuer registry fields and older-record recovery. Update the extensions FAQ
+  in `docs/QUESTIONS.md` and regenerate its guide copy.
+- Add the issuer, token channel, preparation/admission guards and evidence
+  boundaries to the architecture manifest, including BYOXPC signing, read-back
+  and provenance, with citations to their controls. Regenerate graphs and tables;
+  update the issuer rationale, timeline, evidence landing paths, BYOXPC account
+  and known gaps. State the production allocation invariant supported by M1 and
+  integration evidence and the distinction between operational and sandbox state.
+
+Validation for this gate: run the shared admission/transport suites, independent
+reader and Swift comparison controls for lifecycle evidence, and relevant limit
+contract tests. Run the public CLI ordinary and extension controls on standard
+and BYOXPC runners, with `runner_byoxpc` signing, provenance and registry-recovery
+cases, `preflight`, and affected build/signing and maximum-reply controls. Keep
+the required ordering mutation control current when its governed code changes.
 
 **Completion gate:** on both standard and BYOXPC runners, the public CLI retains
 the native lifecycle and three sets of queries/access attempts for one applied
@@ -735,8 +784,15 @@ outcome.
 
 Contract increment for this gate: a scenario-matrix row for each combined fault,
 read by the live case and the Swift comparison tests; catalog, coverage and
-opt-in registry entries for every new case; and the remaining tests that M5.4's
-architecture nodes will cite.
+opt-in registry entries for every new case. Each new claim about delivery,
+publication, phase association, child cleanup or registry recovery must name
+the control establishing it. Update the corresponding architecture entries,
+citations and generated views, and any changed failure or public reading rules.
+
+Validation for this gate: run the registered combined-fault cases, independent
+reader and Swift comparison controls using their matrix rows, and affected
+`failure_boundaries`, worker, witness and `runner_byoxpc` controls. Apply the
+shared validation rules to any implementation or interface repairs made here.
 
 **Completion gate:** combined-fault controls retain each independently supported
 failure and earlier observation without one fault masking another. Adversarial
@@ -746,30 +802,22 @@ and independent-reader checks agree on the supported evidence and withheld
 claims for these cases. The contract increment above is complete, `source_drift`
 passes against a signed build, and neither baseline gained an entry.
 
-## M5 Residual account and integrated acceptance
+## M5 Completeness checks and integrated acceptance
 
-Each preceding increment closes its documentation correctness findings at its
-gate. M5 completes the remaining explanations, whole-document views and acceptance
-run in six sub-milestones: readers before limits, limits before architecture,
-tests before manifests, settled syntax before user prose. Each has its own
-checkpoint row, gate and documentation assessment waypoint. Apply the generator
-ownership rules before expanding handwritten sections, including any generator
-coverage gaps found here. Regenerate through the owning tools and review layout,
-identity, diagrams and shape changes at every step. Across the six, cover public
-ordinary and extension phases, lifecycle placement and action limits, target
-resolution and metadata evidence, and BYOXPC issuer signing, capability refusals
-and registry recovery.
+Check the delivered implementation and documentation as a whole, then establish
+acceptance of the final candidate. Each sub-milestone has its own checkpoint row,
+gate and rendered assessment. Correct omissions or contradictions through the owning
+inputs and generators, rerun affected controls, and recheck changed rendered
+views under the shared rules. Earlier milestones own creation of the behavior,
+its account and its controls; these checks verify their completeness and agreement.
 
 ### M5.1 Evidence contract closure
 
-Rewrite the handwritten sections of
-[the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md): the claim and
-evidence review, the ordering states with the phase dimension, the protocol
-names, the worker evidence operations and progress table, a lifecycle event
-record section, and the ownership table. Complete the scenario matrix and
-regenerate it. State the consumer's rules for phase association and lifecycle
-records beside the existing comparison rules, and keep the shared reading rules
-that the generator copies into the guide current.
+Check [the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md), scenario
+matrix and shared guide rules against the delivered encoders, consumers and
+controls. Review claim ownership, phase ordering, protocol names, worker progress,
+lifecycle records and incomplete publication together. Confirm that rules for
+phase association and native outcomes retain their meaning across all views.
 
 **Completion gate:** `generator_contract`, `limits_documentation`, the blackbox
 checker controls and the Swift comparison tests pass together; every vocabulary
@@ -777,22 +825,24 @@ string appears in the encoder, the consumer and the matrix fixture.
 
 ### M5.2 Limits account
 
-Give every new bound a limits row with a value owner and a boundary or path
-check. Rewrite the Interactions and Premises prose in
-[docs/LIMITS.md](docs/LIMITS.md) and the budget paragraph in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for per-phase waits against the
-sentinel and client windows. Replace every new number in prose with a span and
-regenerate the guide's copy.
+Check the limits inventory for complete source/value-test ownership and boundary
+or path controls. Read the Interactions and Premises in
+[docs/LIMITS.md](docs/LIMITS.md), the budget account in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the guide copy together. Confirm
+that the documented interactions of phase and issuer waits with worker/sentinel
+and client budgets match implementation, and that values and units agree across
+spans, tables and prose.
 
 **Completion gate:** `limits_documentation`, the Swift and C limit contract
 tests and `failure_boundaries` pass; the prose baseline gained no entry.
 
 ### M5.3 Build and bundle account
 
-Review what the M3 increment forced. Update the BUILD.md prose for the signing
-contract and the embedded evidence, [docs/SIGNING.md](docs/SIGNING.md), the
-distribution and preflight READMEs, and the build's known gaps. Confirm each new
-refusal has its control.
+Check the delivered build graph, inventories, signing and embedded-evidence
+account against the pipeline and read-back. Read BUILD.md,
+[docs/SIGNING.md](docs/SIGNING.md), distribution and preflight READMEs and the
+build's known gaps together. Confirm that each new refusal has its control and
+that the issuer's treatment agrees across standard and BYOXPC installations.
 
 **Completion gate:** `build_documentation` and `preflight/codesign.preflight`
 pass, and the opt-in build guard controls pass when refusals changed; the build
@@ -800,16 +850,13 @@ baseline gained no entry.
 
 ### M5.4 Architecture account
 
-Complete [docs/architecture.json](docs/architecture.json): the issuer and the
-token channel in the topology; the token channel record, the target preparation
-and extension admission guards and the issuer evidence in the boundaries; issuer
-signing, read-back and provenance in the BYOXPC apparatus; any new region or
-rule in the document graph, with the drift node's check list equal to what
-`check.py` runs. Then the prose: why the issuer exists, the run timeline, the
-evidence-channels table with the new landing paths, the principles including the
-resolved allocation claim and the operational-state distinction from
-[Scope and constraints](#scope-and-constraints), the BYOXPC section and the
-known gaps.
+Check [docs/architecture.json](docs/architecture.json) and its rendered graphs,
+tables, captions and surrounding prose against the delivered process/channel
+boundaries. Review the phase protocol, issuer, token channel, target preparation,
+admission and BYOXPC provenance together. Confirm that the timeline, evidence
+landing paths, allocation invariant, operational-state distinction and known
+gaps agree with implementation evidence. Check the document graph and drift-node
+check list against the actual generators and drift rules.
 
 **Completion gate:** `architecture_documentation` and the known-gap,
 evidence-channel and core-ideas rules pass; every node and edge cites a test or
@@ -817,28 +864,25 @@ rule that exists.
 
 ### M5.5 User-facing documentation
 
-Update the [user guide](docs/PolicyWitness.md): specimen format with phases and
-the extension declaration, per-step and lifecycle shapes, attempt kinds, BYOXPC
-install, registry fields and the capability refusal, and the FAQ answer on
-extensions in [docs/QUESTIONS.md](docs/QUESTIONS.md) that the generator copies
-in. Update the [request-grammar lesson](docs/REQUEST-GRAMMAR.md) and its corpus,
-the controller and runner READMEs and AGENTS files, the tests suite map, the
-suite READMEs, the opt-in registry and the catalog. Every claim names the case
-that establishes it.
+Read the delivered [user guide](docs/PolicyWitness.md) and staged copy,
+[request-grammar lesson](docs/REQUEST-GRAMMAR.md), corpus and
+[FAQ](docs/QUESTIONS.md) as a user would. Check that examples and reading rules
+agree on ordinary pairs, extension references and placement, unavailable results,
+target evidence and BYOXPC operation. Check linked controller/runner guidance and
+the test suite map, READMEs, opt-in registry and catalog for agreement with that
+account. Trace behavioral claims to their establishing cases and verify copied
+sections against their owners.
 
 **Completion gate:** the full `source_drift` suite passes and the guide stages;
 no claim lacks an establishing case.
 
 ### M5.6 Integrated acceptance and record
 
-Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
-provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
-admission and transport, run `failure_boundaries`, `runner_unit`, `runner_abi_layout`,
-`runner_c_worker_harness`, and `unit`, plus affected validator and witness cases.
+Apply the shared verification and evidence-reuse rules to the final candidate.
 Run the signed default battery against the final candidate, the new lifecycle
 and ordinary-phase cases, the required ordering mutation control, and BYOXPC
 issuer signing, provenance, lifecycle, and older-record recovery controls.
-Select signing/build/maximum-reply controls when their boundaries changed.
+Include the signing/build/maximum-reply controls selected for the delivered changes.
 Verify aggregate limits and the largest admitted reply through real transport.
 
 **Completion gate:** PW demonstrates the controlled experiment on standard and
