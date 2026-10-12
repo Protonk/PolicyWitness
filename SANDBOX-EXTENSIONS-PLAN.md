@@ -57,7 +57,7 @@ outside this plan.
 | Milestone | Status | Completion evidence |
 | --- | --- | --- |
 | Repository investigation | Complete | Baseline and findings below |
-| M0 Run-stage vocabulary | Pending | Prose rename only; no wire or source change |
+| M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
@@ -77,34 +77,17 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** M1 is complete; this turn remains limited to M1.
-Implementation commit `e8effbd` contains the native fixture and registered
-controls, and `e423705` records mechanical checks and evidence reuse.
-`sandbox_extensions_native/feasibility` passed all 18 experiments in
-`tests/out/runs/extensions-m1-native-gate-20261012`; all six registered
-`source_drift` cases passed in `tests/out/runs/extensions-m1-mechanical-20261012`.
-The native binary SHA-256 is
-`ad4121f9f81e8f228a349d1ea1e30cc21ac6c23506a79cde076fb079c2cfe87f`.
-The [investigative record](records/SANDBOX-EXTENSIONS.md) preserves authority,
-results, allocation limits, negative runs, provenance and evidence-reuse rationale.
+**Execution state:** the user authorized completion through the A1 audit
+boundary, then standing by without further assessment. M1 remains complete at
+`d3fc32d`, with its native findings and rendered review in the
+[investigative record](records/SANDBOX-EXTENSIONS.md). M0 vocabulary work is complete; M2 is next. The development identity remains
+`Developer ID Application: Adam Hyland (42D369QV8E)`. No new product candidate or
+BYOXPC resource has yet been created by this continuation.
 
-The fresh `gpt-6-astra` reviewer inspected snapshot `m1-v1` (source `e423705`)
-through Pandoc 3.12, WeasyPrint 70.0 and Poppler 26.10.0 page renders under the
-mechanical run's `reviews/` directory. It found no M1 correctness issue. Lead
-accepted the sole rendering finding F1, corrected the local print CSS, and the
-reviewer accepted the focused `print-v2`/`print-v3` recheck. No finding remains
-open. The record contains inspected surfaces, omissions and dispositions; the
-local-only `m1-final` snapshot includes closure metadata. No production generated
-account or worker identity changed. All native children were reaped. No product
-candidate was built and no BYOXPC resources or cleanup obligations exist.
-
-**Next action in the broader plan:** complete the deferred M0 vocabulary work,
-then begin M2 using the M1 decisions. M3 must carry the signed 64-bit handle
-separately from status fields, use the ordinary issuer and demonstrate actual
-product transport/authority on both runner modes. Its worker invariant should
-cover bounded preallocated PW-owned reporting/coordination without guaranteeing
-private native calls' internal allocation behavior. The current turn stops at
-M1; M0 and later implementation remain pending.
+**Next action:** implement and verify M2 and M3 with their contract increments
+and rendered assessments. Populate and commit the A1 handoff only after M3 is complete, mark
+A1 awaiting response, and stand by there. The prior M1-only stopping scope has
+been superseded by the user's current instruction.
 
 After each increment and before any planned stopping point, update this table and
 execution state so another session can resume safely. Record the implementation

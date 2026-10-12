@@ -132,9 +132,9 @@ Optional subprocess objects preserve the existing omitted-or-null convention.
 
 The readiness, sentinel and exit-grace budgets are unchanged. The driver allows
 two EINTR retries total across polling, grace and final reaping. A terminal wait
-error ends that phase; ECHILD stops all further waits and signals to that PID.
+error ends that stage; ECHILD stops all further waits and signals to that PID.
 There are at most five failed-call records (two recovered interruptions plus one
-terminal error per phase), with no error truncation. `wait_errors[].phase` is
+terminal error per stage), with no error truncation. `wait_errors[].phase` is
 `poll`, `exit_grace`, or `after_termination`; rc/errno and termination numbers
 are signed 32-bit syscall values, encoded as JSON integers. Empty errors means
 observed none; missing/null means unavailable.
@@ -797,7 +797,7 @@ are stream and derived-data bounds, not a peak-process-memory guarantee.
 
 Readiness, bounded policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
-phases. The worker has a separate local exec attempt budget; no end-to-end
+stages. The worker has a separate local exec attempt budget; no end-to-end
 worker deadline is implied. Failed cleanup can leave an unreaped child. Exec
 attempt reaping is nonblocking and bounded by exec_reap_grace; the host's
 worker/validator final reap after successful termination remains blocking. No early
@@ -900,7 +900,7 @@ and the signed app must be restored before acceptance.
 
 ### Claim/evidence review
 
-| Join / observation owners | Association and phase guarantee | Counterexample / limit | What the record states |
+| Join / observation owners | Association and stage guarantee | Counterexample / limit | What the record states |
 | --- | --- | --- | --- |
 | Submitted query → validator record; host and validator | Unique step ID plus exact submitted operation/filter tuple; host invokes validator after observing worker application | A correctly associated query for A need not concern attempted B; a late validator can query changed state | The record answers the submitted query, not necessarily the attempt |
 | Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from any outcome judgment |

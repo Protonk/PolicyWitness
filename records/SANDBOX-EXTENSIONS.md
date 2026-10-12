@@ -336,3 +336,40 @@ implementation milestones remain untouched. The next broader-plan action is M0;
 then M2 can use these M1 decisions, retaining the independent native suite as a
 control. Rerun native evidence if its fixture, checker or relevant execution
 inputs change; preserve prior runs and state replacement credit explicitly.
+
+
+## M0 vocabulary gate
+
+The continuation is authorized through the A1 handoff. M0 was performed after
+M1 because the preceding turn was expressly limited to M1. This sequencing
+exception changes no implementation dependency: M0's prose edits precede M2.
+The pinned-stage heading and budget/principle sentences in ARCHITECTURE, the
+runner lifetime sentence, and four failure-contract passages now use “stage”.
+Descriptions of unchanged wire keys retain “phase” until the M2 response bump.
+Generator-owned copies were regenerated and remained unchanged.
+
+`PW_TEST_OUT_DIR=tests/out/runs/extensions-m0-20261012 tests/run.sh --suite source_drift`
+passed all six registered cases outside the automation sandbox, run ID
+`20261012T214610Z_55b7a6b3`. The source was `d3fc32d` plus the M0 prose/checkpoint
+diff preserved in the review snapshot. Direct drift, worker-identity check and
+`git diff --check` also passed. The worker identity remains
+`64aa50556d3a6220a443c7de8667be608d5fb78c9319a586285e55d90be39c7b`.
+Later changes in this increment are checkpoint and review bookkeeping only;
+no generator input, product source, or executed check changed.
+
+Fresh read-only reviewer `m0_rendered_review`, model `gpt-6-astra`, inspected the
+immutable [M0 rendered snapshot](../tests/out/runs/extensions-m0-20261012/reviews/m0-review/)
+on 2026-10-12. These source/diff, HTML, PDF, PNG and hash manifests are gitignored,
+local-only evidence. Rendering used Pandoc 3.12, WeasyPrint 70.0 and Poppler
+26.10.0. Actual image inspection covered architecture pages 5–7 and 10–11;
+runner reference 1–2; failure contract 3, 5–6, 10–11, 14–15 and 18; guide 15–17,
+21 and 25. The reviewer found no documentation, implementation or investigation
+issue: stages and retained wire fields are accurately distinguished and the
+changed passages and table remain legible. These changes belong to handwritten
+source regions; no generator correction or coverage extension was indicated.
+
+Lead disposition: accepted after checking the changed passages and their source
+ownership. No correction or recheck is required. This bounded vocabulary review
+does not establish runtime behavior or constitute A1; unrelated diagrams/pages
+were outside scope. Mechanical results and identity were supplied to the reviewer,
+not rerun by it. No candidate build or external-runner resource was created by M0.

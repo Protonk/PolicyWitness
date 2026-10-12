@@ -64,7 +64,7 @@ the presence of a paired query alone is insufficient. The
 defines the claims and withheld states.
 
 Policy-transfer, readiness, sentinel, validator and cleanup allowances cover
-different phases. A client timeout does not cancel the host, and a successful
+different stages. A client timeout does not cancel the host, and a successful
 termination request does not establish reaping. Some final waits can block;
 there is no total lifecycle deadline. The
 [limits inventory](../docs/LIMITS.md#execution-budgets) and

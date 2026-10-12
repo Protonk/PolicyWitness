@@ -201,7 +201,7 @@ the held bytes once
    | envelope on stdout
 ```
 
-Where each phase is pinned:
+Where each stage is pinned:
 
 - **Controller admission and selection.** [`run`](../controller/src/run_flow.rs) in
   run_flow.rs: the manifest is loaded once,
@@ -273,7 +273,7 @@ cleanup, and the lifecycle record says what it observed, but a process that
 has left the group outlives the run unseen, and no record establishes that
 every descendant stopped.
 
-Each budget covers one phase and no more. Policy delivery has its own
+Each budget covers one stage and no more. Policy delivery has its own
 absolute monotonic deadline, [`worker_policy_transfer`](LIMITS.md#execution-budgets),
 started immediately after the spawn; the ready window,
 [`worker_ready_wait`](LIMITS.md#execution-budgets), covers only the wait for the
@@ -432,7 +432,7 @@ kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 The core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
 instructions. A drift rule compares the bold labels and their order with the
 list below; explanatory prose is independent. The mechanisms described here
-support the constraints on each phase; label agreement alone establishes no
+support the constraints on each stage; label agreement alone establishes no
 runtime guarantee.
 
 - **One-way sandbox per process.** Every authorized connection shares the
