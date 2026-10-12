@@ -258,3 +258,19 @@ PTY), move the test into the smoke suite and remove it from this registry.
   and unchanged source-app inventory are required before staging deletion.
 - **Artifacts:** Replies, specimens, file effects, PID receipts and cleanup
   records under the case artifact directory.
+
+### Native sandbox extensions
+
+- **Case:** `sandbox_extensions_native/feasibility`
+- **Location:** `tests/suites/sandbox_extensions_native/run.sh`
+- **Purpose:** Independent signed native lifecycle, fresh file-access and failure
+  controls, issuer lifetime, transient-token handling and allocation observations.
+- **Resource dependency:** macOS C toolchain, Developer ID Application identity
+  and unsandboxed execution; signing uses the timestamp service. No app or GUI
+  service installation is required. Set `IDENTITY` or `PW_BYOXPC_IDENTITY`.
+- **When to run:** Before choosing production file-extension authority, native
+  call representation, issuer lifetime or allocation assumptions; after changing
+  the native experiment or its checker.
+- **Artifacts:** The case retains source/build/signing provenance, target
+  metadata, native reports and checker controls under its managed artifact
+  directory. Token bytes remain transient.

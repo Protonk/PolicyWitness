@@ -50,6 +50,9 @@ deterministic, and checked into the repo so tests are hermetic.
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.
+- `sandbox_extensions/`: independent signed native issuer/worker experiment with
+  transient token transport, fresh file-access evidence and allocation controls;
+  see its [README](sandbox_extensions/README.md).
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
 - `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,

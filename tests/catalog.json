@@ -1598,7 +1598,8 @@
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/single_use",
         "runner_byoxpc/entitlement_readback",
-        "runner_byoxpc/entitlement_transfer"
+        "runner_byoxpc/entitlement_transfer",
+        "sandbox_extensions_native/feasibility"
       ]
     },
     "failure_boundaries": {
@@ -1667,6 +1668,23 @@
         {
           "id": "protocol_controls",
           "description": "Independent native allow/deny/NONE oracle and acknowledged query, emission, closure and disconnect controls"
+        }
+      ]
+    },
+    "sandbox_extensions_native": {
+      "command": [
+        "bash",
+        "tests/suites/sandbox_extensions_native/run.sh"
+      ],
+      "requires": [
+        "clang",
+        "identity"
+      ],
+      "cases": [
+        {
+          "id": "feasibility",
+          "description": "Independent signed native extension lifecycle, access controls, issuer lifetime, token confinement and allocation observations",
+          "default": false
         }
       ]
     }

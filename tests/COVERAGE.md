@@ -58,6 +58,12 @@ The [witness suite](suites/witness_contract/README.md#deny-capture-covers-the-ru
 defines these oracles and their equipment requirements. Missing log records do
 not establish allowance or a cause for an attempted failure.
 
+The opt-in [native extension suite](suites/sandbox_extensions_native/README.md)
+establishes file-extension feasibility with independent native calls, target
+identity/content observations, issuer lifetime comparisons and allocation
+controls. It neither produces nor validates PW outcomes; production extension
+and phase integration is outside that case.
+
 ## Attempt outcome coverage matrix
 
 Host lifecycle observations have separate driver/encoding coverage in

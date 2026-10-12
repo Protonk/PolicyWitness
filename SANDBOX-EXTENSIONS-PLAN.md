@@ -58,7 +58,7 @@ outside this plan.
 | --- | --- | --- |
 | Repository investigation | Complete | Baseline and findings below |
 | M0 Run-stage vocabulary | Pending | Prose rename only; no wire or source change |
-| M1 Native feasibility and independent controls | In progress | Native experiment and controls; see the [investigative record](records/SANDBOX-EXTENSIONS.md) |
+| M1 Native feasibility and independent controls | In progress; stopped at user request | 18 native controls passed; full mechanical selection and rendered assessment pending. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
@@ -77,19 +77,27 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** the user directed this turn to M1 only, leaving M0 pending.
-M1 starts from `fb2750d5abddb81291086cc3ae590a9ca7d3e1d2` with a clean tree.
-The development identity is `Developer ID Application: Adam Hyland (42D369QV8E)`;
-unsandboxed keychain discovery confirms it. No production candidate has been
-built and no BYOXPC installation or cleanup obligation has been created.
-The [investigative record](records/SANDBOX-EXTENSIONS.md) owns current findings,
-reproduction instructions and evidence, independently of commit history.
+**Execution state:** the user directed this turn to M1 only, then requested a
+stopping point after the immediate sub-task. The signed native control matrix is
+complete: `sandbox_extensions_native/feasibility` passed all 18 experiments in
+`tests/out/runs/extensions-m1-native-gate-20261012`. M1 remains open pending the
+registered mechanical selection and required rendered assessment; no review is
+credited. M0 remains pending. The native run used source snapshots atop `4f819b7`
+and binary SHA-256
+`ad4121f9f81e8f228a349d1ea1e30cc21ac6c23506a79cde076fb079c2cfe87f`.
+The [investigative record](records/SANDBOX-EXTENSIONS.md) retains authority,
+results, negative runs, provenance, allocation limits and design decisions so
+review does not depend on Git history. All native children were reaped. No
+product candidate was built and no BYOXPC resources or cleanup obligations exist.
 
-**Next action on execution:** build and register the independent M1 native
-experiment, beginning with a controlled read-only file extension and an ordinary
-unprivileged issuer. Read back fixture signatures and entitlements before
-interpreting outcomes. Complete M1's controls and rendered assessment; stop at
-M1 for this turn. M0 remains owed before later implementation.
+**Next action on resumption:** run the applicable registered `source_drift`
+selection, render the affected Markdown and complete the plan's fresh read-only
+M1 documentation assessment. Record findings and dispositions and fix any
+remaining gate issues before closing M1. Reuse native evidence only after checking
+its retained source snapshots against the accepted test implementation. M0 remains
+owed before later implementation. The intended M3 worker invariant covers bounded
+preallocated PW-owned reporting/coordination, without guaranteeing private native
+calls' internal allocation behavior; the record explains the measured basis.
 
 After each increment and before any planned stopping point, update this table and
 execution state so another session can resume safely. Record the implementation
@@ -161,8 +169,9 @@ The repository investigation used source commit
 `8ae8024f60b16dc4918969339c63cc4b11c0ab71`. No product implementation was changed.
 The host reports macOS 26.7.1, build 25G241. Dynamic symbol lookup found
 `sandbox_extension_issue_file`, `sandbox_extension_consume`, and
-`sandbox_extension_release`; this establishes availability only. Issuer authority,
-consumption effects, release effects, and query sensitivity remain untested here.
+`sandbox_extension_release`; this establishes availability only. At that baseline, issuer authority, consumption effects, release effects and
+query sensitivity were untested. Current M1 findings are in the investigative
+record linked from the checkpoint.
 
 The following findings determine the work:
 
