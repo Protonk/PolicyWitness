@@ -429,8 +429,8 @@ An unperformed inspection remains pending, not passed.
 | --- | --- |
 | M0 | Rendered architecture and failure-contract vocabulary and their affected copies: run stages remain distinct from specimen phases, and descriptions of unchanged wire keys remain accurate. |
 | M1 | Rendered feasibility findings and any affected generated/shared accounts: issuer authority, native results and allocation evidence remain distinct from assumptions and unimplemented product behavior. No production documentation is invented solely for this review. |
-| M2 | Generated contract/version views, response shapes and matrix, ordering/progress account and architecture additions: phase association, stage keys, eligibility and incomplete publication agree with reader and control evidence. |
-| M3 | Generated build/signing inventories, limits, topology and boundary views, plus the guide and grammar: lifecycle records, public examples, issuer authority, BYOXPC provenance, token handling, placement caps and new refusals have complete owners and supporting controls. |
+| M2 | Generated contract/version views, response shapes and matrix, ordering/progress account, architecture additions and root README: phase association, stage keys, eligibility, validator lifetime and incomplete publication agree with reader and control evidence. |
+| M3 | Generated build/signing inventories, limits, topology and boundary views, plus the root README, guide and grammar: lifecycle records, public examples, issuer authority, BYOXPC provenance, token handling, placement caps and new refusals have complete owners and supporting controls. |
 | M4 | Rendered combined-fault matrix, coverage and architecture citations: partial and unresolved outcomes remain visible; cited controls support each claimed boundary rather than merely existing. |
 | M5.1 | Completed evidence account and copied reading rules: lifecycle records, phase ordering, vocabulary and consumer meaning agree across generated and handwritten regions. |
 | M5.2 | Limits tables, spans and copied budget explanations: value owners, units and interactions describe the implemented waits and transport bounds without unsupported arithmetic or guarantees. |
@@ -565,10 +565,15 @@ results, and independent effects. Keep tokens entirely transient.
    after application, including first-call behavior. Document what is measured
    and what remains uncertain. Resolve the existing allocation claim explicitly.
 
-**Completion gate:** a reproducible native lifecycle experiment and controls,
-with findings supporting the chosen issuer authority, token transport, call
-signatures, result widths, and worker invariant. In particular, preserve the
-consume API's handle width separately from PW's existing 32-bit status fields.
+**Completion gate:** a reproducible native lifecycle experiment that successfully
+issues a token under the intended issuer authority, consumes it into a real handle
+in the once-sandboxed worker, and calls release on that handle with its native
+result recorded. The independent access observations and failure controls above
+remain required; failure-only runs do not establish feasibility. Findings must
+support the chosen issuer authority, token transport, call signatures, result
+widths, and worker invariant. In particular, preserve the consume API's handle
+width separately from PW's existing 32-bit status fields.
+
 If evidence indicates that issuance requires elevated privileges, a privileged
 service, or an entitlement unavailable to ordinary PW distribution, report the
 finding and obtain an explicit user decision before designing or implementing
@@ -637,6 +642,11 @@ keep internal-only provisional syntax in the investigative record. Update the
 architecture manifest and generated views for phase barriers, validator
 collections and worker lifetime, with the timeline, evidence landing paths and
 operational-state principle matching them.
+
+Update Flow and bundle descriptions in the root [README](README.md) for per-phase
+query collection and the implemented validator lifetime, preserving the ordinary
+one-phase explanation. Keep its examples current with any contract changes
+exposed by this increment.
 
 Validation for this gate: run the shared admission/transport suites and affected
 validator/witness cases, including `witness_contract/order_barrier_mutations`.
@@ -719,7 +729,7 @@ when the test knows the call returned.
 Contract increment for this gate:
 
 - Add the issuer's Meson target to `tests/lib/native_sources.py`, and its signing
-  call to `docs/build.json`, the README inventory, `tests/lib/artifact.py` and
+  call to `docs/build.json`, the root README inventory, `tests/lib/artifact.py` and
   `tests/build-evidence.py`, then regenerate BUILD.md. Update signing and embedded
   evidence explanations, `docs/SIGNING.md`, distribution and preflight READMEs,
   and build known gaps. Give each new build refusal a behavioral control.
@@ -737,7 +747,9 @@ Contract increment for this gate:
   specimens and corpus cases for each new refusal, including the capability
   refusal. Document target resolution and metadata evidence, BYOXPC installation,
   issuer registry fields and older-record recovery. Update the extensions FAQ
-  in `docs/QUESTIONS.md` and regenerate its guide copy.
+  in `docs/QUESTIONS.md` and regenerate its guide copy. Update the root README's
+  Flow for the issuer topology and lifecycle event records, and refresh affected
+  examples to match the public syntax.
 - Add the issuer, token channel, preparation/admission guards and evidence
   boundaries to the architecture manifest, including BYOXPC signing, read-back
   and provenance, with citations to their controls. Regenerate graphs and tables;
@@ -752,10 +764,13 @@ and BYOXPC runners, with `runner_byoxpc` signing, provenance and registry-recove
 cases, `preflight`, and affected build/signing and maximum-reply controls. Keep
 the required ordering mutation control current when its governed code changes.
 
-**Completion gate:** on both standard and BYOXPC runners, the public CLI retains
-the native lifecycle and three sets of queries/access attempts for one applied
-policy and worker, and passes the lifecycle-placement and both ordinary-phase
-controls above.
+**Completion gate:** on both standard and BYOXPC runners, the public CLI
+demonstrates successful issuance and consumption yielding a real handle, followed
+by a release call on that handle with its native result recorded. It retains the
+native lifecycle and three sets of queries/access attempts for one applied policy
+and worker, and passes the lifecycle-placement and both ordinary-phase controls
+above.
+
 Independent controls identify the target, worker, issuer and worker signing
 baselines, and fresh descriptor use. Target preparation and issuer failures remain
 inspectable results with no fabricated consumption or release. Interruption
@@ -885,14 +900,16 @@ issuer signing, provenance, lifecycle, and older-record recovery controls.
 Include the signing/build/maximum-reply controls selected for the delivered changes.
 Verify aggregate limits and the largest admitted reply through real transport.
 
-**Completion gate:** PW demonstrates the controlled experiment on standard and
-BYOXPC runners under their supported signing environments, all applicable checks
-pass against the accepted source and build, and the investigative record identifies
-empirical findings, design decisions, and accepted limitations. Predictions may
-remain unavailable or unchanged, and release may leave access observable; those
-outcomes must remain informative. Report the implementation commits, evidence
-locations, and unresolved findings. Packaging or publishing a release is separate
-from this implementation plan.
+**Completion gate:** on both standard and BYOXPC runners under their supported
+signing environments, PW demonstrates successful issuance and consumption yielding
+a real handle, followed by a release call on that handle with its native result
+recorded, alongside the controlled experiment's query and access observations.
+All applicable checks pass against the accepted source and build, and the
+investigative record identifies empirical findings, design decisions, and
+accepted limitations. Predictions may remain unavailable or unchanged, and release
+may leave access observable; those outcomes must remain informative. Report the
+implementation commits, evidence locations, and unresolved findings. Packaging or
+publishing a release is separate from this implementation plan.
 
 Then complete A2 against this candidate. The plan is complete only after the final
 audit closes under [the out-of-band audit rules](#out-of-band-audit-handoffs).
