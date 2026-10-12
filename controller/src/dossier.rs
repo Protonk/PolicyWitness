@@ -646,6 +646,8 @@ mod tests {
             entitlements: None,
             worker_signature: None,
             worker_entitlements: None,
+            issuer_signature: None,
+            issuer_entitlements: None,
             validator_signature: None,
             validator_entitlements: None,
         };

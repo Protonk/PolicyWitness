@@ -27,7 +27,7 @@ SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
     ('pw-runner-client', 'sandbox-log-observer', 'sbpl-check')),
     *(SERVICE + '/Contents/MacOS/' + name for name in
-      ('PWRunner', 'pw-probe-runner', 'sb_api_validator'))]
+      ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'))]
 MANIFEST = 'Contents/Resources/Evidence/manifest.json'
 SYMBOLS = 'Contents/Resources/Evidence/symbols.json'
 
@@ -151,7 +151,7 @@ def inspect(app):
 
     # Host invariance: the XPC host never links, loads or calls libsandbox. Its
     # undefined symbols must carry no sandbox_* import; the worker and the
-    # validator are the only processes that touch the native API.
+    # validator and issuer are the processes that touch the native API.
     host = SERVICE + '/Contents/MacOS/PWRunner'
     receipt = {'path': host, 'argv': [NM, '-u', str(app / host)], 'returncode': None, 'sandbox_symbols': []}
     try:

@@ -268,7 +268,7 @@ def main() -> int:
             entries.append(entry)
 
             # Sibling binaries inside the XPC bundle's MacOS dir (e.g.
-            # pw-probe-runner, sb_api_validator). These are signed
+            # pw-probe-runner, sb_api_validator, pw-extension-issuer). These are signed
             # individually before the XPC bundle seal is computed so
             # the bundle codesign records their hashes; we surface
             # them here so an evidence consumer can see the embedded

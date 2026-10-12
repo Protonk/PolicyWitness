@@ -33,3 +33,9 @@ void pw_cworker_store_release_u32(uint32_t *p, uint32_t value) {
 int pw_cworker_shm_open_create(const char *name, mode_t mode) {
     return shm_open(name, O_CREAT | O_RDWR | O_EXCL, mode);
 }
+
+/* Volatile stores prevent dead-store elimination during transient erasure. */
+void pw_extension_clear(void *bytes, size_t length) {
+    volatile unsigned char *p = bytes;
+    while (length--) *p++ = 0;
+}

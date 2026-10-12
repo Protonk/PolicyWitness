@@ -78,7 +78,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 16, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 17, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -141,6 +141,7 @@ not establish that a boundary was reached or that its requested effect occurred.
 | `worker_timeout_ms` | integer milliseconds | <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->; changes the host sentinel allowance, leaving the worker's exec budget unchanged. |
 | `validator_io_timeout_ms` | integer milliseconds | <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->; sets the proposed per-phase I/O deadline, capped by the remaining aggregate collection allowance. |
 | `validator_total_timeout_ms` | integer milliseconds | Reduces the aggregate collection allowance, clamped to 1–<!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> across all phases. Later collections can become unavailable while attempts still run. |
+| `issuer_executable_path` | string | Bundle-local `pw-extension-issuer`; substitutes its real launch path for extension experiments. |
 | `validator_executable_path` | string | Bundle-local `sb_api_validator`; substitutes the validator spawn path after successful worker application. |
 | `worker_post_apply_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after completed slots and before `done`; paired with a shorter sentinel allowance it can exercise timeout handling. |
 | `worker_post_apply_kill_signal` | integer signal number | Disabled when absent or nonpositive. Requests self-signalling after completed slots and before `done`; observed fatal delivery can exercise `runner_failed`. |

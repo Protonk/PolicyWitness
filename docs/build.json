@@ -3284,6 +3284,43 @@
       ]
     },
     {
+      "id": "sig_issuer",
+      "target": "${svc_bundle}/Contents/MacOS/pw-extension-issuer",
+      "kind": "signature",
+      "entitlements": null,
+      "loop": "XPC_SERVICE_NAMES",
+      "step": "sign_services",
+      "variants": [
+        "full"
+      ],
+      "flags": [
+        "--force",
+        "--options",
+        "runtime",
+        "--timestamp"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_signing",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_inventory",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
       "id": "seal_service",
       "target": "${svc_bundle}",
       "kind": "seal",

@@ -30,11 +30,14 @@
  *      when set. The spin is bounded by
  *      the host's grace timer (SIGKILL fallback if _exit is denied).
  *
- * No allocations after sandbox_apply. The result region is the only
+ * PW-owned extension reporting uses preallocated storage after sandbox_apply;
+ * private native libraries may allocate. The result region is the only
  * post-apply output channel; stdout/stderr writes may be denied by
  * a (deny default) policy and must not be relied on for results.
  */
 
+#include <dlfcn.h>
+#include <sys/resource.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -60,6 +63,7 @@
 #include "pw_probe_runner_abi.h"
 #include "pw_worker_evidence.h"
 #include "pw_profile_capture.h"
+#include "pw_extension_channel.h"
 
 /*
  * Bounded child deadline for exec attempts. The worker enforces a
@@ -151,6 +155,7 @@ extern void sandbox_free_params(void *params);
 /* ---- argv parsing -------------------------------------------------------- */
 
 typedef struct {
+    int extension_fd;
     int shm_fd;
     int ready_fd;
     int policy_fd;
@@ -239,6 +244,7 @@ static int parse_int_arg(const char *value, long *out) {
 }
 
 static int parse_args(int argc, char **argv, pw_args_t *args) {
+    args->extension_fd = -1;
     args->shm_fd                 = -1;
     args->ready_fd               = -1;
     args->policy_fd              = STDIN_FILENO;
@@ -253,7 +259,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     int i = 1;
     while (i < argc) {
         const char *flag = argv[i];
-        if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
+        if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 || strcmp(flag, "--extension-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
             strcmp(flag, "--post-apply-kill-signal") == 0 ||
@@ -270,7 +276,10 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                 fprintf(stderr, "pw-probe-runner: %s: invalid integer %s\n", flag, argv[i + 1]);
                 return -1;
             }
-            if (strcmp(flag, "--shm-fd") == 0) {
+            if (strcmp(flag, "--extension-fd") == 0) {
+                if (v < 0 || v > INT_MAX) return -1;
+                args->extension_fd = (int)v;
+            } else if (strcmp(flag, "--shm-fd") == 0) {
                 if (v < 0 || v > INT_MAX) {
                     fprintf(stderr, "pw-probe-runner: %s: fd out of range %ld\n", flag, v);
                     return -1;
@@ -1018,6 +1027,102 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
     }
 }
 
+/* Native extension entry points are resolved before application; none is called
+ * to warm it up. PW owns fixed storage; private-library allocation is unspecified. */
+typedef int64_t (*pw_consume_fn)(const char *);
+typedef int (*pw_release_fn)(int64_t);
+static pw_consume_fn extension_consume;
+static pw_release_fn extension_release;
+static pw_extension_channel_t *extension_channel;
+static int64_t extension_handle = -1;
+static int consume_decided, release_decided;
+
+static void prepare_extension(pw_shm_header_t *hdr, int fd) {
+    if (!hdr->extension_requested) { if (fd >= 0) close(fd); return; }
+    uint32_t status = 2;
+    struct rlimit core = {0, 0};
+    if (setrlimit(RLIMIT_CORE, &core)) { if (fd >= 0) close(fd); status = 3; goto publish; }
+    extension_consume = (pw_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
+    extension_release = (pw_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
+    if (!extension_consume || !extension_release) { if (fd >= 0) close(fd); status = 4; goto publish; }
+    if (fd >= 0) {
+        struct stat metadata;
+        if (fstat(fd, &metadata) || metadata.st_size < PW_EXTENSION_CHANNEL_BYTES) {
+            close(fd); status = 3; goto publish;
+        }
+        void *p = mmap(NULL, PW_EXTENSION_CHANNEL_BYTES, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        int closed = close(fd);
+        if (p == MAP_FAILED) { status = 3; goto publish; }
+        extension_channel = p;
+        uint32_t published = atomic_load_explicit(&extension_channel->completed, memory_order_acquire);
+        uint32_t n = published == 1 ? extension_channel->token_length : 0;
+        if (closed || extension_channel->magic != PW_EXTENSION_MAGIC || published != 1 ||
+            extension_channel->status != 1 || n == 0 || n >= PW_EXTENSION_TOKEN_BYTES ||
+            extension_channel->token[n] != 0 || memchr(extension_channel->token, 0, n) != NULL) {
+            pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+            munmap(extension_channel, PW_EXTENSION_CHANNEL_BYTES); extension_channel = NULL;
+            status = 3; goto publish;
+        }
+        hdr->extension_delivered_bytes = n;
+        status = 1;
+    }
+publish:
+    hdr->extension_delivery_status = status;
+    atomic_store_explicit(&hdr->extension_delivery_published, 1, memory_order_release);
+}
+
+static void attempt_extension(pw_shm_slot_t *slot, int release) {
+    if ((release && release_decided) || (!release && consume_decided)) {
+        slot->unavailable_code = 4; return;
+    }
+    if (release) release_decided = 1; else consume_decided = 1;
+    if (!extension_consume || !extension_release) slot->unavailable_code = 3;
+    else if (release && extension_handle == -1) slot->unavailable_code = 2;
+    else if (!release && !extension_channel) slot->unavailable_code = 1;
+    else {
+        atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
+        errno = 0;
+        int64_t result = release ? (int64_t)extension_release(extension_handle)
+                                 : extension_consume(extension_channel->token);
+        int saved = errno;
+        slot->native_result = result;
+        slot->native_errno = saved;
+        slot->native_result_valid = 1;
+        if (!release && result != -1) extension_handle = result;
+    }
+    if (!release && extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+}
+
+/* A single bounded read on a fresh descriptor, with its own identity and close
+ * observations. This does not change open_read's historical open-only meaning. */
+static void attempt_file_read_fresh(pw_shm_slot_t *slot) {
+    slot->access_read_rc = -2; slot->access_stat_rc = -2; slot->access_close_rc = -2;
+    errno = 0;
+    int fd = open(slot->target, O_RDONLY | O_CLOEXEC);
+    slot->access_open_rc = fd;
+    slot->access_open_errno = fd < 0 ? errno : 0;
+    if (fd < 0) { slot->rc = -1; slot->errno_val = slot->access_open_errno; return; }
+    struct stat metadata;
+    errno = 0;
+    int stat_rc = fstat(fd, &metadata);
+    slot->access_stat_rc = stat_rc;
+    slot->access_stat_errno = stat_rc ? errno : 0;
+    if (!stat_rc) {
+        slot->access_device = (uint32_t)metadata.st_dev; slot->access_inode = metadata.st_ino;
+        slot->access_mode = metadata.st_mode; slot->access_uid = metadata.st_uid; slot->access_gid = metadata.st_gid;
+    }
+    errno = 0;
+    ssize_t n = read(fd, slot->access_bytes, PW_SHM_FRESH_READ_BYTES);
+    slot->access_read_rc = n; slot->access_read_errno = n < 0 ? errno : 0;
+    errno = 0;
+    int close_rc = close(fd);
+    slot->access_close_rc = close_rc; slot->access_close_errno = close_rc ? errno : 0;
+    if (stat_rc || n < 0 || close_rc) {
+        slot->rc = -1;
+        slot->errno_val = stat_rc ? slot->access_stat_errno : n < 0 ? slot->access_read_errno : slot->access_close_errno;
+    }
+}
+
 /* Dispatch on attempt_kind. Initializes slot outputs to "ok defaults"
  * before the per-kind helper runs so a kind that leaves a field
  * untouched lands at a known state. `completed` is the LAST write
@@ -1032,6 +1137,9 @@ static void run_attempt(pw_shm_slot_t *slot,
 
     switch (slot->attempt_kind) {
     case PW_ATTEMPT_NONE:                                                 break;
+    case PW_ATTEMPT_EXTENSION_CONSUME: attempt_extension(slot, 0); break;
+    case PW_ATTEMPT_EXTENSION_RELEASE: attempt_extension(slot, 1); break;
+    case PW_ATTEMPT_FILE_READ_FRESH: attempt_file_read_fresh(slot); break;
     case PW_ATTEMPT_FILE_OPEN_READ:   attempt_file_open_read(slot);       break;
     case PW_ATTEMPT_FILE_OPEN_WRITE:  attempt_file_open_write(slot);      break;
     case PW_ATTEMPT_FILE_CREATE:      attempt_file_create(slot);          break;
@@ -1225,6 +1333,8 @@ int main(int argc, char **argv) {
     }
 
 
+    prepare_extension(hdr, args.extension_fd);
+
     /* Ensure host-populated strings are bounded before the sandbox is
      * applied. The worker is intentionally defensive here because a
      * missing NUL would otherwise let open/bootstrap_look_up read past
@@ -1412,7 +1522,8 @@ int main(int argc, char **argv) {
          * the host visibility via shm. */
     }
 
-    /* Apply. After this point: no allocations, no stdout writes
+    /* Apply. After this point: PW extension reporting uses fixed storage;
+     * native libraries may allocate. No stdout writes
      * that the policy hasn't been authored to permit. */
     pw_progress(evidence, PW_OP_APPLY, PW_PROGRESS_STARTED, UINT32_MAX);
     int apply_rc = sandbox_apply(profile);
@@ -1444,6 +1555,8 @@ int main(int argc, char **argv) {
         }
         atomic_store_explicit(&phase->completed, 1u, memory_order_release);
     }
+
+    if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a
      * maximally hostile policy — but the post-apply-hang test seam

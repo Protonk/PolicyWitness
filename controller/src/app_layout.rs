@@ -36,6 +36,11 @@ pub const SHIPPED_VALIDATOR: ShippedBinary = ShippedBinary {
 /// bundle, and the installer signs and reads them back at the same paths.
 pub const BUNDLE_WORKER_REL: &str = "Contents/MacOS/pw-probe-runner";
 pub const BUNDLE_VALIDATOR_REL: &str = "Contents/MacOS/sb_api_validator";
+pub const BUNDLE_ISSUER_REL: &str = "Contents/MacOS/pw-extension-issuer";
+pub const SHIPPED_ISSUER: ShippedBinary = ShippedBinary {
+    rel_path: "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer",
+    kind: "xpc-embedded-helper",
+};
 /// The directory both live in, for checks on recorded executable paths.
 pub const BUNDLE_MACOS_REL: &str = "Contents/MacOS";
 
@@ -89,6 +94,7 @@ mod tests {
         for (bundle_rel, shipped) in [
             (BUNDLE_WORKER_REL, &SHIPPED_WORKER),
             (BUNDLE_VALIDATOR_REL, &SHIPPED_VALIDATOR),
+            (BUNDLE_ISSUER_REL, &SHIPPED_ISSUER),
         ] {
             let expected = format!("Contents/XPCServices/PWRunner.xpc/{bundle_rel}");
             assert_eq!(shipped.rel_path, expected);

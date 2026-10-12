@@ -76,6 +76,7 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
             }
         }
     }
+    if let failure = extensionMeaningFailure(spec) { return failure }
     if var failure = sandboxCheckFailure(spec.probe_plan) {
         if let path = failure.path, path.count >= 2, let index = Int(path[1]) {
             failure.path = spec.probePath(index) + path.dropFirst(2)
@@ -151,3 +152,46 @@ let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
     .init(operation: "sysctl-read",
           filterKind: PWRunnerWire.sandboxFilterSysctlName),
 ]
+
+// Fixed one-token/one-handle semantics; no general dependency graph.
+func extensionMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
+    func fail(_ code: String, _ path: [String]) -> PWRunnerRequestFailure { .init(code: code, path: path) }
+    let declarations = spec.extensions ?? []
+    if !declarations.isEmpty && spec.phases == nil { return fail("extensions_require_phases", ["extensions"]) }
+    if let declaration = declarations.first, declaration.token_ref.isEmpty {
+        return fail("empty_reference", ["extensions", "0", "token_ref"])
+    }
+    if !declarations.isEmpty && spec.probe_plan.contains(where: { $0.attempt.kind == "exec" }) {
+        return fail("extension_exec_unsupported", ["phases"])
+    }
+    var identities = Set<String>()
+    var consumedHandle: String?
+    var releaseSeen = false
+    for (pi, phase) in spec.executionPhases.enumerated() {
+        for (ai, action) in phase.actions.enumerated() {
+            let path = spec.phases == nil ? ["probe_plan", String(ai)] : ["phases", String(pi), "actions", String(ai)]
+            if !identities.insert(action.stepID).inserted { return fail("duplicate_step_id", path + ["step_id"]) }
+            guard case .extensionAction(let value) = action else { continue }
+            if value.step_id.isEmpty { return fail("empty_step_id", path + ["step_id"]) }
+            let op = value.intervention
+            if op.handle_ref.isEmpty { return fail("empty_reference", path + ["extension", "handle_ref"]) }
+            switch op.operation {
+            case "consume":
+                if consumedHandle != nil { return fail("repeated_consume", path + ["extension"]) }
+                guard let token = declarations.first?.token_ref, op.token_ref == token else {
+                    return fail("unknown_token_reference", path + ["extension", "token_ref"])
+                }
+                if op.handle_ref == token { return fail("duplicate_reference", path + ["extension", "handle_ref"]) }
+                consumedHandle = op.handle_ref
+            case "release":
+                if releaseSeen { return fail("repeated_release", path + ["extension"]) }
+                if op.token_ref != nil { return fail("inapplicable_field", path + ["extension", "token_ref"]) }
+                guard let handle = consumedHandle else { return fail("release_before_consume", path + ["extension"]) }
+                if op.handle_ref != handle { return fail("unknown_handle_reference", path + ["extension", "handle_ref"]) }
+                releaseSeen = true
+            default: return fail("unsupported_extension_action", path + ["extension", "operation"])
+            }
+        }
+    }
+    return nil
+}

@@ -47,7 +47,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-IDENTITY_TARGETS = ('pw-probe-runner', 'PWCWorkerShim')
+IDENTITY_TARGETS = ('pw-probe-runner', 'pw-extension-issuer', 'PWCWorkerShim')
 CORE_DIR = 'runner/Sources/PWRunnerCore'
 SHIM_DIR = 'runner/Sources/PWCWorkerShim'
 API = 'runner/Sources/PWRunnerCore/PWRunnerAPI.swift'
@@ -55,6 +55,7 @@ SERVICE_MAIN = 'runner/Services/PWRunner/main.swift'
 CLIENT_MAIN = 'runner/Clients/PWRunnerClient/main.swift'
 WORKER = 'controller/tools/pw_probe_runner/pw_probe_runner.c'
 VALIDATOR = 'controller/tools/sb_api_validator/sb_api_validator.c'
+ISSUER = 'controller/tools/pw_probe_runner/pw_extension_issuer.c'
 
 
 class IntrospectionError(Exception):
@@ -186,7 +187,7 @@ def closure_problems(builddir, root, targets, filenames, label):
 def expected(root, xpc=True):
     """Every target and exactly the files the tree holds for it."""
     root = Path(root).resolve()
-    targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}}
+    targets = {'sb_api_validator': {VALIDATOR}, 'pw-probe-runner': {WORKER}, 'pw-extension-issuer': {ISSUER}}
     if xpc:
         targets['PWCWorkerShim'] = {p.relative_to(root).as_posix() for p in (root / SHIM_DIR).rglob('*.c')}
         targets['pw-runner-client'] = {API, CLIENT_MAIN}

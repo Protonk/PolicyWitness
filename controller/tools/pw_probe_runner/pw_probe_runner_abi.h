@@ -7,7 +7,7 @@
  * to the worker via posix_spawn file actions.
  * After the worker's sandbox_apply() returns successfully it reads its
  * own inputs from the slots, runs each attempt as stack-only POSIX
- * code (no allocations post-apply), writes results to the same slots,
+ * code with preallocated PW-owned result storage, writes results to the same slots,
  * and spins until the host requests exit.
  *
  * Both sides include THIS header so the layout cannot drift. A
@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x78, 0xe5, 0xab, 0x71, 0xd8, 0x2e, 0x10, 0x14, 0x86, 0xf2, 0x91, 0xe1, 0x33, 0xe1, 0xbd, 0xb1, 0xa9, 0x12, 0x57, 0x7f, 0x0d, 0xab, 0xee, 0x8e, 0xbb, 0x35, 0xac, 0x63, 0xb3, 0xa5, 0x23, 0x3d};
+#define PW_WORKER_ABI_IDENTITY_HEX "1b8b6623d0ecedee44f49a378226fc5b9264b61bf1438817e3534d5284073301"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x1b, 0x8b, 0x66, 0x23, 0xd0, 0xec, 0xed, 0xee, 0x44, 0xf4, 0x9a, 0x37, 0x82, 0x26, 0xfc, 0x5b, 0x92, 0x64, 0xb6, 0x1b, 0xf1, 0x43, 0x88, 0x17, 0xe3, 0x53, 0x4d, 0x52, 0x84, 0x07, 0x33, 0x01};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -83,6 +83,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x78, 0xe5, 0xab, 0x71, 0xd8,
 #define PW_SHM_STEP_ID_MAX        64u
 #define PW_SHM_TARGET_MAX        512u   /* path, mach-service name, or sysctl name */
 #define PW_SHM_OBSERVED_PATH_MAX 1024u  /* PATH_MAX on macOS */
+#define PW_SHM_FRESH_READ_BYTES    64u
 #define PW_SHM_ERROR_MAX          256u  /* optional failure-cause string */
 
 /* Bounded argv table for exec attempts. argv_count is the number of
@@ -131,6 +132,9 @@ typedef enum {
     PW_ATTEMPT_MACH_LOOKUP      = 6,
     PW_ATTEMPT_SYSCTL_READ      = 7,
     PW_ATTEMPT_EXEC_SPAWN       = 8,
+    PW_ATTEMPT_FILE_READ_FRESH  = 9,
+    PW_ATTEMPT_EXTENSION_CONSUME = 10,
+    PW_ATTEMPT_EXTENSION_RELEASE = 11,
 } pw_attempt_kind_t;
 
 /* Host inputs partition the slots in order. Each worker publication is written
@@ -197,7 +201,11 @@ typedef struct {
     _Atomic uint32_t proceed_observed; /* worker: latest acquired release ordinal */
     uint8_t abi_identity[PW_SHM_ABI_IDENTITY_BYTES];
     uint32_t phase_count;
-    uint8_t reserved[28];
+    uint32_t extension_requested;
+    _Atomic uint32_t extension_delivery_published;
+    uint32_t extension_delivery_status; /* 1 delivered, 2 absent, 3 malformed, 4 API unavailable */
+    uint32_t extension_delivered_bytes;
+    uint8_t reserved[12];
     pw_shm_phase_t phases[PW_SHM_MAX_PHASES];
 } pw_shm_header_t;
 
@@ -296,6 +304,20 @@ typedef struct {
     char     child_stdout[PW_SHM_CHILD_OUTPUT_BYTES];
     char     child_stderr[PW_SHM_CHILD_OUTPUT_BYTES];
     _Atomic uint32_t completed;
+    /* Immutable pre-call marker; does not establish native entry or return. */
+    _Atomic uint32_t call_boundary;
+    uint32_t native_result_valid;
+    int64_t native_result;
+    int32_t native_errno;
+    uint32_t unavailable_code; /* 1 no token, 2 no handle, 3 API absent, 4 repeated action */
+    int32_t access_open_rc, access_open_errno;
+    int64_t access_read_rc;
+    int32_t access_read_errno, access_close_rc, access_close_errno;
+    int32_t access_stat_rc, access_stat_errno;
+    uint32_t access_mode;
+    uint64_t access_device, access_inode;
+    uint32_t access_uid, access_gid;
+    uint8_t access_bytes[PW_SHM_FRESH_READ_BYTES];
 
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
      * A future field that pushes past this budget breaks the
@@ -315,7 +337,8 @@ typedef struct {
                       - sizeof(int32_t)                        /* child_term_signal */
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stdout */
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
-                      - sizeof(_Atomic uint32_t)];
+                      - sizeof(_Atomic uint32_t)
+                      - 156u];
 } pw_shm_slot_t;
 
 /*

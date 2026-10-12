@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d"
-    static let abiIdentity: [UInt8] = [0x78, 0xe5, 0xab, 0x71, 0xd8, 0x2e, 0x10, 0x14, 0x86, 0xf2, 0x91, 0xe1, 0x33, 0xe1, 0xbd, 0xb1, 0xa9, 0x12, 0x57, 0x7f, 0x0d, 0xab, 0xee, 0x8e, 0xbb, 0x35, 0xac, 0x63, 0xb3, 0xa5, 0x23, 0x3d]
+    static let abiIdentityHex = "1b8b6623d0ecedee44f49a378226fc5b9264b61bf1438817e3534d5284073301"
+    static let abiIdentity: [UInt8] = [0x1b, 0x8b, 0x66, 0x23, 0xd0, 0xec, 0xed, 0xee, 0x44, 0xf4, 0x9a, 0x37, 0x82, 0x26, 0xfc, 0x5b, 0x92, 0x64, 0xb6, 0x1b, 0xf1, 0x43, 0x88, 0x17, 0xe3, 0x53, 0x4d, 0x52, 0x84, 0x07, 0x33, 0x01]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -98,6 +98,10 @@ enum PWShmLayout {
     static let proceedOffset: Int = 56
     static let proceedObservedOffset: Int = 60
 
+    static let extensionRequestedOffset: Int = 100
+    static let extensionDeliveryPublishedOffset: Int = 104
+    static let extensionDeliveryStatusOffset: Int = 108
+    static let extensionDeliveredBytesOffset: Int = 112
     static let phaseCountOffset: Int = 96
     static let phaseRecordsOffset: Int = 128
     static let phaseFirstSlotOffset: Int = 0
@@ -159,6 +163,26 @@ enum PWShmLayout {
     static let slotChildStdoutOffset: Int      = 3932
     static let slotChildStderrOffset: Int      = 4956
     static let slotCompletedOffset: Int        = 5980
+    static let freshReadBytes: Int = 64
+    static let slotCallBoundaryOffset: Int = 5984
+    static let slotNativeResultValidOffset: Int = 5988
+    static let slotNativeResultOffset: Int = 5992
+    static let slotNativeErrnoOffset: Int = 6000
+    static let slotUnavailableCodeOffset: Int = 6004
+    static let slotAccessOpenRcOffset: Int = 6008
+    static let slotAccessOpenErrnoOffset: Int = 6012
+    static let slotAccessReadRcOffset: Int = 6016
+    static let slotAccessReadErrnoOffset: Int = 6024
+    static let slotAccessCloseRcOffset: Int = 6028
+    static let slotAccessCloseErrnoOffset: Int = 6032
+    static let slotAccessStatRcOffset: Int = 6036
+    static let slotAccessStatErrnoOffset: Int = 6040
+    static let slotAccessModeOffset: Int = 6044
+    static let slotAccessDeviceOffset: Int = 6048
+    static let slotAccessInodeOffset: Int = 6056
+    static let slotAccessUidOffset: Int = 6064
+    static let slotAccessGidOffset: Int = 6068
+    static let slotAccessBytesOffset: Int = 6072
 
     // Param field offsets (from the param's base).
     static let paramKeyMax: Int    = 128
@@ -183,6 +207,9 @@ enum PWAttemptKind: UInt32 {
     case machLookup     = 6
     case sysctlRead     = 7
     case execSpawn      = 8
+    case fileReadFresh = 9
+    case extensionConsume = 10
+    case extensionRelease = 11
 }
 
 // MARK: - C atomic shim binding
@@ -191,10 +218,10 @@ enum PWAttemptKind: UInt32 {
 private func pw_cworker_load_acquire_u32(_ p: UnsafePointer<UInt32>) -> UInt32
 
 @_silgen_name("pw_cworker_store_release_u32")
-private func pw_cworker_store_release_u32(_ p: UnsafeMutablePointer<UInt32>, _ value: UInt32)
+func pw_cworker_store_release_u32(_ p: UnsafeMutablePointer<UInt32>, _ value: UInt32)
 
 @_silgen_name("pw_cworker_shm_open_create")
-private func pw_cworker_shm_open_create(_ name: UnsafePointer<CChar>, _ mode: mode_t) -> Int32
+func pw_cworker_shm_open_create(_ name: UnsafePointer<CChar>, _ mode: mode_t) -> Int32
 
 // MARK: - Public input/output types
 
@@ -243,6 +270,8 @@ struct CWorkerPhaseOutput {
 }
 
 struct CWorkerInput {
+    var extensionRequested = false
+    var extensionFD: Int32? = nil
     static let defaultPolicyTransferTimeoutMs = 5_000
     // Internal test setting; never admitted from request JSON.
     var policyTransferTimeoutMs = CWorkerInput.defaultPolicyTransferTimeoutMs
@@ -326,6 +355,11 @@ struct CWorkerInput {
 }
 
 struct CWorkerSlotResult {
+    var callBoundary = false
+    var nativeResult: Int64? = nil
+    var nativeErrno: Int32? = nil
+    var unavailableCode: UInt32? = nil
+    var freshRead: PWRunnerFreshRead? = nil
     var stepId: String
     var rc: Int32
     var errnoVal: Int32
@@ -385,6 +419,8 @@ struct CWorkerOutput {
     var cleanupTrigger: String? = nil
     var graceEnd: String? = nil
     var collectionBasis: String? = nil
+    var extensionDeliveryStatus: UInt32? = nil
+    var extensionDeliveredBytes: UInt32? = nil
 }
 
 
@@ -785,6 +821,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         rawBase.advanced(by: PWShmLayout.abiIdentityOffset).update(from: identity.bindMemory(to: UInt8.self).baseAddress!,
                                                                  count: PWShmLayout.abiIdentityBytes)
     }
+    writeU32(rawBase, offset: PWShmLayout.extensionRequestedOffset, input.extensionRequested ? 1 : 0)
     writeU32(rawBase, offset: PWShmLayout.stepCountOffset, UInt32(input.slots.count))
     writeU32(rawBase, offset: PWShmLayout.paramCountOffset, UInt32(input.params.count))
     writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
@@ -888,6 +925,17 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         }
     }
 
+    // A high CLOEXEC duplicate avoids collisions with the evidence/ready dup2
+    // destinations even when the session's original channel occupied FD 3/4/5.
+    var tokenFD: Int32 = -1
+    if let source = input.extensionFD {
+        tokenFD = fcntl(source, F_DUPFD_CLOEXEC, 64)
+        if tokenFD < 0 {
+            for fd in readyPipe + policyPipe { close(fd) }
+            return .failure(.shmSetupFailed("extension descriptor duplication failed"))
+        }
+    }
+    defer { if tokenFD >= 0 { close(tokenFD) } }
     // ---- posix_spawn.
     var fa: posix_spawn_file_actions_t? = nil
     posix_spawn_file_actions_init(&fa)
@@ -895,6 +943,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     posix_spawn_file_actions_adddup2(&fa, policyPipe[0], 0)
     posix_spawn_file_actions_adddup2(&fa, shmFD, 3)
     posix_spawn_file_actions_adddup2(&fa, readyPipe[1], 4)
+    if tokenFD >= 0 { posix_spawn_file_actions_adddup2(&fa, tokenFD, 5) }
 
     let stepCountStr = String(input.slots.count)
     var argv: [String] = [
@@ -903,6 +952,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         "--ready-fd", "4",
         "--step-count", stepCountStr,
     ]
+    if tokenFD >= 0 { argv += ["--extension-fd", "5"] }
     if let hangMs = input.postApplyHangMs, hangMs > 0 {
         argv.append("--post-apply-hang-ms")
         argv.append(String(hangMs))
@@ -1175,7 +1225,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         let slotBase = rawBase.advanced(by: PWShmLayout.slotsOffset + i * PWShmLayout.slotBytes)
         let completed = loadAcquire(slotBase, offset: PWShmLayout.slotCompletedOffset)
         if completed != 1 {
-            slotResults.append(CWorkerSlotResult(stepId: input.slots[i].stepId,
+            slotResults.append(CWorkerSlotResult(callBoundary: loadAcquire(slotBase, offset: PWShmLayout.slotCallBoundaryOffset) == 1, stepId: input.slots[i].stepId,
                 rc: 0, errnoVal: 0, completed: false))
             continue
         }
@@ -1204,6 +1254,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                                                        max: PWShmLayout.childOutputBytes) : nil
 
         slotResults.append(CWorkerSlotResult(
+            callBoundary: loadAcquire(slotBase, offset: PWShmLayout.slotCallBoundaryOffset) == 1,
+            nativeResult: readI32(slotBase, offset: PWShmLayout.slotNativeResultValidOffset) == 1 ? readI64(slotBase, offset: PWShmLayout.slotNativeResultOffset) : nil,
+            nativeErrno: readI32(slotBase, offset: PWShmLayout.slotNativeResultValidOffset) == 1 ? readI32(slotBase, offset: PWShmLayout.slotNativeErrnoOffset) : nil,
+            unavailableCode: [.extensionConsume, .extensionRelease].contains(input.slots[i].attemptKind) ? UInt32(bitPattern: readI32(slotBase, offset: PWShmLayout.slotUnavailableCodeOffset)) : nil,
+            freshRead: input.slots[i].attemptKind == .fileReadFresh ? decodeFreshRead(slotBase) : nil,
             stepId: stepId,
             rc: rc,
             errnoVal: errnoVal,
@@ -1262,7 +1317,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         orderingProtocolViolations: Array(Set(phaseOutputs.flatMap { $0.violations })).sorted(),
         cleanupTrigger: cleanupTrigger,
         graceEnd: graceEnd,
-        collectionBasis: collectionBasis
+        collectionBasis: collectionBasis,
+        extensionDeliveryStatus: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1 ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStatusOffset)) : nil,
+        extensionDeliveredBytes: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1 ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveredBytesOffset)) : nil
     )
     if let failure = transferFailure {
         return .failure(failure, output)
@@ -1272,19 +1329,19 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
 
 // MARK: - Layout helpers
 
-private func writeU32(_ base: UnsafeMutablePointer<UInt8>, offset: Int, _ value: UInt32) {
+func writeU32(_ base: UnsafeMutablePointer<UInt8>, offset: Int, _ value: UInt32) {
     base.advanced(by: offset).withMemoryRebound(to: UInt32.self, capacity: 1) { p in
         p.pointee = value
     }
 }
 
-private func readI32(_ base: UnsafePointer<UInt8>, offset: Int) -> Int32 {
+func readI32(_ base: UnsafePointer<UInt8>, offset: Int) -> Int32 {
     return base.advanced(by: offset).withMemoryRebound(to: Int32.self, capacity: 1) { p in
         p.pointee
     }
 }
 
-private func loadAcquire(_ base: UnsafePointer<UInt8>, offset: Int) -> UInt32 {
+func loadAcquire(_ base: UnsafePointer<UInt8>, offset: Int) -> UInt32 {
     return base.advanced(by: offset).withMemoryRebound(to: UInt32.self, capacity: 1) { p in
         pw_cworker_load_acquire_u32(p)
     }
@@ -1348,4 +1405,26 @@ func withCStringArrayCopy<R>(_ strings: [String],
     return argv.withUnsafeBufferPointer { buf -> R in
         body(buf.baseAddress!)
     }
+}
+
+func readI64(_ base: UnsafePointer<UInt8>, offset: Int) -> Int64 {
+    UnsafeRawPointer(base.advanced(by: offset)).load(as: Int64.self)
+}
+func decodeFreshRead(_ base: UnsafePointer<UInt8>) -> PWRunnerFreshRead {
+    func i(_ offset: Int) -> Int32 { readI32(base, offset: offset) }
+    let opened = i(PWShmLayout.slotAccessOpenRcOffset)
+    guard opened >= 0 else { return PWRunnerFreshRead(open_rc: opened, open_errno: i(PWShmLayout.slotAccessOpenErrnoOffset)) }
+    let readRC = readI64(base, offset: PWShmLayout.slotAccessReadRcOffset)
+    let statRC = i(PWShmLayout.slotAccessStatRcOffset)
+    let closeRC = i(PWShmLayout.slotAccessCloseRcOffset)
+    let identity: PWFileIdentity? = statRC == 0 ? PWFileIdentity(
+        device: UInt64(bitPattern: readI64(base, offset: PWShmLayout.slotAccessDeviceOffset)),
+        inode: UInt64(bitPattern: readI64(base, offset: PWShmLayout.slotAccessInodeOffset)),
+        mode: UInt32(bitPattern: i(PWShmLayout.slotAccessModeOffset)),
+        uid: UInt32(bitPattern: i(PWShmLayout.slotAccessUidOffset)), gid: UInt32(bitPattern: i(PWShmLayout.slotAccessGidOffset))) : nil
+    let content: String? = readRC >= 0 && readRC <= PWShmLayout.freshReadBytes
+        ? (0..<Int(readRC)).map { String(format: "%02x", base[PWShmLayout.slotAccessBytesOffset + $0]) }.joined() : nil
+    return PWRunnerFreshRead(open_rc: opened, read_rc: readRC, read_errno: readRC < 0 ? i(PWShmLayout.slotAccessReadErrnoOffset) : nil,
+        stat_rc: statRC, stat_errno: statRC != 0 ? i(PWShmLayout.slotAccessStatErrnoOffset) : nil, identity: identity,
+        close_rc: closeRC, close_errno: closeRC != 0 ? i(PWShmLayout.slotAccessCloseErrnoOffset) : nil, content_hex: content)
 }

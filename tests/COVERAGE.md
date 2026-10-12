@@ -93,6 +93,7 @@ associations separately from execution status and cause.
 | outcome | emitted by | primary coverage | notes |
 | --- | --- | --- | --- |
 | `ok` | C worker (pw-probe-runner) | every smoke / happy-path suite | The attempt ran and the kernel allowed the operation. |
+| `read_failed` | C worker (file read_fresh) | `witness_contract/extensions` | Fresh open, bounded read, descriptor identity and close results remain separate. |
 | `open_failed` | C worker (file open_read / open_write / create) | `runner_use_c_worker.bare_deny_default`, blackbox file-deny cases, `witness_contract/create_existing_file_preserves_contents` | Covers permission failures (EPERM / EACCES) and ENOENT-class failures, with errno retained. The create CLI case checks a denied write-open alongside an allowed create on existing files, independently preserving bytes and identities. |
 | `unlink_failed` | C worker (file unlink) | `runner_c_worker_harness` / `unlink_deny` (+ `unlink_allow` for the success path) | Harness drives `PW_ATTEMPT_FILE_UNLINK` directly: deny-default yields `rc=1` + EPERM/EACCES and the target survives; allow-default removes it. `runner_unit` covers the Codable shape; `witness_contract/comparison_matrix` (rows S19, B3 and B6 plan unlinks; S25 and B5 read the paths S19 and B6 remove) and `run_effects` plan unlinks through the controller. |
 | `access_failed` | C worker (file `access(R_OK)`) | `runner_use_c_worker.access_failure_classified` | Errno preserved in `attempt.errno` (typically EPERM/EACCES on a denied path). |

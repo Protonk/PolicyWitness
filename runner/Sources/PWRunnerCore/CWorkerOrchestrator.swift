@@ -69,9 +69,29 @@ enum CWorkerOrchestrator {
         }
 
         // ---- translation: request → driver inputs ------------------------
-        let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
-        let workerParams = workerParamsFromPolicy(parsed.policy)
         let phases = parsed.executionPhases
+        let actions = phases.flatMap { $0.actions }
+        let workerSlots = actions.map { action -> CWorkerSlotInput in
+            switch action {
+            case .probe(let probe): return makeWorkerSlot(stepID: probe.step_id, attempt: probe.attempt)
+            case .extensionAction(let value):
+                return CWorkerSlotInput(stepId: value.step_id,
+                    attemptKind: value.intervention.operation == "consume" ? .extensionConsume : .extensionRelease,
+                    target: value.intervention.operation == "consume" ? (value.intervention.token_ref ?? "") : value.intervention.handle_ref)
+            }
+        }
+        let session = parsed.extensions?.first.map { ExtensionSession(declaration: $0,
+            executable: parsed._test_overrides?.issuer_executable_path ?? defaultIssuerExecutablePath()) }
+        if session?.capabilityUnavailable == true {
+            var reply = requestRefusalReply(parsed: parsed,
+                failure: PWRunnerRequestFailure(code: session?.record.issuance_status == "native_api_unavailable"
+                    ? "extension_api_unavailable" : "extension_issuer_unavailable", path: ["extensions"]),
+                bundleId: bundleId, policyHash: policyHash)
+            session?.erase()
+            reply.extensions = session.map { [$0.record] }
+            return reply
+        }
+        let workerParams = workerParamsFromPolicy(parsed.policy)
         var offset = 0
         let phaseInputs = phases.map { phase -> CWorkerPhaseInput in
             defer { offset += phase.actions.count }
@@ -83,7 +103,7 @@ enum CWorkerOrchestrator {
         // smaller deadline fires before any real worker can complete
         // its post-apply work and would just generate spurious
         // runner_timeouts.
-        let workerInput = CWorkerInput(
+        var workerInput = CWorkerInput(
             workerExecutablePath: workerExecutablePath,
             policy: parsed.policy.sbpl_source ?? "",
             params: workerParams,
@@ -98,6 +118,9 @@ enum CWorkerOrchestrator {
             captureAppliedProfile: parsed.policy.capture_applied_profile == true,
             captureNonce: parsed.policy.capture_nonce
         )
+
+        workerInput.extensionRequested = session != nil
+        workerInput.extensionFD = session?.deliveryDescriptor
 
         // Fresh planning occurs only after this phase's arrival. Each synchronous
         // collection closes before the driver's guarded ordinal release.
@@ -114,7 +137,7 @@ enum CWorkerOrchestrator {
                     collectionRemainingNs -= min(collectionRemainingNs, end - start)
                 } else { collectionRemainingNs = 0 }
             }
-            queryPlans[index] = planValidatorQueries(phases[index].actions.map { $0.probe })
+            queryPlans[index] = planValidatorQueries(phases[index].actions.compactMap { $0.probe })
             let probes = queryPlans[index].compactMap { $0.probe }
             if probes.isEmpty { collectionStatuses[index] = "not_needed"; return }
             guard let now = MonotonicDeadline.now(), now >= start else {
@@ -133,7 +156,7 @@ enum CWorkerOrchestrator {
         })
 
         let workerOutput = unwrapWorkerOutput(workerResult)
-        let disposition = workerOutput.map { resolveDisposition($0, plan: parsed.probe_plan) }
+        let disposition = workerOutput.map { resolveDisposition($0, plan: actions.contains(where: { $0.probe == nil }) ? nil : parsed.probe_plan) }
         var runOutcome = classify(workerResult: workerResult, validatorResult: nil,
                                   expectedVerdictCount: 0, disposition: disposition)
         var phaseResults: [PWRunnerPhaseResult] = []
@@ -148,7 +171,7 @@ enum CWorkerOrchestrator {
                 let observation = workerOutput?.phases.indices.contains(index) == true ? workerOutput!.phases[index] : nil
                 let ordering = workerOutput.map { buildPhaseOrdering($0, index: index,
                     input: phaseInputs[index], validatorOutput: validatorOutput, hasQueries: hasQueries) }
-                var steps = buildStepResults(probePlan: phase.actions.map { $0.probe }, queryPlan: queryPlans[index],
+                var steps = buildStepResults(probePlan: phase.actions.compactMap { $0.probe }, queryPlan: queryPlans[index],
                     workerOutput: workerOutput, validatorOutput: validatorOutput, ordering: ordering,
                     disposition: disposition, stepOffset: phaseInputs[index].firstSlot)
                 for i in steps.indices { steps[i].phase_id = phase.phase_id }
@@ -156,7 +179,7 @@ enum CWorkerOrchestrator {
                 var spawnFailure: PWRunnerSpawnFailure?
                 if case .failure(.spawnFailed(let failure), _) = validatorResults[index] { spawnFailure = failure }
                 phaseResults.append(PWRunnerPhaseResult(phase_id: phase.phase_id, ordinal: index + 1,
-                    action_ids: phase.actions.map { $0.probe.step_id }, arrival_observed: observation?.arrived ?? false,
+                    action_ids: phase.actions.map { $0.stepID }, arrival_observed: observation?.arrived ?? false,
                     completion_observed: observation?.completed ?? false, collection_status: collectionStatuses[index],
                     ordering: ordering, validator_subprocess: validatorOutput.map(buildValidatorSubprocess),
                     validator_spawn_failure: spawnFailure))
@@ -179,6 +202,32 @@ enum CWorkerOrchestrator {
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
         let runnerSubprocess = workerOutput.map { buildWorkerSubprocess($0, disposition: disposition) }
 
+        var events: [PWRunnerExtensionEvent] = []
+        if !refused {
+            for phase in phases {
+                for action in phase.actions {
+                    guard case .extensionAction(let value) = action else { continue }
+                    let slot = workerOutput?.slots.first { $0.stepId == value.step_id }
+                    let record = disposition?.steps.first { $0.step_id == value.step_id }
+                    let published = slot?.completed == true
+                    let native = published ? slot?.nativeResult : nil
+                    let reason = published ? [1: "token_unavailable", 2: "handle_unavailable", 3: "native_api_unavailable", 4: "repeated_action"][Int(slot?.unavailableCode ?? 0)] : nil
+                    events.append(PWRunnerExtensionEvent(phase_id: phase.phase_id, step_id: value.step_id,
+                        operation: value.intervention.operation, token_ref: value.intervention.token_ref,
+                        handle_ref: value.intervention.handle_ref, call_boundary_observed: slot?.callBoundary ?? false,
+                        result_published: published, status: !published ? "unresolved" : native != nil ? "returned" : reason != nil ? "unavailable" : "invalid",
+                        native_result: native, errno: native != nil ? slot?.nativeErrno : nil,
+                        unavailable_reason: reason, lifecycle: record.flatMap(attemptLifecycle)))
+                }
+            }
+        }
+        if let session {
+            if let delivery = workerOutput?.extensionDeliveryStatus {
+                session.record.delivery_status = [1: "delivered", 2: "token_unavailable", 3: "malformed_transport", 4: "native_api_unavailable"][Int(delivery)] ?? "invalid"
+                if delivery == 1 { session.record.delivered_bytes = workerOutput?.extensionDeliveredBytes }
+            }
+            session.erase()
+        }
         return PWRunnerRunResult(
             specimen_id: parsed.specimen_id,
             run_kind: parsed.run_kind,
@@ -193,6 +242,8 @@ enum CWorkerOrchestrator {
             steps: stepResults,
             runner_subprocess: runnerSubprocess,
             phases: phaseResults,
+            extensions: session.map { [$0.record] },
+            extension_events: session == nil ? nil : events,
             test_overrides: parsed._test_overrides,
             applied_profile: workerOutput?.profileCapture,
             admission_failure: admissionFailure
@@ -205,6 +256,10 @@ enum CWorkerOrchestrator {
     /// The XPC service binary itself lives at
     /// `<this xpc service>/Contents/MacOS/<service-name>` — Bundle.main
     /// resolves to the service bundle. Sibling resolution.
+    static func defaultIssuerExecutablePath() -> String {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/pw-extension-issuer").path
+    }
+
     static func defaultWorkerExecutablePath() -> String {
         let bundleURL = Bundle.main.bundleURL
         return bundleURL
@@ -338,6 +393,8 @@ private func makeWorkerSlot(stepID: String, attempt: PWRunnerAttempt) -> CWorker
 // Layer-1 routing table agrees with buildAttemptResult's outcome switch.
 func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
     switch (attempt.kind, attempt.action) {
+    case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionReadFresh):
+        return .fileReadFresh
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenRead):
         return .fileOpenRead
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenWrite):
@@ -443,6 +500,7 @@ let runKindAdmission = AdmissionStringRule(field: "run_kind", maximum: requestLa
 let policyFormatAdmission = AdmissionStringRule(field: "policy.format", maximum: requestLabelMaxBytes)
 let overridePathAdmissions: [(key: WritableKeyPath<PWRunnerTestOverrides, String?>, rule: AdmissionStringRule)] = [
     (\.worker_executable_path, AdmissionStringRule(field: "_test_overrides.worker_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
+    (\.issuer_executable_path, AdmissionStringRule(field: "_test_overrides.issuer_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
     (\.validator_executable_path, AdmissionStringRule(field: "_test_overrides.validator_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
 ]
 
@@ -450,6 +508,23 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
     for (rule, value) in [(specimenIdAdmission, parsed.specimen_id),
                            (runKindAdmission, parsed.run_kind), (policyFormatAdmission, parsed.policy.format)] {
         if let refused = rule.failure(value) { return refused }
+    }
+    if let declarations = parsed.extensions {
+        if declarations.count > 1 { return PWRunnerAdmissionFailure(field: "extensions", actual: declarations.count, maximum: 1, unit: "items") }
+        for (i, declaration) in declarations.enumerated() {
+            for (key, value, cap) in [("token_ref", declaration.token_ref, requestLabelMaxBytes), ("target", declaration.target, 1023)] {
+                if let failure = AdmissionStringRule(field: "extensions.\(i).\(key)", maximum: cap, requiresCString: true).failure(value) { return failure }
+            }
+        }
+    }
+    for (pi, phase) in (parsed.phases ?? []).enumerated() {
+        for (ai, action) in phase.actions.enumerated() {
+            guard case .extensionAction(let value) = action else { continue }
+            for (key, text) in [("step_id", value.step_id), ("extension.operation", value.intervention.operation),
+                                ("extension.token_ref", value.intervention.token_ref), ("extension.handle_ref", value.intervention.handle_ref)] {
+                if let failure = AdmissionStringRule(field: "phases.\(pi).actions.\(ai).\(key)", maximum: requestLabelMaxBytes, requiresCString: true).failure(text) { return failure }
+            }
+        }
     }
     if let overrides = parsed._test_overrides {
         for (key, rule) in overridePathAdmissions {
@@ -603,7 +678,7 @@ func buildStepResults(
                     attempt: PWRunnerAttemptResult)] = []
     channels.reserveCapacity(probePlan.count)
     for (localIndex, step) in probePlan.enumerated() {
-        let index = localIndex + stepOffset
+        _ = localIndex + stepOffset
         var sandboxCheck = buildSandboxCheckResult(
             step: step,
             verdict: verdictsByStep[step.step_id],
@@ -627,7 +702,7 @@ func buildStepResults(
                 ? "query_not_requested" : validatorOutput == nil ? "validator_not_invoked" : "validator_no_verdict"
         }
         let slot = workerSlotsByStep[step.step_id]
-        let recordStep = account?.steps.indices.contains(index) == true ? account?.steps[index] : nil
+        let recordStep = account?.steps.first { $0.step_id == step.step_id }
         let supported = recordStep.map { $0.attempt_support == "supported" } ?? (mapAttemptKindOrNil(step.attempt) != nil)
         let slotState = recordStep?.slot ?? (slot == nil ? "absent" : slot!.completed ? "completed" : "incomplete")
         attempt.requested_kind = step.attempt.kind
@@ -638,8 +713,8 @@ func buildStepResults(
         }
         // The lifecycle object projects this step's two claims; the compatibility
         // triple above is unchanged.
-        if let account, account.steps.indices.contains(index) {
-            attempt.lifecycle = attemptLifecycle(account.steps[index])
+        if let recordStep {
+            attempt.lifecycle = attemptLifecycle(recordStep)
         }
         channels.append((step: step, sandboxCheck: sandboxCheck, attempt: attempt))
     }
@@ -801,6 +876,8 @@ func buildAttemptResult(
              PWRunnerWire.attemptActionOpenWrite,
              PWRunnerWire.attemptActionCreate:
             return AttemptOutcome.openFailed
+        case PWRunnerWire.attemptActionReadFresh:
+            return AttemptOutcome.readFailed
         case PWRunnerWire.attemptActionUnlink:
             return AttemptOutcome.unlinkFailed
         case PWRunnerWire.attemptActionAccess:
@@ -816,7 +893,7 @@ func buildAttemptResult(
         }
     }()
 
-    return PWRunnerAttemptResult(
+    var result = PWRunnerAttemptResult(
         rc: Int(s.rc),
         errno: s.errnoVal == 0 ? nil : Int(s.errnoVal),
         outcome: outcome,
@@ -829,6 +906,8 @@ func buildAttemptResult(
         stdout: s.childStdout,
         stderr: s.childStderr
     )
+    result.fresh_read = s.freshRead
+    return result
 }
 
 enum ComparisonOrder: String { case queryFirst = "query_first", unestablished }
@@ -923,7 +1002,7 @@ func comparisonEvidence(
         } else if attempt.rc != 0 {
             observation = "other_failure"
             basis = "completed_worker_status"
-            if [AttemptOutcome.openFailed, AttemptOutcome.unlinkFailed,
+            if [AttemptOutcome.openFailed, AttemptOutcome.readFailed, AttemptOutcome.unlinkFailed,
                 AttemptOutcome.accessFailed, AttemptOutcome.sysctlFailed,
                 AttemptOutcome.execFailed].contains(attempt.outcome),
                [Int(EPERM), Int(EACCES)].contains(attempt.errno ?? -1) {
@@ -942,7 +1021,7 @@ func comparisonEvidence(
     let operation: String?
     let filter: String?
     switch (attempt.requested_kind, attempt.requested_action) {
-    case ("file", "open_read"), ("file", "access"):
+    case ("file", "open_read"), ("file", "access"), ("file", "read_fresh"):
         operation = "file-read-data"; filter = "path"
     case ("file", "open_write"):
         operation = "file-write-data"; filter = "path"

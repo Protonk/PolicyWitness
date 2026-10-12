@@ -122,6 +122,7 @@ The app contains:
   - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host and worker per specimen, with a fresh validator per eligible phase)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched per eligible phase for sandbox_check verdicts)
+    - `Contents/MacOS/pw-extension-issuer` (ordinary-authority file-extension issuer with a transient token channel)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 The [build tour](docs/BUILD.md) describes the toolchain, build settings and

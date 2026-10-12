@@ -65,6 +65,7 @@ SB_API_VALIDATOR_BIN="${MESON_BUILD_DIR}/sb_api_validator"
 # bundle and built-in vs BYOXPC runners both pick up the correct
 # copy. The single output is copied into each XPC service.
 PW_PROBE_RUNNER_BIN="${MESON_BUILD_DIR}/pw-probe-runner"
+PW_EXTENSION_ISSUER_BIN="${MESON_BUILD_DIR}/pw-extension-issuer"
 
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
@@ -361,7 +362,7 @@ meson compile -C "${MESON_BUILD_DIR}"
 # expectation to the manifest read without a build directory.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
-NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}")
+NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}" "${PW_EXTENSION_ISSUER_BIN}")
 if [[ "${BUILD_XPC}" == "1" ]]; then
   NATIVE_OUTPUTS+=("${PW_RUNNER_CLIENT_BIN}")
   for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
@@ -500,6 +501,10 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     # The orchestrator checks bundle-local first.
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
+
+    # The issuer has its own ordinary authority and transient token channel.
+    cp "${PW_EXTENSION_ISSUER_BIN}" "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
+    chmod +x "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
@@ -562,6 +567,7 @@ if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
     # seal is computed.
     sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner"
     sign_macho "${svc_bundle}/Contents/MacOS/sb_api_validator"
+    sign_macho "${svc_bundle}/Contents/MacOS/pw-extension-issuer"
 
     codesign --force --options runtime --timestamp \
       --entitlements "${svc_entitlements}" \

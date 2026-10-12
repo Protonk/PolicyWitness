@@ -1407,6 +1407,17 @@
             "bash",
             "tests/suites/witness_contract/phases.sh"
           ]
+        },
+        {
+          "id": "extensions",
+          "description": "Native issuance, consume handle and release with phase-local predictions and fresh descriptor evidence",
+          "requires": [
+            "app"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extensions.sh"
+          ]
         }
       ],
       "include": [

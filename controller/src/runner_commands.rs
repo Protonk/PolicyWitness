@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
+use crate::app_layout::{BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::run_pw_runner_client;
@@ -309,6 +309,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
+    let (issuer_signature, issuer_entitlements) =
+        runner_manager::read_back(&bundle_path.join(BUNDLE_ISSUER_REL))?;
+
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
     match std::fs::symlink_metadata(&plist_path) {
         Ok(_) => {
@@ -407,6 +410,8 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         worker_entitlements: Some(worker_entitlements),
         validator_signature: Some(validator_signature),
         validator_entitlements: Some(validator_entitlements),
+        issuer_signature: Some(issuer_signature),
+        issuer_entitlements: Some(issuer_entitlements),
     };
 
     let record = runner_manager::install_record(&registry_path, &mut registry, record, || {

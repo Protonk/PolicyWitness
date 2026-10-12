@@ -150,6 +150,11 @@ pub struct RunnerRecord {
     pub validator_signature: Option<RunnerSignature>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validator_entitlements: Option<RunnerEntitlements>,
+    /// Missing in older records: unknown issuer evidence, never assumed authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issuer_signature: Option<RunnerSignature>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issuer_entitlements: Option<RunnerEntitlements>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -596,7 +601,12 @@ pub fn sign_install_tree(
 ) -> Result<(), String> {
     let worker = bundle.join(crate::app_layout::BUNDLE_WORKER_REL);
     let validator = bundle.join(crate::app_layout::BUNDLE_VALIDATOR_REL);
-    for (role, path) in [("worker", &worker), ("validator", &validator)] {
+    let issuer = bundle.join(crate::app_layout::BUNDLE_ISSUER_REL);
+    for (role, path) in [
+        ("worker", &worker),
+        ("validator", &validator),
+        ("issuer", &issuer),
+    ] {
         if !path.is_file() {
             return Err(format!(
                 "bundle has no embedded {role} at {}; external runners must carry the complete copy",
@@ -606,6 +616,7 @@ pub fn sign_install_tree(
     }
     sign(&worker, identity, entitlements)?;
     sign(&validator, identity, None)?;
+    sign(&issuer, identity, None)?;
     sign(bundle, identity, entitlements)
 }
 
@@ -690,6 +701,15 @@ pub fn validate_record(
     host_signature.valid = host_signature.valid && bundle_ok;
     let (worker_signature, worker_entitlements) = observe("worker", &worker);
     let (validator_signature, validator_entitlements) = observe("validator", &validator);
+    let issuer = bundle.join(crate::app_layout::BUNDLE_ISSUER_REL);
+    // Older records/bundles remain manageable; absence means unknown. Once an
+    // issuer is recorded, its later disappearance is a validation failure.
+    if issuer.exists() || record.issuer_signature.is_some() || record.issuer_entitlements.is_some()
+    {
+        let (signature, entitlements) = observe("issuer", &issuer);
+        record.issuer_signature = Some(signature);
+        record.issuer_entitlements = Some(entitlements);
+    }
     record.signature = host_signature;
     record.entitlements = host_entitlements;
     record.worker_signature = Some(worker_signature);

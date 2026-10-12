@@ -612,6 +612,7 @@ fn validate_disposition(
             }
         }
         if let Some(reply) = reply_steps.get(i) {
+            let is_event = reply.get("operation").is_some();
             let attempt = &reply["attempt"];
             let completed = supported && slot == Some("completed");
             let reason = if completed {
@@ -623,15 +624,53 @@ fn validate_disposition(
             } else {
                 Some("slot_incomplete")
             };
-            if attempt["result_source"] != if completed { "worker" } else { "synthetic" }
-                || attempt["missing_reason"].as_str() != reason
+            if (is_event && reply["result_published"].as_bool() != Some(completed))
+                || (!is_event
+                    && (attempt["result_source"] != if completed { "worker" } else { "synthetic" }
+                        || attempt["missing_reason"].as_str() != reason))
             {
                 issues.push(integrity_issue(
                     "invalid_claim",
                     format!("step {i}: compatibility projections disagree with record"),
                 ));
             }
-            let lifecycle = &attempt["lifecycle"];
+            let lifecycle = if is_event {
+                &reply["lifecycle"]
+            } else {
+                &attempt["lifecycle"]
+            };
+            if is_event {
+                let native = reply.get("native_result").and_then(Value::as_i64);
+                let valid = match reply["status"].as_str() {
+                    Some("returned") => {
+                        completed
+                            && reply["call_boundary_observed"] == true
+                            && native.is_some()
+                            && reply["errno"].as_i64().is_some()
+                            && reply["unavailable_reason"].is_null()
+                    }
+                    Some("unavailable") => {
+                        completed
+                            && reply["call_boundary_observed"] == false
+                            && native.is_none()
+                            && reply["errno"].is_null()
+                            && reply["unavailable_reason"].is_string()
+                    }
+                    Some("unresolved") => {
+                        !completed
+                            && native.is_none()
+                            && reply["errno"].is_null()
+                            && reply["unavailable_reason"].is_null()
+                    }
+                    _ => false,
+                };
+                if !valid {
+                    issues.push(integrity_issue(
+                        "invalid_claim",
+                        format!("step {i}: native lifecycle publication is inconsistent"),
+                    ));
+                }
+            }
             if lifecycle["boundary"] != step["questions"]["step_boundary_reached"]
                 || lifecycle["result"] != step["questions"]["step_result_published"]
             {
@@ -683,7 +722,8 @@ fn validate_disposition(
                     .contains(l)
                 })
                 .collect();
-            if !(reporting_failed && reply["comparison"].is_null())
+            if !is_event
+                && !(reporting_failed && reply["comparison"].is_null())
                 && limits != expected.into_iter().collect::<Vec<_>>()
             {
                 issues.push(integrity_issue(
@@ -833,11 +873,36 @@ fn project_disposition(
 pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
-    let reply_steps: Vec<Value> = runner
+    // Disposition indexes every declared action, including native interventions.
+    // Keep each event's own shape; it is not an ordinary query/attempt pair.
+    let mut reply_steps: Vec<Value> = runner
         .and_then(|r| r.get("steps"))
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
+    if let Some(runner) = runner {
+        if let Some(events) = runner.get("extension_events").and_then(Value::as_array) {
+            reply_steps.extend(events.iter().cloned());
+            let action_ids: Vec<&Value> = runner
+                .get("phases")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .flat_map(|p| {
+                    p.get("action_ids")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten()
+                })
+                .collect();
+            reply_steps.sort_by_key(|a| {
+                action_ids
+                    .iter()
+                    .position(|id| **id == a["step_id"])
+                    .unwrap_or(usize::MAX)
+            });
+        }
+    }
     let projection = match (pid, sub) {
         (Some(_), Some(sub)) => project_disposition(
             sub,

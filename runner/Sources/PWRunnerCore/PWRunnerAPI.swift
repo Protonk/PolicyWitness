@@ -23,6 +23,7 @@ enum PWRunnerWire {
     static let attemptKindExec = "exec"
 
     static let attemptActionOpenRead = "open_read"
+    static let attemptActionReadFresh = "read_fresh"
     static let attemptActionOpenWrite = "open_write"
     static let attemptActionCreate = "create"
     static let attemptActionUnlink = "unlink"
@@ -108,6 +109,7 @@ enum NormalizedOutcome {
 enum AttemptOutcome {
     static let ok = "ok"
     static let openFailed = "open_failed"
+    static let readFailed = "read_failed"
     static let unlinkFailed = "unlink_failed"
     static let accessFailed = "access_failed"
     static let lookupFailed = "lookup_failed"
@@ -153,7 +155,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 16
+    static let responseSchema: Int = 17
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -216,7 +218,7 @@ struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
     }
 }
 
-private func rejectUnknownRequestKeys<K: CodingKey & CaseIterable>(_ type: K.Type, from decoder: Decoder) throws {
+func rejectUnknownRequestKeys<K: CodingKey & CaseIterable>(_ type: K.Type, from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: RequestKey.self)
     let accepted = Set(K.allCases.map { $0.stringValue })
     if let key = container.allKeys.sorted(by: { $0.stringValue < $1.stringValue })
@@ -233,8 +235,9 @@ struct PWRunnerRunSpec: Codable {
     var policy: PWRunnerPolicySpec
     private var ordinaryPlan: [PWRunnerProbeStep]?
     var phases: [PWRunnerPhase]?
+    var extensions: [PWRunnerExtensionDeclaration]?
     var probe_plan: [PWRunnerProbeStep] {
-        get { phases?.flatMap { $0.actions.map { $0.probe } } ?? ordinaryPlan ?? [] }
+        get { phases?.flatMap { $0.actions.compactMap { $0.probe } } ?? ordinaryPlan ?? [] }
         set { ordinaryPlan = newValue; phases = nil }
     }
     var executionPhases: [PWRunnerPhase] {
@@ -244,8 +247,10 @@ struct PWRunnerRunSpec: Codable {
         guard let phases else { return ["probe_plan", String(index)] }
         var offset = 0
         for (phaseIndex, phase) in phases.enumerated() {
-            if index < offset + phase.actions.count { return ["phases", String(phaseIndex), "actions", String(index - offset)] }
-            offset += phase.actions.count
+            for (actionIndex, action) in phase.actions.enumerated() where action.probe != nil {
+                if offset == index { return ["phases", String(phaseIndex), "actions", String(actionIndex)] }
+                offset += 1
+            }
         }
         return ["phases"]
     }
@@ -258,6 +263,7 @@ struct PWRunnerRunSpec: Codable {
         policy: PWRunnerPolicySpec,
         probe_plan: [PWRunnerProbeStep] = [],
         phases: [PWRunnerPhase]? = nil,
+        extensions: [PWRunnerExtensionDeclaration]? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
@@ -266,11 +272,12 @@ struct PWRunnerRunSpec: Codable {
         self.policy = policy
         self.ordinaryPlan = phases == nil ? probe_plan : nil
         self.phases = phases
+        self.extensions = extensions
         self._test_overrides = _test_overrides
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, _test_overrides
+        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, extensions, _test_overrides
     }
 
     init(from decoder: Decoder) throws {
@@ -295,6 +302,7 @@ struct PWRunnerRunSpec: Codable {
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
         policy = try c.decode(PWRunnerPolicySpec.self, forKey: .policy)
+        extensions = try c.decodeIfPresent([PWRunnerExtensionDeclaration].self, forKey: .extensions)
         phases = try c.decodeIfPresent([PWRunnerPhase].self, forKey: .phases)
         ordinaryPlan = try c.decodeIfPresent([PWRunnerProbeStep].self, forKey: .probe_plan)
         guard (phases == nil) != (ordinaryPlan == nil) else {
@@ -311,6 +319,7 @@ struct PWRunnerRunSpec: Codable {
         try c.encode(policy, forKey: .policy)
         try c.encodeIfPresent(ordinaryPlan, forKey: .probe_plan)
         try c.encodeIfPresent(phases, forKey: .phases)
+        try c.encodeIfPresent(extensions, forKey: .extensions)
         try c.encodeIfPresent(_test_overrides, forKey: ._test_overrides)
     }
 }
@@ -319,9 +328,129 @@ struct PWRunnerRunSpec: Codable {
 /// Lifecycle actions have a separate representation and never relax that pair.
 enum PWRunnerPhaseAction: Codable {
     case probe(PWRunnerProbeStep)
-    var probe: PWRunnerProbeStep { switch self { case .probe(let value): return value } }
-    init(from decoder: Decoder) throws { self = .probe(try PWRunnerProbeStep(from: decoder)) }
-    func encode(to encoder: Encoder) throws { try probe.encode(to: encoder) }
+    case extensionAction(PWRunnerExtensionAction)
+    var probe: PWRunnerProbeStep? { if case .probe(let value) = self { return value }; return nil }
+    var stepID: String { switch self { case .probe(let value): return value.step_id; case .extensionAction(let value): return value.step_id } }
+    init(from decoder: Decoder) throws {
+        let keys = try decoder.container(keyedBy: RequestKey.self)
+        if keys.contains(RequestKey(stringValue: "extension")) {
+            self = .extensionAction(try PWRunnerExtensionAction(from: decoder))
+        } else { self = .probe(try PWRunnerProbeStep(from: decoder)) }
+    }
+    func encode(to encoder: Encoder) throws {
+        switch self { case .probe(let value): try value.encode(to: encoder)
+        case .extensionAction(let value): try value.encode(to: encoder) }
+    }
+}
+
+struct PWRunnerExtensionDeclaration: Codable {
+    var token_ref: String
+    var target: String
+    init(token_ref: String, target: String) { self.token_ref = token_ref; self.target = target }
+    enum CodingKeys: String, CodingKey, CaseIterable { case token_ref, target }
+    init(from decoder: Decoder) throws {
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        token_ref = try c.decode(String.self, forKey: .token_ref)
+        target = try c.decode(String.self, forKey: .target)
+    }
+}
+struct PWRunnerExtensionOperation: Codable {
+    var operation: String
+    var token_ref: String?
+    var handle_ref: String
+    enum CodingKeys: String, CodingKey, CaseIterable { case operation, token_ref, handle_ref }
+    init(operation: String, token_ref: String? = nil, handle_ref: String) {
+        self.operation = operation; self.token_ref = token_ref; self.handle_ref = handle_ref
+    }
+    init(from decoder: Decoder) throws {
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        operation = try c.decode(String.self, forKey: .operation)
+        token_ref = try c.decodeIfPresent(String.self, forKey: .token_ref)
+        handle_ref = try c.decode(String.self, forKey: .handle_ref)
+    }
+}
+struct PWRunnerExtensionAction: Codable {
+    var step_id: String
+    var intervention: PWRunnerExtensionOperation
+    enum CodingKeys: String, CodingKey, CaseIterable { case step_id; case intervention = "extension" }
+    init(step_id: String, intervention: PWRunnerExtensionOperation) { self.step_id = step_id; self.intervention = intervention }
+    init(from decoder: Decoder) throws {
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        step_id = try c.decode(String.self, forKey: .step_id)
+        intervention = try c.decode(PWRunnerExtensionOperation.self, forKey: .intervention)
+    }
+}
+
+/// The native handle is signed 64-bit; -1 does not provide a handle.
+/// Missing publication withholds every native result, regardless of progress.
+struct PWRunnerExtensionEvent: Codable {
+    var phase_id: String
+    var step_id: String
+    var operation: String
+    var token_ref: String?
+    var handle_ref: String
+    var call_boundary_observed: Bool
+    var result_published: Bool
+    var status: String
+    var native_result: Int64?
+    var errno: Int32?
+    var unavailable_reason: String?
+    var lifecycle: PWAttemptLifecycle?
+}
+struct PWFileIdentity: Codable {
+    var device: UInt64
+    var inode: UInt64
+    var mode: UInt32
+    var uid: UInt32
+    var gid: UInt32
+}
+struct PWRunnerFreshRead: Codable {
+    var open_rc: Int32
+    var open_errno: Int32?
+    var read_rc: Int64?
+    var read_errno: Int32?
+    var stat_rc: Int32?
+    var stat_errno: Int32?
+    var identity: PWFileIdentity?
+    var close_rc: Int32?
+    var close_errno: Int32?
+    var content_hex: String?
+}
+struct PWRunnerIssuer: Codable {
+    var executable_path: String
+    var pid: Int32?
+    var uid: UInt32?
+    var euid: UInt32?
+    var gid: UInt32?
+    var egid: UInt32?
+    var call_boundary_observed = false
+    var result_published = false
+    var native_nonnull: Bool?
+    var errno: Int32?
+    var token_length: UInt32?
+    var reaped: Bool?
+    var exit_code: Int32?
+    var term_signal: Int32?
+    var wait_errors: [PWRunnerWaitError] = []
+    var termination_request: PWRunnerTerminationRequest?
+    var spawn_failure: PWRunnerSpawnFailure?
+}
+struct PWRunnerExtensionRecord: Codable {
+    var token_ref: String
+    var extension_class = "com.apple.app-sandbox.read"
+    var submitted_target: String
+    var resolved_target: String?
+    var preparation_status = "not_started"
+    var preparation_errno: Int32?
+    var identity: PWFileIdentity?
+    var issuance_status = "not_started"
+    var issuer: PWRunnerIssuer?
+    var delivery_status = "not_observed"
+    var delivered_bytes: UInt32?
+    var host_buffer_erased = false
 }
 
 struct PWRunnerPhase: Codable {
@@ -377,6 +506,7 @@ struct PWRunnerPhase: Codable {
 struct PWRunnerTestOverrides: Codable {
     var worker_executable_path: String?
     var worker_timeout_ms: Int?
+    var issuer_executable_path: String?
     var validator_executable_path: String?
     var validator_total_timeout_ms: Int?
     var validator_io_timeout_ms: Int?
@@ -387,6 +517,7 @@ struct PWRunnerTestOverrides: Codable {
     init(
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
+        issuer_executable_path: String? = nil,
         validator_executable_path: String? = nil,
         validator_io_timeout_ms: Int? = nil,
         validator_total_timeout_ms: Int? = nil,
@@ -396,6 +527,7 @@ struct PWRunnerTestOverrides: Codable {
     ) {
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
+        self.issuer_executable_path = issuer_executable_path
         self.validator_executable_path = validator_executable_path
         self.validator_total_timeout_ms = validator_total_timeout_ms
         self.validator_io_timeout_ms = validator_io_timeout_ms
@@ -405,7 +537,7 @@ struct PWRunnerTestOverrides: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case worker_executable_path, worker_timeout_ms, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
+        case worker_executable_path, worker_timeout_ms, issuer_executable_path, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
         case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms
     }
 
@@ -423,6 +555,7 @@ struct PWRunnerTestOverrides: Codable {
         }
         worker_executable_path = try c.decodeIfPresent(String.self, forKey: .worker_executable_path)
         worker_timeout_ms = try optionalInteger(.worker_timeout_ms)
+        issuer_executable_path = try c.decodeIfPresent(String.self, forKey: .issuer_executable_path)
         validator_executable_path = try c.decodeIfPresent(String.self, forKey: .validator_executable_path)
         validator_total_timeout_ms = try optionalInteger(.validator_total_timeout_ms)
         validator_io_timeout_ms = try optionalInteger(.validator_io_timeout_ms)
@@ -911,6 +1044,7 @@ struct PWRunnerAttemptResult: Codable {
     /// `not_run_worker_died`/`slot_incomplete` stay as they are.
     var lifecycle: PWAttemptLifecycle? = nil
     /// PW's attempt status, not a raw syscall return.
+    var fresh_read: PWRunnerFreshRead? = nil
     var rc: Int
     var errno: Int?
     var outcome: String
@@ -972,7 +1106,7 @@ struct PWRunnerAttemptResult: Codable {
     enum CodingKeys: String, CodingKey {
         case requested_kind, requested_action
         case result_source, missing_reason, lifecycle
-        case rc
+        case rc, fresh_read
         case errno
         case outcome
         case error
@@ -993,6 +1127,7 @@ struct PWRunnerAttemptResult: Codable {
         try container.encodeIfPresent(result_source, forKey: .result_source)
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
+        try container.encodeIfPresent(fresh_read, forKey: .fresh_read)
         try container.encode(rc, forKey: .rc)
         if let errno {
             try container.encode(errno, forKey: .errno)
@@ -1031,6 +1166,7 @@ struct PWRunnerAttemptResult: Codable {
         result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
+        fresh_read = try container.decodeIfPresent(PWRunnerFreshRead.self, forKey: .fresh_read)
         rc = try container.decode(Int.self, forKey: .rc)
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
         outcome = try container.decode(String.self, forKey: .outcome)
@@ -1706,8 +1842,7 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
                 if !isConflict { problems.append("step \(i) \(name): conflict without incompatible observations") }
             }
         }
-        if let replySteps, replySteps.indices.contains(i) {
-            let reply = replySteps[i]
+        if let reply = replySteps?.first(where: { $0.step_id == step.step_id }) {
             let completed = step.slot == "completed" && step.attempt_support == "supported"
             let reason: String? = completed ? nil : step.attempt_support == "unsupported" ? "attempt_not_supported"
                 : step.slot == "absent" ? "slot_absent" : "slot_incomplete"
@@ -1906,6 +2041,8 @@ struct PWRunnerRunResult: Codable {
     var admission_failure: PWRunnerAdmissionFailure?
     var request_failure: PWRunnerRequestFailure?
     var phases: [PWRunnerPhaseResult]
+    var extensions: [PWRunnerExtensionRecord]?
+    var extension_events: [PWRunnerExtensionEvent]?
     var test_overrides: PWRunnerTestOverrides?
     var reporting_failure: PWRunnerReportingFailure?
 
@@ -1924,6 +2061,8 @@ struct PWRunnerRunResult: Codable {
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,
         phases: [PWRunnerPhaseResult] = [],
+        extensions: [PWRunnerExtensionRecord]? = nil,
+        extension_events: [PWRunnerExtensionEvent]? = nil,
         test_overrides: PWRunnerTestOverrides? = nil,
         applied_profile: AppliedProfileCapture? = nil,
         admission_failure: PWRunnerAdmissionFailure? = nil,
@@ -1946,13 +2085,15 @@ struct PWRunnerRunResult: Codable {
         self.sandboxed_after_apply = sandboxed_after_apply
         self.steps = steps
         self.runner_subprocess = runner_subprocess
+        self.extensions = extensions
+        self.extension_events = extension_events
         self.phases = phases
         self.test_overrides = test_overrides
         self.reporting_failure = reporting_failure
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extensions, extension_events, test_overrides, reporting_failure
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1978,6 +2119,8 @@ struct PWRunnerRunResult: Codable {
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
         admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
         request_failure = try c.decodeIfPresent(PWRunnerRequestFailure.self, forKey: .request_failure)
+        extensions = try c.decodeIfPresent([PWRunnerExtensionRecord].self, forKey: .extensions)
+        extension_events = try c.decodeIfPresent([PWRunnerExtensionEvent].self, forKey: .extension_events)
         phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
@@ -2015,7 +2158,7 @@ struct PWRunnerRunResult: Codable {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "a worker subprocess requires the worker disposition record"))
                 }
-                let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: steps.count, steps: steps)
+                let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: phases.reduce(0) { $0 + $1.action_ids.count }, steps: steps)
                 if let first = problems.first {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "disposition record contradicts its basis: \(first)"))
@@ -2023,8 +2166,14 @@ struct PWRunnerRunResult: Codable {
             }
             let phaseIDs = phases.map { $0.phase_id }
             let actionIDs = phases.flatMap { $0.action_ids }
+            let eventIDs = (extension_events ?? []).map { $0.step_id }
+            let stepIDs = steps.map { $0.step_id }
+            let allIDs = stepIDs + eventIDs
             guard phases.count <= PWRunnerPhase.maximumCount, Set(phaseIDs).count == phases.count,
-                  Set(actionIDs).count == actionIDs.count, actionIDs == steps.map({ $0.step_id }),
+                  Set(actionIDs).count == actionIDs.count, actionIDs.count <= 256,
+                  Set(allIDs).count == allIDs.count, Set(actionIDs) == Set(allIDs),
+                  actionIDs.filter({ stepIDs.contains($0) }) == stepIDs,
+                  actionIDs.filter({ eventIDs.contains($0) }) == eventIDs,
                   (runner_subprocess == nil || !phases.isEmpty) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "phase identities and ordered actions must partition the reply"))
@@ -2038,6 +2187,9 @@ struct PWRunnerRunResult: Codable {
                     throw EncodingError.invalidValue(phase, .init(codingPath: encoder.codingPath,
                         debugDescription: "invalid phase boundary account"))
                 }
+            }
+            if let issue = extensionEvidenceProblem() {
+                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: issue))
             }
             for step in steps {
                 guard let phase = phases.first(where: { $0.phase_id == step.phase_id }), phase.action_ids.contains(step.step_id) else {
@@ -2082,6 +2234,8 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
         try c.encodeIfPresent(request_failure, forKey: .request_failure)
         try c.encode(phases, forKey: .phases)
+        try c.encodeIfPresent(extensions, forKey: .extensions)
+        try c.encodeIfPresent(extension_events, forKey: .extension_events)
         try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
         try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
     }
@@ -2097,4 +2251,53 @@ func pwRunnerEncodeJSON<T: Encodable>(_ value: T) throws -> Data {
 func pwRunnerDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
     let dec = JSONDecoder()
     return try dec.decode(type, from: data)
+}
+
+extension PWRunnerRunResult {
+    func extensionEvidenceProblem() -> String? {
+        let events = extension_events ?? []
+        let declarations = extensions ?? []
+        if declarations.count > 1 || events.count > 2 || (!events.isEmpty && declarations.count != 1) { return "extension record capacity or association" }
+        let ids = phases.flatMap { $0.action_ids }
+        var consume: PWRunnerExtensionEvent?
+        var released = false
+        for event in events {
+            guard let phase = phases.first(where: { $0.phase_id == event.phase_id }), phase.action_ids.contains(event.step_id) else { return "extension event phase association" }
+            if event.operation == "consume" {
+                if consume != nil || event.token_ref != declarations.first?.token_ref { return "extension consume reference" }
+                consume = event
+            } else if event.operation == "release" {
+                guard !released, let prior = consume, prior.handle_ref == event.handle_ref, event.token_ref == nil,
+                      let first = ids.firstIndex(of: prior.step_id), let second = ids.firstIndex(of: event.step_id), first < second else { return "extension release reference/order" }
+                released = true
+                if event.status == "returned" && (prior.status != "returned" || prior.native_result == nil || prior.native_result == -1) { return "release lacks an observed consume handle" }
+                if let value = event.native_result, value < Int64(Int32.min) || value > Int64(Int32.max) { return "release result is not native int" }
+            } else { return "unknown extension operation" }
+            if let disposition = runner_subprocess?.disposition?.steps.first(where: { $0.step_id == event.step_id }) {
+                if event.result_published != (disposition.slot == "completed") || event.lifecycle?.boundary != disposition.questions["step_boundary_reached"] || event.lifecycle?.result != disposition.questions["step_result_published"] {
+                    return "extension publication disagrees with disposition"
+                }
+            } else if runner_subprocess != nil { return "extension event lacks disposition" }
+            switch event.status {
+            case "returned":
+                if !event.result_published || !event.call_boundary_observed || event.native_result == nil || event.errno == nil || event.unavailable_reason != nil { return "native extension result lacks publication" }
+                if event.operation == "consume" && declarations.first?.delivery_status != "delivered" { return "consumption lacks delivery" }
+            case "unavailable":
+                if !event.result_published || event.call_boundary_observed || event.native_result != nil || event.errno != nil || !["token_unavailable", "handle_unavailable", "native_api_unavailable", "repeated_action"].contains(event.unavailable_reason ?? "") { return "unavailable extension action fabricates a call" }
+            case "unresolved":
+                if event.result_published || event.native_result != nil || event.errno != nil || event.unavailable_reason != nil { return "unpublished extension result must stay unresolved" }
+            default: return "invalid extension event status"
+            }
+            if event.result_published && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
+        }
+        for declaration in declarations {
+            if declaration.delivery_status == "delivered" {
+                guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,
+                      bytes > 0 && bytes < 16384, bytes == declaration.issuer?.token_length,
+                      declaration.issuer?.native_nonnull == true, declaration.issuer?.result_published == true,
+                      declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0 else { return "delivery lacks bounded issuance and issuer reap" }
+            }
+        }
+        return nil
+    }
 }

@@ -438,7 +438,7 @@ before assembly began.
 
 <!-- BEGIN GENERATED BUILD SIGNING -->
 <details>
-<summary>8 signing calls in order, with symbol presence and test definition verified and the calls, their targets and entitlements compared with the script and the signed inventory with EXECUTABLES, the evidence generator and the README; whether a test asserts the row is not verified</summary>
+<summary>9 signing calls in order, with symbol presence and test definition verified and the calls, their targets and entitlements compared with the script and the signed inventory with EXECUTABLES, the evidence generator and the README; whether a test asserts the row is not verified</summary>
 
 | # | Target | Kind | Flags | Entitlements | In the service loop | Step | Variants | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -447,9 +447,10 @@ before assembly began.
 | 3 | ${APP_BUNDLE}/Contents/MacOS/sbpl-check | signature | --force --options runtime --timestamp | none | no | sign_tools | both | [`${APP_BUNDLE}/Contents/MacOS/sbpl-check`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
 | 4 | ${svc_bundle}/Contents/MacOS/pw-probe-runner | signature | --force --options runtime --timestamp | none | XPC_SERVICE_NAMES | sign_services | full | [`${svc_bundle}/Contents/MacOS/pw-probe-runner`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
 | 5 | ${svc_bundle}/Contents/MacOS/sb_api_validator | signature | --force --options runtime --timestamp | none | XPC_SERVICE_NAMES | sign_services | full | [`${svc_bundle}/Contents/MacOS/sb_api_validator`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
-| 6 | ${svc_bundle} | seal | --force --options runtime --timestamp | ${svc_entitlements} | XPC_SERVICE_NAMES | sign_services | full | [`-s "${IDENTITY}" "${svc_bundle}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
-| 7 | ${APP_BUNDLE} | seal | --force --options runtime --timestamp | ${ENTITLEMENTS_PLIST} | no | seal | both | [`-s "${IDENTITY}" "${APP_BUNDLE}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
-| 8 | ${SANDBOX_LOG_OBSERVER_BIN} | signature | --force --options runtime --timestamp | none | no | sign_observer | both | [`sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
+| 6 | ${svc_bundle}/Contents/MacOS/pw-extension-issuer | signature | --force --options runtime --timestamp | none | XPC_SERVICE_NAMES | sign_services | full | [`${svc_bundle}/Contents/MacOS/pw-extension-issuer`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
+| 7 | ${svc_bundle} | seal | --force --options runtime --timestamp | ${svc_entitlements} | XPC_SERVICE_NAMES | sign_services | full | [`-s "${IDENTITY}" "${svc_bundle}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
+| 8 | ${APP_BUNDLE} | seal | --force --options runtime --timestamp | ${ENTITLEMENTS_PLIST} | no | seal | both | [`-s "${IDENTITY}" "${APP_BUNDLE}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
+| 9 | ${SANDBOX_LOG_OBSERVER_BIN} | signature | --force --options runtime --timestamp | none | no | sign_observer | both | [`sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"`](../build.sh) | [`check_signing`](../tests/suites/source_drift/build_rules.py); [`check_inventory`](../tests/suites/source_drift/build_rules.py) |
 
 </details>
 <!-- END GENERATED BUILD SIGNING -->
@@ -519,7 +520,7 @@ look, not proof that a test asserts the row. The build has
 <!-- span build.steps -->30<!-- /span --> steps,
 <!-- span build.refusals -->65<!-- /span --> refusals, of which
 <!-- span build.uncovered -->27<!-- /span --> have no control that produces
-them, <!-- span build.signing -->8<!-- /span --> signing calls and
+them, <!-- span build.signing -->9<!-- /span --> signing calls and
 <!-- span build.knobs -->2<!-- /span --> knobs.
 
 Before compiling, the script runs every generator's check: limits, contract,
