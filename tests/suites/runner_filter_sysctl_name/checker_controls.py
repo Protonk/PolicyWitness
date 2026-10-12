@@ -30,7 +30,7 @@ CALLERS = (
 def current_reply(step_id, operation, value, sysctl):
     """A reply with one planning-excluded query beside a completed attempt."""
     step = {
-        "step_id": step_id,
+        "step_id": step_id, "phase_id": "main",
         "sandbox_check": {
             "pid": 1234, "operation": operation, "filter_kind": "sysctl_name" if sysctl else operation.split("-")[-1],
             "filter_value": value, "filter_type_id": None,
@@ -65,7 +65,7 @@ def current_reply(step_id, operation, value, sysctl):
                                               "stage": "after_orchestration", "same_as_input": [],
                                               "realpath_resolved": "/private/etc/hosts",
                                               "parent_realpath_resolved": "/private/etc/hosts"}
-    return {
+    reply = {
         "schema_version": contract.RESPONSE_SCHEMA, "normalized_outcome": "ok", "rc": 0, "error": None,
         "policy_format": "sbpl", "sandboxed_after_apply": True, "pid": 1234, "specimen_id": "control",
         "runner_subprocess": {"pid": 1234, "reaped": True, "exit_code": 0, "term_signal": None, "partial_steps": False,
@@ -75,6 +75,10 @@ def current_reply(step_id, operation, value, sysctl):
                                            "protocol_violations": [], "validator_disposition": "not_needed"}},
         "steps": [step],
     }
+    reply["phases"] = [{"phase_id": "main", "ordinal": 1, "action_ids": [step_id],
+                        "arrival_observed": True, "completion_observed": True, "collection_status": "not_needed",
+                        "ordering": reply["runner_subprocess"].pop("ordering")}]
+    return reply
 
 
 def main():

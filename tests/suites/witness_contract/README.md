@@ -17,8 +17,8 @@ file, observes its absence outside PW, then requires fresh planning to withhold
 the next native path query while the paired access reports ENOENT. A final
 resolvable target requires a fresh validator record and `query_first`. The
 reply must retain one worker, distinct collections and all completed phases.
-Six mutations reject wrong phase association, borrowed records, duplicate IDs,
-wrong ordinal, broken completion sequence and a wrong action partition.
+Eleven mutations reject wrong phase association, borrowed records, duplicate IDs,
+wrong ordinal, broken completion sequence, a wrong action partition and malformed phase field types.
 
 The same registered case compiles the bounded validator fixture to drive
 aggregate timeout and stdout byte cutoff. It asserts supplied override echoes,
@@ -195,8 +195,10 @@ one file with the real validator and no overrides. Both native predictions must
 be allow with `query_first` beside `observation: succeeded`. The test observes file
 absence before decoding, and retains later host nonresolution separately as
 `sandbox_check.path_diagnostics.realpath_resolved: null`. A later-step unlink
-of the same submitted target is read from `order` and the unlink step's own
-result (reading rule 6), pinned by the matrix rows and consumer controls. The
+in that same phase is read from `order` and the unlink step's own result
+(reading rule 6), pinned by the matrix rows and consumer controls. Cross-phase
+sequencing instead requires phase boundary publications; `phases` checks an
+unlink/recreate followed by a later native query with its own `query_first`. The
 stronger gated observer and deliberate barrier-bypass controls are
 separate tests; this ordinary run alone does not replace them.
 
@@ -277,8 +279,12 @@ its direct protocol/native controls live in `validator_bridge`. The opt-in
 outside the inspected app. Baseline component and CLI controls must pass. The
 worker wait bypass must fail the ordinary C quiescence assertion; the host early
 release must fail the same Swift gate control used by `runner_unit`. Both signed
-app copies must produce early unlink and exec effects under the unchanged CLI
-observer. Hashes, signatures, source patches, command logs and effect receipts
+app copies must produce early unlink and exec effects under the same CLI
+effect assertions. The worker bypass publishes arrival, then waits on a test-only
+file gate opened by the observer after the validator connects. This places the
+fault inside the held collection instead of letting the host reject premature
+publication before any collection starts. The direct C control opens that gate
+before launch and must still detect the missing worker wait. Hashes, signatures, source patches, command logs and effect receipts
 are retained. See [opt-in prerequisites](../../OPT_IN_TESTS.md).
 
 The unmodified C scenario must complete its 500 ms hold before release. A bypass

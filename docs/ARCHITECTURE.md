@@ -320,7 +320,7 @@ edge is the guard that lets it cross. [contract.json](contract.json) owns the
 wire version numbers and the build generates one source identity
 ([CONTRACT.md](CONTRACT.md)). The records that carry a local version field
 of their own, each read by exactly one receiver, are the observer report,
-the evidence manifest, the runner registry and the compiled-object receipt,
+the evidence manifest, the runner registry, the validator NDJSON and the compiled-object receipt,
 and the node table's Form column names each one's field. Every other
 boundary is held by a golden, a suite, or by being built and shipped
 together, and the edge table says which.

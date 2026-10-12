@@ -73,7 +73,7 @@ def native_rows(runner, records):
         limited(row)
 
 
-def held_effects(pw, out, bridge, helper):
+def held_effects(pw, out, bridge, helper, collection_started=None):
     """Used unchanged by baseline and barrier-bypass candidates.
 
     Preserve observations and finish/clean up the run before rejecting early
@@ -93,6 +93,7 @@ def held_effects(pw, out, bridge, helper):
         run = RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture'])
         try:
             run.start(); ready = gate.accept()
+            if collection_started is not None: collection_started()
             worker = process_snapshot(helper, ready['target_pid'])
             validator_info = process_snapshot(helper, gate.pid)
             host = process_snapshot(helper, worker['ppid'])
@@ -100,11 +101,17 @@ def held_effects(pw, out, bridge, helper):
             for pid in (worker['pid'], host['pid']): exits.watch(pid)
             observed.update(worker=worker, validator=validator_info, host=host)
             records = []
-            for _ in plan: records.append(gate.query()); gate.emit()
+            # Early-release mutants may unlink before fresh planning. Observe
+            # exactly the bridge's admitted queries while retaining the same
+            # effect oracle; the baseline still requires the complete plan.
+            query_count = ready['queries']
+            assert type(query_count) is int and 1 <= query_count <= len(plan), ready
+            observed['queries'] = query_count
+            for _ in range(query_count): records.append(gate.query()); gate.emit()
             deadline = time.monotonic() + 0.5
             while True:
                 held = gate.ping()
-                assert not held['closed'] and held['next'] == 2, held
+                assert not held['closed'] and held['next'] == query_count, held
                 present = target.exists()
                 observed['held_samples'].append(dict(present=present,
                     bytes_match=present and target.read_bytes() == seed,
@@ -128,6 +135,7 @@ def held_effects(pw, out, bridge, helper):
             assert all(s['present'] and s['bytes_match'] for s in observed['held_samples']), 'early unlink while collection held'
             assert not any(s['exec_connected'] for s in observed['held_samples']), 'early exec connection while collection held'
             assert observed['absent_after_release'], observed
+            assert query_count == len(plan), ready
             runner = envelope(run, rc, spec)
             ordering(runner); native_rows(runner, records)
             assert runner['pid'] == worker['pid'], runner

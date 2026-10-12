@@ -54,7 +54,7 @@ def main():
     assert v['stdout_collection_stop'] == 'deadline' and v['reaped'] is True, v
     assert v['termination_request']['signal'] == 9 and v['termination_request']['rc'] == 0, v
     assert len(v['records']) == 1 and v['records'][0]['step_id'] == 'write-0', v
-    ordering = worker['ordering']
+    ordering = runner['phases'][0]['ordering']
     assert all(ordering[k] is True for k in ('collection_closed_before_proceed', 'proceed_set',
                                            'proceed_observed', 'worker_lifetime_established')), ordering
     assert ordering['validator_disposition'] == 'reaped' and not ordering['protocol_violations'], ordering

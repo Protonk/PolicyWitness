@@ -33,11 +33,12 @@ def replace_once(source, old, new):
     return source.replace(old, new, 1)
 
 
-def worker_source(source):
+def worker_source(source, gate):
     # Bypass each actual wait while retaining phase publications and attempts.
     return replace_once(source, '        int64_t release_wait_ns = wait_for_proceed(hdr, evidence, phase_index, args.proceed_wait_ms);',
         '        int64_t release_wait_ns = 0; (void)wait_for_proceed; /* deliberate bypass */\n'
         '        atomic_store_explicit(&phase->arrived, 1u, memory_order_release);\n'
+        f'        while (access({json.dumps(str(gate))}, F_OK) != 0) usleep(1000); /* test collection gate */\n'
         '        atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);\n'
         '        atomic_store_explicit(&hdr->proceed_observed, phase_index + 1u, memory_order_release);')
 
@@ -146,10 +147,10 @@ def signed_copy(source, work, out, identity, worker, host=None):
     return app
 
 
-def cli_control(app, out, bridge, helper, expected):
+def cli_control(app, out, bridge, helper, expected, collection_started=None):
     before = inventory(app)
     try:
-        held_effects(app / 'Contents/MacOS/policy-witness', out / 'cli', bridge, helper)
+        held_effects(app / 'Contents/MacOS/policy-witness', out / 'cli', bridge, helper, collection_started)
     except AssertionError as error:
         assert expected and str(error) in ('early unlink while collection held', 'early exec connection while collection held'), str(error)
         observations = json.loads((out / 'cli/effects.json').read_text())
@@ -186,10 +187,13 @@ def main():
             baseline['cli'] = cli_control(candidate, base, out / 'bridge', out / 'helper', False)
             summaries.append(baseline); save(out / 'mutations.json', summaries)
             mutant = out / 'worker_bypass'; mutant.mkdir()
-            bad_worker = compile_worker(mutant, worker_source(c_source))
+            bypass_gate = work / 'worker-bypass-ready'
+            bad_worker = compile_worker(mutant, worker_source(c_source, bypass_gate))
+            bypass_gate.touch()
             result = dict(variant='worker_bypass', harness=harness_control(out / 'harness', bad_worker, mutant, True))
+            bypass_gate.unlink()
             candidate = signed_copy(app, work, mutant, identity, bad_worker)
-            result['cli'] = cli_control(candidate, mutant, out / 'bridge', out / 'helper', True)
+            result['cli'] = cli_control(candidate, mutant, out / 'bridge', out / 'helper', True, bypass_gate.touch)
             summaries.append(result); save(out / 'mutations.json', summaries)
             mutant = out / 'host_bypass'; mutant.mkdir()
             patched = host_source(swift_source)

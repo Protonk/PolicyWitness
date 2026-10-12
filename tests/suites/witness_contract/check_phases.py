@@ -21,7 +21,7 @@ def action(identity, path, operation='file-read-data', attempt='access'):
 def run(pw, out, name, actions, overrides=None, expected_rc=0):
     spec = {'schema_version': 4, 'specimen_id': name,
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
-            'phases': [{'phase_id': f'p{i}', 'actions': [a]} for i, a in enumerate(actions)]}
+            'phases': [{'phase_id': f'p{i}', 'actions': a if isinstance(a, list) else [a]} for i, a in enumerate(actions)]}
     if overrides is not None:
         spec['_test_overrides'] = overrides
     with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as captured:
@@ -82,6 +82,20 @@ def main():
     for field in ('ordering', 'action_ids', 'collection_status', 'ordinal', 'validator_subprocess'):
         controls.append(rejected('malformed_' + field, lambda r, key=field: r['phases'][2].update({key: 7 if key != 'ordinal' else []})))
     (out / 'consumer-controls.json').write_text(json.dumps(controls, indent=2) + '\n')
+
+    recreated = out / 'recreated'
+    recreated.write_bytes(b'original content before phase intervention')
+    _, recreation = run(pw, out, 'unlink_recreate', [
+        [action('remove', recreated, 'file-write-unlink', 'unlink'),
+         action('recreate', recreated, 'file-write-data', 'create')],
+        action('later_query', recreated)])
+    assert recreated.read_bytes() == b''
+    assert all(s['attempt']['rc'] == 0 for s in recreation['steps'])
+    assert recreation['steps'][2]['comparison']['order'] == 'query_first'
+    assert recreation['steps'][0]['phase_id'] != recreation['steps'][2]['phase_id']
+    assert recreation['phases'][0]['completion_observed'] and recreation['phases'][1]['arrival_observed']
+    assert recreation['phases'][1]['validator_subprocess']['expected_step_ids'] == ['later_query']
+    (out / 'recreation-effect.json').write_text(json.dumps({'present': recreated.exists(), 'length': recreated.stat().st_size}) + '\n')
 
     validator = out / 'bounded-validator'
     command = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',

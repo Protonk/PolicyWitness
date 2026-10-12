@@ -115,9 +115,12 @@ def direct_controls(root, out):
 def lookup(step, dotted):
     current = step
     for key in dotted.split('.'):
-        if not isinstance(current, dict) or key not in current:
+        if isinstance(current, list) and key.isdecimal() and int(key) < len(current):
+            current = current[int(key)]
+        elif isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
             return consumer.ABSENT
-        current = current[key]
     return current
 
 

@@ -30,7 +30,7 @@ from worker_exit_witness import worker_exit_witness
 
 def observer_controls(run):
     base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
-        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure', 'steps': []}, ok=False)
+        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure', 'steps': [], 'phases': []}, ok=False)
     good = dict(kind='sandbox_log_observer_report', schema_version=contract.CONTROLLER_ENVELOPE,
                 data=dict(observer_schema_version=2, observed_deny=True, deny_events=[]))
     def wrapped(reply, status='invalid_reply'):
@@ -70,7 +70,7 @@ def policy_check_controls(run):
     """Constructed captures distinguish rejected payloads from admitted helper data."""
     base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
         'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure',
-        'steps': []}, ok=False)
+        'steps': [], 'phases': []}, ok=False)
     helper = {
         'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'sbpl_check',
         'result': {'normalized_outcome': 'ok', 'ok': True, 'exit_code': 0, 'error': None},

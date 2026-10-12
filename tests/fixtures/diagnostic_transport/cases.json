@@ -13,7 +13,7 @@
       },
       "progress": {
         "operation": 239,
-        "phase": 2,
+        "stage": 2,
         "index": 17
       },
       "text": "alpha opaque detail: snowman ☃ / 4000000001"
@@ -30,7 +30,7 @@
       },
       "progress": {
         "operation": 8,
-        "phase": 2
+        "stage": 2
       },
       "text": "beta native detail: café / 4000000179"
     }

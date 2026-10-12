@@ -462,8 +462,8 @@
         "runner_result.normalized_outcome": "ok",
         "runner_result.sandboxed_after_apply": true,
         "runner_subprocess.exit_code": 0,
-        "validator_subprocess.exit_code": 0,
-        "runner_subprocess.ordering.validator_disposition": "reaped"
+        "phases.0.validator_subprocess.exit_code": 0,
+        "phases.0.ordering.validator_disposition": "reaped"
       }
     },
     "B": {
@@ -619,11 +619,11 @@
         "result.exit_code": 1,
         "runner_result.normalized_outcome": "runner_failed",
         "runner_result.sandboxed_after_apply": false,
-        "runner_subprocess.ordering.validator_disposition": "not_invoked",
-        "runner_subprocess.ordering.proceed_set": false,
+        "phases.0.ordering.validator_disposition": "not_invoked",
+        "phases.0.ordering.proceed_set": false,
         "runner_subprocess.worker_evidence.failure.operation": 5,
         "runner_subprocess.worker_evidence.failure_state": "published",
-        "validator_subprocess": null
+        "phases.0.validator_subprocess": null
       }
     },
     "T": {
@@ -680,8 +680,8 @@
           "stage": 1,
           "index": 0
         },
-        "runner_subprocess.ordering.proceed_set": true,
-        "runner_subprocess.ordering.proceed_observed": true
+        "phases.0.ordering.proceed_set": true,
+        "phases.0.ordering.proceed_observed": true
       }
     }
   },

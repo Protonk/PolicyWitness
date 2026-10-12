@@ -157,6 +157,7 @@ def main():
     # ordering can change without pinning a complete expected transcript.
     changed, steps = mutate()
     steps.reverse()
+    changed["data"]["runner_result"]["phases"][0]["action_ids"].reverse()
     check("reordered_step", changed, ("expected step IDs in order",), status=1,
           same_diagnostics_as=valid_diagnostics)
     broken, steps = mutate()
@@ -164,6 +165,7 @@ def main():
     attempt_errors = ("fs_read_allowed: expected attempt_ok=True", "fs_read_allowed: expected errno=None")
     ordered_diagnostics = check("attribution_bad_attempt", broken, attempt_errors, status=1)
     steps.reverse()  # The faulty step moves, while its expectation stays put.
+    broken["data"]["runner_result"]["phases"][0]["action_ids"].reverse()
     check("reordered_bad_attempt", broken, ("expected step IDs in order", *attempt_errors), status=1,
           same_diagnostics_as=ordered_diagnostics)
 

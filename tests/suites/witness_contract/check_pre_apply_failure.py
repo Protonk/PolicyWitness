@@ -113,7 +113,7 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    ordering = worker['ordering']
+    ordering = runner['phases'][0]['ordering']
     assert ordering['collection_closed_before_proceed'] is (not failure), ordering
     assert ordering['proceed_set'] is (not failure) and ordering['proceed_observed'] is (not failure), ordering
     assert ordering['worker_lifetime_established'] is (not failure), ordering

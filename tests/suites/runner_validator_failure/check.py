@@ -141,7 +141,7 @@ def check_cli(case, out, pw):
                 assert validator_status['decode_fault']['kind'] == 'json', validator_status
                 import base64
                 assert base64.b64decode(validator_status['decode_fault']['context_b64']).decode() == 'invalid-verdict:' + plan[-1]['step_id']
-            ordering = worker['ordering']
+            ordering = runner['phases'][0]['ordering']
             assert ordering['collection_closed_before_proceed'] and ordering['proceed_set'] and ordering['proceed_observed'], ordering
             assert ordering['validator_disposition'] == 'reaped', ordering
             assert [s['comparison']['order'] for s in runner['steps']] == ['query_first', 'query_first', 'unestablished']

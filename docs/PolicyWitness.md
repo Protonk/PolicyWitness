@@ -201,7 +201,8 @@ the phase array itself must be nonempty.
 }
 ```
 
-All queries in a phase are collected before any of its actions. Actions then
+Query collection closes before any actions in that phase begin, even if some
+predictions are unavailable. Actions then
 run in declaration order, and the next collection begins after phase completion.
 The worker and its once-applied policy remain the same. A phase names an interval;
 it does not promise stable file identity or permissions throughout that interval.
@@ -213,9 +214,7 @@ phase completion and arrival still describe the observed progression. Validator
 failure or exhausted collection allowance can likewise leave predictions missing.
 Worker loss or an expired worker release wait stops further progression.
 
-At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and
-<!-- span limits.probe_steps.value -->256<!-- /span --> total actions fit one
-specimen; phases do not multiply the action or query allowance. The
+At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- span limits.probe_steps.value -->256<!-- /span --> total actions fit one specimen; phases do not multiply the action or query allowance. The
 [limits](#limits) describe cumulative collection and per-phase wait bounds.
 
 ### Try an accepted request and a refusal
@@ -1038,9 +1037,7 @@ cleanup. `poll_stop_reason` retains an earlier deadline even if the worker
 finishes during grace. On a failed policy write, `policy_transfer_error` records
 the host's errno and written/expected UTF-8 byte counts, while worker evidence
 and process status remain available. Written bytes do not prove child receipt.
-Policy delivery has an absolute monotonic deadline of
-<!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starting after
-worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
+Policy delivery has an absolute monotonic deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starting after worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
 `elapsed_ms`, `bytes_written` and `bytes_expected`; it invents no write errno.
 The host closes input and enters cleanup without starting readiness/sentinel
 polling. Omission of the write-error object alone does not mean delivery
@@ -1073,7 +1070,7 @@ channel carries no native return.
 
 ### Receiver evidence
 
-`validator_subprocess` retains accepted `records` (including null-ID diagnostics)
+`phases[].validator_subprocess` retains accepted `records` (including null-ID diagnostics)
 and their `raw_line`, expected IDs, association issues, received stdout byte
 count, probe write counts, independent I/O/decode faults, termination-call
 observations and actual reap status. Duplicate IDs supply no unique per-step
@@ -1323,11 +1320,14 @@ Read it with these rules, in order:
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
    attempt met; nothing in a reply discharges this.
-6. When a query has `filter_kind: path`, a nonnull `filter_value` and no
-   `query_plan:*` limitation, and any step's attempt is a worker `unlink` of
-   that same submitted path with `outcome: ok` and `rc: 0`, the target was
-   removed during the run; `order` says whether the removal followed the
-   query, and the unlink attempt's step is the step that removed it.
+6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`
+   records removal at that action. For a path query of that same submitted
+   spelling in the same phase, `order: query_first` establishes that the query
+   preceded the unlink. `order: unestablished` supplies no ordering inference.
+   For actions in different phases, use the corresponding completion and arrival
+   publications to establish sequencing; the query's `order` applies only to
+   its own phase. A later same-path query can follow an earlier unlink and
+   recreation. None of these fields establishes stable object identity.
 7. A `process-exec*` query predicts target admission only, not every spawn
    prerequisite; the child's result is in `attempt.rc` and
    `attempt.child_exit_code`.

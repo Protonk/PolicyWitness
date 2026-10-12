@@ -67,7 +67,7 @@ and phase integration is outside that case.
 The default `witness_contract/phases` case exercises the public phase grammar
 through the signed CLI: an independently observed unlink makes the next path
 query unavailable while its attempt reports ENOENT, and a third phase receives
-a fresh native query. It checks separate validator PIDs and six rejected reader
+a fresh native query. It checks separate validator PIDs and eleven rejected reader
 mutations. The same case drives cumulative collection exhaustion through
 `validator_total_timeout_ms` and a real validator stdout byte cutoff, retaining
 completed attempts and independent cleanup evidence. No new normalized or

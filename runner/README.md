@@ -111,7 +111,8 @@ sandbox or declaring prediction/enforcement agreement. Its principal records are
 | Record | Responsibility and contract |
 | --- | --- |
 | `runner_subprocess` | Worker publications and independent host observations; [worker evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract) and [disposition](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record). Its PID is authoritative for worker correlation. |
-| `validator_subprocess`, `validator_spawn_failure` | Observed validator execution, accepted records and collection faults, or a failed native launch. A failed launch creates no subprocess record; [receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). |
+| `phases[].validator_subprocess`, `phases[].validator_spawn_failure` | Observed validator execution, accepted records and collection faults, or a failed native launch. A failed launch creates no subprocess record; [receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). |
+| `phases[]` | Ordered arrival/completion observations, collection status, action membership and phase-local ordering. Missing publications remain missing. |
 | `steps[].sandbox_check`, `attempt`, `comparison` | Predictions, attempted-operation evidence, and their submitted-scope/order relations; [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record). Later host path resolution is separately attributed. |
 | `normalized_outcome`, `reporting_failure` | Classification of available observations and any reply-construction failure; [classification](../tests/FAILURE-PROPAGATION-CONTRACT.md#evidence-and-classification) and [reply failure](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure). |
 

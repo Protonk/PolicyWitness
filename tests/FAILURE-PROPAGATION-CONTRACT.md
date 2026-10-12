@@ -1083,11 +1083,14 @@ label.
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
    attempt met; nothing in a reply discharges this.
-6. When a query has `filter_kind: path`, a nonnull `filter_value` and no
-   `query_plan:*` limitation, and any step's attempt is a worker `unlink` of
-   that same submitted path with `outcome: ok` and `rc: 0`, the target was
-   removed during the run; `order` says whether the removal followed the
-   query, and the unlink attempt's step is the step that removed it.
+6. A worker `unlink` of a submitted path with `outcome: ok` and `rc: 0`
+   records removal at that action. For a path query of that same submitted
+   spelling in the same phase, `order: query_first` establishes that the query
+   preceded the unlink. `order: unestablished` supplies no ordering inference.
+   For actions in different phases, use the corresponding completion and arrival
+   publications to establish sequencing; the query's `order` applies only to
+   its own phase. A later same-path query can follow an earlier unlink and
+   recreation. None of these fields establishes stable object identity.
 7. A `process-exec*` query predicts target admission only, not every spawn
    prerequisite; the child's result is in `attempt.rc` and
    `attempt.child_exit_code`.

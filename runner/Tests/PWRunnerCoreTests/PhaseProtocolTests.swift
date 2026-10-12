@@ -121,7 +121,12 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 sentinelTimeoutMs: 100)
             var collected: [Int] = []
             let result = runCWorker(input, phaseBoundary: { _, index in collected.append(index) })
-            guard let out = unwrapWorkerOutput(result) else { throw TestFailure(message: "fixture did not spawn") }
+            let out: CWorkerOutput
+            switch result {
+            case .success(let observed): out = observed
+            case .failure(_, let observed?): out = observed
+            default: throw TestFailure(message: "fixture did not spawn")
+            }
             try expectEqual(collected, [0])
             try expectTrue(out.phases[1].arrived)
             try expectFalse(out.phases[1].collectionClosed || out.phases[1].releaseSet || out.phases[1].completed)
