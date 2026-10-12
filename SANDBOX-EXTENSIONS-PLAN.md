@@ -13,8 +13,8 @@ contracts until each implementation increment changes them.
 
 ## Execution mandate
 
-When instructed to execute this plan, implement M1 through M5 and complete their
-acceptance checks. Milestone gates are evidence checks to evaluate autonomously.
+When instructed to execute this plan, implement M0 through M5.6 and complete
+their acceptance checks. Milestone gates are evidence checks to evaluate autonomously.
 When a gate passes, update the checkpoint, commit a coherent verified increment,
 and proceed without requesting routine milestone approval. Diagnose and repair
 failures before advancing dependent work. Progress reports communicate findings
@@ -50,21 +50,28 @@ outside this plan.
 | Milestone | Status | Completion evidence |
 | --- | --- | --- |
 | Repository investigation | Complete | Baseline and findings below |
+| M0 Run-stage vocabulary | Pending | Prose rename only; no wire or source change |
 | M1 Native feasibility and independent controls | Pending | Required before settling issuer authority and native integration |
-| M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, and ordinary one-phase controls |
-| M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, and token confinement controls |
-| M4 Failure combinations and adversarial coverage | Pending | Requires M3; extends the boundary controls already required in M2 and M3 |
-| M5 Contract completion and integrated acceptance | Pending | Requires all preceding milestones |
+| M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
+| M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
+| M4 Failure combinations and adversarial coverage | Pending | Requires M3; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
+| M5.1 Evidence contract closure | Pending | Requires M4 |
+| M5.2 Limits account | Pending | Requires M5.1 |
+| M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
+| M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
+| M5.5 User-facing documentation | Pending | Requires M5.4 |
+| M5.6 Integrated acceptance and record | Pending | Requires all preceding milestones |
 
 **Execution state:** implementation has not started. The development signing
 identity and candidate build have not been selected. This plan has created no
 implementation processes or BYOXPC cleanup obligations. Credited investigation
 checks and their source baseline are listed below.
 
-**Next action on execution:** establish the development signing identity and
-required environment, then build the M1 native experiment and its independent
-controls. Start with a controlled read-only file extension and an ordinary
-unprivileged issuer. Establish the actual signing and entitlement baseline before
+**Next action on execution:** complete M0, the run-stage vocabulary rename, as
+one commit. Then establish the development signing identity and required
+environment, and build the M1 native experiment and its independent controls.
+Start with a controlled read-only file extension and an ordinary unprivileged
+issuer. Establish the actual signing and entitlement baseline before
 interpreting any outcome.
 
 After each increment and before any planned stopping point, update this table and
@@ -85,6 +92,10 @@ Keep permanent documentation focused on current behavior, with history in git.
   the sandboxed worker under separately recorded authority.
 - Establish ordering with observed protocol boundaries. A phase is an ordered
   interval, not a stable state snapshot or proof that a target retained its identity.
+- Reserve `phase` for a specimen phase. A stage of one run, from admission
+  through reply, is a "stage" in prose and in wire keys. The three existing reply
+  keys named `phase` become `stage` under the M2 response bump with no change to
+  their values or meaning; M0 renames the prose first.
 - Keep native results, missing observations, partial publication, and uncertain
   cleanup visible. Do not add `extension_active`, prediction/enforcement agreement,
   drift verdicts, or unsupported sandbox-cause claims.
@@ -159,6 +170,14 @@ The following findings determine the work:
 - A prior [project investigation](https://github.com/Protonk/PolicyWitness/issues/1)
   reports release calls without reliable access revocation on Sonoma 14.4.1.
   Treat this as a lead for controls, not a finding about the current host.
+- Documentation here is generated and checked: five generators, four manifests,
+  the comparison scenario matrix, two baselines, two shape goldens and the drift
+  rules, with every generator's check run by the build before compiling. Their
+  preconditions are listed under
+  [Contract increments at each gate](#contract-increments-at-each-gate).
+- The reply keys `path_diagnostics.phase`, `wait_errors[].phase` and the worker
+  progress field, and the architecture prose, use `phase` for a stage of one
+  run. M0 and the M2 response bump resolve that collision.
 
 Three baseline cases passed: `source_drift/contract_versions`,
 `source_drift/architecture_documentation`, and `source_drift/generator_contract`.
@@ -279,6 +298,67 @@ Observe native-call failures through controlled seams where live reproduction
 is unreliable; do not confuse injected return values with kernel behavior.
 Do not infer explicit release from worker exit or successful cleanup from EOF.
 
+## Contract increments at each gate
+
+The repository's documentation is machinery. Five generators with `--check`,
+run by `build.sh` before compiling, render four hand-owned manifests
+([architecture](docs/architecture.json), [build](docs/build.json),
+[contract](docs/contract.json) and [limits](docs/limits.json)) and the
+comparison [scenario matrix](tests/fixtures/comparison/matrix.json) into marked
+regions; the prose and build baselines list what those mechanisms do not yet
+cover; two shape goldens are the allowlists the independent consumer reads; and
+the drift rules in [check.py](tests/suites/source_drift/check.py) compare
+handwritten text with sources. Each has a precondition that only code or tests
+can satisfy: an architecture node must cite an existing test or rule and may
+state a duration only through a limit placeholder; a limit must cite its source
+symbol and a value test in a listed owner file; a reply key reaches readers only
+through the field-complete fixture that records it; the signing list must agree
+with the artifact inspector, the evidence generator and the README inventory at
+once; and the native_check build step pins every Meson target by name. A signed
+build already refuses a stale copy or a build manifest that disagrees with
+`build.sh`.
+
+Every milestone gate from M2 onward therefore includes a signed build and a
+passing `source_drift` suite, and neither baseline gains an entry. The
+mechanical residue at M5 is then zero; M5 holds prose, graphs and acceptance.
+
+| Gate | Forced by | Increment owed |
+| --- | --- | --- |
+| M2 | the response bump, the consumer allowlist, the layout golden, the drift rules | the contract manifest and its generated copies; the response shape golden from the field-complete fixture; the ABI header with its static assert, the layout golden and the identity together; every new `limitations` or lifecycle vocabulary string in the encoder, the consumer and the matrix fixture in one commit; the test-override table for new seams; COVERAGE rows for new outcome values; the failure contract's ordering-states, protocol-names and worker-evidence prose |
+| M3 | the native_check build step, `build_documentation`, `preflight`, registry read-back | the issuer's Meson target in `tests/lib/native_sources.py`; its `build.sh` signing call with `build.json`, regenerated BUILD.md, the README inventory, `tests/lib/artifact.py` and `tests/build-evidence.py`; limits rows with value owners for every new cap, wait and byte bound; attempt-kind enum agreement and a COVERAGE row for any new action; request-contract corpus examples for each new refusal code; the registry's issuer fields in the guide's BYOXPC section |
+| M4 | matrix ownership, architecture citations | a scenario-matrix row for each combined fault, read by the live case and the Swift comparison tests; the tests that M5.4's architecture nodes will cite; catalog, coverage and opt-in registry entries for every new case |
+
+Standing rules for these increments:
+
+- A new number in prose is a span rendered from a manifest, never a literal. A
+  count with no manifest owner is stated without the number.
+- A new build refusal gets a behavioral control in the same increment; the build
+  baseline does not grow.
+- The `limitations` and lifecycle vocabularies are closed in three places. Change
+  the encoder, `tests/lib/consumer.py` and the matrix fixture together.
+- The failure contract states header offsets and sizes as prose. When the header
+  changes, cite the layout golden instead of restating literals.
+- An architecture node or edge is added in the milestone whose tests it cites.
+  The manifest grows per milestone and is reviewed whole in M5.4.
+- Regenerate the worker identity in every commit that touches a protocol source.
+
+## M0 Run-stage vocabulary
+
+`phase` belongs to the extension machinery: a specimen phase is the ordered
+interval defined under [Scope and constraints](#scope-and-constraints). The
+repository uses the same word for stages of one run. Before M1, rename those
+prose uses to "stage": the pinned-stage list and the budget sentences in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), the lifetime sentence in
+[runner/README.md](runner/README.md), and the sentences of
+[the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md) where "phase"
+means a run stage rather than naming a wire key. Leave the three reply keys
+named `phase` and the sentences that describe them untouched; they are renamed
+to `stage` under the M2 response bump, with no other change to their values or
+meaning. Keep the harness-note and core-ideas copies in agreement.
+
+**Completion gate:** no prose outside a wire-key description uses "phase" for a
+run stage; `source_drift` passes; the worker identity is unchanged; one commit.
+
 ## M1 Native feasibility and independent controls
 
 Build a small native harness independent of PW's result classifier and phase
@@ -358,6 +438,19 @@ explicit versioning and coordinated readers.
   must not produce a fictitious completed phase. Extend and run
   `witness_contract/order_barrier_mutations` whenever its governed code changes.
 
+Contract increment for this gate: bump the response contract and regenerate its
+copies. In the same bump rename the three reply keys named `phase` to `stage`
+and update their readers, fixtures and descriptions. Record every new reply key
+in the field-complete fixture and the shape golden. Change the ABI header and
+its static assert, the layout golden and the identity together, and replace the
+failure contract's literal offsets with a citation of the layout golden. Add
+each new `limitations` or lifecycle vocabulary string to the encoder, the
+consumer and the matrix fixture in one commit. Extend the test-override table
+for new seams and add COVERAGE rows for new outcome values. Rewrite the
+ordering-states and protocol-names tables for phases. Fixture directories are
+named by response version, so the bump creates the new version's directories
+rather than editing retained ones.
+
 **Completion gate:** independently controlled execution through the production
 C/Swift phase protocol with multiple real boundaries in one worker, mutation
 controls that reject premature execution, and interruption controls that withhold
@@ -365,7 +458,9 @@ unsupported phase completion while retaining earlier evidence. A signed CLI
 one-phase regression must establish that query collection closes before any
 attempt begins on success, timeout, and failure, including missing-verdict cases.
 Public CLI experiments with ordinary and extension phases are required in M3;
-their exact syntax need not be fixed in M2.
+their exact syntax need not be fixed in M2. The contract increment above is
+complete, `source_drift` passes against a signed build, and neither baseline
+gained an entry.
 
 ## M3 Minimal extension experiment through PW
 
@@ -428,6 +523,18 @@ publication. Use observations to distinguish the test intervention from what PW
 can know. No published native result means the result remains unresolved even
 when the test knows the call returned.
 
+Contract increment for this gate: add the issuer's Meson target to
+`tests/lib/native_sources.py`, and its signing call to `build.json`, the README
+inventory, `tests/lib/artifact.py` and `tests/build-evidence.py`, then
+regenerate BUILD.md. Give each new build refusal a behavioral control. Add
+limits rows with value owners for the declaration and action caps, the phase
+and action bounds, token size and issuer waits. Keep the attempt-kind enums in
+agreement and add a COVERAGE row for any new action. Add request-contract corpus
+examples for each new refusal code, including the capability refusal. Record the
+registry's issuer fields and the capability refusal in the guide's BYOXPC
+section. Add the topology, boundary and BYOXPC architecture nodes whose tests
+now exist.
+
 **Completion gate:** on both standard and BYOXPC runners, the public CLI retains
 the native lifecycle and three sets of queries/access attempts for one applied
 policy and worker, and passes the lifecycle-placement and both ordinary-phase
@@ -436,7 +543,9 @@ Independent controls identify the target, worker, issuer and worker signing
 baselines, and fresh descriptor use. Target preparation and issuer failures remain
 inspectable results with no fabricated consumption or release. Interruption
 controls preserve unresolved native outcomes and earlier published observations;
-the producer and independent readers reject invented completion.
+the producer and independent readers reject invented completion. The contract
+increment above is complete, `source_drift` and `preflight` pass against a
+signed build, and neither baseline gained an entry.
 
 ## M4 Failure combinations and adversarial coverage
 
@@ -453,27 +562,101 @@ Select additional combinations from the implemented boundaries and record what
 each establishes. Revisit the interface if these controls expose an unrepresentable
 outcome.
 
+Contract increment for this gate: a scenario-matrix row for each combined fault,
+read by the live case and the Swift comparison tests; catalog, coverage and
+opt-in registry entries for every new case; and the remaining tests that M5.4's
+architecture nodes will cite.
+
 **Completion gate:** combined-fault controls retain each independently supported
 failure and earlier observation without one fault masking another. Adversarial
 timing cannot admit late records to another phase or invent completion, and
 malformed or interrupted token delivery preserves token confinement. Producer
 and independent-reader checks agree on the supported evidence and withheld
-claims for these cases.
+claims for these cases. The contract increment above is complete, `source_drift`
+passes against a signed build, and neither baseline gained an entry.
 
-## M5 Contract completion and integrated acceptance
+## M5 Residual account and integrated acceptance
 
-Update documentation as each milestone changes behavior; this milestone checks
-the complete account. Maintain architecture/process/channel boundaries in
-[docs/architecture.json](docs/architecture.json), build behavior in
-[docs/build.json](docs/build.json), versions in
-[docs/contract.json](docs/contract.json), and bounds in
-[docs/limits.json](docs/limits.json). Regenerate through the owning tools and
-review generated layout, identity, diagrams, and shape changes. Update the user
-guide, request grammar, FAQ, failure contract, test catalog, coverage, and opt-in
-guidance with implementation-grounded claims and independent checks. Cover public
-ordinary and extension phases, lifecycle placement and action limits, target
-resolution and metadata evidence, and BYOXPC issuer signing, capability refusals,
-and registry recovery.
+The increments above leave no stale copy or disagreeing manifest at any gate.
+What remains is the prose, the graphs and the acceptance run, split into six
+sub-milestones in dependency order: readers before limits, limits before
+architecture, tests before manifests, settled syntax before user prose. Each has
+its own checkpoint row and gate. Regenerate through the owning tools and review
+generated layout, identity, diagrams and shape changes at every step. Across the
+six, cover public ordinary and extension phases, lifecycle placement and action
+limits, target resolution and metadata evidence, and BYOXPC issuer signing,
+capability refusals and registry recovery.
+
+### M5.1 Evidence contract closure
+
+Rewrite the handwritten sections of
+[the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md): the claim and
+evidence review, the ordering states with the phase dimension, the protocol
+names, the worker evidence operations and progress table, a lifecycle event
+record section, and the ownership table. Complete the scenario matrix and
+regenerate it. State the consumer's rules for phase association and lifecycle
+records beside the existing comparison rules, and keep the shared reading rules
+that the generator copies into the guide current.
+
+**Completion gate:** `generator_contract`, `limits_documentation`, the blackbox
+checker controls and the Swift comparison tests pass together; every vocabulary
+string appears in the encoder, the consumer and the matrix fixture.
+
+### M5.2 Limits account
+
+Give every new bound a limits row with a value owner and a boundary or path
+check. Rewrite the Interactions and Premises prose in
+[docs/LIMITS.md](docs/LIMITS.md) and the budget paragraph in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for per-phase waits against the
+sentinel and client windows. Replace every new number in prose with a span and
+regenerate the guide's copy.
+
+**Completion gate:** `limits_documentation`, the Swift and C limit contract
+tests and `failure_boundaries` pass; the prose baseline gained no entry.
+
+### M5.3 Build and bundle account
+
+Review what the M3 increment forced. Update the BUILD.md prose for the signing
+contract and the embedded evidence, [docs/SIGNING.md](docs/SIGNING.md), the
+distribution and preflight READMEs, and the build's known gaps. Confirm each new
+refusal has its control.
+
+**Completion gate:** `build_documentation` and `preflight/codesign.preflight`
+pass, and the opt-in build guard controls pass when refusals changed; the build
+baseline gained no entry.
+
+### M5.4 Architecture account
+
+Complete [docs/architecture.json](docs/architecture.json): the issuer and the
+token channel in the topology; the token channel record, the target preparation
+and extension admission guards and the issuer evidence in the boundaries; issuer
+signing, read-back and provenance in the BYOXPC apparatus; any new region or
+rule in the document graph, with the drift node's check list equal to what
+`check.py` runs. Then the prose: why the issuer exists, the run timeline, the
+evidence-channels table with the new landing paths, the principles including the
+resolved allocation claim and the operational-state distinction from
+[Scope and constraints](#scope-and-constraints), the BYOXPC section and the
+known gaps.
+
+**Completion gate:** `architecture_documentation` and the known-gap,
+evidence-channel and core-ideas rules pass; every node and edge cites a test or
+rule that exists.
+
+### M5.5 User-facing documentation
+
+Update the [user guide](docs/PolicyWitness.md): specimen format with phases and
+the extension declaration, per-step and lifecycle shapes, attempt kinds, BYOXPC
+install, registry fields and the capability refusal, and the FAQ answer on
+extensions in [docs/QUESTIONS.md](docs/QUESTIONS.md) that the generator copies
+in. Update the [request-grammar lesson](docs/REQUEST-GRAMMAR.md) and its corpus,
+the controller and runner READMEs and AGENTS files, the tests suite map, the
+suite READMEs, the opt-in registry and the catalog. Every claim names the case
+that establishes it.
+
+**Completion gate:** the full `source_drift` suite passes and the guide stages;
+no claim lacks an establishing case.
+
+### M5.6 Integrated acceptance and record
 
 Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
 provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
