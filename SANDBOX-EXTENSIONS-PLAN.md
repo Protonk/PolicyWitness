@@ -16,9 +16,11 @@ contracts until each implementation increment changes them.
 When instructed to execute this plan, implement M0 through M5.6 and complete
 their acceptance checks. Milestone gates are evidence checks to evaluate autonomously.
 When a gate passes, update the checkpoint, commit a coherent verified increment,
-and proceed without requesting routine milestone approval. Diagnose and repair
-failures before advancing dependent work. Progress reports communicate findings
-and do not end execution while authorized work remains.
+and proceed without requesting routine milestone approval, except at the two
+[out-of-band audit handoffs](#out-of-band-audit-handoffs). At those boundaries,
+commit the handoff and pause for the auditor's response. Diagnose and repair
+failures before advancing dependent work. Outside those handoffs, progress reports
+communicate findings and do not end execution while authorized work remains.
 
 Choose and revise implementation details within the stated scope and evidence
 constraints, including the provisional grammar, helper lifetime, reference
@@ -54,16 +56,20 @@ outside this plan.
 | M1 Native feasibility and independent controls | Pending | Required before settling issuer authority and native integration |
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, ordinary one-phase controls and the M2 contract increment |
 | M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
-| M4 Failure combinations and adversarial coverage | Pending | Requires M3; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
+| A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
+| M4 Failure combinations and adversarial coverage | Pending | Requires M3 and A1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
 | M5.2 Limits account | Pending | Requires M5.1 |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
 | M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
 | M5.5 User-facing documentation | Pending | Requires M5.4 |
 | M5.6 Integrated acceptance and record | Pending | Requires all preceding milestones |
+| A2 Final out-of-band audit | Pending | After M5.6; returned audit, required corrections and evidence for the final candidate complete before plan closure |
 
-Each gate includes its [rendered documentation assessment](#rendered-documentation-assessment)
-waypoint and the lead agent's disposition of the findings.
+Each implementation gate includes its
+[rendered documentation assessment](#rendered-documentation-assessment) waypoint
+and the lead agent's disposition of the findings. A1 and A2 use the separate
+out-of-band handoff below.
 
 **Execution state:** implementation has not started. The development signing
 identity and candidate build have not been selected. This plan has created no
@@ -321,7 +327,7 @@ once; and the native_check build step pins every Meson target by name. A signed
 build already refuses a stale copy or a build manifest that disagrees with
 `build.sh`.
 
-Every milestone gate from M2 onward therefore includes a signed build and a
+Every implementation gate from M2 onward therefore includes a signed build and a
 passing `source_drift` suite, and neither baseline gains an entry. These checks
 establish agreement within their coverage. Rendered documentation assessment at
 each gate checks for missing coverage, misleading accounts and evidence gaps;
@@ -426,6 +432,40 @@ An unperformed inspection remains pending, not passed.
 | M5.4 | Rendered architecture graphs and their tables, captions and prose as a whole: process/channel boundaries and operational-state claims are consistent, legible and supported by the cited observations. |
 | M5.5 | Rendered user guide and its staged copy, grammar, FAQ and linked operating guidance: public examples, unavailable results and capability refusals read consistently with the implemented contract. |
 | M5.6 | Reconcile prior findings with the accepted source/build and rendered artifacts; review changed surfaces since their last assessment and confirm credited reviews still apply to this candidate. |
+
+## Out-of-band audit handoffs
+
+Use [records/SANDBOX-EXTENSIONS-AUDIT.md](records/SANDBOX-EXTENSIONS-AUDIT.md)
+as the single committed exchange document for both audits. The executing agent
+writes questions at the waypoint from the implemented system, rendered account
+and available evidence. The auditor is another agent working out of band and
+writes answers and additional findings in that same document. Keep these audits
+separate from the implementation's rendered-documentation sub-agent reviews.
+
+| Audit | Handoff point | Resume condition |
+| --- | --- | --- |
+| A1 Middle | After M3 and its documentation assessment, before M4. The real CLI lifecycle, public grammar, BYOXPC integration and their contract increments are available to inspect together. | Auditor answers are returned and dispositioned; findings that invalidate M3 or block dependent work are resolved before M4 proceeds. |
+| A2 Final | After M5.6 and its documentation assessment, before declaring the plan complete. The complete account and integrated acceptance evidence identify the candidate under review. | Auditor answers are returned and dispositioned, required corrections are verified, and the audit and acceptance evidence apply to the final candidate. |
+
+At each handoff, identify the exact source commit, build identity, rendered
+documentation and test evidence, relevant limitations and inaccessible/local-only
+artifacts. Write the actual questions then; do not seed them in advance. Commit
+the populated document and checkpoint, record the audit as awaiting response,
+report the handoff commit, and pause execution. An unanswered handoff is pending.
+
+The auditor answers beside the questions with evidence and may raise findings
+beyond them. Preserve the auditor's words and attribution; the executing agent
+adds its own dispositions separately, using the documentation/implementation/
+investigation distinction above. Resolve disagreements through cited evidence or
+the narrow investigation they require. Commit returned answers, dispositions and
+correction evidence before closing the audit; carry any agreed later work into
+its named milestone without weakening that milestone's gate.
+
+Keep the middle exchange when preparing the final one. Clarifications, repairs
+and auditor follow-up stay in the relevant section of this same document. If
+repairs change the reviewed candidate, refresh affected checks, generated accounts
+and review references, and obtain any needed follow-up there. These are two audit
+waypoints in total; follow-up does not create an additional audit milestone.
 
 ## M0 Run-stage vocabulary
 
@@ -632,6 +672,9 @@ the producer and independent readers reject invented completion. The contract
 increment above is complete, `source_drift` and `preflight` pass against a
 signed build, and neither baseline gained an entry.
 
+Complete and close A1 before advancing to M4, under
+[the out-of-band audit rules](#out-of-band-audit-handoffs).
+
 ## M4 Failure combinations and adversarial coverage
 
 Extend the shared boundary controls with combined faults, adversarial timing and
@@ -763,3 +806,6 @@ remain unavailable or unchanged, and release may leave access observable; those
 outcomes must remain informative. Report the implementation commits, evidence
 locations, and unresolved findings. Packaging or publishing a release is separate
 from this implementation plan.
+
+Then complete A2 against this candidate. The plan is complete only after the final
+audit closes under [the out-of-band audit rules](#out-of-band-audit-handoffs).
