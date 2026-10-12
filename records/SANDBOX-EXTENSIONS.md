@@ -2,16 +2,19 @@
 
 ## Scope and checkpoint
 
-M1 native controls and the registered mechanical checks pass. M1 remains open
-only for the required rendered-documentation assessment and disposition of any
-findings. Work resumed after the user's requested stopping point; the M1-only
-scope remains in force, with M0 pending. Production phases and extension behavior
-are not implemented. This record is the current account of findings and
-limitations, readable without commit history.
+M1 is complete: the native feasibility controls, registered mechanical checks,
+and fresh rendered-documentation assessment passed. The sole rendering finding
+was corrected and rechecked. The M1-only scope remains in force, with M0 pending.
+Production phases and extension behavior are not implemented. This record is the
+current account of findings, decisions and limitations, readable without commit
+history.
 
 Implementation commit `e8effbd` contains the native fixture, registered suite and
-findings. The next gate action is a fresh read-only assessment of the rendered
-M1 account. No product build, XPC integration or BYOXPC acceptance is credited.
+findings; `e423705` records mechanical checks and evidence reuse. The closure
+checkpoint adds the completed review and disposition below. No product build,
+XPC integration or BYOXPC acceptance is credited. On resuming the broader plan,
+complete M0 before beginning M2; the M3 authority, ABI, transport and worker
+invariant decisions are recorded here for integration and further testing.
 
 ## Equipment and reproducibility
 
@@ -256,17 +259,80 @@ the captured catalog among pre-existing execution inputs. Hash matches establish
 identity, while this dependency review is the basis for reusing the native run.
 Any subsequent relevant code change requires a fresh native run.
 
-## Rendered assessment and current state
+## Rendered assessment and disposition
 
-The accepted native run reaped all owned children and removed its temporary
-target directory. No BYOXPC resources were created. Test output and source
-snapshots remain in managed directories. The disposable development compile at
-`/private/tmp/pw-ext-dev-native` is not accepted equipment.
+Reviewer: fresh read-only agent `m1_rendered_review`, model `gpt-6-astra`, on
+2026-10-12. The reviewed source was immutable snapshot `m1-v1`: `e8effbd` plus
+its captured `source.diff`, subsequently committed unchanged as `e423705`.
+The [review directory](../tests/out/runs/extensions-m1-mechanical-20261012/reviews/m1-v1/)
+and its manifests, source copies, rendered HTML, PDF and PNG files are gitignored
+and local-only. The review directory's `manifest.json` pins every source/HTML
+hash; `print/manifest.json` pins PDF/page-image hashes. Renderer recipes and the
+native evidence-reuse audit are retained in the parent `reviews/` directory.
 
-The required fresh M1 rendered assessment is pending. Its immutable HTML snapshot
-will cover this record, the plan checkpoint/M1 gate, both native READMEs and the
-affected test registry/coverage documentation. These are authored inputs; no
-production generated account was changed. The final assessment entry must name
-reviewer/model, revision, renderer, artifacts, findings and lead dispositions.
-M1 cannot close until correctness findings are resolved. M0 and later
-implementation milestones remain untouched.
+The renderer was Pandoc 3.12 (GFM to standalone HTML), then WeasyPrint 70.0 with
+local review CSS, rasterized by Poppler 26.10.0 at 90 dpi. The reviewer actually
+viewed the rendered PNGs, including the results tables and visible links, before
+returning the assessment. Safari new-tab attempts were refused because the user
+was interacting with Safari; existing user content was untouched. Browser-specific
+layout and interactive link navigation were not inspected. The independent page
+renders supplied the required visual inspection, and a separate check of 159
+local HTML links/anchors found no missing target. No diagram or staged guide was
+produced for M1.
+
+Inspected surfaces and scope:
+
+| Surface | Rendered inspection |
+| --- | --- |
+| Investigative record | All four original pages, including native effects, allocation limitations, negative runs and reuse account |
+| Plan | Pages 1–3 and 9: checkpoint, baseline context, allocation decision and complete M1 gate |
+| Native fixture and suite READMEs | Complete, one page each |
+| Tests README | Suite-map page 5 and native entry |
+| Outcome coverage | Page 3, native paragraph and surrounding evidence-contract context |
+| Opt-in registry | Page 4, native entry and surrounding context |
+| Fixture catalog | Both pages |
+
+The reviewer also traced all 18 raw native reports, the C fixture, the independent
+checker, signing read-backs and referenced WebKit declarations/implementation.
+Its conclusion was no M1 correctness finding or investigation blocker: the
+account accurately distinguishes native observations, selected design assumptions
+and future production obligations. The results table agrees with the native
+returns, query patterns, fresh accesses and descriptor counts. Independent
+content/identity and cleanup checks support the effect claims; zero allocation
+callbacks are appropriately bounded. No missing generator coverage was identified:
+the changed prose is authored Markdown and existing generated regions are
+unchanged. Mechanical agreement was not used as semantic proof.
+
+| Finding | Route and owner | Lead disposition and recheck |
+| --- | --- | --- |
+| F1: narrow print table columns split checkpoint status words and suite-map identifiers | Low-priority rendering issue, high confidence; local review CSS/print recipe, not authored prose or a production generator | Accepted. Added minimum widths and ordinary word wrapping. The first correction fixed plan status and the native suite row but narrowed the Reference column; added a minimum width there too. Reviewer visually accepted plan pages 1–2 in `print-v2` and tests README page 5 in `print-v3`, with intact labels and no clipping/overflow. Resolved. |
+
+Original renders are preserved. The corresponding `print-v2` and `print-v3`
+manifests pin corrections, and `reviews/print-v2.py` and `print-v3.py` retain
+recipes. No source or semantic claim changed to address F1. No finding remains
+open or deferred. The final `reviews/m1-final/` snapshot adds only closure and
+review metadata to this record and the plan; native findings, fixture/suite
+accounts and evidence are unchanged. Lead review checks that final rendering and
+bookkeeping without attributing those later metadata edits to the earlier review.
+
+## Gate closure and next work
+
+M1's native completion requirement is met by successful issuance under the
+recorded ordinary authority, consume into a real 64-bit handle and release with
+its native result, plus all required independent controls. The host-specific
+findings support the initial class/flags, transient transport, issuer lifetime
+and qualified worker invariant described above. They do not replace M2/M3's
+production ordering, admission, transport, signing and confinement evidence.
+
+All owned native children were reaped; the checker removed its temporary target
+directory. No BYOXPC resources or cleanup obligations exist. Managed test outputs
+and source snapshots remain available locally. The disposable development binary
+`/private/tmp/pw-ext-dev-native` is not accepted equipment. Rendering used an
+isolated temporary WeasyPrint environment and installed Homebrew Poppler; neither
+is part of the native experiment or product dependency set.
+
+The session stops at completed M1 under the user's scope. M0 and later
+implementation milestones remain untouched. The next broader-plan action is M0;
+then M2 can use these M1 decisions, retaining the independent native suite as a
+control. Rerun native evidence if its fixture, checker or relevant execution
+inputs change; preserve prior runs and state replacement credit explicitly.
