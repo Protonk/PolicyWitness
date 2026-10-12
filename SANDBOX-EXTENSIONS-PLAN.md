@@ -21,7 +21,7 @@ failures before advancing dependent work. Progress reports communicate findings
 and do not end execution while authorized work remains.
 
 Choose and revise implementation details within the stated scope and evidence
-constraints, including the provisional grammar, helper arrangement, reference
+constraints, including the provisional grammar, helper lifetime, reference
 representation, limits, and failure behavior. Schema changes under the wire
 contract and an evidence-backed revision of the worker allocation claim are
 within scope. When experiments contradict a proposed choice, update the plan
@@ -52,7 +52,7 @@ outside this plan.
 | Repository investigation | Complete | Baseline and findings below |
 | M1 Native feasibility and independent controls | Pending | Required before settling issuer authority and native integration |
 | M2 Ordered phases in the existing worker | Pending | Requires M1 design decisions; phase ordering, interruption, and ordinary one-phase controls |
-| M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; real CLI specimen, incomplete native results, and token confinement controls |
+| M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, and token confinement controls |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3; extends the boundary controls already required in M2 and M3 |
 | M5 Contract completion and integrated acceptance | Pending | Requires all preceding milestones |
 
@@ -91,17 +91,24 @@ Keep permanent documentation focused on current behavior, with history in git.
 - Keep raw tokens out of specimens, command arguments, environment variables,
   ordinary diagnostics, envelopes, logs, and retained artifacts. Use local token
   and handle references; keep authority-bearing bytes in transient channels.
-- Begin with investigator-owned files and the smallest demonstrated extension
-  class. Broader classes, process-bound issuance, overlapping grants, and arbitrary
-  stateful programs remain outside initial scope without being declared impossible.
+- Use investigator-owned regular files as test discipline for M1 and acceptance
+  experiments. Do not add ownership, file-type, or symlink admission restrictions;
+  retain path preparation evidence and native outcomes for admitted targets.
+  Begin with the smallest demonstrated extension class. Broader classes,
+  process-bound issuance, and overlapping grants remain outside initial scope.
+- Support extension specimens on both standard and BYOXPC runners in 0.3.0,
+  with a bundle-local issuer inside the XPC service bundle.
 - Keep ordinary stateless specimens simple. Use one canonical execution model
   with a one-phase path in which query collection closes before any attempt
   begins, including on timeout or failure. Closure does not require a verdict
-  for every eligible query. Do not introduce historical schema translation.
-- Limit the initial model to a bounded sequence of phases, queries, and ordered
-  actions. Exclude branches, loops, arbitrary dependency graphs, and user-defined
-  conditions. Token/handle references and a release that cannot run after failed
-  consumption need fixed operation semantics, not a general dependency engine.
+  for every eligible query. Do not introduce historical request/reply translation.
+- Expose a bounded public sequence of phases, queries, and ordered actions for
+  ordinary actions as well as extension experiments. An ordinary specimen may
+  unlink a target and query it in a later phase without using extensions. Exclude
+  branches, loops, arbitrary dependency graphs, and user-defined conditions.
+  Token/handle references and a release that cannot run after failed consumption
+  need fixed operation semantics, not a general dependency engine. Refuse
+  unsupported action combinations explicitly.
 - Preserve bounded admission and collection, explicit refusals, partial evidence,
   and optional denial logging that cannot change execution results.
 
@@ -190,12 +197,20 @@ runtime dependencies explicitly: failed consumption leaves no invented handle;
 a dependent release records why it could not run. Keep later observations useful
 when safe to continue, and record where a terminal failure stopped execution.
 
-A disposable native issuer supervised by the host is the initial topology to
-evaluate. Use a dedicated bounded transient channel for tokens, separate from
-retained evidence. Choose issuance timing and helper lifetime from M1 evidence;
-do not assume the issuer must stay alive or can safely exit before consumption.
-Keep the worker's handle table limited to routing references and observed call
-outcomes.
+Use a disposable native issuer supervised by the host and resolved inside its
+XPC service bundle. Use a dedicated bounded transient channel for tokens,
+separate from retained evidence. Choose issuance timing and helper lifetime from
+M1 evidence; do not assume the issuer must stay alive or can safely exit before
+consumption. Keep the worker's handle table limited to routing references and
+observed call outcomes.
+
+Before issuance, the host resolves symlinks in the submitted extension target and
+passes the resolved path to the issuer. Retain the submitted path, resolved
+issuance path, and observed device, inode, mode, and owner. Resolution or metadata
+lookup failure produces a bounded, named preparation failure. Do not silently
+rewrite independently submitted query or attempt targets. These host observations
+do not establish stable file identity across resolution, issuance, or later
+accesses; keep them distinct from identity witnessed by those accesses.
 
 Initially prefer a fresh validator collection per phase, reusing the current
 bounded driver. Measure the cost and cleanup behavior before considering a
@@ -214,7 +229,9 @@ boundaries; M4 extends them with combinations and adversarial conditions.
 | --- | --- | --- |
 | Phase admission | M2 | Duplicate/unknown phase or action identities, unsupported combinations, oversized counts/strings, embedded NUL |
 | Extension admission | M3 | Duplicate/unknown references, forward/invalid handle use, unsupported combinations, unavailable helper/API |
+| Target preparation | M3, building on M1 target evidence | Symlink resolution, resolution/metadata failures, retained submitted and resolved paths, unchanged query/attempt targets, no owner/type admission rule, replacement between observations without a stable-identity claim |
 | Issuance and delivery | M3, building on M1 native refusals | Native refusal, issuer death, timeout, partial/oversized token transfer, delivery without consumption, unknown cleanup |
+| BYOXPC integration | M3 | Bundle-local issuer resolution, install signing and read-back, validate/reconcile evidence, older registry records and cleanup, named missing-issuer capability refusal |
 | Consumption and release | M3, building on M1 native calls | Rejected token, failed consume without a handle, failed release, repeated release policy, missing result publication |
 | Phase ordering | M2 | Delayed/missing predictions, validator failure, late/wrong-phase records, stale release/acknowledgement, phase exhaustion, host loss while worker waits |
 | Worker lifetime | M2 for phase interruption; M3 for native calls | Death before/inside/after consume or release, death before acknowledgement, failure after a completed earlier phase, unresolved termination/reap |
@@ -232,9 +249,10 @@ implementation. Register its controls through the test harness and preserve
 source, build commands, OS/SDK facts, signing and entitlement read-backs, native
 results, and independent effects. Keep tokens entirely transient.
 
-1. Create a regular file with known contents and controlled permissions. Record
-   its identity and verify it is accessible before introducing the experimental
-   policy. The sandboxed worker must not inherit an open descriptor to this target.
+1. Create an investigator-owned regular file with known contents and controlled
+   permissions. Record the submitted and resolved issuance paths, device, inode,
+   mode, and owner, and verify access before introducing the experimental policy.
+   The sandboxed worker must not inherit an open descriptor to this target.
 2. Issue a read-only extension outside the worker. Apply one fixed policy with
    the relevant extension predicate in the worker. Observe access before consume,
    after consume, and after release, using a fresh open/read/close sequence each
@@ -277,10 +295,11 @@ by itself invalidate the witness objective.
 
 Introduce phases using existing file operations before adding production
 extension calls. Exercise the smallest provisional request and evidence
-representation needed for this increment, informed by M1. Internal harnesses may
-establish the phase protocol before new public syntax is settled. Let the native
-extension experiment integrated in M3 determine the public representation;
-provisional wire formats still require explicit versioning and coordinated readers.
+representation needed for the bounded public phase model, informed by M1.
+Internal harnesses may establish the phase protocol before new public syntax is
+settled. Use both ordinary action sequences and the native extension experiment
+integrated in M3 to settle that syntax; provisional wire formats still require
+explicit versioning and coordinated readers.
 
 - Define phase/action identities, legal ordering, reference admission, and the
   ordinary one-phase authoring path. Decide request and response version changes
@@ -308,8 +327,8 @@ controls that reject premature execution, and interruption controls that withhol
 unsupported phase completion while retaining earlier evidence. A signed CLI
 one-phase regression must establish that query collection closes before any
 attempt begins on success, timeout, and failure, including missing-verdict cases.
-A multi-phase public CLI experiment is required in M3; it need not force a public
-grammar commitment in M2.
+Public CLI experiments with ordinary and extension phases are required in M3;
+their exact syntax need not be fixed in M2.
 
 ## M3 Minimal extension experiment through PW
 
@@ -317,17 +336,24 @@ Integrate the M1 issuer and native calls with the M2 protocol. Implement the
 three-phase experiment above using local references and structured lifecycle
 events. Record issuance and delivery independently from worker consumption,
 including explicit unavailable or skipped dependent actions. Use this integrated
-experiment to settle the minimal public syntax, subject to M4's adversarial
-checks before treating the interface as final.
+experiment and an ordinary unlink-then-re-query specimen to settle one bounded
+public phase syntax, subject to M4's adversarial checks before treating the
+interface as final. Lifecycle interventions retain their own records without
+invented query/attempt pairs.
 
 Provide the access evidence established in M1. If a new action or changed action
 meaning is needed, apply the request-contract rules rather than silently
 reinterpreting `open_read`. Preserve native results and local handle association.
 
-Add the issuer to Meson, bundle assembly, signing, evidence inventories, native
-source checks, helper resolution, and BYOXPC signing/read-back as applicable.
-Do not grant it the worker's entitlements by accident. Cover missing helpers and
-unsupported native capability explicitly. Keep host sandbox-import guards intact.
+Add the bundle-local issuer to Meson, bundle assembly, signing, evidence
+inventories, native source checks, and helper resolution. Extend BYOXPC install
+signing, read-back, validate, reconcile, and registry records to include it.
+Sign the issuer with the selected identity without the worker's entitlement
+plist; additional issuer authority remains subject to M1's decision gate.
+Preserve management and cleanup of older registry records, treating absent
+issuer evidence as unknown. A selected runner lacking the required issuer must
+refuse extension specimens with a named capability code. Cover unsupported native
+capability explicitly and keep host sandbox-import guards intact.
 
 Test token confinement on success and failure, including malformed transport,
 truncation, diagnostics, and cleanup. Compare captured output with token bytes
@@ -343,21 +369,27 @@ publication. Use observations to distinguish the test intervention from what PW
 can know. No published native result means the result remains unresolved even
 when the test knows the call returned.
 
-**Completion gate:** the public CLI retains the native lifecycle and three sets
-of queries/access attempts for one applied policy and worker. Independent controls
-identify the target, worker, signing baseline, and fresh descriptor use. Issuer
-failure remains an inspectable result with no fabricated consumption or release.
-Interruption controls preserve unresolved native outcomes and earlier published
-observations; the producer and independent readers reject invented completion.
+**Completion gate:** on both standard and BYOXPC runners, the public CLI retains
+the native lifecycle and three sets of queries/access attempts for one applied
+policy and worker, and demonstrates ordinary phases without extensions.
+Independent controls identify the target, worker, issuer and worker signing
+baselines, and fresh descriptor use. Target preparation and issuer failures remain
+inspectable results with no fabricated consumption or release. Interruption
+controls preserve unresolved native outcomes and earlier published observations;
+the producer and independent readers reject invented completion.
 
 ## M4 Failure combinations and adversarial coverage
 
 Extend the shared boundary controls with combined faults, adversarial timing and
 inputs, and failures that are difficult to reproduce naturally. Cover material
 interactions such as worker death during partial token delivery and validator
-timeout followed by late output and unconfirmed cleanup. Select additional
-combinations from the implemented boundaries and record what each establishes.
-Revisit the interface if these controls expose an unrepresentable outcome.
+timeout followed by late output and unconfirmed cleanup. Include ordinary phase
+sequences without extensions and supported mixtures of ordinary actions and
+lifecycle interventions, with aggregate limits and unsupported combinations
+checked at admission. Exercise BYOXPC provenance and registry recovery failures.
+Select additional combinations from the implemented boundaries and record what
+each establishes. Revisit the interface if these controls expose an unrepresentable
+outcome.
 
 **Completion gate:** combined-fault controls retain each independently supported
 failure and earlier observation without one fault masking another. Adversarial
@@ -376,22 +408,25 @@ the complete account. Maintain architecture/process/channel boundaries in
 [docs/limits.json](docs/limits.json). Regenerate through the owning tools and
 review generated layout, identity, diagrams, and shape changes. Update the user
 guide, request grammar, FAQ, failure contract, test catalog, coverage, and opt-in
-guidance with implementation-grounded claims and independent checks.
+guidance with implementation-grounded claims and independent checks. Cover public
+ordinary and extension phases, target resolution and metadata evidence, and
+BYOXPC issuer signing, capability refusals, and registry recovery.
 
 Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
 provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
 admission and transport, run `failure_boundaries`, `runner_unit`, `runner_abi_layout`,
 `runner_c_worker_harness`, and `unit`, plus affected validator and witness cases.
 Run the signed default battery against the final candidate, the new lifecycle
-cases, the required ordering mutation control, and applicable BYOXPC controls.
+and ordinary-phase cases, the required ordering mutation control, and BYOXPC
+issuer signing, provenance, lifecycle, and older-record recovery controls.
 Select signing/build/maximum-reply controls when their boundaries changed.
 Verify aggregate limits and the largest admitted reply through real transport.
 
-**Completion gate:** PW demonstrates the controlled experiment under its supported
-signing environment, all applicable checks pass against the accepted source and
-build, and the investigative record identifies empirical findings, design
-decisions, and accepted limitations. Predictions may remain unavailable or
-unchanged, and release may leave access observable; those outcomes must remain
-informative. Report the implementation commits, evidence locations, and
-unresolved findings. Packaging or publishing a release is separate from this
-implementation plan.
+**Completion gate:** PW demonstrates the controlled experiment on standard and
+BYOXPC runners under their supported signing environments, all applicable checks
+pass against the accepted source and build, and the investigative record identifies
+empirical findings, design decisions, and accepted limitations. Predictions may
+remain unavailable or unchanged, and release may leave access observable; those
+outcomes must remain informative. Report the implementation commits, evidence
+locations, and unresolved findings. Packaging or publishing a release is separate
+from this implementation plan.
