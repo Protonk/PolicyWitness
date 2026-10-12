@@ -62,6 +62,9 @@ outside this plan.
 | M5.5 User-facing documentation | Pending | Requires M5.4 |
 | M5.6 Integrated acceptance and record | Pending | Requires all preceding milestones |
 
+Each gate includes its [rendered documentation assessment](#rendered-documentation-assessment)
+waypoint and the lead agent's disposition of the findings.
+
 **Execution state:** implementation has not started. The development signing
 identity and candidate build have not been selected. This plan has created no
 implementation processes or BYOXPC cleanup obligations. Credited investigation
@@ -319,8 +322,10 @@ build already refuses a stale copy or a build manifest that disagrees with
 `build.sh`.
 
 Every milestone gate from M2 onward therefore includes a signed build and a
-passing `source_drift` suite, and neither baseline gains an entry. The
-mechanical residue at M5 is then zero; M5 holds prose, graphs and acceptance.
+passing `source_drift` suite, and neither baseline gains an entry. These checks
+establish agreement within their coverage. Rendered documentation assessment at
+each gate checks for missing coverage, misleading accounts and evidence gaps;
+corrections needed by the increment belong to that gate.
 
 | Gate | Forced by | Increment owed |
 | --- | --- | --- |
@@ -341,6 +346,86 @@ Standing rules for these increments:
 - An architecture node or edge is added in the milestone whose tests it cites.
   The manifest grows per milestone and is reviewed whole in M5.4.
 - Regenerate the worker identity in every commit that touches a protocol source.
+- Before adding explanatory prose, identify facts that belong in manifests,
+  fixtures, shared source sections or generated views. Extend the owning generator
+  and its controls where those facts are not represented, regenerate, and then
+  write only the remaining explanation. Follow the
+  [generator contracts](tests/suites/source_drift/README.md#generator-contracts);
+  never patch generated output or expand a baseline to silence a review finding.
+
+## Rendered documentation assessment
+
+At each waypoint below, dispatch a fresh read-only sub-agent, preferably Astra
+when available, after the increment's documentation has been regenerated and its
+required mechanical checks have run. Give it a bounded brief for that waypoint,
+not the implementation conversation or the lead's preferred diagnosis. These
+reviews are part of implementation; the lead retains responsibility for gate
+decisions and the execution mandate's reserved user decisions.
+
+Provide the source revision and any uncommitted diff, the milestone's implemented
+scope, affected rendered documents and diagrams, their owning inputs/generators,
+and relevant test evidence. Hold the reviewed files stable or identify an immutable
+snapshot. Include surrounding sections and linked copies where needed to read
+the changed account coherently. Do not present still-planned behavior as current
+behavior or ask the reviewer to treat a passing drift check as semantic proof.
+
+The reviewer reads the generated account as a reader encounters it: rendered
+Markdown with its tables, links, copied sections and embedded SVGs, including
+the staged guide when that waypoint produces it. Raw manifests, Markdown source,
+DOT files or SVG stamps alone do not constitute this inspection. Use an available
+local preview for Markdown-only outputs; record the renderer and artifact revision.
+If a surface cannot be rendered or inspected, report that coverage gap explicitly.
+Trace surprising or missing claims back to their owning inputs, generator,
+implementation and cited tests after reading the rendered account.
+
+Return a concise report with the inspected surfaces and omissions, and one entry
+per substantive finding: rendered location and claim or omission, why it matters,
+source/test evidence, proposed route below, confidence or remaining uncertainty,
+owning input/generator, and the smallest corrective action or discriminating check.
+Identify generator coverage to add before proposing handwritten prose. A resolved
+citation establishes that a test exists; assess whether its observations support
+the claim. Record unsupported assertions, stale copies, misleading presentation
+and contradictions even when generation and drift checks pass.
+
+| Proposed route | Evidence needed and next step |
+| --- | --- |
+| Documentation issue | Implemented behavior and its evidence are sufficiently established, but the account is stale, incomplete or misleading. Correct the owning input, generator, copied source or rendering; regenerate and check the affected views. Use handwritten explanation only for what remains. |
+| Implementation problem | Evidence supports a concrete defect in product behavior, a reader, or the controls needed to establish the required behavior. Repair the responsible code or test boundary, verify it, then regenerate its account. Do not revise the documented requirement merely to excuse the defect. |
+| Investigation blocker | An unresolved fact, conflicting evidence or design assumption prevents a specific gate claim or dependent step. Name that dependency, competing explanations and the smallest investigation that can distinguish them. A surprising sentence alone does not establish a blocker. |
+
+Routes are provisional and may be linked: a misleading paragraph can expose a
+code defect or a missing experiment. The lead checks each cited passage, its
+owner and the decisive evidence, then accepts, reclassifies or rejects the finding
+with a short rationale. This is a bounded assessment of the report, not a second
+full audit. For uncertainty affecting a gate, run the narrow discriminating check
+before deciding the route. A sub-agent's blocker label does not itself halt work;
+a confirmed blocker stops the affected dependent work under the execution mandate
+while independent work continues.
+
+Resolve correctness findings for the current increment before closing its gate.
+Remaining editorial work or coverage of behavior scheduled for a later milestone
+may be assigned there with an explicit owner and reason, provided current claims
+remain accurate. After fixes, regenerate and rerun the affected checks, then send
+the changed rendered surfaces and finding dispositions for a focused recheck.
+Repeat only for unresolved findings or materially changed evidence. Record the
+reviewed revision, reviewer/model, render and report locations, lead dispositions
+and recheck status in the checkpoint; put detailed reports in the associated
+investigative record once it exists. Label local-only artifacts accordingly.
+An unperformed inspection remains pending, not passed.
+
+| Waypoint, before gate closure | Bounded assessment focus |
+| --- | --- |
+| M0 | Rendered architecture and failure-contract vocabulary and their affected copies: run stages remain distinct from specimen phases, and descriptions of unchanged wire keys remain accurate. |
+| M1 | Rendered feasibility findings and any affected generated/shared accounts: issuer authority, native results and allocation evidence remain distinct from assumptions and unimplemented product behavior. No production documentation is invented solely for this review. |
+| M2 | Generated contract/version views, response shapes and matrix, ordering/progress account and architecture additions: phase association, stage keys, eligibility and incomplete publication agree with reader and control evidence. |
+| M3 | Generated build/signing inventories, limits, topology and boundary views, plus their guide copies: issuer authority, BYOXPC provenance, token handling, placement caps and new refusals have complete owners and supporting controls. |
+| M4 | Rendered combined-fault matrix, coverage and architecture citations: partial and unresolved outcomes remain visible; cited controls support each claimed boundary rather than merely existing. |
+| M5.1 | Completed evidence account and copied reading rules: lifecycle records, phase ordering, vocabulary and consumer meaning agree across generated and handwritten regions. |
+| M5.2 | Limits tables, spans and copied budget explanations: value owners, units and interactions describe the implemented waits and transport bounds without unsupported arithmetic or guarantees. |
+| M5.3 | Build graph, inventories, signing/evidence tables and surrounding operating guidance: the issuer and refusal/cleanup paths are represented consistently. This review can proceed independently of M5.1 and M5.2. |
+| M5.4 | Rendered architecture graphs and their tables, captions and prose as a whole: process/channel boundaries and operational-state claims are consistent, legible and supported by the cited observations. |
+| M5.5 | Rendered user guide and its staged copy, grammar, FAQ and linked operating guidance: public examples, unavailable results and capability refusals read consistently with the implemented contract. |
+| M5.6 | Reconcile prior findings with the accepted source/build and rendered artifacts; review changed surfaces since their last assessment and confirm credited reviews still apply to this candidate. |
 
 ## M0 Run-stage vocabulary
 
@@ -577,15 +662,17 @@ passes against a signed build, and neither baseline gained an entry.
 
 ## M5 Residual account and integrated acceptance
 
-The increments above leave no stale copy or disagreeing manifest at any gate.
-What remains is the prose, the graphs and the acceptance run, split into six
-sub-milestones in dependency order: readers before limits, limits before
-architecture, tests before manifests, settled syntax before user prose. Each has
-its own checkpoint row and gate. Regenerate through the owning tools and review
-generated layout, identity, diagrams and shape changes at every step. Across the
-six, cover public ordinary and extension phases, lifecycle placement and action
-limits, target resolution and metadata evidence, and BYOXPC issuer signing,
-capability refusals and registry recovery.
+Each preceding increment closes its documentation correctness findings at its
+gate. M5 completes the remaining explanations, whole-document views and acceptance
+run in six sub-milestones: readers before limits, limits before architecture,
+tests before manifests, settled syntax before user prose. Each has its own
+checkpoint row, gate and documentation assessment waypoint. Apply the generator
+ownership rules before expanding handwritten sections, including any generator
+coverage gaps found here. Regenerate through the owning tools and review layout,
+identity, diagrams and shape changes at every step. Across the six, cover public
+ordinary and extension phases, lifecycle placement and action limits, target
+resolution and metadata evidence, and BYOXPC issuer signing, capability refusals
+and registry recovery.
 
 ### M5.1 Evidence contract closure
 
