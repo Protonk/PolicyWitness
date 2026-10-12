@@ -7,14 +7,14 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 16, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 4 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 15 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 16 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 7 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
@@ -107,7 +107,8 @@ checks before worker or validator creation.
 
 The existing Swift `Codable` types remain the parser. Their `CodingKeys` also
 define the accepted fields of every request object: the root, policy, each
-probe step, sandbox check, filter, attempt and `_test_overrides`. An unknown key
+phase, ordinary action/probe step, sandbox check, filter, attempt and
+`_test_overrides`. An unknown key
 is a `bad_request` with a bounded field path, rather than an ignored option.
 For example, `policy.capture_applied_profiel` is rejected. `policy.params`
 is a dictionary of caller-chosen names to string values; its names are data,
@@ -128,7 +129,10 @@ Meaning checks reject unknown attempt kind/action pairs and filter kinds before
 any worker or validator is created. A non-null `attempt.args` is accepted only
 for `exec/spawn`; a non-null `filter.value` is refused for `kind: "none"`;
 `capture_nonce` requires enabled `capture_applied_profile`. Enabled capture
-requires a valid nonce. Step IDs must be distinct and exec targets absolute.
+requires a valid nonce. Exactly one non-null plan form, `probe_plan` or
+`phases`, is required. Explicit phases are nonempty and have unique nonempty
+phase IDs. Every ordinary action requires both query and attempt. Step IDs
+must be distinct across all phases and exec targets absolute.
 Known operation/filter pairs excluded from prediction still produce explicit
 `prediction_unavailable` observations, with supported attempts executed normally.
 Operation names passed to `sandbox_check` remain OS queries; the validator can

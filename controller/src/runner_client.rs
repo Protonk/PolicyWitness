@@ -198,7 +198,7 @@ mod tests {
             json!({"schema_version": current, "normalized_outcome": "ok", "steps": [{
             "step_id": "spawn",
             "sandbox_check": {"outcome": "allow", "rc": 0, "native_rc": 0, "path_diagnostics": {
-                "input": "/submitted", "observer": "runner_host", "phase": "after_orchestration"}},
+                "input": "/submitted", "observer": "runner_host", "stage": "after_orchestration"}},
             "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123, "child_exit_code": 37,
                 "stdout": "controlled marker", "requested_kind": "exec", "requested_action": "spawn"},
             "comparison": {"observation": "succeeded", "observation_basis": "spawned_child",

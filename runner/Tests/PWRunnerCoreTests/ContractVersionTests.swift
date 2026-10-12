@@ -68,9 +68,9 @@ private func shapeSlot(_ id: String, completed: Bool) -> CWorkerSlotResult {
                       error: nil, completed: completed)
 }
 
-private func shapeProgress(_ op: UInt32, _ phase: UInt32, index: UInt32? = nil) -> PWWorkerProgress {
+private func shapeProgress(_ op: UInt32, _ stage: UInt32, index: UInt32? = nil) -> PWWorkerProgress {
     let item: UInt32 = index.map { $0 + 1 } ?? 0
-    return PWWorkerProgress(raw: (op << 24) | (phase << 20) | item, operation: op, phase: phase, index: index)
+    return PWWorkerProgress(raw: (op << 24) | (stage << 20) | item, operation: op, stage: stage, index: index)
 }
 
 private func shapeProbe(_ id: String, kind: String = "file", action: String = "open_read") -> PWRunnerProbeStep {
@@ -110,7 +110,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         exitCode: nil, termSignal: 9, slots: [shapeSlot("first", completed: true)],
         pollStopReason: "sentinel_deadline", exitRequested: true,
         terminationRequest: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil), reaped: true,
-        waitErrors: [PWRunnerWaitError(phase: "exit_grace", rc: -1, errno: 10)],
+        waitErrors: [PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: 10)],
         workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(10, 2),
             failure_publication: 1, failure_state: "published",
             failure: PWWorkerFailure(operation: 10, code: 1, native_kind: 1, native_result: -1, errno: 22, index: 0, detail: 0),
@@ -165,18 +165,18 @@ func replyShapeDocuments() throws -> [[String: Any]] {
     defective.steps[0].comparison?.order = "future_order"
     documents.append(try shapeObject(pwRunnerReplyData(defective)))
     var signalledValidator = base
-    signalledValidator.validator_subprocess?.term_signal = 9
-    signalledValidator.validator_subprocess?.exit_code = nil
+    signalledValidator.phases[0].validator_subprocess?.term_signal = 9
+    signalledValidator.phases[0].validator_subprocess?.exit_code = nil
     documents.append(try shapeObject(pwRunnerEncodeJSON(signalledValidator)))
     for (out, plan) in shapeWorkerOutputs() {
         let record = resolveDisposition(out, plan: plan)
-        var sub = buildWorkerSubprocess(out, disposition: record)
-        sub.ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
+        let sub = buildWorkerSubprocess(out, disposition: record)
+        let ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
         let reply = PWRunnerRunResult(specimen_id: "shape", rc: 0, normalized_outcome: NormalizedOutcome.ok,
             pid: Int(out.workerPid), policy_format: "sbpl", sandboxed_after_apply: true,
             steps: buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
-                                    validatorOutput: nil, ordering: sub.ordering, disposition: record),
-            runner_subprocess: sub)
+                                    validatorOutput: nil, ordering: ordering, disposition: record),
+            runner_subprocess: sub, phases: [constructedPhase(out, ids: plan.map { $0.step_id })])
         documents.append(try shapeObject(pwRunnerEncodeJSON(reply)))
     }
     return documents
@@ -263,7 +263,7 @@ func runContractVersionTests(_ tk: TestKit) {
         tk.run("shape documents cover the keys an ordinary fixture cannot carry at once") {
             let shape = try replyShape()
             for (path, key) in [("reply", "reporting_failure"), ("reply.steps[].attempt", "missing_reason"),
-                                ("reply.validator_subprocess", "term_signal"), ("reply.runner_subprocess", "exit_code"),
+                                ("reply.phases[].validator_subprocess", "term_signal"), ("reply.runner_subprocess", "exit_code"),
                                 ("reply.runner_subprocess", "term_signal"), ("reply.runner_subprocess", "policy_transfer_error"),
                                 ("reply.runner_subprocess", "policy_transfer_timeout"),
                                 ("reply.runner_subprocess.worker_evidence", "failure"),

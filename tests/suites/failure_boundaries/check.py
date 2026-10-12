@@ -125,7 +125,7 @@ def admission(pw, out):
                 assert failure['origin'] == 'runner_host', failure
                 assert failure['field'] == ('args' if field.startswith('args_') else field), failure
                 assert (failure['actual'], failure['maximum'], failure['unit']) == (actual, maximum, unit), failure
-                assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+                assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
                 # Nothing ran and nothing is echoed: a refusal reply carries no steps,
                 # and the record never repeats the refused string itself.
                 assert runner['steps'] == [], runner
@@ -155,7 +155,7 @@ def admission(pw, out):
                     code = {'policy.format': 'unsupported_policy_format', 'sandbox_check.filter.kind': 'unknown_filter_kind',
                             'attempt.kind': 'unsupported_attempt', 'attempt.action': 'unsupported_attempt'}[field]
                     assert runner['request_failure']['code'] == code, runner
-                    assert runner['steps'] == [] and runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+                    assert runner['steps'] == [] and runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
                 if field.startswith('_test_overrides.'):
                     assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
             else:
@@ -271,7 +271,7 @@ def validator(pw, out, mode):
             if case == 'real_control':
                 assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
                 assert all(path.read_bytes() != b'before' for path in paths), 'completed file effects absent'
-                process = runner['validator_subprocess']
+                process = runner['phases'][0]['validator_subprocess']
                 assert process['reaped'] is True and process['exit_code'] == 0, process
                 assert process['association_issues'] == [] and process.get('decode_fault') is None, process
                 assert [v['step_id'] for v in process['records']] == names, process
@@ -297,7 +297,7 @@ def validator(pw, out, mode):
                 assert (failure['actual'], failure['maximum'], failure['unit']) == (65536, 127, 'utf8_bytes'), failure
                 assert failure['step_id'] == 'middle', failure
                 assert all(path.read_bytes() == b'before' for path in paths), 'attempt ran despite refusal'
-                assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+                assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
                 assert runner['steps'] == [], runner  # a refusal echoes nothing
                 # The largest admitted probe, every byte escaped to six, stays far inside
                 # the 65,534-byte line; step_id 63, operation 127 and filter value 511 are
@@ -315,7 +315,7 @@ def validator(pw, out, mode):
                 assert all(path.read_bytes() != b'before' for path in paths[:2])
             else:
                 assert all(path.read_bytes() != b'before' for path in paths), 'completed file effects absent'
-            process = runner['validator_subprocess']
+            process = runner['phases'][0]['validator_subprocess']
             assert process['reaped'] is True and process['exit_code'] == 0, process
             assert process.get('term_signal') is None and process.get('termination_request') is None, process
             assert process['wait_errors'] == [] and process['stdout_bytes_received'] > 0, process
@@ -393,8 +393,8 @@ def query_planning(pw, out):
             assert step['comparison']['order'] == 'unestablished', step
             assert step['comparison']['limitations'] == ['query_plan:path_unresolved_at_planning'], step
             assert 'when the query was planned' in prediction['error'], prediction
-            if mixed: assert runner['validator_subprocess']['expected_step_ids'] == ['s'], runner
-            else: assert runner.get('validator_subprocess') is None, runner
+            if mixed: assert runner['phases'][0]['validator_subprocess']['expected_step_ids'] == ['s'], runner
+            else: assert (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
             print('PASS frozen query decision after create', mixed, flush=True)
 
 

@@ -490,7 +490,7 @@ class WorkerIdentityTests(unittest.TestCase):
              'atomic_load_explicit(&hdr->proceed, memory_order_acquire)',
              'atomic_load_explicit(&hdr->proceed, memory_order_relaxed)'),
             ('runner/Sources/PWRunnerCore/CWorker.swift',
-             'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 1)',
+             'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, ordinal)',
              'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 0)'),
         ]
         for name, old, new in changes:

@@ -46,11 +46,11 @@
     {
       "id": "probe_steps",
       "section": "admission",
-      "title": "Probe steps",
+      "title": "Total actions and queries",
       "value": 256,
       "unit": "items",
-      "refusal_field": "`probe_plan`",
-      "counting": "Entries in `probe_plan`.",
+      "refusal_field": "`probe_plan` or `phases.actions`",
+      "counting": "Total ordinary paired actions across the entire plan. Each action supplies at most one query; phases do not multiply this cap.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -823,8 +823,8 @@
       "title": "Worker release wait",
       "value": 60000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic deadline for worker release after successful policy application.",
-      "effect": "Expiry or clock failure records a proceed failure with no attempts.",
+      "counting": "Elapsed monotonic deadline for each phase release after the worker arrives.",
+      "effect": "Expiry or clock failure records the phase index and prevents its actions; earlier published phase evidence remains.",
       "control": "Fixed.",
       "sources": [
         {
@@ -891,8 +891,8 @@
       "title": "Validator I/O test override floor",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Minimum effective `_test_overrides.validator_io_timeout_ms`.",
-      "effect": "Smaller supplied values use 50 ms; there is no ceiling. The reply mirrors the supplied value. This changes only the validator I/O deadline; a longer value can outlast `worker_proceed_wait` without restoring expired attempts.",
+      "counting": "Minimum proposed `_test_overrides.validator_io_timeout_ms`.",
+      "effect": "Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor.",
       "control": "Fixed.",
       "sources": [
         {
@@ -916,7 +916,7 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Default elapsed monotonic deadline for validator query delivery and verdict collection.",
+      "counting": "Default elapsed monotonic deadline for one phase\u2019s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
       "control": "Fixed.",
       "sources": [
@@ -939,7 +939,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runValidator uses a CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. The `_test_overrides.validator_io_timeout_ms` test seam replaces this deadline, floored at 50 ms without a ceiling and mirrored in results; production has no flag. I/O deadline and partial-evidence paths use shortened budgets; the production duration is source-inspected."
+      "behavior": "runValidator uses CLOCK_MONOTONIC for nonblocking writes and reads. The validator_io_timeout_ms seam changes its proposed deadline, floored at 50 ms, while the aggregate phase allowance can cap the effective deadline below that floor. Earlier records survive timeout; cleanup observations remain separate."
     },
     {
       "id": "validator_exit_grace",
@@ -1227,7 +1227,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 24825461,
+      "value": 52257718,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1262,13 +1262,13 @@
           "form": "test"
         }
       ],
-      "behavior": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. runner_unit recomputes the number; edit the manifest when the synthesizer's value moves. The synthesizer's value is compared with the manifest; the budget relation is asserted; an injected unclassified key is detected. Live 256-step workloads are measured against this bound."
+      "behavior": "The production encoder sizes a conservative field-complete constructed reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Fields that cannot coexist are included, so this is an upper bound rather than a reachable output claim. Distinct maximal control-character identities satisfy phase/action association. An unclassified string key fails the test. The real transport controls separately run admitted workloads and measure their actual replies."
     },
     {
       "id": "controller_output",
       "section": "transport",
       "title": "Runner client output",
-      "value": 75497472,
+      "value": 159383552,
       "unit": "bytes",
       "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding.",
       "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
@@ -2123,6 +2123,417 @@
         }
       ],
       "behavior": "This bound covers streaming text accumulation only, not memory use or total report size. Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected."
+    },
+    {
+      "id": "phase_count",
+      "section": "admission",
+      "title": "Specimen phases",
+      "value": 8,
+      "unit": "items",
+      "counting": "Explicit phases in one request; probe_plan normalizes to one phase.",
+      "effect": "Excess returns admission_failure before any child.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "PWShmLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        }
+      ],
+      "behavior": "Explicit phases in one request; probe_plan normalizes to one phase. Excess returns admission_failure before any child.",
+      "refusal_field": "`phases`"
+    },
+    {
+      "id": "phase_id",
+      "section": "admission",
+      "title": "Phase identity",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
+      "effect": "Excess returns admission_failure without echoing the refused identity.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "admissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+          "symbol": "runRequestContractTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity.",
+      "refusal_field": "`phase_id`"
+    },
+    {
+      "id": "phase_publications",
+      "section": "evidence",
+      "title": "Phase publication storage",
+      "value": 256,
+      "unit": "bytes",
+      "counting": "Eight fixed 32-byte phase records within the shared header.",
+      "effect": "The phase cap prevents excess publication storage.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "PWShmLayout"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+          "symbol": "runPhaseProtocolTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Eight fixed 32-byte phase records within the shared header. The phase cap prevents excess publication storage."
+    },
+    {
+      "id": "phase_collection_wait",
+      "section": "execution",
+      "title": "Aggregate phase collection allowance",
+      "value": 30000,
+      "unit": "milliseconds",
+      "counting": "Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline.",
+      "effect": "After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts.",
+      "control": "Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "phaseCollectionBudgetMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+          "symbol": "runPhaseProtocolTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts."
+    },
+    {
+      "id": "validator_reply_frame",
+      "section": "transport",
+      "title": "Validator reply frame",
+      "value": 8192,
+      "unit": "bytes",
+      "counting": "UTF-8 bytes in one NDJSON frame, before parsing.",
+      "effect": "An overlong frame is rejected with bounded context; earlier complete records remain.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain."
+    },
+    {
+      "id": "validator_records_per_query",
+      "section": "transport",
+      "title": "Validator records per query",
+      "value": 2,
+      "unit": "items",
+      "counting": "Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run.",
+      "effect": "The first excess record produces a decode fault; no excess record enters association.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association."
+    },
+    {
+      "id": "validator_reply_bytes_per_query",
+      "section": "transport",
+      "title": "Validator reply storage per query",
+      "value": 16384,
+      "unit": "bytes",
+      "counting": "Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run.",
+      "effect": "The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "runValidator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame."
+    },
+    {
+      "id": "validator_reply_step_id",
+      "section": "transport",
+      "title": "Validator step_id string",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator step_id string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator step_id string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "validator_reply_operation",
+      "section": "transport",
+      "title": "Validator operation string",
+      "value": 127,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator operation string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator operation string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "validator_reply_filter_type",
+      "section": "transport",
+      "title": "Validator filter_type string",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator filter_type string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator filter_type string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "validator_reply_filter_value",
+      "section": "transport",
+      "title": "Validator filter_value string",
+      "value": 1023,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator filter_value string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator filter_value string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "validator_reply_outcome",
+      "section": "transport",
+      "title": "Validator outcome string",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator outcome string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator outcome string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "validator_reply_error",
+      "section": "transport",
+      "title": "Validator error string",
+      "value": 511,
+      "unit": "UTF-8 bytes",
+      "counting": "Bytes in a decoded validator error string, when present.",
+      "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorReplyLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
     }
   ]
 }

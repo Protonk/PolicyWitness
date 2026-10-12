@@ -14,11 +14,13 @@ Querying `sandbox_check` about a process and attempting an operation in that pro
 
 PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The
 controller hands each specimen to a fresh runner, an unsandboxed XPC host that
-spawns two short-lived children: a C worker that applies the policy to itself
-and attempts the plan, and, for the probes it can predict, a validator that
-asks `sandbox_check` about each one against the worker's PID. The host
-releases the worker's attempts only after every prediction has been
-collected, joins both children's outputs into one reply, and exits; the
+spawns a C worker that applies the policy to itself once. A simple `probe_plan`
+runs as one phase; an explicit `phases` sequence divides actions into ordered
+intervals in that same worker. At each phase arrival, the host plans queries
+afresh and, when eligible queries exist, starts a fresh validator against the
+worker's PID. Collection closes before that phase's actions are released,
+including on collection failure. The host joins the observations into one
+reply and exits; the
 controller wraps the reply in the envelope it prints.
 
 Each step carries three records: the prediction, the attempt, and a
@@ -117,9 +119,9 @@ The app contains:
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
   - `Contents/MacOS/sbpl-check` (SBPL compile-check helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host + two short-lived children per specimen)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host and worker per specimen, with a fresh validator per eligible phase)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
-    - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
+    - `Contents/MacOS/sb_api_validator` (bundle-local validator launched per eligible phase for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 The [build tour](docs/BUILD.md) describes the toolchain, build settings and

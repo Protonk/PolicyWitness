@@ -42,6 +42,19 @@ func runLimitsContractTests(_ tk: TestKit) {
             let observed: [String: Int] = [
                 "policy_source": PWShmLayout.policyBytes - 1,
                 "probe_steps": PWShmLayout.maxSteps,
+                "phase_count": PWRunnerPhase.maximumCount,
+                "phase_id": requestLabelMaxBytes,
+                "phase_publications": PWShmLayout.maxPhases * PWShmLayout.phaseBytes,
+                "phase_collection_wait": phaseCollectionBudgetMs,
+                "validator_reply_frame": ValidatorReplyLimits.frameBytes,
+                "validator_records_per_query": ValidatorReplyLimits.recordsPerProbe,
+                "validator_reply_bytes_per_query": ValidatorReplyLimits.frameBytes * ValidatorReplyLimits.recordsPerProbe,
+                "validator_reply_step_id": ValidatorReplyLimits.stringBytes["step_id"]!,
+                "validator_reply_operation": ValidatorReplyLimits.stringBytes["operation"]!,
+                "validator_reply_filter_type": ValidatorReplyLimits.stringBytes["filter_type"]!,
+                "validator_reply_filter_value": ValidatorReplyLimits.stringBytes["filter_value"]!,
+                "validator_reply_outcome": ValidatorReplyLimits.stringBytes["outcome"]!,
+                "validator_reply_error": ValidatorReplyLimits.stringBytes["error"]!,
                 "policy_parameters": PWShmLayout.maxParams,
                 "step_id": PWShmLayout.stepIdMax - 1,
                 "attempt_target": PWShmLayout.targetMax - 1,
@@ -77,6 +90,7 @@ func runLimitsContractTests(_ tk: TestKit) {
             ]
             try expectTrue(observed["worker_proceed_wait"]! > validator.verdictReadTimeoutMs
                 + validator.exitGraceMs + validatorReleaseMarginMs)
+            try expectEqual(PWRunnerPhase.maximumCount, PWShmLayout.maxPhases)
             try expectEqual(timeoutMsForValidator(override: nil), validator.verdictReadTimeoutMs)
             try expectEqual(timeoutMsForValidator(override: -100), 50)
             try expectEqual(timeoutMsForValidator(override: 70), 70)

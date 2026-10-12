@@ -108,6 +108,13 @@ def swift_name_for(printer_key: str) -> str:
     if printer_key.startswith("offsetof.pw_shm_capture_t."):
         field = printer_key[len("offsetof.pw_shm_capture_t."):]
         return "capture" + title_first(to_camel(field)) + "Offset"
+    if printer_key == "sizeof.pw_shm_phase_t":
+        return "phaseBytes"
+    if printer_key == "offsetof.pw_shm_header_t.phases":
+        return "phaseRecordsOffset"
+    if printer_key.startswith("offsetof.pw_shm_phase_t."):
+        field = printer_key[len("offsetof.pw_shm_phase_t."):]
+        return "phase" + title_first(to_camel(field)) + "Offset"
     if printer_key.startswith("offsetof.pw_shm_header_t."):
         field = printer_key[len("offsetof.pw_shm_header_t."):]
         return to_camel(field) + "Offset"

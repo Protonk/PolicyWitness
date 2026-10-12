@@ -34,17 +34,22 @@ def replace_once(source, old, new):
 
 
 def worker_source(source):
-    # Preserve acknowledgement and all ordinary attempts; only bypass the wait.
-    return replace_once(source, '    int64_t release_wait_ns = wait_for_proceed(hdr, evidence, args.proceed_wait_ms);',
-        '    int64_t release_wait_ns = 0; (void)wait_for_proceed; /* required negative control: bypass wait */\n'
-        '    atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);')
+    # Bypass each actual wait while retaining phase publications and attempts.
+    return replace_once(source, '        int64_t release_wait_ns = wait_for_proceed(hdr, evidence, phase_index, args.proceed_wait_ms);',
+        '        int64_t release_wait_ns = 0; (void)wait_for_proceed; /* deliberate bypass */\n'
+        '        atomic_store_explicit(&phase->arrived, 1u, memory_order_release);\n'
+        '        atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);\n'
+        '        atomic_store_explicit(&hdr->proceed_observed, phase_index + 1u, memory_order_release);')
 
 
 def host_source(source):
-    release = '                storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 1)\n                proceedSet = true\n'
+    release = ('                    let ordinal = input.phaseReleaseOrdinal?(index) ?? UInt32(index + 1)\n'
+               '                    storeRelease(rawBase, offset: PWShmLayout.proceedOffset, ordinal)\n'
+               '                    phaseOutputs[index].releaseSet = ordinal == UInt32(index + 1)\n'
+               '                    if ordinal != UInt32(index + 1) { phaseOutputs[index].violations.append("wrong_release_ordinal") }\n')
     source = replace_once(source, release, '')
-    return replace_once(source, '                if let hook = postApplied { hook(pid) }',
-                        release + '                if let hook = postApplied { hook(pid) }')
+    return replace_once(source, '                if let hook = phaseBoundary { hook(pid, index) }',
+                        release + '                if let hook = phaseBoundary { hook(pid, index) }')
 
 
 def compile_worker(out, body):

@@ -58,6 +58,17 @@ int main(void) {
     printf("sizeof.pw_shm_param_t=%zu\n",      sizeof(pw_shm_param_t));
     printf("sizeof.pw_shm_capture_t=%zu\n", sizeof(pw_shm_capture_t));
 
+    printf("PW_SHM_MAX_PHASES=%u\n", PW_SHM_MAX_PHASES);
+    printf("PW_SHM_PHASE_BYTES=%u\n", PW_SHM_PHASE_BYTES);
+    printf("sizeof.pw_shm_phase_t=%zu\n", sizeof(pw_shm_phase_t));
+    printf("offsetof.pw_shm_header_t.phase_count=%zu\n", offsetof(pw_shm_header_t, phase_count));
+    printf("offsetof.pw_shm_header_t.phases=%zu\n", offsetof(pw_shm_header_t, phases));
+    printf("offsetof.pw_shm_phase_t.first_slot=%zu\n", offsetof(pw_shm_phase_t, first_slot));
+    printf("offsetof.pw_shm_phase_t.end_slot=%zu\n", offsetof(pw_shm_phase_t, end_slot));
+    printf("offsetof.pw_shm_phase_t.arrived=%zu\n", offsetof(pw_shm_phase_t, arrived));
+    printf("offsetof.pw_shm_phase_t.acknowledged=%zu\n", offsetof(pw_shm_phase_t, acknowledged));
+    printf("offsetof.pw_shm_phase_t.completed=%zu\n", offsetof(pw_shm_phase_t, completed));
+
     /* Header field offsets. */
     printf("offsetof.pw_shm_header_t.abi_magic=%zu\n",    offsetof(pw_shm_header_t, abi_magic));
     printf("offsetof.pw_shm_header_t.abi_identity=%zu\n", offsetof(pw_shm_header_t, abi_identity));

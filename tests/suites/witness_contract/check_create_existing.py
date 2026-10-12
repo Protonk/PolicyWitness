@@ -45,7 +45,7 @@ def check_envelope(envelope, rc, specimen, expected):
     assert runner['specimen_id'] == specimen['specimen_id'], runner
     assert runner.get('test_overrides') is None, runner
     worker = runner['runner_subprocess']
-    validator = runner['validator_subprocess']
+    validator = runner['phases'][0]['validator_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
     assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker

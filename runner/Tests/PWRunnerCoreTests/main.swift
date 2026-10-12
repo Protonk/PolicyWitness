@@ -24,6 +24,8 @@ runComparisonEvidenceTests(tk)
 // Release barrier, eligible-record lifetime, native spawn failures through replies,
 // and ordering encoding controls.
 runOrderingTests(tk)
+// Repeated production barriers, fresh planning, ordinal refusal and interrupted phases.
+runPhaseProtocolTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.
 runReplyFailureTests(tk)
 // Shared host admission, concurrent exported objects and owner-only exit scheduling.

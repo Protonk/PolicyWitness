@@ -66,10 +66,25 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
     } else if spec.policy.capture_nonce != nil {
         return PWRunnerRequestFailure(code: "inapplicable_field", path: ["policy", "capture_nonce"])
     }
-    if let failure = sandboxCheckFailure(spec.probe_plan) { return failure }
+    var phaseIDs = Set<String>()
+    if let phases = spec.phases {
+        if phases.isEmpty { return PWRunnerRequestFailure(code: "empty_phases", path: ["phases"]) }
+        for (index, phase) in phases.enumerated() {
+            if phase.phase_id.isEmpty { return PWRunnerRequestFailure(code: "empty_phase_id", path: ["phases", String(index), "phase_id"]) }
+            if !phaseIDs.insert(phase.phase_id).inserted {
+                return PWRunnerRequestFailure(code: "duplicate_phase_id", path: ["phases", String(index), "phase_id"])
+            }
+        }
+    }
+    if var failure = sandboxCheckFailure(spec.probe_plan) {
+        if let path = failure.path, path.count >= 2, let index = Int(path[1]) {
+            failure.path = spec.probePath(index) + path.dropFirst(2)
+        }
+        return failure
+    }
     var ids = Set<String>()
     for (index, step) in spec.probe_plan.enumerated() {
-        let path = ["probe_plan", String(index)]
+        let path = spec.probePath(index)
         if !ids.insert(step.step_id).inserted {
             return PWRunnerRequestFailure(code: "duplicate_step_id", path: path + ["step_id"])
         }

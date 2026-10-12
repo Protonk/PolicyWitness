@@ -373,3 +373,63 @@ ownership. No correction or recheck is required. This bounded vocabulary review
 does not establish runtime behavior or constitute A1; unrelated diagrams/pages
 were outside scope. Mechanical results and identity were supplied to the reviewer,
 not rerun by it. No candidate build or external-runner resource was created by M0.
+
+## M2 implementation checkpoint
+
+The phase candidate exposes mutually exclusive `probe_plan` and `phases` forms.
+The simple form normalizes to `main`. Eight phases share 256 total ordinary
+query/attempt pairs, globally unique action IDs, fixed immutable phase
+publications and one worker/application. Host planning is fresh at each arrived
+boundary; a numbered release follows collection closure and a second ownership
+check. Missing predictions do not suppress attempts. Wrong ordinals, expired
+waits, invalid boundaries and lost ownership withhold progression; earlier
+observations survive. Response schema 16 moves validator/ordering evidence into
+phase records, associates each step with its phase and renames the three run
+stage keys. Request 4 remains an additive authoring contract; envelope 7 retains
+its reading rules. Bootstrap magic/identity offsets are unchanged; the compiled
+C/Swift layout has a larger header and fixed phase records.
+
+Collection uses a fresh validator per eligible phase, a cumulative 30-second
+planning/collection allowance, and bounded frames, decoded strings, records and
+retained bytes. The resolved filter-value bound is 1023 bytes, permitting a
+resolved OS path longer than its submitted spelling. The Unicode round-trip
+control distributes its original scalar corpus across admitted-size IDs.
+The conservative production-encoded maximum is 52,257,718 bytes; the controller
+budget is three times that value rounded upward to 152 MiB. This construction
+places mutually exclusive fields together; it is not a reachable transcript
+claim. The prose baseline lost its stale literal ABI-offset entry and gained
+none. A stale architecture claim about an unversioned validator was corrected:
+the receiver already requires its kind and schema marker.
+
+Diagnostic runs remain under `tests/out/runs/extensions-m2-*` (gitignored,
+local-only). The signed receiver run `extensions-m2-receiver-signed-20261012`
+passed 395 Swift/native checks and the service-admission mutation case against
+worker identity `e2dec1d651268c5d6424edff3f96b078f4cf02cb253d415a8dcacbdb561da716`.
+The subsequent source adds invalid-prior-completion refusal before collection
+and closes validator input immediately on byte cutoff; final acceptance requires
+rerunning against that source. Earlier failed diagnostics identify old expected
+shape/size/version values, test inputs exceeding newly explicit receiver bounds,
+and a deliberately mismatched stale app during an intermediate unit run. They
+are not acceptance evidence.
+
+Registered live captures passed BBX-001 and BBX-002 in
+`extensions-m2-live-captures-20261012`; the exact requests and envelopes populate
+`tests/fixtures/blackbox_e2e/checker/response16`. The corrected deadline case and
+public ordinary phase/aggregate-budget/byte-cutoff case passed in
+`extensions-m2-live-captures2-20261012`; the former supplies
+`tests/fixtures/disposition/response16`. Prior-version captures remain untouched.
+These fixtures identify their producing build; later acceptance runs must test
+the final candidate independently. The phase case was subsequently extended
+with malformed-type reader controls. No fixture is rewritten to claim a newer
+producer or schema.
+
+The coordinated M2 gate is currently running as
+`extensions-m2-gate-20261012`, after a signed rebuild with worker identity
+`78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d`.
+Selected suites are runner_unit, runner_abi_layout, runner_c_worker_harness,
+failure_boundaries, runner_outcome_bad_request, runner_validator_failure, unit,
+blackbox_e2e, witness_contract (including opt-in mutations and the owned BYOXPC
+dossier fixture), and source_drift. Registry list/reconcile before installation
+reported no runners, pending cleanup, candidates or inspection errors. The
+harness owns any subsequent fixture session record and cleanup. No M2 gate or
+rendered assessment is yet claimed complete. M3 has not begun.

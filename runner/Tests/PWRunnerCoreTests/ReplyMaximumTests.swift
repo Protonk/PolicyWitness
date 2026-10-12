@@ -28,18 +28,19 @@ private let stringPolicy: [String: Int?] = [
     // Fixed vocabulary or host constants.
     "normalized_outcome": nil, "bundle_id": nil, "policy_format": nil, "policy_sha256": nil,
     "status": nil, "reason": nil, "outcome": nil, "result_source": nil,
-    "missing_reason": nil, "observer": nil, "phase": nil, "same_as_input": nil, "summary": nil,
+    "missing_reason": nil, "observer": nil, "stage": nil, "same_as_input": nil, "summary": nil,
     "state": nil, "answer": nil, "basis": nil, "observation": nil,
     "observation_basis": nil, "operation_relation": nil, "target_relation": nil,
     "order": nil, "limitations": nil, "poll_stop_reason": nil,
     "cleanup_trigger": nil, "grace_end": nil, "collection_basis": nil, "slot": nil,
     "attempt_support": nil, "validator_disposition": nil, "protocol_violations": nil,
     "failure_state": nil, "origin": nil, "field": nil, "unit": nil, "kind": nil,
-    "filter_type": nil, "signal": nil, "stdout_collection_stop": nil, "question": nil,
+    "filter_type": 63, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
-    "abi_identity": nil, "code": nil,
+    "abi_identity": nil, "code": nil, "collection_status": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
+    "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
     "step_id": PWShmLayout.stepIdMax - 1, "operation": sandboxCheckOperationMaxBytes,
     "filter_kind": probePlanLabelMaxBytes, "filter_value": sandboxCheckFilterValueMaxBytes,
     "input": sandboxCheckFilterValueMaxBytes, "requested_kind": probePlanLabelMaxBytes,
@@ -129,14 +130,16 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
         "bytes_written": 262143, "bytes_expected": 262143] as [String: Any]
     reply["runner_subprocess"] = subprocess
 
-    var validator = reply["validator_subprocess"] as! [String: Any]
+    var phases = reply["phases"] as! [[String: Any]]
+    var validator = phases[0]["validator_subprocess"] as! [String: Any]
     validator["read_error"] = maximal(1023)
     validator["io_error"] = maximal(1023)
     validator["decode_fault"] = ["origin": "runner_host", "kind": "structure", "message": maximal(1023),
                                  "byte_offset": 2_147_483_647, "frame_bytes": 2_147_483_647, "retained_bytes": 256,
                                  "context_b64": Data(repeating: 0xff, count: 256).base64EncodedString(),
                                  "context_truncated": true]
-    reply["validator_subprocess"] = validator
+    phases[0]["validator_subprocess"] = validator
+    reply["phases"] = phases
 
     reply["applied_profile"] = ["schema_version": 1, "status": "captured", "worker_pid": 4_294_967_295,
         "request_nonce": String(repeating: "f", count: 32), "profile_type": 0,
@@ -168,24 +171,45 @@ func maximalReplyEncodedSize() throws -> Int {
     reply["error"] = maximal(8191)
 
     let count = PWShmLayout.maxSteps
+    func identity(_ index: Int) -> String {
+        maximal(61) + String(UnicodeScalar(index / 31 + 1)!) + String(UnicodeScalar(index % 31 + 1)!)
+    }
     let step = (reply["steps"] as! [[String: Any]])[0]
-    reply["steps"] = Array(repeating: step, count: count)
+    reply["steps"] = (0..<count).map { index -> [String: Any] in
+        var copy = step
+        copy["step_id"] = identity(index)
+        copy["phase_id"] = identity(index / (count / PWRunnerPhase.maximumCount))
+        return copy
+    }
     var subprocess = reply["runner_subprocess"] as! [String: Any]
     var disposition = subprocess["disposition"] as! [String: Any]
     let entry = (disposition["steps"] as! [[String: Any]])[0]
     disposition["steps"] = (0..<count).map { index -> [String: Any] in
-        var copy = entry; copy["index"] = index; return copy
+        var copy = entry; copy["index"] = index; copy["step_id"] = identity(index); return copy
     }
     subprocess["disposition"] = disposition
     reply["runner_subprocess"] = subprocess
-    var validator = reply["validator_subprocess"] as! [String: Any]
-    validator["records"] = Array(repeating: try maximalRecord(), count: count)
-    validator["expected_step_ids"] = Array(repeating: maximal(PWShmLayout.stepIdMax - 1), count: count)
-    validator["association_issues"] = Array(repeating: ["origin": "runner_host", "kind": "query_mismatch",
-                                                         "step_id": maximal(PWShmLayout.stepIdMax - 1), "count": 1] as [String: Any], count: count)
-    validator["probe_bytes_written"] = 2_147_483_647; validator["probe_bytes_expected"] = 2_147_483_647
-    validator["stdout_bytes_received"] = 2_147_483_647
-    reply["validator_subprocess"] = validator
+    var phases = reply["phases"] as! [[String: Any]]
+    var validator = phases[0]["validator_subprocess"] as! [String: Any]
+    var record = try maximalRecord()
+    for (field, bound) in ValidatorReplyLimits.stringBytes { record[field] = maximal(bound) }
+    record["raw_line"] = maximal(ValidatorReplyLimits.frameBytes)
+    let perPhase = count / PWRunnerPhase.maximumCount
+    reply["phases"] = (0..<PWRunnerPhase.maximumCount).map { index -> [String: Any] in
+        var phase = phases[0], collection = validator
+        let ids = (index * perPhase..<(index + 1) * perPhase).map(identity)
+        phase["phase_id"] = identity(index); phase["ordinal"] = index + 1; phase["action_ids"] = ids
+        collection["records"] = (0..<(ids.count * ValidatorReplyLimits.recordsPerProbe)).map { position -> [String: Any] in
+            let id = identity(index * ids.count * ValidatorReplyLimits.recordsPerProbe + position)
+            var copy = record; copy["step_id"] = id; return copy
+        }
+        collection["expected_step_ids"] = ids
+        collection["association_issues"] = (0..<(ids.count * (ValidatorReplyLimits.recordsPerProbe + 1))).map { identity(index * ids.count * ValidatorReplyLimits.recordsPerProbe + $0) }.map { ["origin": "runner_host", "kind": "query_mismatch", "step_id": $0, "count": 1] as [String: Any] }
+        collection["probe_bytes_written"] = 2_147_483_647; collection["probe_bytes_expected"] = 2_147_483_647
+        collection["stdout_bytes_received"] = 2_147_483_647
+        phase["validator_subprocess"] = collection
+        return phase
+    }
 
     let data = try JSONSerialization.data(withJSONObject: reply)
     let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)

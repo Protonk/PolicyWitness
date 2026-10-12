@@ -10,6 +10,21 @@ Each test asserts one contract claim. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 
+## Public phases
+
+`phases` uses the signed CLI with ordinary actions. It unlinks a controlled
+file, observes its absence outside PW, then requires fresh planning to withhold
+the next native path query while the paired access reports ENOENT. A final
+resolvable target requires a fresh validator record and `query_first`. The
+reply must retain one worker, distinct collections and all completed phases.
+Six mutations reject wrong phase association, borrowed records, duplicate IDs,
+wrong ordinal, broken completion sequence and a wrong action partition.
+
+The same registered case compiles the bounded validator fixture to drive
+aggregate timeout and stdout byte cutoff. It asserts supplied override echoes,
+real collection stop/reap evidence, unavailable later predictions, and retained
+successful attempts. These are driver controls, not sandbox predictions.
+
 ## Invariants
 
 - The suite is included in the default battery, including regression guards

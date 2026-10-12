@@ -146,7 +146,8 @@ Top-level fields:
 - `specimen_id`: string
 - `run_kind`: string (optional)
 - `policy`: object
-- `probe_plan`: array of steps
+- Exactly one non-null plan form: `probe_plan` (array of paired steps) or
+  `phases` (ordered array of phase objects)
 - `runner`: object (optional; select runner mode and external runners)
 
 Minimal skeleton (copy/paste):
@@ -169,6 +170,53 @@ Notes:
 - `probe_plan` may be empty when you only want to exercise sandbox
   apply (the validator child is only spawned when there are probes
   to query).
+
+### Ordered phases
+
+Use `probe_plan` for one query collection followed by its attempts. It becomes
+one reply phase named `main`, including when the plan is empty. To collect again
+after earlier actions, supply `phases` instead. Each phase has a nonempty unique
+`phase_id` and an `actions` array. Each ordinary action has the same shape as a
+probe-plan step: `step_id`, `sandbox_check` and `attempt` are all required.
+Step IDs are unique across the entire specimen. Empty action arrays are allowed;
+the phase array itself must be nonempty.
+
+```json
+{
+  "schema_version": 4,
+  "specimen_id": "two_reads",
+  "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
+  "phases": [
+    { "phase_id": "first", "actions": [
+      { "step_id": "read1",
+        "sandbox_check": { "operation": "file-read-data", "filter": { "kind": "path", "value": "/etc/hosts" } },
+        "attempt": { "kind": "file", "action": "access", "target": "/etc/hosts" } }
+    ] },
+    { "phase_id": "second", "actions": [
+      { "step_id": "read2",
+        "sandbox_check": { "operation": "file-read-data", "filter": { "kind": "path", "value": "/etc/hosts" } },
+        "attempt": { "kind": "file", "action": "access", "target": "/etc/hosts" } }
+    ] }
+  ]
+}
+```
+
+All queries in a phase are collected before any of its actions. Actions then
+run in declaration order, and the next collection begins after phase completion.
+The worker and its once-applied policy remain the same. A phase names an interval;
+it does not promise stable file identity or permissions throughout that interval.
+
+Path-query eligibility is checked afresh at each boundary. If an earlier action
+unlinks a target, a later path query can be unavailable while its paired attempt
+still runs and reports its own result. Such a pair has `order: unestablished`;
+phase completion and arrival still describe the observed progression. Validator
+failure or exhausted collection allowance can likewise leave predictions missing.
+Worker loss or an expired worker release wait stops further progression.
+
+At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and
+<!-- span limits.probe_steps.value -->256<!-- /span --> total actions fit one
+specimen; phases do not multiply the action or query allowance. The
+[limits](#limits) describe cumulative collection and per-phase wait bounds.
 
 ### Try an accepted request and a refusal
 
@@ -638,7 +686,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Refusal names | Counting and consequence | Control |
 | --- | --- | --- | --- | --- |
 | Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
-| Probe steps (`probe_steps`) | 256 items | `probe_plan` | Entries in `probe_plan`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Total actions and queries (`probe_steps`) | 256 items | `probe_plan` or `phases.actions` | Total ordinary paired actions across the entire plan. Each action supplies at most one query; phases do not multiply this cap. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries in `policy.params`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
@@ -652,6 +700,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind` or `policy.format` | Each of `run_kind` and `policy.format`. A refused `run_kind` is omitted and a refused format reads `unknown`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 | Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path` or `_test_overrides.validator_executable_path` | Each of `_test_overrides.worker_executable_path` and `_test_overrides.validator_executable_path`. Every path that fails byte or NUL admission is omitted from a refusal's `test_overrides`, even when another field is refused first. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Specimen phases (`phase_count`) | 8 items | `phases` | Explicit phases in one request; probe_plan normalizes to one phase. Excess returns admission_failure before any child. | Fixed. |
+| Phase identity (`phase_id`) | 63 UTF-8 bytes | `phase_id` | UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity. | Fixed. |
 
 ### Execution budgets
 
@@ -663,10 +713,10 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
-| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed monotonic deadline for worker release after successful policy application. Expiry or clock failure records a proceed failure with no attempts. | Fixed. |
+| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed monotonic deadline for each phase release after the worker arrives. Expiry or clock failure records the phase index and prevents its actions; earlier published phase evidence remains. | Fixed. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Informative allowance between the validator budgets and worker release wait. No separate timeout or refusal occurs at this value. | Not enforced; no flag. |
-| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective `_test_overrides.validator_io_timeout_ms`. Smaller supplied values use 50 ms; there is no ceiling. The reply mirrors the supplied value. This changes only the validator I/O deadline; a longer value can outlast `worker_proceed_wait` without restoring expired attempts. | Fixed. |
-| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for validator query delivery and verdict collection. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed. |
+| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum proposed `_test_overrides.validator_io_timeout_ms`. Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor. | Fixed. |
+| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Nominal wait for validator exit after collection closes. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Elapsed monotonic deadline after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
 | Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Elapsed monotonic budget shared by exec steps, including worker setup and intervening work but excluding the worker release wait. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A clock failure refuses spawn or leaves an observation error after spawn. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
@@ -674,14 +724,15 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
+| Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
 
 ### Queries and transport
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 24,825,461 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
-| Runner client output (`controller_output`) | 75,497,472 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,257,718 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
 | Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes from `log show` stderr, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -690,6 +741,15 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Observer echoed metadata (`log_observer_metadata`) | 4,096 UTF-8 bytes | Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID. Oversized arguments are rejected; oversized reply metadata leaves correlation unavailable. | Fixed. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
+| Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
+| Validator records per query (`validator_records_per_query`) | 2 items | Retained-record allowance is twice the number of queries actually sent in that phase; at most 512 records across a production run. The first excess record produces a decode fault; no excess record enters association. | Fixed. |
+| Validator reply storage per query (`validator_reply_bytes_per_query`) | 16,384 bytes | Twice the frame bound per actual query; at most 4,194,304 retained stdout bytes across a production run. The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame. | Fixed. |
+| Validator step_id string (`validator_reply_step_id`) | 63 UTF-8 bytes | Bytes in a decoded validator step_id string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
+| Validator operation string (`validator_reply_operation`) | 127 UTF-8 bytes | Bytes in a decoded validator operation string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
+| Validator filter_type string (`validator_reply_filter_type`) | 63 UTF-8 bytes | Bytes in a decoded validator filter_type string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
+| Validator filter_value string (`validator_reply_filter_value`) | 1,023 UTF-8 bytes | Bytes in a decoded validator filter_value string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
+| Validator outcome string (`validator_reply_outcome`) | 63 UTF-8 bytes | Bytes in a decoded validator outcome string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
+| Validator error string (`validator_reply_error`) | 511 UTF-8 bytes | Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated. | Fixed. |
 
 ### Evidence capture
 
@@ -708,6 +768,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Optional compiled-object capture (`applied_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
+| Phase publication storage (`phase_publications`) | 256 bytes | Eight fixed 32-byte phase records within the shared header. The phase cap prevents excess publication storage. | Fixed. |
 
 ### Diagnostic helpers
 
@@ -729,6 +790,20 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   values, so no number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
+- Phases share one total action/query capacity and a cumulative collection
+  allowance of <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span -->.
+  Each eligible phase gets a fresh validator; its I/O deadline is capped by the
+  remaining allowance. Planning and cleanup consume this allowance, but cleanup
+  and scheduling can overrun it. Exhaustion leaves later predictions unavailable
+  while attempts may still run. Each worker arrival starts its own
+  <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
+  release wait; stale releases cannot satisfy it. The host's sentinel polling
+  excludes every synchronous collection, and the worker's exec budget excludes
+  every measured release wait. Client timeout still cancels none of this work.
+- Validator storage scales with queries actually sent, never with the phase
+  capacity multiplied by the action capacity. Frame and string rejection retain
+  earlier complete records and bounded fault context; the stdout byte cutoff
+  closes collection with `byte_limit` and discards any incomplete cutoff frame.
 - Output budgets mark, they never silently cut. Each receiver reports the
   budget it applied in `capture_limit_bytes` (`controller_output`,
   `policy_helper_output`). Output beyond it is marked truncated, and a
@@ -743,8 +818,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   limit, and the plan's step count does not bound how much the OS log holds.
 - One refusal names the first failing field. When a specimen exceeds several
   admission limits, the order is: top-level metadata (`specimen_id`,
-  `request_label`) and `test_override_path` executable overrides, then plan
-  and parameter counts (`probe_steps`, `policy_parameters`), then worker strings
+  `request_label`) and `test_override_path` executable overrides, then phase count, total action count, phase identities
+  and parameter counts (`phase_count`, `probe_steps`, `phase_id`, `policy_parameters`), then worker strings
   (`policy_source`, `step_id`, `attempt_target`, exec arguments, parameter keys
   and values), then host query
   fields (`query_operation`, `query_filter_value`, `probe_plan_label`). A
@@ -753,7 +828,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   oversized `policy.format` reads `unknown`.
 - The `policy_source`, `parameter_key`, `parameter_value`, `step_id`,
   `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`
-  and `test_override_path` limits also reject embedded NUL. For a string within
+  `phase_id` and `test_override_path` limits also reject embedded NUL. For a string within
   its byte capacity, that refusal reports unit `nul_bytes`, maximum 0 and the
   same field. Metadata and labels (`specimen_id`, `request_label`,
   `probe_plan_label`) permit escaped NUL at this gate; their
@@ -788,12 +863,12 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 16, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
 `pw-runner-client` prints: its `schema_version` is the response schema, and it
-holds `normalized_outcome`, `steps`, `runner_subprocess`, `validator_subprocess`
+holds `normalized_outcome`, `steps`, `runner_subprocess`, `phases`
 and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
 readable on its own. The controller envelope is what `policy-witness run`
 prints: its `schema_version` is the controller envelope, `result` summarizes
@@ -806,7 +881,7 @@ document accept exactly the current numbers; another version is reported as
 unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
-batch validator. Worker identity for
+fresh batch validator for each eligible phase. Worker identity for
 correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
 the host or client when no worker metadata exists.
 
@@ -817,7 +892,7 @@ the host or client when no worker metadata exists.
 `policy_transfer_deadline`. Termination requests record
 signal, syscall return and errno only on failure. Exit/signal values require a
 successful reap; both are absent/null when disposition is unconfirmed. Wait
-errors retain their phase and native return/errno, including recovered EINTR.
+errors retain their stage and native return/errno, including recovered EINTR.
 Application remains independently reported by `sandboxed_after_apply`.
 
 `runner_subprocess` also records three host facts where the host acts:
@@ -879,7 +954,15 @@ no use for.
 
 Reply fields beyond `pid` / `runner_subprocess`:
 
-- `validator_subprocess` — optional validator child observations, including
+- `phases[]` — ordered records with `phase_id`, one-based `ordinal`, ordered
+  `action_ids`, `arrival_observed`, `completion_observed` and `collection_status`.
+  Status is `not_reached`, `not_needed`, `collected`, `budget_exhausted` or
+  `clock_unavailable`; `collected` includes failed or partial collection.
+  `ordering` is present when a worker exists. Each `steps[].phase_id` identifies
+  the phase owning its query, attempt and comparison. Phase completion and
+  individual action completion remain separate observations.
+
+- `phases[].validator_subprocess` — optional validator child observations, including
   `pid`, `reaped`, exit/signal status and the [receiver evidence](#receiver-evidence).
 
   | Observed validator disposition | Current status fields |
@@ -894,15 +977,15 @@ Reply fields beyond `pid` / `runner_subprocess`:
   and its number alone does not identify the sender. An absent or null
   subprocess object does not by itself establish why validator observation
   is missing.
-- `validator_spawn_failure` — optional host launch evidence with `origin`,
+- `phases[].validator_spawn_failure` — optional host launch evidence with `origin`,
   `operation`, `executable_path`, `return_code` and `diagnostic`. For a failed
   validator launch, these are `runner_host`, `posix_spawn`, the executable path,
   the direct native return code and native descriptive text. The code is not
   ambient errno. Unfamiliar nonzero codes remain failures; wording is not a
   classification rule. The record survives a higher-priority worker failure
   and evidence-preserving reply degradation.
-- `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before the entire attempt batch, not state stability or runtime identity.
-- `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it. `validator_disposition` is `not_invoked`, `not_needed` (empty query plan), `not_spawned`, `reaped` or `unconfirmed`.
+- `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before that phase’s entire action batch, not state stability or runtime identity.
+- `phases[].ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. After collection closure, release still requires the expected live worker phase. Validator failure or unconfirmed cleanup does not itself prevent release; no later record enters a closed collection. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it. `validator_disposition` is `not_invoked`, `not_needed` (empty query plan), `not_spawned`, `reaped` or `unconfirmed`.
 - `steps[].comparison` — six fields that relate the two channels without
   judging them. `observation` classifies the attempt channel (`succeeded`,
   `permission_failure`, `other_failure` or `unavailable`) and
@@ -1296,14 +1379,14 @@ jq '.data.runner_sandbox_diagnostics.permission_failures_without_record' run.jso
 `path_diagnostics` is emitted on every path-filter `sandbox_check`
 result with a nonempty submitted path. It carries later host-resolved path forms
 for diagnostic inspection; it cannot identify which form an earlier native check
-used. Fields: `{ observer, phase, input, same_as_input, realpath_resolved?,
+used. Fields: `{ observer, stage, input, same_as_input, realpath_resolved?,
 firmlink_resolved? }`. The runner still passes the raw `filter_value` to
 `sandbox_check` — this block is observation only.
 
 Producer: `path_diagnostics` is computed by the unsandboxed runner
 host (`PWRunnerService.enrichPathDiagnostics`) after orchestration returns,
 which need not establish that every child was reaped. `observer="runner_host"`
-and `phase="after_orchestration"` identify that provenance. The host's resolution
+and `stage="after_orchestration"` identify that provenance. The host's resolution
 is independent of the worker's sandbox and can see a path changed by an attempt.
 Neither a resolved path nor null establishes what the validator saw earlier.
 
@@ -1346,10 +1429,10 @@ otherwise the diagnostic can carry a different resolved string. The earlier
 ### attempt.path_diagnostics
 
 Every file or exec attempt with a nonempty target carries
-`attempt.path_diagnostics`: `{ observer, phase, input, same_as_input,
+`attempt.path_diagnostics`: `{ observer, stage, input, same_as_input,
 realpath_resolved?, parent_realpath_resolved? }`, produced by the same
 unsandboxed host pass after orchestration (`observer="runner_host"`,
-`phase="after_orchestration"`) and always in the compact three-state form
+`stage="after_orchestration"`) and always in the compact three-state form
 above. `realpath_resolved` is `realpath(3)` of the target with the leaf
 followed. `parent_realpath_resolved` is `realpath(3)` of the parent directory
 with the literal leaf appended: the path the kernel names for a created or
@@ -1664,7 +1747,7 @@ its requested and worker-observed paths, and the host's after-orchestration
 path, so a target reached through a symlink (such as `/etc/hosts`) correlates
 through `realpath_resolved`, and a created or unlinked entry through
 `parent_realpath_resolved`. Host forms require a valid compact block with that
-exact observer and phase, and an input equal to both the submitted target and
+exact observer and stage, and an input equal to both the submitted target and
 the reported requested path. Invalid blocks contribute no host path matches;
 independent submitted, requested and observed paths remain eligible.
 Supported operations are:

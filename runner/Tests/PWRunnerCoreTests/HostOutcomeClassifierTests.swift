@@ -152,11 +152,11 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
         ClassifyRow(label: "wait error survives later clean reap",
-                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(phase: "poll", rc: -1, errno: EIO)])),
+                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(stage: "poll", rc: -1, errno: EIO)])),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
         ClassifyRow(label: "recovered EINTR does not fail a clean report",
-                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(phase: "exit_grace", rc: -1, errno: EINTR)])),
+                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(stage: "exit_grace", rc: -1, errno: EINTR)])),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.ok),
 

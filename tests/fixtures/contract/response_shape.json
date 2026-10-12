@@ -1,5 +1,5 @@
 {
-  "response_schema" : 15,
+  "response_schema" : 16,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -7,6 +7,7 @@
       "bundle_id" : "string",
       "error" : "string",
       "normalized_outcome" : "string",
+      "phases" : "array",
       "pid" : "number",
       "policy_format" : "string",
       "policy_sha256" : "string",
@@ -19,9 +20,7 @@
       "schema_version" : "number",
       "specimen_id" : "string",
       "steps" : "array",
-      "test_overrides" : "object",
-      "validator_spawn_failure" : "object",
-      "validator_subprocess" : "object"
+      "test_overrides" : "object"
     },
     "reply.admission_failure" : {
       "actual" : "number",
@@ -49,6 +48,88 @@
       "status" : "string",
       "worker_pid" : "number"
     },
+    "reply.phases[]" : {
+      "action_ids" : "array",
+      "arrival_observed" : "boolean",
+      "collection_status" : "string",
+      "completion_observed" : "boolean",
+      "ordering" : "object",
+      "ordinal" : "number",
+      "phase_id" : "string",
+      "validator_spawn_failure" : "object",
+      "validator_subprocess" : "object"
+    },
+    "reply.phases[].ordering" : {
+      "collection_closed_before_proceed" : "boolean",
+      "proceed_observed" : "boolean",
+      "proceed_set" : "boolean",
+      "protocol_violations" : "array",
+      "validator_disposition" : "string",
+      "worker_lifetime_established" : "boolean"
+    },
+    "reply.phases[].validator_spawn_failure" : {
+      "diagnostic" : "string",
+      "executable_path" : "string",
+      "operation" : "string",
+      "origin" : "string",
+      "return_code" : "number"
+    },
+    "reply.phases[].validator_subprocess" : {
+      "association_issues" : "array",
+      "decode_fault" : "object",
+      "exit_code" : "number",
+      "expected_step_ids" : "array",
+      "io_error" : "string",
+      "pid" : "number",
+      "probe_bytes_expected" : "number",
+      "probe_bytes_written" : "number",
+      "read_error" : "string",
+      "reaped" : "boolean",
+      "records" : "array",
+      "stdout_bytes_received" : "number",
+      "stdout_collection_stop" : "string",
+      "term_signal" : "number",
+      "termination_request" : "object",
+      "wait_errors" : "array"
+    },
+    "reply.phases[].validator_subprocess.association_issues[]" : {
+      "count" : "number",
+      "kind" : "string",
+      "origin" : "string",
+      "step_id" : "string"
+    },
+    "reply.phases[].validator_subprocess.decode_fault" : {
+      "byte_offset" : "number",
+      "context_b64" : "string",
+      "context_truncated" : "boolean",
+      "frame_bytes" : "number",
+      "kind" : "string",
+      "message" : "string",
+      "origin" : "string",
+      "retained_bytes" : "number"
+    },
+    "reply.phases[].validator_subprocess.records[]" : {
+      "errno" : "number",
+      "error" : "string",
+      "filter_type" : "string",
+      "filter_type_id" : "number",
+      "filter_value" : "string",
+      "operation" : "string",
+      "outcome" : "string",
+      "raw_line" : "string",
+      "rc" : "number",
+      "step_id" : "string"
+    },
+    "reply.phases[].validator_subprocess.termination_request" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
+    },
+    "reply.phases[].validator_subprocess.wait_errors[]" : {
+      "errno" : "number",
+      "rc" : "number",
+      "stage" : "string"
+    },
     "reply.reporting_failure" : {
       "diagnostic" : "string",
       "evidence_retained" : "boolean",
@@ -70,7 +151,6 @@
       "exit_code" : "number",
       "exit_requested" : "boolean",
       "grace_end" : "string",
-      "ordering" : "object",
       "partial_steps" : "boolean",
       "pid" : "number",
       "policy_transfer_error" : "object",
@@ -183,14 +263,6 @@
       "reason" : "string",
       "state" : "string"
     },
-    "reply.runner_subprocess.ordering" : {
-      "collection_closed_before_proceed" : "boolean",
-      "proceed_observed" : "boolean",
-      "proceed_set" : "boolean",
-      "protocol_violations" : "array",
-      "validator_disposition" : "string",
-      "worker_lifetime_established" : "boolean"
-    },
     "reply.runner_subprocess.policy_transfer_error" : {
       "bytes_expected" : "number",
       "bytes_written" : "number",
@@ -209,8 +281,8 @@
     },
     "reply.runner_subprocess.wait_errors[]" : {
       "errno" : "number",
-      "phase" : "string",
-      "rc" : "number"
+      "rc" : "number",
+      "stage" : "string"
     },
     "reply.runner_subprocess.worker_evidence" : {
       "abi_identity" : "string",
@@ -239,8 +311,8 @@
     "reply.runner_subprocess.worker_evidence.progress" : {
       "index" : "number",
       "operation" : "number",
-      "phase" : "number",
-      "raw" : "number"
+      "raw" : "number",
+      "stage" : "number"
     },
     "reply.runner_subprocess.worker_evidence.readiness" : {
       "errno" : "number",
@@ -249,6 +321,7 @@
     "reply.steps[]" : {
       "attempt" : "object",
       "comparison" : "object",
+      "phase_id" : "string",
       "sandbox_check" : "object",
       "step_id" : "string"
     },
@@ -293,9 +366,9 @@
       "input" : "string",
       "observer" : "string",
       "parent_realpath_resolved" : "string",
-      "phase" : "string",
       "realpath_resolved" : "string",
-      "same_as_input" : "array"
+      "same_as_input" : "array",
+      "stage" : "string"
     },
     "reply.steps[].comparison" : {
       "limitations" : "array",
@@ -324,81 +397,19 @@
       "firmlink_resolved" : "string",
       "input" : "string",
       "observer" : "string",
-      "phase" : "string",
       "realpath_resolved" : "string",
-      "same_as_input" : "array"
+      "same_as_input" : "array",
+      "stage" : "string"
     },
     "reply.test_overrides" : {
       "validator_executable_path" : "string",
       "validator_io_timeout_ms" : "number",
+      "validator_total_timeout_ms" : "number",
       "worker_executable_path" : "string",
       "worker_post_apply_hang_ms" : "number",
       "worker_post_apply_kill_signal" : "number",
       "worker_pre_ready_hang_ms" : "number",
       "worker_timeout_ms" : "number"
-    },
-    "reply.validator_spawn_failure" : {
-      "diagnostic" : "string",
-      "executable_path" : "string",
-      "operation" : "string",
-      "origin" : "string",
-      "return_code" : "number"
-    },
-    "reply.validator_subprocess" : {
-      "association_issues" : "array",
-      "decode_fault" : "object",
-      "exit_code" : "number",
-      "expected_step_ids" : "array",
-      "io_error" : "string",
-      "pid" : "number",
-      "probe_bytes_expected" : "number",
-      "probe_bytes_written" : "number",
-      "read_error" : "string",
-      "reaped" : "boolean",
-      "records" : "array",
-      "stdout_bytes_received" : "number",
-      "stdout_collection_stop" : "string",
-      "term_signal" : "number",
-      "termination_request" : "object",
-      "wait_errors" : "array"
-    },
-    "reply.validator_subprocess.association_issues[]" : {
-      "count" : "number",
-      "kind" : "string",
-      "origin" : "string",
-      "step_id" : "string"
-    },
-    "reply.validator_subprocess.decode_fault" : {
-      "byte_offset" : "number",
-      "context_b64" : "string",
-      "context_truncated" : "boolean",
-      "frame_bytes" : "number",
-      "kind" : "string",
-      "message" : "string",
-      "origin" : "string",
-      "retained_bytes" : "number"
-    },
-    "reply.validator_subprocess.records[]" : {
-      "errno" : "number",
-      "error" : "string",
-      "filter_type" : "string",
-      "filter_type_id" : "number",
-      "filter_value" : "string",
-      "operation" : "string",
-      "outcome" : "string",
-      "raw_line" : "string",
-      "rc" : "number",
-      "step_id" : "string"
-    },
-    "reply.validator_subprocess.termination_request" : {
-      "errno" : "number",
-      "rc" : "number",
-      "signal" : "number"
-    },
-    "reply.validator_subprocess.wait_errors[]" : {
-      "errno" : "number",
-      "phase" : "string",
-      "rc" : "number"
     }
   }
 }

@@ -43,22 +43,26 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
    request claim across connections; another request receives `already_ran`.
    The claim precedes decoding, so a refused request also consumes the host.
    Only the claim owner schedules exit after its reply.
-2. The service decodes and admits the request, validates meaning and plans
-   queries before creating either child. The worker receives policy bytes on
+2. The service decodes and admits the request and validates meaning before
+   creating children. `probe_plan` becomes one phase named `main`; explicit
+   phases share one total action capacity. The worker receives policy bytes on
    its input pipe and shares fixed-layout inputs/publications with the host.
-3. The worker compiles and applies the policy, publishes application, then waits.
-   After observing successful application and matching worker identity, the host
-   collects eligible queries with `sb_api_validator --batch`. No eligible queries
-   means no validator; failures before application can also prevent its launch.
-4. Collection closes on every validator terminal path. The host releases the
-   worker, which acknowledges release before attempting the plan. No later
-   validator record joins this run's predictions.
+3. The worker applies the policy once, then publishes arrival at each phase.
+   The host checks successful application, identity and worker ownership, plans
+   that phase's queries afresh and collects eligible queries with a fresh
+   `sb_api_validator --batch` child. No eligible queries means no validator.
+4. Collection closes on every terminal path. The host rechecks the live phase
+   before publishing its numbered release; the worker acknowledges that release
+   before actions, then publishes phase completion before its next arrival.
+   Each phase retains immutable publications and its own validator evidence.
+   No later record joins a closed collection. Expired waits and worker loss
+   stop progression; earlier observations remain.
 5. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
-the full collection/release/acknowledgement chain and worker lifetime evidence;
+that phase's collection/release/acknowledgement chain and worker lifetime evidence;
 the presence of a paired query alone is insufficient. The
 [ordering contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states)
 defines the claims and withheld states.
@@ -74,11 +78,13 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 16, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
-source and optional parameters, and an ordered probe plan. Codable types and
+source and optional parameters, and exactly one of `probe_plan` or `phases`.
+An ordinary action always has a submitted query and attempt. Phase IDs are
+unique and nonempty; step IDs are unique across the entire specimen. Codable types and
 their `CodingKeys` define acceptance. Unknown fields, wrong types, unsupported
 versions, unsupported attempt/filter names and ineffective combinations produce
 `bad_request` with a bounded `request_failure`. Capacity admission is shared
@@ -132,7 +138,8 @@ not establish that a boundary was reached or that its requested effect occurred.
 | --- | --- | --- |
 | `worker_executable_path` | string | Bundle-local `pw-probe-runner`; substitutes the worker spawn path. A nonexistent path can exercise `worker_spawn_failed`. |
 | `worker_timeout_ms` | integer milliseconds | <!-- span limits.worker_sentinel_wait.value_unit -->120,000 milliseconds<!-- /span -->; changes the host sentinel allowance, leaving the worker's exec budget unchanged. |
-| `validator_io_timeout_ms` | integer milliseconds | <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->; changes the validator I/O deadline and can outlast the worker's release wait. |
+| `validator_io_timeout_ms` | integer milliseconds | <!-- span limits.validator_io_wait.value_unit -->30,000 milliseconds<!-- /span -->; sets the proposed per-phase I/O deadline, capped by the remaining aggregate collection allowance. |
+| `validator_total_timeout_ms` | integer milliseconds | Reduces the aggregate collection allowance, clamped to 1–<!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span --> across all phases. Later collections can become unavailable while attempts still run. |
 | `validator_executable_path` | string | Bundle-local `sb_api_validator`; substitutes the validator spawn path after successful worker application. |
 | `worker_post_apply_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after completed slots and before `done`; paired with a shorter sentinel allowance it can exercise timeout handling. |
 | `worker_post_apply_kill_signal` | integer signal number | Disabled when absent or nonpositive. Requests self-signalling after completed slots and before `done`; observed fatal delivery can exercise `runner_failed`. |

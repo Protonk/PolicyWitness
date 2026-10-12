@@ -167,31 +167,45 @@ def expected_relations(query, attempt):
     return operation_relation, target_relation
 
 
-def _ordering_chain(runner):
-    worker = runner.get('runner_subprocess')
-    ordering = worker.get('ordering') if isinstance(worker, dict) else None
+def _step_phase(runner, step):
+    phases = runner.get('phases')
+    if not isinstance(phases, list):
+        return {}
+    matches = [p for p in phases if isinstance(p, dict) and p.get('phase_id') == step.get('phase_id')
+               and isinstance(p.get('action_ids'), list) and step.get('step_id') in p['action_ids']]
+    return matches[0] if len(matches) == 1 else {}
+
+
+def _ordering_chain(runner, phase):
+    ordering = phase.get('ordering')
     if not isinstance(ordering, dict):
         return False
     return all(ordering.get(k) is True for k in ('collection_closed_before_proceed', 'proceed_set', 'proceed_observed',
                                                    'worker_lifetime_established')) \
-        and ordering.get('protocol_violations') == [] and runner.get('sandboxed_after_apply') is True
+        and ordering.get('protocol_violations') == [] and runner.get('sandboxed_after_apply') is True \
+        and phase.get('arrival_observed') is True
 
 
 def eligible_order(runner, step):
     """True when the step's native record and the run's chain support query_first."""
     query = step.get('sandbox_check') or {}
     worker = runner.get('runner_subprocess') or {}
-    validator = runner.get('validator_subprocess') or {}
+    phase = _step_phase(runner, step)
+    validator = phase.get('validator_subprocess')
+    if not isinstance(validator, dict):
+        return False
     rc, err = query.get('native_rc'), query.get('errno')
     native = type(rc) is int and type(err) is int and query.get('rc') == rc and (
         (query.get('outcome') == 'allow' and rc == 0) or (query.get('outcome') == 'deny' and rc == 1 and err == 0))
-    records = validator.get('records') or []
+    records = validator.get('records')
+    if not isinstance(records, list):
+        return False
     matches = [r for r in records if isinstance(r, dict) and r.get('step_id') == step.get('step_id')]
     associated = len(matches) == 1 and all(matches[0].get(k) == v for k, v in {
         'operation': query.get('operation'), 'filter_type': str(query.get('filter_kind')).upper(),
         'filter_value': None if query.get('filter_kind') == 'none' else query.get('filter_value'),
         'outcome': query.get('outcome'), 'rc': rc, 'errno': err}.items())
-    return _ordering_chain(runner) and query.get('result_source') == 'validator' and native and associated \
+    return _ordering_chain(runner, phase) and query.get('result_source') == 'validator' and native and associated \
         and isinstance(worker, dict) and query.get('pid') == worker.get('pid')
 
 
@@ -320,14 +334,14 @@ def _validate_step(runner, step, failed_reporting):
         errors.append(f'{sid}: unavailable prediction requires rc=-1')
     path = query.get('path_diagnostics')
     if path is not None:
-        if not isinstance(path, dict) or (path.get('observer'), path.get('phase')) != ('runner_host', 'after_orchestration'):
-            errors.append(f'{sid}: path diagnostics lack host/phase provenance')
+        if not isinstance(path, dict) or (path.get('observer'), path.get('stage')) != ('runner_host', 'after_orchestration'):
+            errors.append(f'{sid}: path diagnostics lack host/stage provenance')
         errors.extend(f'{sid}: {error}' for error in validate_path_diagnostics(path))
     attempt_path = attempt.get('path_diagnostics')
     if attempt_path is not None:
         if not isinstance(attempt_path, dict) or \
-                (attempt_path.get('observer'), attempt_path.get('phase')) != ('runner_host', 'after_orchestration'):
-            errors.append(f'{sid}: attempt path diagnostics lack host/phase provenance')
+                (attempt_path.get('observer'), attempt_path.get('stage')) != ('runner_host', 'after_orchestration'):
+            errors.append(f'{sid}: attempt path diagnostics lack host/stage provenance')
         if isinstance(attempt_path, dict):
             if attempt_path.get('input') != attempt.get('requested_path') or not isinstance(attempt.get('requested_path'), str):
                 errors.append(f'{sid}: attempt path diagnostics input differs from requested_path')
@@ -403,18 +417,8 @@ def _validate_reply(runner):
                 type(failure.get('evidence_retained')) is not bool:
             errors.append('invalid reporting_failure diagnostics')
         elif not failure['evidence_retained'] and (runner.get('steps') != [] or
-                runner.get('runner_subprocess') is not None or runner.get('validator_subprocess') is not None or
-                runner.get('validator_spawn_failure') is not None):
+                runner.get('runner_subprocess') is not None or runner.get('phases') != []):
             errors.append('reporting failure without evidence retention must omit steps, subprocesses and validator spawn evidence')
-    spawn = runner.get('validator_spawn_failure')
-    if spawn is not None:
-        if not isinstance(spawn, dict) or spawn.get('origin') != 'runner_host' or spawn.get('operation') != 'posix_spawn' or \
-                not isinstance(spawn.get('executable_path'), str) or not spawn['executable_path'] or \
-                type(spawn.get('return_code')) is not int or spawn['return_code'] == 0 or \
-                not isinstance(spawn.get('diagnostic'), str):
-            errors.append('invalid validator_spawn_failure record')
-        elif runner.get('validator_subprocess') is not None:
-            errors.append('validator_spawn_failure cannot coexist with a validator subprocess')
     steps_value = runner.get('steps')
     if not isinstance(steps_value, list):
         errors.append('steps is not a list')
@@ -425,7 +429,7 @@ def _validate_reply(runner):
             continue
         errors.extend(_validate_step(runner, step, failed_reporting))
     if not failed_reporting:
-        errors.extend(_validate_ordering(runner))
+        errors.extend(_validate_phases(runner))
     sub = runner.get('runner_subprocess')
     if isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
         timeout = sub['policy_transfer_timeout']
@@ -441,20 +445,76 @@ def _validate_reply(runner):
     return errors
 
 
-def _validate_ordering(runner):
+def _validate_phases(runner):
+    phases = runner.get('phases')
+    if not isinstance(phases, list) or len(phases) > 8:
+        return ['phases must be a bounded array']
+    errors, ids, actions = [], [], []
+    if runner.get('runner_subprocess') is not None and not phases:
+        errors.append('a worker subprocess requires phase evidence')
+    for index, phase in enumerate(phases):
+        if not isinstance(phase, dict):
+            errors.append('phase is not an object'); continue
+        pid = phase.get('phase_id')
+        if not isinstance(pid, str) or not pid or len(pid.encode('utf-8')) > 63 or '\0' in pid:
+            errors.append('invalid phase_id')
+        ids.append(pid)
+        if type(phase.get('ordinal')) is not int or phase['ordinal'] != index + 1:
+            errors.append('phase ordinal disagrees with sequence')
+        action_ids = phase.get('action_ids')
+        if not isinstance(action_ids, list) or any(not isinstance(x, str) for x in action_ids):
+            errors.append('invalid phase action_ids')
+        else:
+            actions.extend(action_ids)
+        if phase.get('collection_status') not in ('not_reached', 'not_needed', 'collected', 'budget_exhausted', 'clock_unavailable'):
+            errors.append('invalid phase collection_status')
+        for key in ('arrival_observed', 'completion_observed'):
+            if type(phase.get(key)) is not bool:
+                errors.append('invalid phase ' + key)
+        ordering = phase.get('ordering')
+        if not isinstance(ordering, dict):
+            ordering = {}
+        if phase.get('completion_observed') is True and (phase.get('arrival_observed') is not True or ordering.get('proceed_observed') is not True):
+            errors.append('phase completion lacks arrival or acknowledgement')
+        if phase.get('arrival_observed') is True and index and (not isinstance(phases[index - 1], dict) or phases[index - 1].get('completion_observed') is not True):
+            errors.append('phase arrival lacks preceding completion')
+        if ordering.get('collection_closed_before_proceed') is True and phase.get('arrival_observed') is not True:
+            errors.append('collection closure lacks phase arrival')
+        errors.extend(_validate_ordering(runner, phase))
+    if len({str(x) for x in ids}) != len(ids) or len(set(actions)) != len(actions):
+        errors.append('duplicate phase/action identity')
+    steps = [x for x in runner.get('steps', []) if isinstance(x, dict)]
+    if actions != [x.get('step_id') for x in steps] or any(not _step_phase(runner, step) for step in steps):
+        errors.append('phase actions do not partition the ordered steps')
+    return errors
+
+
+def _validate_ordering(runner, phase):
     errors = []
     worker = runner.get('runner_subprocess')
-    validator = runner.get('validator_subprocess') or {}
+    validator = phase.get('validator_subprocess')
+    if validator is not None and not isinstance(validator, dict):
+        errors.append('invalid phase validator subprocess')
+    validator = validator if isinstance(validator, dict) else {}
+    spawn = phase.get('validator_spawn_failure')
+    if spawn is not None:
+        if not isinstance(spawn, dict) or spawn.get('origin') != 'runner_host' or spawn.get('operation') != 'posix_spawn' or \
+                not isinstance(spawn.get('executable_path'), str) or not spawn['executable_path'] or \
+                type(spawn.get('return_code')) is not int or spawn['return_code'] == 0 or \
+                not isinstance(spawn.get('diagnostic'), str):
+            errors.append('invalid validator_spawn_failure record')
+        elif phase.get('validator_subprocess') is not None:
+            errors.append('validator_spawn_failure cannot coexist with a validator subprocess')
     if not isinstance(worker, dict):
         return errors
-    ordering = worker.get('ordering')
+    ordering = phase.get('ordering')
     if not isinstance(ordering, dict):
-        return ['runner_subprocess.ordering is required beside a worker subprocess']
+        return ['phase ordering is required beside a worker subprocess']
     for key in ('collection_closed_before_proceed', 'proceed_set', 'proceed_observed', 'worker_lifetime_established'):
         if type(ordering.get(key)) is not bool:
             errors.append('invalid ordering.' + key)
     disposition = ordering.get('validator_disposition')
-    if disposition not in {'not_invoked', 'not_needed', 'not_spawned', 'reaped', 'unconfirmed'}:
+    if disposition not in ('not_invoked', 'not_needed', 'not_spawned', 'reaped', 'unconfirmed'):
         errors.append('invalid ordering.validator_disposition')
     faults = ordering.get('protocol_violations')
     if not isinstance(faults, list) or any(not isinstance(x, str) for x in faults):
@@ -469,8 +529,8 @@ def _validate_ordering(runner):
     if (s or o) and runner.get('sandboxed_after_apply') is not True:
         contradictions.append('release_without_successful_application')
     failure = ((worker.get('worker_evidence') or {}).get('failure') or {})
-    if failure.get('operation') == 11 and (o or any((x.get('attempt') or {}).get('result_source') == 'worker'
-                                                     for x in runner.get('steps', []) if isinstance(x, dict))):
+    if failure.get('operation') == 11 and type(phase.get('ordinal')) is int and failure.get('index') == phase['ordinal'] - 1 and (o or any((x.get('attempt') or {}).get('result_source') == 'worker'
+                                                     for x in runner.get('steps', []) if isinstance(x, dict) and x.get('phase_id') == phase.get('phase_id'))):
         contradictions.append('attempt_or_acknowledgement_after_proceed_failure')
     for fault in contradictions:
         if fault not in faults:
@@ -481,7 +541,7 @@ def _validate_ordering(runner):
         errors.append('ordering reaped disposition lacks validator reap evidence')
     if disposition == 'unconfirmed' and (not validator or validator.get('reaped') is not False):
         errors.append('ordering unconfirmed disposition lacks validator evidence')
-    if disposition in {'not_needed', 'not_spawned', 'not_invoked'} and validator:
+    if disposition in ('not_needed', 'not_spawned', 'not_invoked') and validator:
         errors.append('ordering terminal decision contradicts validator subprocess')
     return errors
 

@@ -827,10 +827,20 @@ fn finish_sandbox_log_capture(
                     .and_then(Value::as_array),
                 capture.deny_events.as_ref(),
             ) {
+                let phase_plan: Vec<Value> = request
+                    .get("phases")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|p| p.get("actions").and_then(Value::as_array))
+                    .flatten()
+                    .filter(|a| a.get("attempt").is_some())
+                    .cloned()
+                    .collect();
                 let plan = request.get("probe_plan").and_then(Value::as_array);
                 match bounded_step_denies(
                     steps,
-                    plan.map(Vec::as_slice).unwrap_or(&[]),
+                    plan.map(Vec::as_slice).unwrap_or(&phase_plan),
                     events,
                     worker_pid(runner),
                     capture.supervision.as_ref().map(|r| r.budget),
@@ -1206,7 +1216,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response15/a1_expected.json"
+            "../../tests/fixtures/disposition/response16/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1400,7 +1410,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response15/a1_expected.json"
+            "../../tests/fixtures/disposition/response16/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();

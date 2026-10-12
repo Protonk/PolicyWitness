@@ -23,7 +23,7 @@ with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
     assert all(a and a != b for b, a in zip(seeds, after)), 'all writes must independently change bytes'
     runner = envelope(run, rc, spec, 'validator_unavailable')
 ordering(runner)
-status = runner['validator_subprocess']
+status = runner['phases'][0]['validator_subprocess']
 assert status['term_signal'] == 9 and status.get('exit_code') is None and status['reaped'] is True, status
 assert 'signal' in runner['error'] and '9' in runner['error'], runner['error']
 received = json.loads(validator.with_suffix('.received.json').read_text())

@@ -211,7 +211,7 @@ fn host_attempt_forms<'a>(step: &'a Value, submitted: &Value) -> Option<[Option<
         || Some(input) != submitted.get("target").and_then(Value::as_str)
         || Some(input) != attempt.get("requested_path").and_then(Value::as_str)
         || forms.get("observer")?.as_str()? != "runner_host"
-        || forms.get("phase")?.as_str()? != "after_orchestration"
+        || forms.get("stage")?.as_str()? != "after_orchestration"
     {
         return None;
     }
@@ -1307,7 +1307,7 @@ mod tests {
                 "realpath_resolved": "/real/file", "parent_realpath_resolved": "/real/file"});
             if provenance {
                 forms["observer"] = json!("runner_host");
-                forms["phase"] = json!("after_orchestration");
+                forms["stage"] = json!("after_orchestration");
             }
             json!({"step_id": "s", "attempt": {"requested_path": "/link/file", "path_diagnostics": forms}})
         };
@@ -1326,7 +1326,7 @@ mod tests {
         let mut listed = block(true);
         listed["attempt"]["path_diagnostics"] = json!({"input": "/link/file",
             "same_as_input": ["realpath_resolved"], "parent_realpath_resolved": null,
-            "observer": "runner_host", "phase": "after_orchestration"});
+            "observer": "runner_host", "stage": "after_orchestration"});
         assert!(match_step_denies(&[listed.clone()], &plan, &event, Some(42)).is_empty());
         let same = [deny(Some(42), "file-read-data", "/link/file")];
         let matches = match_step_denies(&[listed.clone()], &plan, &same, Some(42));
@@ -1350,11 +1350,11 @@ mod tests {
         let plan = [request("s", "open_read", "/link/file")];
         let valid = json!({"input": "/link/file", "same_as_input": [],
             "realpath_resolved": "/real/file", "parent_realpath_resolved": null,
-            "observer": "runner_host", "phase": "after_orchestration"});
+            "observer": "runner_host", "stage": "after_orchestration"});
         let mut malformed = Vec::new();
         for (key, value) in [
             ("observer", json!("worker")),
-            ("phase", json!("before_attempt")),
+            ("stage", json!("before_attempt")),
             ("input", json!("/unrelated/file")),
             ("same_as_input", json!(["unknown"])),
             ("same_as_input", json!([3])),
@@ -1418,7 +1418,7 @@ mod tests {
         let step = json!({"step_id": "s", "attempt": {"requested_path": "/link/new",
             "path_diagnostics": {"input": "/link/new", "same_as_input": [],
                 "realpath_resolved": null, "parent_realpath_resolved": "/real/new",
-                "observer": "runner_host", "phase": "after_orchestration"}}});
+                "observer": "runner_host", "stage": "after_orchestration"}}});
         for (action, op) in [
             ("create", "file-write-create"),
             ("unlink", "file-write-unlink"),

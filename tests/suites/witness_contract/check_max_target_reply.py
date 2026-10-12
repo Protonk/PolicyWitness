@@ -66,13 +66,21 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
                 probe_plan=steps)
 
 
+def request_steps(request):
+    return request.get('probe_plan', [step for phase in request.get('phases', []) for step in phase['actions']])
+
+
 def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False, exec_output=None):
     assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
-    assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request['probe_plan']]
+    assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request_steps(request)]
     errors = consumer.validate(runner)
     assert not errors, errors
-    for step, planned in zip(runner['steps'], request['probe_plan']):
+    if 'phases' in request:
+        assert len(runner['phases']) == 8
+        assert all(p['arrival_observed'] and p['completion_observed'] and len(p['validator_subprocess']['records']) == 32 for p in runner['phases'])
+        assert all(step['comparison']['order'] == 'query_first' for step in runner['steps'])
+    for step, planned in zip(runner['steps'], request_steps(request)):
         check, attempt = step['sandbox_check'], step['attempt']
         target = planned['attempt']['target']
         query = planned['sandbox_check']['filter']['value']
@@ -105,7 +113,7 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
     assert failure['field'] == field, failure
     assert (failure['actual'], failure['maximum'], failure['unit']) == (OVER_CAP_QUERY_BYTES, maximum, 'utf8_bytes'), failure
     assert failure['step_id'] == IDS[step_index], failure
-    assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+    assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
     assert runner['steps'] == [], runner
     errors = consumer.validate(runner)
     assert not errors, errors
@@ -181,6 +189,12 @@ def main():
         # existing file, so predictions resolve, while the attempts read the plain set.
         assert all(len(query.encode()) == QUERY_FILTER_BYTES for query in escaped)
         observations.append(run_case(pw, out, 'independent_query', specimen(plain, escaped)))
+        phased = specimen(plain, escaped)
+        actions = phased.pop('probe_plan')
+        phased['phases'] = [dict(phase_id='p' + str(i), actions=actions[i * 32:(i + 1) * 32]) for i in range(8)]
+        observations.append(run_case(pw, out, 'eight_phase_maximum', phased))
+        assert all(Path(target).read_bytes() == b'x' for target in plain + escaped)
+
         # The existing fixture has direct output/exit controls in exec_fixture.
         repo = Path(__file__).resolve().parents[3]
         helper = root / 'exec-fixture'

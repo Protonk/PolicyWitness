@@ -215,7 +215,7 @@ QUESTIONS = (
                             'with the encoded word; or an index on a non-indexed operation', rules=('D3',))),
         None,
         (Unresolved('no_progress_published', 'no progress word published (raw zero)'),
-         Unresolved('progress_unrecognized', 'unrecognized operation or phase code; the raw word is retained')),
+         Unresolved('progress_unrecognized', 'unrecognized operation or stage code; the raw word is retained')),
         ('reading a parameter index as a step index', 'ordering by numeric opcode instead of the worker protocol'),
         'whenever a progress word was published', 'no_progress_word',
         ('step_boundary_reached', 'step_result_published')),
@@ -391,9 +391,9 @@ def step(slot, supported=True):
     return {'slot': slot, 'supported': supported}
 
 
-def progress(operation, phase, index=None):
-    word = {'operation': operation, 'phase': phase,
-            'raw': (operation << 24) | (phase << 20) | (0 if index is None else index + 1)}
+def progress(operation, stage, index=None):
+    word = {'operation': operation, 'stage': stage,
+            'raw': (operation << 24) | (stage << 20) | (0 if index is None else index + 1)}
     if index is not None:
         word['index'] = index
     return word

@@ -126,7 +126,7 @@ def check_cli(case, out, pw):
             worker = runner['runner_subprocess']
             assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
             assert worker['partial_steps'] is False and worker['pid'] == runner['pid'], worker
-            validator_status = runner['validator_subprocess']
+            validator_status = runner['phases'][0]['validator_subprocess']
             assert validator_status['pid'] > 0 and validator_status['exit_code'] == 0, validator_status
             assert validator_status.get('term_signal') is None, validator_status
             received = json.loads(validator.with_suffix('.received.json').read_text())

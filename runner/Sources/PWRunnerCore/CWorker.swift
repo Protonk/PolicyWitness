@@ -24,8 +24,8 @@ import CryptoKit
  *   6. posix_spawn pw-probe-runner with FDs dup'd to 0/3/4.
  *   7. Write the policy text to the policy pipe and close.
  *   8. Read the pre-apply ready byte (deadline).
- *   9. Acquire applied, run the synchronous collection hook, release proceed;
- *      acquire acknowledgement and done with bounded sentinel polling.
+ *   9. Acquire applied and each phase arrival; collect, then release its ordinal;
+ *      retain per-phase acknowledgement/completion with bounded sentinel polling.
  *  10. Release-store `exit_requested = 1`; waitpid with grace timer;
  *      SIGKILL fallback if the worker hangs.
  *  11. Reconstruct CWorkerStepResult per slot by reading the shm
@@ -48,14 +48,16 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "64aa50556d3a6220a443c7de8667be608d5fb78c9319a586285e55d90be39c7b"
-    static let abiIdentity: [UInt8] = [0x64, 0xaa, 0x50, 0x55, 0x6d, 0x3a, 0x62, 0x20, 0xa4, 0x43, 0xc7, 0xde, 0x86, 0x67, 0xbe, 0x60, 0x8d, 0x5f, 0xb7, 0x8c, 0x93, 0x19, 0xa5, 0x86, 0x28, 0x5e, 0x55, 0xd9, 0x0b, 0xe3, 0x9c, 0x7b]
+    static let abiIdentityHex = "78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d"
+    static let abiIdentity: [UInt8] = [0x78, 0xe5, 0xab, 0x71, 0xd8, 0x2e, 0x10, 0x14, 0x86, 0xf2, 0x91, 0xe1, 0x33, 0xe1, 0xbd, 0xb1, 0xa9, 0x12, 0x57, 0x7f, 0x0d, 0xab, 0xee, 0x8e, 0xbb, 0x35, 0xac, 0x63, 0xb3, 0xa5, 0x23, 0x3d]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
     static let abiIdentityBytes: Int = 32
 
-    static let headerBytes: Int     = 96
+    static let headerBytes: Int     = 384
+    static let maxPhases: Int = 8
+    static let phaseBytes: Int = 32
     static let slotBytes: Int       = 8192
     static let maxSteps: Int        = 256
     static let policyBytes: Int     = 262144
@@ -95,6 +97,14 @@ enum PWShmLayout {
     static let captureNonceOffset: Int = 40
     static let proceedOffset: Int = 56
     static let proceedObservedOffset: Int = 60
+
+    static let phaseCountOffset: Int = 96
+    static let phaseRecordsOffset: Int = 128
+    static let phaseFirstSlotOffset: Int = 0
+    static let phaseEndSlotOffset: Int = 4
+    static let phaseArrivedOffset: Int = 8
+    static let phaseAcknowledgedOffset: Int = 12
+    static let phaseCompletedOffset: Int = 16
 
     static let slotsOffset: Int    = headerBytes
     static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
@@ -218,10 +228,28 @@ struct CWorkerParam {
     }
 }
 
+struct CWorkerPhaseInput {
+    var firstSlot: Int
+    var endSlot: Int
+}
+struct CWorkerPhaseOutput {
+    var arrived = false
+    var collectionClosed = false
+    var releaseSet = false
+    var acknowledged = false
+    var completed = false
+    var ownershipEstablished = false
+    var violations: [String] = []
+}
+
 struct CWorkerInput {
     static let defaultPolicyTransferTimeoutMs = 5_000
     // Internal test setting; never admitted from request JSON.
     var policyTransferTimeoutMs = CWorkerInput.defaultPolicyTransferTimeoutMs
+    // Internal controls operate on the real wait and ordinal store. They are
+    // never decoded from a specimen and cannot manufacture observations.
+    var proceedWaitMs: Int? = nil
+    var phaseReleaseOrdinal: ((Int) -> UInt32)? = nil
     static let defaultSentinelTimeoutMs = 120_000
     var workerExecutablePath: String
     var policy: String
@@ -230,6 +258,7 @@ struct CWorkerInput {
     var captureAppliedProfile: Bool
     var captureNonce: String?
     var slots: [CWorkerSlotInput]
+    var phases: [CWorkerPhaseInput]
     var readyByteTimeoutMs: Int
     var sentinelTimeoutMs: Int
     var exitGraceMs: Int
@@ -267,6 +296,7 @@ struct CWorkerInput {
                 policy: String,
                 params: [CWorkerParam] = [],
                 slots: [CWorkerSlotInput],
+                phases: [CWorkerPhaseInput]? = nil,
                 readyByteTimeoutMs: Int = 1_000,
                 sentinelTimeoutMs: Int = CWorkerInput.defaultSentinelTimeoutMs,
                 exitGraceMs: Int = 1_000,
@@ -281,6 +311,7 @@ struct CWorkerInput {
         self.policy = policy
         self.params = params
         self.slots = slots
+        self.phases = phases ?? [CWorkerPhaseInput(firstSlot: 0, endSlot: slots.count)]
         self.readyByteTimeoutMs = readyByteTimeoutMs
         self.sentinelTimeoutMs = sentinelTimeoutMs
         self.exitGraceMs = exitGraceMs
@@ -341,6 +372,7 @@ struct CWorkerOutput {
     var workerEvidence: PWWorkerEvidence? = nil
     var policyTransferTimeout: PWWorkerPolicyTransferTimeout? = nil
     var policyTransferError: PWWorkerPolicyTransferError? = nil
+    var phases: [CWorkerPhaseOutput] = []
     var hookInvoked: Bool = false
     var proceedSet: Bool = false
     var proceedObserved: Bool = false
@@ -371,7 +403,7 @@ func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
     let raw = loadAcquire(e, offset: PWShmLayout.evidenceProgressOffset)
     let item = raw & 0xfffff
     let progress = raw == 0 ? nil : PWWorkerProgress(raw: raw, operation: raw >> 24,
-        phase: (raw >> 20) & 15, index: item == 0 ? nil : item - 1)
+        stage: (raw >> 20) & 15, index: item == 0 ? nil : item - 1)
     let published = loadAcquire(e, offset: PWShmLayout.evidenceFailurePublishedOffset)
     var state = published == 0 ? "absent" : published == 2 ? "incomplete" : "invalid"
     var failure: PWWorkerFailure? = nil
@@ -555,6 +587,9 @@ let parameterKeyAdmission = AdmissionStringRule(field: "key", maximum: PWShmLayo
 
 /// Checks local to the ABI writer. The C reader retains its defensive guard.
 func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? {
+    if input.phases.count > PWShmLayout.maxPhases {
+        return PWRunnerAdmissionFailure(field: "phases", actual: input.phases.count, maximum: PWShmLayout.maxPhases, unit: "items")
+    }
     func check(_ field: String, _ actual: Int, _ maximum: Int, _ unit: String,
                step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
         guard actual > maximum else { return nil }
@@ -603,6 +638,11 @@ func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? 
 /// worker's monotonic proceed budget continues independently. Returning closes
 /// collection and releases attempts, including after validator failure.
 typealias CWorkerPostAppliedHook = (pid_t) -> Void
+typealias CWorkerPhaseHook = (pid_t, Int) -> Void
+
+func runCWorker(_ input: CWorkerInput, phaseBoundary: @escaping CWorkerPhaseHook) -> CWorkerRunResult {
+    runCWorker(input, processCalls: ChildProcessCalls(), phaseBoundary: phaseBoundary)
+}
 
 func runCWorker(_ input: CWorkerInput,
                        postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
@@ -623,7 +663,7 @@ enum ChildWaitObservation { case pending, reaped, failed }
 
 /// One child's host observations. Status is assigned only by a successful reap.
 /// Across polling/grace/final reap, allow two EINTR retries total. A terminal
-/// wait error ends that phase; ECHILD ends all waits/kills because ownership is
+/// wait error ends that stage; ECHILD ends all waits/kills because ownership is
 /// lost. At most five failed calls can be recorded (two recovered interruptions
 /// plus one terminal error in each of three phases). No errors are dropped.
 /// Grace retains its existing budget. A failed kill permits only a nonblocking
@@ -645,7 +685,7 @@ struct ChildProcessState {
         self.calls = calls
     }
 
-    mutating func wait(options: Int32, phase: String) -> ChildWaitObservation {
+    mutating func wait(options: Int32, stage: String) -> ChildWaitObservation {
         while true {
             var candidate: Int32 = 0
             let rc = calls.wait(pid, &candidate, options)
@@ -656,7 +696,7 @@ struct ChildProcessState {
             }
             if rc == 0 { return .pending }
             if let error = savedErrno {
-                waitErrors.append(PWRunnerWaitError(phase: phase, rc: rc, errno: error))
+                waitErrors.append(PWRunnerWaitError(stage: stage, rc: rc, errno: error))
                 if error == ECHILD { childUnavailable = true }
                 if error == EINTR && interruptRetries > 0 {
                     interruptRetries -= 1
@@ -672,17 +712,22 @@ struct ChildProcessState {
         let rc = calls.kill(pid, SIGKILL)
         let savedErrno = rc == -1 ? errno : nil
         terminationRequest = PWRunnerTerminationRequest(signal: SIGKILL, rc: rc, errno: savedErrno)
-        _ = wait(options: rc == 0 ? 0 : WNOHANG, phase: "after_termination")
+        _ = wait(options: rc == 0 ? 0 : WNOHANG, stage: "after_termination")
     }
 }
 
 func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
-                postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
+                postApplied: CWorkerPostAppliedHook? = nil, phaseBoundary: CWorkerPhaseHook? = nil) -> CWorkerRunResult {
     if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
         return .failure(.captureNonceInvalid)
     }
     // All capacity refusals use the same host-owned record, before shm/spawn.
     if let failure = workerAdmissionFailure(input) { return .failure(.admissionFailed(failure)) }
+    var endSlot = 0
+    guard !input.phases.isEmpty, input.phases.allSatisfy({ phase in
+        defer { endSlot = phase.endSlot }
+        return phase.firstSlot == endSlot && phase.endSlot >= endSlot && phase.endSlot <= input.slots.count
+    }), endSlot == input.slots.count else { return .failure(.shmSetupFailed("invalid phase partition")) }
     for slot in input.slots where slot.attemptKind == .execSpawn && !slot.target.hasPrefix("/") {
         return .failure(.execTargetNotAbsolute(stepId: slot.stepId, target: slot.target))
     }
@@ -745,6 +790,13 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
     if input.captureAppliedProfile, let nonce = captureNonceBytes(input.captureNonce) {
         nonce.copyBytes(to: rawBase.advanced(by: PWShmLayout.captureNonceOffset), count: nonce.count)
+    }
+
+    writeU32(rawBase, offset: PWShmLayout.phaseCountOffset, UInt32(input.phases.count))
+    for (index, phase) in input.phases.enumerated() {
+        let base = rawBase.advanced(by: PWShmLayout.phaseRecordsOffset + index * PWShmLayout.phaseBytes)
+        writeU32(base, offset: PWShmLayout.phaseFirstSlotOffset, UInt32(phase.firstSlot))
+        writeU32(base, offset: PWShmLayout.phaseEndSlotOffset, UInt32(phase.endSlot))
     }
 
     // ---- Populate slots.
@@ -867,6 +919,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         argv.append("--exec-child-deadline-ms")
         argv.append(String(deadlineMs))
     }
+    if let waitMs = input.proceedWaitMs {
+        argv += ["--proceed-wait-ms", String(waitMs)]
+    }
     if let budgetMs = input.execAttemptBudgetMs {
         argv.append("--exec-attempt-budget-ms")
         argv.append(String(budgetMs))
@@ -933,26 +988,35 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // the full sentinel deadline over a corpse.
     var sawApplied = false
     var sawDone = false
-    var hookFired = false
-    var proceedSet = false
+    var phaseOutputs = input.phases.map { _ in CWorkerPhaseOutput() }
+    var nextPhase = 0
     var ownershipUnbroken = true
-    var acknowledgedWhileOwned = false
-    var orderingFaults: [String] = []
+    func phaseBase(_ index: Int) -> UnsafeMutablePointer<UInt8> {
+        rawBase.advanced(by: PWShmLayout.phaseRecordsOffset + index * PWShmLayout.phaseBytes)
+    }
     func observeAcknowledgement() {
-        if ownershipUnbroken && loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset) == 1 {
-            acknowledgedWhileOwned = true
+        for index in input.phases.indices {
+            let base = phaseBase(index)
+            let ack = loadAcquire(base, offset: PWShmLayout.phaseAcknowledgedOffset)
+            if ownershipUnbroken && phaseOutputs[index].releaseSet && ack == 1 {
+                phaseOutputs[index].ownershipEstablished = true
+            }
         }
     }
-    func checkPrematurePublication() {
-        let ack = loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset)
-        let progress = loadAcquire(rawBase.advanced(by: PWShmLayout.evidenceOffset),
-                                   offset: PWShmLayout.evidenceProgressOffset)
-        let completed = input.slots.indices.contains { i in
+    func checkPrematurePublication(_ index: Int) {
+        let base = phaseBase(index)
+        let ordinal = loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset)
+        let ack = loadAcquire(base, offset: PWShmLayout.phaseAcknowledgedOffset)
+        let progress = loadAcquire(rawBase.advanced(by: PWShmLayout.evidenceOffset), offset: PWShmLayout.evidenceProgressOffset)
+        let progressIndex = Int(progress & 0xfffff) - 1
+        let completed = (input.phases[index].firstSlot..<input.slots.count).contains { i in
             loadAcquire(rawBase.advanced(by: PWShmLayout.slotsOffset + i * PWShmLayout.slotBytes),
                         offset: PWShmLayout.slotCompletedOffset) == 1
         }
-        if ack != 0 { orderingFaults.append("acknowledgement_before_release") }
-        if completed || progress >> 24 == 9 { orderingFaults.append("attempt_before_release") }
+        if ack != 0 || ordinal > UInt32(index) { phaseOutputs[index].violations.append("acknowledgement_before_release") }
+        if completed || (progress >> 24 == 9 && progressIndex >= input.phases[index].firstSlot) {
+            phaseOutputs[index].violations.append("attempt_before_release")
+        }
     }
     var pollStopReason = transferFailure == nil ? "sentinel_deadline" : (transferTimeout == nil ? "policy_write_error" : "policy_transfer_deadline")
     if transferFailure == nil {
@@ -969,22 +1033,57 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1 {
                 sawApplied = true
             }
-            // Fire the post-applied hook the first iteration after we
-            // observe `applied`. The worker is now under the policy;
-            // anything the hook does sees the sandboxed worker_pid.
-            // We fire BEFORE checking `done` so a short-running worker
-            // can't finish before the hook starts.
-            if sawApplied && !hookFired
+            // Only the exact arrived phase may collect predictions. Planning and
+            // collection occur while this worker is paused, after prior completion.
+            if sawApplied && nextPhase < input.phases.count
                 && readI32(rawBase, offset: PWShmLayout.applyRcOffset) == 0
-                && workerIdentityMatches(rawBase) {
-                checkPrematurePublication()
-                hookFired = true
-                if let hook = postApplied { hook(pid) }
-                // Synchronous collection is closed. No record can enter this
-                // run's predictions after the release store, including on error.
-                checkPrematurePublication()
-                storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 1)
-                proceedSet = true
+                && workerIdentityMatches(rawBase)
+                && loadAcquire(rawBase, offset: PWShmLayout.doneOffset) == 0
+                && loadAcquire(phaseBase(nextPhase), offset: PWShmLayout.phaseArrivedOffset) == 1 {
+                let index = nextPhase
+                phaseOutputs[index].arrived = true
+                checkPrematurePublication(index)
+                observeAcknowledgement()
+                if index > 0 && loadAcquire(phaseBase(index - 1), offset: PWShmLayout.phaseCompletedOffset) != 1 {
+                    phaseOutputs[index].violations.append("arrival_without_previous_completion")
+                }
+                if loadAcquire(phaseBase(index), offset: PWShmLayout.phaseCompletedOffset) != 0 {
+                    phaseOutputs[index].violations.append("completion_before_release")
+                }
+                if !phaseOutputs[index].violations.isEmpty {
+                    // Preserve the invalid boundary and stop collections. Normal
+                    // done/death/deadline polling still owns terminal cleanup.
+                    nextPhase = input.phases.count
+                    continue
+                }
+                switch process.wait(options: WNOHANG, stage: "poll") {
+                case .reaped: pollStopReason = "child_reaped"; break polling
+                case .failed: ownershipUnbroken = false; pollStopReason = "wait_error"; break polling
+                case .pending: break
+                }
+                if let hook = phaseBoundary { hook(pid, index) }
+                else if index == 0, let hook = postApplied { hook(pid) }
+                phaseOutputs[index].collectionClosed = true
+                checkPrematurePublication(index)
+                // Collection may outlast the worker wait or lose the child. A
+                // closed collection alone never authorizes a late release.
+                switch process.wait(options: WNOHANG, stage: "poll") {
+                case .reaped: pollStopReason = "child_reaped"; break polling
+                case .failed: ownershipUnbroken = false; pollStopReason = "wait_error"; break polling
+                case .pending: break
+                }
+                if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) == 0
+                    && loadAcquire(phaseBase(index), offset: PWShmLayout.phaseArrivedOffset) == 1
+                    && loadAcquire(phaseBase(index), offset: PWShmLayout.phaseAcknowledgedOffset) == 0
+                    && loadAcquire(phaseBase(index), offset: PWShmLayout.phaseCompletedOffset) == 0
+                    && (index == 0 || loadAcquire(phaseBase(index - 1), offset: PWShmLayout.phaseCompletedOffset) == 1)
+                    && phaseOutputs[index].violations.isEmpty {
+                    let ordinal = input.phaseReleaseOrdinal?(index) ?? UInt32(index + 1)
+                    storeRelease(rawBase, offset: PWShmLayout.proceedOffset, ordinal)
+                    phaseOutputs[index].releaseSet = ordinal == UInt32(index + 1)
+                    if ordinal != UInt32(index + 1) { phaseOutputs[index].violations.append("wrong_release_ordinal") }
+                }
+                nextPhase += 1
             }
             observeAcknowledgement()
             if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) != 0 {
@@ -999,7 +1098,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // its status and let the classifier read the signal/exit as
             // the source of truth.
             if iter % exitCheckEvery == 0 {
-                switch process.wait(options: WNOHANG, phase: "poll") {
+                switch process.wait(options: WNOHANG, stage: "poll") {
                 case .reaped:
                     pollStopReason = "child_reaped"
                     break polling
@@ -1033,7 +1132,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         graceEnd = "exhausted"
         grace: for _ in 0..<graceIters {
             observeAcknowledgement()
-            switch process.wait(options: WNOHANG, phase: "exit_grace") {
+            switch process.wait(options: WNOHANG, stage: "exit_grace") {
             case .reaped:
                 graceEnd = "reaped_during_grace"
                 break grace
@@ -1059,7 +1158,13 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // Never rewrite pollStopReason or run the validator against a reaped child.
     sawApplied = loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1
     sawDone = loadAcquire(rawBase, offset: PWShmLayout.doneOffset) == 1
-    let finalProceedObserved = loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset) == 1
+    for index in input.phases.indices {
+        let base = phaseBase(index)
+        phaseOutputs[index].arrived = loadAcquire(base, offset: PWShmLayout.phaseArrivedOffset) == 1
+        phaseOutputs[index].acknowledged = loadAcquire(base, offset: PWShmLayout.phaseAcknowledgedOffset) == 1
+        phaseOutputs[index].completed = loadAcquire(base, offset: PWShmLayout.phaseCompletedOffset) == 1
+    }
+    let finalProceedObserved = phaseOutputs.allSatisfy { $0.acknowledged }
     let applyRC = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyRcOffset) : 0
     let applyErrno = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyErrnoOffset) : 0
 
@@ -1149,11 +1254,12 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         workerEvidence: decodeWorkerEvidence(rawBase),
         policyTransferTimeout: transferTimeout,
         policyTransferError: transferError,
-        hookInvoked: hookFired,
-        proceedSet: proceedSet,
+        phases: phaseOutputs,
+        hookInvoked: phaseOutputs.allSatisfy { $0.collectionClosed },
+        proceedSet: phaseOutputs.allSatisfy { $0.releaseSet },
         proceedObserved: finalProceedObserved,
-        proceedOwnershipEstablished: finalProceedObserved && (acknowledgedWhileOwned || ownershipUnbroken),
-        orderingProtocolViolations: Array(Set(orderingFaults)).sorted(),
+        proceedOwnershipEstablished: phaseOutputs.allSatisfy { $0.ownershipEstablished },
+        orderingProtocolViolations: Array(Set(phaseOutputs.flatMap { $0.violations })).sorted(),
         cleanupTrigger: cleanupTrigger,
         graceEnd: graceEnd,
         collectionBasis: collectionBasis

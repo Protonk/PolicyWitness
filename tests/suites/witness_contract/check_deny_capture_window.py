@@ -125,7 +125,7 @@ def main():
         attempt = step['attempt']
         assert attempt['outcome'] == 'open_failed' and attempt['errno'] in (errno.EPERM, errno.EACCES), attempt
         forms = attempt['path_diagnostics']
-        assert (forms['observer'], forms['phase']) == ('runner_host', 'after_orchestration'), forms
+        assert (forms['observer'], forms['stage']) == ('runner_host', 'after_orchestration'), forms
     # The host's later resolution of the link form is mandatory evidence; whether
     # the OS logged the denial under that form is a separate, optional observation.
     via_forms = steps[ids['via']]['attempt']['path_diagnostics']

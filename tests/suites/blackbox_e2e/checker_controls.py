@@ -226,19 +226,19 @@ def consumer_controls(artifacts, current):
     attempt = first(resolved)['attempt']
     attempt['requested_path'] = '/link/file'
     attempt['path_diagnostics'] = dict(input='/link/file', observer='runner_host',
-        phase='after_orchestration', same_as_input=[], realpath_resolved='/real/file',
+        stage='after_orchestration', same_as_input=[], realpath_resolved='/real/file',
         parent_realpath_resolved=None)
     # The query names the same target so the record's target relation holds.
     first(resolved)['sandbox_check']['filter_value'] = '/link/file'
     first(resolved)['sandbox_check']['path_diagnostics']['input'] = '/link/file'
-    for record in runner(resolved)['validator_subprocess']['records']:
+    for record in runner(resolved)['phases'][0]['validator_subprocess']['records']:
         if record['step_id'] == 'fs_write_allowed':
             record['filter_value'] = '/link/file'
     run('attempt_path_forms', resolved)
     for name, change, diagnostic in [
         ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
-        ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/phase provenance'),
-        ('wrong_phase', lambda a: a['path_diagnostics'].update(phase='before_attempt'), 'host/phase provenance'),
+        ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/stage provenance'),
+        ('wrong_phase', lambda a: a['path_diagnostics'].update(stage='before_attempt'), 'host/stage provenance'),
         ('missing_compact', lambda a: a['path_diagnostics'].pop('same_as_input'), 'require same_as_input'),
         ('duplicate_form', lambda a: a['path_diagnostics'].update(same_as_input=['realpath_resolved']*2), 'unique supported form names'),
         ('missing_form', lambda a: a['path_diagnostics'].pop('parent_realpath_resolved'), 'exclusively'),
@@ -289,19 +289,19 @@ def consumer_controls(artifacts, current):
     # The ordering chain: query_first needs the complete chain and an eligible
     # native record; an eligible record with the chain must say query_first.
     def ordering(e):
-        return runner(e)['runner_subprocess']['ordering']
+        return runner(e)['phases'][0]['ordering']
     for name, change, diagnostic in [
         ('collection_not_closed', lambda e: ordering(e).update(collection_closed_before_proceed=False), 'lacks eligible record or ordering chain'),
         ('proceed_not_set', lambda e: ordering(e).update(proceed_set=False), 'lacks eligible record or ordering chain'),
         ('proceed_not_observed', lambda e: ordering(e).update(proceed_observed=False), 'lacks eligible record or ordering chain'),
         ('lifetime_unestablished', lambda e: ordering(e).update(worker_lifetime_established=False), 'lacks eligible record or ordering chain'),
         ('failed_apply', lambda e: runner(e).update(sandboxed_after_apply=False), 'lacks eligible record or ordering chain'),
-        ('missing_ordering', lambda e: runner(e)['runner_subprocess'].pop('ordering'), 'ordering is required'),
+        ('missing_ordering', lambda e: runner(e)['phases'][0].pop('ordering'), 'ordering is required'),
         ('synthetic_query', lambda e: first(e)['sandbox_check'].update(result_source='synthetic'), 'lacks eligible record or ordering chain'),
         ('incoherent_native', lambda e: first(e)['sandbox_check'].update(native_rc=1), 'lacks eligible record or ordering chain'),
         ('wrong_pid', lambda e: first(e)['sandbox_check'].update(pid=runner(e)['runner_subprocess']['pid'] + 1), 'lacks eligible record or ordering chain'),
-        ('wrong_tuple', lambda e: runner(e)['validator_subprocess']['records'][0].update(filter_value='/other'), 'lacks eligible record or ordering chain'),
-        ('duplicate_record', lambda e: runner(e)['validator_subprocess']['records'].append(copy.deepcopy(runner(e)['validator_subprocess']['records'][0])), 'lacks eligible record or ordering chain'),
+        ('wrong_tuple', lambda e: runner(e)['phases'][0]['validator_subprocess']['records'][0].update(filter_value='/other'), 'lacks eligible record or ordering chain'),
+        ('duplicate_record', lambda e: runner(e)['phases'][0]['validator_subprocess']['records'].append(copy.deepcopy(runner(e)['phases'][0]['validator_subprocess']['records'][0])), 'lacks eligible record or ordering chain'),
         ('unestablished_despite_chain', lambda e: first(e)['comparison'].update(order='unestablished'), 'requires query_first'),
     ]:
         broken = copy.deepcopy(current)
@@ -330,7 +330,7 @@ def consumer_controls(artifacts, current):
         if not retained:
             r['steps'] = []
             r.pop('runner_subprocess', None)
-            r.pop('validator_subprocess', None)
+            r['phases'] = []
     def preserved(e):
         view = lifecycle(e)
         require(view['reporting'] == 'reported', 'retained lifecycle evidence must remain readable')
@@ -363,21 +363,22 @@ def consumer_controls(artifacts, current):
                  diagnostic='unfamiliar native launch diagnostic')
     spawned = copy.deepcopy(current)
     r = runner(spawned)
-    r.update(rc=1, normalized_outcome='validator_spawn_failed', error='native launch failure', validator_spawn_failure=copy.deepcopy(spawn))
+    r.update(rc=1, normalized_outcome='validator_spawn_failed', error='native launch failure')
+    r['phases'][0]['validator_spawn_failure'] = copy.deepcopy(spawn)
     spawned['result'].update(ok=False, exit_code=1, normalized_outcome='validator_spawn_failed')
-    r.pop('validator_subprocess')
-    r['runner_subprocess']['ordering']['validator_disposition'] = 'not_spawned'
+    r['phases'][0].pop('validator_subprocess')
+    r['phases'][0]['ordering']['validator_disposition'] = 'not_spawned'
     for step in r['steps']:
         step['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None, errno=None,
                                      missing_reason='validator_not_invoked')
         step['comparison'].update(order='unestablished')
-    run('unfamiliar_spawn_failure', spawned, lambda e: require(runner(e)['validator_spawn_failure'] == spawn, 'raw launch record changed'))
+    run('unfamiliar_spawn_failure', spawned, lambda e: require(runner(e)['phases'][0]['validator_spawn_failure'] == spawn, 'raw launch record changed'))
     for name, change, diagnostic in [
-        ('zero_code', lambda e: runner(e)['validator_spawn_failure'].update(return_code=0), 'invalid validator_spawn_failure'),
-        ('string_code', lambda e: runner(e)['validator_spawn_failure'].update(return_code='2'), 'invalid validator_spawn_failure'),
-        ('missing_path', lambda e: runner(e)['validator_spawn_failure'].pop('executable_path'), 'invalid validator_spawn_failure'),
-        ('foreign_origin', lambda e: runner(e)['validator_spawn_failure'].update(origin='validator'), 'invalid validator_spawn_failure'),
-        ('with_subprocess', lambda e: runner(e).update(validator_subprocess=dict(reaped=True, records=[])), 'cannot coexist'),
+        ('zero_code', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].update(return_code=0), 'invalid validator_spawn_failure'),
+        ('string_code', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].update(return_code='2'), 'invalid validator_spawn_failure'),
+        ('missing_path', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].pop('executable_path'), 'invalid validator_spawn_failure'),
+        ('foreign_origin', lambda e: runner(e)['phases'][0]['validator_spawn_failure'].update(origin='validator'), 'invalid validator_spawn_failure'),
+        ('with_subprocess', lambda e: runner(e)['phases'][0].update(validator_subprocess=dict(reaped=True, records=[])), 'cannot coexist'),
     ]:
         broken = copy.deepcopy(spawned)
         change(broken)
@@ -549,7 +550,7 @@ def mutation_order_controls(artifacts, current):
     target = step['attempt']['requested_path']
     step['sandbox_check'].update(operation='file-write-unlink')
     step['attempt'].update(requested_action='unlink', outcome='ok', rc=0, errno=None)
-    for record in r['validator_subprocess']['records']:
+    for record in r['phases'][0]['validator_subprocess']['records']:
         if record['step_id'] == step['step_id']:
             record['operation'] = 'file-write-unlink'
     assert not validate(base), validate(base)
@@ -559,8 +560,8 @@ def mutation_order_controls(artifacts, current):
     # No validator ran (its spawn failed): collection closed with nothing to
     # collect, the worker was released, and no row can claim an order.
     unordered = copy.deepcopy(base)
-    unordered['data']['runner_result']['runner_subprocess']['ordering'].update(validator_disposition='not_spawned')
-    unordered['data']['runner_result'].pop('validator_subprocess')
+    unordered['data']['runner_result']['phases'][0]['ordering'].update(validator_disposition='not_spawned')
+    unordered['data']['runner_result']['phases'][0].pop('validator_subprocess')
     for s in unordered['data']['runner_result']['steps']:
         s['sandbox_check'].update(result_source='synthetic', native_rc=None, errno=None, outcome='error', missing_reason='validator_not_invoked')
         s['comparison']['order'] = 'unestablished'
@@ -581,7 +582,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response15/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response16/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -612,7 +613,7 @@ def main():
     run_controls(artifacts)
     for label, change, diagnostic in [
         ('missing_intent', lambda s: s['attempt'].pop('requested_action'), 'missing attempt.requested_action'),
-        ('host_as_validator', lambda s: s['sandbox_check'].update(path_diagnostics={'input': s['sandbox_check']['filter_value'], 'observer': 'validator', 'phase': 'after_orchestration'}), 'path diagnostics lack host/phase provenance'),
+        ('host_as_validator', lambda s: s['sandbox_check'].update(path_diagnostics={'input': s['sandbox_check']['filter_value'], 'observer': 'validator', 'stage': 'after_orchestration'}), 'path diagnostics lack host/stage provenance'),
     ]:
         lost = copy.deepcopy(baseline)
         change(lost['data']['runner_result']['steps'][0])
@@ -657,7 +658,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response15/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response16/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

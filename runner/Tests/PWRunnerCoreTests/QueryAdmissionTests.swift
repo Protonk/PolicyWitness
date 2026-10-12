@@ -75,7 +75,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest, field)
                 try expectEqual(result.admission_failure?.field, field)
                 try expectNil(result.runner_subprocess)
-                try expectNil(result.validator_subprocess)
+                try expectNil(result.phases.first?.validator_subprocess)
                 try expectTrue(result.steps.isEmpty)
                 try expectTrue(pwRunnerReplyData(result).count < 4096)
             }
@@ -163,8 +163,8 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest)
             try expectEqual(result.rc, 1)
             try expectNil(result.runner_subprocess)
-            try expectNil(result.validator_subprocess)
-            try expectNil(result.validator_spawn_failure)
+            try expectNil(result.phases.first?.validator_subprocess)
+            try expectNil(result.phases.first?.validator_spawn_failure)
             guard let refused = result.admission_failure else { throw TestFailure(message: "no admission record") }
             try expectEqual(refused.origin, "runner_host")
             try expectEqual(refused.field, "sandbox_check.filter.value")
@@ -213,7 +213,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                             workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
                         try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest)
                         try expectEqual(result.admission_failure?.field, fields[i].0)
-                        try expectNil(result.runner_subprocess); try expectNil(result.validator_subprocess)
+                        try expectNil(result.runner_subprocess); try expectNil(result.phases.first?.validator_subprocess)
                         try expectTrue(result.steps.isEmpty)
                         try expectEqual(result.test_overrides?.worker_timeout_ms, 73)
                         let data = pwRunnerReplyData(result)

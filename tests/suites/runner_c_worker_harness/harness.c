@@ -465,6 +465,8 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     hdr->abi_magic = PW_SHM_ABI_MAGIC;
     memcpy(hdr->abi_identity, PW_WORKER_ABI_IDENTITY, PW_SHM_ABI_IDENTITY_BYTES);
     hdr->step_count = scen->step_count;
+    hdr->phase_count = 1;
+    hdr->phases[0].end_slot = scen->step_count;
     if (scen->populate_slots) scen->populate_slots(slots);
     if (scen->populate_params) {
         hdr->param_count = scen->populate_params(params);

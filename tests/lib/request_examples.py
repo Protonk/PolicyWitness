@@ -28,6 +28,11 @@ def materialize(example, effect, nonce):
         step = specimen['probe_plan'][0]
         specimen['probe_plan'] = [dict(copy.deepcopy(step), step_id=f's{i}')
                                  for i in range(example['repeat_steps'])]
+    if 'repeat_phase_actions' in example:
+        step = specimen['phases'][0]['actions'][0]
+        count = example['repeat_phase_actions']
+        actions = [dict(copy.deepcopy(step), step_id=f's{i}') for i in range(count)]
+        specimen['phases'] = [dict(phase_id=f'p{i}', actions=actions[i * 32:(i + 1) * 32] if i < 7 else actions[i * 32:]) for i in range(8)]
     return specimen
 
 

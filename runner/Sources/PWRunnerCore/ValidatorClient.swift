@@ -258,6 +258,10 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     // disposition — so the caller can surface degraded evidence. =====
 
     var stdoutBytes = Data()
+    var stdoutReceived = 0
+    let recordLimit = max(1, input.probes.count) * ValidatorReplyLimits.recordsPerProbe
+    let byteLimit = recordLimit * ValidatorReplyLimits.frameBytes
+
     var writeOffset = 0
     var stdinOpen = true
     var stdoutOpen = true
@@ -355,7 +359,20 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
                 if (pfd.revents & (Int16(POLLIN) | Int16(POLLHUP) | Int16(POLLERR) | Int16(POLLNVAL))) != 0 {
                     var buf = [UInt8](repeating: 0, count: 8192)
                     let n = buf.withUnsafeMutableBytes { Darwin.read(stdoutPipe[0], $0.baseAddress!, $0.count) }
-                    if n > 0 { stdoutBytes.append(contentsOf: buf.prefix(n)) }
+                    if n > 0 {
+                        stdoutReceived += n
+                        let retained = min(n, byteLimit - stdoutBytes.count)
+                        stdoutBytes.append(contentsOf: buf.prefix(retained))
+                        if retained < n {
+                            collectionStop = "byte_limit"
+                            readError = .verdictReadFailed("validator stdout exceeds bounded retention (\(byteLimit) bytes); received \(stdoutReceived)")
+                            // A cutoff fragment is context, never a complete frame.
+                            if let last = stdoutBytes.lastIndex(of: 0x0a) { stdoutBytes = stdoutBytes.prefix(through: last) }
+                            else { stdoutBytes.removeAll(keepingCapacity: true) }
+                            stdoutOpen = false
+                            if stdinOpen { close(stdinPipe[1]); stdinOpen = false }
+                        }
+                    }
                     else if n == 0 { stdoutOpen = false }
                     else if errno != EAGAIN && errno != EINTR {
                         collectionStop = "read_error"
@@ -375,14 +392,14 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     if stdinOpen { close(stdinPipe[1]) }
     close(stdoutPipe[0])
 
-    let decoded = decodeValidatorFrames(stdoutBytes)
+    let decoded = decodeValidatorFrames(stdoutBytes, maximumRecords: recordLimit)
 
     // Status is usable only when the shared observer actually reaped this PID.
     var process = ChildProcessState(pid: pid, calls: processCalls)
     let pollNs: UInt64 = 10_000_000
     let iters = max(1, input.exitGraceMs * 1_000_000 / Int(pollNs))
     for _ in 0..<iters {
-        let observation = process.wait(options: WNOHANG, phase: "exit_grace")
+        let observation = process.wait(options: WNOHANG, stage: "exit_grace")
         if observation != .pending { break }
         sleepNs(pollNs)
     }
@@ -397,7 +414,7 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     let output = ValidatorOutput(
         validatorPid: pid, verdicts: decoded.verdicts,
         exitCode: exitCode, termSignal: termSignal,
-        sentSigkill: process.terminationRequest != nil, rawStdoutBytes: stdoutBytes.count,
+        sentSigkill: process.terminationRequest != nil, rawStdoutBytes: stdoutReceived,
         reaped: process.status != nil, terminationRequest: process.terminationRequest,
         waitErrors: process.waitErrors, ioError: (ioError ?? readError)?.description,
         decodeFault: decoded.fault, expectedProbes: input.probes,
@@ -452,7 +469,14 @@ struct ValidatorDecodedFrames {
     var fault: PWValidatorDecodeFault? = nil
 }
 
-func decodeValidatorFrames(_ bytes: Data) -> ValidatorDecodedFrames {
+enum ValidatorReplyLimits {
+    static let frameBytes = 8192
+    static let recordsPerProbe = 2
+    static let stringBytes = ["step_id": 63, "operation": 127, "filter_type": 63,
+                              "filter_value": 1023, "outcome": 63, "error": 511]
+}
+
+func decodeValidatorFrames(_ bytes: Data, maximumRecords: Int = 512) -> ValidatorDecodedFrames {
     var result = ValidatorDecodedFrames()
     var offset = 0
     for frame in bytes.split(separator: 0x0a, omittingEmptySubsequences: false) {
@@ -465,6 +489,8 @@ func decodeValidatorFrames(_ bytes: Data) -> ValidatorDecodedFrames {
                 context_b64: prefix.base64EncodedString(), context_truncated: frame.count > prefix.count)
             return result
         }
+        if frame.count > ValidatorReplyLimits.frameBytes { return reject("structure", "validator frame exceeds byte bound") }
+        if result.verdicts.count >= maximumRecords { return reject("structure", "validator record count exceeds query allowance") }
         guard let line = String(data: frame, encoding: .utf8) else {
             return reject("utf8", "invalid UTF-8 in validator reply")
         }
@@ -473,6 +499,11 @@ func decodeValidatorFrames(_ bytes: Data) -> ValidatorDecodedFrames {
         catch { return reject("json", "verdict parse failed: " + String(describing: error)) }
         guard let obj = json as? [String: Any] else { return reject("structure", "verdict must be an object") }
         if let why = validatorStructureError(obj) { return reject("structure", why) }
+        for (key, limit) in ValidatorReplyLimits.stringBytes {
+            if let value = obj[key] as? String, value.utf8.count > limit {
+                return reject("structure", "validator " + key + " exceeds byte bound")
+            }
+        }
         result.verdicts.append(ValidatorVerdict(
             stepId: obj["step_id"] as? String, operation: obj["operation"] as? String,
             filterType: obj["filter_type"] as? String, filterTypeId: validatorInteger(obj["filter_type_id"]),

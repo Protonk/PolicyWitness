@@ -59,6 +59,43 @@ private func assertValidatorDisposition(_ out: ValidatorOutput, expected: String
 
 func runValidatorEvidenceTests(_ tk: TestKit) {
     tk.group("validator byte frames and structural contract") {
+        tk.run("bounded frames and record count preserve only earlier complete records") {
+            let base = Data(validValidatorLine.utf8)
+            let exact = base + Data(repeating: 32, count: 8192 - base.count)
+            try expectEqual(decodeValidatorFrames(exact).verdicts.count, 1)
+            let over = decodeValidatorFrames(Data((validValidatorLine + "\n").utf8) + exact + Data([32]))
+            try expectEqual(over.verdicts.count, 1); try expectContains(over.fault?.message ?? "", "frame exceeds")
+            let records = Data((validValidatorLine + "\n" + validValidatorLine + "\n").utf8)
+            try expectEqual(decodeValidatorFrames(records, maximumRecords: 2).verdicts.count, 2)
+            let refused = decodeValidatorFrames(records + base, maximumRecords: 2)
+            try expectEqual(refused.verdicts.count, 2); try expectContains(refused.fault?.message ?? "", "record count")
+        }
+        tk.run("native record string limits count UTF-8 bytes without truncating accepted values") {
+            let base = try JSONSerialization.jsonObject(with: Data(validValidatorLine.utf8)) as! [String: Any]
+            for (key, maximum) in ["step_id": 63, "operation": 127, "filter_type": 63, "filter_value": 1023, "outcome": 63, "error": 511] {
+                for multibyte in [false, true] {
+                    for excess in [0, 1] {
+                        var record = base
+                        record["error"] = "diagnostic"
+                        let count = maximum + excess
+                        let value = multibyte ? String(repeating: "é", count: count / 2) + (count % 2 == 1 ? "x" : "") : String(repeating: "x", count: count)
+                        record[key] = value
+                        let decoded = decodeValidatorFrames(try JSONSerialization.data(withJSONObject: record))
+                        try expectEqual(decoded.verdicts.count, excess == 0 ? 1 : 0, key)
+                        if excess == 1 { try expectContains(decoded.fault?.message ?? "", key + " exceeds") }
+                    }
+                }
+            }
+        }
+        tk.run("real byte cutoff retains the first frame and bounds stream storage") {
+            let out = try validatorFixture("byte_flood")
+            try expectEqual(out.stdoutCollectionStop, "byte_limit")
+            try expectEqual(out.verdicts.count, 1)
+            try expectTrue(out.rawStdoutBytes > 16384 && out.rawStdoutBytes <= 24576)
+            try expectContains(out.readError ?? "", "bounded retention")
+            try expectEqual(out.reaped, true)
+        }
+
         tk.run("valid prefix survives invalid UTF-8; empty and malformed are distinct") {
             let prefix = Data((validValidatorLine + "\n").utf8)
             let bad = decodeValidatorFrames(prefix + Data([0xff, 0x0a]))
@@ -218,7 +255,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectContains(out.readError ?? "", "1000 ms I/O deadline")
             try expectEqual(out.stdoutCollectionStop, "deadline")
             try expectEqual(out.decodeFault?.kind, "utf8")
-            try expectTrue(out.rawStdoutBytes > 32768)
+            try expectTrue(out.rawStdoutBytes > 16384)
             try expectEqual(out.verdicts.first?.stepId, "s")
             let wire = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self,
                 from: pwRunnerEncodeJSON(buildValidatorSubprocess(out)))
@@ -230,7 +267,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             let out = try validatorFixture("close_input")
             try expectNotNil(out.ioError)
             try expectEqual(out.stdoutCollectionStop, "eof")
-            try expectTrue(out.rawStdoutBytes > 32768)
+            try expectTrue(out.rawStdoutBytes > 16384)
             try expectNil(out.readError)
             try expectEqual(out.decodeFault?.kind, "utf8")
             try expectEqual(out.verdicts.first?.stepId, "s")

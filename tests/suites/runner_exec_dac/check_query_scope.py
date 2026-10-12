@@ -101,7 +101,7 @@ def main():
             assert runner['normalized_outcome'] == 'ok'
             assert runner.get('test_overrides') is None
             assert runner['runner_subprocess']['exit_code'] == 0
-            assert runner['validator_subprocess']['exit_code'] == 0
+            assert runner['phases'][0]['validator_subprocess']['exit_code'] == 0
             assert [s['step_id'] for s in runner['steps']] == [s['step_id'] for s in steps]
             evidence[name] = {s['step_id']: s for s in runner['steps']}
             for step in runner['steps']:

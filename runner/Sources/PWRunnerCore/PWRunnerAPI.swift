@@ -153,7 +153,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 15
+    static let responseSchema: Int = 16
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -231,7 +231,24 @@ struct PWRunnerRunSpec: Codable {
     var specimen_id: String
     var run_kind: String?
     var policy: PWRunnerPolicySpec
-    var probe_plan: [PWRunnerProbeStep]
+    private var ordinaryPlan: [PWRunnerProbeStep]?
+    var phases: [PWRunnerPhase]?
+    var probe_plan: [PWRunnerProbeStep] {
+        get { phases?.flatMap { $0.actions.map { $0.probe } } ?? ordinaryPlan ?? [] }
+        set { ordinaryPlan = newValue; phases = nil }
+    }
+    var executionPhases: [PWRunnerPhase] {
+        phases ?? [PWRunnerPhase(phase_id: "main", actions: (ordinaryPlan ?? []).map(PWRunnerPhaseAction.probe))]
+    }
+    func probePath(_ index: Int) -> [String] {
+        guard let phases else { return ["probe_plan", String(index)] }
+        var offset = 0
+        for (phaseIndex, phase) in phases.enumerated() {
+            if index < offset + phase.actions.count { return ["phases", String(phaseIndex), "actions", String(index - offset)] }
+            offset += phase.actions.count
+        }
+        return ["phases"]
+    }
     var _test_overrides: PWRunnerTestOverrides?
 
     init(
@@ -239,19 +256,21 @@ struct PWRunnerRunSpec: Codable {
         specimen_id: String,
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec,
-        probe_plan: [PWRunnerProbeStep],
+        probe_plan: [PWRunnerProbeStep] = [],
+        phases: [PWRunnerPhase]? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
         self.run_kind = run_kind
         self.policy = policy
-        self.probe_plan = probe_plan
+        self.ordinaryPlan = phases == nil ? probe_plan : nil
+        self.phases = phases
         self._test_overrides = _test_overrides
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, policy, probe_plan, _test_overrides
+        case schema_version, specimen_id, run_kind, policy, probe_plan, phases, _test_overrides
     }
 
     init(from decoder: Decoder) throws {
@@ -276,8 +295,48 @@ struct PWRunnerRunSpec: Codable {
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
         policy = try c.decode(PWRunnerPolicySpec.self, forKey: .policy)
-        probe_plan = try c.decode([PWRunnerProbeStep].self, forKey: .probe_plan)
+        phases = try c.decodeIfPresent([PWRunnerPhase].self, forKey: .phases)
+        ordinaryPlan = try c.decodeIfPresent([PWRunnerProbeStep].self, forKey: .probe_plan)
+        guard (phases == nil) != (ordinaryPlan == nil) else {
+            throw PWRunnerRequestFailure(code: "exclusive_plan_forms", path: ["phases"])
+        }
         _test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: ._test_overrides)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schema_version, forKey: .schema_version)
+        try c.encode(specimen_id, forKey: .specimen_id)
+        try c.encodeIfPresent(run_kind, forKey: .run_kind)
+        try c.encode(policy, forKey: .policy)
+        try c.encodeIfPresent(ordinaryPlan, forKey: .probe_plan)
+        try c.encodeIfPresent(phases, forKey: .phases)
+        try c.encodeIfPresent(_test_overrides, forKey: ._test_overrides)
+    }
+}
+
+/// Ordinary phase actions retain the required prediction/attempt pair.
+/// Lifecycle actions have a separate representation and never relax that pair.
+enum PWRunnerPhaseAction: Codable {
+    case probe(PWRunnerProbeStep)
+    var probe: PWRunnerProbeStep { switch self { case .probe(let value): return value } }
+    init(from decoder: Decoder) throws { self = .probe(try PWRunnerProbeStep(from: decoder)) }
+    func encode(to encoder: Encoder) throws { try probe.encode(to: encoder) }
+}
+
+struct PWRunnerPhase: Codable {
+    static let maximumCount = 8
+    var phase_id: String
+    var actions: [PWRunnerPhaseAction]
+    init(phase_id: String, actions: [PWRunnerPhaseAction]) {
+        self.phase_id = phase_id; self.actions = actions
+    }
+    enum CodingKeys: String, CodingKey, CaseIterable { case phase_id, actions }
+    init(from decoder: Decoder) throws {
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        phase_id = try c.decode(String.self, forKey: .phase_id)
+        actions = try c.decode([PWRunnerPhaseAction].self, forKey: .actions)
     }
 }
 
@@ -319,6 +378,7 @@ struct PWRunnerTestOverrides: Codable {
     var worker_executable_path: String?
     var worker_timeout_ms: Int?
     var validator_executable_path: String?
+    var validator_total_timeout_ms: Int?
     var validator_io_timeout_ms: Int?
     var worker_post_apply_hang_ms: Int?
     var worker_post_apply_kill_signal: Int?
@@ -329,6 +389,7 @@ struct PWRunnerTestOverrides: Codable {
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
         validator_io_timeout_ms: Int? = nil,
+        validator_total_timeout_ms: Int? = nil,
         worker_post_apply_hang_ms: Int? = nil,
         worker_post_apply_kill_signal: Int? = nil,
         worker_pre_ready_hang_ms: Int? = nil
@@ -336,6 +397,7 @@ struct PWRunnerTestOverrides: Codable {
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
+        self.validator_total_timeout_ms = validator_total_timeout_ms
         self.validator_io_timeout_ms = validator_io_timeout_ms
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
         self.worker_post_apply_kill_signal = worker_post_apply_kill_signal
@@ -343,7 +405,7 @@ struct PWRunnerTestOverrides: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case worker_executable_path, worker_timeout_ms, validator_executable_path, validator_io_timeout_ms
+        case worker_executable_path, worker_timeout_ms, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
         case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms
     }
 
@@ -362,6 +424,7 @@ struct PWRunnerTestOverrides: Codable {
         worker_executable_path = try c.decodeIfPresent(String.self, forKey: .worker_executable_path)
         worker_timeout_ms = try optionalInteger(.worker_timeout_ms)
         validator_executable_path = try c.decodeIfPresent(String.self, forKey: .validator_executable_path)
+        validator_total_timeout_ms = try optionalInteger(.validator_total_timeout_ms)
         validator_io_timeout_ms = try optionalInteger(.validator_io_timeout_ms)
         worker_post_apply_hang_ms = try optionalInteger(.worker_post_apply_hang_ms)
         worker_post_apply_kill_signal = try optionalInteger(.worker_post_apply_kill_signal)
@@ -569,7 +632,7 @@ struct PWRunnerPathDiagnostics: Codable {
     static let formNames = ["realpath_resolved", "firmlink_resolved"]
 
     var observer: String?
-    var phase: String?
+    var stage: String?
     var input: String
     var realpath_resolved: String?
     var firmlink_resolved: String?
@@ -579,10 +642,10 @@ struct PWRunnerPathDiagnostics: Codable {
         realpath_resolved: String? = nil,
         firmlink_resolved: String? = nil,
         observer: String? = nil,
-        phase: String? = nil
+        stage: String? = nil
     ) {
         self.observer = observer
-        self.phase = phase
+        self.stage = stage
         self.input = input
         self.realpath_resolved = realpath_resolved
         self.firmlink_resolved = firmlink_resolved
@@ -591,7 +654,7 @@ struct PWRunnerPathDiagnostics: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: PathFormKey.self)
         try container.encodeIfPresent(observer, forKey: .observer)
-        try container.encodeIfPresent(phase, forKey: .phase)
+        try container.encodeIfPresent(stage, forKey: .stage)
         try container.encode(input, forKey: .input)
         try encodePathForms(&container, input: input,
             forms: [("realpath_resolved", realpath_resolved), ("firmlink_resolved", firmlink_resolved)])
@@ -600,7 +663,7 @@ struct PWRunnerPathDiagnostics: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: PathFormKey.self)
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
-        phase = try container.decodeIfPresent(String.self, forKey: .phase)
+        stage = try container.decodeIfPresent(String.self, forKey: .stage)
         input = try container.decode(String.self, forKey: .input)
         let decoded = try decodePathForms(container, input: input, formNames: Self.formNames)
         realpath_resolved = decoded["realpath_resolved"] ?? nil
@@ -616,7 +679,7 @@ struct PathFormKey: CodingKey {
     init(stringValue: String) { self.stringValue = stringValue }
     init?(intValue: Int) { nil }
     static let observer = PathFormKey(stringValue: "observer")
-    static let phase = PathFormKey(stringValue: "phase")
+    static let stage = PathFormKey(stringValue: "stage")
     static let input = PathFormKey(stringValue: "input")
     static let sameAsInput = PathFormKey(stringValue: "same_as_input")
 }
@@ -685,7 +748,7 @@ struct PWRunnerAttemptPathDiagnostics: Codable {
     static let formNames = ["realpath_resolved", "parent_realpath_resolved"]
 
     var observer: String?
-    var phase: String?
+    var stage: String?
     var input: String
     var realpath_resolved: String?
     var parent_realpath_resolved: String?
@@ -695,10 +758,10 @@ struct PWRunnerAttemptPathDiagnostics: Codable {
         realpath_resolved: String? = nil,
         parent_realpath_resolved: String? = nil,
         observer: String? = nil,
-        phase: String? = nil
+        stage: String? = nil
     ) {
         self.observer = observer
-        self.phase = phase
+        self.stage = stage
         self.input = input
         self.realpath_resolved = realpath_resolved
         self.parent_realpath_resolved = parent_realpath_resolved
@@ -707,7 +770,7 @@ struct PWRunnerAttemptPathDiagnostics: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: PathFormKey.self)
         try container.encodeIfPresent(observer, forKey: .observer)
-        try container.encodeIfPresent(phase, forKey: .phase)
+        try container.encodeIfPresent(stage, forKey: .stage)
         try container.encode(input, forKey: .input)
         try encodePathForms(&container, input: input,
             forms: [("realpath_resolved", realpath_resolved), ("parent_realpath_resolved", parent_realpath_resolved)])
@@ -716,7 +779,7 @@ struct PWRunnerAttemptPathDiagnostics: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: PathFormKey.self)
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
-        phase = try container.decodeIfPresent(String.self, forKey: .phase)
+        stage = try container.decodeIfPresent(String.self, forKey: .stage)
         input = try container.decode(String.self, forKey: .input)
         let decoded = try decodePathForms(container, input: input, formNames: Self.formNames)
         realpath_resolved = decoded["realpath_resolved"] ?? nil
@@ -1036,6 +1099,7 @@ struct PWRunnerComparison: Codable {
 }
 
 struct PWRunnerStepResult: Codable {
+    var phase_id: String
     var step_id: String
     var sandbox_check: PWRunnerSandboxCheckResult
     var attempt: PWRunnerAttemptResult
@@ -1045,10 +1109,12 @@ struct PWRunnerStepResult: Codable {
 
     init(
         step_id: String,
+        phase_id: String = "main",
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
         comparison: PWRunnerComparison? = nil
     ) {
+        self.phase_id = phase_id
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
@@ -1056,7 +1122,7 @@ struct PWRunnerStepResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case step_id
+        case phase_id, step_id
         case sandbox_check
         case attempt
         case comparison
@@ -1065,6 +1131,7 @@ struct PWRunnerStepResult: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(comparison, forKey: .comparison)
+        try container.encode(phase_id, forKey: .phase_id)
         try container.encode(step_id, forKey: .step_id)
         try container.encode(sandbox_check, forKey: .sandbox_check)
         try container.encode(attempt, forKey: .attempt)
@@ -1072,6 +1139,7 @@ struct PWRunnerStepResult: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        phase_id = try container.decode(String.self, forKey: .phase_id)
         step_id = try container.decode(String.self, forKey: .step_id)
         sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
         attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
@@ -1098,18 +1166,18 @@ struct PWRunnerTerminationRequest: Codable {
 }
 
 /// One host-observed failed waitpid(2) call, including recovered interruptions.
-/// JSON: runner_subprocess.wait_errors[].{phase,rc,errno}. phase is a string
+/// JSON: runner_subprocess.wait_errors[].{stage,rc,errno}. stage is a string
 /// (poll, exit_grace, after_termination); rc/errno are signed 32-bit integers.
 /// Only rc == -1 produces a record, with errno captured before another call.
-/// Unknown phase/errno values remain transportable. Empty array means no errors
+/// Unknown stage/errno values remain transportable. Empty array means no errors
 /// observed; absent/null array means unavailable.
 struct PWRunnerWaitError: Codable {
-    let phase: String
+    let stage: String
     let rc: Int32
     let errno: Int32
 
-    init(phase: String, rc: Int32, errno: Int32) {
-        self.phase = phase
+    init(stage: String, rc: Int32, errno: Int32) {
+        self.stage = stage
         self.rc = rc
         self.errno = errno
     }
@@ -1133,7 +1201,7 @@ struct PWWorkerPolicyTransferError: Codable {
 struct PWWorkerProgress: Codable {
     var raw: UInt32
     var operation: UInt32
-    var phase: UInt32
+    var stage: UInt32
     var index: UInt32?
 }
 struct PWWorkerFailure: Codable {
@@ -1187,7 +1255,6 @@ struct PWRunnerOrdering: Codable {
 }
 
 struct PWRunnerSubprocess: Codable {
-    var ordering: PWRunnerOrdering? = nil
     var pid: Int
     /// JSON integers, meaningful only after waitpid returned this child's PID.
     /// Both may be absent/null when status was not obtained; zero is a real exit.
@@ -1202,7 +1269,7 @@ struct PWRunnerSubprocess: Codable {
     /// Host read of the ready byte; false does not prove compilation failed.
     var ready_byte_received: Bool?
     /// Final acquire observation of done after cleanup, not successful application.
-    /// poll_stop_reason separately retains the reason the polling phase ended.
+    /// poll_stop_reason separately retains the reason the polling stage ended.
     var done_observed: Bool?
     /// Host string: done, child_reaped, sentinel_deadline, wait_error, policy_write_error, or policy_transfer_deadline.
     /// Identifies why polling stopped; later cleanup must not rewrite it.
@@ -1357,9 +1424,9 @@ struct PWAttemptLifecycle: Codable, Equatable {
 struct ProtocolPosition: Comparable {
     let order: Int
     let index: Int
-    let phase: Int
+    let stage: Int
     static func < (a: ProtocolPosition, b: ProtocolPosition) -> Bool {
-        (a.order, a.index, a.phase) < (b.order, b.index, b.phase)
+        (a.order, a.index, a.stage) < (b.order, b.index, b.stage)
     }
 }
 
@@ -1396,21 +1463,27 @@ enum ProgressAssociation {
 func associateProgress(_ progress: PWWorkerProgress?, planCount: Int) -> ProgressAssociation? {
     guard let progress else { return nil }
     guard let order = PWDisposition.protocolOrder.firstIndex(of: progress.operation),
-          (1...2).contains(progress.phase) else { return .unrecognized }
+          (1...2).contains(progress.stage) else { return .unrecognized }
     if let index = progress.index, index >= 0xfffff { return .invalid }
     let item = progress.index.map { $0 + 1 } ?? 0
-    guard progress.raw == ((progress.operation << 24) | (progress.phase << 20) | item) else { return .invalid }
-    let phase = Int(progress.phase)
+    guard progress.raw == ((progress.operation << 24) | (progress.stage << 20) | item) else { return .invalid }
+    let stage = Int(progress.stage)
     switch progress.operation {
     case 9:
         guard let index = progress.index, Int(index) < planCount else { return .invalid }
-        return .stepIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
+        return .stepIndex(Int(index), ProtocolPosition(order: order, index: Int(index), stage: stage))
+    case 11 where progress.index != nil:
+        guard let index = progress.index, Int(index) <= planCount,
+              let attemptOrder = PWDisposition.protocolOrder.firstIndex(of: 9) else { return .invalid }
+        // Waiting is before the first action of this phase, even after a prior
+        // phase's completed actions. Neither wait marker establishes entry.
+        return .none(ProtocolPosition(order: attemptOrder, index: Int(index), stage: 0))
     case 4:
         guard let index = progress.index else { return .invalid }
-        return .parameterIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
+        return .parameterIndex(Int(index), ProtocolPosition(order: order, index: Int(index), stage: stage))
     default:
         guard progress.index == nil else { return .invalid }
-        return .none(ProtocolPosition(order: order, index: 0, phase: phase))
+        return .none(ProtocolPosition(order: order, index: 0, stage: stage))
     }
 }
 
@@ -1609,8 +1682,8 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
     let attemptOrder = PWDisposition.protocolOrder.firstIndex(of: 9)!
     var referencedIssues = Set<Int>()
     for (i, step) in record.steps.enumerated() {
-        let reached = position.map { $0 >= ProtocolPosition(order: attemptOrder, index: i, phase: 1) } ?? false
-        let returned = position.map { $0 >= ProtocolPosition(order: attemptOrder, index: i, phase: 2) } ?? false
+        let reached = position.map { $0 >= ProtocolPosition(order: attemptOrder, index: i, stage: 1) } ?? false
+        let returned = position.map { $0 >= ProtocolPosition(order: attemptOrder, index: i, stage: 2) } ?? false
         let boundaryConflict = terminal && position != nil && !reached && step.slot == "completed"
         let resultConflict = terminal && returned && step.slot == "incomplete" && step.attempt_support == "supported"
         if let claim = step.questions["step_boundary_reached"], claim.state == "supported" {
@@ -1799,6 +1872,20 @@ struct PWRunnerSpawnFailure: Codable {
 // Encoding is explicit to enforce response invariants. When adding a stored
 // field, update CodingKeys and encode(to:), and populate the field-coverage
 // round-trip fixture in ReplyFailureTests. Reflection stays in that test.
+/// One phase's immutable publications and its own collection. Unobserved
+/// arrival/completion stay false; later progress never manufactures them.
+struct PWRunnerPhaseResult: Codable {
+    var phase_id: String
+    var ordinal: Int
+    var action_ids: [String]
+    var arrival_observed: Bool
+    var completion_observed: Bool
+    var collection_status: String
+    var ordering: PWRunnerOrdering?
+    var validator_subprocess: PWRunnerValidatorSubprocess?
+    var validator_spawn_failure: PWRunnerSpawnFailure?
+}
+
 struct PWRunnerRunResult: Codable {
     // Response wire version. Semantic decoding and encoding accept exactly
     // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
@@ -1818,8 +1905,7 @@ struct PWRunnerRunResult: Codable {
     var runner_subprocess: PWRunnerSubprocess?
     var admission_failure: PWRunnerAdmissionFailure?
     var request_failure: PWRunnerRequestFailure?
-    var validator_subprocess: PWRunnerValidatorSubprocess?
-    var validator_spawn_failure: PWRunnerSpawnFailure?
+    var phases: [PWRunnerPhaseResult]
     var test_overrides: PWRunnerTestOverrides?
     var reporting_failure: PWRunnerReportingFailure?
 
@@ -1837,12 +1923,11 @@ struct PWRunnerRunResult: Codable {
         sandboxed_after_apply: Bool? = nil,
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,
-        validator_subprocess: PWRunnerValidatorSubprocess? = nil,
+        phases: [PWRunnerPhaseResult] = [],
         test_overrides: PWRunnerTestOverrides? = nil,
         applied_profile: AppliedProfileCapture? = nil,
         admission_failure: PWRunnerAdmissionFailure? = nil,
         reporting_failure: PWRunnerReportingFailure? = nil,
-        validator_spawn_failure: PWRunnerSpawnFailure? = nil,
         request_failure: PWRunnerRequestFailure? = nil
     ) {
         self.schema_version = schema_version
@@ -1861,14 +1946,13 @@ struct PWRunnerRunResult: Codable {
         self.sandboxed_after_apply = sandboxed_after_apply
         self.steps = steps
         self.runner_subprocess = runner_subprocess
-        self.validator_subprocess = validator_subprocess
+        self.phases = phases
         self.test_overrides = test_overrides
         self.reporting_failure = reporting_failure
-        self.validator_spawn_failure = validator_spawn_failure
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, test_overrides, reporting_failure
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1894,8 +1978,7 @@ struct PWRunnerRunResult: Codable {
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
         admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
         request_failure = try c.decodeIfPresent(PWRunnerRequestFailure.self, forKey: .request_failure)
-        validator_subprocess = try c.decodeIfPresent(PWRunnerValidatorSubprocess.self, forKey: .validator_subprocess)
-        validator_spawn_failure = try c.decodeIfPresent(PWRunnerSpawnFailure.self, forKey: .validator_spawn_failure)
+        phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
         if reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
@@ -1915,7 +1998,7 @@ struct PWRunnerRunResult: Codable {
                   rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
                   steps.allSatisfy({ $0.comparison == nil }),
-                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && validator_subprocess == nil && validator_spawn_failure == nil) else {
+                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && phases.isEmpty) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
@@ -1937,12 +2020,30 @@ struct PWRunnerRunResult: Codable {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "disposition record contradicts its basis: \(first)"))
                 }
-                guard sub.ordering != nil else {
-                    throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
-                        debugDescription: "a worker subprocess requires runner ordering"))
+            }
+            let phaseIDs = phases.map { $0.phase_id }
+            let actionIDs = phases.flatMap { $0.action_ids }
+            guard phases.count <= PWRunnerPhase.maximumCount, Set(phaseIDs).count == phases.count,
+                  Set(actionIDs).count == actionIDs.count, actionIDs == steps.map({ $0.step_id }),
+                  (runner_subprocess == nil || !phases.isEmpty) else {
+                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                    debugDescription: "phase identities and ordered actions must partition the reply"))
+            }
+            for (index, phase) in phases.enumerated() {
+                guard phase.ordinal == index + 1,
+                      ["not_reached", "not_needed", "collected", "budget_exhausted", "clock_unavailable"].contains(phase.collection_status),
+                      (runner_subprocess == nil || phase.ordering != nil),
+                      (!phase.completion_observed || (phase.arrival_observed && phase.ordering?.proceed_observed == true)),
+                      (!phase.arrival_observed || index == 0 || phases[index - 1].completion_observed) else {
+                    throw EncodingError.invalidValue(phase, .init(codingPath: encoder.codingPath,
+                        debugDescription: "invalid phase boundary account"))
                 }
             }
             for step in steps {
+                guard let phase = phases.first(where: { $0.phase_id == step.phase_id }), phase.action_ids.contains(step.step_id) else {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
+                        debugDescription: "step requires unique phase association"))
+                }
                 guard let comparison = step.comparison else {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
                         debugDescription: "every step of an ordinary reply carries a comparison record"))
@@ -1956,7 +2057,7 @@ struct PWRunnerRunResult: Codable {
                         debugDescription: "limitation outside the vocabulary: \(outside)"))
                 }
                 if comparison.order == "query_first" && !eligibleOrderedStep(stepId: step.step_id, query: step.sandbox_check,
-                    records: validator_subprocess?.records ?? [], ordering: runner_subprocess?.ordering,
+                    records: phase.validator_subprocess?.records ?? [], ordering: phase.ordering,
                     sandboxedAfterApply: sandboxed_after_apply, workerPid: runner_subprocess?.pid) {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
                         debugDescription: "query_first requires eligible prediction and complete ordering chain"))
@@ -1980,8 +2081,7 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
         try c.encodeIfPresent(request_failure, forKey: .request_failure)
-        try c.encodeIfPresent(validator_subprocess, forKey: .validator_subprocess)
-        try c.encodeIfPresent(validator_spawn_failure, forKey: .validator_spawn_failure)
+        try c.encode(phases, forKey: .phases)
         try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
         try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
     }

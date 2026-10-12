@@ -1227,5 +1227,1013 @@
         ]
       }
     }
+  },
+  {
+    "id": "phases_create",
+    "phase": "meaning",
+    "lesson": "An ordinary paired action can be authored in an explicit phase.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "phases_and_plan",
+    "phase": "structure",
+    "lesson": "Choose exactly one plan form.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ],
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "exclusive_plan_forms",
+        "path": [
+          "phases"
+        ]
+      },
+      "xpc": {
+        "code": "exclusive_plan_forms",
+        "path": [
+          "phases"
+        ]
+      }
+    }
+  },
+  {
+    "id": "empty_phases",
+    "phase": "meaning",
+    "lesson": "An explicit phase sequence is nonempty.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": []
+    },
+    "expected": {
+      "cli": {
+        "code": "empty_phases",
+        "path": [
+          "phases"
+        ]
+      },
+      "xpc": {
+        "code": "empty_phases",
+        "path": [
+          "phases"
+        ]
+      }
+    }
+  },
+  {
+    "id": "empty_phase_id",
+    "phase": "meaning",
+    "lesson": "Phase identities must be nonempty.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "empty_phase_id",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      },
+      "xpc": {
+        "code": "empty_phase_id",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "duplicate_phase_ids",
+    "phase": "meaning",
+    "lesson": "Phase identities are unique even for empty phases.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "create",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "duplicate_phase_id",
+        "path": [
+          "phases",
+          "1",
+          "phase_id"
+        ]
+      },
+      "xpc": {
+        "code": "duplicate_phase_id",
+        "path": [
+          "phases",
+          "1",
+          "phase_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "duplicate_phase_actions",
+    "phase": "meaning",
+    "lesson": "Action identities are unique across the complete sequence.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "second",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "duplicate_step_id",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "step_id"
+        ]
+      },
+      "xpc": {
+        "code": "duplicate_step_id",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "step_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_missing_sandbox_check",
+    "phase": "structure",
+    "lesson": "Every ordinary action retains the required query/attempt pair.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "missing_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "sandbox_check"
+        ]
+      },
+      "xpc": {
+        "code": "missing_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "sandbox_check"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_missing_attempt",
+    "phase": "structure",
+    "lesson": "Every ordinary action retains the required query/attempt pair.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "missing_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "attempt"
+        ]
+      },
+      "xpc": {
+        "code": "missing_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "attempt"
+        ]
+      }
+    }
+  },
+  {
+    "id": "unknown_phase_field",
+    "phase": "structure",
+    "lesson": "Phase object fields are closed.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ],
+          "unrecognized": true
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "unrecognized"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "unrecognized"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_count_over",
+    "phase": "capacity",
+    "lesson": "The ninth phase exceeds bounded publication storage.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "0",
+          "actions": []
+        },
+        {
+          "phase_id": "1",
+          "actions": []
+        },
+        {
+          "phase_id": "2",
+          "actions": []
+        },
+        {
+          "phase_id": "3",
+          "actions": []
+        },
+        {
+          "phase_id": "4",
+          "actions": []
+        },
+        {
+          "phase_id": "5",
+          "actions": []
+        },
+        {
+          "phase_id": "6",
+          "actions": []
+        },
+        {
+          "phase_id": "7",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_id_over",
+    "phase": "capacity",
+    "lesson": "Phase identities occupy at most 63 UTF-8 bytes.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_id_nul",
+    "phase": "capacity",
+    "lesson": "Phase identities cannot contain NUL.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "a\u0000b",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_unknown_attempt",
+    "phase": "meaning",
+    "lesson": "An unsupported action refuses the entire phase sequence before any effects.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "unknown",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_attempt",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "attempt"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_attempt",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "attempt"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_id_exact",
+    "phase": "capacity",
+    "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "phase_id_multibyte_exact",
+    "phase": "capacity",
+    "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "éééééééééééééééééééééééééééééééx",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "phase_id_multibyte_over",
+    "phase": "capacity",
+    "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "éééééééééééééééééééééééééééééééé",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "phase_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "phase_count_exact",
+    "phase": "capacity",
+    "lesson": "Eight ordered phases fit the fixed publication capacity.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "0",
+          "actions": []
+        },
+        {
+          "phase_id": "1",
+          "actions": []
+        },
+        {
+          "phase_id": "2",
+          "actions": []
+        },
+        {
+          "phase_id": "3",
+          "actions": []
+        },
+        {
+          "phase_id": "4",
+          "actions": []
+        },
+        {
+          "phase_id": "5",
+          "actions": []
+        },
+        {
+          "phase_id": "6",
+          "actions": []
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "phase_total_actions_256",
+    "phase": "capacity",
+    "lesson": "The total action cap applies across phases.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    },
+    "repeat_phase_actions": 256
+  },
+  {
+    "id": "phase_total_actions_257",
+    "phase": "capacity",
+    "lesson": "The total action cap applies across phases.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "create",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases"
+        ]
+      }
+    },
+    "repeat_phase_actions": 257
   }
 ]

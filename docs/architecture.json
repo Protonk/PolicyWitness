@@ -302,7 +302,7 @@
             "Started by": "the host",
             "Sandboxed": "yes; applies the specimen policy to itself",
             "Native sandbox API": "sandbox_compile_string, params, sandbox_apply",
-            "Lifetime": "until the host requests exit; spins after done"
+            "Lifetime": "one specimen; one application and all ordered phases"
           },
           "sources": [
             {
@@ -323,6 +323,11 @@
             {
               "path": "tests/suites/runner_use_c_worker/run.sh",
               "symbol": "happy_default_allow",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
               "form": "test"
             }
           ]
@@ -369,10 +374,10 @@
           "facts": {
             "Language": "C",
             "Where": "inside the XPC bundle",
-            "Started by": "the host, after applied",
+            "Started by": "the host at each eligible phase arrival",
             "Sandboxed": "no",
             "Native sandbox API": "sandbox_check",
-            "Lifetime": "one batch"
+            "Lifetime": "one phase collection"
           },
           "sources": [
             {
@@ -397,6 +402,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift",
               "symbol": "bothBinariesExist",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
               "form": "test"
             }
           ]
@@ -704,8 +714,8 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "posix_spawn --batch <pid>; NDJSON probes in, verdicts out",
-          "short": "posix_spawn --batch",
+          "label": "fresh posix_spawn --batch <pid> per eligible phase; bounded NDJSON",
+          "short": "fresh collection per phase",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -725,6 +735,11 @@
             {
               "path": "tests/suites/runner_validator_failure/run.sh",
               "symbol": "transcript_controls",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
               "form": "test"
             }
           ]
@@ -764,7 +779,7 @@
           "from": "worker",
           "to": "host",
           "kind": "channel",
-          "label": "evidence published in the shared region with release ordering; proceed waited for before attempts",
+          "label": "immutable phase arrivals, acknowledgements and completions; numbered releases before actions",
           "short": "shared-region evidence",
           "sources": [
             {
@@ -793,6 +808,11 @@
             {
               "path": "tests/suites/witness_contract/opt_in/mutations.sh",
               "symbol": "order_barrier_mutations",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
               "form": "test"
             }
           ]
@@ -1085,7 +1105,7 @@
           "kind": "record",
           "facts": {
             "Owner": "host and validator, co-shipped in one bundle",
-            "Form": "NDJSON; kind sb_api_validator_verdict; no version marker"
+            "Form": "bounded NDJSON; exact kind sb_api_validator_verdict and schema_version 1"
           },
           "sources": [
             {
@@ -1111,9 +1131,13 @@
               "path": "tests/suites/failure_boundaries/check.py",
               "symbol": "validator_overlong_request",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+              "symbol": "runValidatorEvidenceTests",
+              "form": "test"
             }
-          ],
-          "note": "The wire carries no version marker; the Known gap below the figure says what holds this boundary instead."
+          ]
         },
         {
           "id": "reply",
@@ -1424,7 +1448,7 @@
           "from": "run_spec",
           "to": "shm_region",
           "kind": "guard",
-          "label": "host writes identity, counts, slots, params; worker refuses on magic or identity mismatch (exit 4)",
+          "label": "host writes identity, counts, phase partitions and slots; worker refuses mismatched identity or invalid partition",
           "short": "identity; exit 4 on mismatch",
           "sources": [
             {
@@ -1459,6 +1483,11 @@
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_control_states",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
+              "form": "test"
             }
           ]
         },
@@ -1467,8 +1496,8 @@
           "from": "shm_region",
           "to": "reply",
           "kind": "guard",
-          "label": "release/acquire publication; proceed before attempts; disposition record from raw facts",
-          "short": "release/acquire; proceed first",
+          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts",
+          "short": "phase publication; ordinal release",
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -1493,6 +1522,11 @@
               "path": "tests/suites/witness_contract/opt_in/mutations.sh",
               "symbol": "order_barrier_mutations",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
+              "form": "test"
             }
           ]
         },
@@ -1501,8 +1535,8 @@
           "from": "run_spec",
           "to": "validator_wire",
           "kind": "guard",
-          "label": "planned probes; strict NDJSON decode; association by unique id",
-          "short": "plan; strict NDJSON",
+          "label": "fresh phase planning; bounded strict NDJSON decode; unique step association within the phase",
+          "short": "phase planning; bounded NDJSON",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -1523,6 +1557,11 @@
               "path": "tests/suites/runner_validator_failure/run.sh",
               "symbol": "transcript_controls",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
+              "form": "test"
             }
           ]
         },
@@ -1531,7 +1570,7 @@
           "from": "validator_wire",
           "to": "reply",
           "kind": "guard",
-          "label": "verdict joined to its step, or an explicit unavailable prediction",
+          "label": "verdict joined only to its phase and step, or explicit unavailable prediction",
           "short": "join, or unavailable",
           "sources": [
             {
@@ -1552,6 +1591,11 @@
             {
               "path": "tests/suites/runner_use_c_worker/run.sh",
               "symbol": "happy_default_allow",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
+              "symbol": "runPhaseProtocolTests",
               "form": "test"
             }
           ]

@@ -71,12 +71,6 @@
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "following the capture bytes. Host and worker require exactly the same generated source identity, with no fallback. Header offsets 56 and 60 carry proceed and proceed_observed; bytes 64 through 95 carry the identity, and the header is 96 bytes. The reply carries the ordering evidence described below."
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
       "text": "many bytes in the fixed 4096-byte text region (at most 4095 payload bytes)."
     },
     {

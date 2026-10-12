@@ -122,7 +122,7 @@ record. Internal `CWorkerOutput` carries the same facts to the assembler.
 | `exit_requested` | Host boolean: release-store to the exit-request flag occurred; not proof the worker acted on it |
 | `termination_request` | Optional host object with `signal` (integer), `rc` (signed syscall return), `errno` (integer only on failed kill, otherwise absent/null); absent/null means no request |
 | `reaped` | Host boolean: a wait call actually returned this PID; not inferred from kill success |
-| `wait_errors` | Host array of observed wait failures, each with phase, signed return and errno; retain errors even if a later wait succeeds |
+| `wait_errors` | Host array of observed wait failures, each with stage, signed return and errno; retain errors even if a later wait succeeds |
 
 `sandboxed_after_apply` remains the public application observation; do not add a
 second authoritative applied boolean. `sentSigkill` internally must not stand in
@@ -134,7 +134,7 @@ The readiness, sentinel and exit-grace budgets are unchanged. The driver allows
 two EINTR retries total across polling, grace and final reaping. A terminal wait
 error ends that stage; ECHILD stops all further waits and signals to that PID.
 There are at most five failed-call records (two recovered interruptions plus one
-terminal error per stage), with no error truncation. `wait_errors[].phase` is
+terminal error per stage), with no error truncation. `wait_errors[].stage` is
 `poll`, `exit_grace`, or `after_termination`; rc/errno and termination numbers
 are signed 32-bit syscall values, encoded as JSON integers. Empty errors means
 observed none; missing/null means unavailable.
@@ -267,7 +267,7 @@ that names no submitted step, including any attempt index for an empty plan,
 is `invalid`; a mismatch between the encoded word and its decoded fields, or
 an item index on a non-indexed operation, is also `invalid`. An ambiguous slot
 identity supplies no associated slot, rather than selecting one duplicate.
-An unrecognized operation or phase code is `progress_unrecognized`
+An unrecognized operation or stage code is `progress_unrecognized`
 and its raw word is retained. Progress at or beyond a step's boundary means a
 position at or after that step's `started` word.
 
@@ -295,7 +295,7 @@ position at or after that step's `started` word.
 | Grace end | none | the host recorded no grace outcome; never infer exhaustion from `done` plus a kill | whenever exit was requested | `termination_cause`, lifecycle error clause |
 | Kill request and result | none | the host recorded no request outcome; absent evidence is not an observed non-request | whenever cleanup ran | `termination_cause`, lifecycle error clause |
 | Collection basis | none | the host recorded no basis; a later kill or reap never stabilizes earlier reads | whenever slots were read | the scope of every per-step answer |
-| Progress association | none | no progress word; unrecognized operation or phase code, with the raw word retained | whenever a progress word was published | the per-step answers below |
+| Progress association | none | no progress word; unrecognized operation or stage code, with the raw word retained | whenever a progress word was published | the per-step answers below |
 | Per-step boundary reached | D5; a completed slot for this step beside valid terminal progress that never reached it; terminal | no usable progress and no completed slot; a live or unavailable basis for `not reached` | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
 | Per-step result published | D5; valid association, an incomplete slot and valid returned progress for this step or a later known protocol position, violating completion-before-return; terminal | an absent or unusable slot; an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
 | Per-step requested-operation applicability | none | the host recorded no mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
@@ -518,7 +518,7 @@ missing. Constructed classifier/encoding cases have separate credit.
 ## Worker evidence contract
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
-following the capture bytes. Host and worker require exactly the same generated source identity, with no fallback. Header offsets 56 and 60 carry proceed and proceed_observed; bytes 64 through 95 carry the identity, and the header is 96 bytes. The reply carries the ordering evidence described below.
+following the capture bytes. Host and worker require exactly the same generated source identity, with no fallback. The [layout golden](fixtures/contract/abi_layout.txt), checked against compiled C and Swift, owns offsets and sizes. The header carries the latest release ordinal, latest observed acknowledgement and fixed per-phase arrival, acknowledgement and completion records; the magic and identity bootstrap locations remain fixed. The reply carries the ordering evidence described below.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
 Its `abi_identity` is the host-selected SHA-256 source identity encoded as a hex string, not proof the child reached ABI validation.
 An entirely absent publication remains explicit even after a mapping failure.
@@ -527,10 +527,10 @@ Host process observations remain independent.
 ### Progress and state table
 
 One release-stored/acquire-loaded UInt32 is the entire progress snapshot: high
-8 bits operation, next 4 bits phase (1 started, 2 returned), low 20 bits item
-index plus one (zero means no index). JSON retains `raw`, `operation`, `phase`,
+8 bits operation, next 4 bits stage (1 started, 2 returned), low 20 bits item
+index plus one (zero means no index). JSON retains `raw`, `operation`, `stage`,
 and optional zero-based `index`. Zero raw means no progress publication; unknown
-operation/phase values are retained without inferring success. No non-atomic
+operation/stage values are retained without inferring success. No non-atomic
 payload is read through progress. This is the latest milestone, not a history.
 
 Operations: 1 compatible header validation, 2 policy read, 3 parameter allocation,
@@ -546,7 +546,7 @@ outputs are established only by that slot's `completed == 1`.
 | compile returned; next operation not started | Call returned; success requires subsequent independent evidence; a report may still be unpublished |
 | compile NULL | Returned progress, then immutable operation=5 failure with native_kind=2, native_result=0; done may follow |
 | param assignment i returns nonzero | Record operation=4 and index=i with the actual integer return; no fabricated apply result |
-| assignment i returns and i+1 starts | Atomic progress identifies exactly one boundary; no torn index/phase |
+| assignment i returns and i+1 starts | Atomic progress identifies exactly one boundary; no torn index/stage |
 | readiness write fails | Its own immutable rc/errno record remains; execution may proceed to apply and done |
 | optional capture omitted | Transition compile → readiness is valid |
 | proceed wait starts; budget expires | Operation 11/code 8, budget milliseconds in detail, done; no acknowledgement or attempt, even after late release |
@@ -721,7 +721,7 @@ but can omit native results; unfamiliar outcomes and extra raw JSON fields are
 preserved. Booleans, strings and fractional values cannot stand in for integers.
 Parsing never turns a missing native result into a prediction.
 
-When validator `posix_spawn` returns nonzero, `validator_spawn_failure` retains
+When validator `posix_spawn` returns nonzero, `phases[].validator_spawn_failure` retains
 `origin: runner_host`, `operation: posix_spawn`, the exact `executable_path`,
 numeric `return_code`, and native `strerror` text as `diagnostic`. The return code
 is captured directly, independently of ambient errno, with no recognized-code
@@ -737,7 +737,7 @@ requiring English wording. Internal native-call controls exercise unfamiliar
 returns through orchestration and reply serialization; they are not policy
 evidence and no request override selects them.
 
-`validator_subprocess` retains all accepted `records` with original `raw_line`,
+`phases[].validator_subprocess` retains all accepted `records` with original `raw_line`,
 including explicit null step IDs. Its `expected_step_ids` and `association_issues`
 record missing, duplicate, unexpected and unassociated IDs, plus query mismatches.
 Only a unique record matching the submitted query enters the step join; duplicate records remain at run scope
@@ -770,13 +770,13 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->72 MiB<!-- /span --> prefix per runner-client
+`Command::output()` buffers before retaining a <!-- span limits.controller_output.binary -->152 MiB<!-- /span --> prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> prefix per sbpl-check stream.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
-budget (75497472 or 8388608). Locally truncated
+budget (<!-- span limits.controller_output.value -->159,383,552<!-- /span --> or <!-- span limits.policy_helper_output.value -->8,388,608<!-- /span --> bytes). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -823,7 +823,7 @@ Query planning records each submitted probe or exclusion reason before attempts
 run. A later create/unlink cannot change that decision, including when all
 queries are excluded and no validator runs. Only unique records matching the
 submitted `(operation, filter_type, filter_value)` supply a step prediction.
-Mismatch records remain under `validator_subprocess.records`, with
+Mismatch records remain under `phases[].validator_subprocess.records`, with
 `association_issues.kind="query_mismatch"`, a missing step prediction and a
 non-ok run.
 Diagnostics may omit query metadata; any metadata they supply must agree.
@@ -837,7 +837,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->72 MiB<!-- /span -->
+the same original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->152 MiB<!-- /span -->
 per runner-client stream, <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream, and streaming limits of
 <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> stdout / <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> stderr for the observer. Received/retained byte counts
 precede lossy context conversion; log collection's counts are actual bounded
@@ -933,13 +933,13 @@ field in a reply does.
 | `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
 | `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access` → `file-read-data`, `open_write` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for a compound `file`/`create` attempt or an unsupported attempt |
 | `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
-| `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before the entire attempt batch, not a state snapshot or per-step interleaving. |
+| `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |
 
 The query's answer stays in `sandbox_check`: it is `outcome` when
 `result_source` is `validator` and the outcome is `allow` or `deny`; otherwise
 no prediction was available and `missing_reason` says why.
-`runner_subprocess.ordering` carries the host's collection, release,
+`phases[].ordering` carries the host's collection, release,
 acknowledgement and lifetime observations that `order` is derived from
 (`collection_closed_before_proceed`, `proceed_set`, `proceed_observed`,
 `worker_lifetime_established`, `validator_disposition`, `protocol_violations`);
@@ -948,6 +948,46 @@ establish no order. Validator disposition is `not_invoked`, `not_needed`
 (empty query plan), `not_spawned`, `reaped` or `unconfirmed`; collection
 closes when the synchronous driver returns, even after partial output or
 failed cleanup, and no later record enters predictions.
+
+#### Phase association and partial publication
+
+`phases` is ordered by one-based `ordinal`. Each record carries a unique
+`phase_id`, ordered `action_ids`, `arrival_observed`, `completion_observed`,
+`collection_status`, and, when a worker exists, `ordering`. Validator process
+and spawn-failure evidence belong only to this record. `steps[].phase_id` must
+match the unique phase containing its `step_id`; concatenating all phase action
+IDs must equal the ordered step IDs. The simple `probe_plan` has one phase,
+`main`. Admission refusals have no phases or steps.
+
+Collection status is `not_reached`, `not_needed`, `collected`,
+`budget_exhausted` or `clock_unavailable`. `collected` means the synchronous
+driver ran and returned, including timeout, decode failure and failed cleanup;
+it does not mean every query received a usable answer. Planning is repeated at
+each arrival. A path missing then has `prediction_unavailable`,
+`query_plan:path_unresolved_at_planning` and `order: unestablished`, while its
+attempt can still run. Later path diagnostics cannot replace this observation.
+
+A worker publishes arrival, waits for the exact release ordinal, publishes
+acknowledgement, performs the phase's actions, then publishes completion.
+Earlier ordinals cannot release a later phase; a future ordinal is a protocol
+failure. Host release requires collection closure, the expected arrival,
+previous phase completion and retained worker ownership. Loss or expiry during
+collection withholds release while preserving already collected records.
+`query_first` uses only the matching phase's validator records and ordering.
+Neither a previous phase's acknowledgement nor another phase's record can
+supply the missing chain. A later worker death does not erase an acknowledgement
+already observed while ownership was established.
+
+Phase completion and action completion are separate publications. A missing
+completion stays missing even if an action result exists; a later boundary
+cannot fill in an unpublished result. Progress operation `PW_OP_PROCEED`
+identifies the next phase's first action index, which can equal the total
+count at an empty final phase. It records a wait, not entry into that action.
+The request has one fixed policy application and one worker for every phase.
+These publications establish intervals, not stable target identity or effective
+kernel permission state. `PhaseProtocolTests`, `OrderingTests` and the barrier
+mutation control check independent file effects, stale/future releases,
+interrupted collection and retained earlier evidence.
 
 #### Ordering evidence states
 
@@ -959,27 +999,27 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 | No worker spawned | No ordering object | No snapshot | `unestablished` on any emitted step |
 | Worker exists, application not confirmed | false/false/false | `not_invoked` | `unestablished` |
 | Applied, no planned queries, release acknowledged | true/true/true | `not_needed` | `unestablished`; no prediction exists |
-| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; the failure is retained in `validator_spawn_failure` |
+| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; the failure is retained in `phases[].validator_spawn_failure` |
 | Eligible records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` for eligible records only |
 | Partial, diagnostic or rejected records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` only for eligible associated records; all others `unestablished` |
-| Proceed expired or worker died before acknowledgement; hook later returned | true/true/false | actual terminal disposition | `unestablished`; received records survive |
+| Proceed expired or worker died during collection; closure later observed | true/false/false | actual terminal disposition | `unestablished`; received records survive |
 | Worker died or hung after acknowledgement | true/true/true | actual terminal disposition | eligible records retain `query_first`; missing attempts remain unavailable |
 
 #### Ordering protocol names
 
 | Thing | Name | Where |
 | --- | --- | --- |
-| Release sentinel | `proceed` | shared-memory header offset 56 |
-| Acknowledgement sentinel | `proceed_observed` | shared-memory header offset 60 |
+| Release ordinal | `proceed` = phase index + 1 | shared header; [layout golden](fixtures/contract/abi_layout.txt) |
+| Latest acknowledgement ordinal | `proceed_observed`; immutable `phases[i].acknowledged` | shared header; [layout golden](fixtures/contract/abi_layout.txt) |
 | Worker operation | `PW_OP_PROCEED` = 11 | `pw_probe_runner_abi.h` |
 | Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8; clock failure is `PW_FAILURE_NATIVE` with kind `PW_NATIVE_CLOCK` = 3 | `pw_probe_runner_abi.h` |
 | Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
 | Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
-| Request override | `validator_io_timeout_ms` | `PWRunnerTestOverrides` |
-| Run-level evidence | `runner_subprocess.ordering` | reply |
+| Request overrides | `validator_io_timeout_ms`, `validator_total_timeout_ms` | `PWRunnerTestOverrides` |
+| Per-phase evidence | `phases[].ordering` | reply |
 | Per-step evidence | `comparison.order` | reply |
 | Host reply failure | `runner_reporting_failed`, `reporting_failure` | reply; comparisons absent |
-| Failed validator launch | `validator_spawn_failure` | reply; optional and additive |
+| Failed validator launch | `phases[].validator_spawn_failure` | reply; optional and additive |
 | Native gated validator | `tests/fixtures/validator/bridge.m`, suite `validator_bridge` | test equipment |
 
 ### Invariants

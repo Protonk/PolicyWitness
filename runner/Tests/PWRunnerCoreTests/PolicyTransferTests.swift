@@ -104,11 +104,10 @@ func runPolicyTransferTests(_ tk: TestKit) {
 
 private func retainTransferReply(_ out: CWorkerOutput, result: CWorkerRunResult, name: String, fixture: String) throws {
     let summary = classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0)
-    var sub = buildWorkerSubprocess(out)
-    sub.ordering = buildOrdering(out, validatorOutput: nil, hasQueries: false)
+    let sub = buildWorkerSubprocess(out)
     let reply = PWRunnerRunResult(specimen_id: name, rc: summary.rc, normalized_outcome: summary.outcome,
         error: summary.error, pid: Int(getpid()), policy_format: "sbpl", sandboxed_after_apply: out.applied,
-        steps: [], runner_subprocess: sub)
+        steps: [], runner_subprocess: sub, phases: [constructedPhase(out, ids: [], hasQueries: false)])
     let bytes = try pwRunnerEncodeJSON(reply)
     let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
     try expectEqual(decoded.runner_subprocess?.policy_transfer_timeout?.bytes_written, out.policyTransferTimeout?.bytes_written)

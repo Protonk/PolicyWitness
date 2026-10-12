@@ -64,6 +64,20 @@ identity/content observations, issuer lifetime comparisons and allocation
 controls. It neither produces nor validates PW outcomes; production extension
 and phase integration is outside that case.
 
+The default `witness_contract/phases` case exercises the public phase grammar
+through the signed CLI: an independently observed unlink makes the next path
+query unavailable while its attempt reports ENOENT, and a third phase receives
+a fresh native query. It checks separate validator PIDs and six rejected reader
+mutations. The same case drives cumulative collection exhaustion through
+`validator_total_timeout_ms` and a real validator stdout byte cutoff, retaining
+completed attempts and independent cleanup evidence. No new normalized or
+attempt outcome names are introduced by phases.
+
+`runner_unit` / `PhaseProtocolTests` holds all phase boundaries while observing
+file effects, injects stale/future release ordinals, kills the worker during a
+later collection and checks earlier evidence. The required barrier mutation
+control independently removes the worker wait and moves host release early.
+
 ## Attempt outcome coverage matrix
 
 Host lifecycle observations have separate driver/encoding coverage in

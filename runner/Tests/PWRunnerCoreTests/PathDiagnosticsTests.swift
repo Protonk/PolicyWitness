@@ -42,7 +42,7 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
                 }
             }
             let forms = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: nil,
-                parent_realpath_resolved: resolved, observer: "runner_host", phase: "after_orchestration")
+                parent_realpath_resolved: resolved, observer: "runner_host", stage: "after_orchestration")
             let decoded = try pwRunnerDecodeJSON(PWRunnerAttemptPathDiagnostics.self, from: pwRunnerEncodeJSON(forms))
             try expectEqual(decoded.parent_realpath_resolved, .some(resolved))
         }
@@ -118,7 +118,7 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
             for real in values {
                 for parent in values {
                     let original = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: real,
-                        parent_realpath_resolved: parent, observer: "runner_host", phase: "after_orchestration")
+                        parent_realpath_resolved: parent, observer: "runner_host", stage: "after_orchestration")
                     let data = try pwRunnerEncodeJSON(original)
                     let raw = try JSONSerialization.jsonObject(with: data) as! [String: Any]
                     let same = raw["same_as_input"] as! [String]
@@ -130,7 +130,7 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
                         try expectEqual(raw[name] == nil, identical)
                         try expectEqual(recovered.map { Array($0.utf8) }, value.map { Array($0.utf8) })
                     }
-                    try expectTrue(Set(raw.keys).isSubset(of: ["observer", "phase", "input", "same_as_input",
+                    try expectTrue(Set(raw.keys).isSubset(of: ["observer", "stage", "input", "same_as_input",
                         "realpath_resolved", "parent_realpath_resolved"]), "unexpected attempt form keys")
                 }
             }
@@ -179,7 +179,7 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
             try expectEqual(forms[0]?.realpath_resolved, .some(realRoot + "/real/file"))
             try expectEqual(forms[0]?.parent_realpath_resolved, .some(realRoot + "/real/file"))
             try expectEqual(forms[0]?.observer, .some("runner_host"))
-            try expectEqual(forms[0]?.phase, .some("after_orchestration"))
+            try expectEqual(forms[0]?.stage, .some("after_orchestration"))
             // A missing leaf has no leaf-followed form; the parent form names what a create would touch.
             try expectNil(forms[1]?.realpath_resolved)
             try expectEqual(forms[1]?.parent_realpath_resolved, .some(realRoot + "/real/new"))

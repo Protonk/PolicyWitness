@@ -89,9 +89,9 @@ resolve their own helpers relative to their own bundle.
 | controller | policy-witness | executable | app top level | one run | Rust | the caller | no | none | [`fn main`](../controller/src/main.rs); [`cmd_run`](../controller/src/run_flow.rs) | [`consumer_controls`](../tests/suites/blackbox_e2e/checker_controls.py); [`inventory`](../tests/lib/artifact.py) |  |
 | client | pw-runner-client | executable | app top level | one run | Swift | the controller | no | none | [`readDataToEndOfFile`](../runner/Clients/PWRunnerClient/main.swift); [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift) | [`path_wire_fixtures_survive_capture_serialization_and_independent_consumer`](../controller/src/runner_client.rs); [`client_output_control`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
 | host | PWRunner | executable | inside the XPC bundle | one specimen; exits 50 milliseconds after replying | Swift | launchd: XPC service lookup, or a Mach service for BYOXPC | no | none, by the invariance rule | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`hostExitDelayMs`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`inspect`](../tests/lib/artifact.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`runServiceAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift); [`single_use`](../tests/suites/runner_byoxpc/opt_in/single_use.sh) | [`host_exit_delay`](LIMITS.md#execution-budgets) |
-| worker | pw-probe-runner | sandboxed | inside the XPC bundle | until the host requests exit; spins after done | C | the host | yes; applies the specimen policy to itself | sandbox_compile_string, params, sandbox_apply | [`sandbox_compile_string`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_apply`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh) |  |
+| worker | pw-probe-runner | sandboxed | inside the XPC bundle | one specimen; one application and all ordered phases | C | the host | yes; applies the specimen policy to itself | sandbox_compile_string, params, sandbox_apply | [`sandbox_compile_string`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_apply`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | exec_child | exec helper children | sandboxed | the caller's path | the worker's waits are bounded by the exec deadline and the attempt budget; a descendant that leaves the child's process group is not contained | caller-supplied | the worker | inherit the worker's sandbox | none of PolicyWitness's | [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`timeout_preserves_output_and_continues`](../tests/suites/runner_exec_lifecycle/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |  |
-| validator | sb_api_validator | executable | inside the XPC bundle | one batch | C | the host, after applied | no | sandbox_check | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`bothBinariesExist`](../runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift) |  |
+| validator | sb_api_validator | executable | inside the XPC bundle | one phase collection | C | the host at each eligible phase arrival | no | sandbox_check | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`bothBinariesExist`](../runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | observer | sandbox-log-observer | executable | app top level | one scan | Rust | the controller, after execution completes, in its own process group | no | none | [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs); [`process_group`](../controller/src/log_capture.rs) | [`parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims`](../controller/src/bin/sandbox-log-observer.rs); [`checked_reads`](../tests/suites/witness_contract/check_deny_capture_window.py) |  |
 | log_show | log show | os | /usr/bin/log | one query | OS | the observer | no | none | [`Command::new("/usr/bin/log")`](../controller/src/bin/sandbox-log-observer.rs) | [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) |  |
 | sbpl_check | sbpl-check | executable | app top level | one compile | Rust | the controller, only for an admitted xpc_error reply | no | sandbox_compile_string and params; never applies | [`sandbox_compile_string`](../controller/src/bin/sbpl-check.rs); [`run_policy_check`](../controller/src/policy_check.rs) | [`fallback_compilation_is_requested_only_for_an_admitted_xpc_error`](../controller/src/run_flow.rs) |  |
@@ -106,9 +106,9 @@ resolve their own helpers relative to their own bundle.
 | T3 | client | host | channel | NSXPC runSpecimen(Data) and its reply | [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh) |  |
 | T4 | launchd | host | launch | start on XPC lookup, or as a Mach service (BYOXPC) | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`launchctl_bootstrap`](../controller/src/runner_manager.rs) | [`pwrunner_survives_mach_service_launch`](../tests/suites/runner_mach_service_liveness/run.sh); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | T5 | host | worker | spawn | posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe | [`posix_spawn_file_actions_adddup2`](../runner/Sources/PWRunnerCore/CWorker.swift); [`F_SETNOSIGPIPE`](../runner/Sources/PWRunnerCore/CWorker.swift); [`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift); [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPolicyTransferTests`](../runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift) |  |
-| T6 | host | validator | spawn | posix_spawn --batch <pid>; NDJSON probes in, verdicts out | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh) |  |
+| T6 | host | validator | spawn | fresh posix_spawn --batch <pid> per eligible phase; bounded NDJSON | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | T7 | validator | worker | native | sandbox_check against the worker PID, with SANDBOX_CHECK_NO_REPORT | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh) |  |
-| T8 | worker | host | channel | evidence published in the shared region with release ordering; proceed waited for before attempts | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`CWorkerStepResult`](../runner/Sources/PWRunnerCore/CWorker.swift); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh) |  |
+| T8 | worker | host | channel | immutable phase arrivals, acknowledgements and completions; numbered releases before actions | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`CWorkerStepResult`](../runner/Sources/PWRunnerCore/CWorker.swift); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | T9 | worker | exec_child | spawn | posix_spawn after apply; stdout and stderr pipes into bounded slot buffers | [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`timeout_preserves_output_and_continues`](../tests/suites/runner_exec_lifecycle/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | T10 | controller | observer | spawn | spawn in its own process group after execution; budget on argv; JSON report on stdout | [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs); [`capture_with_ops`](../controller/src/log_capture.rs); [`process_group`](../controller/src/log_capture.rs) | [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs); [`checked_reads`](../tests/suites/witness_contract/check_deny_capture_window.py) |  |
 | T11 | observer | log_show | spawn | log show over the padded client span; text on stdout, bounded | [`Command::new("/usr/bin/log")`](../controller/src/bin/sandbox-log-observer.rs); [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs) | [`run_span_window_floors_start_ceils_end_and_never_collapses`](../controller/src/sandbox_log.rs); [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) |  |
@@ -126,80 +126,53 @@ Every node and edge above cites at least one test or rule.
 
 ## One run in time
 
-The spine of the architecture is temporal. The host releases the worker's
-attempts only after the validator's collection has closed, so every
-prediction is made before any attempt is tried; that interval is the only
-thing `comparison.order: "query_first"` claims
-([the record](../tests/FAILURE-PROPAGATION-CONTRACT.md#the-record)). The
-timeline below is the host driver's step list in
-[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift), the worker's
-[`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) in
-pw_probe_runner.c and
-the controller's [`run`](../controller/src/run_flow.rs) in run_flow.rs, laid
-side by side.
+The host closes query collection before releasing the actions of each phase.
+`comparison.order: "query_first"` requires that phase's eligible native record
+and observed collection, release, acknowledgement and ownership chain
+([the record](../tests/FAILURE-PROPAGATION-CONTRACT.md#the-record)). A simple
+`probe_plan` becomes one phase named `main`; all phases use one worker and one
+policy application. The sequence below follows [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift),
+[CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+and the [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c).
 
 ```text
-controller / client            host (PWRunner)                  worker (pw-probe-runner)      validator
--------------------            ---------------                  ------------------------      ---------
-read the request; version
-gate; select the runner;
-resolve augments; dossier;
-strip selectors; serialize
-the held bytes once
-   |
-   | client reads stdin to
-   | EOF, then NSXPC
-   | runSpecimen(Data)
-   |-------------------------->| accept only an authorized caller
-                               | decode with closed keys; capacity,
-                               | then meaning; policy hash
-                               | plan validator queries: drop pairs that
-                               | cannot be predicted and paths that do
-                               | not resolve on the host now
-                               | zero the region; identity, counts,
-                               | slots, params; pre-touch; prepared=1
-                               | ready + policy pipes (CLOEXEC, NOSIGPIPE)
-                               |-- posix_spawn, fds 0/3/4 -------->| map the region; refuse on magic
-                               |-- policy bytes on fd 0 ---------->| or identity mismatch (exit 4);
-                               |                                   | read the policy to EOF; params;
-                               |                                   | compile; if asked, copy the compiled
-                               |                                   | object into the capture region
-                               |<--------- ready byte (fd 4) ------|
-                               |                                   | sandbox_apply; applied=1
-                               | acquire applied (apply_rc 0,      |
-                               | identity match)                   |
-                               |-- posix_spawn --batch <pid> --------------------------------->|
-                               |-- probes on stdin ------------------------------------------->| sandbox_check
-                               |<--------------------------------------------- verdicts (NDJSON)| per probe
-                               | hook returns; collection closed;  |
-                               | proceed=1 (release)               |
-                               |                                   | wait_for_proceed (budget;
-                               |                                   | failure code 8 on expiry)
-                               |                                   | proceed_observed=1
-                               |                                   | attempts in plan order; exec
-                               |                                   | children are spawned here;
-                               |                                   | completed=1 per slot (release)
-                               |                                   | done=1; spin
-                               | poll: done, reaped, sentinel      |
-                               | deadline, or wait error           |
-                               | exit_requested=1 ---------------->| _exit(0)
-                               | grace; SIGKILL fallback; waitpid  |
-                               | final acquire snapshot; decode
-                               | evidence; classify; disposition
-                               | record; ordering; per-step query,
-                               | attempt and comparison; encode,
-                               | degrading if the reply cannot be
-                               | built
-   |<--------------------------| reply; exit 50 ms later
-   | admit the reply version
-   | sbpl-check, only for xpc_error
-   | complete execution (the
-   | disposition projection)
-   | observer over the padded client
-   | span, in its own process group,
-   | runs log show; correlation
-   | envelope on stdout
+controller / client          host                        worker                validator
+-------------------          ----                        ------                ---------
+read; gate; select;
+resolve augments;
+serialize held request
+stdin to EOF; XPC ----------> authorize; decode; admit
+                             prepare shared region
+                             spawn; policy pipe --------> compile; ready byte
+                                                         apply once
+                             <--------------------------- phase arrival
+                             check identity + ownership
+                             plan this phase afresh
+                             spawn eligible collection -----------------------> sandbox_check
+                             <----------------------------------------------- bounded NDJSON
+                             collection closes
+                             recheck phase + ownership
+                             numbered release ----------> acknowledge ordinal
+                                                         actions in order
+                                                         publish completion
+                             <--------------------------- next phase arrival
+                             repeat collection/release   repeat until done
+                             exit request --------------> exit
+                             grace; kill if needed; reap
+                             final snapshot; disposition;
+                             phase evidence; comparisons
+reply <--------------------- encode; schedule host exit
+admit reply version;
+complete execution;
+optional logs;
+print envelope
 ```
+
+Collection can close with unavailable predictions or incomplete validator
+cleanup. Release still requires a live, correctly waiting worker. A failed
+phase wait, invalid release ordinal or loss of worker ownership prevents later
+actions without erasing earlier publications. A boundary publication is an
+observation of progress; it does not manufacture a missing action result.
 
 Where each stage is pinned:
 
@@ -215,13 +188,12 @@ Where each stage is pinned:
   `admissionFailure(for:)` (capacity), `requestMeaningFailure` (meaning) and
   `computePolicyHash`, in that order; a refusal replies without spawning
   anything. Checked by `runner_outcome_bad_request` and `failure_boundaries`.
-- **Query planning.** `planValidatorQueries` runs before the spawn. It drops
-  a query whose operation and filter pair cannot be predicted, and a path
-  query whose target does not resolve on the host at that moment
-  (`path_unresolved_at_planning`); the decision holds for the run even if an
-  attempt later creates or removes the target, and the step still receives
-  an explicit `prediction_unavailable` observation. Checked by `runner_unit`
-  and the planner rule in `source_drift`.
+- **Query planning.** `planValidatorQueries` runs anew at each observed phase
+  arrival, after all prior phase actions have completed. It drops excluded
+  operation/filter pairs and paths that do not resolve on the host then.
+  `path_unresolved_at_planning` supplies an explicit unavailable prediction
+  without suppressing the paired attempt. Checked by `PhaseProtocolTests`,
+  query admission tests and the planner rule in `source_drift`.
 - **Spawn and apply.** The driver's header comment in
   [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) from the
   region setup through the ready byte, and the worker's from mapping the
@@ -234,14 +206,13 @@ Where each stage is pinned:
   integrity checks (`decodeProfileCapture`); the
   [guide](PolicyWitness.md#compiled-object-receipt-opt-in) distinguishes it
   from a kernel readback. Checked by `AppliedProfileCaptureTests`.
-- **The barrier.** The validator runs inside the [`postApplied`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) hook of
-  CWorkerOrchestrator.swift
-  with the worker's PID, or not at all when no step has a predictable
-  query. `proceed` is stored when the hook returns; the worker's
-  `wait_for_proceed` refuses to attempt anything before it. `PWRunnerOrdering`
-  records what was observed. Checked by `OrderingTests` and the opt-in
-  `witness_contract/order_barrier_mutations` control
-  ([OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md)).
+- **The barrier.** The `phaseBoundary` callback collects against the worker's
+  PID. The driver observes arrival and checks child ownership before collection
+  and again before release. Its ordinal store cannot reuse an earlier release;
+  immutable phase acknowledgement records preserve earlier observations.
+  `PWRunnerOrdering` is assembled independently per phase. `PhaseProtocolTests`,
+  `OrderingTests` and the opt-in
+  [order-barrier mutation control](../tests/OPT_IN_TESTS.md) check the protocol.
 - **Attempts and publication.** `run_attempt` writes each slot and releases
   `completed`; an exec attempt acquires its pipes and spawn handles after
   apply and releases them before its slot completes. Checked by
@@ -279,15 +250,18 @@ started immediately after the spawn; the ready window,
 [`worker_ready_wait`](LIMITS.md#execution-budgets), covers only the wait for the
 ready byte after the policy has been written; the sentinel deadline,
 [`worker_sentinel_wait`](LIMITS.md#execution-budgets), covers application through
-`done`, less the collection interval, because the host runs the hook
-synchronously between polls and the hook's time is outside it; the
+`done`, less every phase collection interval, because callbacks run
+synchronously between polls; the
 validator I/O deadline, [`validator_io_wait`](LIMITS.md#execution-budgets), covers
-collection; the proceed budget, [`worker_proceed_wait`](LIMITS.md#execution-budgets),
-covers the worker's wait for release; the grace timer,
+one collection, capped by the remaining cumulative
+[`phase_collection_wait`](LIMITS.md#execution-budgets) allowance for planning and
+collection across all phases. Cleanup time is charged to that allowance but can
+overrun it; exhausted later phases retain unavailable predictions. The proceed budget, [`worker_proceed_wait`](LIMITS.md#execution-budgets),
+covers each worker phase's wait for its exact release ordinal; the grace timer,
 [`worker_exit_grace`](LIMITS.md#execution-budgets), covers exit request to kill; the
 exec deadline and attempt budget, [`exec_child_wait`](LIMITS.md#execution-budgets) and
 [`exec_attempt_budget`](LIMITS.md#execution-budgets), cover the worker's waits on exec
-children, per step and per plan; the log budget,
+children, per step and per plan, excluding every measured phase release wait; the log budget,
 [`log_collection_timeout`](LIMITS.md#evidence-capture), covers the observer.
 The ready and sentinel budgets are iteration counts over a sleep interval,
 not wall-clock guarantees in either direction. Their values and their
@@ -367,7 +341,7 @@ together, and the edge table says which.
 | held_request | held request bytes | record | the controller | one serialization; selectors stripped, augments spliced | [`strip_runner_selector`](../controller/src/runner_select.rs); [`pub fn resolve_augments`](../controller/src/augments.rs) | [`invalid_request_version_stops_before_selection_augments_or_client_invocation`](../controller/src/run_flow.rs) |  |
 | run_spec | decoded request (PWRunnerRunSpec) | record | the host | Codable with closed keys | [`PWRunnerRunSpec`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`CodingKeys`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh); [`admission`](../tests/suites/failure_boundaries/check.py) |  |
 | shm_region | shared region and policy pipe (worker ABI) | record | host writes inputs, worker writes outputs | fixed layout; magic at byte 0, source identity at byte 64 | [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PW_WORKER_ABI_IDENTITY_HEX`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`PW_SHM_`](../tests/fixtures/contract/abi_layout.txt) |  |
-| validator_wire | validator NDJSON (probes and verdicts) | record | host and validator, co-shipped in one bundle | NDJSON; kind sb_api_validator_verdict; no version marker | [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`validator_overlong_request`](../tests/suites/failure_boundaries/check.py) |  |
+| validator_wire | validator NDJSON (probes and verdicts) | record | host and validator, co-shipped in one bundle | bounded NDJSON; exact kind sb_api_validator_verdict and schema_version 1 | [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`validator_overlong_request`](../tests/suites/failure_boundaries/check.py); [`runValidatorEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift) |  |
 | reply | runner reply (PWRunnerRunResult) | record | the host | response schema; shape golden | [`PWRunnerRunResult`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`PWContract`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`replyShapeDocuments`](../runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift); [`schema_version`](../tests/fixtures/contract/response_shape.json) |  |
 | profile_capture | compiled-object receipt (applied_profile) | record | the worker, before apply; admitted by the host | opt-in copy of the compiled object with a nonce; its own schema_version on AppliedProfileCapture | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`AppliedProfileCapture`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`runAppliedProfileCaptureTests`](../runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift) |  |
 | envelope | controller envelope (kind run) | record | the controller | envelope frame; shape golden | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`render_envelope`](../controller/src/json_contract.rs); [`complete_execution`](../controller/src/run_flow.rs) | [`envelope_shape_golden_agrees_with_the_manifest`](../controller/src/run_flow.rs); [`_validate_observer_reply`](../tests/lib/consumer.py); [`observer_admission_precedes_all_body_interpretation`](../controller/src/sandbox_log.rs); [`observer_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
@@ -382,10 +356,10 @@ together, and the edge table says which.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | B1 | request_file | held_request | guard | request version gate; selector parse; augment resolution | [`validate_request_version`](../controller/src/request_patch.rs); [`parse_runner_selector_value`](../controller/src/runner_select.rs); [`pub fn resolve_augments`](../controller/src/augments.rs) | [`invalid_request_version_stops_before_selection_augments_or_client_invocation`](../controller/src/run_flow.rs); [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh) |  |
 | B2 | held_request | run_spec | guard | caller authorization; closed-key decode; capacity, then meaning; policy hash | [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`CodingKeys`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`admissionFailure(for`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`requestMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift); [`computePolicyHash`](../runner/Sources/PWRunnerCore/SandboxApply.swift) | [`admission`](../tests/suites/failure_boundaries/check.py); [`runEnvelopeInvariantTests`](../runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift) |  |
-| B3 | run_spec | shm_region | guard | host writes identity, counts, slots, params; worker refuses on magic or identity mismatch (exit 4) | [`abiIdentityHex`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PW_WORKER_ABI_IDENTITY`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`return 4`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh) |  |
-| B4 | shm_region | reply | guard | release/acquire publication; proceed before attempts; disposition record from raw facts | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PWRunnerOrdering`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh) |  |
-| B5 | run_spec | validator_wire | guard | planned probes; strict NDJSON decode; association by unique id | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh) |  |
-| B6 | validator_wire | reply | guard | verdict joined to its step, or an explicit unavailable prediction | [`ComparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh) |  |
+| B3 | run_spec | shm_region | guard | host writes identity, counts, phase partitions and slots; worker refuses mismatched identity or invalid partition | [`abiIdentityHex`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PW_WORKER_ABI_IDENTITY`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`return 4`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| B4 | shm_region | reply | guard | per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PWRunnerOrdering`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| B5 | run_spec | validator_wire | guard | fresh phase planning; bounded strict NDJSON decode; unique step association within the phase | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| B6 | validator_wire | reply | guard | verdict joined only to its phase and step, or explicit unavailable prediction | [`ComparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | B7 | reply | envelope | guard | exact response version; disposition validated and projected; reply retained unread when refused | [`reply_version`](../controller/src/run_flow.rs); [`complete_execution`](../controller/src/run_flow.rs); [`execution_diagnostics`](../controller/src/disposition.rs); [`validate_disposition`](../controller/src/disposition.rs) | [`reply_versions_are_gated_exactly`](../controller/src/run_flow.rs); [`rust_wrapper_controls`](../tests/suites/blackbox_e2e/disposition_controls.py) |  |
 | B8 | observer_report | envelope | guard | nested unchanged; log evidence never changes execution evidence | [`attach_sandbox_logs`](../controller/src/run_flow.rs); [`admitted_observer`](../controller/src/sandbox_log.rs); [`OBSERVER_SCHEMA_VERSION`](../controller/src/bin/sandbox-log-observer.rs) | [`collector_states_preserve_the_serialized_execution_half`](../controller/src/run_flow.rs); [`_validate_observer_reply`](../tests/lib/consumer.py); [`observer_admission_precedes_all_body_interpretation`](../controller/src/sandbox_log.rs); [`observer_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
 | B9 | helper_envelope | envelope | guard | nested unchanged; admitted by kind and frame version | [`fallback_policy_check`](../controller/src/run_flow.rs); [`_validate_policy_check_reply`](../tests/lib/consumer.py) | [`fallback_compilation_is_requested_only_for_an_admitted_xpc_error`](../controller/src/run_flow.rs); [`policy_check_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
@@ -395,7 +369,6 @@ together, and the edge table says which.
 
 Notes:
 
-- `validator_wire`: The wire carries no version marker; the Known gap below the figure says what holds this boundary instead.
 - `B8`: The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.
 
 Every node and edge above cites at least one test or rule.
@@ -403,12 +376,11 @@ Every node and edge above cites at least one test or rule.
 </details>
 <!-- END GENERATED ARCHITECTURE GRAPH boundaries -->
 
-Known gap: the validator wire carries no version marker. Every other
-boundary above is held by a golden or a suite; the validator NDJSON is held
-only by being built and shipped with the host. The validator_batch_mode suite
-checks the shape, but the identity digest excludes the validator and the
-validator_executable_path test seam can pair the host with another
-validator, so co-shipping is an arrangement, not a guard.
+The validator receiver checks an exact kind and schema marker, bounded frames
+and strings, and per-query byte and record allowances before association. A
+rejected frame retains bounded context and prior complete records. Co-shipping
+and the worker source identity do not authenticate a validator selected through
+a test seam; its observations and process disposition remain explicit.
 
 The nested envelopes (`data.policy_check.envelope`,
 `data.sandbox_log_capture.observer` and the controller's own) share the
@@ -454,9 +426,13 @@ runtime guarantee.
 - **Witness over interpretation.** An attempt's `rc` is never the claim; the
   comparison record names its `observation_basis`. The consumer,
   [consumer.py](../tests/lib/consumer.py), re-derives every step's expected
-  observation from the raw channels before accepting an envelope.
+  observation from the raw channels before accepting an envelope. Bounded
+  operational state routes actions and coordinates phases; it supplies no model
+  of effective kernel permissions. Release requests and worker acknowledgements
+  remain separate observations.
 - **Predictions precede attempts.** `proceed` and `proceed_observed` in the
-  shared region, `collection_closed_before_proceed` in `PWRunnerOrdering`,
+  shared region identify the latest ordinal; immutable per-phase publications,
+  `collection_closed_before_proceed` in each `PWRunnerOrdering`,
   and the worker's `wait_for_proceed`. Checked by `OrderingTests` and the
   opt-in order-barrier mutation control, which must be rerun whenever the
   wait, the release store or the eligibility rule changes.
@@ -787,8 +763,6 @@ only points there, in document order.
 
 - [One run in time](#one-run-in-time): an exec child's descendant that
   leaves the child's process group is not contained.
-- [Boundaries](#boundaries): the validator wire carries no version marker,
-  so co-shipping is an arrangement, not a guard.
 - [Principles as enforced constraints](#principles-as-enforced-constraints):
   a connection that races the host's retirement can fail before it is
   refused.

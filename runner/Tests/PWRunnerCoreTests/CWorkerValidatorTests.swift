@@ -225,16 +225,16 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
             }
             let controls = String((1...31).map { Character(UnicodeScalar(UInt8($0))) })
             // The file name omits U+D7FF, U+FFFF and U+10FFFF, which the file
-            // system representation refuses; the step ID carries the full corpus.
+            // system representation refuses; the step IDs together carry the full corpus.
             let nameSafe = controls + "\u{7f}\u{80}\u{7ff}\u{800}\u{e000}\u{10000}e\u{301}é\u{2028}\\\""
-            let scalars = nameSafe + "\u{d7ff}\u{ffff}\u{10ffff}"
+            let scalars = String(nameSafe.dropFirst(controls.count)) + "\u{d7ff}\u{ffff}\u{10ffff}"
             let path = NSTemporaryDirectory() + "pw-scalars-\(getpid())-" + nameSafe
             guard FileManager.default.createFile(atPath: path, contents: Data("x".utf8)) else {
                 throw TestFailure(message: "could not create the control-character file")
             }
             defer { try? FileManager.default.removeItem(atPath: path) }
             let probes = [
-                ValidatorProbe(stepId: "id" + scalars, operation: "file-read-data", filterType: "PATH", filterValue: path),
+                ValidatorProbe(stepId: "id" + controls, operation: "file-read-data", filterType: "PATH", filterValue: path),
                 ValidatorProbe(stepId: scalars, operation: "file-read-data", filterType: "NONE"),
             ]
             let result = runValidator(ValidatorClientInput(

@@ -147,7 +147,7 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
                 "error": finalDiagnostic, "pid": result.pid,
                 "bundle_id": result.bundle_id as Any? ?? NSNull(),
                 "policy_format": result.policy_format,
-                "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [],
+                "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [], "phases": [],
                 "reporting_failure": [
                     "origin": "runner_host", "diagnostic": finalDiagnostic,
                     "original_rc": result.rc, "original_normalized_outcome": result.normalized_outcome,
@@ -355,7 +355,7 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
                 realpath_resolved: canonicalizePath(target).resolved,
                 parent_realpath_resolved: parentRealpathResolved(target),
                 observer: "runner_host",
-                phase: "after_orchestration"
+                stage: "after_orchestration"
             )
         }
         guard step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterPath,
@@ -371,7 +371,7 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
             realpath_resolved: canonical.resolved,
             firmlink_resolved: firmlinkResolved(basis),
             observer: "runner_host",
-            phase: "after_orchestration"
+            stage: "after_orchestration"
         )
         // This later host observation never touches the comparison record:
         // a null realpath_resolved on a query the planner did not exclude is

@@ -1395,6 +1395,18 @@
             "app",
             "identity"
           ]
+        },
+        {
+          "id": "phases",
+          "description": "Fresh per-phase planning after independent unlink, separate live collections, aggregate timeout, byte cutoff and reader rejection controls",
+          "requires": [
+            "app",
+            "clang"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/phases.sh"
+          ]
         }
       ],
       "include": [

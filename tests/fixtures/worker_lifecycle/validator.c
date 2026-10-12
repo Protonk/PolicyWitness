@@ -13,6 +13,7 @@ int main(void) {
     size_t cap = 0;
     if (getline(&line, &cap, stdin) <= 0) return 90;
     int multibyte = strstr(line, "multibyte") != NULL;
+    int byte_flood = strstr(line, "byte_flood") != NULL;
     int io_hang = strstr(line, "io_hang") != NULL;
     int hang = strstr(line, "hang") != NULL;
     int nonzero = strstr(line, "nonzero") != NULL;
@@ -38,10 +39,11 @@ int main(void) {
         /* Close input BEFORE producing more than one host read's worth of
          * output. The host must drain despite EPIPE; sleeps are unnecessary. */
         close(STDIN_FILENO);
-        for (int i = 0; i < 32768; i++) putchar(' ');
+        for (int i = 0; i < 16384; i++) putchar('\n');
     }
     printf("%s,\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"rc\":0,\"errno\":0,\"outcome\":\"allow\"}\n", query);
     free(query);
+    if (byte_flood) { for (int i = 0; i < 65536; i++) putchar(' '); }
     if (multibyte) {
         fputs("{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"tail\",\"outcome\":\"future_937\",\"error\":\"", stdout);
         putchar(0xe2); fflush(stdout); usleep(30000);

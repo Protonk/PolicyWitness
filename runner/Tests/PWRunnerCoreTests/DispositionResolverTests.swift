@@ -19,9 +19,9 @@ private func slot(_ id: String, completed: Bool, rc: Int32 = 0) -> CWorkerSlotRe
                       error: nil, completed: completed)
 }
 
-private func progressWord(_ op: UInt32, _ phase: UInt32, index: UInt32? = nil) -> PWWorkerProgress {
+private func progressWord(_ op: UInt32, _ stage: UInt32, index: UInt32? = nil) -> PWWorkerProgress {
     let item: UInt32 = index.map { $0 + 1 } ?? 0
-    return PWWorkerProgress(raw: (op << 24) | (phase << 20) | item, operation: op, phase: phase, index: index)
+    return PWWorkerProgress(raw: (op << 24) | (stage << 20) | item, operation: op, stage: stage, index: index)
 }
 
 private func evidence(progress: PWWorkerProgress?) -> PWWorkerEvidence {
@@ -149,7 +149,7 @@ private func inputs(from observations: [String: Any]) -> (CWorkerOutput, [PWRunn
     if let word = observations["progress"] as? [String: Any] {
         progress = PWWorkerProgress(raw: UInt32(truncating: word["raw"] as! NSNumber),
                                     operation: UInt32(truncating: word["operation"] as! NSNumber),
-                                    phase: UInt32(truncating: word["phase"] as! NSNumber),
+                                    stage: UInt32(truncating: word["stage"] as! NSNumber),
                                     index: (word["index"] as? NSNumber).map { UInt32(truncating: $0) })
     }
     let steps = (observations["steps"] as? [[String: Any]]) ?? []
@@ -244,8 +244,8 @@ func runDispositionResolverTests(_ tk: TestKit) {
                                         workerOutput: out, validatorOutput: nil,
                                         ordering: buildOrdering(out, validatorOutput: nil, hasQueries: true),
                                         disposition: record),
-                runner_subprocess: { var sub = buildWorkerSubprocess(out, disposition: record)
-                                     sub.ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true); return sub }())
+                runner_subprocess: buildWorkerSubprocess(out, disposition: record),
+                phases: [constructedPhase(out, ids: ["first", "second"])])
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(reply))
             try expectEqual(decoded.runner_subprocess?.disposition?.issues.first?.rule, "D5")
         }
@@ -416,15 +416,15 @@ func runDispositionResolverTests(_ tk: TestKit) {
             var record = resolveDisposition(out, plan: [probe("a")])
             record.questions["final_status"] = PWDispositionClaim(state: "supported", answer: "signal",
                                                                   value: .integer(9), basis: ["reaped", "term_signal"])
-            var sub = buildWorkerSubprocess(out, disposition: record)
-            sub.ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
+            let sub = buildWorkerSubprocess(out, disposition: record)
+            let ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
             try expectFalse(dispositionIntegrityProblems(record, subprocess: sub, stepCount: 1).isEmpty)
             let reply = PWRunnerRunResult(specimen_id: "invalid", rc: 0, normalized_outcome: NormalizedOutcome.ok, pid: 4242,
                 policy_format: "sbpl", sandboxed_after_apply: true,
                 steps: buildStepResults(probePlan: [probe("a")], queryPlan: planValidatorQueries([probe("a")]),
                                         workerOutput: out, validatorOutput: nil,
-                                        ordering: sub.ordering, disposition: record),
-                runner_subprocess: sub)
+                                        ordering: ordering, disposition: record),
+                runner_subprocess: sub, phases: [constructedPhase(out, ids: ["a"])])
             do { _ = try pwRunnerEncodeJSON(reply); throw TestFailure(message: "contradicting record accepted") }
             catch is EncodingError { }
             let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(reply))

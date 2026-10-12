@@ -71,8 +71,12 @@ enum CWorkerOrchestrator {
         // ---- translation: request → driver inputs ------------------------
         let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
         let workerParams = workerParamsFromPolicy(parsed.policy)
-        let queryPlan = planValidatorQueries(parsed.probe_plan)
-        let validatorProbes = queryPlan.compactMap { $0.probe }
+        let phases = parsed.executionPhases
+        var offset = 0
+        let phaseInputs = phases.map { phase -> CWorkerPhaseInput in
+            defer { offset += phase.actions.count }
+            return CWorkerPhaseInput(firstSlot: offset, endSlot: offset + phase.actions.count)
+        }
 
         // _test_overrides.worker_timeout_ms drives the sentinel
         // deadline on the C-worker path. Floored at 50 ms because a
@@ -84,6 +88,7 @@ enum CWorkerOrchestrator {
             policy: parsed.policy.sbpl_source ?? "",
             params: workerParams,
             slots: workerSlots,
+            phases: phaseInputs,
             sentinelTimeoutMs: timeoutMsForCWorker(
                 override: parsed._test_overrides?.worker_timeout_ms
             ),
@@ -94,63 +99,85 @@ enum CWorkerOrchestrator {
             captureNonce: parsed.policy.capture_nonce
         )
 
-        // ---- run worker + validator together via postApplied hook --------
-        var validatorResult: ValidatorClientResult? = nil
-        let workerResult = runCWorker(workerInput) { workerPid in
-            // Skip validator entirely when every step's (op, filter) is
-            // in the prediction_unavailable set: no probes to send means
-            // no useful validator work. Avoids spawning a child only to
-            // immediately reap it.
-            if validatorProbes.isEmpty { return }
-            let vInput = ValidatorClientInput(
-                executablePath: validatorExecutablePath,
-                targetPid: workerPid,
-                probes: validatorProbes,
-                verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
-            )
-            validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
-        }
+        // Fresh planning occurs only after this phase's arrival. Each synchronous
+        // collection closes before the driver's guarded ordinal release.
+        var queryPlans = phases.map { _ in [ValidatorQueryDecision]() }
+        var validatorResults = phases.map { _ -> ValidatorClientResult? in nil }
+        var collectionStatuses = phases.map { _ in "not_reached" }
+        var collectionRemainingNs = UInt64(max(1, min(phaseCollectionBudgetMs, parsed._test_overrides?.validator_total_timeout_ms ?? phaseCollectionBudgetMs))) * 1_000_000
+        let workerResult = runCWorker(workerInput, phaseBoundary: { workerPid, index in
+            guard let start = MonotonicDeadline.now() else {
+                collectionStatuses[index] = "clock_unavailable"; collectionRemainingNs = 0; return
+            }
+            defer {
+                if let end = MonotonicDeadline.now(), end >= start {
+                    collectionRemainingNs -= min(collectionRemainingNs, end - start)
+                } else { collectionRemainingNs = 0 }
+            }
+            queryPlans[index] = planValidatorQueries(phases[index].actions.map { $0.probe })
+            let probes = queryPlans[index].compactMap { $0.probe }
+            if probes.isEmpty { collectionStatuses[index] = "not_needed"; return }
+            guard let now = MonotonicDeadline.now(), now >= start else {
+                collectionStatuses[index] = "clock_unavailable"; collectionRemainingNs = 0; return
+            }
+            let planningNs = now - start
+            guard collectionRemainingNs > planningNs + 1_000_000 else {
+                collectionStatuses[index] = "budget_exhausted"; return
+            }
+            let timeout = min(timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms),
+                              Int((collectionRemainingNs - planningNs) / 1_000_000))
+            let input = ValidatorClientInput(executablePath: validatorExecutablePath, targetPid: workerPid,
+                probes: probes, verdictReadTimeoutMs: timeout)
+            validatorResults[index] = runValidator(input, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
+            collectionStatuses[index] = "collected"
+        })
 
-        // ---- assemble + classify -----------------------------------------
         let workerOutput = unwrapWorkerOutput(workerResult)
         let disposition = workerOutput.map { resolveDisposition($0, plan: parsed.probe_plan) }
-        let runOutcome = classify(
-            workerResult: workerResult,
-            validatorResult: validatorResult,
-            expectedVerdictCount: validatorProbes.count,
-            disposition: disposition
-        )
-
-        let validatorOutput = unwrapValidatorOutput(validatorResult)
-
-        let ordering = workerOutput.map {
-            buildOrdering($0, validatorOutput: validatorOutput, hasQueries: !validatorProbes.isEmpty)
-        }
-        // A pre-spawn refusal is a bad_request like the service's own: the
-        // reply carries the refusal record and no steps (see isPreSpawnRefusal).
-        let stepResults: [PWRunnerStepResult]
-        if case .failure(let error, nil) = workerResult, error.isPreSpawnRefusal {
-            stepResults = []
-        } else {
-            stepResults = buildStepResults(
-                probePlan: parsed.probe_plan,
-                queryPlan: queryPlan,
-                workerOutput: workerOutput,
-                validatorOutput: validatorOutput, ordering: ordering,
-                disposition: disposition
-            )
+        var runOutcome = classify(workerResult: workerResult, validatorResult: nil,
+                                  expectedVerdictCount: 0, disposition: disposition)
+        var phaseResults: [PWRunnerPhaseResult] = []
+        var stepResults: [PWRunnerStepResult] = []
+        let refused: Bool
+        if case .failure(let error, nil) = workerResult { refused = error.isPreSpawnRefusal }
+        else { refused = false }
+        if !refused {
+            for (index, phase) in phases.enumerated() {
+                let validatorOutput = unwrapValidatorOutput(validatorResults[index])
+                let hasQueries = !queryPlans[index].compactMap { $0.probe }.isEmpty
+                let observation = workerOutput?.phases.indices.contains(index) == true ? workerOutput!.phases[index] : nil
+                let ordering = workerOutput.map { buildPhaseOrdering($0, index: index,
+                    input: phaseInputs[index], validatorOutput: validatorOutput, hasQueries: hasQueries) }
+                var steps = buildStepResults(probePlan: phase.actions.map { $0.probe }, queryPlan: queryPlans[index],
+                    workerOutput: workerOutput, validatorOutput: validatorOutput, ordering: ordering,
+                    disposition: disposition, stepOffset: phaseInputs[index].firstSlot)
+                for i in steps.indices { steps[i].phase_id = phase.phase_id }
+                stepResults += steps
+                var spawnFailure: PWRunnerSpawnFailure?
+                if case .failure(.spawnFailed(let failure), _) = validatorResults[index] { spawnFailure = failure }
+                phaseResults.append(PWRunnerPhaseResult(phase_id: phase.phase_id, ordinal: index + 1,
+                    action_ids: phase.actions.map { $0.probe.step_id }, arrival_observed: observation?.arrived ?? false,
+                    completion_observed: observation?.completed ?? false, collection_status: collectionStatuses[index],
+                    ordering: ordering, validator_subprocess: validatorOutput.map(buildValidatorSubprocess),
+                    validator_spawn_failure: spawnFailure))
+                // Worker failure has precedence; otherwise the first failed
+                // collection determines the summary. Every collection is retained.
+                if runOutcome.rc == 0 {
+                    runOutcome = classify(workerResult: workerResult, validatorResult: validatorResults[index],
+                        expectedVerdictCount: queryPlans[index].compactMap { $0.probe }.count, disposition: disposition)
+                    if runOutcome.rc == 0 && ["budget_exhausted", "clock_unavailable"].contains(collectionStatuses[index]) {
+                        runOutcome = ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
+                            error: "phase collection unavailable: " + collectionStatuses[index])
+                    }
+                }
+            }
         }
 
         let admissionFailure: PWRunnerAdmissionFailure?
         if case .failure(.admissionFailed(let record), _) = workerResult { admissionFailure = record }
         else { admissionFailure = nil }
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
-        var runnerSubprocess = workerOutput.map { buildWorkerSubprocess($0, disposition: disposition) }
-        runnerSubprocess?.ordering = ordering
-        let validatorSubprocess = validatorOutput.map(buildValidatorSubprocess)
-        let validatorSpawnFailure: PWRunnerSpawnFailure?
-        if case .failure(.spawnFailed(let failure), _) = validatorResult { validatorSpawnFailure = failure }
-        else { validatorSpawnFailure = nil }
+        let runnerSubprocess = workerOutput.map { buildWorkerSubprocess($0, disposition: disposition) }
 
         return PWRunnerRunResult(
             specimen_id: parsed.specimen_id,
@@ -165,11 +192,10 @@ enum CWorkerOrchestrator {
             sandboxed_after_apply: workerOutput?.applied,
             steps: stepResults,
             runner_subprocess: runnerSubprocess,
-            validator_subprocess: validatorSubprocess,
+            phases: phaseResults,
             test_overrides: parsed._test_overrides,
             applied_profile: workerOutput?.profileCapture,
-            admission_failure: admissionFailure,
-            validator_spawn_failure: validatorSpawnFailure
+            admission_failure: admissionFailure
         )
     }
 
@@ -220,6 +246,21 @@ enum CWorkerOrchestrator {
     static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
         if let refused = requestAdmissionFailure(parsed) { return refused }
         // Count checks precede translating an unbounded plan or sorting params.
+        if let phases = parsed.phases {
+            if phases.count > PWShmLayout.maxPhases {
+                return PWRunnerAdmissionFailure(field: "phases", actual: phases.count, maximum: PWShmLayout.maxPhases, unit: "items")
+            }
+            let count = phases.reduce(0) { $0 + $1.actions.count }
+            if count > PWShmLayout.maxSteps {
+                return PWRunnerAdmissionFailure(field: "phases.actions", actual: count, maximum: PWShmLayout.maxSteps, unit: "items")
+            }
+            for (index, phase) in phases.enumerated() {
+                if var failure = AdmissionStringRule(field: "phase_id", maximum: requestLabelMaxBytes, requiresCString: true).failure(phase.phase_id) {
+                    failure.index = index
+                    return failure
+                }
+            }
+        }
         if parsed.probe_plan.count > PWShmLayout.maxSteps {
             return PWRunnerAdmissionFailure(field: "probe_plan", actual: parsed.probe_plan.count,
                 maximum: PWShmLayout.maxSteps, unit: "items")
@@ -236,6 +277,8 @@ enum CWorkerOrchestrator {
 }
 
 // MARK: - Helpers
+
+let phaseCollectionBudgetMs = 30_000
 
 /// Resolve the sentinel-timeout for the C worker from the request's
 /// `_test_overrides.worker_timeout_ms`. Floor at 50 ms because a
@@ -438,16 +481,19 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
         error: CWorkerRunError.admissionFailed(record).description, pid: Int(getpid()),
         bundle_id: bundleId, policy_format: policyFormatAdmission.safeEcho(parsed.policy.format) ?? "unknown",
         policy_sha256: policyHash, steps: [], test_overrides: mirrored, admission_failure: record,
-        request_failure: requestCapacityFailure(record))
+        request_failure: requestCapacityFailure(record, parsed: parsed))
 }
 
-func requestCapacityFailure(_ record: PWRunnerAdmissionFailure) -> PWRunnerRequestFailure {
-    var path = record.field.split(separator: ".").map(String.init)
+func requestCapacityFailure(_ record: PWRunnerAdmissionFailure, parsed: PWRunnerRunSpec? = nil) -> PWRunnerRequestFailure {
+    var path = record.field == "phases.actions" ? ["phases"] : record.field.split(separator: ".").map(String.init)
     if let index = record.step_index {
         if record.field == "target" || record.field == "args" { path.insert("attempt", at: 0) }
-        path = ["probe_plan", String(index)] + path
+        path = (parsed?.probePath(index) ?? ["probe_plan", String(index)]) + path
     }
-    if let index = record.index { path.append(String(index)) }
+    if let index = record.index {
+        if record.field == "phase_id" { path = ["phases", String(index), "phase_id"] }
+        else { path.append(String(index)) }
+    }
     // Parameter-key refusals deliberately withhold the key. The existing
     // admission record remains authoritative for exact counts and positions.
     if record.field == "key" {
@@ -539,7 +585,8 @@ func buildStepResults(
     workerOutput: CWorkerOutput?,
     validatorOutput: ValidatorOutput?,
     ordering: PWRunnerOrdering? = nil,
-    disposition: PWDispositionRecord? = nil
+    disposition: PWDispositionRecord? = nil,
+    stepOffset: Int = 0
 ) -> [PWRunnerStepResult] {
     // One resolved account for every lifecycle projection below.
     let account = disposition ?? workerOutput.map { resolveDisposition($0, plan: probePlan) }
@@ -555,7 +602,8 @@ func buildStepResults(
     var channels: [(step: PWRunnerProbeStep, sandboxCheck: PWRunnerSandboxCheckResult,
                     attempt: PWRunnerAttemptResult)] = []
     channels.reserveCapacity(probePlan.count)
-    for (index, step) in probePlan.enumerated() {
+    for (localIndex, step) in probePlan.enumerated() {
+        let index = localIndex + stepOffset
         var sandboxCheck = buildSandboxCheckResult(
             step: step,
             verdict: verdictsByStep[step.step_id],
@@ -805,6 +853,23 @@ struct ComparisonEvidence {
     }
 }
 
+func buildPhaseOrdering(_ worker: CWorkerOutput, index: Int, input: CWorkerPhaseInput,
+                        validatorOutput: ValidatorOutput?, hasQueries: Bool) -> PWRunnerOrdering {
+    let phase = worker.phases[index]
+    // Reuse the single collection's claim rules on this phase's observations.
+    var view = worker
+    view.hookInvoked = phase.collectionClosed
+    view.proceedSet = phase.releaseSet
+    view.proceedObserved = phase.acknowledged
+    view.proceedOwnershipEstablished = phase.ownershipEstablished
+    view.orderingProtocolViolations = phase.violations
+    view.slots = Array(worker.slots[input.firstSlot..<input.endSlot])
+    if view.workerEvidence?.failure?.operation == 11 && view.workerEvidence?.failure?.index != UInt32(index) {
+        view.workerEvidence?.failure = nil
+    }
+    return buildOrdering(view, validatorOutput: validatorOutput, hasQueries: hasQueries)
+}
+
 func buildOrdering(_ worker: CWorkerOutput, validatorOutput: ValidatorOutput?, hasQueries: Bool) -> PWRunnerOrdering {
     let disposition = !worker.hookInvoked ? "not_invoked" : !hasQueries ? "not_needed"
         : validatorOutput == nil ? "not_spawned" : validatorOutput?.reaped == true ? "reaped" : "unconfirmed"
@@ -1036,7 +1101,7 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
         }
     }
     // A recorded request is a direct observation; only the absence of a request
-    // needs the recorded cleanup phase (exit_requested) to count as observed.
+    // needs the recorded cleanup stage (exit_requested) to count as observed.
     if out.exitRequested == false {
         questions["kill_request_and_result"] = inapplicable("exit_not_requested")
     } else if let request = out.terminationRequest {
@@ -1081,8 +1146,8 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
         let slot = slotsById[step.id]
         let slotState = slot == nil ? "absent" : (slot!.completed ? "completed" : "incomplete")
         let completed = slotState == "completed"
-        let boundary = ProtocolPosition(order: attemptOrder, index: i, phase: 1)
-        let afterSlot = ProtocolPosition(order: attemptOrder, index: i, phase: 2)
+        let boundary = ProtocolPosition(order: attemptOrder, index: i, stage: 1)
+        let afterSlot = ProtocolPosition(order: attemptOrder, index: i, stage: 2)
         var claims: [String: PWDispositionClaim] = [:]
         claims["step_requested_operation_applicability"] =
             supported(step.supported ? "supported" : "unsupported", basis: ["attempt_support"])

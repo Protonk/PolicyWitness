@@ -43,7 +43,7 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectEqual(f?.native_result, op == 3 ? 0 : -23)
                 try expectEqual(f?.index, op == 3 ? nil : 1)
                 try expectNil(f?.errno, "stale errno from APIs without an errno contract")
-                try expectEqual(out.workerEvidence?.progress?.phase, 2)
+                try expectEqual(out.workerEvidence?.progress?.stage, 2)
                 try expectFalse(out.applied)
             }
         }
@@ -72,7 +72,7 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
             try expectTrue(out.done)
             try expectTrue(out.slots[0].completed)
             try expectEqual(out.slots[0].rc, 0)
-            try expectEqual(out.workerEvidence?.progress?.phase, 2)
+            try expectEqual(out.workerEvidence?.progress?.stage, 2)
             try expectEqual(classify(workerResult: .success(out), validatorResult: nil,
                 expectedVerdictCount: 0).outcome, NormalizedOutcome.runnerTimeout)
         }
@@ -81,7 +81,7 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
             try expectFalse(out.slots[0].completed)
             try expectEqual(out.slots[0].rc, 0, "unpublished poison was read")
             try expectEqual(out.workerEvidence?.progress?.operation, 9)
-            try expectEqual(out.workerEvidence?.progress?.phase, 1)
+            try expectEqual(out.workerEvidence?.progress?.stage, 1)
         }
         tk.run("rich missing empty and truncated text keep identical failure classification") {
             for (mode, status) in [("rich", "complete"), ("missing", "absent"),

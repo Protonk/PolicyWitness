@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "64aa50556d3a6220a443c7de8667be608d5fb78c9319a586285e55d90be39c7b"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x64, 0xaa, 0x50, 0x55, 0x6d, 0x3a, 0x62, 0x20, 0xa4, 0x43, 0xc7, 0xde, 0x86, 0x67, 0xbe, 0x60, 0x8d, 0x5f, 0xb7, 0x8c, 0x93, 0x19, 0xa5, 0x86, 0x28, 0x5e, 0x55, 0xd9, 0x0b, 0xe3, 0x9c, 0x7b};
+#define PW_WORKER_ABI_IDENTITY_HEX "78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x78, 0xe5, 0xab, 0x71, 0xd8, 0x2e, 0x10, 0x14, 0x86, 0xf2, 0x91, 0xe1, 0x33, 0xe1, 0xbd, 0xb1, 0xa9, 0x12, 0x57, 0x7f, 0x0d, 0xab, 0xee, 0x8e, 0xbb, 0x35, 0xac, 0x63, 0xb3, 0xa5, 0x23, 0x3d};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -61,7 +61,9 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x64, 0xaa, 0x50, 0x55, 0x6d,
 #define PW_SHM_SLOT_BYTES   8192u
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
-#define PW_SHM_HEADER_BYTES 96u
+#define PW_SHM_MAX_PHASES 8u
+#define PW_SHM_PHASE_BYTES 32u
+#define PW_SHM_HEADER_BYTES 384u
 /* Optional compiled-object capture. The host pre-touches this bounded region;
  * no capture pipe or post-apply allocation/file output is needed. */
 #define PW_SHM_CAPTURE_HEADER_BYTES 144u
@@ -131,6 +133,18 @@ typedef enum {
     PW_ATTEMPT_EXEC_SPAWN       = 8,
 } pw_attempt_kind_t;
 
+/* Host inputs partition the slots in order. Each worker publication is written
+ * once, independently of the latest release ordinal in the region header. */
+typedef struct {
+    uint32_t first_slot;
+    uint32_t end_slot;
+    _Atomic uint32_t arrived;
+    _Atomic uint32_t acknowledged;
+    _Atomic uint32_t completed;
+    uint8_t reserved[12];
+} pw_shm_phase_t;
+_Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift");
+
 /*
  * Region header. Lives at offset 0; slot[i] lives at
  * offset PW_SHM_HEADER_BYTES + i * PW_SHM_SLOT_BYTES.
@@ -179,9 +193,12 @@ typedef struct {
     int32_t apply_errno;             /* failed-apply errno, valid with done; otherwise see above */
     uint32_t capture_requested;      /* host input; exactly 1 opts into sensitive capture */
     uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
-    _Atomic uint32_t proceed;          /* host: collection closed, release attempts */
-    _Atomic uint32_t proceed_observed; /* worker: acquired release before attempts */
+    _Atomic uint32_t proceed;          /* host: release ordinal, phase index + 1 */
+    _Atomic uint32_t proceed_observed; /* worker: latest acquired release ordinal */
     uint8_t abi_identity[PW_SHM_ABI_IDENTITY_BYTES];
+    uint32_t phase_count;
+    uint8_t reserved[28];
+    pw_shm_phase_t phases[PW_SHM_MAX_PHASES];
 } pw_shm_header_t;
 
 _Static_assert(offsetof(pw_shm_header_t, abi_magic) == 0,
@@ -205,7 +222,8 @@ enum {
     /* Embedded NUL in the policy text; detail is the byte offset. The host
      * refuses this at admission, and the reader refuses it again rather than
      * compile a prefix of the source the reply's policy_sha256 describes. */
-    PW_FAILURE_SOURCE_NUL = 9
+    PW_FAILURE_SOURCE_NUL = 9, PW_FAILURE_PHASE_LAYOUT = 10,
+    PW_FAILURE_PHASE_RELEASE = 11
 };
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };

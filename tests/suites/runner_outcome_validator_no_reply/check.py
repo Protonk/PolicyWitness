@@ -48,7 +48,7 @@ def main():
     assert runner['schema_version'] == contract.RESPONSE_SCHEMA and runner['normalized_outcome'] == 'validator_no_reply', runner
     assert '500 ms I/O deadline' in runner['error'], runner['error']
     assert runner['test_overrides'] == spec['_test_overrides'], runner
-    worker, v = runner['runner_subprocess'], runner['validator_subprocess']
+    worker, v = runner['runner_subprocess'], runner['phases'][0]['validator_subprocess']
     assert worker['exit_code'] == 0 and worker['done_observed'] and not worker['partial_steps'], worker
     assert worker['worker_evidence']['failure_state'] == 'absent', worker
     assert v['stdout_collection_stop'] == 'deadline' and v['reaped'] is True, v

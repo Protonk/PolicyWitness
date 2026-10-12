@@ -42,7 +42,7 @@ CONTROLLER = 'Contents/MacOS/policy-witness'
 VOLATILE = {
     'pid': (
         'data.runner_result.pid', 'data.runner_result.runner_subprocess.pid',
-        'data.runner_result.steps[].sandbox_check.pid', 'data.runner_result.validator_subprocess.pid',
+        'data.runner_result.steps[].sandbox_check.pid', 'data.runner_result.phases[].validator_subprocess.pid',
         'data.runner_result.steps[].attempt.child_pid',
         'data.sandbox_log_capture.deny_events[].pid', 'data.sandbox_log_capture.observer.data.pid',
         'data.sandbox_log_capture.observer.data.deny_events[].pid',

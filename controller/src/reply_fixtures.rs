@@ -28,12 +28,12 @@ pub(crate) fn query(action: &str, path: &str) -> Value {
     json!({"outcome": "allow", "rc": 0, "native_rc": 0, "errno": 0, "error": null, "pid": 42,
         "result_source": "validator", "operation": operation(action), "filter_kind": "path",
         "filter_type_id": 1, "filter_value": path,
-        "path_diagnostics": {"input": path, "observer": "runner_host", "phase": "after_orchestration",
+        "path_diagnostics": {"input": path, "observer": "runner_host", "stage": "after_orchestration",
             "same_as_input": ["realpath_resolved", "firmlink_resolved"]}})
 }
 
 pub(crate) fn attempt_paths(path: &str) -> Value {
-    json!({"input": path, "observer": "runner_host", "phase": "after_orchestration",
+    json!({"input": path, "observer": "runner_host", "stage": "after_orchestration",
         "same_as_input": ["realpath_resolved", "parent_realpath_resolved"]})
 }
 
@@ -54,7 +54,7 @@ pub(crate) fn step(id: &str, action: &str, path: &str, observation: &str) -> Val
         json!({"state": "supported", "answer": "reached", "basis": ["slot", "attempt_support"]});
     let result =
         json!({"state": "supported", "answer": "published", "basis": ["slot", "attempt_support"]});
-    json!({"step_id": id, "sandbox_check": query(action, path),
+    json!({"step_id": id, "phase_id": "main", "sandbox_check": query(action, path),
         "attempt": {"requested_kind": "file", "requested_action": action, "requested_path": path,
             "outcome": outcome, "rc": rc, "errno": errno, "error": null, "observed_path": null,
             "result_source": "worker", "path_diagnostics": attempt_paths(path),
@@ -70,7 +70,7 @@ pub(crate) fn incomplete_step(id: &str, action: &str, path: &str) -> Value {
     let boundary = json!({"state": "unresolved", "reason": "no_progress_word"});
     let result = json!({"state": "supported", "answer": "unpublished",
         "basis": ["slot", "collection_basis"]});
-    json!({"step_id": id, "sandbox_check": query(action, path),
+    json!({"step_id": id, "phase_id": "main", "sandbox_check": query(action, path),
         "attempt": {"requested_kind": "file", "requested_action": action, "requested_path": path,
             "outcome": "not_run_worker_died", "rc": -1, "errno": null,
             "error": "no completed attempt result: slot publication incomplete",
@@ -148,10 +148,7 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         "cleanup_trigger": signal.map(|_| "deadline_expiry"),
         "grace_end": signal.map(|_| "exhausted"),
         "collection_basis": "after_confirmed_reap", "partial_steps": partial,
-        "wait_errors": [], "ready_byte_received": true,
-        "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
-            "proceed_observed": true, "validator_disposition": "reaped",
-            "worker_lifetime_established": true, "protocol_violations": []}});
+        "wait_errors": [], "ready_byte_received": true});
     sub["disposition"] = disposition_for(&sub, &steps);
     let records: Vec<Value> = steps
         .iter()
@@ -169,7 +166,13 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         "pid": 9999, "bundle_id": "controlled.service", "policy_format": "sbpl",
         "policy_sha256": "0".repeat(64), "sandboxed_after_apply": true, "test_overrides": null,
         "runner_subprocess": sub,
-        "validator_subprocess": {"pid": 43, "reaped": true, "exit_code": 0, "records": records},
+        "phases": [{"phase_id": "main", "ordinal": 1,
+            "action_ids": steps.iter().map(|s| s["step_id"].clone()).collect::<Vec<_>>(),
+            "arrival_observed": true, "completion_observed": !partial && signal.is_none(), "collection_status": "collected",
+            "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
+                "proceed_observed": true, "validator_disposition": "reaped",
+                "worker_lifetime_established": true, "protocol_violations": []},
+            "validator_subprocess": {"pid": 43, "reaped": true, "exit_code": 0, "records": records}}],
         "steps": steps})
 }
 

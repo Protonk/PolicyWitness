@@ -56,7 +56,7 @@ POLICY = {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'}
 def progress_word(operation, phase, index=None):
     """pw_progress encoding: (op << 24) | (phase << 20) | (index + 1); no item when index is None."""
     word = (operation << 24) | (phase << 20) | (0 if index is None else index + 1)
-    decoded = {'operation': operation, 'phase': phase, 'raw': word}
+    decoded = {'operation': operation, 'stage': phase, 'raw': word}
     if index is not None:
         decoded['index'] = index
     return decoded

@@ -46,8 +46,8 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 step.attempt.path_diagnostics = nil
                 step.comparison = PWRunnerComparison(observation: "succeeded", observation_basis: "completed_worker_status",
                     operation_relation: "matched", target_relation: "same_submitted", order: "unestablished", limitations: [])
-                result.validator_subprocess?.records?[0].operation = "file-write-unlink"
-                result.validator_subprocess?.records?[0].filterValue = path
+                result.phases[0].validator_subprocess?.records?[0].operation = "file-write-unlink"
+                result.phases[0].validator_subprocess?.records?[0].filterValue = path
                 if state != "present" { try FileManager.default.removeItem(atPath: path) }
                 if state == "recreated" { FileManager.default.createFile(atPath: path, contents: Data("new".utf8)) }
                 result.steps = enrichPathDiagnostics(steps: [step])
@@ -57,7 +57,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 try expectEqual(decoded.comparison?.order, "unestablished")
                 try expectEqual(decoded.comparison?.limitations, [])
                 try expectEqual(decoded.sandbox_check.outcome, "allow")
-                try expectEqual(decoded.sandbox_check.path_diagnostics?.phase, "after_orchestration")
+                try expectEqual(decoded.sandbox_check.path_diagnostics?.stage, "after_orchestration")
                 // Later host nonresolution is visible only in the path block.
                 try expectEqual(decoded.sandbox_check.path_diagnostics?.realpath_resolved == nil, state == "absent")
                 let wire = try wireObject(data)
@@ -80,7 +80,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             step.attempt.child_exit_code = 37
             step.attempt.stdout = "controlled marker"
             result.steps = [step]
-            result.validator_subprocess?.records?[0].operation = "process-exec*"
+            result.phases[0].validator_subprocess?.records?[0].operation = "process-exec*"
             let encoded = try pwRunnerEncodeJSON(result)
             let raw = try wireObject(encoded)
             let wire = (raw["steps"] as! [[String: Any]])[0]
@@ -171,14 +171,14 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
                 partial_steps: false, poll_stop_reason: "future_stop",
                 termination_request: PWRunnerTerminationRequest(signal: 31, rc: -1, errno: 123456),
-                reaped: false, wait_errors: [PWRunnerWaitError(phase: "future_phase", rc: -1, errno: 654321)])
+                reaped: false, wait_errors: [PWRunnerWaitError(stage: "future_phase", rc: -1, errno: 654321)])
             let data = try pwRunnerEncodeJSON(record)
             let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
             try expectEqual(decoded.poll_stop_reason, "future_stop")
             try expectEqual(decoded.termination_request?.signal, 31)
             try expectEqual(decoded.termination_request?.rc, -1)
             try expectEqual(decoded.termination_request?.errno, 123456)
-            try expectEqual(decoded.wait_errors?.first?.phase, "future_phase")
+            try expectEqual(decoded.wait_errors?.first?.stage, "future_phase")
             try expectEqual(decoded.wait_errors?.first?.rc, -1)
             try expectEqual(decoded.wait_errors?.first?.errno, 654321)
         }
@@ -218,9 +218,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             let data = try pwRunnerEncodeJSON(original)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
             try expectEqual(decoded.steps.count, original.steps.count)
-            try expectEqual(decoded.validator_subprocess?.pid, original.validator_subprocess?.pid)
-            try expectEqual(decoded.validator_subprocess?.exit_code, original.validator_subprocess?.exit_code)
-            try expectNil(decoded.validator_subprocess?.term_signal)
+            try expectEqual(decoded.phases[0].validator_subprocess?.pid, original.phases[0].validator_subprocess?.pid)
+            try expectEqual(decoded.phases[0].validator_subprocess?.exit_code, original.phases[0].validator_subprocess?.exit_code)
+            try expectNil(decoded.phases.first?.validator_subprocess?.term_signal)
         }
         tk.run("no worker PID encodes an explicit null query PID") {
             var result = try replyFixture()
@@ -270,7 +270,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(timeout.pid, timeout.runner_subprocess?.pid)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(timeout))
             try expectNotNil(decoded.runner_subprocess?.disposition)
-            try expectNotNil(decoded.runner_subprocess?.ordering)
+            try expectNotNil(decoded.phases.first?.ordering)
         }
     }
 }

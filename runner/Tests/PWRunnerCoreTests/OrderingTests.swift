@@ -38,13 +38,24 @@ private func orderedSteps(_ worker: CWorkerOutput?, _ validator: ValidatorOutput
     buildStepResults(probePlan: [step], queryPlan: planValidatorQueries([step]), workerOutput: worker,
         validatorOutput: validator, ordering: worker.map { buildOrdering($0, validatorOutput: validator, hasQueries: true) })
 }
+// Constructed single-phase account for unit-only inputs. These values are
+// explicitly test data; live driver tests inspect immutable publications.
+func constructedPhase(_ out: CWorkerOutput?, ids: [String], validator: ValidatorOutput? = nil,
+                      hasQueries: Bool = true) -> PWRunnerPhaseResult {
+    PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ids,
+        arrival_observed: out?.hookInvoked == true || out?.proceedObserved == true,
+        completion_observed: out?.done == true && out?.proceedObserved == true,
+        collection_status: out?.hookInvoked == true ? "collected" : "not_reached",
+        ordering: out.map { buildOrdering($0, validatorOutput: validator, hasQueries: hasQueries) },
+        validator_subprocess: validator.map(buildValidatorSubprocess))
+}
+
 private func orderingEnvelope(_ worker: CWorkerOutput?, _ validator: ValidatorOutput?) -> PWRunnerRunResult {
-    var sub = worker.map(buildWorkerSubprocess)
-    sub?.ordering = worker.map { buildOrdering($0, validatorOutput: validator, hasQueries: true) }
+    let sub = worker.map(buildWorkerSubprocess)
     return PWRunnerRunResult(specimen_id: "ordering", rc: 0, normalized_outcome: "ok", pid: 42,
         policy_format: "sbpl", sandboxed_after_apply: worker?.applied,
         steps: orderedSteps(worker, validator), runner_subprocess: sub,
-        validator_subprocess: validator.map(buildValidatorSubprocess))
+        phases: [constructedPhase(worker, ids: ["s"], validator: validator)])
 }
 private func waitForReceipt(_ path: String, _ text: String) -> Bool {
     for _ in 0..<2000 {
@@ -89,7 +100,7 @@ func runOrderingTests(_ tk: TestKit) {
                 expired = waitForReceipt(receipt, "expired") // test-owned collection gate
             }
             try expectTrue(expired)
-            try expectTrue(out.hookInvoked && out.proceedSet && out.done)
+            try expectTrue(out.hookInvoked && !out.proceedSet && out.done)
             try expectFalse(out.proceedObserved || out.slots[0].completed)
             try expectEqual(out.workerEvidence?.failure?.operation, 11)
             try expectEqual(out.workerEvidence?.failure?.code, 8)
@@ -148,19 +159,19 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(reply.normalized_outcome, workerFailed ? NormalizedOutcome.runnerFailed : NormalizedOutcome.validatorSpawnFailed)
                 try expectEqual(reply.rc, 1)
                 try expectNil(reply.reporting_failure)
-                try expectNil(reply.validator_subprocess)
-                try expectEqual(reply.validator_spawn_failure?.origin, "runner_host")
-                try expectEqual(reply.validator_spawn_failure?.operation, "posix_spawn")
-                try expectEqual(reply.validator_spawn_failure?.executable_path, path)
-                try expectEqual(reply.validator_spawn_failure?.return_code, code)
-                try expectEqual(reply.validator_spawn_failure?.diagnostic, diagnostic)
+                try expectNil(reply.phases[0].validator_subprocess)
+                try expectEqual(reply.phases[0].validator_spawn_failure?.origin, "runner_host")
+                try expectEqual(reply.phases[0].validator_spawn_failure?.operation, "posix_spawn")
+                try expectEqual(reply.phases[0].validator_spawn_failure?.executable_path, path)
+                try expectEqual(reply.phases[0].validator_spawn_failure?.return_code, code)
+                try expectEqual(reply.phases[0].validator_spawn_failure?.diagnostic, diagnostic)
                 if !workerFailed {
                     try expectContains(reply.error ?? "", path)
                     try expectContains(reply.error ?? "", String(code))
                     try expectContains(reply.error ?? "", diagnostic)
                 }
-                try expectEqual(reply.runner_subprocess?.ordering?.validator_disposition, "not_spawned")
-                try expectEqual(reply.runner_subprocess?.ordering?.proceed_observed, true)
+                try expectEqual(reply.phases.first?.ordering?.validator_disposition, "not_spawned")
+                try expectEqual(reply.phases.first?.ordering?.proceed_observed, true)
                 try expectEqual(reply.steps[0].attempt.outcome, workerFailed ? AttemptOutcome.notRunWorkerDied : AttemptOutcome.ok)
                 try expectEqual(reply.steps[0].sandbox_check.outcome, SandboxCheckOutcome.error)
                 try expectEqual(reply.steps[0].sandbox_check.missing_reason, "validator_not_invoked")
@@ -172,14 +183,16 @@ func runOrderingTests(_ tk: TestKit) {
                 let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(invalid))
                 try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                 try expectEqual(degraded.reporting_failure?.evidence_retained, true)
-                try expectEqual(try pwRunnerEncodeJSON(degraded.validator_spawn_failure),
-                                try pwRunnerEncodeJSON(reply.validator_spawn_failure))
+                try expectEqual(try pwRunnerEncodeJSON(degraded.phases[0].validator_spawn_failure),
+                                try pwRunnerEncodeJSON(reply.phases[0].validator_spawn_failure))
                 // An absent optional record stays unknown.
                 var without = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-                without.removeValue(forKey: "validator_spawn_failure")
+                var phases = without["phases"] as! [[String: Any]]
+                phases[0].removeValue(forKey: "validator_spawn_failure")
+                without["phases"] = phases
                 let absent = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
                     from: JSONSerialization.data(withJSONObject: without))
-                try expectNil(absent.validator_spawn_failure)
+                try expectNil(absent.phases.first?.validator_spawn_failure)
             }
         }
         tk.run("signal_while_waiting: records before and after death never acquire policy lifetime") {
@@ -252,7 +265,7 @@ func runOrderingTests(_ tk: TestKit) {
             }
             let out = try orderingWorker("proceed_wait|" + receipt, calls: calls)
             try expectTrue(interceptedReap)
-            try expectEqual(out.waitErrors?.first?.phase, "exit_grace")
+            try expectEqual(out.waitErrors?.first?.stage, "exit_grace")
             try expectTrue(out.proceedObserved && out.proceedOwnershipEstablished)
             try expectEqual(out.reaped, false)
             let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true)
@@ -270,10 +283,11 @@ func runOrderingTests(_ tk: TestKit) {
                 try? FileManager.default.removeItem(atPath: receipt)
                 try? FileManager.default.removeItem(atPath: receipt + ".ackgate")
             }
-            var hookFinished = false, ownershipLost = false, sawLateAck = false
+            var hookFinished = false, postHookChecked = false, ownershipLost = false, sawLateAck = false
             var calls = ChildProcessCalls()
             calls.wait = { pid, status, options in
                 if !hookFinished { return Darwin.waitpid(pid, status, options) }
+                if !postHookChecked { postHookChecked = true; return Darwin.waitpid(pid, status, options) }
                 if !ownershipLost {
                     ownershipLost = true
                     errno = EIO; return -1
@@ -328,7 +342,7 @@ func runOrderingTests(_ tk: TestKit) {
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
                 try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
-                try expectEqual(decoded.runner_subprocess?.ordering != nil, missing != "worker")
+                try expectEqual(decoded.phases.first?.ordering != nil, missing != "worker")
             }
         }
         tk.run("NONE queries ignore the submitted unused value when matching native records") {
@@ -402,12 +416,12 @@ func runOrderingTests(_ tk: TestKit) {
                 workerExecutablePath: path, validatorExecutablePath: path + ".validator")
             try expectEqual(result.normalized_outcome, NormalizedOutcome.runnerFailed)
             try expectEqual(result.test_overrides?.validator_io_timeout_ms, 150)
-            try expectEqual(result.validator_subprocess?.stdout_collection_stop, "deadline")
-            try expectEqual(result.validator_subprocess?.records?.count, 1)
+            try expectEqual(result.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
+            try expectEqual(result.phases[0].validator_subprocess?.records?.count, 1)
             try expectEqual(result.runner_subprocess?.worker_evidence?.failure?.operation, 11)
             try expectEqual(result.runner_subprocess?.worker_evidence?.failure?.detail, 50)
-            try expectEqual(result.runner_subprocess?.ordering?.proceed_set, true)
-            try expectEqual(result.runner_subprocess?.ordering?.proceed_observed, false)
+            try expectEqual(result.phases.first?.ordering?.proceed_set, false)
+            try expectEqual(result.phases.first?.ordering?.proceed_observed, false)
             try expectEqual(result.steps[0].sandbox_check.outcome, "allow")
             try expectEqual(result.steps[0].attempt.result_source, "synthetic")
             try expectEqual(result.steps[0].comparison?.order, "unestablished")
@@ -424,8 +438,8 @@ func runOrderingTests(_ tk: TestKit) {
             try expectContains(result.error ?? "", "50 ms I/O deadline")
             try expectEqual(result.test_overrides?.validator_io_timeout_ms, 50)
             try expectEqual(result.runner_subprocess?.exit_code, 0)
-            try expectEqual(result.validator_subprocess?.stdout_collection_stop, "deadline")
-            try expectEqual(result.runner_subprocess?.ordering?.proceed_observed, true)
+            try expectEqual(result.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
+            try expectEqual(result.phases.first?.ordering?.proceed_observed, true)
             try expectEqual(result.steps[0].comparison?.order, "query_first")
             try expectEqual(result.steps[0].attempt.outcome, "ok")
             _ = try pwRunnerEncodeJSON(result)

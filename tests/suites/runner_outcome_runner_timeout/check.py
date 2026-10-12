@@ -46,7 +46,7 @@ def check_envelope(envelope, rc, specimen, expected):
     steps = runner['steps']
     assert isinstance(steps, list), steps
     assert [step['step_id'] for step in steps] == [step['step_id'] for step in expected], steps
-    validator = runner.get('validator_subprocess')
+    validator = (runner.get('phases') or [{}])[0].get('validator_subprocess')
     if not expected:
         # Optional subprocess metadata is omitted or null when no child ran.
         assert validator is None, validator

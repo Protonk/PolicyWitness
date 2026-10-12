@@ -68,7 +68,7 @@ private func checkLifecycleJSON(_ out: CWorkerOutput, stop: String,
     try expectEqual(decoded.termination_request?.signal, out.terminationRequest?.signal)
     try expectEqual(decoded.termination_request?.rc, out.terminationRequest?.rc)
     try expectEqual(decoded.termination_request?.errno, out.terminationRequest?.errno)
-    try expectEqual(decoded.wait_errors?.map { $0.phase }, out.waitErrors?.map { $0.phase })
+    try expectEqual(decoded.wait_errors?.map { $0.stage }, out.waitErrors?.map { $0.stage })
     try expectEqual(decoded.wait_errors?.map { $0.rc }, out.waitErrors?.map { $0.rc })
     try expectEqual(decoded.wait_errors?.map { $0.errno }, out.waitErrors?.map { $0.errno })
     if !reaped {
@@ -156,7 +156,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkCompletedReport(out)
             try checkLifecycleJSON(out, stop: "done", reaped: false)
             try expectEqual(out.terminationRequest?.rc, 0)
-            try expectEqual(out.waitErrors?.map { $0.phase }, ["after_termination"])
+            try expectEqual(out.waitErrors?.map { $0.stage }, ["after_termination"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [ECHILD])
         }
         tk.run("interrupted grace reap recovers and retains the interruption") {
@@ -170,7 +170,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkCompletedReport(out)
             try checkLifecycleJSON(out, stop: "done", reaped: true, exit: 17)
             try expectNil(out.terminationRequest)
-            try expectEqual(out.waitErrors?.map { $0.phase }, ["exit_grace"])
+            try expectEqual(out.waitErrors?.map { $0.stage }, ["exit_grace"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [EINTR])
         }
         tk.run("repeated EINTR returns with finite attempts and unconfirmed status") {
@@ -186,7 +186,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkCompletedReport(out)
             try checkLifecycleJSON(out, stop: "done", reaped: false)
             try expectEqual(waitCalls, 4, "three grace attempts, then one final attempt")
-            try expectEqual(out.waitErrors?.map { $0.phase },
+            try expectEqual(out.waitErrors?.map { $0.stage },
                             ["exit_grace", "exit_grace", "exit_grace", "after_termination"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [EINTR, EINTR, EINTR, EINTR])
             try expectEqual(out.terminationRequest?.rc, 0)
@@ -204,7 +204,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
                 try checkLifecycleJSON(out, stop: completed ? "done" : "wait_error", reaped: false)
                 try expectNil(out.terminationRequest)
                 try expectEqual(killCalls, 0)
-                try expectEqual(out.waitErrors?.map { $0.phase }, [completed ? "exit_grace" : "poll"])
+                try expectEqual(out.waitErrors?.map { $0.stage }, [completed ? "exit_grace" : "poll"])
                 try expectEqual(out.waitErrors?.map { $0.errno }, [ECHILD])
             }
         }
@@ -219,7 +219,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkLifecycleJSON(out, stop: "wait_error", reaped: true, signal: SIGKILL)
             try expectFalse(out.done)
             try expectEqual(out.terminationRequest?.rc, 0)
-            try expectEqual(out.waitErrors?.map { $0.phase }, ["poll"])
+            try expectEqual(out.waitErrors?.map { $0.stage }, ["poll"])
             try expectEqual(out.waitErrors?.map { $0.errno }, [EIO])
         }
     }

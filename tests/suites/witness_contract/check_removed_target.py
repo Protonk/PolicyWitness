@@ -46,9 +46,9 @@ def main():
     assert runner['normalized_outcome'] == 'ok'
     assert runner.get('test_overrides') is None
     assert runner['runner_subprocess']['exit_code'] == 0
-    assert runner['validator_subprocess']['exit_code'] == 0
+    assert runner['phases'][0]['validator_subprocess']['exit_code'] == 0
     assert [step['step_id'] for step in runner['steps']] == ['read', 'unlink']
-    ordering = runner["runner_subprocess"]["ordering"]
+    ordering = runner["phases"][0]["ordering"]
     assert all(ordering[key] is True for key in ("collection_closed_before_proceed", "proceed_set", "proceed_observed")), ordering
     recorded = {}
     for step, action in zip(runner['steps'], ('open_read', 'unlink')):

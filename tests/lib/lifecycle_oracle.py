@@ -46,7 +46,7 @@ def extract_observations(envelope, view):
         reaped=sub.get('reaped'), exit_code=sub.get('exit_code'), term_signal=sub.get('term_signal'),
         poll_stop_reason=field('poll_stop_reason'), exit_requested=sub.get('exit_requested'),
         # The host encodes an observed non-request as an absent object once it has
-        # recorded the cleanup phase (exit_requested); without that phase recorded,
+        # recorded the cleanup stage (exit_requested); without that stage recorded,
         # absence is not an observation.
         termination_request=(sub['termination_request'] if 'termination_request' in sub
                              else None if 'exit_requested' in sub else MISSING),
@@ -87,18 +87,22 @@ def association(progress, plan_len):
     """(answer or None, protocol position or None). None answer: no word or unrecognized."""
     if progress is None:
         return None, None
-    op, phase, index = progress.get('operation'), progress.get('phase'), progress.get('index')
-    if op not in C.OPERATIONS or phase not in C.PHASES:
+    op, stage, index = progress.get('operation'), progress.get('stage'), progress.get('index')
+    if op not in C.OPERATIONS or stage not in C.PHASES:
         return 'unrecognized', None
     raw = progress.get('raw')
     if type(raw) is not int or not 0 < raw <= 0xffffffff or raw >> 24 != op \
-            or (raw >> 20) & 15 != phase or (raw & 0xfffff) != (index + 1 if type(index) is int else 0):
+            or (raw >> 20) & 15 != stage or (raw & 0xfffff) != (index + 1 if type(index) is int else 0):
         return 'invalid', None
+    if op == 11 and index is not None:
+        if type(index) is not int or index < 0 or index > plan_len:
+            return 'invalid', None
+        return 'none', (ORDER[C.OP_ATTEMPT], index, 0)
     if op in C.INDEXED_OPERATIONS:
         if type(index) is not int or index < 0 or (op == C.OP_ATTEMPT and index >= plan_len):
             return 'invalid', None
-        return C.INDEXED_OPERATIONS[op], (ORDER[op], index, phase)
-    return ('invalid', None) if index is not None else ('none', (ORDER[op], 0, phase))
+        return C.INDEXED_OPERATIONS[op], (ORDER[op], index, stage)
+    return ('invalid', None) if index is not None else ('none', (ORDER[op], 0, stage))
 
 
 def boundary(i):

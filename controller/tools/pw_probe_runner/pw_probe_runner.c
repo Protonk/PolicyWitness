@@ -1081,15 +1081,18 @@ static _Noreturn void spin_for_exit(pw_shm_header_t *hdr) {
 
 /* No allocation, sleep or I/O after apply. CLOCK_MONOTONIC reads the macOS
  * commpage. An unusable clock fails closed even if release is already visible. */
-static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long budget_ms) {
-    pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, UINT32_MAX);
+static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
+                                uint32_t phase_index, long budget_ms) {
+    pw_shm_phase_t *phase = &hdr->phases[phase_index];
+    pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, phase->first_slot);
+    atomic_store_explicit(&phase->arrived, 1u, memory_order_release);
     struct timespec start, now;
     int rc = PW_MONOTONIC_READ(PW_CLOCK_PROCEED_START, &start);
     int clock_errno = errno;
     for (;;) {
         if (rc != 0) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_NATIVE, PW_NATIVE_CLOCK,
-                       rc, 1, clock_errno, UINT32_MAX, (uint32_t)budget_ms);
+                       rc, 1, clock_errno, phase_index, (uint32_t)budget_ms);
             pw_diagnostic(e, "proceed wait: CLOCK_MONOTONIC failed");
             break;
         }
@@ -1100,13 +1103,22 @@ static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long
             + now.tv_nsec - start.tv_nsec;
         if (elapsed_ns >= (int64_t)budget_ms * 1000000LL) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE,
-                       0, 0, 0, UINT32_MAX, (uint32_t)budget_ms);
+                       0, 0, 0, phase_index, (uint32_t)budget_ms);
             pw_diagnostic(e, "proceed wait: worker_proceed_wait budget expired (milliseconds in detail)");
             break;
         }
-        if (atomic_load_explicit(&hdr->proceed, memory_order_acquire) == 1u) {
-            atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);
-            pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, UINT32_MAX);
+        uint32_t ordinal = atomic_load_explicit(&hdr->proceed, memory_order_acquire);
+        if (ordinal > phase_index + 1u) {
+            pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PHASE_RELEASE, PW_NATIVE_NONE,
+                       0, 0, 0, phase_index, ordinal);
+            pw_diagnostic(e, "release names a future phase");
+            break;
+        }
+        if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) _exit(0);
+        if (ordinal == phase_index + 1u) {
+            atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);
+            atomic_store_explicit(&hdr->proceed_observed, ordinal, memory_order_release);
+            pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, phase->first_slot);
             return elapsed_ns;
         }
         for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
@@ -1193,6 +1205,25 @@ int main(int argc, char **argv) {
                 args.step_count, hdr->step_count);
     }
     uint32_t step_count = hdr->step_count;
+    uint32_t end_slot = 0;
+    int phases_valid = hdr->phase_count > 0 && hdr->phase_count <= PW_SHM_MAX_PHASES;
+    if (phases_valid) {
+        for (uint32_t i = 0; i < hdr->phase_count; i++) {
+            pw_shm_phase_t *phase = &hdr->phases[i];
+            if (phase->first_slot != end_slot || phase->end_slot < end_slot || phase->end_slot > step_count
+                || atomic_load_explicit(&phase->arrived, memory_order_acquire) != 0u
+                || atomic_load_explicit(&phase->acknowledged, memory_order_acquire) != 0u
+                || atomic_load_explicit(&phase->completed, memory_order_acquire) != 0u) phases_valid = 0;
+            end_slot = phase->end_slot;
+        }
+    }
+    if (!phases_valid || end_slot != step_count) {
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_PHASE_LAYOUT, PW_NATIVE_NONE,
+                   0, 0, 0, UINT32_MAX, PW_SHM_MAX_PHASES);
+        pw_diagnostic(evidence, "invalid phase partition or publication input");
+        return 9;
+    }
+
 
     /* Ensure host-populated strings are bounded before the sandbox is
      * applied. The worker is intentionally defensive here because a
@@ -1402,15 +1433,16 @@ int main(int argc, char **argv) {
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
 
-    int64_t release_wait_ns = wait_for_proceed(hdr, evidence, args.proceed_wait_ms);
-    attempt_budget_exclude(&attempt_budget, release_wait_ns);
-
-    /* Run attempts. Dispatch by attempt_kind; each helper writes
-     * outputs before the slot's `completed` flag is released. */
-    for (uint32_t i = 0; i < step_count; i++) {
-        pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
-        run_attempt(&slots[i], &attempt_budget, child_deadline_ms);
-        pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
+    for (uint32_t phase_index = 0; phase_index < hdr->phase_count; phase_index++) {
+        pw_shm_phase_t *phase = &hdr->phases[phase_index];
+        int64_t release_wait_ns = wait_for_proceed(hdr, evidence, phase_index, args.proceed_wait_ms);
+        attempt_budget_exclude(&attempt_budget, release_wait_ns);
+        for (uint32_t i = phase->first_slot; i < phase->end_slot; i++) {
+            pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
+            run_attempt(&slots[i], &attempt_budget, child_deadline_ms);
+            pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
+        }
+        atomic_store_explicit(&phase->completed, 1u, memory_order_release);
     }
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a

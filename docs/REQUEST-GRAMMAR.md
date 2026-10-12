@@ -96,6 +96,21 @@ No worker or validator is created for these request refusals. The XPC host
 may have launched to decode and refuse a request. File I/O, runner availability
 and transport failures remain separate tool/execution failures.
 
+## Divide ordinary actions into phases
+
+Render `phases_create` to use the same paired action inside an explicit phase.
+`probe_plan` and `phases` are mutually exclusive non-null forms; supplying both
+or neither produces `exclusive_plan_forms`. The simple form has one execution
+phase named `main`, so it shares the same barriers and evidence rules.
+
+The corpus's phase controls cover empty/duplicate IDs, unknown phase fields,
+missing query or attempt, global duplicate step IDs, and the inclusive phase,
+identity and total-action bounds. Refusal paths identify
+`phases`, the phase index, `actions` and the action index. Capacity comes before
+meaning and no child is launched on either refusal. The guide's
+[ordered-phase example](PolicyWitness.md#ordered-phases) describes the sequence
+and how fresh planning can leave a later query unavailable after an unlink.
+
 ## The entry point matters
 
 The controller accepts an authored specimen and resolves controller-owned

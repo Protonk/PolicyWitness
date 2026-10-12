@@ -217,12 +217,12 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
                 try expectEqual(enriched.comparison?.observation, comparison.observation)
                 try expectEqual(enriched.comparison?.order, comparison.order)
                 try expectEqual(enriched.sandbox_check.path_diagnostics?.observer, "runner_host")
-                try expectEqual(enriched.sandbox_check.path_diagnostics?.phase, "after_orchestration")
+                try expectEqual(enriched.sandbox_check.path_diagnostics?.stage, "after_orchestration")
                 try expectEqual(enriched.sandbox_check.path_diagnostics?.realpath_resolved == nil, state == "absent" || state == "excluded")
             }
         }
         tk.run("later host disappearance is distinct from an earlier supplied validator record") {
-            let path = "/private/tmp/pw-path-phase-" + UUID().uuidString
+            let path = "/private/tmp/pw-path-stage-" + UUID().uuidString
             FileManager.default.createFile(atPath: path, contents: Data("before".utf8))
             defer { try? FileManager.default.removeItem(atPath: path) }
             let step = PWRunnerStepResult(step_id: "s", sandbox_check: comparisonCheck(target: path),

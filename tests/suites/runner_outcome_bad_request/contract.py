@@ -71,7 +71,7 @@ def main():
                     assert runner['request_failure'] == diagnostic, env
                     assert runner['normalized_outcome'] == 'bad_request', runner
                     assert runner.get('runner_subprocess') is None and runner['steps'] == [], runner
-                    assert runner.get('validator_subprocess') is None, runner
+                    assert (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
                 else:
                     assert env['data']['runner_client'] is None, env
 
@@ -104,7 +104,7 @@ def main():
             else:
                 assert reply['normalized_outcome'] == 'bad_request' and reply['request_failure'] == expected['xpc'], (example['id'], reply)
                 assert not observed and reply['steps'] == [], reply
-                assert reply.get('runner_subprocess') is None and reply.get('validator_subprocess') is None, reply
+                assert reply.get('runner_subprocess') is None and (reply.get('phases') or [{}])[0].get('validator_subprocess') is None, reply
 
         cli('selector_alias', dict(base, runner_mode='standard', required_entitlements=[]), accepted=True)
         cli('selector_nested', dict(base, runner=dict(mode='standard', required_entitlements=[])), accepted=True)

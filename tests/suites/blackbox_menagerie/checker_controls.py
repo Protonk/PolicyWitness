@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response15/missing_path_run.json"
+BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response16/missing_path_run.json"
 
 
 def main():
@@ -195,7 +195,7 @@ def main():
                                          native_rc=1 if outcome == "deny" else -1,
                                          filter_type_id=2 if outcome == "deny" else None, errno=errno,
                                          error=None if outcome == "deny" else "validator control failure")
-        for record in changed["data"]["runner_result"]["validator_subprocess"]["records"]:
+        for record in changed["data"]["runner_result"]["phases"][0]["validator_subprocess"]["records"]:
             if record["step_id"] == steps[1]["step_id"]:
                 record.update(outcome=outcome, rc=1 if outcome == "deny" else -1, errno=errno)
         if outcome != "deny":

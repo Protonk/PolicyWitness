@@ -54,7 +54,7 @@ def check_worker(pw, output, fixture, mode):
     assert process['reaped'] is True and process['exit_code'] == 23, process
     assert process.get('term_signal') is None and process.get('termination_request') is None, process
     assert process['wait_errors'] == [], process
-    assert runner['sandboxed_after_apply'] is False and runner.get('validator_subprocess') is None, runner
+    assert runner['sandboxed_after_apply'] is False and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
     assert after == before, 'transport fixture must not perform the requested attempt'
     step = runner['steps'][0]
     assert step['sandbox_check']['pid'] == process['pid'], step
@@ -120,7 +120,7 @@ def check_validator(pw, output, bad_tail):
     assert rc == int(bad_tail), runner
     assert runner['normalized_outcome'] == ('validator_decode_failure' if bad_tail else 'ok'), runner
     assert runner['sandboxed_after_apply'] is True and runner['runner_subprocess']['exit_code'] == 0, runner
-    process = runner['validator_subprocess']
+    process = runner['phases'][0]['validator_subprocess']
     assert process['pid'] > 0 and process['pid'] != runner['runner_subprocess']['pid'], process
     assert process['reaped'] is True and process['exit_code'] == 0 and process['stdout_collection_stop'] == 'eof', process
     assert process.get('io_error') is None and process['association_issues'] == [], process

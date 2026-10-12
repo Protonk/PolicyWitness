@@ -43,6 +43,16 @@ func runRequestContractTests(_ tk: TestKit) {
                         var copy = step; copy["step_id"] = "s\(index)"; return copy
                     }
                 }
+                if let count = example["repeat_phase_actions"] as? Int {
+                    let phases = request["phases"] as! [[String: Any]]
+                    let step = (phases[0]["actions"] as! [[String: Any]])[0]
+                    let actions = (0..<count).map { index -> [String: Any] in
+                        var copy = step; copy["step_id"] = "s\(index)"; return copy
+                    }
+                    request["phases"] = (0..<8).map { index -> [String: Any] in
+                        ["phase_id": "p\(index)", "actions": Array(actions[(index * 32)..<(index == 7 ? count : (index + 1) * 32)])]
+                    }
+                }
                 let encoded = try JSONSerialization.data(withJSONObject: request)
                 let text = (example["raw_request"] as? String ?? String(decoding: encoded, as: UTF8.self))
                     .replacingOccurrences(of: "$EFFECT", with: "/private/tmp/request-grammar-effect")
@@ -51,7 +61,7 @@ func runRequestContractTests(_ tk: TestKit) {
                 do {
                     let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
                     if let capacity = CWorkerOrchestrator.admissionFailure(for: parsed) {
-                        failure = requestCapacityFailure(capacity)
+                        failure = requestCapacityFailure(capacity, parsed: parsed)
                     } else { failure = requestMeaningFailure(parsed) }
                 } catch { failure = requestDecodeFailure(error) }
                 let expected = (example["expected"] as! [String: Any])["xpc"]!

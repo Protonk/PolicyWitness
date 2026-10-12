@@ -124,7 +124,7 @@ def common_evidence(envelope, rc, specimen, failure):
     assert [s['step_id'] for s in steps] == [s['step_id'] for s in specimen['probe_plan']], steps
     if failure:
         assert runner.get('sandboxed_after_apply') is not True, runner
-        assert runner.get('validator_subprocess') is None, runner
+        assert (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
         assert worker['partial_steps'] is True, worker
         assert worker.get('term_signal') == 9 and worker.get('exit_code') is None, worker
         assert 'pw-probe-runner' in runner['error'], runner['error']
@@ -142,7 +142,7 @@ def common_evidence(envelope, rc, specimen, failure):
         assert runner['sandboxed_after_apply'] is True, runner
         assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
         assert worker['partial_steps'] is False, worker
-        validator = runner['validator_subprocess']
+        validator = runner['phases'][0]['validator_subprocess']
         assert type(validator['pid']) is int and validator['pid'] > 0, validator
         assert validator['pid'] != worker['pid'], validator
         assert validator['exit_code'] == 0 and validator.get('term_signal') is None, validator
@@ -267,7 +267,7 @@ def main():
                 check('pre_apply.library_result_attribution', no_library_result)
             runner = envelope['data']['runner_result']
             observations[name] = {'schema_version': runner.get('schema_version'),
-                                  'validator_subprocess': runner.get('validator_subprocess'),
+                                  'validator_subprocess': (runner.get('phases') or [{}])[0].get('validator_subprocess'),
                                   'predictions': [s.get('sandbox_check') for s in runner.get('steps', [])]}
             (out / 'prediction_observations.json').write_text(json.dumps(observations, indent=2) + '\n')
 
@@ -285,7 +285,7 @@ def main():
             assert rc == 1 and runner['normalized_outcome'] == 'worker_spawn_failed', runner
             assert 'posix_spawn' in runner['error'], runner
             assert runner['test_overrides'] == request['_test_overrides'], runner
-            assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+            assert runner.get('runner_subprocess') is None and (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
             assert 'ordering' not in runner, runner
             assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
             assert not consumer.validate(value), consumer.validate(value)

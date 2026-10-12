@@ -36,9 +36,9 @@ def specimen(plan, policy='(version 1)(allow default)', overrides=None):
 
 
 def ordering(runner, disposition='reaped'):
-    assert runner['runner_subprocess']['ordering'] == dict(
+    assert runner['phases'][0]['ordering'] == dict(
         collection_closed_before_proceed=True, proceed_set=True, proceed_observed=True,
-        validator_disposition=disposition, protocol_violations=[], worker_lifetime_established=True), runner['runner_subprocess']['ordering']
+        validator_disposition=disposition, protocol_violations=[], worker_lifetime_established=True), runner['phases'][0]['ordering']
 
 
 def envelope(run, rc, spec, outcome='ok'):
@@ -262,8 +262,8 @@ def spawn_failed(pw, out):
         assert after and after != seed
         runner = envelope(run, rc, spec, 'validator_spawn_failed')
     ordering(runner, 'not_spawned')
-    assert runner.get('validator_subprocess') is None, runner
-    failure = runner['validator_spawn_failure']
+    assert (runner.get('phases') or [{}])[0].get('validator_subprocess') is None, runner
+    failure = runner['phases'][0]['validator_spawn_failure']
     assert failure['origin'] == 'runner_host' and failure['operation'] == 'posix_spawn', failure
     assert failure['executable_path'] == hostile and failure['return_code'] == errno.ENOENT, failure
     assert isinstance(failure['diagnostic'], str) and failure['diagnostic'], failure

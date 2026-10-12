@@ -45,10 +45,10 @@ import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 runner = env.get("data", {}).get("runner_result") or {}
-vsub = runner.get("validator_subprocess")
+vsub = (runner.get("phases") or [{}])[0].get("validator_subprocess")
 if vsub is None:
     raise SystemExit(
-        "runner_result.validator_subprocess is absent — it should be "
+        "runner_result.phases[0].validator_subprocess is absent — it should be "
         "populated on every run that spawns the validator child."
     )
 if not isinstance(vsub.get("pid"), int):

@@ -85,8 +85,8 @@ r = env["data"]["runner_result"]
 # Envelope shape: both subprocess records + override mirrored back.
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
-assert r["validator_subprocess"] is not None, "validator_subprocess missing"
-assert r["validator_subprocess"]["exit_code"] == 0
+assert r["phases"][0]["validator_subprocess"] is not None, "validator_subprocess missing"
+assert r["phases"][0]["validator_subprocess"]["exit_code"] == 0
 assert r["runner_subprocess"] is not None, "runner_subprocess missing"
 assert r["runner_subprocess"]["exit_code"] == 0
 # Production-shape specimens carry no _test_overrides, so the
@@ -306,7 +306,7 @@ assert r["rc"] == 1
 assert "duplicate step_id" in (r.get("error") or ""), \
     "error should name the duplicate: {0!r}".format(r.get("error"))
 assert r.get("runner_subprocess") is None, "no worker should have spawned"
-assert r.get("validator_subprocess") is None, "no validator should have spawned"
+assert (r.get("phases") or [{}])[0].get("validator_subprocess") is None, "no validator should have spawned"
 assert r["steps"] == []
 print("ok: duplicate step_id rejected pre-spawn as bad_request")
 PY
@@ -367,7 +367,7 @@ assert r["normalized_outcome"] == "bad_request" and r["rc"] == 1, r
 expected = {"code": "unsupported_attempt", "path": ["probe_plan", "1", "attempt"]}
 assert env["data"]["request_failure"] == r["request_failure"] == expected, r
 assert r["steps"] == [] and r.get("runner_subprocess") is None, r
-assert r.get("validator_subprocess") is None, r
+assert (r.get("phases") or [{}])[0].get("validator_subprocess") is None, r
 print("ok: unsupported attempt refuses all steps before children")
 PY
   local arc=$?

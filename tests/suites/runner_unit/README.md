@@ -3,6 +3,15 @@
 Swift unit tests for the `PWRunnerCore` library — small helpers and
 classifier branches, live worker/validator drivers, and host lifecycle observations.
 
+`PhaseProtocolTests` checks eight held arrivals against independently observed
+unlink effects, fresh planning and fresh validator processes, stale/future
+release refusal, interrupted later collection and aggregate exhaustion.
+`ValidatorEvidenceTests` checks exact/over frame, record and UTF-8 scalar bounds,
+and real stream cutoff with retained complete evidence. The maximal reply
+fixture accounts for all phases and bounded validator records through the
+production encoder; it is a conservative constructed bound, not a reachable
+native transcript.
+
 ## Invariants
 
 - Runs the `PWRunnerCoreTests` executable target defined in

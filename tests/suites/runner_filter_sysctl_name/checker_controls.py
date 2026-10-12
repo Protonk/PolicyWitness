@@ -62,7 +62,7 @@ def current_reply(step_id, operation, value, sysctl):
     }
     if not sysctl:
         step["attempt"]["path_diagnostics"] = {"input": "/etc/hosts", "observer": "runner_host",
-                                              "phase": "after_orchestration", "same_as_input": [],
+                                              "stage": "after_orchestration", "same_as_input": [],
                                               "realpath_resolved": "/private/etc/hosts",
                                               "parent_realpath_resolved": "/private/etc/hosts"}
     return {
@@ -129,7 +129,7 @@ def main():
         step["comparison"]["order"] = "query_first"
         check("order_claimed_without_record", changed, ("lacks eligible record",))
         changed, _ = mutate()
-        del changed["data"]["runner_result"]["runner_subprocess"]["ordering"]
+        del changed["data"]["runner_result"]["phases"][0]["ordering"]
         check("missing_ordering", changed, ("ordering is required",))
         changed, step = mutate()
         del step["comparison"]
@@ -239,7 +239,7 @@ def main():
             check("denial_with_success_status", broken, ("expected attempt_ok=False",))
             broken, step = mutate()
             step["sandbox_check"]["path_diagnostics"] = {"input": "kern.osrelease", "observer": "runner_host",
-                                                        "phase": "after_orchestration",
+                                                        "stage": "after_orchestration",
                                                         "same_as_input": ["realpath_resolved", "firmlink_resolved"]}
             check("non_path_query_with_path_provenance", broken, ("non-path query acquired path provenance",))
 

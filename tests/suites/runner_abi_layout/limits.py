@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 ABI_LIMITS = {
     'policy_source': ('PW_SHM_POLICY_BYTES', 1),
     'probe_steps': ('PW_SHM_MAX_STEPS', 0),
+    'phase_count': ('PW_SHM_MAX_PHASES', 0),
     'policy_parameters': ('PW_SHM_MAX_PARAMS', 0),
     'step_id': ('PW_SHM_STEP_ID_MAX', 1),
     'attempt_target': ('PW_SHM_TARGET_MAX', 1),

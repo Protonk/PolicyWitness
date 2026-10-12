@@ -82,6 +82,21 @@ int main(void) {
         }
         if (used == sizeof(mode) - 1) return 94;
     }
+    if (!strcmp(mode, "phase_invalid_previous")) {
+        alarm(5);
+        if (write(4, "R", 1) != 1) return 97;
+        close(4);
+        hdr->apply_rc = 0;
+        atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+        atomic_store_explicit(&hdr->phases[0].arrived, 1, memory_order_release);
+        while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != 1) usleep(1000);
+        atomic_store_explicit(&hdr->phases[0].acknowledged, 1, memory_order_release);
+        atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+        /* Deliberately omit prior completion: the host must not collect phase 2. */
+        atomic_store_explicit(&hdr->phases[1].arrived, 1, memory_order_release);
+        while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
+        return 0;
+    }
     if (!strncmp(mode, "proceed_", 8) || !strncmp(mode, "signal_", 7) || !strncmp(mode, "ignore_proceed", 14)) {
         char *receipt = strchr(mode, '|');
         int receipt_fd = -1;
@@ -92,7 +107,8 @@ int main(void) {
         close(4);
         hdr->apply_rc = 0;
         atomic_store_explicit(&hdr->applied, 1, memory_order_release);
-        pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, UINT32_MAX);
+        pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, 0);
+        atomic_store_explicit(&hdr->phases[0].arrived, 1, memory_order_release);
         if (receipt_fd >= 0) (void)write(receipt_fd, "waiting\n", 8);
         struct timespec start, now;
         clock_gettime(CLOCK_MONOTONIC, &start);
@@ -109,7 +125,7 @@ int main(void) {
             clock_gettime(CLOCK_MONOTONIC, &now);
             long elapsed = (now.tv_sec - start.tv_sec) * 1000 + (now.tv_nsec - start.tv_nsec) / 1000000;
             if (elapsed >= budget) {
-                pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, (uint32_t)budget);
+                pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE, 0, 0, 0, 0, (uint32_t)budget);
                 pw_diagnostic(e, "fixture proceed wait expired");
                 atomic_store_explicit(&hdr->done, 1, memory_order_release);
                 if (receipt_fd >= 0) (void)write(receipt_fd, "expired\n", 8);
@@ -121,6 +137,7 @@ int main(void) {
                     char gate[160]; snprintf(gate, sizeof(gate), "%s.ackgate", receipt);
                     if (access(gate, F_OK) != 0) { usleep(1000); continue; }
                 }
+                atomic_store_explicit(&hdr->phases[0].acknowledged, 1, memory_order_release);
                 atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
                 if (receipt_fd >= 0) (void)write(receipt_fd, "ack\n", 4);
                 if (!strcmp(mode, "signal_after_ack")) { kill(getpid(), SIGTERM); return 98; }
@@ -135,6 +152,7 @@ int main(void) {
                     }
                     atomic_store_explicit(&slots[i].completed, 1, memory_order_release);
                 }
+                atomic_store_explicit(&hdr->phases[0].completed, 1, memory_order_release);
                 if (receipt_fd >= 0) (void)write(receipt_fd, "attempt\n", 8);
                 atomic_store_explicit(&hdr->done, 1, memory_order_release);
                 break;

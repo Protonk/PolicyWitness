@@ -98,7 +98,7 @@ fn reference_resolves(token: &str, sub: &Value, step: Option<&Value>) -> bool {
             .and_then(|e| e.get("progress"))
             .map_or(false, |v| !v.is_null()),
         // The host records an explicit non-request as an absent object once it has
-        // recorded the cleanup phase, so the token resolves beside exit_requested.
+        // recorded the cleanup stage, so the token resolves beside exit_requested.
         "termination_request" => present("termination_request") || present("exit_requested"),
         other => present(other),
     }
@@ -156,21 +156,27 @@ fn disposition_progress(
 ) -> (Option<&str>, Option<i64>, Option<DispositionPosition>) {
     let progress = &sub["worker_evidence"]["progress"];
     let op = progress["operation"].as_u64();
-    let phase = progress["phase"].as_u64();
+    let stage = progress["stage"].as_u64();
     let order = [1, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
         .iter()
         .position(|v| Some(*v) == op);
-    let (Some(op), Some(phase @ (1 | 2)), Some(order)) = (op, phase, order) else {
+    let (Some(op), Some(stage @ (1 | 2)), Some(order)) = (op, stage, order) else {
         return (None, None, None);
     };
     let index = progress["index"].as_u64();
-    let indexed = op == 9 || op == 4;
+    let phase_wait = op == 11 && index.is_some();
+    let indexed = op == 9 || op == 4 || phase_wait;
     if (indexed && index.is_none())
         || (!indexed && !progress["index"].is_null())
-        || index.map_or(false, |i| i >= 0xfffff || (op == 9 && i >= count as u64))
-        || progress["raw"].as_u64() != Some((op << 24) | (phase << 20) | index.map_or(0, |i| i + 1))
+        || index.map_or(false, |i| {
+            i >= 0xfffff || (op == 9 && i >= count as u64) || (phase_wait && i > count as u64)
+        })
+        || progress["raw"].as_u64() != Some((op << 24) | (stage << 20) | index.map_or(0, |i| i + 1))
     {
         return (Some("invalid"), None, None);
+    }
+    if phase_wait {
+        return (Some("none"), None, Some((9, index.unwrap(), 0)));
     }
     (
         Some(if op == 9 {
@@ -181,7 +187,7 @@ fn disposition_progress(
             "none"
         }),
         index.map(|i| i as i64),
-        Some((order, index.unwrap_or(0), phase)),
+        Some((order, index.unwrap_or(0), stage)),
     )
 }
 
@@ -1069,7 +1075,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response15/a1_expected.json"
+            "../../tests/fixtures/disposition/response16/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];
