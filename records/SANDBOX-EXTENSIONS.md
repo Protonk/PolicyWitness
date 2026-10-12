@@ -2,17 +2,16 @@
 
 ## Scope and checkpoint
 
-M1 native controls now pass; M1 itself remains open. The user requested a
-stopping point after the current sub-task, so the full mechanical selection
-and required rendered-documentation assessment are pending. M0 remains pending
-under the earlier M1-only direction. Production phases and extension behavior
+M1 native controls and the registered mechanical checks pass. M1 remains open
+only for the required rendered-documentation assessment and disposition of any
+findings. Work resumed after the user's requested stopping point; the M1-only
+scope remains in force, with M0 pending. Production phases and extension behavior
 are not implemented. This record is the current account of findings and
 limitations, readable without commit history.
 
-The next session should run the applicable registered `source_drift` checks,
-render the affected Markdown, and commission the plan's fresh read-only M1
-assessment. Resolve findings and record dispositions before closing M1. No
-review, product build, XPC integration or BYOXPC acceptance is credited here.
+Implementation commit `e8effbd` contains the native fixture, registered suite and
+findings. The next gate action is a fresh read-only assessment of the rendered
+M1 account. No product build, XPC integration or BYOXPC acceptance is credited.
 
 ## Equipment and reproducibility
 
@@ -223,20 +222,51 @@ controls. No private-library allocation conclusion is drawn from the failed
 instrumentation. OS crash reports are outside the repository; only the diagnosis
 is retained here, not process memory or token material.
 
-## Remaining gate work and stopping state
+## Mechanical checks and evidence reuse
 
-The current native acceptance run passed, all owned native children were reaped,
-and the checker removed its temporary target directory. No BYOXPC resources were
-created. Test output and source snapshots remain in their managed directories.
-The disposable development compile at `/private/tmp/pw-ext-dev-native` is not
-accepted equipment.
+All six cases in the registered `source_drift` suite passed at `e8effbd`:
+`runner_source_manifests_agree`, `limits_documentation`, `contract_versions`,
+`architecture_documentation`, `build_documentation`, and `generator_contract`.
+The exact command was:
 
-A direct `source_drift/check.py` check accompanies this increment. The registered
-mechanical selection and rendered assessment remain owed. There is no reviewer
-or rendered artifact to credit yet. At resumption, compare retained source hashes
-to the current fixture/checker and shared harness dependencies before reusing the
-native result; rerun if relevant implementation changes. Then render the record,
-plan checkpoint and affected fixture/suite documentation with their surrounding
-context, commission the plan's fresh read-only assessment, resolve findings and
-record reviewer/model, revision, renderer, artifacts and dispositions. Only then
-can M1 close. M0 and all later implementation milestones remain untouched.
+```sh
+PW_TEST_OUT_DIR=tests/out/runs/extensions-m1-mechanical-20261012 \
+  tests/run.sh --suite source_drift
+```
+
+The [mechanical run](../tests/out/runs/extensions-m1-mechanical-20261012/run.json)
+is gitignored and local-only. It has six completed passes, no skips or unrun
+cases, and no harness errors. This verifies registry/source agreement, generated
+copies and generator mutation controls; it does not establish native semantics.
+No generated owner or output changed in M1. The new native fixture is test
+apparatus built by its own script, not a new production Meson target. Native
+production sources, worker identity, wire versions and prose baseline are
+unchanged.
+
+On resumption, all nine captured executable/input source hashes matched the
+committed versions: native C/build script, suite checker/runner, catalog, and
+`case.sh`, `testlib.sh`, `test_cli.py`, `suite_run.py`. The native binary hash
+also matched. The only differing captured file is this plan's checkpoint prose;
+the checker copies it for provenance but does not interpret it. This is a
+reviewed evidence-reuse exception for that narrative delta. Tracing dispatch
+through `tests/run.sh`, shared harness helpers, the suite, build script and
+checker found no other modified code dependencies: the Git diff from the
+baseline adds the captured fixture/suite and documentation, and modifies only
+the captured catalog among pre-existing execution inputs. Hash matches establish
+identity, while this dependency review is the basis for reusing the native run.
+Any subsequent relevant code change requires a fresh native run.
+
+## Rendered assessment and current state
+
+The accepted native run reaped all owned children and removed its temporary
+target directory. No BYOXPC resources were created. Test output and source
+snapshots remain in managed directories. The disposable development compile at
+`/private/tmp/pw-ext-dev-native` is not accepted equipment.
+
+The required fresh M1 rendered assessment is pending. Its immutable HTML snapshot
+will cover this record, the plan checkpoint/M1 gate, both native READMEs and the
+affected test registry/coverage documentation. These are authored inputs; no
+production generated account was changed. The final assessment entry must name
+reviewer/model, revision, renderer, artifacts, findings and lead dispositions.
+M1 cannot close until correctness findings are resolved. M0 and later
+implementation milestones remain untouched.

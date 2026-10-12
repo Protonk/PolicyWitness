@@ -29,11 +29,11 @@ fields and unsuccessful fstat identity storage have no observational meaning.
 The consume result is signed 64-bit; -1 means no obtained handle. A returned
 release result is not evidence of access revocation.
 
-Optional malloc and VM logger callbacks count only callbacks from any thread while a native consume/release call is bracketed. Positive allocation
-controls execute before application and after the experiment. Descriptor counts
+Optional malloc and VM loggers count callbacks from any thread while a native
+consume/release call is bracketed. Positive allocation controls execute before application and after the experiment. Descriptor counts
 sample the boundaries around native calls. Neither zero counters nor unchanged
-descriptor counts establish absence of transient resources, uninstrumented allocation paths or kernel resources. No extension call
-is made before application to warm it up.
+descriptor counts establish absence of transient resources, uninstrumented
+allocation paths or kernel resources. No extension call is made before application to warm it up.
 
 The fixture's bounds live in its C definitions; they are experiment limits, not
 new product admission limits. Native failures and cleanup results remain in the
