@@ -94,8 +94,12 @@ Keep permanent documentation focused on current behavior, with history in git.
 - Use investigator-owned regular files as test discipline for M1 and acceptance
   experiments. Do not add ownership, file-type, or symlink admission restrictions;
   retain path preparation evidence and native outcomes for admitted targets.
-  Begin with the smallest demonstrated extension class. Broader classes,
-  process-bound issuance, and overlapping grants remain outside initial scope.
+  Begin with the smallest demonstrated extension class. Broader classes and
+  process-bound issuance remain outside initial scope.
+- Limit each specimen to at most one extension declaration and its associated
+  token and consume-result handle references. Permit at most one consume action
+  and one release action across the entire phase sequence. Refuse additional
+  declarations, including sequential ones, and repeated consume or release actions.
 - Support extension specimens on both standard and BYOXPC runners in 0.3.0,
   with a bundle-local issuer inside the XPC service bundle.
 - Keep ordinary stateless specimens simple. Use one canonical execution model
@@ -204,7 +208,17 @@ manufacture a missing earlier call result. Failed predictions can leave an
 informative execution history; no phase should wait indefinitely for a usable
 verdict.
 
-The first specimen has this conceptual sequence, independent of final JSON names:
+Consume and release may appear anywhere among the phases' ordered actions.
+Consume must name the declared token reference; release must name the handle
+reference associated with an earlier declared consume, using phase order and
+then action order within each phase. Both actions are optional and may occupy the
+same phase or different phases. Issuance and delivery without consumption, and
+consumption without release, are legal experiments.
+Admission checks declared order and references; it does not predict native
+success. All queries still precede the entire action batch within their phase.
+
+The required three-phase acceptance specimen has this conceptual sequence,
+independent of final JSON names:
 
 | Phase | Queries while the worker waits | Worker actions after release |
 | --- | --- | --- |
@@ -222,8 +236,8 @@ Use a disposable native issuer supervised by the host and resolved inside its
 XPC service bundle. Use a dedicated bounded transient channel for tokens,
 separate from retained evidence. Choose issuance timing and helper lifetime from
 M1 evidence; do not assume the issuer must stay alive or can safely exit before
-consumption. Keep the worker's handle table limited to routing references and
-observed call outcomes.
+consumption. Keep the worker's single handle record limited to its routing
+reference and observed call outcomes.
 
 Before issuance, the host resolves symlinks in the submitted extension target and
 passes the resolved path to the issuer. Retain the submitted path, resolved
@@ -250,11 +264,12 @@ boundaries; M4 extends them with combinations and adversarial conditions.
 | --- | --- | --- |
 | Phase admission | M2 | Duplicate/unknown phase or action identities, ordinary entries missing a query or attempt, unsupported combinations, oversized counts/strings, embedded NUL |
 | Phase query eligibility | M2 | Fresh planning observations per phase, unresolved paths excluded despite earlier resolution, unavailable predictions and unestablished query/attempt order alongside retained phase progression, actual later-phase queries on resolvable targets |
-| Extension admission | M3 | Duplicate/unknown references, forward/invalid handle use, unsupported combinations, unavailable helper/API |
+| Extension admission | M3 | Additional declarations even if sequential, repeated consume/release actions, duplicate/unknown references, release without or before consume, invalid handle use, unsupported combinations, unavailable helper/API |
+| Lifecycle placement | M3 | Same-phase consume/access/release, cross-phase placement, issuance/delivery without consumption, consumption without release, preserved query barrier, omitted actions distinguished from unresolved calls |
 | Target preparation | M3, building on M1 target evidence | Symlink resolution, resolution/metadata failures, retained submitted and resolved paths, unchanged query/attempt targets, no owner/type admission rule, replacement between observations without a stable-identity claim |
 | Issuance and delivery | M3, building on M1 native refusals | Native refusal, issuer death, timeout, partial/oversized token transfer, delivery without consumption, unknown cleanup |
 | BYOXPC integration | M3 | Bundle-local issuer resolution, install signing and read-back, validate/reconcile evidence, older registry records and cleanup, named missing-issuer capability refusal |
-| Consumption and release | M3, building on M1 native calls | Rejected token, failed consume without a handle, failed release, repeated release policy, missing result publication |
+| Consumption and release | M3, building on M1 native calls | Rejected token, failed consume without a handle, dependent release unable to run, failed release, missing result publication |
 | Phase ordering | M2 | Delayed/missing predictions, validator failure, late/wrong-phase records, stale release/acknowledgement, phase exhaustion, host loss while worker waits |
 | Worker lifetime | M2 for phase interruption; M3 for native calls | Death before/inside/after consume or release, death before acknowledgement, failure after a completed earlier phase, unresolved termination/reap |
 | Independent readers | M2 for phases; M3 for extensions | Reject fabricated lifecycle success, cross-phase prediction association, unsupported versions, and unsupported ordering claims while retaining raw evidence |
@@ -362,6 +377,12 @@ experiment and the ordinary paired-probe specimens below to settle one bounded
 public phase syntax, subject to M4's adversarial checks before treating the
 interface as final.
 
+Enforce the declaration and lifecycle-action caps and reference-order rules in
+admission, and record the caps in the limits manifest. Exercise the shared
+lifecycle-placement controls through the public CLI, preserving the distinction
+between omitted actions, declared actions that could not run, and calls without
+a published result.
+
 Demonstrate ordinary phases without extensions using two controls. The first
 establishes eligibility becoming unavailable after a successful unlink:
 
@@ -409,7 +430,8 @@ when the test knows the call returned.
 
 **Completion gate:** on both standard and BYOXPC runners, the public CLI retains
 the native lifecycle and three sets of queries/access attempts for one applied
-policy and worker, and passes both ordinary-phase controls above.
+policy and worker, and passes the lifecycle-placement and both ordinary-phase
+controls above.
 Independent controls identify the target, worker, issuer and worker signing
 baselines, and fresh descriptor use. Target preparation and issuer failures remain
 inspectable results with no fabricated consumption or release. Interruption
@@ -424,7 +446,9 @@ interactions such as worker death during partial token delivery and validator
 timeout followed by late output and unconfirmed cleanup. Include ordinary phase
 sequences without extensions and supported mixtures of ordinary actions and
 lifecycle interventions, with aggregate limits and unsupported combinations
-checked at admission. Exercise BYOXPC provenance and registry recovery failures.
+checked at admission. Extend same-phase and cross-phase placement controls with
+native failures and interruption, including specimens that omit consumption or
+release. Exercise BYOXPC provenance and registry recovery failures.
 Select additional combinations from the implemented boundaries and record what
 each establishes. Revisit the interface if these controls expose an unrepresentable
 outcome.
@@ -447,8 +471,9 @@ the complete account. Maintain architecture/process/channel boundaries in
 review generated layout, identity, diagrams, and shape changes. Update the user
 guide, request grammar, FAQ, failure contract, test catalog, coverage, and opt-in
 guidance with implementation-grounded claims and independent checks. Cover public
-ordinary and extension phases, target resolution and metadata evidence, and
-BYOXPC issuer signing, capability refusals, and registry recovery.
+ordinary and extension phases, lifecycle placement and action limits, target
+resolution and metadata evidence, and BYOXPC issuer signing, capability refusals,
+and registry recovery.
 
 Follow [test guidance](tests/AGENTS.md) throughout for output ownership, evidence
 provenance and reuse, locking, cleanup, and sandboxed-harness retries. For changed
