@@ -102,9 +102,12 @@ Keep permanent documentation focused on current behavior, with history in git.
   with a one-phase path in which query collection closes before any attempt
   begins, including on timeout or failure. Closure does not require a verdict
   for every eligible query. Do not introduce historical request/reply translation.
-- Expose a bounded public sequence of phases, queries, and ordered actions for
-  ordinary actions as well as extension experiments. An ordinary specimen may
-  unlink a target and query it in a later phase without using extensions. Exclude
+- Expose a bounded public sequence of phases containing ordinary query/attempt
+  pairs and explicit extension lifecycle interventions. Every ordinary entry
+  requires both a submitted query and an attempt, preserving existing comparison
+  semantics; query-only and attempt-only ordinary entries are outside the 0.3.0
+  grammar. Extension lifecycle entries omit that pair and have their own event
+  records. Ordinary specimens may use multiple phases without extensions. Exclude
   branches, loops, arbitrary dependency graphs, and user-defined conditions.
   Token/handle references and a release that cannot run after failed consumption
   need fixed operation semantics, not a general dependency engine. Refuse
@@ -147,8 +150,8 @@ The following findings determine the work:
   results. Its successful status establishes an open, not verified retrieval of
   known contents. The experiment needs stronger observations if it claims a read.
 - Query eligibility currently includes host path resolution before execution.
-  Decide its phase-specific timing explicitly; later host diagnostics cannot
-  substitute for the observation used to admit a query.
+  Later host diagnostics cannot substitute for the observation used to admit
+  a query.
 - A prior [project investigation](https://github.com/Protonk/PolicyWitness/issues/1)
   reports release calls without reliable access revocation on Sonoma 14.4.1.
   Treat this as a lead for controls, not a finding about the current host.
@@ -164,14 +167,32 @@ general product acceptance.
 
 Use a bounded sequence of phases. At each phase entry the worker publishes its
 arrival and waits. The host observes arrival and worker ownership, plans and
-collects eligible queries for that phase, and closes collection before considering
-release. Every started collection closes on success, timeout, or failure, with
+collects all eligible queries from that phase's ordinary pairs, and closes
+collection before considering release of any attempt or lifecycle intervention.
+Every started collection closes on success, timeout, or failure, with
 missing predictions retained as unavailable. The host publishes release only
 when the phase and worker-ownership checks permit progression. Observed worker
 loss, an invalid boundary, or an expired worker wait ends progression with the
 available evidence preserved. On normal progression, the worker acknowledges
 release before running the phase's declared actions in order, then publishes
 arrival at the next boundary or final completion.
+
+Evaluate query eligibility afresh during each phase's planning, preserving the
+existing exclusion rules. A path filter requires successful host `realpath`
+resolution at that boundary. Retain the planning observation's phase association;
+it admits a query only in that collection. A resolution failure skips the native
+query and records `prediction_unavailable`, the
+`query_plan:path_unresolved_at_planning` limitation, and
+`comparison.order: unestablished`, while the paired attempt remains eligible to
+run. Issuance-target preparation and later path diagnostics are separate
+observations, not substitutes for query planning.
+
+Keep phase progression evidence distinct from a pair's `comparison.order`.
+An action's published completion and the observed phase boundaries can establish
+that it completed before later planning and execution even when that later phase
+has no native query result.
+`query_first` still requires an eligible native record and the full collection,
+release, and acknowledgement chain for its phase.
 
 Use numbered boundaries and immutable phase/event publications so a previous
 release or acknowledgement cannot satisfy a later phase. Distinguish reaching a
@@ -227,7 +248,8 @@ boundaries; M4 extends them with combinations and adversarial conditions.
 
 | Boundary | First required | Required controls |
 | --- | --- | --- |
-| Phase admission | M2 | Duplicate/unknown phase or action identities, unsupported combinations, oversized counts/strings, embedded NUL |
+| Phase admission | M2 | Duplicate/unknown phase or action identities, ordinary entries missing a query or attempt, unsupported combinations, oversized counts/strings, embedded NUL |
+| Phase query eligibility | M2 | Fresh planning observations per phase, unresolved paths excluded despite earlier resolution, unavailable predictions and unestablished query/attempt order alongside retained phase progression, actual later-phase queries on resolvable targets |
 | Extension admission | M3 | Duplicate/unknown references, forward/invalid handle use, unsupported combinations, unavailable helper/API |
 | Target preparation | M3, building on M1 target evidence | Symlink resolution, resolution/metadata failures, retained submitted and resolved paths, unchanged query/attempt targets, no owner/type admission rule, replacement between observations without a stable-identity claim |
 | Issuance and delivery | M3, building on M1 native refusals | Native refusal, issuer death, timeout, partial/oversized token transfer, delivery without consumption, unknown cleanup |
@@ -307,8 +329,8 @@ explicit versioning and coordinated readers.
   if its reading rules require it.
 - Implement phase arrival, collection closure, release, acknowledgement, and
   terminal handling in C and Swift. Associate predictions and comparisons with
-  the correct phase. Define eligibility at that boundary and preserve unavailable
-  queries separately from access attempts.
+  the correct phase. Apply the phase-local eligibility rules above and preserve
+  unavailable queries separately from access attempts.
 - Bound phase count, total actions/queries, publication storage, and total
   collection time as well as individual waits. Specify how phase waits interact
   with worker execution, cleanup, exec budgets, and the client RPC timeout.
@@ -336,10 +358,26 @@ Integrate the M1 issuer and native calls with the M2 protocol. Implement the
 three-phase experiment above using local references and structured lifecycle
 events. Record issuance and delivery independently from worker consumption,
 including explicit unavailable or skipped dependent actions. Use this integrated
-experiment and an ordinary unlink-then-re-query specimen to settle one bounded
+experiment and the ordinary paired-probe specimens below to settle one bounded
 public phase syntax, subject to M4's adversarial checks before treating the
-interface as final. Lifecycle interventions retain their own records without
-invented query/attempt pairs.
+interface as final.
+
+Demonstrate ordinary phases without extensions using two controls. The first
+establishes eligibility becoming unavailable after a successful unlink:
+
+| Phase | Submitted path query | Paired attempt on the same target |
+| --- | --- | --- |
+| 1 | `file-write-unlink` | `unlink` |
+| 2 | `file-read-data` | `access` |
+
+Independently verify the unlink and failed phase-2 host resolution. Phase 2 must
+retain the unavailable prediction and `comparison.order: unestablished`, alongside
+evidence of phase progression and the actual access result. Expect `ENOENT` under
+the controlled fixture's policy, but preserve whatever the syscall reports. The
+second control keeps its target resolvable across ordinary phases
+and establishes an actual later-phase validator query with the supporting
+collection/release/acknowledgement evidence. Neither control uses ordinary
+query-only or attempt-only entries.
 
 Provide the access evidence established in M1. If a new action or changed action
 meaning is needed, apply the request-contract rules rather than silently
@@ -371,7 +409,7 @@ when the test knows the call returned.
 
 **Completion gate:** on both standard and BYOXPC runners, the public CLI retains
 the native lifecycle and three sets of queries/access attempts for one applied
-policy and worker, and demonstrates ordinary phases without extensions.
+policy and worker, and passes both ordinary-phase controls above.
 Independent controls identify the target, worker, issuer and worker signing
 baselines, and fresh descriptor use. Target preparation and issuer failures remain
 inspectable results with no fabricated consumption or release. Interruption
