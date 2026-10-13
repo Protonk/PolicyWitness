@@ -1965,3 +1965,33 @@ Initial and corrected immutable source/HTML/PDF/PNG artifacts and reports are in
 and gitignored. Pandoc 3.12, WeasyPrint 70 and Poppler 26.10 rendered the account.
 The initial snapshot also contains the surfaces used by the independent M5.3
 review, whose two documentation findings remain pending at this checkpoint.
+
+
+## M5.3 build-account closure
+
+Closed at clean `d8f3d43637ce803f1189eb79e271bc3858efbd70`, build 582 unchanged.
+Fresh Astra reviewer `/root/m53_rendered_review` found two documentation issues:
+F1 overstated preflight entitlement inspection; F2 omitted the issuer from the
+generated assembly Reads/Writes cells and graph tooltip. The lead accepted both.
+The preflight README now names its actual inventory/signature/signer/hash checks
+and links separate entitlement read-back. `docs/build.json` now includes the
+already-shipped issuer in assembly inputs/outputs; the owning generator refreshed
+BUILD and its graph. No refusal or baseline entry, runtime behavior or signing
+invariant changed. Focused rendered reinspection closed both findings.
+
+`extensions-m53-20261013` (`20261013T230939Z_92d1dc74`) passed 11/11: all six
+source-drift cases, preflight, BYOXPC verification, signed-artifact mutations, build
+guards and installed entitlement read-back. The checkpoint credits 11 fresh and
+186 reviewed reused cases, with exact source/app comparisons separated from
+dependency judgments. Descriptive manifest cells and suite prose do not alter the
+retained executable paths or controlled inputs. The app inventories and both
+baselines remain unchanged. Exact cleanup observed the owned installed service,
+staging and plist absent; no native observer channels were created.
+
+The initial report is preserved in M5.2 and copied with the corrected source,
+HTML/PDF/PNG, complete graph raster, report/recheck and renderer scripts into
+[the M5.3 run](../tests/out/runs/extensions-m53-20261013/reviews/). These are local
+gitignored evidence. Pandoc 3.12, WeasyPrint 70 and Poppler 26.10 produced the
+views. The local print renderer's earlier clipping/wrapping is corrected; the
+reviewer inspected the full graph and readable corrected tables. Existing build
+refusal coverage gaps remain explicit, and this is not release acceptance.

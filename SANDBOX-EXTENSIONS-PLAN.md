@@ -66,8 +66,8 @@ outside this plan.
 | M4 Failure combinations and adversarial coverage | Complete | Build 578 acceptance: 197 passing case credits, 17 fresh at `2e6a2c1` and 180 reviewed reuses from `b641054`. Eight shared combined-fault rows, BYOXPC controls and independent cleanup passed; both rendered-review findings corrected and rechecked. One earlier intermittent observer failure remains preserved and unexplained. See the investigative record. |
 | M5.1 Evidence contract closure | Complete | A1-F11 repaired; build 582 has 197 passing credits, nine fresh at `e1231bd` and 188 reviewed reuses from `ea10ce3`. The shared generator/limits/blackbox/Swift gate and final rendered recheck pass. Evidence account and native-detail units reconciled; neither baseline changed. |
 | M5.2 Limits account | Complete | 24/24 fresh at `c76975a`, 173 reviewed reuses; issuer clock and extension admission account corrected, copies staged. Fresh rendered assessment and table-legibility recheck passed; existing source-inspected limits remain explicit. |
-| M5.3 Build and bundle account | In progress | Fresh rendered review found two documentation issues: preflight entitlement overclaim and omitted issuer in assembly inputs/outputs. Correct owning inputs and verify. |
-| M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
+| M5.3 Build and bundle account | Complete | 11/11 fresh at `d8f3d43`, 186 reviewed reuses. Preflight entitlement attribution and generated issuer assembly account corrected; fresh rendered recheck closes both findings. Neither baseline changed. |
+| M5.4 Architecture account | In progress | Trace the complete rendered architecture account and correct unsupported prose. |
 | M5.5 User-facing documentation | Pending | Requires M5.4 |
 | M5.6 Integrated acceptance and record | Pending | Requires all preceding milestones |
 | A2 Final out-of-band audit | Pending | After M5.6; returned audit, required corrections and evidence for the final candidate complete before plan closure |
@@ -77,8 +77,8 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** M0–M5.2, A1 and H1 are complete. The user authorized continuation
-through the prepared A2 handoff. M5.3 is in progress; stop at A2 awaiting the
+**Execution state:** M0–M5.3, A1 and H1 are complete. The user authorized continuation
+through the prepared A2 handoff. M5.4 is in progress; stop at A2 awaiting the
 out-of-band auditor.
 A1-F11 is closed: wrong-type phase evidence is rejected, optional absence and
 degraded raw forwarding remain supported, and full-shape versus claim-validation
@@ -95,22 +95,16 @@ Wire contracts remain request 4, response 18, envelope 7. Maximum reply remains
 52,414,779 bytes; ABI geometry and both documentation baselines are unchanged.
 The checkpoint commit adds only plan, record and retention metadata.
 
-**Latest gate:** M5.2 passed 24/24 at clean `c76975a`, build 582 unchanged,
-run `extensions-m52-20261013` (`20261013T230245Z_e01bd438`). Its checkpoint
-credits 24 fresh cases and 173 reviewed reuses for all 197 required cases.
-The manifest's sole semantic delta is issuer-wait counting prose; numeric values
-and runtime inputs are unchanged. All source-drift, Rust, Swift/C limits,
-failure-boundary and selected phase/extension/reply controls passed. Neither
-baseline changed. Exact cleanup confirms 26 named channels/recovery directories
-absent; no BYOXPC sessions were created in this focused gate.
+**Latest gate:** M5.3 passed 11/11 at clean `d8f3d43`, build 582 unchanged,
+run `extensions-m53-20261013` (`20261013T230939Z_92d1dc74`). Its checkpoint
+credits 11 fresh cases and 186 reviewed reuses for all 197 required cases.
+All six source-drift, signing/build controls and installed entitlement read-back
+passed. Both baselines remain unchanged; exact owned BYOXPC cleanup is verified.
 
-**Rendered assessment:** fresh M5.2 review found no semantic issue. Local PDF
-tables fragmented numbers/units; wider tables and ordinary wrapping corrected
-M52-R1, and actual LIMITS/guide page reinspection closed it. Both initial and
-corrected renders and reports are retained in the M5.2 run. The independent
-M5.3 review identified the two documentation issues assigned above; its report
-is also preserved there pending correction. Prior review and acceptance details
-remain in the investigative record, including failed/cancelled runs.
+**Rendered assessment:** fresh M5.3 review and focused recheck close both
+documentation findings. Corrected immutable renders, complete graph raster and
+reports are retained in its run. Earlier milestones and failed/cancelled evidence
+remain in the investigative record.
 
 **Remaining limitations:** the older 25 empty M3 shared-memory objects with
 unrecorded names have unverified absence; no prefix cleanup is authorized by
@@ -118,7 +112,7 @@ those missing records. The M4 observer intermittent failure remains unexplained.
 Existing source-inspected production timing/buffer limits and build-control gaps
 remain explicitly distinguished from behavioral evidence.
 
-**Next action:** complete M5.2–M5.6 with their checks and fresh rendered reviews,
+**Next action:** complete M5.4–M5.6 with their checks and fresh rendered reviews,
 then prepare and commit A2 in the shared audit record and stop awaiting response.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
