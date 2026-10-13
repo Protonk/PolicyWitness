@@ -397,7 +397,9 @@ control distributes its original scalar corpus across admitted-size IDs.
 The conservative production-encoded maximum is 52,257,718 bytes; the controller
 budget is three times that value rounded upward to 152 MiB. This construction
 places mutually exclusive fields together; it is not a reachable transcript
-claim. The prose baseline lost its stale literal ABI-offset entry and gained
+claim. The later M3 maximum-reply calculation below supersedes this M2 value
+with 52,414,779 bytes while retaining the 152 MiB budget.
+The prose baseline lost its stale literal ABI-offset entry and gained
 none. A stale architecture claim about an unversioned validator was corrected:
 the receiver already requires its kind and schema marker.
 
@@ -1215,3 +1217,45 @@ invariant remains limited to PW-owned preallocated reporting/coordination with
 no explicit PW allocator use after application; private API internal resource
 behavior is not guaranteed. Issuer authority has not been expanded. Execution
 stands by at A1; H1 and M4 have not started.
+
+
+## A1 returned audit and executing-agent review
+
+The out-of-band auditor returned attributed answers and nine numbered findings
+on 2026-10-13. Commit `221f5ec` preserves those answers and the auditor's
+retention entry before lead dispositions. The shared audit exchange contains
+the detailed review and correction owners; its answers are not rewritten by the
+executing agent. The auditor found no issue invalidating the demonstrated M3
+gate and performed an additional full-default run on unchanged build 560.
+
+`a1-audit-default-20261013` (`20261013T162635Z_9a7839fb`) passed 172/174,
+with no skips or unrun cases. The lead verified ownership, results and all 21
+current hashed app entries against the retained inventory. Forty-nine default
+cases were absent from the 147 final M3 credits; the new run passed 47 and found
+two stale controls. The wrapper fixture assumes every sibling script runs via
+the wrapper, but the extension boundary case is separately cataloged. The
+isolation checker reverses steps without updating phase action order, provoking
+a legitimate additional partition diagnostic. Their original failures remain.
+This confirms a test-selection gap in the implementation work, despite coverage
+of the plan's named gate controls. Subsequent milestone acceptance must include
+the default battery alongside required opt-in controls, applying the existing
+case-level evidence-reuse rules.
+
+The lead reproduced the accepted contradictory `collected`/`not_needed` phase
+record using both Python validation entry points. It cannot establish
+`query_first`, but `collected` itself claims driver execution; its repair is
+moved from M5.1 to A1 follow-up. Current guide corrections likewise belong in
+A1 rather than waiting for M5.5. An additional lead finding confirms the guide
+confuses missing-helper and missing-native-API refusal codes; retained issuer-6
+evidence and the orchestrator distinguish them. The test-build limitation is
+already explained in fixture documentation and should be explicit beside the
+suite description. The older M2 reply figure now points to its M3 successor.
+
+The review recommends retaining the bounded existing machinery for H1. The
+plan's validator-cost measurement is conditional on considering a persistent
+protocol, which is not proposed; collection duration must not be presented as
+isolated launch overhead. M4 owns the named post-publication issuer-exit,
+missing-helper-file, issuer-entitlement and BYOXPC maximum-reply controls.
+This turn records review and dispositions, with no product or test-control
+changes and no new live/TCC-sensitive execution. A1 remains open for corrections,
+verification and applicable rechecks; formal H1 preparation and M4 remain pending.

@@ -10,7 +10,7 @@ section. Execution dispositions remain separate from the attributed audit text.
 ## A1 Middle audit — after M3
 
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent dispositions pending. M3 implementation and its
+executing-agent review recorded below; corrective follow-up pending. M3 implementation and its
 rendered-documentation assessment are complete. This exchange is not A1
 closure; execution is standing by before H1 and M4.
 
@@ -130,7 +130,7 @@ without a usable handle and failed release? Can any supported or malformed
 record fabricate completion, a handle association or successful fresh access?
 Inspect [the native worker](../controller/tools/pw_probe_runner/pw_probe_runner.c),
 [Swift evidence tests](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift),
-[Rust reader](../controller/src/evidence.rs),
+[Rust reader](../controller/src/disposition.rs),
 [independent Python reader](../tests/lib/extension_evidence.py) and the
 [failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md). Please distinguish
 an actual claim defect from additional combinations assigned to M4.
@@ -623,11 +623,99 @@ implementation / investigation distinction.
 
 ### A1 Execution dispositions and follow-up
 
-Pending the returned audit. No answers have been supplied, dispositioned or
-accepted. M3 completion records implementation-gate evidence; A1 remains open.
-After answers arrive, preserve their attribution here and record each executing
-agent disposition, correction, verification and any auditor follow-up separately.
-H1 preparation requires A1 closure; M4 has not started.
+Executing agent `/root`, 2026-10-13. This is the requested review and briefing
+of the returned audit, not completion of its corrective work. The auditor's
+answers and original evidence index were preserved in commit `221f5ec` before
+these dispositions. Their attributed text is unchanged. A1 remains open; H1
+preparation and M4 have not started.
+
+#### Assessment and verification
+
+The audit supplies useful independent evidence and supports the principal M3
+conclusion: the demonstrated lifecycle and phase ordering do not invent
+effective permission, revocation or completion from native return codes. Its
+scope is bounded source/evidence review plus new controls, not exhaustive proof
+of every malformed record or another rendered-documentation assessment.
+
+I verified the audit run's ownership, terminal state, run ID and counts:
+172/174 passed, two failures, no skips or unrun cases. Its unchanged app
+inventory matches the accepted M3 inventory, and I independently re-hashed all
+21 hashed entries against the current app. Exactly 49 default cases were absent
+from the final 147 M3 credits; 47 passed in the audit run and two failed. I did
+not independently reconstruct the stronger historical statement that none ran
+in any incremental M2/M3 diagnostic. The confirmed omission from final gate
+credits is sufficient to accept the coverage criticism. My test selection was
+too narrow for a change spanning worker ABI and response readers, even though
+the plan's named gate controls were covered.
+
+The failure logs and test source support the auditor's diagnoses. The wrapper
+fixture glob includes the separately cataloged `extension_boundaries.sh`, which
+the wrapper does not invoke. The isolation test first established distinct live
+identities, effects and envelopes, then its mutation reversed `steps` without
+reversing the phase action partition. The additional partition diagnostic is
+legitimate. These are test-maintenance failures; neither is evidence that the
+live isolation or native experiment failed. They nevertheless require repair.
+
+I read the auditor's mutation script/output and independently reproduced F3 in
+memory from the retained ordinary-phase envelope: both Python validation entry
+points accept changing `not_needed` to `collected` while disposition stays
+`not_needed` and no validator exists. This does not establish `query_first`, but
+`collected` itself claims that the synchronous driver ran and returned under
+the current failure contract. I therefore do not accept the unqualified phrase
+“No claim can be built on it” as a reason to postpone this until M5.1.
+The producer's empty-plan branch emits `not_needed`, so the observed production
+baseline remains sound. Coordinated encoder/reader consistency controls should
+be repaired during A1 follow-up, without equating `collected` with successful
+spawn, complete output or clean reap.
+
+No new live execution, signing or resource-sensitive experiment was needed for
+this review. The existing allocation and unrecorded-empty-object limitations
+remain; no attempt was made to clean objects by prefix.
+
+#### Finding dispositions
+
+| Finding | Lead disposition, owner and timing |
+| --- | --- |
+| A1-F1 | Accepted; corrected the executing agent's Q1 link to `disposition.rs` here. Auditor wording is preserved. |
+| A1-F2 | Accepted. Repair both test controls and rerun them during A1 follow-up, before H1/M4. Prefer catalog-aware wrapper expectations; preserve both the pure order mutation and independent partition rejection rather than weakening the consumer. Include the default battery in subsequent milestones' acceptance evidence alongside opt-in gate controls, with explicit dependency-reviewed reuse where applicable. |
+| A1-F3 | Accepted and moved earlier, to A1 follow-up. `collected` makes a bounded execution claim even without a usable prediction. Add compatible-state checks and positive/negative controls across affected encoder/readers; preserve valid collection failures. M5.1 will verify the resulting contract. |
+| A1-F4 | Accepted. Document code 3's existing broader meaning, including local setup failure, during A1 follow-up so the current account does not infer malformed input from that label. M4 owns a distinct setup-failure code if its combined-fault controls require finer representation; any vocabulary change must update producer, readers and matrix together. |
+| A1-F5 | Accepted as M4 vocabulary/combined-fault work. Published native evidence and abnormal issuer exit must both remain visible; delivery is already withheld. Add the post-publication-exit control and choose a status that does not imply the publication was absent. |
+| A1-F6 | Accepted, with wording repair moved from M5.5 to A1 follow-up: the precise missing-helper refusal applies to a current runner copy. Older protocol binaries can refuse earlier. M4 owns the live default-path control on an owned copy with the helper removed; M5.5 rechecks the final account. |
+| A1-F7 | Partly accepted as clarification, not missing foundational evidence. The fixture README already says that it compiles production sources outside the inspected app and identifies the instrumentation through overrides/provenance. Make the alternate-build limitation explicit beside the suite description during A1 follow-up; M5.3/M5.4 check its consistency. It does not prove the shipped bytes were interrupted internally. |
+| A1-F8 | Accepted as an H1 design note, not an unmet unconditional measurement gate. The plan says to measure before considering a persistent validator; no such change is proposed. Recommend retaining the fresh validator and its existing bounded cleanup model. Retained aggregate/collection timings must not be called isolated process-launch cost. A persistent protocol would require the measurement first. |
+| A1-F9 | Accepted as a history-navigation improvement. Added a pointer beside the M2 figure to the superseding M3 calculation; the original measured value is preserved. |
+
+#### Additional lead finding and carried work
+
+**A1-L1 — current capability-code documentation.** The guide at
+`docs/PolicyWitness.md` near line 313 assigns `extension_issuer_unavailable` to
+both a missing helper and a missing native issuance API. The orchestrator's
+capability branch distinguishes `extension_api_unavailable`, and the retained
+`extension_boundaries/artifacts/issuer-6/run.json` records that exact code. I
+checked both source and retained output. Repair the owning guide and regenerate
+its staged copy during A1 follow-up, alongside F6. This is a current
+documentation error, not a proposed behavior change.
+
+Q4's optional empty-issuer-entitlement assertion is accepted for M4 provenance
+controls: compare the independent read-back to the expected empty grant set,
+without changing how older unknown records are represented. Q5's BYOXPC
+maximum-reply-path control is assigned to M4, with final acceptance at M5.6.
+Shared transport code supports the present reuse argument but is not a live
+maximum-size BYOXPC observation.
+
+For H1, retain the fresh per-phase validator, separate issuer/token channel and
+phase action partition. Their responsibilities and isolation boundaries are
+established. Keep the encoder and independent readers separate despite their
+maintenance cost. The worker's duplicate-action guards are small defensive
+checks and do not justify a broader mechanism. This is a preliminary design
+assessment for the requested audit briefing; the formal H1 briefing still
+requires A1 corrections and closure.
+
+Before A1 closes, commit the test/reader and current-account corrections,
+affected checks, rendered rechecks and updated applicability evidence. Obtain
+auditor follow-up where changes or disputed semantics require it. This review
+does not relabel the 172/174 audit run as passing or replace its original output.
 
 ## A2 Final audit — after M5.6
 

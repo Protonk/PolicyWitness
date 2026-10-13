@@ -61,7 +61,7 @@ outside this plan.
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
-| A1 Middle out-of-band audit | Awaiting response | Handoff and actual questions populated in the [shared audit document](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-middle-audit--after-m3); auditor answers and execution dispositions remain pending. |
+| A1 Middle out-of-band audit | Corrective follow-up pending | Returned audit preserved at `221f5ec`; lead dispositions in the [shared audit document](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-middle-audit--after-m3). Auditor found no issue invalidating M3; additional default run passed 172/174 and exposed two stale controls. Lead also requires phase-status consistency and current-account corrections before closure. |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
@@ -77,8 +77,9 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** M0–M3 are complete and execution is standing by at the A1
-audit boundary. The reviewed source is
+**Execution state:** M0–M3 implementation gates are complete. The user requested
+review and a briefing of the returned A1 audit; that bounded review is recorded,
+and execution remains at A1 with corrective follow-up pending. The reviewed source is
 `fdbd89b215125b50fc6030e09bdc4a66b56e48f2`. The signed development app is build
 560, version 0.2.8, from clean source
 `6744f3c0652fac983d2823dfcc9cb848efb105af` (`v0.2.8-40-g6744f3c`), with worker
@@ -87,7 +88,7 @@ The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 The intervening source delta changes tests and their account only; Rust edits
 are confined to `#[cfg(test)]`, and production bytes and the app are unchanged.
-This handoff increment changes only the plan, records and retention index.
+The audit/review increments change only the plan, records and retention index.
 
 The 147-case signed consolidation is retained as
 `extensions-m3-accepted-20261013` (`20261013T143650Z_763cbafa`). The final
@@ -116,10 +117,23 @@ after verified cleanup. The earlier 25 empty shared-memory objects with
 unrecorded names remain an explicit cleanup limitation. No build, test or render
 process remains active, and no product edit is pending at this checkpoint.
 
-**Next action:** await the external auditor's attributed answers in the shared
-audit document. Disposition them separately, resolve any findings invalidating
-M3 or blocking dependent work, and commit corrections and evidence before closing
-A1. H1 preparation and M4 have not started; an unanswered A1 is not closure.
+The auditor's additional run, `a1-audit-default-20261013`
+(`20261013T162635Z_9a7839fb`), passed 172/174 default cases on unchanged build
+560, with no skips/unrun and unchanged inventories. Forty-nine default cases
+were outside the final M3 credit set; 47 passed and two exposed stale wrapper
+and isolation-mutation controls. The lead verified those failures, current app
+hashes and the accepted contradictory phase-status record. The detailed
+dispositions preserve the auditor's words and distinguish accepted findings,
+earlier repair timing, and the lead's additional capability-code documentation
+finding. The original failed run remains retained, not relabeled as passing.
+
+**Next action:** complete A1 corrective follow-up: repair the two test controls,
+coordinate the phase collection-status consistency checks, correct current
+guide/status/build-scope accounts, and verify affected checks and rendered
+surfaces. Include default-battery coverage under the shared rules below, refresh
+evidence applicability, and obtain any needed auditor follow-up before A1
+closure. Formal H1 preparation and M4 have not started. This review/briefing
+does not authorize bypassing either boundary.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
@@ -334,6 +348,12 @@ Select signing, build and maximum-reply controls in the increment that changes
 their boundaries. Verify changed aggregate limits and the largest admitted reply
 through real transport. Credit reusable evidence only under the test guidance;
 record its source/build identity and the checks still owed by the current increment.
+
+From A1 follow-up onward, each gate's acceptance also includes the full default
+battery alongside its required opt-in cases. Worker/native/protocol changes
+require a fresh default run on the candidate; other increments may reuse
+case-level results only after the same conservative dependency/applicability
+review. Named milestone selectors do not replace this broader regression coverage.
 
 Register each new case in the catalog, owning suite README, coverage account and
 opt-in registry as applicable, and update the test suite map when its entries
@@ -835,6 +855,14 @@ release. Exercise BYOXPC provenance and registry recovery failures.
 Select additional combinations from the implemented boundaries and record what
 each establishes. Revisit the interface if these controls expose an unrepresentable
 outcome.
+
+Carry the A1 dispositions into this milestone: issuer death after publication
+with both observations retained and accurate status vocabulary; a live missing
+issuer-file refusal on an owned current runner copy; independent empty issuer
+entitlement-grant checks; and a maximum-reply workload over the BYOXPC path.
+Revisit the broader worker `malformed_transport` status if combined setup and
+publication failures require separate codes. A1 owns correction of its current
+documented meaning; M5.1 and M5.6 verify the final contract and acceptance.
 
 Contract increment for this gate: a scenario-matrix row for each combined fault,
 read by the live case and the Swift comparison tests; catalog, coverage and
