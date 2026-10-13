@@ -1096,9 +1096,33 @@ fn phase_collection_issues(runner: &Value) -> Vec<Value> {
     if runner["reporting_failure"].is_object() {
         return vec![]; // Degraded replies preserve conflicting observations.
     }
+    let phases = match runner.get("phases") {
+        None | Some(Value::Null) => return vec![],
+        Some(Value::Array(phases)) => phases,
+        Some(_) => {
+            return vec![integrity_issue(
+                "phase_collection",
+                "phases is not an array".into(),
+            )];
+        }
+    };
     let mut issues = Vec::new();
-    for phase in runner["phases"].as_array().into_iter().flatten() {
-        let disposition = phase["ordering"]["validator_disposition"].as_str();
+    for phase in phases {
+        let ordering = &phase["ordering"];
+        let raw_disposition = &ordering["validator_disposition"];
+        let spawn = &phase["validator_spawn_failure"];
+        if !phase.is_object()
+            || !(ordering.is_null() || ordering.is_object())
+            || !(raw_disposition.is_null() || raw_disposition.is_string())
+            || !(spawn.is_null() || spawn.is_object())
+        {
+            issues.push(integrity_issue(
+                "phase_collection",
+                "phase collection evidence has an invalid type".into(),
+            ));
+            continue;
+        }
+        let disposition = raw_disposition.as_str();
         let status = phase["collection_status"].as_str();
         let allowed = match status {
             Some("not_reached") => matches!(disposition, None | Some("not_invoked")),
@@ -1111,7 +1135,6 @@ fn phase_collection_issues(runner: &Value) -> Vec<Value> {
             _ => false,
         };
         let validator = &phase["validator_subprocess"];
-        let spawn = &phase["validator_spawn_failure"];
         let observations = if status != Some("collected") {
             validator.is_null() && spawn.is_null()
         } else if disposition == Some("not_spawned") {
@@ -1255,6 +1278,85 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn phase_collection_types_distinguish_malformed_from_optional_absence() {
+        let mut baseline = worker("ok", None);
+        baseline["phases"][0]["collection_status"] = json!("not_reached");
+        baseline["phases"][0]["ordering"]["validator_disposition"] = json!("not_invoked");
+        baseline["phases"][0]["validator_subprocess"] = Value::Null;
+        baseline["phases"][0]["validator_spawn_failure"] = Value::Null;
+        for (path, values) in [
+            (
+                "/phases",
+                vec![json!(7), json!(true), json!("wrong"), json!({}), json!([7])],
+            ),
+            (
+                "/phases/0/ordering",
+                vec![json!(7), json!(true), json!("wrong"), json!([])],
+            ),
+            (
+                "/phases/0/ordering/validator_disposition",
+                vec![json!(7), json!(true), json!([]), json!({})],
+            ),
+            (
+                "/phases/0/validator_spawn_failure",
+                vec![json!(7), json!(true), json!([])],
+            ),
+        ] {
+            for value in values {
+                let mut runner = baseline.clone();
+                *runner.pointer_mut(path).unwrap() = value.clone();
+                let diag = diagnostics(&runner);
+                assert_eq!(
+                    diag.disposition_integrity,
+                    Some("invalid"),
+                    "{path}: {value}"
+                );
+                assert_eq!(diag.process_disposition, "withheld", "{path}: {value}");
+                assert_eq!(diag.termination_cause, Some("unknown"));
+                assert!(
+                    diag.disposition_issues
+                        .iter()
+                        .any(|i| i["kind"] == "phase_collection")
+                );
+            }
+        }
+        // The claim reader tolerates optional absence. It is not the response
+        // shape validator, and does not turn absent ordering into query_first.
+        for path in [
+            "/phases",
+            "/phases/0/ordering",
+            "/phases/0/ordering/validator_disposition",
+        ] {
+            for absent in [false, true] {
+                let mut runner = baseline.clone();
+                if absent {
+                    let (parent, key) = path.rsplit_once('/').unwrap();
+                    runner
+                        .pointer_mut(parent)
+                        .unwrap()
+                        .as_object_mut()
+                        .unwrap()
+                        .remove(key);
+                } else {
+                    *runner.pointer_mut(path).unwrap() = Value::Null;
+                }
+                assert_eq!(
+                    diagnostics(&runner).disposition_integrity,
+                    Some("valid"),
+                    "{path}: absent={absent}"
+                );
+            }
+        }
+        // An empty spawn object has no contradictory presence claim here.
+        // The full Python consumer owns its required native-call fields.
+        let phase = &mut baseline["phases"][0];
+        phase["collection_status"] = json!("collected");
+        phase["ordering"]["validator_disposition"] = json!("not_spawned");
+        phase["validator_spawn_failure"] = json!({});
+        assert_eq!(diagnostics(&baseline).disposition_integrity, Some("valid"));
     }
 
     #[test]

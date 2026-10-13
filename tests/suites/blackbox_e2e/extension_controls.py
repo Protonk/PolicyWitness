@@ -54,6 +54,30 @@ def run_extension_controls(run):
         run('phase_collection_' + case['name'], document, rejected_by=diagnostic)
         findings = check_record(document)
         assert (not findings) == case['accepted'], (case['name'], findings)
+        if case['accepted'] and case['status'] == 'not_reached':
+            for field in ('ordering', 'ordering.validator_disposition'):
+                for value in (7, True, 'wrong', [], {}):
+                    if field == 'ordering' and value == {}:
+                        continue  # Full shape validation owns missing required fields.
+                    changed = deepcopy(document)
+                    changed_phase = changed['data']['runner_result']['phases'][-1]
+                    if field == 'ordering':
+                        changed_phase[field] = value
+                    else:
+                        changed_phase['ordering']['validator_disposition'] = value
+                    run('phase_type_' + field + '_' + type(value).__name__, changed,
+                        rejected_by='phase collection evidence has an invalid type')
+                    assert any(f['kind'] == 'phase_collection' for f in check_record(changed))
+        if case['accepted'] and case['status'] == 'collected' and case['disposition'] == 'not_spawned':
+            changed = deepcopy(document)
+            changed['data']['runner_result']['phases'][-1]['validator_spawn_failure'] = {}
+            run('empty_spawn_' + case['name'], changed, rejected_by='invalid validator_spawn_failure record')
+            # The oracle validates claims, not every record's required fields.
+            assert check_record(changed) == []
+            changed['data']['runner_result']['phases'][-1]['validator_spawn_failure'] = 7
+            run('mistyped_spawn_' + case['name'], changed,
+                rejected_by='phase collection evidence has an invalid type')
+            assert any(f['kind'] == 'phase_collection' for f in check_record(changed))
 
     def runner(document):
         return document['data']['runner_result']

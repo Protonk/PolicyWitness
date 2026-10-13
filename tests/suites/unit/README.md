@@ -37,7 +37,11 @@ output through the independent Python consumer; their
 
 ## Fixtures
 
-- None.
+Current response captures and constructed reply helpers support disposition and
+assembly tests. Phase collection controls distinguish wrong JSON types from
+optional absence, withhold unsupported projections and retain the raw reply
+through assembly. Empty spawn-failure objects exercise claim-validation scope;
+the independent full consumer owns their required-field rejection.
 
 ## Artifacts
 

@@ -171,6 +171,14 @@ retains successful access evidence independently of the unavailable release.
 The separate lifecycle oracle checks the native-event mutations as well as the
 ordinary action account; no constructed mutation establishes a native effect.
 
+Phase collection controls reject mistyped containers, ordering and disposition
+values without treating them as absent. An empty spawn-failure object is rejected
+by the full consumer's required-field checks; the separate lifecycle oracle checks
+claim consistency and does not certify that object's complete shape. Rust unit
+and assembly controls pin the same claim boundary, optional absence and unchanged
+raw forwarding, including degraded reporting-failure replies.
+
+
 `comparison_controls` exercises `tests/lib/envelope_compare.py` through its CLI
 using the checked-in live envelope and constructed mutations. It runs offline
 without a built app or migration output. Changed commands, flags, timeouts,

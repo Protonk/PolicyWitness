@@ -92,6 +92,12 @@ does not require a bump. An absent field means unknown, never false. An
 additive contract change may also carry a bump, recorded in
 [contract.json](contract.json).
 
+Enforcing an already specified invariant, including rejecting impossible
+producer combinations, does not change the valid-document contract. Such a
+repair needs controls for the rejected combinations and preserved valid inputs.
+A genuine change to field meaning or the rules a reader must apply still requires
+the corresponding version bump.
+
 The generated sentence above is the one place that states the current numbers;
 describe current behavior without repeating them in prose.
 

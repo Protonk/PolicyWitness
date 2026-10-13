@@ -1122,6 +1122,59 @@ mod tests {
     }
 
     #[test]
+    fn malformed_phase_claims_withhold_projection_and_preserve_raw_reply() {
+        let mut baseline = worker("ok", None);
+        baseline["phases"][0]["collection_status"] = json!("not_reached");
+        baseline["phases"][0]["validator_subprocess"] = Value::Null;
+        baseline["phases"][0]["ordering"]["validator_disposition"] = json!("not_invoked");
+        for path in ["/phases", "/phases/0/ordering/validator_disposition"] {
+            let mut malformed = baseline.clone();
+            *malformed.pointer_mut(path).unwrap() = json!(7);
+            for degraded in [false, true] {
+                let reply = if degraded {
+                    reporting_failed(malformed.clone())
+                } else {
+                    malformed.clone()
+                };
+                let (result, data, code) = attach_sandbox_logs(
+                    complete_execution(execution_data(Some(reply.clone()))),
+                    &json!({"probe_plan": []}),
+                    true,
+                    |_, _, _| panic!("logs disabled"),
+                );
+                let wire: Value = serde_json::from_str(
+                    &json_contract::render_envelope("run", result, &data).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(wire["data"]["runner_result"], reply);
+                assert_eq!(code, if degraded { 1 } else { 0 });
+                let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
+                if degraded {
+                    assert!(
+                        !diagnostics["disposition_issues"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .any(|i| i["kind"] == "phase_collection")
+                    );
+                    assert_eq!(reply["normalized_outcome"], "runner_reporting_failed");
+                } else {
+                    assert_eq!(diagnostics["disposition_integrity"], "invalid");
+                    assert_eq!(diagnostics["process_disposition"], "withheld");
+                    assert_eq!(diagnostics["termination_cause"], "unknown");
+                    assert!(
+                        diagnostics["disposition_issues"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .any(|i| i["kind"] == "phase_collection")
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
     fn policy_transfer_driver_replies_cross_assembly_and_consumer() {
         use std::io::Write;

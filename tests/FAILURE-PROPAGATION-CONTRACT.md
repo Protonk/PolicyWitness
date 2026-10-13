@@ -419,7 +419,7 @@ answer from raw fields or prose.
 | `runner_sandbox_diagnostics.process_disposition` | `final_status` supported: `signal` gives `signaled`; `exit_code` 0 gives `clean_exit`; nonzero gives `nonzero_exit`. Unresolved gives `unconfirmed`. Conflicting gives `conflicting`. A record that fails validation, or a worker subprocess without one, gives `withheld`; an unrecognized answer spelling gives `unrecognized`. No worker gives `no_worker`. |
 | `runner_sandbox_diagnostics.termination_cause` | The cause table above. |
 | `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. The raw `poll_stop_reason` remains readable. |
-| `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid` or `invalid`. Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record` or `malformed_record`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
+| `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid` or `invalid`. Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record`, `malformed_record`, `extension_evidence` or `phase_collection`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
 | `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. It does not say an attempt never began. |
 | `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
 | `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. Lifecycle entries never change the relations, order or sandbox attribution. |
@@ -450,6 +450,34 @@ final-status answer projects `process_disposition: unrecognized` and cause
 `unknown`; an unrecognized stop reason projects null; an unrecognized lifecycle
 summary keeps its raw value. Consumers never reinterpret a reply of another
 version; they report it as unsupported.
+
+### Reader validation responsibilities
+
+The Swift response types establish field types; ordinary encoding also checks
+claim, phase, ordering and native-publication invariants. The reporting-failure
+path retains conflicting observations and withholds comparisons as described
+above. It does not make contradictory raw observations trustworthy.
+
+The Rust controller gates the version and validates the evidence needed for its
+disposition projections. `disposition_integrity: valid` certifies those claim
+checks, not the shape of the entire response. Present non-null phase containers,
+phase records, ordering objects, validator-disposition values and spawn-failure
+objects must have their declared types; a mistyped value cannot become optional
+absence. The claim checks tolerate absent or null optional evidence without
+inventing it. Required phase and ordering fields remain the full response
+validator's responsibility. A degraded reporting-failure reply preserves the raw
+phase account without using contradictory collection observations to recover
+ordinary claims; the controller always forwards the raw reply unchanged.
+
+`tests/lib/consumer.py` combines shape-golden checks with required-field and
+semantic checks. `tests/lib/lifecycle_oracle.py` independently checks lifecycle
+claims and their supporting observations; it is not a complete response-shape
+validator. For example, an empty `validator_spawn_failure: {}` beside
+`collected`/`not_spawned` contradicts no presence claim, so Rust and the lifecycle
+oracle do not infer a native spawn result from it. The full consumer rejects it
+because the required origin, operation, executable path, nonzero return code and
+diagnostic are missing. Reader controls pin both responsibilities, including
+wrong-type rejection, optional absence and unchanged degraded evidence.
 
 ### Versions
 
@@ -748,7 +776,7 @@ cleanup observations reach the ordinary assembly path. Published worker
 failure retains summary precedence; the transfer observation stays available.
 Successful transfer begins the separate readiness wait. The deadline does
 not bound final blocking reap, cancel an earlier client timeout, or contain
-all descendants. Response schema 15 requires readers to consider the timeout
+all descendants. Readers must consider the timeout
 object and stop reason as well as the errno-bearing write-error object.
 
 ## Admission and validator/controller receiver contract
@@ -1001,7 +1029,7 @@ field in a reply does.
 | --- | --- | --- |
 | `observation` | string | the attempt channel classified: `succeeded`, `permission_failure`, `other_failure` or `unavailable` |
 | `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
-| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access` → `file-read-data`, `open_write` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for a compound `file`/`create` attempt or an unsupported attempt |
+| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for a compound `file`/`create` attempt or an unsupported attempt |
 | `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
 | `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |

@@ -36,9 +36,12 @@ The controller uses the app's `Contents/MacOS/pw-runner-client` Swift helper for
 `NSXPCConnection` wiring. Rust owns orchestration and capture, and consumes the
 host's reply without directly managing its worker, validator or issuer. Issuer
 binary provenance uses the same observed-path/hash/baseline rules as the other
-helpers. Reply admission checks native publication, local-reference association
-and fresh-read consistency before exposing derived claims; rejected parsed
-evidence remains available under the receiver contract.
+helpers. After version admission, the controller checks native publication,
+local-reference association, fresh-read consistency and phase collection evidence
+before exposing derived disposition claims. These checks do not validate every
+response field's shape; the full test consumer owns that broader validation.
+The controller preserves the parsed reply unchanged, including malformed claim
+evidence and degraded reporting-failure observations.
 
 ## CLI surface (contract)
 
