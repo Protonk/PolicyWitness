@@ -1314,6 +1314,12 @@ The lifecycle [example](#sandbox-extensions) returns these records under
 | `extension_events[]` | `phase_id`, `step_id`, operation and references, `call_boundary_observed`, `result_published`, status, optional `native_result`, errno, unavailability reason and lifecycle claims. |
 | `steps[].attempt.fresh_read` | `open_rc` / `open_errno`, `stat_rc` / `stat_errno`, optional descriptor identity, `read_rc` / `read_errno`, `close_rc` / `close_errno` and `content_hex`. Each errno belongs to its failed syscall; successful read count determines the hex length. |
 
+`issuance_status: issued` requires published bounded token evidence and a clean,
+confirmed issuer exit. `issuer_abnormal_exit` retains that publication alongside
+an observed nonzero exit or signal and withholds delivery. An interrupted worker
+can leave `delivery_status: not_observed` despite completed issuance; neither
+record implies that consumption ran.
+
 An event status of `returned` requires native result publication; consumption's
 signed handle value of -1 supplies no handle. Release's native result stays
 separate from later file access. `unavailable` records a published no-call

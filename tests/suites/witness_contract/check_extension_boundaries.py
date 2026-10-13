@@ -4,6 +4,7 @@ import hashlib
 import json
 import mmap
 import os
+import shutil
 from pathlib import Path
 import struct
 import stat
@@ -31,8 +32,8 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def compile_fixture(out, channel, mode, issuer):
-    path = out / ('issuer' if issuer else 'worker')
+def compile_fixture(out, channel, mode, issuer, executable_dir):
+    path = executable_dir / ('issuer' if issuer else 'worker')
     command = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-O2', '-Wall', '-Wextra',
         '-Wno-deprecated-declarations', '-Wno-unused-function', f'-DPW_CONTROL_MODE={mode}',
         '-DPW_CONTROL_CHANNEL=' + json.dumps(channel), '-I', str(ROOT / 'controller/tools/pw_probe_runner')]
@@ -43,6 +44,7 @@ def compile_fixture(out, channel, mode, issuer):
     result = subprocess.run(command, capture_output=True, timeout=30)
     (out / (path.name + '-build.log')).write_bytes(result.stdout + result.stderr)
     assert result.returncode == 0, f'{path.name} compile failed; see build log'
+    shutil.copy2(path, out / path.name)
     return path
 
 
@@ -80,6 +82,8 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
     def retire_owner():
         if not owner['cleanup_retained']:
             (recovery.parent / 'target').unlink(missing_ok=True)
+            for name in ('issuer', 'worker'):
+                (recovery.parent / name).unlink(missing_ok=True)
             recovery.unlink()
             recovery.parent.rmdir()
     try:
@@ -101,8 +105,8 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
     save_owner()
     launched, cleanup_known = False, False
     try:
-        issuer = compile_fixture(out, channel, issuer_mode, True)
-        worker = compile_fixture(out, channel, worker_mode, False) if worker_mode is not None else None
+        issuer = compile_fixture(out, channel, issuer_mode, True, recovery.parent)
+        worker = compile_fixture(out, channel, worker_mode, False, recovery.parent) if worker_mode is not None else None
         target = recovery.parent / 'target'
         owner['target_path'] = str(target)
         save_owner()

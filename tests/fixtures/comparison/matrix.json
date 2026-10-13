@@ -2824,7 +2824,14 @@
         "extension_events.1": null,
         "phases.1.completion_observed": true
       },
-      "observer_assert": {}
+      "observer_assert": {
+        "stage": 2,
+        "operation": 1,
+        "actual_returned": true,
+        "actual_result": -1,
+        "worker_core_disabled": true,
+        "worker_channel_closed": true
+      }
     },
     {
       "id": "M04",
@@ -2897,7 +2904,14 @@
         "phases.0.completion_observed": true,
         "phases.2.completion_observed": true
       },
-      "observer_assert": {}
+      "observer_assert": {
+        "stage": 2,
+        "operation": 2,
+        "actual_returned": true,
+        "actual_result": -1,
+        "worker_core_disabled": true,
+        "worker_channel_closed": true
+      }
     },
     {
       "id": "M05",

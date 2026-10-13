@@ -37,7 +37,8 @@ try:
     assert envelope['data']['specimen']['binaries']['issuer']['verification'] == 'unavailable'
     rc, raw, _ = session.tool(receipts, 'validate-missing', [pw, 'runner', 'validate'], invoke=session.command, check=False)
     result = json.loads(raw)
-    assert rc != 0 and result['result']['ok'] is False
+    # validate succeeded as a command; its data reports invalid installations.
+    assert rc == 0 and result['result']['ok'] is True and result['data']['invalid'] >= 1
     assert any(f['service_name'] == state['service_name'] and f['binary'] == 'issuer'
                for f in result['data']['failures']), result
 finally:
@@ -47,6 +48,7 @@ finally:
     ownership['restored'] = True
     session.save(recovery, ownership)
     session.save(receipts / 'restoration.json', ownership)
-session.envelope(receipts, 'validate-restored', [pw, 'runner', 'validate'], session.command)
+restored = session.envelope(receipts, 'validate-restored', [pw, 'runner', 'validate'], session.command)
+assert not any(f['service_name'] == state['service_name'] for f in restored['failures']), restored
 recovery.unlink()
 print('Missing installed issuer refused before worker launch; validation reports it; exact bytes restored and verified.')

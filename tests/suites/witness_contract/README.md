@@ -49,7 +49,10 @@ read-backs establish that the issuer receives the selected identity without the
 worker's supplied entitlements. Envelope provenance must match the registry's
 per-binary records, and issuer dossier hashes must match independently read
 installed bytes and the shipped baseline. A missing issuer path must produce
-the named capability refusal before worker launch. The owned installed-copy control removes the actual issuer, retains a restoration receipt, checks public validation, then restores and verifies the exact bytes. The same BYOXPC session runs the maximum-reply workloads. Cleanup verifies service removal. These workloads place
+the named capability refusal before worker launch. The owned installed-copy
+control removes the actual issuer, retains a restoration receipt, checks public
+validation, then restores and verifies the exact bytes. The same BYOXPC session
+runs the maximum-reply workloads. Cleanup verifies service removal. These workloads place
 their targets in owned temporary directories to avoid requesting Desktop access.
 
 `extension_boundaries` compiles the production issuer and worker with the

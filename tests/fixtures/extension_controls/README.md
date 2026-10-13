@@ -23,7 +23,9 @@ and disabled core dumps at the observed native boundaries.
 
 Each channel has a case-local ownership receipt and a duplicate recovery record
 in a uniquely created temporary directory, outside prunable run output. The
-target is an owned regular file in that same directory, avoiding Desktop access.
+target is an owned regular file in that same directory. Executable fixtures also
+run there, with retained copies in the artifacts, avoiding Desktop access by
+the issuer or worker.
 The record is retained when native child cleanup is unknown. Recovery must use that
 exact channel name and independently establish child cleanup before erasing and
 unlinking it; a name prefix alone is not ownership. Successful cleanup removes

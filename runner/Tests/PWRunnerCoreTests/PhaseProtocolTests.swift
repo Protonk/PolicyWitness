@@ -207,7 +207,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 phases: [PWRunnerPhase(phase_id: "timed", actions: [.probe(phaseProbe("early", target.path, operation: "io_hang_late:" + id))]),
                          PWRunnerPhase(phase_id: "later", actions: [.probe(phaseProbe("later", target.path, action: "read_fresh"))])],
                 _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 100))
-            let reply = CWorkerOrchestrator.run(parsed: request, policyHash: "controlled-validator", bundleId: nil,
+            var reply = CWorkerOrchestrator.run(parsed: request, policyHash: "controlled-validator", bundleId: nil,
                 workerExecutablePath: phaseEquipment("pw-probe-runner"), validatorExecutablePath: fixture + ".validator",
                 validatorSpawn: { pid, path, actions, argv in
                     if !spawned.isEmpty { FileManager.default.createFile(atPath: gate, contents: Data()) }
@@ -219,6 +219,9 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                     if index == 0 { calls.kill = { _, _ in errno = EPERM; return -1 } }
                     return calls
                 })
+            // Use the service's production post-orchestration enrichment before
+            // handing this driver reply to complete-document readers.
+            reply.steps = enrichPathDiagnostics(steps: reply.steps)
             try expectEqual(spawned.count, 2)
             try expectTrue(spawned[0] != spawned[1])
             let deadline = Date().addingTimeInterval(2)
