@@ -6,8 +6,9 @@ import Foundation
 // (tests/fixtures/comparison/matrix.json) through `comparisonEvidence(...)`.
 // Each row's `unit` inputs are constructed channel results; the expectations
 // were reviewed against the matrix and its independent controls, not taken
-// from this producer. The live reader (`witness_contract/comparison_matrix`)
-// runs the rows not marked constructed through the CLI. S09 protects defensive
+// from this producer. Live owners are comparison_matrix, the FIFO deadline
+// case, extension_combinations and PhaseProtocolTests; the fixture README
+// names the CLI and internal-driver boundaries. S09 protects defensive
 // result construction; public requests refuse unsupported attempts before children.
 
 private struct MatrixRow {

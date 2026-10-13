@@ -3,17 +3,20 @@
 ## Scope and checkpoint
 
 Current status: M0–M3, A1 and H1 are complete. The user authorized M4 through
-M5.1 with a stop at completed M5.1. M4 is in implementation and verification.
-The first candidate is `2c3ab18`; `9131cfa` refreshes response captures and adds
-cross-reader issuer controls. The diagnostic run passed its seven combined CLI
-rows and live phase driver control; the two expected stale fixture/shape checks
-are corrected. Full candidate acceptance and rendered review remain owed.
-No M4 completion is claimed.
-The signed app remains build 566 from clean `2f380d0`. The latest acceptance
-account and design recommendation are at [F10 closure](#a1-f10-closure) and
-[H1 prepared human review](#h1-prepared-human-review) below. Historical entries
-retain their original observations and status; the associated plan owns the
-current resume instructions.
+M5.1 with a stop at completed M5.1. M4's build-578 candidate (`b641054`, clean)
+finished 197 selected cases: 196 passed and `unit/rust.unit` failed the existing
+observer `both_raw_streams_are_bounded_at_exact_edges` control with
+`pipe_open_after_exit`. The exact isolated rerun passed; this does not establish
+cause or resolution of the intermittent failure previously retained during the
+Meson cutover. The original run remains failed. Focused replacement evidence,
+M4 rendered-review recheck and gate closure remain pending.
+
+The fresh M4 rendered review found incomplete M-row ownership text and M08's
+unused, mismatching raw assertions. The correction aligns M08's 22-byte target,
+consumes every shared raw expectation and checks that a wrong byte count is
+rejected. It also completes the reader and ownership inventories. No product
+input changes in this correction. Historical entries retain original results;
+the associated plan owns current resume instructions.
 
 ### M1 initial checkpoint
 

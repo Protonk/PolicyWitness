@@ -3180,8 +3180,8 @@
               "uid": 501,
               "gid": 20
             },
-            "read_rc": 20,
-            "content_hex": "696e646570656e64656e74207769746e6573730a",
+            "read_rc": 22,
+            "content_hex": "636f6d62696e6564207068617365207769746e657373",
             "close_rc": 0
           }
         },
@@ -3198,8 +3198,8 @@
         "attempt.result_source": "worker",
         "attempt.fresh_read.open_rc": ">0",
         "attempt.fresh_read.stat_rc": 0,
-        "attempt.fresh_read.read_rc": 20,
-        "attempt.fresh_read.content_hex": "696e646570656e64656e74207769746e6573730a",
+        "attempt.fresh_read.read_rc": 22,
+        "attempt.fresh_read.content_hex": "636f6d62696e6564207068617365207769746e657373",
         "attempt.fresh_read.close_rc": 0
       },
       "control": "runner_unit PhaseProtocolTests M08: native kill substitution returns EPERM; surviving validator observes EPIPE after collection closure; distinct validator PIDs and exact phase-local record IDs; unchanged target bytes; Rust/Python replay of the production-encoded reply.",

@@ -6,7 +6,7 @@ the two recorded explicitly, validator failures attributed honestly, removed
 fields rejected, the specimen dossier collected, the test seam functioning,
 and the source-drift guardrail enforcing the audit trail.
 
-Each test asserts one contract claim. The suite reads as a
+Cases assert contract claims independently. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
 the architecture behind it.
 

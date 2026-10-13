@@ -2,15 +2,14 @@
 
 `matrix.json` is the single source of comparison-record expectations: one row
 per scenario of the [failure contract's comparison record](../../FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
-(S01–S27 with S04 unused, B1–B7, C1 and T), each with the inputs that produce
+(S01–S27 with S04 unused, B1–B7, C1, T and M01–M08), each with the inputs that produce
 it, the raw channel values a unit reader feeds to the producer, the raw fields
 a live reader asserts beside the record, and the expected `comparison` object
 at the current response schema. Expectations were reviewed against the record's
 rules and the independent controls named per row; they were not generated from
-the producer under test. Readers: `witness_contract/comparison_matrix` (live)
-and `runner_unit`'s `ComparisonEvidenceTests` (unit).
+the producer under test.
 
-Two readers share the file:
+These readers share the file:
 
 - `witness_contract/comparison_matrix` runs the S, B and C specimens through
   the CLI and checks every step against its row with the consumer's `validate`
@@ -18,6 +17,12 @@ Two readers share the file:
   bytes before and after, direct spawn results). The existing
   `worker_attempt_in_flight_at_deadline` case reads row T after establishing
   its FIFO boundary; it owns FIFO cleanup.
+- `witness_contract/extension_combinations` runs M01–M07 through the CLI,
+  checking native observer receipts, earlier observations and the row's raw
+  and comparison assertions.
+- `runner_unit`'s `PhaseProtocolTests` runs M08 through the production phase
+  driver with controlled validator calls, checks every raw and comparison
+  assertion, and exports the reply for Rust assembly and Python reader replay.
 - `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift` is
   table-driven over the same file through `comparisonEvidence(...)`, appending
   the lifecycle limitation for `unit.lifecycle_summary` exactly as the step
@@ -26,7 +31,7 @@ Two readers share the file:
 ## Placeholders
 
 Absolute paths use the fixtures' `{{NAME}}` convention and are expanded by
-both readers before use:
+the applicable readers before use:
 
 | Placeholder | Live reader | Unit reader |
 | --- | --- | --- |

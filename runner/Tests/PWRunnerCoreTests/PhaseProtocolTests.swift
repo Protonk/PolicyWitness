@@ -241,6 +241,26 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             let row = (matrix["rows"] as! [[String: Any]]).first { $0["id"] as? String == "M08" }!
             let actual = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[1].comparison!)) as! NSDictionary
             try expectTrue(actual.isEqual(to: row["comparison"] as! [String: Any]))
+            let raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[1]))
+            func mismatches(_ expected: [String: Any]) -> [String] {
+                expected.keys.sorted().filter { path in
+                    let observed = path.split(separator: ".").reduce(raw as Any?) { value, key in
+                        (value as? [String: Any])?[String(key)]
+                    } ?? NSNull()
+                    if expected[path] as? String == ">0" {
+                        guard let number = observed as? NSNumber,
+                              CFGetTypeID(number) != CFBooleanGetTypeID() else { return true }
+                        return number.intValue <= 0
+                    }
+                    return !(observed as! NSObject).isEqual(expected[path]!)
+                }
+            }
+            let expectations = row["assert"] as! [String: Any]
+            try expectEqual(mismatches(expectations), [], "M08 shared raw assertions")
+            // A wrong fixture expectation must fail this same live reader.
+            var wrong = expectations
+            wrong["attempt.fresh_read.read_rc"] = 20
+            try expectEqual(mismatches(wrong), ["attempt.fresh_read.read_rc"])
             let output = URL(fileURLWithPath: artifacts)
             try pwRunnerEncodeJSON(reply).write(to: output.appendingPathComponent("combined-phases.json"))
             try Data(receipt.utf8).write(to: output.appendingPathComponent("combined-phases-late-write.txt"))

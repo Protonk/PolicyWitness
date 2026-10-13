@@ -1221,8 +1221,12 @@ validator; B steers it with `stub_validator.py` through
 `_test_overrides.validator_executable_path` (its records are stub output, so
 its expectations come from submitted scopes and independent file and
 permission controls, never from native verdicts); C fails to compile; T is the
-FIFO deadline case. Lifecycle limitations in the table come from the step's
-summary.
+FIFO deadline case. M01–M07 combine native issuance, delivery and lifecycle
+faults through the CLI. M08 uses the production phase driver with controlled
+validator calls to combine a collection timeout, failed termination, unconfirmed
+reap and late output; its validator transcript is controlled fixture output.
+The ordinary worker performs a fresh read of independently prepared bytes.
+Lifecycle limitations in the table come from the step's summary.
 
 <!-- BEGIN GENERATED SCENARIO MATRIX -->
 
@@ -1283,6 +1287,8 @@ summary.
 | Specimen B rows in the generated matrix (steered validator) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Stub transcript plus file effects; the run ends in `validator_no_reply` while B1, B6 and B7 retain `query_first` |
 | C1 (compile failure, nothing runs) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Files unchanged; `runner_failed` with the validator not invoked |
 | T (FIFO in flight at the deadline) | `witness_contract/worker_attempt_in_flight_at_deadline` (live, with the `a1` specimen of `tests/fixtures/disposition/`); `runner_unit` `ComparisonEvidenceTests` | OS-observed deadline, SIGKILL request and reaped signal; the lifecycle oracle |
+| M01–M07 (combined extension faults) | `witness_contract/extension_combinations` (live CLI); `runner_unit` `ComparisonEvidenceTests` (constructed comparisons) | Independent native observer records, target bytes and descriptor checks; row-specific placement, raw, comparison and cleanup assertions |
+| M08 (combined ordinary-phase faults) | `runner_unit` `PhaseProtocolTests` (production driver), `ComparisonEvidenceTests` (constructed comparison), and Rust assembly/Python consumer and lifecycle-oracle replay | Failed termination call, unconfirmed host reap, surviving validator's late EPIPE, distinct phase-local PIDs/record IDs, independently prepared fresh-read bytes and separate test cleanup |
 | Producer invariants and the shape golden | `runner_unit`: `ContractVersionTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by the encoder |
 | Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
 | Controller invariants (version gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies of other and malformed versions; live refusals |
