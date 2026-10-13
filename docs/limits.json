@@ -2838,7 +2838,7 @@
       "title": "Issuer collection wait",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Monotonic host wait for the fresh issuer before worker creation. Separate from per-phase collection and worker waits.",
+      "counting": "Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started.",
       "effect": "Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait.",
       "control": "Fixed.",
       "sources": [

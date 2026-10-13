@@ -291,7 +291,11 @@ cleanup, and the lifecycle record says what it observed, but a process that
 has left the group outlives the run unseen, and no record establishes that
 every descendant stopped.
 
-Each budget covers one stage and no more. Policy delivery has its own
+Each budget covers one stage and no more. The issuer's monotonic wait,
+[`extension_issuer_wait`](LIMITS.md#execution-budgets), begins after issuer spawn
+and precedes worker creation. Target preparation and spawn are outside that wait;
+issuer cleanup can overrun it. The client reply window includes this work, while
+worker and phase collection budgets have not started. Policy delivery has its own
 absolute monotonic deadline, [`worker_policy_transfer`](LIMITS.md#execution-budgets),
 started immediately after the spawn; the ready window,
 [`worker_ready_wait`](LIMITS.md#execution-budgets), covers only the wait for the

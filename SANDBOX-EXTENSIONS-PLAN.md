@@ -65,7 +65,7 @@ outside this plan.
 | H1 Prepared human review | Complete | User accepted the recommendations on 2026-10-13 after discussion of interruption hooks and diagnostic-host alternatives. Retain the bounded design; further hook investigation is deferred, not an added gate. The [briefing and disposition](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) record the agreement. |
 | M4 Failure combinations and adversarial coverage | Complete | Build 578 acceptance: 197 passing case credits, 17 fresh at `2e6a2c1` and 180 reviewed reuses from `b641054`. Eight shared combined-fault rows, BYOXPC controls and independent cleanup passed; both rendered-review findings corrected and rechecked. One earlier intermittent observer failure remains preserved and unexplained. See the investigative record. |
 | M5.1 Evidence contract closure | Complete | A1-F11 repaired; build 582 has 197 passing credits, nine fresh at `e1231bd` and 188 reviewed reuses from `ea10ce3`. The shared generator/limits/blackbox/Swift gate and final rendered recheck pass. Evidence account and native-detail units reconciled; neither baseline changed. |
-| M5.2 Limits account | Pending | Requires M5.1 |
+| M5.2 Limits account | In progress | Review issuer/phase/worker budget interactions, ownership and admission precedence; regenerate and verify the account. |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
 | M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
 | M5.5 User-facing documentation | Pending | Requires M5.4 |
@@ -77,8 +77,9 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** M0–M5.1, A1 and H1 are complete. Stopped at the user's
-requested M5.1 boundary; do not start M5.2 until continuation is authorized.
+**Execution state:** M0–M5.1, A1 and H1 are complete. The user authorized continuation
+through the prepared A2 handoff. M5.2 is in progress; stop at A2 awaiting the
+out-of-band auditor.
 A1-F11 is closed: wrong-type phase evidence is rejected, optional absence and
 degraded raw forwarding remain supported, and full-shape versus claim-validation
 responsibilities are explicit. H1's accepted design remains unchanged.
@@ -127,9 +128,8 @@ The old 25 empty M3 shared-memory objects with unrecorded names remain an explic
 unverified-absence limitation; no prefix cleanup was attempted. The earlier M4
 observer failure did not recur in M5.1, but its cause remains unexplained.
 
-**Next action:** await the user's continuation at this completed M5.1 stop.
-Then begin M5.2's limits-account review under its existing gate. M5.2–M5.6 and
-A2 remain pending; no later milestone is credited by the broader M5.1 run.
+**Next action:** complete M5.2–M5.6 with their checks and fresh rendered reviews,
+then prepare and commit A2 in the shared audit record and stop awaiting response.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

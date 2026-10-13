@@ -102,7 +102,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 | Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
-| Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Monotonic host wait for the fresh issuer before worker creation. Separate from per-phase collection and worker waits. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
+| Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
 
 ## Queries and transport
 
@@ -172,6 +172,12 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   values, so no number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
+- Extension issuance precedes worker creation. Its
+  <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
+  wait starts after the issuer spawns; target preparation and the spawn call
+  precede that clock. Issuer cleanup can overrun the wait. This work consumes
+  the client's reply window but none of the later worker or phase collection
+  budgets. A client timeout does not cancel issuance or its cleanup.
 - Phases share one total action/query capacity and a cumulative collection
   allowance of <!-- span limits.phase_collection_wait.value_unit -->30,000 milliseconds<!-- /span -->.
   Each eligible phase gets a fresh validator; its I/O deadline is capped by the
@@ -200,7 +206,9 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   limit, and the plan's step count does not bound how much the OS log holds.
 - One refusal names the first failing field. When a specimen exceeds several
   admission limits, the order is: top-level metadata (`specimen_id`,
-  `request_label`) and `test_override_path` executable overrides, then phase count, total action count, phase identities
+  `request_label`), extension declaration count and declaration strings, then
+  lifecycle-action strings and `test_override_path` executable overrides,
+  then phase count, total action count, phase identities
   and parameter counts (`phase_count`, `probe_steps`, `phase_id`, `policy_parameters`), then worker strings
   (`policy_source`, `step_id`, `attempt_target`, exec arguments, parameter keys
   and values), then host query
@@ -209,8 +217,10 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   replaced by `<admission_refused>`, an oversized `run_kind` is omitted and an
   oversized `policy.format` reads `unknown`.
 - The `policy_source`, `parameter_key`, `parameter_value`, `step_id`,
-  `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`
-  `phase_id` and `test_override_path` limits also reject embedded NUL. For a string within
+  `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`,
+  `phase_id`, `extension_reference`, `extension_target` and `test_override_path`
+  limits also reject embedded NUL, as do lifecycle-action identities and operation
+  labels. For a string within
   its byte capacity, that refusal reports unit `nul_bytes`, maximum 0 and the
   same field. Metadata and labels (`specimen_id`, `request_label`,
   `probe_plan_label`) permit escaped NUL at this gate; their
@@ -355,8 +365,9 @@ implements it, so that a premise can be reopened when the platform changes.
   (event array, candidates, JSON delimiter count) have independent guards.
 - Admission order and echo. `CWorkerOrchestrator`'s [`admissionFailure`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
   checks decoded requests before semantic validation or child process work.
-  Its `requestAdmissionFailure` checks metadata and executable overrides
-  before plan/parameter counts, then [`workerAdmissionFailure`](../runner/Sources/PWRunnerCore/CWorker.swift) and the host
+  Its `requestAdmissionFailure` checks metadata, extension declarations and
+  lifecycle-action strings, then executable overrides before plan/parameter
+  counts. [`workerAdmissionFailure`](../runner/Sources/PWRunnerCore/CWorker.swift) and the host
   `queryAdmissionFailure` check worker strings and query fields. The service
   ([PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift))
   and direct orchestration share this gate. Each string checks its UTF-8
@@ -394,7 +405,11 @@ implements it, so that a premise can be reopened when the platform changes.
   so the kernel writes no record for them. Archive access has cost seconds for
   short spans; scan cost is not independent of span or log volume.
 - Nested timeouts. [`DEFAULT_TIMEOUT_MS`](../controller/src/run_flow.rs)
-  is the client wait; [`timeoutMsForCWorker`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+  is the client wait. [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
+  prepares the target and spawns the issuer before starting its monotonic wait;
+  it observes or attempts issuer cleanup before worker creation. Neither target
+  preparation nor blocking spawn/reap is bounded by that issuer wait.
+  [`timeoutMsForCWorker`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) is
   the worker polling window; [`ValidatorClientInput`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
   the validator deadline; `PW_PROCEED_WAIT_MS_DEFAULT` the release wait, with
   `validatorReleaseMarginMs` as the nominal margin
