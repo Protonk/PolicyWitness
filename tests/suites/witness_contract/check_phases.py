@@ -3,6 +3,7 @@ import copy
 import errno
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -105,12 +106,15 @@ def run_targets(pw, out, target_dir, session_state):
     assert recreation['phases'][1]['validator_subprocess']['expected_step_ids'] == ['later_query']
     (out / 'recreation-effect.json').write_text(json.dumps({'present': recreated.exists(), 'length': recreated.stat().st_size}) + '\n')
 
-    validator = out / 'bounded-validator'
+    # The runner must not execute this fixture from a TCC-protected checkout.
+    # Both target_dir owners keep it alive through the run and clean it up.
+    validator = target_dir / 'bounded-validator'
     command = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',
                str(ROOT / 'tests/fixtures/worker_lifecycle/validator.c'), '-o', str(validator)]
     built = subprocess.run(command, capture_output=True, text=True, timeout=60)
     (out / 'fixture-build.json').write_text(json.dumps({'argv': command, 'rc': built.returncode, 'stdout': built.stdout, 'stderr': built.stderr}, indent=2) + '\n')
     assert built.returncode == 0, built.stderr
+    shutil.copy2(validator, out / 'bounded-validator')
     warmed = subprocess.run([str(validator)], input=b'', capture_output=True, timeout=30)
     assert warmed.returncode == 90
     overrides = {'validator_executable_path': str(validator), 'validator_total_timeout_ms': 100}
@@ -118,6 +122,9 @@ def run_targets(pw, out, target_dir, session_state):
     assert exhausted['normalized_outcome'] == 'validator_no_reply'
     assert exhausted['phases'][0]['validator_subprocess']['stdout_collection_stop'] == 'deadline'
     assert exhausted['phases'][0]['validator_subprocess']['reaped'] is True
+    records = exhausted['phases'][0]['validator_subprocess']['records']
+    assert len(records) == 1 and records[0]['step_id'] == 's0'
+    assert records[0]['operation'] == 'io_hang' and records[0]['rc'] == 0
     assert all(p['collection_status'] == 'budget_exhausted' and 'validator_subprocess' not in p for p in exhausted['phases'][1:])
     assert all(s['attempt']['rc'] == 0 for s in exhausted['steps'])
     assert all(s['comparison']['order'] == 'unestablished' for s in exhausted['steps'][1:])

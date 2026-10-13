@@ -1031,3 +1031,91 @@ A local immutable HTML/PDF/page-image snapshot is being prepared with the existi
 Pandoc/WeasyPrint/Poppler toolchain for the plan's fresh rendered review. That
 assessment and the consolidated M3 acceptance remain pending; no A1 handoff or
 M3 completion is claimed. The earlier unrecorded empty-object limitation remains.
+
+
+## M3 consolidated diagnostic and rendered corrections
+
+The consolidated selection at `1f7abc0d585470df5828efc21c3da4887d8b3922`
+completed all 141 cases against unchanged signed build 558: 139 passed and two
+failed. Run `extensions-m3-gate-20261013`, ID `20261013T141627Z_82f7aa31`,
+retains its original failures, console, tracked-source hashes and signed-build
+log. Source provenance is established by the clean committed tree and the
+source manifest; the build retains its separately recorded `4158716-dirty` stamp.
+The release fixture's independently maintained app inventory lacked
+`pw-extension-issuer`; the real artifact inspector correctly rejected the fake
+valid archive for a missing executable and missing manifest entry. The fixture
+inventory now includes it without importing the inspector's inventory.
+
+The BYOXPC extension workload passed its native lifecycle and placement checks,
+then the ordinary-phase byte-limit control observed no validator output before
+the production deadline. Its helper path was inside this Desktop checkout. The
+preceding injected timeout also observed no output; that assertion did not prove
+the fixture had reached its intended operation. No evidence establishes TCC as
+the cause. The helper is now compiled and executed inside the fixture's already
+owned `/private/tmp` target directory, with a retained binary copy in artifacts.
+The timeout control additionally requires its first published fixture record;
+the byte-cutoff control keeps its original record and byte-count requirements.
+This honors the user's TCC preference and prevents a blocked helper launch from
+satisfying the intended timeout experiment. No production code or wait changed.
+All eight recorded BYOXPC sessions from the diagnostic have removal receipts and
+absent staging paths. The earlier unrecorded empty-object limitation remains.
+
+Fresh read-only reviewer `/root/m3_rendered_review` assessed the immutable
+`m3-candidate` render of `1f7abc0` (snapshot base plus diff, document hashes
+verified against the commit). The retained report identifies the runtime model
+as unavailable to the reviewer; the dispatch was recorded as requesting
+`gpt-6-astra`. The assessment is separate from A1. Renderer: Pandoc 3.12 GFM to
+HTML, WeasyPrint 70.0 to PDF, Poppler 26.10.0 to actual inspected PNG pages.
+Coverage and omissions are in the full report; source and staged guide pages,
+embedded topology/boundary/BYOXPC diagrams, limits/build/signing inventories and
+linked accounts were inspected. Unchanged release procedures/document-graph
+rows, all duplicate limit-table pages, browser compatibility and exhaustive
+link navigation were outside the bounded review.
+
+Lead dispositions, all accepted as documentation issues:
+
+| Finding | Owner and correction |
+| --- | --- |
+| F1: guide says attempts have no native returns | Handwritten guide now distinguishes aggregate PW status from fresh-read syscall observations. |
+| F2: validation inventory omits issuer | Guide includes present-or-recorded issuer checks, the issuer failure label, and the unknown older-record case. |
+| F3: BYOXPC X4 signing and X15 hash inventory omit issuer | Corrected labels in `architecture.json`; regenerated DOT, SVG and architecture tables. |
+| F4: ownership table ends at S25 despite generated S26/S27 | Handwritten ownership now refers to specimen groups in the generated matrix, retaining S09's exception and adding independent fresh-prefix evidence. No second list of numeric ranges needs generation or parsing; the reviewer accepted this route. |
+| F5: inline generated cap markers split guide paragraphs | Moved the existing markers inline with preceding text; numeric ownership is unchanged. Wide preview tables remain readable; browser-specific wrapping is not attributed to the shipped guide. |
+
+The lead also corrected the new guide's “All queries ... are collected” wording
+to collection closure before actions, including failure, without promising that
+every query yields a prediction. Existing phase/validator controls establish
+that distinction. The generator stages the corrected guide; the distribution
+copy is never patched. No generator ownership region or baseline was expanded.
+Focused mechanical checks, corrected rendered recheck and final consolidated
+acceptance are pending at this entry. The gate remains open.
+
+
+The focused correction run `extensions-m3-review-corrections-20261013`, ID
+`20261013T143009Z_f238dea2`, passed all 15 cases: all `source_drift` and
+`dispatcher` members, `preflight/release_controls`, `witness_contract/phases`
+and `witness_contract/extensions_byoxpc`. The relocated BYOXPC helper published
+one record before the injected deadline (223 stdout bytes) and one before the
+byte cutoff (24,576 received bytes). Both children were reaped. The owned
+BYOXPC session reports removal and its staging directory is absent. These facts
+establish the corrected fixture experiment, not the cause of the earlier stall.
+The app stayed build 558 with unchanged artifact inventories.
+
+The focused rendered recheck closed F1–F5 and the collection-closure and witness
+README corrections. Actual page inspection covered both guide copies at pages
+5/21/34, architecture 25/31/32 including the BYOXPC SVG, failure contract 22 and
+witness README 1. Full reports, immutable original/corrected HTML, source copies,
+PDFs, PNGs, renderer scripts and hash manifests are retained in
+[the correction run's reviews directory](../tests/out/runs/extensions-m3-review-corrections-20261013/reviews/).
+The lead independently inspected corrected guide 5 and architecture 31 and
+accepted the reviewer dispositions. There is no unresolved correctness finding
+from this bounded assessment; its listed coverage omissions still apply.
+
+Both runs are indexed, with original status unchanged. The correction checkpoint
+retains the working diff/source hashes against `1f7abc0` and console transcript;
+its source field remains null. Evidence attachment held the stable checkout lock
+after run-ID, ownership and terminal-state checks. All rendered/evidence files
+are gitignored and local-only; HTML links include original local preview paths,
+while PDFs/PNGs and source copies preserve the inspected content. No required
+baseline gained an entry. Final consolidated acceptance will use the committed
+corrections and a freshly stamped signed build before M3 closure/A1 preparation.

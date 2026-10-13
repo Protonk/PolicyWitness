@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply and public/generated accounts now pass targeted checks; consolidated gate and rendered assessment remain pending. |
+| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, public/generated accounts and rendered corrections pass. The first consolidated run completed 139/141; both fixture failures are repaired and all 15 focused checks pass. Final consolidated acceptance remains pending. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -94,26 +94,28 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** run consolidated signed M3 acceptance and complete the fresh
-rendered assessment of the permanent documentation/generator increment. Prepare A1
-only after that gate passes. Maximum-reply and mixed-action admission controls
-now pass: the conservative bound is 52,414,779 bytes and the existing 152 MiB
-receiver allowance remains sufficient. Issuer dossier, older-record interpretation
-and signed-copy validation/capability controls pass.
-Issuer cleanup and
-physical erasure, lifecycle placement/omission and target preparation controls
-now pass. The shared extension and ordinary-phase workload also passes on an
-owned BYOXPC runner with independent issuer/worker authority read-back.
-The native-boundary test fixtures now retain durable ownership before channel
-use and verify cleanup on success. One earlier diagnostic failed before writing
-ownership receipts and left empty shared-memory objects whose random names were
-not retained; their absence cannot be verified. That limitation is recorded
-explicitly. No token or native child was created in that attempt. All M3 BYOXPC fixtures have been removed with absence verified. No build or
-test process remains active at the latest completed test checkpoint. The final targeted selection passed
-five cases (including 403 Swift checks, ABI checks and 26 native controls); its
-admission checker failure was corrected and that case passed in a separate run
-against the unchanged app. Both original failures and replacement evidence are
-retained. This is incremental evidence, not consolidated M3 acceptance.
+**Next action:** build a freshly stamped signed candidate from the committed
+rendered-review and fixture corrections, then repeat consolidated M3 acceptance.
+The first consolidated run at `1f7abc0` completed 139/141: a stale synthetic
+release inventory and a BYOXPC phase helper launched from Desktop failed.
+The independent fixture inventory now includes the issuer; the phase helper runs
+from owned `/private/tmp`, and its timeout control requires a received fixture
+record. The corrected selection passed all 15 source-drift, dispatcher, release
+and standard/BYOXPC phase checks against unchanged build 558.
+
+The fresh rendered review and focused recheck are complete. Reviewer
+`/root/m3_rendered_review` (gpt-6-astra requested; runtime identifier not independently
+exposed) closed F1–F5 plus collection-closure wording and the test-path account.
+Reports, source hashes and Pandoc/WeasyPrint/Poppler HTML/PDF/PNG snapshots are
+retained under `tests/out/runs/extensions-m3-review-corrections-20261013/reviews/`;
+coverage omissions and lead dispositions are in the investigative record.
+Maximum reply remains bounded at 52,414,779 bytes with the existing 152 MiB
+receiver allowance. No prose/build baseline grew. The diagnostic and correction
+runs preserve their original statuses and source provenance. All newly owned
+BYOXPC fixtures were removed with absent staging verified; the earlier empty
+shared-memory objects with unrecorded names remain an explicit cleanup limitation.
+No build or test process remains active at this checkpoint. M3 remains open;
+prepare A1 only after final acceptance passes, then stand by for the auditor.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

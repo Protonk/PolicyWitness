@@ -20,10 +20,13 @@ reply must retain one worker, distinct collections and all completed phases.
 Eleven mutations reject wrong phase association, borrowed records, duplicate IDs,
 wrong ordinal, broken completion sequence, a wrong action partition and malformed phase field types.
 
-The same registered case compiles the bounded validator fixture to drive
-aggregate timeout and stdout byte cutoff. It asserts supplied override echoes,
-real collection stop/reap evidence, unavailable later predictions, and retained
-successful attempts. These are driver controls, not sandbox predictions.
+The same registered case compiles the bounded validator fixture in its owned
+temporary target directory and retains a copy with the artifacts. It drives
+aggregate timeout and stdout byte cutoff, requiring a received fixture record
+before each cutoff so a blocked launch cannot satisfy the control. It asserts
+supplied override echoes, real collection stop/reap evidence, unavailable later
+predictions, and retained successful attempts. These are driver controls, not
+sandbox predictions.
 
 ## Native extension boundaries
 

@@ -236,10 +236,8 @@ by themselves establish effective access or revocation.
 The limits are <!-- span limits.extension_declarations.value -->1<!-- /span -->
 declaration, <!-- span limits.extension_consumes.value -->1<!-- /span --> consume
 and <!-- span limits.extension_releases.value -->1<!-- /span --> release across
-the entire specimen. References are nonempty and at most
-<!-- span limits.extension_reference.value -->63<!-- /span --> UTF-8 bytes.
-Declaration targets have their own
-<!-- span limits.extension_target.value -->1,023<!-- /span -->-byte cap, distinct
+the entire specimen. References are nonempty and at most <!-- span limits.extension_reference.value -->63<!-- /span --> UTF-8 bytes.
+Declaration targets have their own <!-- span limits.extension_target.value -->1,023<!-- /span -->-byte cap, distinct
 from ordinary attempt targets. References and paths cannot contain NUL.
 Unknown references, duplicate token/handle names, release before consume,
 repeated actions, unknown fields and mixing an extension declaration with exec
@@ -250,9 +248,10 @@ Omitting consumption or release is allowed. Issuance/delivery without consumptio
 consumption without release, and phases containing only lifecycle actions retain
 those distinctions. An action is either an ordinary query/attempt pair or a
 lifecycle action, never a mixture. Lifecycle actions have no predictions or
-comparison records. All queries in a phase are collected before any of that
-phase's actions, so a read after a consume in the same phase still has a query
-from before the consume. Place the read in a later phase to collect again.
+comparison records. Query collection closes before any of that phase's actions,
+including when collection fails. A read after a consume in the same phase has
+any received prediction from before the consume. Place the read in a later phase
+to collect again; unavailable predictions remain unavailable.
 
 Use an investigator-owned file in a temporary directory for a repeatable example:
 
@@ -1179,8 +1178,8 @@ or `conflicting`, and its `boundary` and `result` claims carry the supporting
 observations or the reason the
 question is unresolved, projected from
 [the worker disposition record](#shape-and-schema_version). A completed
-attempt's rc is PW attempt status, not a raw syscall return, and the attempt
-channel carries no native return.
+attempt's `rc` is PW attempt status. For `read_fresh`, the separate
+`attempt.fresh_read` fields retain native open, fstat, read and close returns.
 
 ### Receiver evidence
 
@@ -2207,10 +2206,13 @@ JSON replacement. One registry admits one modifier at a time; read-only commands
 remain available. Never remove the lock file while a command might hold it.
 
 `runner validate` verifies each registry entry's bundle recursively, then the
-host, the worker and the validator individually, re-reads every signature and
-entitlement set, and reports `invalid` (records with a failure) and `failures`
-rows naming the record and the binary (`bundle`, `host`, `worker` or
-`validator`). The host's recorded `signature.valid` follows the recursive
+host, worker and validator individually. It also checks the issuer when the file
+is present or the registry already records issuer evidence. It re-reads those
+signatures and entitlement sets, and reports `invalid` (records with a failure)
+and `failures` rows naming the record and binary (`bundle`, `host`, `worker`,
+`validator` or `issuer`). An older record and bundle with no issuer retain unknown
+issuer evidence; a recorded issuer that disappears fails validation.
+The host's recorded `signature.valid` follows the recursive
 check; each helper's follows its own. This is registry-internal only — it does
 not reconcile against launchctl or `LaunchAgents/`.
 

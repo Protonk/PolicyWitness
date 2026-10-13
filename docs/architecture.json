@@ -5494,7 +5494,7 @@
           "from": "install",
           "to": "signing",
           "kind": "spawn",
-          "label": "sign_install_tree: codesign the worker with --entitlements, the validator, then the bundle; codesign --verify --deep --strict",
+          "label": "sign_install_tree: codesign the worker with --entitlements, the validator, the issuer, then the bundle; codesign --verify --deep --strict",
           "short": "codesign",
           "sources": [
             {
@@ -5778,7 +5778,7 @@
           "from": "bundle_copy",
           "to": "provenance",
           "kind": "reads",
-          "label": "Binaries::observe hashes the service, worker and validator files before invocation",
+          "label": "Binaries::observe hashes the service, worker, validator and issuer files before invocation",
           "short": "hashes before invocation",
           "sources": [
             {

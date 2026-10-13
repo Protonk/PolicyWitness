@@ -492,6 +492,20 @@
       "reason": "M3 documentation corrections: source/header controls, shared rule checks, 405 Swift checks and public extension example passed.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-gate-20261013",
+      "run_id": "20261013T141627Z_82f7aa31",
+      "reason": "M3 consolidated diagnostic: 139/141; stale release fixture inventory and BYOXPC phase validator no-output deadline retained; unchanged signed build 558.",
+      "source": "1f7abc0d585470df5828efc21c3da4887d8b3922",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-review-corrections-20261013",
+      "run_id": "20261013T143009Z_f238dea2",
+      "reason": "M3 rendered/account corrections: all 15 cases pass, including source drift, independent dispatcher inventory, release fixture and standard/BYOXPC phase controls from owned temporary targets.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
