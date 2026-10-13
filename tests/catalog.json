@@ -1341,7 +1341,7 @@
         },
         {
           "id": "max_targets_reply_survives",
-          "description": "Five 256-step long-target, long-query workloads return intact, including worst-case control-character escaping; oversized query values and filter/attempt labels are refused at admission",
+          "description": "Admitted maximum-size ordinary, phased, fresh-read and lifecycle workloads return intact, including control-character escaping; oversized query values and filter/attempt labels are refused at admission",
           "command": [
             "bash",
             "tests/suites/witness_contract/max_targets_reply_survives.sh"
@@ -1393,7 +1393,8 @@
           ],
           "requires": [
             "app",
-            "identity"
+            "identity",
+            "gui"
           ]
         },
         {
@@ -1454,7 +1455,8 @@
           "requires": [
             "app",
             "identity",
-            "clang"
+            "clang",
+            "gui"
           ]
         }
       ],

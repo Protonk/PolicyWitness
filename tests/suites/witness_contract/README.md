@@ -17,7 +17,7 @@ file, observes its absence outside PW, then requires fresh planning to withhold
 the next native path query while the paired access reports ENOENT. A final
 resolvable target requires a fresh validator record and `query_first`. The
 reply must retain one worker, distinct collections and all completed phases.
-Eleven mutations reject wrong phase association, borrowed records, duplicate IDs,
+Mutations reject wrong phase association, borrowed records, duplicate IDs,
 wrong ordinal, broken completion sequence, a wrong action partition and malformed phase field types.
 
 The same registered case compiles the bounded validator fixture in its owned
