@@ -126,3 +126,8 @@ extent or integrity fields, failed application and incomplete/abnormal worker
 completion withhold the bytecode. The
 [ABI suite](../runner_abi_layout/README.md#compiled-object-capture) separately
 checks the C capture helper against constructed objects.
+
+`ExtensionEvidenceTests` also run the native issuer with the host-owned channel.
+They inspect physical zeroization and descriptor closure, and substitute failed
+wait/kill observations after independent test cleanup to verify that published
+issuance cannot supply a delivery descriptor without confirmed host reaping.

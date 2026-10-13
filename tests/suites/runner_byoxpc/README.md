@@ -12,7 +12,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
   directory and gives it a unique service identifier. Only that copy is signed;
   source signatures/entitlements and before/after file inventories are retained.
   The caller-auth settings must stay unchanged. The installer re-signs the
-  embedded worker (with the supplied entitlements) and validator (identity
+  embedded worker (with the supplied entitlements), validator and issuer (identity
   alone); their read-backs are checked after installation.
 - Shared smoke and blackbox scripts receive `PW_TEST_RUNNER_MODE=byoxpc` and the
   installed service name.

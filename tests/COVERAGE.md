@@ -70,6 +70,12 @@ missing native APIs, malformed channels, issuer death/deadline, consume/release
 failure and interrupted publication retain separate native, delivery and access
 observations. The independent token detector compares actual bytes in memory;
 controlled return values establish reporting behavior, not effective permissions.
+`witness_contract/extensions_byoxpc` repeats placement and ordinary-phase
+controls on an owned external runner, checking independent issuer/worker signing
+and entitlement read-backs against registry and envelope provenance. Swift
+`ExtensionEvidenceTests` inspect physical host-buffer erasure and withhold
+delivery when a controlled host wait cannot establish issuer cleanup, despite
+independent test observations of a completed native issuance.
 
 The default `witness_contract/phases` case exercises the public phase grammar
 through the signed CLI: an independently observed unlink makes the next path

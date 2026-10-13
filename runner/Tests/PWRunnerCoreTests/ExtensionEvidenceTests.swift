@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 @testable import PWRunnerCore
 
@@ -81,6 +82,64 @@ func extensionShapeDocuments() throws -> [[String: Any]] {
 }
 
 func runExtensionEvidenceTests(_ tk: TestKit) {
+    tk.group("issuer cleanup and physical channel erasure") {
+        func withIssuer(_ body: (String, PWRunnerExtensionDeclaration) throws -> Void) throws {
+            guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
+                  FileManager.default.isExecutableFile(atPath: fixture + ".issuer") else {
+                throw TestFailure(message: "required native issuer fixture missing; use tests/run.sh")
+            }
+            let target = FileManager.default.temporaryDirectory.appendingPathComponent("pw-issuer-" + UUID().uuidString)
+            try Data("independent issuer target".utf8).write(to: target)
+            defer { try? FileManager.default.removeItem(at: target) }
+            try body(fixture + ".issuer", PWRunnerExtensionDeclaration(token_ref: "token", target: target.path))
+        }
+        tk.run("host erases the actual mapping and closes its owned descriptor") {
+            try withIssuer { executable, declaration in
+                var session: ExtensionSession? = ExtensionSession(declaration: declaration, executable: executable)
+                try expectEqual(session!.record.issuance_status, "issued")
+                let fd = session!.descriptor
+                let base = mmap(nil, ExtensionSession.channelBytes, PROT_READ, MAP_SHARED, fd, 0)!
+                try expectTrue(base != MAP_FAILED)
+                defer { munmap(base, ExtensionSession.channelBytes) }
+                let bytes = UnsafeRawBufferPointer(start: base, count: ExtensionSession.channelBytes)
+                try expectTrue(bytes[ExtensionSession.tokenOffset...].contains { $0 != 0 })
+                session!.erase()
+                try expectTrue(bytes.allSatisfy { $0 == 0 }, "host's mapped bytes were not erased")
+                try expectTrue(session!.record.host_buffer_erased)
+                session = nil
+                try expectEqual(fcntl(fd, F_GETFD), -1)
+                try expectEqual(errno, EBADF)
+            }
+        }
+        tk.run("published issuance cannot deliver after an unconfirmed host reap") {
+            try withIssuer { executable, declaration in
+                var independentlyReaped = false
+                var independentStatus: Int32 = -1
+                var calls = ChildProcessCalls()
+                calls.wait = { pid, _, _ in
+                    // The test observes and owns real cleanup, while refusing
+                    // that observation at the host's OS-call boundary.
+                    if !independentlyReaped {
+                        independentlyReaped = Darwin.waitpid(pid, &independentStatus, 0) == pid
+                    }
+                    errno = EIO; return -1
+                }
+                calls.kill = { _, _ in errno = EPERM; return -1 }
+                let session = ExtensionSession(declaration: declaration, executable: executable, processCalls: calls)
+                try expectTrue(independentlyReaped && independentStatus == 0)
+                try expectEqual(session.record.issuance_status, "issuer_wait_error")
+                try expectEqual(session.record.issuer?.result_published, true)
+                try expectEqual(session.record.issuer?.native_nonnull, true)
+                try expectEqual(session.record.issuer?.reaped, false)
+                try expectNil(session.record.issuer?.exit_code)
+                try expectEqual(session.record.issuer?.wait_errors.map { $0.errno }, [EIO, EIO])
+                try expectEqual(session.record.issuer?.termination_request?.errno, EPERM)
+                try expectNil(session.deliveryDescriptor)
+                session.erase()
+                try expectTrue(session.record.host_buffer_erased)
+            }
+        }
+    }
     tk.group("extension publication and reference evidence") {
         tk.run("native int64 handles and all-action disposition round trip") {
             let source = extensionReplyFixture()

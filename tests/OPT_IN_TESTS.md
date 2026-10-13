@@ -94,6 +94,23 @@ selection, deduplication, configuration validation, and complete accounting.
   records or BYOXPC install/verify behavior.
 - **Artifacts:** `<run>/suites/witness_contract/dossier_witness_byoxpc/artifacts/byoxpc/*`
 
+### BYOXPC extension and phase witness
+
+- **Case:** `witness_contract/extensions_byoxpc`
+- **Location:** `tests/suites/witness_contract/opt_in/extensions_byoxpc.sh`
+- **Purpose:** Run the shared native lifecycle, placement, omission, target
+  preparation and ordinary-phase controls through an owned BYOXPC runner.
+  Compare issuer and worker authority read-backs with registry and envelope
+  provenance; verify removal afterward.
+- **Opt-in reason:** Installs a launchd service in a logged-in GUI session and
+  requires the selected app's Developer ID identity.
+- **Resource dependency:** Signed app, signing identity, GUI session and clang.
+  Targets live in the owned `/private/tmp` staging directory. The shared session
+  helper retains durable ownership until removal is verified.
+- **When to run:** After changing native extension execution, phase handling,
+  issuer signing, provenance or runner installation.
+- **Artifacts:** `<run>/suites/witness_contract/extensions_byoxpc/artifacts/`
+
 ### built-in caller authentication
 
 - **Case:** `smoke/runner_caller_auth`

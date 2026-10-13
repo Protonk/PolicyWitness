@@ -366,6 +366,55 @@
       "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-issuer-owner-20261012",
+      "run_id": "20261013T010817Z_d6ec36c3",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-issuer-owner2-20261012",
+      "run_id": "20261013T010854Z_6424bf8c",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-placement-20261012",
+      "run_id": "20261013T011019Z_5e0e9521",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-byoxpc-fixture-20261012",
+      "run_id": "20261013T011136Z_0d583d90",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-byoxpc-20261012",
+      "run_id": "20261013T011236Z_c1108960",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-byoxpc2-20261012",
+      "run_id": "20261013T011327Z_84e3293f",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-targets-20261012",
+      "run_id": "20261013T011541Z_4ca69577",
+      "reason": "M3 issuer cleanup, lifecycle placement, target location and owned BYOXPC diagnostics/verification; original outcomes preserved. See investigative record.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

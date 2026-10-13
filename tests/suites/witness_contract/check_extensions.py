@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
@@ -31,20 +32,46 @@ def specimen(target, phases):
             'phases': [{'phase_id': f'p{i}', 'actions': actions} for i, actions in enumerate(phases)]}
 
 
-def main():
-    pw, directory = sys.argv[1:]
-    out = Path(directory).resolve()
-    target = out / 'extension-target'
+def capture(pw, out, name, spec, *, expected_rc=0, session_state=None):
+    directory = out / name
+    if session_state:
+        sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
+        import session
+        spec['runner'] = {'mode': 'byoxpc', 'service': session_state['service_name']}
+        directory.mkdir(parents=True, exist_ok=True)
+        session.retire_host(session_state, directory, session.command)
+    with RunCapture(pw, directory, spec, cli_args=['--no-log-capture']) as captured:
+        assert captured.wait(timeout=40) == expected_rc, captured.metadata_path
+        envelope = captured.load_json()
+    errors = consumer.validate(envelope)
+    assert not errors, errors
+    from lifecycle_oracle import check_record
+    errors = check_record(envelope)
+    assert not errors, errors
+    return envelope, envelope['data']['runner_result']
+
+
+def run_suite(pw, out, session_state=None):
+    out.mkdir(parents=True, exist_ok=True)
+    if session_state:
+        target_dir = Path(session_state['staging']) / 'extension-targets'
+        return run_targets(pw, out, target_dir, session_state)
+    with tempfile.TemporaryDirectory(prefix='pw-extension-targets-', dir='/private/tmp') as directory:
+        return run_targets(pw, out, Path(directory), session_state)
+
+
+def run_targets(pw, out, target_dir, session_state):
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (out / 'target-directory.json').write_text(json.dumps({'path': str(target_dir),
+        'ownership': 'byoxpc_session' if session_state else 'temporary_directory'}) + '\n')
+    target = target_dir / 'extension-target'
     contents = b'PW extension fresh read witness\n'
     target.write_bytes(contents)
     metadata = target.stat()
     spec = specimen(target, [[probe('before', target), intervention('consume', 'consume')],
                              [probe('during', target), intervention('release', 'release')],
                              [probe('after', target)]])
-    with RunCapture(pw, out / 'lifecycle', spec, cli_args=['--no-log-capture']) as captured:
-        assert captured.wait(timeout=40) == 0
-        envelope = captured.load_json()
-    runner = envelope['data']['runner_result']
+    envelope, runner = capture(pw, out, 'lifecycle', spec, session_state=session_state)
     assert runner['normalized_outcome'] == 'ok', runner
     assert runner['sandboxed_after_apply'] and runner['runner_subprocess']['reaped']
     declaration, = runner['extensions']
@@ -61,7 +88,10 @@ def main():
     assert release['native_result'] == 0 and release['status'] == 'returned'
     assert consume['handle_ref'] == release['handle_ref'] == 'handle'
     before, during, after = [x['attempt'] for x in runner['steps']]
-    assert before['rc'] != 0 and after['rc'] != 0
+    assert before['rc'] != 0
+    # A successful release does not itself require access revocation.
+    if after['rc'] == 0:
+        assert bytes.fromhex(after['fresh_read']['content_hex']) == contents
     read = during['fresh_read']
     assert during['rc'] == 0 and read['open_rc'] >= 0 and read['close_rc'] == 0
     assert bytes.fromhex(read['content_hex']) == contents and read['read_rc'] == len(contents)
@@ -71,9 +101,104 @@ def main():
     assert target.read_bytes() == contents
     (out / 'independent-observations.json').write_text(json.dumps({'device': metadata.st_dev,
         'inode': metadata.st_ino, 'content_hex': contents.hex(), 'unchanged_contents': True}, indent=2) + '\n')
-    errors = consumer.validate(envelope)
-    assert not errors, errors
-    print('One worker: native issuance/consume handle/release, three collections and fresh access evidence.')
+    read_observations = {'before': before['fresh_read'], 'during': during['fresh_read'],
+                         'after': after['fresh_read'], 'release_result': release['native_result']}
+    (out / 'access-observations.json').write_text(json.dumps(read_observations, indent=2) + '\n')
+
+    placements = {
+        'delivered_only': [[probe('read', target)]],
+        'consume_only': [[intervention('consume', 'consume'), probe('read', target)], [probe('later', target)]],
+        'same_phase': [[probe('before', target), intervention('consume', 'consume'), probe('during', target),
+                        intervention('release', 'release'), probe('after', target)]],
+        'later_consume': [[probe('before', target)], [intervention('consume', 'consume'), probe('during', target)],
+                          [intervention('release', 'release'), probe('after', target)]],
+        'intervention_only_phases': [[intervention('consume', 'consume')], [probe('during', target)],
+                                     [intervention('release', 'release')], [probe('after', target)]],
+    }
+    for name, phases in placements.items():
+        request = specimen(target, phases)
+        _, reply = capture(pw, out, name, request, session_state=session_state)
+        declared = [(p['phase_id'], a['step_id'], a['extension']['operation']) for p in request['phases']
+                    for a in p['actions'] if 'extension' in a]
+        events = reply.get('extension_events', [])
+        assert [(e['phase_id'], e['step_id'], e['operation']) for e in events] == declared
+        assert reply['extensions'][0]['issuance_status'] == 'issued'
+        assert reply['extensions'][0]['delivery_status'] == 'delivered'
+        assert all(e['status'] == 'returned' and e['result_published'] for e in events)
+        if events:
+            assert events[0]['native_result'] != -1
+        if len(events) == 2:
+            assert events[1]['native_result'] == 0
+        assert all(p['completion_observed'] for p in reply['phases'])
+        assert reply['runner_subprocess']['reaped']
+        for step in reply['steps']:
+            if step['step_id'] in ('during', 'later') or name == 'consume_only':
+                assert bytes.fromhex(step['attempt']['fresh_read']['content_hex']) == contents
+        if name == 'intervention_only_phases':
+            assert all(reply['phases'][i]['collection_status'] == 'not_needed' for i in (0, 2))
+
+    ordinary = specimen(target, [[probe('ordinary', target)]])
+    ordinary.pop('extensions')
+    _, reply = capture(pw, out, 'no_declaration', ordinary, session_state=session_state)
+    assert not reply.get('extensions') and not reply.get('extension_events')
+
+    missing = target_dir / 'absent-target'
+    failed = specimen(missing, [[intervention('consume', 'consume')],
+                               [probe('absent', missing), intervention('release', 'release')]])
+    _, reply = capture(pw, out, 'preparation_failure', failed, session_state=session_state)
+    declaration, = reply['extensions']
+    assert declaration['preparation_status'] == 'resolution_failed'
+    assert declaration['preparation_errno'] != 0 and not declaration.get('issuer')
+    assert declaration['issuance_status'] == 'not_started'
+    assert [e['unavailable_reason'] for e in reply['extension_events']] == ['token_unavailable', 'handle_unavailable']
+    assert reply['steps'][0]['sandbox_check']['outcome'] == 'prediction_unavailable'
+    assert reply['steps'][0]['comparison']['order'] == 'unestablished'
+    assert not missing.exists()
+
+    alias = target_dir / 'target-symlink'
+    alias.symlink_to(target)
+    linked = specimen(alias, [[intervention('consume', 'consume'), probe('linked', alias), intervention('release', 'release')]])
+    _, reply = capture(pw, out, 'symlink', linked, session_state=session_state)
+    declaration, = reply['extensions']
+    assert declaration['submitted_target'] == str(alias) and declaration['resolved_target'] == str(target.resolve())
+    assert declaration['identity']['inode'] == metadata.st_ino
+    assert bytes.fromhex(reply['steps'][0]['attempt']['fresh_read']['content_hex']) == contents
+    assert alias.is_symlink() and target.read_bytes() == contents
+
+    # Issuance preparation describes the original identity. Ordinary worker
+    # actions replace it before consumption; later fresh observations must not
+    # borrow the issuance identity or assert target stability.
+    replacement = target_dir / 'replaced-target'
+    replacement.write_bytes(b'original before replacement')
+    original = replacement.stat()
+    held = os.open(replacement, os.O_RDONLY)  # Outside worker inheritance (CLOEXEC).
+    try:
+        remove, create = probe('remove', replacement), probe('create', replacement)
+        for value, operation, action in ((remove, 'file-write-unlink', 'unlink'), (create, 'file-write-data', 'create')):
+            value['sandbox_check']['operation'] = operation
+            value['attempt']['action'] = action
+        changed = specimen(replacement, [[remove, create, intervention('consume', 'consume')],
+                                          [probe('replacement_read', replacement), intervention('release', 'release')]])
+        _, reply = capture(pw, out, 'replacement', changed, session_state=session_state)
+        observed = replacement.stat()
+        assert observed.st_ino != original.st_ino and replacement.read_bytes() == b''
+        assert reply['extensions'][0]['identity']['inode'] == original.st_ino
+        assert all(s['attempt']['rc'] == 0 for s in reply['steps'][:2])
+        fresh = reply['steps'][2]['attempt']['fresh_read']
+        if fresh['open_rc'] >= 0:
+            assert fresh['identity']['inode'] == observed.st_ino and fresh['read_rc'] == 0
+        (out / 'replacement-observations.json').write_text(json.dumps({'original_inode': original.st_ino,
+            'replacement_inode': observed.st_ino, 'original_fd_cloexec': not os.get_inheritable(held),
+            'replacement_length': observed.st_size, 'fresh_read': fresh}, indent=2) + '\n')
+    finally:
+        os.close(held)
+    print('Native lifecycle, optional/same/cross-phase placement, preparation, symlink and replacement observations passed.')
+
+
+def main():
+    pw, directory, *state = sys.argv[1:]
+    session_state = json.loads(Path(state[0]).read_text()) if state else None
+    run_suite(pw, Path(directory).resolve(), session_state)
 
 
 if __name__ == '__main__':

@@ -732,3 +732,72 @@ index because these were incremental working-tree runs. Attachments and retentio
 updates used the checkout lock after checking run ownership and completion.
 This increment does not close M3 or prepare A1; the checkpoint lists remaining
 obligations. No release or external-runner installation occurred.
+
+## M3 placement, host cleanup and BYOXPC increment
+
+After native checkpoint `250126a`, Swift controls inspected the actual shared
+mapping before and after host erasure, then confirmed descriptor closure. A
+second control independently reaped the real issuer but substituted failed
+wait/kill observations at the host boundary. Native issuance remained published
+with a nonnull result; the host's reap stayed unconfirmed and delivery was
+withheld. No token bytes were printed. The passing Swift suite now contains 403
+checks and its real-driver reader replay.
+
+The shared CLI workload covers consume/release in one phase or separate phases,
+intervention-only phases, delivered-but-unconsumed tokens, consumption without
+release, and ordinary requests without a declaration. Failed target resolution
+retains preparation errno, unavailable consume/release and unavailable query
+planning. A symlink preserves submitted/resolved path distinctions. Replacement
+between preparation and consumption retains the issuance identity while later
+reads describe their actual opened descriptor; an independent non-inherited
+handle prevents reuse of the removed inode during the control. Release results
+do not dictate the asserted later access outcome.
+
+The owned BYOXPC fixture now independently reads the issuer's signature and
+entitlements and compares registry/envelope provenance. Its issuer receives the
+selected Developer ID identity without the supplied worker entitlements. A fake
+OS control rejects an issuer with unexpected entitlements. Setup records both
+`runner list` and `runner reconcile` before installation. The new opt-in
+`witness_contract/extensions_byoxpc` repeats the extension workload and the
+ordinary phase controls, using the same assertions as the standard runner.
+
+The first BYOXPC run reached the issuer's pre-call marker but timed out without
+native result publication. Its target was inside this Desktop checkout. The
+user then reported and approved a macOS TCC prompt naming `PWRunner.xpc` and
+requesting Desktop access, and asked to avoid such prompts where possible. A
+separate run with targets in the owned `/private/tmp` staging directory passed.
+This supports a target-location/TCC explanation, but the timeout itself does
+not establish a cause and user approval is a confounding environmental change.
+No issuer authority was expanded. New standard and BYOXPC extension/phase
+controls now use owned `/private/tmp` targets; raw output and sanitized evidence
+remain in managed test output. No private-data access is part of the workload.
+
+| Run suffix after `extensions-m3-` and before `-20261012` | Run ID | Original result |
+| --- | --- | --- |
+| `issuer-owner` | `20261013T010817Z_d6ec36c3` | Failed Swift compilation: extra optional chaining in the new test. |
+| `issuer-owner2` | `20261013T010854Z_6424bf8c` | Swift executable passed 403 checks and driver-reader replay. |
+| `placement` | `20261013T011019Z_5e0e9521` | Expanded standard `witness_contract/extensions` passed. |
+| `byoxpc-fixture` | `20261013T011136Z_0d583d90` | `shell_helpers/byoxpc_setup` and `witness_contract/phases` passed. |
+| `byoxpc` | `20261013T011236Z_c1108960` | First `extensions_byoxpc` failed on issuer timeout with a Desktop target; owned cleanup verified. |
+| `byoxpc2` | `20261013T011327Z_84e3293f` | `extensions_byoxpc` passed with temporary staging targets; native and ordinary workloads, read-back/provenance and removal verified. |
+| `targets` | `20261013T011541Z_4ca69577` | Four registered cases passed with temporary targets: standard extensions/phases, all native boundaries and BYOXPC extensions/phases. |
+
+Commands used `tests/run.sh` with the case IDs above, a fresh managed output
+path, established Rust PATH and escalation for required equipment. The signed
+app remains build 553 with the native identity recorded in the preceding
+increment; it was valid before and unchanged after the live runs. The source
+changes in this increment are test and account changes. Original failed results
+remain failed. All listed runs are retained with console logs; `targets/checkpoint/`
+contains a tracked diff and source/hash snapshot against `250126a`. Evidence is
+gitignored and local-only. Retention entries keep source null for incremental
+working-tree runs, and attachment used the checkout lock after run-ID/ownership
+and completion checks. Every actual BYOXPC staging directory is absent after
+verified removal; every final native observer receipt confirms unlink and
+removal of its durable duplicate. The earlier unrecorded empty-object limitation
+remains unchanged. No active process or newly owned resource remains.
+
+M3 remains open. Next are the issuer's per-binary dossier observations (currently
+only issuer registry provenance is represented), older-registry and capability
+controls, limits/maximum reply, admission corpus and permanent generated accounts,
+followed by consolidated acceptance and the fresh rendered assessment. No A1
+handoff or gate completion is claimed.

@@ -91,3 +91,9 @@ executable (about 200 ms on a fresh macOS 26 machine), which would otherwise be
 charged to the first driver test that spawns the fixture, such as the 150 ms
 over-budget validator case. The warm-up asserts nothing; the tests own every
 behavioral check.
+
+The `.issuer` companion builds the production native issuer for Swift host
+controls. `ExtensionEvidenceTests` observe the mapped bytes before and after
+host erasure and descriptor closure, then inject unavailable wait/kill observations
+while independently reaping the real issuer. Published issuance remains visible,
+but unknown host cleanup prevents delivery. The test never prints token bytes.

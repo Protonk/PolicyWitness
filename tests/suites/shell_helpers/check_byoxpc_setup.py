@@ -14,7 +14,7 @@ def main():
     out = Path(sys.argv[1]).resolve()
     completed = []
     modes = ('success', 'no_entitlements', 'bad_source_signature', 'entitlement_diagnostic',
-             'malformed_entitlements', 'sign_failure', 'partial_install', 'unowned_plist',
+             'malformed_entitlements', 'issuer_entitlements', 'sign_failure', 'partial_install', 'unowned_plist',
              'malformed_install_reply', 'wrong_team', 'changed_entitlements', 'helper_changed',
              'connection_failure', 'remove_failure', 'remove_warning', 'remove_lies', 'launchctl_equipment',
              'registered_unowned_plist', 'uncertain_install', 'uncertain_no_record',
@@ -31,7 +31,7 @@ def main():
                 'CFBundlePackageType': 'XPC!', 'PWRunnerRequireSignedCaller': True,
                 'PWRunnerAllowedIdentifiers': ['pw-runner-client']}
         (source / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
-        for name in ('PWRunner', 'pw-probe-runner', 'sb_api_validator'):
+        for name in ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'):
             (binary_dir / name).write_bytes(('original ' + name).encode())
         client = app / 'Contents/MacOS/pw-runner-client'
         client.parent.mkdir(parents=True)

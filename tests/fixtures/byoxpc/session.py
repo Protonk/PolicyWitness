@@ -44,11 +44,11 @@ def entitlements(target, out, label, invoke):
     return value
 
 
-HELPERS = ('PWRunner', 'pw-probe-runner', 'sb_api_validator')
+HELPERS = ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')
 
 
 def binary_entitlements(bundle, out, label, invoke):
-    """The host's, the worker's and the validator's entitlements, read back separately."""
+    """Each embedded executable's entitlements, read back separately."""
     return {name: entitlements(bundle / 'Contents/MacOS' / name, out, f'{label}-{name}', invoke) for name in HELPERS}
 
 
@@ -130,6 +130,7 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     persist_state(state, receipt)
     _, bundle = owned_bundle(state)
     existing = registry(pw, out, 'registry-before', invoke)
+    envelope(out, 'reconcile-before', [pw, 'runner', 'reconcile'], invoke)
     assert not any(r['service_name'] == service for r in existing), 'test service already registered'
     assert not os.path.lexists(state['plist_path']), 'test launchd plist already exists'
     assert not service_present(state, out, 'launchd-before', invoke), 'test service already loaded'
@@ -198,19 +199,20 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
         assert sig['TeamIdentifier'] == team and not sig['adhoc'] and sig.get('Timestamp'), sig
     assert entitlements(bundle, out, 'staged-entitlements', invoke) == supplied, 'entitlements changed'
     # The installer signs the embedded worker with the supplied entitlements
-    # and the validator with the identity alone before sealing the bundle, so
+    # and the validator and issuer with the identity alone before sealing the bundle, so
     # their bytes change; read each binary back separately instead.
     embedded = binary_entitlements(bundle, out, 'staged', invoke)
     assert embedded['PWRunner'] == supplied, ('host entitlements', embedded['PWRunner'])
     assert embedded['pw-probe-runner'] == supplied, ('worker entitlements', embedded['pw-probe-runner'])
     assert embedded['sb_api_validator'] is None, ('validator entitlements', embedded['sb_api_validator'])
-    for helper in ('pw-probe-runner', 'sb_api_validator'):
+    assert embedded['pw-extension-issuer'] is None, ('issuer entitlements', embedded['pw-extension-issuer'])
+    for helper in ('pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'):
         helper_sig = signature(bundle / 'Contents/MacOS' / helper, out / ('staged-signature-' + helper), invoke=invoke)
         if variant == 'adhoc_noauth':
             assert helper_sig['adhoc'], (helper, helper_sig)
         else:
             assert helper_sig['TeamIdentifier'] == team and not helper_sig['adhoc'], (helper, helper_sig)
-    for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None)):
+    for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None), ('issuer_entitlements', None)):
         keys = sorted(expected) if expected else []
         assert record[field]['keys'] == keys and record[field]['error'] is None, (field, record.get(field))
     # Record every runner-related process alive before the connection, so a

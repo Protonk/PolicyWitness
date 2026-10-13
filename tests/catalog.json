@@ -1430,6 +1430,20 @@
             "bash",
             "tests/suites/witness_contract/extension_boundaries.sh"
           ]
+        },
+        {
+          "id": "extensions_byoxpc",
+          "default": false,
+          "description": "Native lifecycle, placement and ordinary phases on an owned BYOXPC runner with issuer authority read-back and provenance",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh"
+          ],
+          "requires": [
+            "app",
+            "identity",
+            "clang"
+          ]
         }
       ],
       "include": [
@@ -1634,7 +1648,8 @@
         "runner_byoxpc/single_use",
         "runner_byoxpc/entitlement_readback",
         "runner_byoxpc/entitlement_transfer",
-        "sandbox_extensions_native/feasibility"
+        "sandbox_extensions_native/feasibility",
+        "witness_contract/extensions_byoxpc"
       ]
     },
     "failure_boundaries": {

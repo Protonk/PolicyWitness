@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native and reader checkpoints `0daa018` and `d4f512a`; native boundary/confinement controls, independent readers, Swift evidence guards and both channel layouts pass. Remaining preparation/placement, BYOXPC, limits and contract work precede the gate and rendered assessment. |
+| M3 Minimal extension experiment through PW | In progress | Native and reader checkpoints `0daa018` and `d4f512a`; native boundary/confinement controls, independent readers, Swift evidence guards and both channel layouts pass. Preparation/placement, physical host erasure and shared standard/BYOXPC controls now pass. Limits, remaining contract work and consolidated gate/rendered assessment remain pending. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -93,16 +93,25 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** finish issuer unknown-cleanup/buffer-erasure controls, target
-preparation and lifecycle placement/omission, then the remaining limits,
-maximum-reply, admission and documentation increment, signed standard/BYOXPC
-acceptance and rendered assessment. Prepare A1 only after that gate passes.
+**Next action:** complete issuer binary dossier coverage and older-registry/capability
+controls, the remaining limits/maximum-reply and admission corpus, permanent
+documentation/generator increment, then consolidated signed acceptance and the
+rendered assessment. Prepare A1 only after that gate passes. Issuer cleanup and
+physical erasure, lifecycle placement/omission and target preparation controls
+now pass. The shared extension and ordinary-phase workload also passes on an
+owned BYOXPC runner with independent issuer/worker authority read-back.
 The native-boundary test fixtures now retain durable ownership before channel
 use and verify cleanup on success. One earlier diagnostic failed before writing
 ownership receipts and left empty shared-memory objects whose random names were
 not retained; their absence cannot be verified. That limitation is recorded
-explicitly. No token or native child was created in that attempt. No M3 BYOXPC
-installation has been made; M2 fixture removal remains verified.
+explicitly. No token or native child was created in that attempt. All M3 BYOXPC fixtures have been removed with absence verified. No build or
+test process remains active at this increment.
+
+**User testing preference:** avoid TCC prompts unless necessary. The user observed
+and approved a Desktop-access prompt during the first BYOXPC experiment; future
+extension/phase test targets use owned `/private/tmp` directories. The first
+BYOXPC issuer timeout remains retained; the prompt supports a TCC explanation
+but does not establish its cause by itself.
 
 After each increment and before any planned stopping point, update this table and
 execution state so another session can resume safely. Record the implementation

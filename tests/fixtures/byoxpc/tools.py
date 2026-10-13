@@ -57,9 +57,11 @@ if argv[0] == '/usr/bin/codesign':
         ent = config['entitlements']
         if mode == 'changed_entitlements' and staged:
             ent = {'unexpected': True}
-        if target.name == 'sb_api_validator':
-            # The installer signs the validator with the identity alone.
+        if target.name in ('sb_api_validator', 'pw-extension-issuer'):
+            # These helpers receive the identity without the worker plist.
             ent = None
+        if mode == 'issuer_entitlements' and staged and target.name == 'pw-extension-issuer':
+            ent = {'unexpected': True}
         if ent is not None:
             sys.stdout.buffer.write(plistlib.dumps(ent))
             sys.stdout.buffer.flush()
@@ -87,6 +89,8 @@ if argv[0] == '/bin/launchctl':
 assert argv[0] == config['pw'] and argv[1] == 'runner', argv
 if argv[2] == 'list':
     reply({'runners': state['runners'], 'pending_cleanup': state['pending_cleanup']})
+if argv[2] == 'reconcile':
+    reply({'records': [], 'candidates': []})
 if argv[2] == 'install':
     target = Path(argv[argv.index('--bundle') + 1])
     assert target == bundle and target.resolve() == target
@@ -111,7 +115,7 @@ if argv[2] == 'install':
                                'granted': sorted(k for k, v in (value or {}).items() if v is True), 'error': None}
     record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending',
               'entitlements': read_back(embedded), 'worker_entitlements': read_back(embedded),
-              'validator_entitlements': read_back(None)}
+              'validator_entitlements': read_back(None), 'issuer_entitlements': read_back(None)}
     state['runners'].append(record)
     plist.parent.mkdir(parents=True, exist_ok=True)
     plist.write_bytes(plistlib.dumps({'Label': service, 'ProgramArguments': [str(executable), '--mach-service', service],

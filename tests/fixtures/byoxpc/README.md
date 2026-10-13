@@ -2,7 +2,7 @@
 
 `session.py` copies the selected app's complete `PWRunner.xpc` to a unique
 `/private/tmp/pw-byoxpc-*` staging directory and assigns a unique
-`com.policywitness.test.byoxpc.*` service. It inspects the registry first and
+`com.policywitness.test.byoxpc.*` service. It inspects the registry and reconciliation report first and
 verifies source signatures, metadata, entitlements and copy identity. Source
 aliases and paths escaping the bundle are rejected before signing.
 
@@ -11,9 +11,9 @@ ID. `install-noauth` removes those keys and requests ad-hoc signing through the
 public installer. Both supply the source's extracted entitlements unless the
 caller passes a plist of its own (an optional seventh argument); only
 `runner install` signs the copy, and it signs the embedded worker with those
-entitlements and the validator with the identity alone before sealing the
-bundle. After installation the helper reads the host's, the worker's and the
-validator's entitlements and signatures back separately and checks the registry
+entitlements and the validator and issuer with the identity alone before sealing
+the bundle. After installation the helper reads each binary's entitlements and
+signatures back separately and checks the registry
 record against them. Signature, runtime and connection checks must succeed
 before the wrapper receives its runner environment. Installation failure is a
 failed case.

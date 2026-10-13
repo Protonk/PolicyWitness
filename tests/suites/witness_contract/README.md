@@ -32,6 +32,20 @@ in one worker, with fresh descriptor identity, bounded bytes and syscall results
 on either side of both interventions. Each phase collects its own queries.
 Native return values and observed access remain independent evidence.
 
+The same case covers omitted lifecycle actions, same-phase and cross-phase
+placement, intervention-only phases, failed path preparation, symlink resolution
+and replacement between issuance preparation and consumption. An independently
+held, non-inherited descriptor keeps the removed identity observable while the
+worker creates a replacement. Later reads report their actual identity and bytes;
+the test does not require release success to revoke access.
+
+The opt-in `extensions_byoxpc` case runs this workload and the ordinary `phases`
+controls through an owned installed runner. Independent signing and entitlement
+read-backs establish that the issuer receives the selected identity without the
+worker's supplied entitlements. Envelope provenance must match the registry's
+per-binary records, and cleanup verifies service removal. These workloads place
+their targets in owned temporary directories to avoid requesting Desktop access.
+
 `extension_boundaries` compiles the production issuer and worker with the
 [controlled native entrypoints](../../fixtures/extension_controls/README.md).
 It drives native refusal, absent APIs, issuer death/deadline, malformed transport

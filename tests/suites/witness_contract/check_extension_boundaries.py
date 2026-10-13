@@ -75,6 +75,7 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
         write_json(recovery, owner)
     def retire_owner():
         if not owner['cleanup_retained']:
+            (recovery.parent / 'target').unlink(missing_ok=True)
             recovery.unlink()
             recovery.parent.rmdir()
     try:
@@ -98,7 +99,9 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
     try:
         issuer = compile_fixture(out, channel, issuer_mode, True)
         worker = compile_fixture(out, channel, worker_mode, False) if worker_mode is not None else None
-        target = out / 'target'
+        target = recovery.parent / 'target'
+        owner['target_path'] = str(target)
+        save_owner()
         contents = b'PW boundary witness\n'
         target.write_bytes(contents)
         spec = specimen(target, [[probe('before', target), intervention('consume', 'consume')],

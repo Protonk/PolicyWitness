@@ -166,7 +166,8 @@ real conditional calls where errexit alone cannot enforce build failures.
 `byoxpc_setup` exercises the real disposable-runner setup and cleanup with an
 independent fake command executable. It covers valid/absent entitlements,
 signature and extraction failures, failed signing, partial installation,
-malformed install output, wrong teams, changed entitlements/helpers, connection
+malformed install output, wrong teams, changed entitlements/helpers, an issuer
+incorrectly holding entitlements, connection
 failure, removal failures/warnings/false success, unowned plists, and uncertain
 installer completion. It checks the source bytes and an unrelated registration,
 and observes retained staging before test teardown removes simulated leftovers.
