@@ -11,8 +11,8 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 use crate::app_layout::{
-    BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL, SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER,
-    ShippedBinary,
+    BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL, SHIPPED_ISSUER, SHIPPED_SERVICE,
+    SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
 };
 use crate::augments::PolicyAugmentation;
 use crate::evidence::{self, EvidenceManifest};
@@ -196,6 +196,7 @@ pub struct Binaries {
     pub service: Option<BinaryRecord>,
     pub worker: Option<BinaryRecord>,
     pub validator: Option<BinaryRecord>,
+    pub issuer: Option<BinaryRecord>,
 }
 
 /// The echo bound the runner applies to override paths; longer strings are
@@ -409,6 +410,7 @@ impl Binaries {
             service: Some(record()),
             worker: Some(record()),
             validator: Some(record()),
+            issuer: Some(record()),
         }
     }
 
@@ -441,8 +443,10 @@ impl Binaries {
         };
         let worker_selected = manifest_entry(&SHIPPED_WORKER);
         let validator_selected = manifest_entry(&SHIPPED_VALIDATOR);
+        let issuer_selected = manifest_entry(&SHIPPED_ISSUER);
         let worker_bundle = bundle.map(|b| b.join(BUNDLE_WORKER_REL));
         let validator_bundle = bundle.map(|b| b.join(BUNDLE_VALIDATOR_REL));
+        let issuer_bundle = bundle.map(|b| b.join(BUNDLE_ISSUER_REL));
         Binaries {
             service,
             worker: helper_record(
@@ -460,6 +464,14 @@ impl Binaries {
                 validator_selected.as_deref(),
                 manifest,
                 &SHIPPED_VALIDATOR,
+            ),
+            issuer: helper_record(
+                request,
+                "issuer_executable_path",
+                issuer_bundle.as_deref(),
+                issuer_selected.as_deref(),
+                manifest,
+                &SHIPPED_ISSUER,
             ),
         }
     }
@@ -510,9 +522,14 @@ mod tests {
         fs::write(path, bytes).unwrap();
     }
 
-    const ROLES: [&ShippedBinary; 3] = [&SHIPPED_SERVICE, &SHIPPED_WORKER, &SHIPPED_VALIDATOR];
+    const ROLES: [&ShippedBinary; 4] = [
+        &SHIPPED_SERVICE,
+        &SHIPPED_WORKER,
+        &SHIPPED_VALIDATOR,
+        &SHIPPED_ISSUER,
+    ];
 
-    /// A synthetic app root: the three shipped binaries as small distinct
+    /// A synthetic app root: the shipped binaries as small distinct
     /// files, a decoy sharing the validator's id at an app-level path the app
     /// does not ship, and no Info.plist anywhere.
     fn synthetic_app(tag: &str) -> PathBuf {
@@ -588,6 +605,13 @@ mod tests {
                     Some(hash_of(root, &SHIPPED_VALIDATOR)),
                 ),
                 entry(
+                    "pw-extension-issuer",
+                    "xpc-embedded-helper",
+                    None,
+                    SHIPPED_ISSUER.rel_path,
+                    Some(hash_of(root, &SHIPPED_ISSUER)),
+                ),
+                entry(
                     "sb_api_validator",
                     "helper",
                     None,
@@ -658,7 +682,9 @@ mod tests {
         match role {
             "service" => binaries.service.clone(),
             "worker" => binaries.worker.clone(),
-            _ => binaries.validator.clone(),
+            "validator" => binaries.validator.clone(),
+            "issuer" => binaries.issuer.clone(),
+            _ => panic!("unknown role: {role}"),
         }
         .unwrap_or_else(|| panic!("{role}: expected a record"))
     }
@@ -688,7 +714,8 @@ mod tests {
             Binaries {
                 service: None,
                 worker: None,
-                validator: None
+                validator: None,
+                issuer: None
             }
         );
         assert_eq!(request, before);
@@ -998,6 +1025,62 @@ mod tests {
     }
 
     #[test]
+    fn issuer_override_and_missing_external_issuer_keep_independent_hash_evidence() {
+        let root = synthetic_app("issuer");
+        let manifest = manifest_for(&root);
+        let target = builtin(&root, &manifest);
+        let scratch = temp_root("issuer-copy");
+        let copy = scratch.join("issuer");
+        write(
+            &copy,
+            &fs::read(root.join(SHIPPED_ISSUER.rel_path)).unwrap(),
+        );
+        for (input, expected) in [
+            (json!(copy), "match"),
+            (json!(scratch.join("absent")), "unavailable"),
+            (json!(7), "unavailable"),
+        ] {
+            let request = json!({"_test_overrides": {"issuer_executable_path": input}});
+            let original = request.clone();
+            let observations = Binaries::observe(&root, &target, &request, Ok(&manifest));
+            let issuer = record(&observations, "issuer");
+            assert_eq!(issuer.verification, expected);
+            assert_eq!(
+                issuer.baseline_sha256,
+                Some(hash_of(&root, &SHIPPED_ISSUER))
+            );
+            assert_eq!(issuer.actual_sha256.is_some(), expected == "match");
+            assert!(observations.worker.is_none() && observations.validator.is_none());
+            assert_eq!(request, original);
+        }
+        write(&copy, b"modified issuer");
+        let observations = Binaries::observe(
+            &root,
+            &target,
+            &json!({"_test_overrides": {"issuer_executable_path": copy}}),
+            Ok(&manifest),
+        );
+        assert_eq!(record(&observations, "issuer").verification, "mismatch");
+        let (bundle, external) = byoxpc(
+            "issuer-absent",
+            b"host",
+            Some(b"worker"),
+            Some(b"validator"),
+        );
+        let observations = Binaries::observe(&root, &external, &json!({}), Ok(&manifest));
+        let issuer = record(&observations, "issuer");
+        assert_eq!(issuer.verification, "unavailable");
+        assert_eq!(
+            issuer.path,
+            Some(bundle.join(BUNDLE_ISSUER_REL).display().to_string())
+        );
+        assert!(issuer.actual_sha256.is_none() && issuer.baseline_sha256.is_some());
+        fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(scratch).unwrap();
+        fs::remove_dir_all(bundle.parent().unwrap()).unwrap();
+    }
+
+    #[test]
     fn override_observations_follow_the_table_without_changing_the_request() {
         let root = synthetic_app("overrides");
         let manifest = manifest_for(&root);
@@ -1181,15 +1264,16 @@ mod tests {
             Binaries {
                 service: None,
                 worker: None,
-                validator: None
+                validator: None,
+                issuer: None
             }
         );
-        // A malformed container affects both helper roles; the service is untouched.
+        // A malformed container affects every helper role; the service is untouched.
         for container in [json!(5), json!("x"), json!([])] {
             let request = json!({"_test_overrides": container});
             let binaries = Binaries::observe(&root, &target, &request, Ok(&manifest));
             assert!(binaries.service.is_none());
-            for role in ["worker", "validator"] {
+            for role in ["worker", "validator", "issuer"] {
                 let record = record(&binaries, role);
                 assert!(record.path.is_none() && record.actual_sha256.is_none());
                 assert_eq!(record.verification, "unavailable");
@@ -1241,7 +1325,10 @@ mod tests {
             keys(&wire["host"]),
             ["arch", "kernel_release", "macos_build", "macos_version"]
         );
-        assert_eq!(keys(&wire["binaries"]), ["service", "validator", "worker"]);
+        assert_eq!(
+            keys(&wire["binaries"]),
+            ["issuer", "service", "validator", "worker"]
+        );
         assert_eq!(
             keys(&wire["binaries"]["worker"]),
             [

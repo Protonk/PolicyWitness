@@ -415,9 +415,17 @@
       "rel_path": "string"
     },
     "envelope.data.specimen.binaries": {
+      "issuer": "object",
       "service": "object",
       "validator": "object",
       "worker": "object"
+    },
+    "envelope.data.specimen.binaries.issuer": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
     },
     "envelope.data.specimen.binaries.service": {
       "actual_sha256": "string",

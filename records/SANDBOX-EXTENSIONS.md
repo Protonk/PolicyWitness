@@ -801,3 +801,49 @@ only issuer registry provenance is represented), older-registry and capability
 controls, limits/maximum reply, admission corpus and permanent generated accounts,
 followed by consolidated acceptance and the fresh rendered assessment. No A1
 handoff or gate completion is claimed.
+
+## M3 issuer dossier and validation increment
+
+The issuer now participates in `data.specimen.binaries` under the same rules as
+the worker and validator: the uniquely selected shipped path needs no duplicate
+record; an override or BYOXPC copy records its selected path, actual hash, shipped
+baseline hash and comparison. Missing bytes remain unavailable observations and
+do not create a product verdict. The generated envelope candidate added only the
+issuer object and its existing binary-record fields; it was reviewed and installed
+without changing the additive envelope version. Independent native controls check
+the instrumented issuer's exact hash; BYOXPC captures compare the installed issuer
+bytes and baseline independently. Historical captures remain unchanged.
+
+Registry controls now distinguish an older record with no issuer observations
+from a recorded issuer that later disappears or cannot be read. The former
+remains manageable with unknown issuer evidence; the latter records a validation
+failure without fabricating a signature. Never-launched signed-copy controls
+corrupt the worker and issuer separately: installation rejects each copy before
+registration, validation names the bundle and affected helper, unaffected helper
+signatures remain valid, and registry/plist removal is verified. Both standard
+and BYOXPC CLI workloads exercise `extension_issuer_unavailable` at the helper
+resolution boundary and require no worker or lifecycle execution. The native
+API-absence control remains in the boundary workload.
+
+| Run suffix after `extensions-m3-` and before `-20261012` | Run ID | Original result |
+| --- | --- | --- |
+| `issuer-dossier` | `20261013T011855Z_c39d93d9` | Rust formatting passed; unit batch failed on stale field/manifest fixtures and the deliberate envelope-golden difference. |
+| `issuer-dossier2` | `20261013T012002Z_f87e4d78` | Rust unit and formatting cases plus independent blackbox checker controls passed. |
+| `dossier-live` | `20261013T012157Z_3f705769` | Five cases passed: preflight BYOXPC signed-copy verification, dossier witness, extension placement/capability, native boundaries and owned BYOXPC extension/phase/provenance controls. |
+
+The development app is build 555, stamp `21b01d6-dirty`, built with the established
+Developer ID identity and unchanged native worker identity
+`5e8afcb85a49a54cb9df6b24cf594befd5b74712618161ebadd92679fc28c8a0`. Live
+inspection found valid signatures before and unchanged bytes afterward. All
+new test targets remain in owned temporary directories. The actual BYOXPC
+fixture was removed with absence verified; all native observer channels were
+unlinked and their recovery copies retired. No live build or test remains.
+
+These managed runs and console logs are retained, with incremental source
+provenance null. The final run's `checkpoint/` contains the signed-build log and
+source/diff/hash snapshot against `21b01d6`. Attachments were added under the
+checkout lock after verifying completed ownership. Evidence is gitignored and
+local-only. M3 still requires its limits/maximum-reply and admission corpus,
+permanent contract/architecture/build/user accounts, consolidated acceptance and
+rendered assessment before A1. The earlier empty shared-memory object cleanup
+limitation remains recorded and is not revised by these passing controls.

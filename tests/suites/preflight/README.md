@@ -25,6 +25,11 @@ Offline release controls also exercise the release procedure's decision points.
   matching Developer ID while retaining the old manifest. All signatures must
   verify, but inspection must reject the stale runner hash. No copy is launched;
   cleanup removes only the temporary directory and checks the source inventory.
+- `byoxpc_verification_controls` uses never-launched signed copies and isolated
+  child registry/home directories. Corrupting a worker or issuer code page must
+  fail recursive installation checks and subsequently identify both the bundle
+  and changed helper during validation. Other helper signatures remain valid;
+  removal verifies registry and plist cleanup.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS

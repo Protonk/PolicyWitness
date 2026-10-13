@@ -142,6 +142,18 @@ def run_targets(pw, out, target_dir, session_state):
     _, reply = capture(pw, out, 'no_declaration', ordinary, session_state=session_state)
     assert not reply.get('extensions') and not reply.get('extension_events')
 
+    unavailable = specimen(target, [[intervention('consume', 'consume'), probe('read', target),
+                                     intervention('release', 'release')]])
+    absent_issuer = str(target_dir / 'absent-issuer')
+    unavailable['_test_overrides'] = {'issuer_executable_path': absent_issuer}
+    _, reply = capture(pw, out, 'issuer_capability', unavailable, expected_rc=1, session_state=session_state)
+    assert reply['normalized_outcome'] == 'bad_request'
+    assert reply['request_failure'] == {'code': 'extension_issuer_unavailable', 'path': ['extensions']}
+    assert reply['extensions'][0]['issuance_status'] == 'issuer_unavailable'
+    assert not reply.get('runner_subprocess') and not reply.get('extension_events')
+    assert reply['test_overrides']['issuer_executable_path'] == absent_issuer
+    assert target.read_bytes() == contents
+
     missing = target_dir / 'absent-target'
     failed = specimen(missing, [[intervention('consume', 'consume')],
                                [probe('absent', missing), intervention('release', 'release')]])

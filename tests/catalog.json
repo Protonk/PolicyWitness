@@ -39,7 +39,7 @@
         },
         {
           "id": "byoxpc_verification_controls",
-          "description": "Installation refuses, and validation reports, a never-launched copy whose worker code changed after sealing",
+          "description": "Installation refuses, and validation reports, a never-launched copy whose worker or issuer code changed after sealing",
           "requires": [
             "app"
           ]

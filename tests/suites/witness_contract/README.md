@@ -43,7 +43,9 @@ The opt-in `extensions_byoxpc` case runs this workload and the ordinary `phases`
 controls through an owned installed runner. Independent signing and entitlement
 read-backs establish that the issuer receives the selected identity without the
 worker's supplied entitlements. Envelope provenance must match the registry's
-per-binary records, and cleanup verifies service removal. These workloads place
+per-binary records, and issuer dossier hashes must match independently read
+installed bytes and the shipped baseline. A missing issuer path must produce
+the named capability refusal before worker launch. Cleanup verifies service removal. These workloads place
 their targets in owned temporary directories to avoid requesting Desktop access.
 
 `extension_boundaries` compiles the production issuer and worker with the

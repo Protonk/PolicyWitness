@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 from bundle import SERVICE, command, inventory, save
 
-WORKER = 'Contents/MacOS/pw-probe-runner'
+HELPERS = {'worker': 'Contents/MacOS/pw-probe-runner', 'issuer': 'Contents/MacOS/pw-extension-issuer'}
 CODE_PAGE_OFFSET = 4096
 
 
@@ -45,11 +45,10 @@ def main(app, out, pw):
             return result
 
         def verification(name, bundle):
-            worker = bundle / WORKER
             rows = {}
             for label, args in (('outer', ['--verify', '--verbose=2', bundle]),
                                 ('deep', ['--verify', '--deep', '--strict', '--verbose=2', bundle]),
-                                ('worker', ['--verify', '--verbose=2', worker])):
+                                *[(role, ['--verify', '--verbose=2', bundle / relative]) for role, relative in HELPERS.items()]):
                 rows[label] = command(out / name / ('verify-' + label), ['/usr/bin/codesign', *args], check=False)['returncode']
             observations[name] = rows
             return rows
@@ -69,13 +68,13 @@ def main(app, out, pw):
             # build's signatures, so the copy needs no identity to verify.
             command(out / name / 'seal', ['/usr/bin/codesign', '--force', '--options', 'runtime', '-s', '-', bundle], timeout=90)
             intact = verification(name + '-intact', bundle)
-            assert intact == {'outer': 0, 'deep': 0, 'worker': 0}, intact
+            assert intact == {'outer': 0, 'deep': 0, 'worker': 0, 'issuer': 0}, intact
             return service, bundle
 
-        def corrupt(name, bundle):
+        def corrupt(name, bundle, role):
             # One signed byte in a mapped code page; the signature blob stays
             # intact. The copy is never launched.
-            worker = bundle / WORKER
+            worker = bundle / HELPERS[role]
             with worker.open('r+b') as stream:
                 stream.seek(CODE_PAGE_OFFSET)
                 value = stream.read(1)
@@ -84,49 +83,49 @@ def main(app, out, pw):
                 stream.write(bytes([value[0] ^ 1]))
             save(out / name / 'corruption.json', dict(offset=CODE_PAGE_OFFSET, old=value[0], new=value[0] ^ 1, executed=False))
             rows = verification(name + '-corrupt', bundle)
-            assert rows['deep'] != 0 and rows['worker'] != 0, ('corruption must fail recursive and individual verification', rows)
+            assert rows['deep'] != 0 and rows[role] != 0, ('corruption must fail recursive and individual verification', rows)
             return rows
 
         install_args = ['runner', 'install', '--kind', 'byoxpc', '--scope', 'user', '--allow-adhoc', '--skip-bootstrap']
 
-        # Control 1: installation refuses a copy whose worker code changed
-        # after sealing.
-        service, bundle = copy('refused')
-        corrupt('refused', bundle)
-        refused = cli('refused/install', [*install_args, '--bundle', bundle], code=2)
-        assert b'codesign verify failed' in refused.stderr, refused.stderr
-        assert not registry.exists() or not json.loads(registry.read_text())['runners'], 'a refused copy must not be registered'
+        for role in HELPERS:
+            refused_name, validated_name = 'refused-' + role, 'validated-' + role
+            # A changed signed helper must fail installation before registration.
+            service, bundle = copy(refused_name)
+            corrupt(refused_name, bundle, role)
+            refused = cli(refused_name + '/install', [*install_args, '--bundle', bundle], code=2)
+            assert b'codesign verify failed' in refused.stderr, refused.stderr
+            assert not registry.exists() or not json.loads(registry.read_text())['runners']
 
-        # Control 2: validation of a registered copy reports a worker that
-        # changed after installation, naming the runner and the binary.
-        service, bundle = copy('validated')
-        installed = json.loads(cli('validated/install', [*install_args, '--bundle', bundle], code=0).stdout)
-        assert installed['result']['ok'] is True and installed['data']['runner']['state'] == 'installed', installed
-        runner_id = installed['data']['runner']['id']
-        try:
-            corrupt('validated', bundle)
-            validated = json.loads(cli('validated/validate', ['runner', 'validate'], code=0).stdout)
-            data = validated['data']
-            failures = data.get('failures')
-            assert data.get('invalid') == 1 and isinstance(failures, list), \
-                ('runner validate must report the changed worker', data)
-            assert [f['binary'] for f in failures] == ['bundle', 'worker'], failures
-            for failure in failures:
-                assert failure['runner_id'] == runner_id and failure['service_name'] == service, failure
-                assert 'codesign verify failed' in failure['error'], failure
-            listed = json.loads(cli('validated/list', ['runner', 'list'], code=0).stdout)['data']['runners']
-            assert listed[0]['id'] == runner_id and listed[0]['signature']['valid'] is False, listed
-            assert listed[0]['worker_signature']['valid'] is False, listed[0]['worker_signature']
-            assert listed[0]['validator_signature']['valid'] is True, listed[0]['validator_signature']
-        finally:
-            removed = json.loads(cli('validated/remove', ['runner', 'remove', '--id', runner_id, '--skip-bootout'], code=0).stdout)
-            assert removed['data'].get('cleanup_retained') is not True, removed
+            # Validate the independently changed helper after registration.
+            service, bundle = copy(validated_name)
+            installed = json.loads(cli(validated_name + '/install', [*install_args, '--bundle', bundle], code=0).stdout)
+            assert installed['result']['ok'] is True and installed['data']['runner']['state'] == 'installed'
+            runner_id = installed['data']['runner']['id']
+            try:
+                corrupt(validated_name, bundle, role)
+                data = json.loads(cli(validated_name + '/validate', ['runner', 'validate'], code=0).stdout)['data']
+                failures = data.get('failures')
+                assert data.get('invalid') == 1 and isinstance(failures, list), data
+                assert [f['binary'] for f in failures] == ['bundle', role], failures
+                for failure in failures:
+                    assert failure['runner_id'] == runner_id and failure['service_name'] == service
+                    assert 'codesign verify failed' in failure['error'], failure
+                listed = json.loads(cli(validated_name + '/list', ['runner', 'list'], code=0).stdout)['data']['runners']
+                assert listed[0]['id'] == runner_id and listed[0]['signature']['valid'] is False
+                assert listed[0][role + '_signature']['valid'] is False
+                for other in ('worker', 'validator', 'issuer'):
+                    if other != role:
+                        assert listed[0][other + '_signature']['valid'] is True
+            finally:
+                removed = json.loads(cli(validated_name + '/remove', ['runner', 'remove', '--id', runner_id, '--skip-bootout'], code=0).stdout)
+                assert removed['data'].get('cleanup_retained') is not True, removed
         final = json.loads(registry.read_text())
         assert not final['runners'] and not final.get('pending_cleanup'), final
         assert not list((home / 'Library/LaunchAgents').iterdir()), 'fixture LaunchAgents not empty'
     save(out / 'observations.json', observations)
     assert inventory(app) == before, 'the selected app changed'
-    print(json.dumps(dict(controls=['refused', 'validated'], observations=observations)))
+    print(json.dumps(dict(controls=['refused-worker', 'validated-worker', 'refused-issuer', 'validated-issuer'], observations=observations)))
 
 
 if __name__ == '__main__':

@@ -1463,6 +1463,49 @@ mod tests {
         let worker = record.worker_entitlements.as_ref().unwrap();
         assert_eq!(worker.keys, vec!["k".to_string()]);
         assert!(record.validator_signature.as_ref().unwrap().valid);
+        // Older bundles/records without an issuer stay manageable; absent
+        // evidence is unknown rather than an invented signature/read-back.
+        assert!(record.issuer_signature.is_none() && record.issuer_entitlements.is_none());
+        record.issuer_signature = Some(record.signature.clone());
+        let missing_issuer = |path: &Path| {
+            if path.ends_with("pw-extension-issuer") {
+                Err("recorded issuer is missing".to_string())
+            } else {
+                Ok(())
+            }
+        };
+        let unreadable_issuer = |path: &Path| {
+            if path.ends_with("pw-extension-issuer") {
+                Err("issuer cannot be read".to_string())
+            } else {
+                good(path)
+            }
+        };
+        let failures = validate_record(
+            &mut record,
+            &|_| Ok(()),
+            &missing_issuer,
+            &unreadable_issuer,
+        );
+        assert_eq!(
+            failures
+                .iter()
+                .map(|f| f.binary.as_str())
+                .collect::<Vec<_>>(),
+            ["issuer"]
+        );
+        assert!(!record.issuer_signature.as_ref().unwrap().valid);
+        assert_eq!(
+            record
+                .issuer_entitlements
+                .as_ref()
+                .unwrap()
+                .error
+                .as_deref(),
+            Some("issuer read-back failed")
+        );
+        record.issuer_signature = None;
+        record.issuer_entitlements = None;
         // A changed worker: the recursive bundle check and the worker's own
         // check fail; the host and validator still verify individually, the
         // host's recorded validity follows the bundle.
@@ -1532,6 +1575,7 @@ mod tests {
         let record = &registry.runners[0];
         assert!(record.worker_signature.is_none() && record.worker_entitlements.is_none());
         assert!(record.validator_signature.is_none() && record.validator_entitlements.is_none());
+        assert!(record.issuer_signature.is_none() && record.issuer_entitlements.is_none());
         let wire = serde_json::to_value(record).unwrap();
         assert!(
             wire.get("worker_entitlements").is_none(),

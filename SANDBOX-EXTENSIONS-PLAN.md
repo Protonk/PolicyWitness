@@ -83,9 +83,9 @@ This checkpoint does not reach that audit boundary. M2's consolidated signed
 acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
 `0daa018101ed39ecfd92d6d528b112784ed9c30f`, followed by the reader integration
 increment described in the investigative record.
-The current development app is build 553, stamped `d4f512a-dirty`, with worker
+The current development app is build 555, stamped `21b01d6-dirty`, with worker
 identity `5e8afcb85a49a54cb9df6b24cf594befd5b74712618161ebadd92679fc28c8a0`.
-It includes the Rust reader checks and native publication guards. The native
+It includes the Rust reader checks, native publication guards and issuer binary dossier. The native
 boundary increment passes its registered live controls and the coordinated
 Swift, ABI and independent-reader selection. Diagnostic failures and accepted
 runs retain their original results, console logs and source snapshots; the
@@ -93,10 +93,11 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** complete issuer binary dossier coverage and older-registry/capability
-controls, the remaining limits/maximum-reply and admission corpus, permanent
+**Next action:** complete the limits/maximum-reply and admission corpus, permanent
 documentation/generator increment, then consolidated signed acceptance and the
-rendered assessment. Prepare A1 only after that gate passes. Issuer cleanup and
+rendered assessment. Prepare A1 only after that gate passes. Issuer dossier,
+older-record interpretation and signed-copy validation/capability controls pass.
+Issuer cleanup and
 physical erasure, lifecycle placement/omission and target preparation controls
 now pass. The shared extension and ordinary-phase workload also passes on an
 owned BYOXPC runner with independent issuer/worker authority read-back.

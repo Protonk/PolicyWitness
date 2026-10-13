@@ -1,5 +1,6 @@
 """Public CLI boundary controls with token comparison only in transient memory."""
 import ctypes
+import hashlib
 import json
 import mmap
 import os
@@ -152,6 +153,10 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
             assert runner['test_overrides']['worker_executable_path'] == str(worker)
         assert consumer.validate(envelope) == [], consumer.validate(envelope)
         assert check_record(envelope) == [], check_record(envelope)
+        binary = envelope['data']['specimen']['binaries']['issuer']
+        assert binary['path'] == str(issuer)
+        assert binary['actual_sha256'] == hashlib.sha256(issuer.read_bytes()).hexdigest()
+        assert binary['verification'] == 'mismatch' and binary['baseline_sha256']
         if length:
             assert observed['issuer_argv_clean'] and observed['issuer_env_clean']
             assert observed['issuer_core_disabled'] and observed['issuer_channel_closed']

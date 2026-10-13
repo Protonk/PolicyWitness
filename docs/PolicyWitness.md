@@ -1147,11 +1147,12 @@ source or parameter values.
   not identify the sandbox libraries the worker or the validator loaded.
 - `runner_provenance`: the selected runner's `runner_kind`, bundle identity
   and path, service name, executable path, `runner_registry_id` for an
-  installed BYOXPC runner, and the host's, the worker's and the validator's
+  installed BYOXPC runner, and the host's, worker's, validator's and issuer's
   signature metadata and entitlements read back separately
   (`runner_signature`/`runner_entitlements`, `runner_worker_signature`/
   `runner_worker_entitlements`, `runner_validator_signature`/
-  `runner_validator_entitlements`). Each entitlement object lists `keys` and
+  `runner_validator_entitlements`, `runner_issuer_signature`/
+  `runner_issuer_entitlements`). Each entitlement object lists `keys` and
   `granted`, the keys whose value is `true`. The built-in runner's helpers are
   described from the evidence manifest and carry no signature metadata.
 - `app_provenance`: `evidence_manifest_path`, the app evidence manifest the
@@ -1159,7 +1160,7 @@ source or parameter values.
   `evidence_verify`, the verification report when `PW_VERIFY_EVIDENCE`
   requested one (null otherwise). The object is null when the manifest could
   not be parsed.
-- `binaries.service`, `binaries.worker` and `binaries.validator`: null when
+- `binaries.service`, `binaries.worker`, `binaries.validator` and `binaries.issuer`: null when
   the selected binary is the manifest's entry for that role, so the manifest's
   hash already describes it. Otherwise (a `_test_overrides` executable path or
   a BYOXPC copy) an object with `path`, `actual_sha256`, `baseline_sha256`

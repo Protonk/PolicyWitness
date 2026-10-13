@@ -2521,7 +2521,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
     mod orchestration {
         use super::*;
         use crate::app_layout::{
-            SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
+            SHIPPED_ISSUER, SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
         };
         use crate::runner_manager::{
             RUNNER_PROTOCOL_VERSION, RUNNER_REGISTRY_SCHEMA_VERSION, RunnerEntitlements,
@@ -2530,8 +2530,13 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
         use std::cell::RefCell;
         use std::fs;
 
-        const ROLES: [&ShippedBinary; 3] = [&SHIPPED_SERVICE, &SHIPPED_WORKER, &SHIPPED_VALIDATOR];
-        const ROLE_NAMES: [&str; 3] = ["service", "worker", "validator"];
+        const ROLES: [&ShippedBinary; 4] = [
+            &SHIPPED_SERVICE,
+            &SHIPPED_WORKER,
+            &SHIPPED_VALIDATOR,
+            &SHIPPED_ISSUER,
+        ];
+        const ROLE_NAMES: [&str; 4] = ["service", "worker", "validator", "issuer"];
         const SERVICE_ID: &str = "com.controlled.pw.PWRunner";
         const EXTERNAL_SERVICE: &str = "com.controlled.runner";
 
@@ -2594,6 +2599,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                     entry(SERVICE_ID, Some(SERVICE_ID), &SHIPPED_SERVICE),
                     entry("pw-probe-runner", None, &SHIPPED_WORKER),
                     entry("sb_api_validator", None, &SHIPPED_VALIDATOR),
+                    entry("pw-extension-issuer", None, &SHIPPED_ISSUER),
                 ],
                 "notes": ["controlled"],
             })
@@ -2636,6 +2642,10 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             write(
                 &macos.join("sb_api_validator"),
                 &fs::read(app.join(SHIPPED_VALIDATOR.rel_path)).unwrap(),
+            );
+            write(
+                &macos.join("pw-extension-issuer"),
+                &fs::read(app.join(SHIPPED_ISSUER.rel_path)).unwrap(),
             );
             bundle
         }
@@ -3606,6 +3616,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                     service: Some(binary()),
                     worker: Some(binary()),
                     validator: Some(binary()),
+                    issuer: Some(binary()),
                 },
             };
             let reply = json!({

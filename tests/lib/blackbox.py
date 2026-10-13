@@ -33,7 +33,7 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
                                        'cycle': None, 'exceeded': None, 'failure': None}},
                 'host': {'macos_version': '14.0', 'macos_build': '23A000', 'kernel_release': '23.0.0', 'arch': 'arm64'},
                 'runner_provenance': None, 'app_provenance': None,
-                'binaries': {'service': dict(binary), 'worker': dict(binary), 'validator': dict(binary)}},
+                'binaries': {'service': dict(binary), 'worker': dict(binary), 'validator': dict(binary), 'issuer': dict(binary)}},
             'policy_check': None, 'timeout_ms': timeout_ms,
             'runner_client': {'argv': ['constructed-client'], 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500,
                               'exit_code': 0, 'request_delivery': {'bytes_written': 2, 'error': None}},
