@@ -141,6 +141,25 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
         }
     }
     tk.group("extension publication and reference evidence") {
+        tk.run("published abnormal issuer exit retains both observations and rejects invented claims") {
+            let raw = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot().appendingPathComponent(
+                "tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"))) as! [String: Any]
+            let data = (raw["data"] as! [String: Any])["runner_result"]!
+            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: data))
+            _ = try pwRunnerEncodeJSON(baseline)
+            let changes: [(inout PWRunnerRunResult) -> Void] = [
+                { $0.extensions?[0].issuer?.exit_code = 0 },
+                { $0.extensions?[0].issuer?.result_published = false },
+                { $0.extensions?[0].issuer?.reaped = false },
+                { $0.extensions?[0].issuer?.token_length = 0 },
+            ]
+            for change in changes {
+                var reply = baseline; change(&reply)
+                var refused = false
+                do { _ = try pwRunnerEncodeJSON(reply) } catch { refused = true }
+                try expectTrue(refused)
+            }
+        }
         tk.run("native int64 handles and all-action disposition round trip") {
             let source = extensionReplyFixture()
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(source))

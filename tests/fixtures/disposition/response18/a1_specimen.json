@@ -12,13 +12,13 @@
         "operation": "file-read-data",
         "filter": {
           "kind": "path",
-          "value": "/private/tmp/pw-in-flight-3_nn2p4x/blocker.fifo"
+          "value": "/private/tmp/pw-in-flight-cyhonkjl/blocker.fifo"
         }
       },
       "attempt": {
         "kind": "file",
         "action": "open_read",
-        "target": "/private/tmp/pw-in-flight-3_nn2p4x/blocker.fifo"
+        "target": "/private/tmp/pw-in-flight-cyhonkjl/blocker.fifo"
       }
     },
     {

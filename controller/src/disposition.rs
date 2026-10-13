@@ -1258,9 +1258,26 @@ mod tests {
     }
 
     #[test]
+    fn published_abnormal_issuer_exit_requires_both_observations() {
+        let envelope: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"
+        )).unwrap();
+        let baseline = &envelope["data"]["runner_result"];
+        assert_eq!(diagnostics(baseline).disposition_integrity, Some("valid"));
+        for (key, value) in [("exit_code", json!(0)), ("result_published", json!(false)),
+            ("reaped", json!(false)), ("token_length", json!(0))] {
+            let mut changed = baseline.clone();
+            changed["extensions"][0]["issuer"][key] = value;
+            let diag = diagnostics(&changed);
+            assert_eq!(diag.disposition_integrity, Some("invalid"));
+            assert_eq!(diag.process_disposition, "withheld");
+        }
+    }
+
+    #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response17/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response18/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -1505,7 +1522,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response17/a1_expected.json"
+            "../../tests/fixtures/disposition/response18/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

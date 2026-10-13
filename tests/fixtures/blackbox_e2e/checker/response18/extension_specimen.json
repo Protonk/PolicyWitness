@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+      "target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+              "value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+            "target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+              "value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+            "target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
           }
         },
         {
@@ -76,13 +76,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+              "value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m3-reader-live-20261012/suites/witness_contract/extensions/artifacts/extension-target"
+            "target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target"
           }
         }
       ]

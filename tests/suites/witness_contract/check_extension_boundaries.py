@@ -160,6 +160,8 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             assert runner['test_overrides']['worker_executable_path'] == str(worker)
         assert consumer.validate(envelope) == [], consumer.validate(envelope)
         assert check_record(envelope) == [], check_record(envelope)
+        if worker_record:
+            assert envelope['data']['runner_sandbox_diagnostics']['disposition_integrity'] == 'valid'
         binary = envelope['data']['specimen']['binaries']['issuer']
         assert binary['path'] == str(issuer)
         assert binary['actual_sha256'] == hashlib.sha256(issuer.read_bytes()).hexdigest()

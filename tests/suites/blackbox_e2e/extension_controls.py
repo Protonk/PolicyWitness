@@ -7,10 +7,18 @@ from lifecycle_oracle import check_record
 
 
 def run_extension_controls(run):
-    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response17/extension_run.json'
+    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response18/extension_run.json'
     baseline = json.loads(fixture.read_text())
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)
+    abnormal = json.loads(fixture.with_name('issuer_abnormal_run.json').read_text())
+    run('issuer_abnormal_capture', abnormal)
+    assert check_record(abnormal) == []
+    for key, value in [('exit_code', 0), ('result_published', False), ('reaped', False), ('token_length', 0)]:
+        changed = deepcopy(abnormal)
+        changed['data']['runner_result']['extensions'][0]['issuer'][key] = value
+        run('issuer_abnormal_' + key, changed, rejected_by='abnormal issuer exit lacks publication and reap')
+        assert check_record(changed)
 
     for name, value in [('integer', 7), ('boolean', True), ('string', 'invalid'),
                         ('object', {'invalid': True}), ('entry', [7])]:
