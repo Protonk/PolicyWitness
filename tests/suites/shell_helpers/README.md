@@ -114,9 +114,12 @@ configured. Controls cover literal paths, order, failure continuation, missing
 and empty inputs, caller/child errexit, single-child status forwarding, and
 BYOXPC setup gates, runner-mode propagation, and cleanup after downstream
 success or failure. BYOXPC installation and removal use harmless stand-ins.
-The witness wrapper must retain its baseline-first ordering and selected cases.
-Its child inventory excludes scripts with independent case commands in the
-catalog; every other sibling script must still run through the wrapper.
+The witness wrapper must retain its baseline-first ordering and execute every
+sibling script, including independently cataloged cases. The expected inventory
+comes from the directory. Passing children and a failing baseline both preserve
+complete execution. Separate wrapper mutations omit the phase, extension, and
+extension-boundary scripts; each must be rejected for exactly the missing child
+receipt even while the baseline already makes the wrapper exit unsuccessfully.
 
 Artifacts retain fixture repositories, child receipts, wrapper streams, exit
 statuses, configurations, and the control inventory.

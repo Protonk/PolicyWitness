@@ -10,12 +10,20 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/shell_case'
 
 
+class ChildReceiptsMismatch(AssertionError):
+    def __init__(self, name, actual, expected):
+        super().__init__(name, actual, expected)
+        self.actual = actual
+        self.expected = expected
+
+
 def main():
     out = Path(sys.argv[1]).resolve()
     inventory = []
 
     def exercise(name, children, *, wrapper=None, modes=None, missing=(),
-                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True, selected=None):
+                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True, selected=None,
+                 wrapper_omission=None):
         work = out / name
         repo = work / 'fixture repo'
         library = repo / 'tests/lib/scripts.sh'
@@ -50,6 +58,12 @@ def main():
             path = repo / f'tests/suites/{wrapper}/run.sh'
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path.relative_to(repo), path)
+            if wrapper_omission is not None:
+                assert wrapper == 'witness_contract'
+                line = f'  "${{SUITE_DIR}}/{Path(wrapper_omission).name}"\n'
+                original = path.read_text()
+                assert original.count(line) == 1, (name, wrapper_omission)
+                path.write_text(original.replace(line, ''))
             argv = ['bash', str(path)]
         else:
             argv = ['bash', str(FIXTURE / 'script_group.sh'), str(library),
@@ -63,10 +77,6 @@ def main():
         records = [json.loads(line) for line in journal.read_text().splitlines()] if journal.exists() else []
         expected = expected if expected is not None else [child for child in children if child not in missing]
         actual = [record['script'] for record in records]
-        if ordered:
-            assert actual == expected, (name, actual, expected)
-        else:
-            assert sorted(actual) == sorted(expected) and actual[0] == expected[0], (name, actual)
         for record in records:
             assert record['mode'] == config['modes'].get(record['script'], 'pass'), (name, record)
             assert record['argv'] == (['runner', 'remove', '--id', 'fixture-id']
@@ -97,6 +107,10 @@ def main():
                     assert record['env_path'].endswith('/runner_install/artifacts/runner_env.json'), name
                 if selected is not None and not setup and record['script'] != 'tools/pw':
                     assert record['selected_cases'] in selected and '\n' not in record['selected_cases'], (name, record)
+        matched = (actual == expected if ordered else
+                   sorted(actual) == sorted(expected) and bool(actual) and actual[0] == expected[0])
+        if not matched:
+            raise ChildReceiptsMismatch(name, actual, expected)
         inventory.append(name)
         print(f'{name}: ok', flush=True)
 
@@ -129,17 +143,34 @@ def main():
 
     exercise('opt_in_forward', ['tests/run.sh'], wrapper='opt_in')
     baseline = 'tests/suites/witness_contract/happy_path_baseline.sh'
-    suite = json.loads((ROOT / 'tests/catalog.json').read_text())['suites']['witness_contract']
-    # A case with its own catalog command is dispatched independently. Keep
-    # every other sibling in the expectation so a missing wrapper child fails.
-    standalone = {part for case in suite['cases'] for part in case.get('command', [])
-                  if part.startswith('tests/suites/witness_contract/') and part.endswith('.sh')}
+    # The wrapper must run every sibling, including independently cataloged cases.
+    # Derive this inventory from the directory, not the wrapper being checked.
     witness = [baseline] + sorted(str(path.relative_to(ROOT)) for path in
                                   (ROOT / 'tests/suites/witness_contract').glob('*.sh')
-                                  if path.name not in ('run.sh', 'happy_path_baseline.sh')
-                                  and str(path.relative_to(ROOT)) not in standalone)
+                                  if path.name not in ('run.sh', 'happy_path_baseline.sh'))
+    exercise('witness_success', witness, wrapper='witness_contract', ordered=False)
     exercise('witness_continues', witness, wrapper='witness_contract',
              modes={baseline: 'fail'}, rc=1, ordered=False)
+    for leaf in ('phases.sh', 'extensions.sh', 'extension_boundaries.sh'):
+        omitted = f'tests/suites/witness_contract/{leaf}'
+        name = f'witness_omits_{Path(leaf).stem}'
+        try:
+            exercise(name, witness, wrapper='witness_contract', wrapper_omission=omitted,
+                     modes={baseline: 'fail'}, rc=1, ordered=False)
+        except ChildReceiptsMismatch as failure:
+            # Only the exact missing receipt counts as rejection. Status, stream,
+            # fixture setup, and all other child observations must still pass.
+            assert failure.expected == witness, (name, failure.expected)
+            assert sorted(failure.actual) == sorted(child for child in witness if child != omitted)
+            assert failure.actual[0] == baseline
+            (out / name / 'rejection.json').write_text(json.dumps({
+                'reason': 'child_receipts_mismatch', 'omitted': omitted,
+                'actual': failure.actual, 'expected': failure.expected,
+            }, indent=2) + '\n')
+            inventory.append(name)
+            print(f'{name}: rejected missing child', flush=True)
+        else:
+            raise AssertionError(f'{name}: wrapper omission escaped the receipt check')
 
     byoxpc = ['tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh',
               'tests/suites/runner_byoxpc/runner_install.sh',

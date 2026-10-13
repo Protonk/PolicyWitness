@@ -29,6 +29,7 @@ scripts=(
   "${SUITE_DIR}/queries_precede_attempts.sh"
   "${SUITE_DIR}/phases.sh"
   "${SUITE_DIR}/extensions.sh"
+  "${SUITE_DIR}/extension_boundaries.sh"
   "${SUITE_DIR}/queries_use_a_pre_attempt_interval.sh"
   "${SUITE_DIR}/attempt_effects_wait_for_collection.sh"
   "${SUITE_DIR}/query_interval_is_not_a_snapshot.sh"
