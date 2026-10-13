@@ -1085,7 +1085,7 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 | No worker spawned | No ordering object | No snapshot | `unestablished` on any emitted step |
 | Worker exists, application not confirmed | false/false/false | `not_invoked` | `unestablished` |
 | Applied, no planned queries, release acknowledged | true/true/true | `not_needed` | `unestablished`; no prediction exists |
-| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; the failure is retained in `phases[].validator_spawn_failure` |
+| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; an observed native spawn failure is retained in `phases[].validator_spawn_failure`; local setup can fail before a spawn record exists |
 | Eligible records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` for eligible records only |
 | Partial, diagnostic or rejected records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` only for eligible associated records; all others `unestablished` |
 | Proceed expired or worker died during collection; closure later observed | true/false/false | actual terminal disposition | `unestablished`; received records survive |

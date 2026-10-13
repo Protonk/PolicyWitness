@@ -135,13 +135,19 @@ evidence applicability, and obtain any needed auditor follow-up before A1
 closure. Formal H1 preparation and M4 have not started. This review/briefing
 does not authorize bypassing either boundary.
 
-**A1 correction increment:** wrapper/isolation controls, coordinated collection
-consistency checks and current-account fixes are implemented. The focused Rust,
-Python and wrapper retry passes 7/7; its sandboxed diagnostic and exact source
-snapshot remain retained. The app is still unchanged build 560 at this increment.
-Next, build this committed correction candidate with the established identity,
-run Swift/live/default and required opt-in controls, recheck changed rendered
-surfaces, and prepare a focused follow-up in the same audit document for the
+**A1 correction increment:** production corrections are committed at `8707abc`;
+fixture corrections are committed at `2f380d0`. Clean source `2f380d0` built as
+signed build 566 (`v0.2.8-46-g2f380d0`), with worker identity
+`d728670539b289721b4cfbc567df5c14ec76917c09311bba283e64a39ba36957`.
+The full default battery passes 174/174 in `a1-repair-default-20261013`
+(`20261013T171246Z_a9d472bc`), with no skips/unrun and unchanged inventories.
+Swift passes all 406 checks; the maximum-reply bound and shape golden are
+unchanged. A final Python oracle malformed-container fix passes its focused
+checker controls, and the rendered review's sole setup/spawn wording finding
+is corrected for focused recheck. These last changes do not change app inputs.
+Next, commit this final test/documentation correction, run the consolidated
+default plus 22 required opt-in cases on unchanged build 566, retain final
+rendered review and acceptance evidence, and prepare the follow-up for the
 original auditor. Do not close A1 or start H1/M4 at that handoff.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed

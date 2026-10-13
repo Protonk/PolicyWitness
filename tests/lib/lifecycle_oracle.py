@@ -465,10 +465,17 @@ def check_record(envelope):
     view = read_lifecycle(envelope)
     findings = []
     proj = view['projections']
-    runner = (envelope.get('data') or {}).get('runner_result') or {}
+    data = envelope.get('data')
+    runner = data.get('runner_result') if isinstance(data, dict) else None
+    runner = runner if isinstance(runner, dict) else {}
     if not runner.get('reporting_failure'):
-        for phase in runner.get('phases') or []:
-            if isinstance(phase, dict):
+        phases = runner.get('phases')
+        if phases is not None and not isinstance(phases, list):
+            findings.append(_finding('D6', 'phase_collection', 'phases is not an array'))
+        for phase in phases if isinstance(phases, list) else []:
+            if not isinstance(phase, dict):
+                findings.append(_finding('D6', 'phase_collection', 'phase is not an object'))
+            else:
                 problem = collection_problem(phase)
                 if problem:
                     findings.append(_finding('D6', 'phase_collection', problem))

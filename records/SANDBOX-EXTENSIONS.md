@@ -1339,3 +1339,19 @@ and corrected rendered views are prepared for the existing documentation
 reviewer's bounded recheck; the external follow-up remains assigned to the
 original auditor. A final clean build and full default/opt-in acceptance follow
 this test-fixture correction increment.
+
+The clean `2f380d0` build is signed development build 566,
+`v0.2.8-46-g2f380d0`. Full default run `a1-repair-default-20261013`
+(`20261013T171246Z_a9d472bc`) passes 174/174 with no skips/unrun and unchanged
+app inventories. The final oracle review found that a malformed scalar
+`phases` value could raise instead of return a diagnostic. Explicit container
+and entry checks now preserve the reader's diagnostic behavior; five independent
+mutations exercise both Python entry points. Focused working-source run
+`a1-repair-oracle-20261013` (`20261013T173450Z_39acbafc`) passes its checker
+case; exact source hashes/diff and original console are retained with null
+index source. The documentation reviewer found one wording overstatement in
+the ordering table: local driver setup can fail before a native spawn-failure
+record exists. The corrected cell qualifies that claim and has a new immutable
+render for recheck. These final changes affect test readers and prose only.
+The next acceptance run consolidates all default and required opt-in cases,
+so final credits need no reuse of results from the earlier oracle revision.

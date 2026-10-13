@@ -12,6 +12,15 @@ def run_extension_controls(run):
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)
 
+    for name, value in [('integer', 7), ('boolean', True), ('string', 'invalid'),
+                        ('object', {'invalid': True}), ('entry', [7])]:
+        document = deepcopy(baseline)
+        document['data']['runner_result']['phases'] = value
+        run('phase_collection_malformed_' + name, document,
+            rejected_by='phase is not an object' if name == 'entry' else 'phases must be a bounded array')
+        findings = check_record(document)
+        assert any(f['kind'] == 'phase_collection' for f in findings), (name, findings)
+
     cases = json.loads((fixture.parents[3] / 'contract/phase_collection.json').read_text())
     for case in cases:
         document = deepcopy(baseline)
