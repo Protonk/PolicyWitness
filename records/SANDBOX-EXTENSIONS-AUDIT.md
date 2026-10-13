@@ -11,9 +11,10 @@ section. Execution dispositions remain separate from the attributed audit text.
 
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
 executing-agent review and corrections are recorded below. Final acceptance and
-the rendered recheck are complete; the focused follow-up handoff is ready for
-the original auditor. This exchange is not A1 closure; execution is standing
-by before H1 and M4.
+the rendered recheck are complete; the original auditor's follow-up answers were
+returned on 2026-10-13 (two new findings, no remaining blocker), and the
+executing-agent disposition of the follow-up is pending. This exchange is not
+A1 closure; execution is standing by before H1 and M4.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -939,8 +940,187 @@ independently established.
 
 #### Original auditor follow-up answers
 
-Pending. Please attribute answers and findings here without rewriting the
-original audit or the executing-agent dispositions.
+Auditor follow-up (Claude Fable 5.1, out of band, 2026-10-13). Reviewed at
+`9a1f20b7e5517d67177e753996c19b3dbe0ae7df`, whose delta from the reviewed
+source `efb588b` is the plan, two records and the retention index; the
+implementation, test code and app inputs are those of `52bb1b9` and `2f380d0`.
+The local app is build 566 with worker identity `d7286705…6957` embedded in
+the runner binary, the worker header, the Swift layout and `tests/lib/contract.py`.
+My own evidence is retained under
+[a1-recheck-default-20261013](../tests/out/runs/a1-recheck-default-20261013/audit/):
+33 reader probes replayed through the Python consumer, the lifecycle oracle and
+the Rust `execution_diagnostics` entry point (the Rust replay used a scratch
+copy of `controller/` at this commit with one appended test function that only
+reads probe files; the production source is byte-identical and the diff is
+retained), wrapper-control mutations, and the full default battery at this
+commit against unchanged build 566 (run `20261013T193011Z_7e1b6661`: 174 of 174 passed, 0 failed, 0 skipped, 0 unrun). I did not
+rerun the 22 credited opt-in cases: each requires the signing identity directly
+or through its installation dependency, and the standing instruction is to pause
+at keychain-dependent steps. Their evidence is accepted on the provenance checks
+in answer 3, not on my own execution.
+
+**Follow-up 1 — Collection consistency and wire versions.** Yes on both
+parts. The repair rejects the A1-F3 contradiction, preserves every valid
+failed-collection state, and leaves degraded replies holding the raw conflict
+without claims. Retaining 4/17/7 is justified.
+
+*The table is the producer's image.* In
+[`CWorkerOrchestrator.swift`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+the phase boundary assigns exactly five statuses: `clock_unavailable` before
+planning (plan stays empty, so `buildOrdering` yields `not_needed`) or after a
+nonempty plan (`not_spawned`); `not_needed` for an empty plan; `budget_exhausted`
+before any spawn (`not_spawned`); and `collected` once `runValidator` returns.
+The disposition and `validator_subprocess.reaped` derive from the same
+`ValidatorOutput`; a `validator_spawn_failure` record exists only for
+`.spawnFailed`, whose partial output is nil; pre-spawn driver failures return
+`.failure(_, nil)` with no record. Every compatible row in the failure contract's
+table is therefore a reachable production state and every contradictory row is
+unreachable, which is what the fixture's nine accepted and twelve rejected rows
+encode.
+
+*Three readers, one rule.* Swift
+[`collectionEvidenceConsistent`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
+runs inside the ordinary branch of the reply encoder; the degraded branch
+guarded by `reporting_failure` does not apply it, and the service's fallback
+in `pwRunnerReplyData` strips comparisons and re-encodes under
+`reporting_failure`, so a contradiction reaches the controller as evidence,
+not as a claim. Rust `phase_collection_issues` returns nothing when
+`reporting_failure` is an object and otherwise withholds the disposition; the
+Python consumer skips `_validate_phases` for failed reporting and the oracle
+skips its D6 phase check. My 33 probes on the live `phases/ordinary` and
+`extensions/lifecycle` envelopes of the resumed run agree across all three
+readers: the four unmodified baselines accepted, including the two build-560
+envelopes from `extensions-m3-accepted-20261013` read by the repaired readers;
+the F3 mutation and its three mirrors (`collected` child phase relabelled
+`not_needed` or `not_reached`, the consume phase relabelled `not_needed`)
+rejected by all three with the phase rule; eight valid failed or empty
+collections accepted by all three (`budget_exhausted`, clock failure before
+and after planning, an unconfirmed child, and appended `not_spawned` phases
+with and without a spawn record, an unconfirmed child and `not_reached`); ten
+contradictions beyond the fixture rows rejected by all three (reap flag against
+disposition in both directions, child absent or present against disposition,
+spawn failure beside a child or a `not_needed` phase, ordering removed, unknown
+status, empty child object, string reap flag); and the degraded reply carrying
+the F3 contradiction accepted by all three with no comparison claims. The only
+divergences are on malformed types and are recorded as A1-F11.
+
+*Versions.* The contract's rule in
+[CONTRACT.md](../docs/CONTRACT.md#when-a-number-moves) moves a number when a
+field is removed, its type or meaning changes, or a new requirement is placed
+on readers. The repair removes no field, changes no type and changes no meaning:
+`collected` and `not_needed` keep the meanings the contract already documented.
+The new reader obligation applies only to combinations no conforming producer
+emits, as the producer image shows, and the set of producer-emitted documents a
+version-17 reader accepts is the same before and after the repair; the build-560
+envelopes still validate. That is enforcement of version 17, not a new reading
+rule, and I accept retaining 4/17/7 and regenerating the worker identity
+without a layout change. Recommendation, not a finding: record this reading
+in the contract's "When a number moves" section in one sentence, so the next
+validation hardening does not reopen the question.
+
+**Follow-up 2 — Test controls, Swift fixtures and the bound.** Partly. The
+isolation controls, the Swift fixture split and the maximum-reply allowance
+are preserved. The wrapper control is not; it now guards two scripts (A1-F10).
+
+*Isolation.* [`check.py`](../tests/suites/runner_specimen_isolation/check.py)
+now requires step-only reversal to report both the order error and the broken
+partition, then reverses the sole phase's `action_ids` so the pure order
+mutation and the bad-attempt variant must add exactly one order error with the
+remaining diagnostic multiset unchanged; the `check` helper enforces
+`len(order) == 1` and multiset equality. Both rejections stay independent and
+the consumer is not weakened. It passes in my battery.
+
+*Wrapper.* [`check_scripts.py`](../tests/suites/shell_helpers/check_scripts.py)
+derives its exclusion from every `witness_contract` case command. Every case in
+that suite has its own command, so 34 of the 36 siblings are excluded and the
+expectation is three scripts: the baseline and the two scripts cataloged under
+`runner_validator_failure`. I demonstrated the consequence on a scratch copy of
+the tests tree: with `phases.sh` and `extensions.sh` deleted from the wrapper,
+all 31 script-group controls pass; with
+`validator_decode_failure_reports_degraded.sh` deleted, the control fails. The
+README's sentence that "every other sibling script must still run through the
+wrapper" is literally true of two scripts. See A1-F10.
+
+*Swift fixtures.* The field-complete fixture no longer places a validator child
+and a spawn failure in one phase; the spawn-failure keys reach the response
+shape golden through the added `spawnFailed` shape document, and the committed
+golden is unchanged since `955e227`. The `worker` and `collection`
+missing-evidence cases in `OrderingTests` still assert `unestablished` order
+first, then assert ordinary encoding refusal and degraded retention of the
+contradictory validator record with comparisons withheld. `PhaseProtocolTests`
+drives the 21 fixture rows through the full encoder. Coverage is preserved.
+
+*Bound.* The spawn member is maximized separately and added once per phase
+(eight phases) with one byte removed for the brace-to-comma substitution. The
+union is 52,414,779 bytes before and after the split, so the separate accounting
+reproduces the former in-fixture bytes exactly; the resumed run's Swift log
+records `maximal reply: 52414779 bytes; budget 159383552`, and the 152 MiB
+budget is unchanged. The union remains deliberately unreachable.
+
+**Follow-up 3 — Coverage, provenance and cleanup.** Yes, the gap is closed,
+and I found no missing dependency, unsupported applicability claim or cleanup
+issue. Mechanical checks I repeated: the 196 credits are exactly the
+dispatcher's 174 default cases plus 22 of the 25 opt-ins (the three not
+credited are `runner_exec_inheritance/mutation_controls`,
+`sandbox_extensions_native/feasibility` and `smoke/runner_caller_auth`, none
+named by the M3 gate); the 30 credits from the cancelled run are exactly its
+completed passes and the 166 resumed credits are exactly its remaining list
+and the resumed run's completed passes; the resumed run's source snapshot
+hashes all 644 tracked files and every hash equals the git tree at `efb588b`;
+the `52bb1b9` to `efb588b` delta is the four metadata files the applicability
+review names; the `2f380d0` to `52bb1b9` delta is six files of which none is a
+build input, and the staged guide is byte-identical to its source; the 21
+hashed app entries equal the current app. The labeled exceptions for the 30
+reused results are judgments I agree with: dispatcher fixtures copy the index,
+retention controls replace it, and build guards copy tracked metadata that
+`build.sh` does not consume. Cleanup rechecked now: all 26 recorded observer
+channels return ENOENT from `shm_open`, all 15 session and registry labels are
+absent from the user launchd domain, all 16 staging and bundle paths are absent,
+and no `pw-byoxpc-*` directory remains under `/private/tmp`. The 25 unnamed M3
+objects remain unverifiable, as recorded. My discriminating run is the default
+battery at this commit: `20261013T193011Z_7e1b6661`, 174 of 174 passed, 0 failed, 0 skipped, 0 unrun, with the app inventory
+unchanged.
+
+**Follow-up 4 — Documentation and deferrals.** Yes. A1-F1 is corrected. A1-F4's
+guide and contract wording matches the worker: in
+[`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+status 3 follows `setrlimit`, the descriptor size check, `mmap`, and a failed
+close or rejected publication, and the text no longer implies malformed input.
+A1-F6 limits the precise refusal to a current runner copy. A1-F7's wording
+matches `compile_fixture` in `check_extension_boundaries.py` (clang `-O2`
+against `control.c`, which defines `PW_EXTENSION_OBSERVE`) and claims nothing
+about shipped bytes. A1-F9's pointer is beside the M2 figure. A1-L1 matches the
+orchestrator's capability branch. The architecture account names the new
+guard and its three checks, the generated copies agree, and `source_drift`
+passes in my battery. The deferrals stand: A1-F5 and the two optional controls
+to M4, A1-F8 as an H1 design note. Nothing here invalidates M3 or blocks H1
+preparation. **No remaining blocker.** Two items belong to A1 rather than a later
+milestone: A1-F10 is the unfinished half of A1-F2 and is small enough to finish
+in this follow-up, and A1-F11 can be carried to M5.1 explicitly.
+
+**A1-F10 — The repaired wrapper control guards two scripts (low; test
+maintenance; complete within A1 follow-up or carry it explicitly).** Because the
+catalog gives every `witness_contract` case its own command, the catalog-derived
+exclusion in `check_scripts.py` removes 34 of 36 siblings from the
+`witness_continues` expectation, and the control no longer fails when a sibling
+is dropped from `tests/suites/witness_contract/run.sh` (demonstrated above and
+retained under `audit/`). The default battery is unaffected because the
+dispatcher runs cases from the catalog, not the wrapper, so this is not product
+evidence. Smallest corrections: either add `extension_boundaries.sh` to the
+wrapper and restore the sibling-complete expectation, or keep catalog awareness
+but key the exclusion on an explicit attribute or a named exclusion list with a
+stated reason; in both cases add the negative control that drops a sibling from
+a wrapper copy and expects failure, which is the check that would have caught
+this repair.
+
+**A1-F11 — The Rust reader treats malformed phase containers and types as
+absent (low; M5.1 reader hardening).** `phase_collection_issues` reads through
+`as_array` and `as_str`, so `phases: 7` yields no issue and a `not_reached`
+phase whose `validator_disposition` is the integer 7 is accepted; the Python
+consumer and oracle reject both (probes 40 and 43). No claim depends on it: the
+Rust projection owns the process disposition, phase claims are read by the
+Python readers, and no producer emits these shapes. It belongs with the M5.1
+reader-hardening work rather than with this follow-up.
 
 #### Executing-agent disposition of follow-up
 
