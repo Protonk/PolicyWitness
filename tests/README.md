@@ -476,6 +476,11 @@ Consumer evidence coverage follows the
 `tests/lib/consumer.py` validates one envelope and selects steps by field
 using explicit classification tables over the raw channel fields, without
 consulting specimen policies or calling the runner classifier.
+`tests/lib/phase_evidence.py` checks collection status against validator
+disposition and presence for both the consumer and lifecycle oracle. It is
+independent of the Swift encoder and Rust disposition reader; all three
+implementations exercise the hand-reviewed `contract/phase_collection.json`
+fixture through their enclosing reply/claim checks.
 Recovered spawn-failure records retain their numeric codes, paths and
 diagnostic text. Explicit evidence-loss replies omit that record along with
 steps and subprocesses. Controlled scenario expectations stay in the CLI/witness

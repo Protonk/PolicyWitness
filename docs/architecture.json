@@ -1693,7 +1693,7 @@
           "from": "shm_region",
           "to": "reply",
           "kind": "guard",
-          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts; native result publication and fresh-read consistency before claims",
+          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts; collection status agrees with validator observations; native result publication and fresh-read consistency before claims",
           "short": "phase publication; ordinal release",
           "sources": [
             {
@@ -1711,6 +1711,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
               "symbol": "extensionEvidenceProblem"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "symbol": "collectionEvidenceConsistent"
             }
           ],
           "checks": [
@@ -1732,6 +1736,16 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/disposition.rs",
+              "symbol": "phase_collection_states_gate_disposition_without_requiring_success",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/blackbox_e2e/extension_controls.py",
+              "symbol": "run_extension_controls",
               "form": "test"
             }
           ]

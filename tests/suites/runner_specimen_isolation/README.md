@@ -53,7 +53,9 @@ on successful attempts.
 Each run has paired ordered/reordered controls for valid evidence and for an
 exec attempt that contradicts its expected success. Reordering must add exactly
 one order error and preserve the multiset of all other diagnostics, including
-the moved attempt's attribution. Extra, lost, and duplicated step errors fail;
+the moved attempt's attribution. These controls reverse both steps and their
+phase action IDs. A separate step-only reversal must also report the broken
+phase partition. Extra, lost, and duplicated step errors fail;
 diagnostic line order is unconstrained. The ordered inputs must independently
 pass or report the specified attempt failure, so agreement alone cannot pass.
 

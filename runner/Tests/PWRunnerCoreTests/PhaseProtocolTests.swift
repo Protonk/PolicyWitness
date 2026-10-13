@@ -24,6 +24,42 @@ private func phaseRun(_ phases: [PWRunnerPhase], overrides: PWRunnerTestOverride
 
 func runPhaseProtocolTests(_ tk: TestKit) {
     tk.group("ordered phases: production C/Swift and independent file effects") {
+        tk.run("collection states reject contradictions and retain failed driver evidence") {
+            let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+                .deletingLastPathComponent().deletingLastPathComponent()
+            let fixtures = root.appendingPathComponent("tests/fixtures")
+            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
+                fixtures.appendingPathComponent("blackbox_e2e/checker/response17/extension_run.json"))) as! [String: Any]
+            let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
+            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+            let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:
+                fixtures.appendingPathComponent("contract/phase_collection.json"))) as! [[String: Any]]
+            for row in cases {
+                var reply = baseline
+                var phase = reply.phases.last!
+                phase.phase_id = "collection_control"; phase.ordinal = reply.phases.count + 1; phase.action_ids = []
+                phase.collection_status = row["status"] as! String
+                phase.arrival_observed = phase.collection_status != "not_reached"; phase.completion_observed = false
+                phase.ordering?.validator_disposition = row["disposition"] as! String
+                phase.ordering?.collection_closed_before_proceed = phase.ordering?.validator_disposition != "not_invoked"
+                phase.ordering?.proceed_set = false; phase.ordering?.proceed_observed = false
+                phase.ordering?.worker_lifetime_established = false
+                if let reaped = row["reaped"] as? Bool {
+                    phase.validator_subprocess?.reaped = reaped
+                    phase.validator_subprocess?.exit_code = nil; phase.validator_subprocess?.term_signal = nil
+                } else { phase.validator_subprocess = nil }
+                phase.validator_spawn_failure = (row["spawn_failure"] as! Bool) ? PWRunnerSpawnFailure(
+                    executable_path: "/controlled/validator", return_code: 2, diagnostic: "controlled spawn failure") : nil
+                reply.phases.append(phase)
+                var rejected = false
+                do { _ = try pwRunnerEncodeJSON(reply) }
+                catch EncodingError.invalidValue(_, let context) {
+                    rejected = true
+                    try expectTrue(context.debugDescription.contains("phase collection status contradicts validator evidence"))
+                }
+                try expectEqual(rejected, !(row["accepted"] as! Bool), row["name"] as! String)
+            }
+        }
         tk.run("each of eight held arrivals precedes its own unlink and follows earlier effects") {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("pw-phases-" + UUID().uuidString)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)

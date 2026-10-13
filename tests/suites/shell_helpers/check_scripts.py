@@ -129,9 +129,15 @@ def main():
 
     exercise('opt_in_forward', ['tests/run.sh'], wrapper='opt_in')
     baseline = 'tests/suites/witness_contract/happy_path_baseline.sh'
+    suite = json.loads((ROOT / 'tests/catalog.json').read_text())['suites']['witness_contract']
+    # A case with its own catalog command is dispatched independently. Keep
+    # every other sibling in the expectation so a missing wrapper child fails.
+    standalone = {part for case in suite['cases'] for part in case.get('command', [])
+                  if part.startswith('tests/suites/witness_contract/') and part.endswith('.sh')}
     witness = [baseline] + sorted(str(path.relative_to(ROOT)) for path in
                                   (ROOT / 'tests/suites/witness_contract').glob('*.sh')
-                                  if path.name not in ('run.sh', 'happy_path_baseline.sh'))
+                                  if path.name not in ('run.sh', 'happy_path_baseline.sh')
+                                  and str(path.relative_to(ROOT)) not in standalone)
     exercise('witness_continues', witness, wrapper='witness_contract',
              modes={baseline: 'fail'}, rc=1, ordered=False)
 

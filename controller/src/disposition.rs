@@ -1081,6 +1081,45 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
     issues
 }
 
+fn phase_collection_issues(runner: &Value) -> Vec<Value> {
+    if runner["reporting_failure"].is_object() {
+        return vec![]; // Degraded replies preserve conflicting observations.
+    }
+    let mut issues = Vec::new();
+    for phase in runner["phases"].as_array().into_iter().flatten() {
+        let disposition = phase["ordering"]["validator_disposition"].as_str();
+        let status = phase["collection_status"].as_str();
+        let allowed = match status {
+            Some("not_reached") => matches!(disposition, None | Some("not_invoked")),
+            Some("not_needed") => disposition == Some("not_needed"),
+            Some("collected") => {
+                matches!(disposition, Some("not_spawned" | "reaped" | "unconfirmed"))
+            }
+            Some("budget_exhausted") => disposition == Some("not_spawned"),
+            Some("clock_unavailable") => matches!(disposition, Some("not_needed" | "not_spawned")),
+            _ => false,
+        };
+        let validator = &phase["validator_subprocess"];
+        let spawn = &phase["validator_spawn_failure"];
+        let observations = if status != Some("collected") {
+            validator.is_null() && spawn.is_null()
+        } else if disposition == Some("not_spawned") {
+            validator.is_null() // Driver setup can fail before posix_spawn.
+        } else {
+            validator.is_object()
+                && spawn.is_null()
+                && validator["reaped"].as_bool() == Some(disposition == Some("reaped"))
+        };
+        if !allowed || !observations {
+            issues.push(integrity_issue(
+                "phase_collection",
+                "phase collection status contradicts validator evidence".into(),
+            ));
+        }
+    }
+    issues
+}
+
 pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
@@ -1132,7 +1171,8 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
         },
     };
     if let Some(runner) = runner {
-        let native_issues = extension_account_issues(runner);
+        let mut native_issues = extension_account_issues(runner);
+        native_issues.extend(phase_collection_issues(runner));
         if !native_issues.is_empty() {
             projection.disposition = "withheld";
             projection.cause = Some("unknown");
@@ -1156,6 +1196,54 @@ mod tests {
 
     fn diagnostics(runner: &Value) -> RunnerExecutionDiagnostics {
         execution_diagnostics(Some(runner))
+    }
+
+    #[test]
+    fn phase_collection_states_gate_disposition_without_requiring_success() {
+        let cases: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/phase_collection.json"
+        ))
+        .unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut runner = worker("ok", None);
+            let phase = &mut runner["phases"][0];
+            phase["collection_status"] = case["status"].clone();
+            phase["ordering"]["validator_disposition"] = case["disposition"].clone();
+            phase["validator_subprocess"] = if case["reaped"].is_null() {
+                Value::Null
+            } else {
+                json!({"pid": 43, "reaped": case["reaped"], "exit_code": null})
+            };
+            phase["validator_spawn_failure"] = if case["spawn_failure"] == true {
+                json!({"origin": "runner_host", "operation": "posix_spawn",
+                    "executable_path": "/controlled/validator", "return_code": 2,
+                    "diagnostic": "controlled spawn failure"})
+            } else {
+                Value::Null
+            };
+            let diag = diagnostics(&runner);
+            if case["accepted"] == true {
+                assert_eq!(
+                    diag.disposition_integrity,
+                    Some("valid"),
+                    "{}",
+                    case["name"]
+                );
+            } else {
+                assert_eq!(
+                    diag.disposition_integrity,
+                    Some("invalid"),
+                    "{}",
+                    case["name"]
+                );
+                assert_eq!(diag.process_disposition, "withheld", "{}", case["name"]);
+                assert!(
+                    diag.disposition_issues
+                        .iter()
+                        .any(|i| i["kind"] == "phase_collection")
+                );
+            }
+        }
     }
 
     #[test]

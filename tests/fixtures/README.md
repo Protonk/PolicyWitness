@@ -16,6 +16,10 @@ deterministic, and checked into the repo so tests are hermetic.
   against. A failing comparison writes a candidate into the case artifacts;
   replace the golden after review, and bump the number in `docs/contract.json`
   first when the failure says so. See `docs/CONTRACT.md`.
+  `phase_collection.json` supplies hand-reviewed compatible and contradictory
+  collection/disposition observations to the Swift encoder, Rust disposition
+  reader and Python consumer/oracle controls. Accepted failures include driver
+  setup, native spawn failure and unconfirmed child cleanup.
   `path_diagnostics.json` contains independent compact path states,
   Unicode byte distinctions and malformed representations shared by Swift
   encoding/decoding, Rust forwarding and Python consumer checks.

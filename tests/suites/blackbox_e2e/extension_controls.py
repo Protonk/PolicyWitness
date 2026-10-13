@@ -12,6 +12,32 @@ def run_extension_controls(run):
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)
 
+    cases = json.loads((fixture.parents[3] / 'contract/phase_collection.json').read_text())
+    for case in cases:
+        document = deepcopy(baseline)
+        reply = document['data']['runner_result']
+        # An empty final phase leaves every existing action/claim untouched.
+        phase = deepcopy(reply['phases'][-1])
+        phase.update(phase_id='collection_control', ordinal=len(reply['phases']) + 1,
+                     action_ids=[], arrival_observed=case['status'] != 'not_reached',
+                     completion_observed=False, collection_status=case['status'])
+        phase['ordering'].update(validator_disposition=case['disposition'],
+            collection_closed_before_proceed=case['disposition'] != 'not_invoked',
+            proceed_set=False, proceed_observed=False, worker_lifetime_established=False)
+        if case['reaped'] is None:
+            phase.pop('validator_subprocess', None)
+        else:
+            phase['validator_subprocess'].update(reaped=case['reaped'], exit_code=None, term_signal=None)
+        phase.pop('validator_spawn_failure', None)
+        if case['spawn_failure']:
+            phase['validator_spawn_failure'] = dict(origin='runner_host', operation='posix_spawn',
+                executable_path='/controlled/validator', return_code=2, diagnostic='controlled spawn failure')
+        reply['phases'].append(phase)
+        diagnostic = None if case['accepted'] else 'phase collection status contradicts validator evidence'
+        run('phase_collection_' + case['name'], document, rejected_by=diagnostic)
+        findings = check_record(document)
+        assert (not findings) == case['accepted'], (case['name'], findings)
+
     def runner(document):
         return document['data']['runner_result']
 

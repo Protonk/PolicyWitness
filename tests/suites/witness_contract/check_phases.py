@@ -87,6 +87,8 @@ def run_targets(pw, out, target_dir, session_state):
         rejected('earlier_records_cannot_supply_later_query', lambda r: r['phases'][2].update(validator_subprocess=r['phases'][0]['validator_subprocess'])),
         rejected('duplicate_phase', lambda r: r['phases'][2].update(phase_id='p0')),
         rejected('action_partition', lambda r: r['phases'][2].update(action_ids=['missing'])),
+        rejected('collected_without_collection', lambda r: r['phases'][1].update(collection_status='collected')),
+        rejected('not_needed_with_validator', lambda r: r['phases'][2].update(collection_status='not_needed')),
     ]
     for field in ('ordering', 'action_ids', 'collection_status', 'ordinal', 'validator_subprocess'):
         controls.append(rejected('malformed_' + field, lambda r, key=field: r['phases'][2].update({key: 7 if key != 'ordinal' else []})))
@@ -133,7 +135,7 @@ def run_targets(pw, out, target_dir, session_state):
     assert child['stdout_collection_stop'] == 'byte_limit' and len(child['records']) == 1
     assert 16384 < child['stdout_bytes_received'] <= 24576
     assert child['reaped'] is True and cutoff['steps'][0]['attempt']['rc'] == 0
-    print('Public phases: independent unlink, fresh unavailable query, fresh native later query; eleven reader rejections; aggregate timeout and byte cutoff.')
+    print('Public phases: independent unlink, fresh unavailable query, fresh native later query; reader rejection controls; aggregate timeout and byte cutoff.')
 
 
 if __name__ == '__main__':

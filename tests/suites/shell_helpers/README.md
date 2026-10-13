@@ -115,6 +115,8 @@ and empty inputs, caller/child errexit, single-child status forwarding, and
 BYOXPC setup gates, runner-mode propagation, and cleanup after downstream
 success or failure. BYOXPC installation and removal use harmless stand-ins.
 The witness wrapper must retain its baseline-first ordering and selected cases.
+Its child inventory excludes scripts with independent case commands in the
+catalog; every other sibling script must still run through the wrapper.
 
 Artifacts retain fixture repositories, child receipts, wrapper streams, exit
 statuses, configurations, and the control inventory.

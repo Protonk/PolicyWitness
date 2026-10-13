@@ -25,6 +25,7 @@ import contract
 import lifecycle_contract as C
 from lifecycle_adapter import read_lifecycle
 from document_versions import version_errors
+from phase_evidence import collection_problem
 
 MISSING = C.MISSING
 ORDER = {op: position for position, op in enumerate(C.PROTOCOL_ORDER)}
@@ -464,6 +465,13 @@ def check_record(envelope):
     view = read_lifecycle(envelope)
     findings = []
     proj = view['projections']
+    runner = (envelope.get('data') or {}).get('runner_result') or {}
+    if not runner.get('reporting_failure'):
+        for phase in runner.get('phases') or []:
+            if isinstance(phase, dict):
+                problem = collection_problem(phase)
+                if problem:
+                    findings.append(_finding('D6', 'phase_collection', problem))
     if view['reporting'] == 'no_runner_reply':
         return findings
     if view['reporting'] == 'no_worker':

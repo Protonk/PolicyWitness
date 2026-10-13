@@ -72,6 +72,10 @@ constructed controls.
 live envelope passes BBX-001's expectations. Controlled changes must fail:
 an incorrect later attempt, a prediction mismatch, both together, both on the
 same step, malformed evidence channels, duplicate IDs, and reordered steps.
+The hand-reviewed `contract/phase_collection.json` cases append an empty phase
+to the retained extension capture, leaving its action evidence untouched.
+The consumer and lifecycle oracle must accept compatible failed collections
+and reject contradictory status, process, spawn and reap evidence.
 Combined failures must report each independent problem, so changing a skip
 to an early failure is insufficient. These controls exercise the checker CLI
 without importing its implementation or any production code.

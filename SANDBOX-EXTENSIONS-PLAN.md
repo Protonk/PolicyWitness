@@ -135,6 +135,15 @@ evidence applicability, and obtain any needed auditor follow-up before A1
 closure. Formal H1 preparation and M4 have not started. This review/briefing
 does not authorize bypassing either boundary.
 
+**A1 correction increment:** wrapper/isolation controls, coordinated collection
+consistency checks and current-account fixes are implemented. The focused Rust,
+Python and wrapper retry passes 7/7; its sandboxed diagnostic and exact source
+snapshot remain retained. The app is still unchanged build 560 at this increment.
+Next, build this committed correction candidate with the established identity,
+run Swift/live/default and required opt-in controls, recheck changed rendered
+surfaces, and prepare a focused follow-up in the same audit document for the
+original auditor. Do not close A1 or start H1/M4 at that handoff.
+
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
 extension/phase test targets use owned `/private/tmp` directories. The first

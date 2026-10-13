@@ -221,6 +221,11 @@ def exercise_checker(witnesses, envelopes, out):
         valid_diagnostics = check(f"{witness['label']}_attribution_valid_ordered", envelope, witness)
         changed = copy.deepcopy(envelope)
         changed['data']['runner_result']['steps'].reverse()
+        check(f"{witness['label']}_reordered_broken_partition", changed, witness,
+              ['expected step IDs in order', 'phase actions do not partition the ordered steps'])
+        # Isolate the request-order diagnostic from the phase partition rule.
+        assert len(changed['data']['runner_result']['phases']) == 1
+        changed['data']['runner_result']['phases'][0]['action_ids'].reverse()
         check(f"{witness['label']}_reordered_valid", changed, witness,
               ['expected step IDs in order'], same_diagnostics_as=valid_diagnostics)
         changed = copy.deepcopy(envelope)
@@ -231,6 +236,7 @@ def exercise_checker(witnesses, envelopes, out):
         ordered_diagnostics = check(f"{witness['label']}_attribution_bad_attempt", changed, witness,
                                     attempt_errors)
         steps.reverse()  # Move the faulty exec step away from its request position.
+        changed['data']['runner_result']['phases'][0]['action_ids'].reverse()
         check(f"{witness['label']}_reordered_and_bad_attempt", changed, witness,
               ['expected step IDs in order', *attempt_errors], same_diagnostics_as=ordered_diagnostics)
         changed = copy.deepcopy(envelope)

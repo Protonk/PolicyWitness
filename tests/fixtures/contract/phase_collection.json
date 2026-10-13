@@ -1,0 +1,23 @@
+[
+  {"name":"not_reached","status":"not_reached","disposition":"not_invoked","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"empty_plan","status":"not_needed","disposition":"not_needed","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"clock_before_planning","status":"clock_unavailable","disposition":"not_needed","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"clock_after_planning","status":"clock_unavailable","disposition":"not_spawned","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"budget_exhausted","status":"budget_exhausted","disposition":"not_spawned","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"driver_setup_failed","status":"collected","disposition":"not_spawned","reaped":null,"spawn_failure":false,"accepted":true},
+  {"name":"spawn_failed","status":"collected","disposition":"not_spawned","reaped":null,"spawn_failure":true,"accepted":true},
+  {"name":"child_reaped","status":"collected","disposition":"reaped","reaped":true,"spawn_failure":false,"accepted":true},
+  {"name":"child_unconfirmed","status":"collected","disposition":"unconfirmed","reaped":false,"spawn_failure":false,"accepted":true},
+  {"name":"collected_but_not_needed","status":"collected","disposition":"not_needed","reaped":null,"spawn_failure":false,"accepted":false},
+  {"name":"collected_but_not_invoked","status":"collected","disposition":"not_invoked","reaped":null,"spawn_failure":false,"accepted":false},
+  {"name":"empty_plan_with_child","status":"not_needed","disposition":"not_needed","reaped":true,"spawn_failure":false,"accepted":false},
+  {"name":"unreached_with_spawn_failure","status":"not_reached","disposition":"not_invoked","reaped":null,"spawn_failure":true,"accepted":false},
+  {"name":"budget_with_spawn_failure","status":"budget_exhausted","disposition":"not_spawned","reaped":null,"spawn_failure":true,"accepted":false},
+  {"name":"clock_with_child","status":"clock_unavailable","disposition":"not_spawned","reaped":true,"spawn_failure":false,"accepted":false},
+  {"name":"reaped_without_child","status":"collected","disposition":"reaped","reaped":null,"spawn_failure":false,"accepted":false},
+  {"name":"unconfirmed_without_child","status":"collected","disposition":"unconfirmed","reaped":null,"spawn_failure":false,"accepted":false},
+  {"name":"reaped_but_unconfirmed","status":"collected","disposition":"reaped","reaped":false,"spawn_failure":false,"accepted":false},
+  {"name":"unconfirmed_but_reaped","status":"collected","disposition":"unconfirmed","reaped":true,"spawn_failure":false,"accepted":false},
+  {"name":"child_and_spawn_failure","status":"collected","disposition":"reaped","reaped":true,"spawn_failure":true,"accepted":false},
+  {"name":"not_spawned_with_child","status":"collected","disposition":"not_spawned","reaped":true,"spawn_failure":false,"accepted":false}
+]

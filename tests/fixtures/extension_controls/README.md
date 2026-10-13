@@ -25,7 +25,9 @@ exact channel name and independently establish child cleanup before erasing and
 unlinking it; a name prefix alone is not ownership. Successful cleanup removes
 the duplicate while preserving the case receipt.
 
-The fixture is built outside the inspected app. Its worker retains the current
+The fixture is a clang `-O2` build with `PW_EXTENSION_OBSERVE`, outside the
+inspected app; it does not establish interruption of the shipped executable
+bytes. Its worker retains the current
 production ABI/source identity for transport, but the executable override and
 independent binary provenance identify the instrumentation. These substitutions
 establish boundary handling and publication, not policy effects of fabricated

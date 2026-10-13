@@ -1259,3 +1259,48 @@ missing-helper-file, issuer-entitlement and BYOXPC maximum-reply controls.
 This turn records review and dispositions, with no product or test-control
 changes and no new live/TCC-sensitive execution. A1 remains open for corrections,
 verification and applicable rechecks; formal H1 preparation and M4 remain pending.
+
+## A1 correction candidate
+
+The correction pass repairs the wrapper inventory from independent catalog
+commands and separates a pure request-order mutation (steps and phase action IDs
+both reversed) from a broken-partition mutation. Neither fix weakens the
+consumer's phase partition rule. The Swift encoder, Rust disposition reader and
+shared Python consumer/oracle collection check now reject contradictory
+collection status and validator observations. Hand-reviewed
+`tests/fixtures/contract/phase_collection.json` supplies 21 full-reply controls:
+nine compatible states, including driver setup/spawn failure and unconfirmed
+cleanup, and twelve contradictory states. The existing public phase control
+also mutates the actual no-query phase to claim collection and a collected phase
+to claim it was unnecessary. Degraded reporting-failure replies can retain raw
+conflicts without recovering claims.
+
+This enforces the existing meanings of `collected` (driver ran and returned)
+and validator disposition; no valid record gains a different interpretation,
+field shape or vocabulary. Under the wire contract, the correction therefore
+retains request/response/envelope versions 4/17/7. The conservative generated
+worker identity changes because its inputs include the Swift encoder, although
+the native wait/release code and ABI layout are unchanged. Its value is
+`d728670539b289721b4cfbc567df5c14ec76917c09311bba283e64a39ba36957`.
+
+Current accounts distinguish missing-helper and missing-native-API codes,
+scope missing-helper behavior to a current runner copy, state the broader local
+setup meaning of `malformed_transport`, and explicitly identify the alternate
+instrumented clang build. The failure contract states compatible collection
+observations, architecture B4 cites their controls, and owning generators
+regenerate the identity, architecture views and staged guide. No baseline is
+expanded and no worker scheduling, issuer authority or lifecycle cap changes.
+
+Focused offline run `a1-repair-offline-20261013`, ID
+`20261013T170001Z_26490059`, passed six cases and left the blackbox checker
+unrun after sandboxed app signature inspection failed. The same selection
+outside the automation sandbox, `a1-repair-offline-retry-20261013`, ID
+`20261013T170037Z_0b6cd9f8`, passed all seven on the unchanged build 560. That
+retry establishes the signature failure as environmental. The selection was
+`--case shell_helpers/script_groups --case blackbox_e2e/checker_controls
+--suite unit`, using the established Rust PATH and distinct managed outputs.
+Both original runs, console logs, working source hashes/diff and new source
+copies are retained locally with null source provenance in the index; the base
+is `cbb0ccf`. Attachment verified run IDs, ownership and terminal state under
+the stable checkout lock. Signed candidate build, Swift/live acceptance,
+rendered recheck and handoff back to the original auditor remain pending.

@@ -309,13 +309,18 @@ the worker. `read_fresh` opens after application, records descriptor metadata,
 reads at most <!-- span limits.fresh_read_bytes.value -->64<!-- /span --> bytes
 once, and closes it; it does not establish EOF or read an entire file.
 
-A selected bundle without the issuer, or an issuer without the native issuance
-API, returns `bad_request` with `extension_issuer_unavailable`. Native refusal,
+A current runner bundle without the issuer returns `bad_request` with
+`extension_issuer_unavailable`; an issuer without the native issuance API returns
+`extension_api_unavailable`. Native refusal,
 issuer death, timeout, malformed publication and unconfirmed cleanup retain their
 own issuance evidence and withhold delivery. Worker-side API absence is an
 unavailable lifecycle action. An issued token and a delivered token remain
 separate observations. Raw token bytes travel only through a bounded transient
 channel, never the request, argv, environment, reply or ordinary diagnostics.
+Worker delivery status `malformed_transport` covers a rejected channel
+publication or failure of local core-limit, descriptor-metadata, mapping or
+descriptor-close setup. It withholds delivery without identifying which of
+those causes occurred; it does not by itself establish malformed input.
 The host clears its mapping before replying; this is not a claim about every
 copy a native library might hold. BYOXPC uses its own bundle-local issuer,
 [signed without the worker's entitlements](#install-a-byoxpc-runner).
@@ -2059,9 +2064,11 @@ A record written by an earlier policy-witness carries no worker read-back: it
 can be listed, validated and removed, and it serves specimens that require no
 entitlements, but a specimen with `required_entitlements` is refused until the
 runner is reinstalled. Older records without issuer read-back similarly retain
-unknown issuer provenance and remain manageable. Selecting an older bundle that
-lacks the helper refuses extension specimens with `extension_issuer_unavailable`;
-ordinary specimens remain supported. `runner validate` checks any recorded helper
+unknown issuer provenance and remain manageable. Selecting a current runner copy
+whose issuer file is missing refuses extension specimens with
+`extension_issuer_unavailable`; its ordinary specimens remain supported. An
+older runner binary can refuse the request version or fields before reaching
+this capability check. `runner validate` checks any recorded helper
 against the current copy and reports missing or invalid code; `runner reconcile`
 remains a report of installation state, not a provenance upgrade.
 

@@ -2030,6 +2030,28 @@ struct PWRunnerPhaseResult: Codable {
     var ordering: PWRunnerOrdering?
     var validator_subprocess: PWRunnerValidatorSubprocess?
     var validator_spawn_failure: PWRunnerSpawnFailure?
+
+    var collectionEvidenceConsistent: Bool {
+        let disposition = ordering?.validator_disposition
+        let allowed: Bool
+        switch collection_status {
+        case "not_reached": allowed = disposition == nil || disposition == "not_invoked"
+        case "not_needed": allowed = disposition == "not_needed"
+        case "collected": allowed = ["not_spawned", "reaped", "unconfirmed"].contains(disposition ?? "")
+        case "budget_exhausted": allowed = disposition == "not_spawned"
+        case "clock_unavailable": allowed = disposition == "not_needed" || disposition == "not_spawned"
+        default: allowed = false
+        }
+        guard allowed else { return false }
+        if collection_status != "collected" {
+            return validator_subprocess == nil && validator_spawn_failure == nil
+        }
+        if disposition == "not_spawned" {
+            // Driver setup can fail before there is a native spawn observation.
+            return validator_subprocess == nil
+        }
+        return validator_spawn_failure == nil && validator_subprocess?.reaped == (disposition == "reaped")
+    }
 }
 
 struct PWRunnerRunResult: Codable {
@@ -2191,6 +2213,10 @@ struct PWRunnerRunResult: Codable {
                     debugDescription: "phase identities and ordered actions must partition the reply"))
             }
             for (index, phase) in phases.enumerated() {
+                guard phase.collectionEvidenceConsistent else {
+                    throw EncodingError.invalidValue(phase, .init(codingPath: encoder.codingPath,
+                        debugDescription: "phase collection status contradicts validator evidence"))
+                }
                 guard phase.ordinal == index + 1,
                       ["not_reached", "not_needed", "collected", "budget_exhausted", "clock_unavailable"].contains(phase.collection_status),
                       (runner_subprocess == nil || phase.ordering != nil),

@@ -54,6 +54,9 @@ their targets in owned temporary directories to avoid requesting Desktop access.
 
 `extension_boundaries` compiles the production issuer and worker with the
 [controlled native entrypoints](../../fixtures/extension_controls/README.md).
+The clang test build uses `PW_EXTENSION_OBSERVE` outside the inspected app.
+These controls establish boundary behavior of those instrumented sources;
+they do not interrupt the shipped executable bytes or observe private API internals.
 It drives native refusal, absent APIs, issuer death/deadline, malformed transport
 and interrupted consumption/release through the CLI. Independent receipts
 distinguish death after the pre-call marker, inside a replacement function, and

@@ -199,6 +199,11 @@ published channel observation separately from issuance. `host_buffer_erased`
 records clearing the host's mapping, not proof that every process or native
 library has erased every copy.
 
+Worker `delivery_status: malformed_transport` covers both rejected channel
+publication and local setup failure (`setrlimit`, descriptor metadata, mapping
+or descriptor close). This aggregate label withholds delivery but cannot
+distinguish malformed input from a local setup error.
+
 Each `extension_events[]` entry identifies its phase, action, operation and local
 handle reference; consumption also identifies its token reference. These events
 have no ordinary query or comparison. `call_boundary_observed` is a separately
@@ -1028,6 +1033,24 @@ it does not mean every query received a usable answer. Planning is repeated at
 each arrival. A path missing then has `prediction_unavailable`,
 `query_plan:path_unresolved_at_planning` and `order: unestablished`, while its
 attempt can still run. Later path diagnostics cannot replace this observation.
+
+Collection status must agree with the independent validator account:
+
+| Collection status | Compatible validator disposition | Process/spawn evidence |
+| --- | --- | --- |
+| `not_reached` | `not_invoked`, or no ordering when there is no worker | Neither present |
+| `not_needed` | `not_needed` | Neither present |
+| `collected` | `not_spawned`, `reaped`, `unconfirmed` | A failed spawn can have its own record; local driver setup can fail before spawning. A child requires its matching reap disposition and excludes a spawn-failure record. |
+| `budget_exhausted` | `not_spawned` | Neither present |
+| `clock_unavailable` | `not_needed` before planning, or `not_spawned` after a nonempty plan | Neither present |
+
+`collected` does not require successful spawning, complete output, zero exit
+status or confirmed cleanup. Contradictory combinations cannot support ordinary
+encoding or reader claims; a degraded reporting-failure reply can retain the
+conflict without recovering those claims. The hand-reviewed
+[collection controls](fixtures/contract/phase_collection.json) exercise the
+encoder, Rust disposition reader and both Python reader entry points; live
+phase/validator controls establish the corresponding production paths.
 
 A worker publishes arrival, waits for the exact release ordinal, publishes
 acknowledgement, performs the phase's actions, then publishes completion.
