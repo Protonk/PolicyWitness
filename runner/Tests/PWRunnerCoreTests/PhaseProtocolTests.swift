@@ -241,6 +241,16 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             let output = URL(fileURLWithPath: artifacts)
             try pwRunnerEncodeJSON(reply).write(to: output.appendingPathComponent("combined-phases.json"))
             try Data(receipt.utf8).write(to: output.appendingPathComponent("combined-phases-late-write.txt"))
+            // This cleanup belongs to the test, after the host's recorded
+            // unconfirmed disposition. It cannot upgrade the retained reply.
+            let killRC = Darwin.kill(spawned[0], SIGKILL)
+            var status: Int32 = 0
+            var reaped: pid_t
+            repeat { reaped = Darwin.waitpid(spawned[0], &status, 0) } while reaped < 0 && errno == EINTR
+            try JSONSerialization.data(withJSONObject: ["pid": spawned[0], "kill_rc": killRC,
+                "wait_rc": reaped, "wait_status": status], options: [.sortedKeys]).write(
+                    to: output.appendingPathComponent("combined-phases-test-cleanup.json"))
+            try expectEqual(reaped, spawned[0])
         }
     }
 }

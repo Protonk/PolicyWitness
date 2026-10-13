@@ -1128,16 +1128,23 @@ mod tests {
         use std::process::{Command, Stdio};
         let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES")
             .expect("runner_unit receipt directory required");
-        for (name, filename) in [("timeout", "policy-transfer-timeout.json"),
-            ("unconfirmed", "policy-transfer-unconfirmed.json"), ("combined", "combined-phases.json")] {
+        for (name, filename) in [
+            ("timeout", "policy-transfer-timeout.json"),
+            ("unconfirmed", "policy-transfer-unconfirmed.json"),
+            ("combined", "combined-phases.json"),
+        ] {
             let reply: Value = serde_json::from_slice(
-                &std::fs::read(
-                    std::path::Path::new(&directory).join(filename),
-                )
-                .unwrap(),
+                &std::fs::read(std::path::Path::new(&directory).join(filename)).unwrap(),
             )
             .unwrap();
-            assert_eq!(reply["normalized_outcome"], if name == "combined" { "validator_no_reply" } else { "runner_timeout" });
+            assert_eq!(
+                reply["normalized_outcome"],
+                if name == "combined" {
+                    "validator_no_reply"
+                } else {
+                    "runner_timeout"
+                }
+            );
             let (result, data, code) = attach_sandbox_logs(
                 complete_execution(execution_data(Some(reply.clone()))),
                 &json!({"probe_plan":[]}),
@@ -1153,8 +1160,14 @@ mod tests {
             let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
             assert_eq!(diagnostics["disposition_integrity"], "valid");
             if name == "combined" {
-                assert_eq!(reply["phases"][0]["ordering"]["validator_disposition"], "unconfirmed");
-                assert_eq!(reply["phases"][1]["validator_subprocess"]["records"][0]["step_id"], "later");
+                assert_eq!(
+                    reply["phases"][0]["ordering"]["validator_disposition"],
+                    "unconfirmed"
+                );
+                assert_eq!(
+                    reply["phases"][1]["validator_subprocess"]["records"][0]["step_id"],
+                    "later"
+                );
             } else if name == "timeout" {
                 assert_eq!(diagnostics["stop_reason"], "policy_transfer_deadline");
                 assert_eq!(

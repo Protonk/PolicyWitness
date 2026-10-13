@@ -1261,11 +1261,16 @@ mod tests {
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
             "../../tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"
-        )).unwrap();
+        ))
+        .unwrap();
         let baseline = &envelope["data"]["runner_result"];
         assert_eq!(diagnostics(baseline).disposition_integrity, Some("valid"));
-        for (key, value) in [("exit_code", json!(0)), ("result_published", json!(false)),
-            ("reaped", json!(false)), ("token_length", json!(0))] {
+        for (key, value) in [
+            ("exit_code", json!(0)),
+            ("result_published", json!(false)),
+            ("reaped", json!(false)),
+            ("token_length", json!(0)),
+        ] {
             let mut changed = baseline.clone();
             changed["extensions"][0]["issuer"][key] = value;
             let diag = diagnostics(&changed);

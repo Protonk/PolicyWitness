@@ -2,9 +2,13 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M3, A1 and H1 are complete. F10 is repaired and verified at
-`7bfbdcd`; the user accepted the H1 recommendations on 2026-10-13. M4 has not
-started and is the next implementation milestone.
+Current status: M0–M3, A1 and H1 are complete. The user authorized M4 through
+M5.1 with a stop at completed M5.1. M4 is in implementation and verification.
+The first candidate is `2c3ab18`; `9131cfa` refreshes response captures and adds
+cross-reader issuer controls. The diagnostic run passed its seven combined CLI
+rows and live phase driver control; the two expected stale fixture/shape checks
+are corrected. Full candidate acceptance and rendered review remain owed.
+No M4 completion is claimed.
 The signed app remains build 566 from clean `2f380d0`. The latest acceptance
 account and design recommendation are at [F10 closure](#a1-f10-closure) and
 [H1 prepared human review](#h1-prepared-human-review) below. Historical entries
