@@ -471,13 +471,18 @@ attempts and unchanged file bytes, requires `runner_failed`, confirmed signal
 status and no host termination request, and makes no sandbox-cause claim.
 
 The same failure runs with capture disabled and enabled; both retain the same
-execution status. An un-overridden run verifies successful-run capture. The
-checker verifies worker identity in observer output, explicit capture/window
+execution status. An un-overridden run verifies successful-run capture. Each
+variant also runs with the repeated writes in separate explicit phases, asserting
+phase completion, separate query collections and phase-local query ordering.
+The checker verifies worker identity in observer output, explicit capture/window
 limits and any actual event associations. Repeated attempts reference each event
 once with ambiguous candidate IDs. Completed logs can contain no match, while
 evidenced budget exhaustion must withhold correlation; unexpected collection or cleanup failures fail the case.
 Rust tests deterministically cover populated, missing/mismatched PID, unrelated
 operation, independent query, repeated-attempt and unavailable-capture cases.
+The collector-state controls exercise both request forms: a shared worker PID
+and target across phases still yields ambiguous candidates, while populated,
+empty and failed captures leave serialized execution evidence unchanged.
 Artifacts retain each request, raw envelope, stderr, capture metadata, file bytes
 and `observations.json`. No signed app is altered to steer observer output.
 

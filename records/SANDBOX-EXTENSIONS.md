@@ -1119,3 +1119,38 @@ are gitignored and local-only; HTML links include original local preview paths,
 while PDFs/PNGs and source copies preserve the inspected content. No required
 baseline gained an entry. Final consolidated acceptance will use the committed
 corrections and a freshly stamped signed build before M3 closure/A1 preparation.
+
+
+## M3 signed consolidation and phase-log coverage closure
+
+Source `6744f3c0652fac983d2823dfcc9cb848efb105af` built cleanly as signed build
+560 (`v0.2.8-40-g6744f3c`), with the established Developer ID and unchanged native
+identity. Run `extensions-m3-accepted-20261013`, ID
+`20261013T143650Z_763cbafa`, passed all 147 selected cases with no skipped or
+unrun cases. It selected the earlier consolidated suites plus `dispatcher`.
+The retained plan records every canonical ID and configuration. Before/after
+artifact inventories are unchanged; original results, build/console logs and
+clean source hashes are attached under `checkpoint/`. Eight BYOXPC session
+receipts report removal with absent staging; all 26 native observer receipts
+report cleanup with absent recovery records. The original empty-object
+limitation is retained explicitly. Neither documentation baseline changed.
+
+The lead's gate-to-control trace then found that optional-log controls repeated
+targets within a flat plan but had no explicit cross-phase case. The plan requires
+this in M3. The existing serialized-execution preservation control now also runs
+against explicit phases, with the same worker PID and target across phases.
+It requires ambiguous candidates for matching captures and unchanged serialized
+execution under all existing populated, empty, failed and disabled capture
+states. The real CLI termination/log case also repeats its disabled/enabled
+failure and successful-run controls with the writes in separate phases. It
+asserts phase completion, distinct query collections and phase-local ordering;
+any recovered kernel-event associations must remain ambiguous. Real events stay
+optional; the deterministic control establishes association when they exist.
+
+Only test code and its documentation change: Rust edits lie inside the existing
+`#[cfg(test)] mod tests`, whose preceding production bytes are identical to
+`6744f3c`; the signed app is unmodified. The witness README and coverage table
+name the added coverage, and architecture B8 cites its unit and live controls.
+This is a required coverage repair, not an implementation behavior change or M4
+expansion. The focused Rust/live/source checks and rendered recheck remain
+pending at this commit; M3 and A1 preparation remain open.

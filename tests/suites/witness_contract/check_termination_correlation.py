@@ -47,10 +47,18 @@ def main():
                           for step_id in ids],
         }
         overrides = {'worker_post_apply_kill_signal': 9, 'worker_post_apply_hang_ms': 1500}
-        for name, signaled, capture_enabled in [('signal_disabled', True, False),
-                                               ('signal_capture', True, True),
-                                               ('success_capture', False, True)]:
+        for name, signaled, capture_enabled, phased in [
+                ('signal_disabled', True, False, False),
+                ('signal_capture', True, True, False),
+                ('success_capture', False, True, False),
+                ('phases_signal_disabled', True, False, True),
+                ('phases_signal_capture', True, True, True),
+                ('phases_success_capture', False, True, True)]:
             specimen = dict(base)
+            if phased:
+                specimen['phases'] = [
+                    {'phase_id': f'phase{i}', 'actions': [entry]}
+                    for i, entry in enumerate(specimen.pop('probe_plan'))]
             if signaled:
                 specimen['_test_overrides'] = overrides
             args = ['--timeout-ms', '20000']
@@ -85,6 +93,16 @@ def main():
             else:
                 assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
             assert [s['step_id'] for s in runner['steps']] == ids, runner['steps']
+            if phased:
+                assert [s['phase_id'] for s in runner['steps']] == ['phase0', 'phase1']
+                assert [p['phase_id'] for p in runner['phases']] == ['phase0', 'phase1']
+                for phase, identity in zip(runner['phases'], ids):
+                    assert phase['arrival_observed'] and phase['completion_observed']
+                    assert phase['action_ids'] == [identity]
+                    assert phase['validator_subprocess']['expected_step_ids'] == [identity]
+                    assert all(phase['ordering'][k] for k in (
+                        'collection_closed_before_proceed', 'proceed_set', 'proceed_observed'))
+                assert all(s['comparison']['order'] == 'query_first' for s in runner['steps'])
             for step in runner['steps']:
                 assert step['sandbox_check']['operation'] == 'file-read-data', step
                 assert step['sandbox_check']['outcome'] == 'allow', step

@@ -1195,6 +1195,15 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
 
     #[test]
     fn collector_states_preserve_the_serialized_execution_half() {
+        collector_state_controls(false);
+    }
+
+    #[test]
+    fn phased_collector_states_preserve_execution_and_ambiguous_candidates() {
+        collector_state_controls(true);
+    }
+
+    fn collector_state_controls(phased: bool) {
         // Independent native observations with two indistinguishable candidates
         // and one permission failure that has no matching captured path.
         let request = json!({"probe_plan": [
@@ -1202,11 +1211,25 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             {"step_id": "b", "attempt": {"kind": "file", "action": "open_write", "target": "/attempt"}},
             {"step_id": "silent", "attempt": {"kind": "file", "action": "open_write", "target": "/silent"}}
         ]});
-        let steps = vec![
+        let plan = request["probe_plan"].as_array().unwrap().clone();
+        let request = if phased {
+            json!({"phases": [
+                {"phase_id": "earlier", "actions": [plan[0].clone()]},
+                {"phase_id": "later", "actions": [plan[1].clone(), plan[2].clone()]}
+            ]})
+        } else {
+            request
+        };
+        let mut steps = vec![
             step("a", "open_write", "/attempt", "permission_failure"),
             step("b", "open_write", "/attempt", "permission_failure"),
             step("silent", "open_write", "/silent", "permission_failure"),
         ];
+        if phased {
+            for (index, step) in steps.iter_mut().enumerate() {
+                step["phase_id"] = json!(if index == 0 { "earlier" } else { "later" });
+            }
+        }
         let runner = reply_with("ok", None, steps.clone());
         let failed = reply_with("runner_failed", Some(9), steps.clone());
         let mut no_pid = runner.clone();
@@ -1299,7 +1322,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                                 .and_then(|r| r["steps"].as_array())
                                 .map(Vec::as_slice)
                                 .unwrap_or(&[]),
-                            request["probe_plan"].as_array().unwrap(),
+                            &plan,
                             capture.deny_events.as_ref().unwrap(),
                             pid,
                         ));

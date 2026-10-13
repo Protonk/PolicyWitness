@@ -1873,6 +1873,16 @@
               "form": "test"
             },
             {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "phased_collector_states_preserve_execution_and_ambiguous_candidates",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/worker_termination_and_log_correlation.sh",
+              "symbol": "worker_termination_and_log_correlation",
+              "form": "test"
+            },
+            {
               "path": "tests/lib/consumer.py",
               "symbol": "_validate_observer_reply",
               "form": "control"

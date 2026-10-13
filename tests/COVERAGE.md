@@ -51,7 +51,7 @@ Log coverage separates three claims, all in the default selection:
 | Claim | Required coverage | Limit of the claim |
 | --- | --- | --- |
 | OS query selection | `witness_contract/log_query_predicate_archive`: real `log show`, committed archive, independent positive/negative multisets before parsing | Fixture forms and verified readers; no claim about kernel emission |
-| Record preservation and execution independence | `unit/rust.unit`: supplied-text parser/receiver/assembly/consumer replay, capacity, deadline/byte/cleanup faults; `blackbox_e2e/checker_controls`: consumer recovery across capture states | Exact controlled inputs and expected candidates; no live retrieval-completeness claim |
+| Record preservation and execution independence | `unit/rust.unit`: supplied-text parser/receiver/assembly/consumer replay, repeated targets across phases, capacity, deadline/byte/cleanup faults; `blackbox_e2e/checker_controls`: consumer recovery across capture states | Exact controlled inputs and expected candidates; no live retrieval-completeness claim |
 | Live collection evidence | `witness_contract/deny_capture_covers_the_run`, `worker_termination_and_log_correlation`, `max_targets_reply_survives`, with independent `log_capture_controls` | Native execution remains mandatory. Complete empty queries and evidenced budget exhaustion with confirmed cleanup are admissible; unsupported failures are not. |
 
 The [witness suite](suites/witness_contract/README.md#deny-capture-covers-the-run)

@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, public/generated accounts and rendered corrections pass. The first consolidated run completed 139/141; both fixture failures are repaired and all 15 focused checks pass. Final consolidated acceptance remains pending. |
+| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, public/generated accounts and rendered corrections pass. Final signed consolidation at `6744f3c` passed 147/147. A subsequent gate trace identified missing explicit phase-log coverage; test-only additions and their focused rendered/check closure remain pending. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -83,7 +83,7 @@ This checkpoint does not reach that audit boundary. M2's consolidated signed
 acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
 `0daa018101ed39ecfd92d6d528b112784ed9c30f`, followed by the reader integration
 increment described in the investigative record.
-The current development app is build 558, stamped `4158716-dirty`, with worker
+The current development app is build 560, stamped `6744f3c`, with worker
 identity `12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
 It includes the Rust reader checks, native publication guards, issuer binary dossier
 and shared extension-limit constants. The native
@@ -94,28 +94,28 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** build a freshly stamped signed candidate from the committed
-rendered-review and fixture corrections, then repeat consolidated M3 acceptance.
-The first consolidated run at `1f7abc0` completed 139/141: a stale synthetic
-release inventory and a BYOXPC phase helper launched from Desktop failed.
-The independent fixture inventory now includes the issuer; the phase helper runs
-from owned `/private/tmp`, and its timeout control requires a received fixture
-record. The corrected selection passed all 15 source-drift, dispatcher, release
-and standard/BYOXPC phase checks against unchanged build 558.
+**Next action:** run the added explicit phase-log controls, affected Rust and
+source-drift checks, and a focused rendered recheck of their documentation.
+The clean signed candidate at `6744f3c` passed all 147 consolidated cases in
+`extensions-m3-accepted-20261013`. The lead's gate trace found that existing
+log tests covered repeated targets within a flat plan but not explicit phases.
+The added tests exercise the same ambiguity and execution-independence rules
+across phases; production code and build 560 are unchanged. Rust changes are
+confined to `#[cfg(test)]`; their production prefix matches the signed source.
 
-The fresh rendered review and focused recheck are complete. Reviewer
+The broad fresh rendered review and first focused recheck closed F1–F5 plus
+collection-closure wording and the test-path account. Reviewer
 `/root/m3_rendered_review` (gpt-6-astra requested; runtime identifier not independently
-exposed) closed F1–F5 plus collection-closure wording and the test-path account.
-Reports, source hashes and Pandoc/WeasyPrint/Poppler HTML/PDF/PNG snapshots are
-retained under `tests/out/runs/extensions-m3-review-corrections-20261013/reviews/`;
-coverage omissions and lead dispositions are in the investigative record.
-Maximum reply remains bounded at 52,414,779 bytes with the existing 152 MiB
-receiver allowance. No prose/build baseline grew. The diagnostic and correction
-runs preserve their original statuses and source provenance. All newly owned
-BYOXPC fixtures were removed with absent staging verified; the earlier empty
-shared-memory objects with unrecorded names remain an explicit cleanup limitation.
-No build or test process remains active at this checkpoint. M3 remains open;
-prepare A1 only after final acceptance passes, then stand by for the auditor.
+exposed) inspected retained Pandoc/WeasyPrint/Poppler views under
+`tests/out/runs/extensions-m3-review-corrections-20261013/reviews/`.
+The late phase-log test account will receive its own focused recheck; other
+rendered document bytes are unchanged. Coverage omissions and lead dispositions
+are in the investigative record. Both baselines are unchanged. All eight owned
+BYOXPC staging paths and all 26 native observer recovery records from final
+consolidation are absent after verified cleanup. The earlier empty shared-memory
+objects with unrecorded names remain an explicit limitation. No build or test
+process remains active at this checkpoint. Prepare A1 only after the final
+coverage correction passes, then stand by for the auditor.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
