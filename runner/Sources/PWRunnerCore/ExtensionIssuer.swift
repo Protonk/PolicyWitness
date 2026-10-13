@@ -1,15 +1,37 @@
 import Darwin
 import Foundation
 
+// Checked against compiled C sizeof/offsetof by runner_abi_layout.
+enum PWExtensionLayout {
+    static let magic: UInt32 = 0x50574558
+    static let tokenBytes: Int = 16384
+    static let pathBytes: Int = 1024
+    static let channelBytes: Int = 17472
+    static let issuerWaitMs: Int = 5000
+    static let magicOffset: Int = 0
+    static let callBoundaryOffset: Int = 4
+    static let completedOffset: Int = 8
+    static let statusOffset: Int = 12
+    static let errnoOffset: Int = 16
+    static let tokenLengthOffset: Int = 20
+    static let pidOffset: Int = 24
+    static let uidOffset: Int = 28
+    static let euidOffset: Int = 32
+    static let gidOffset: Int = 36
+    static let egidOffset: Int = 40
+    static let targetOffset: Int = 64
+    static let tokenOffset: Int = 1088
+}
+
 // The authority-bearing mapping is separate from the worker's evidence mapping.
 // Only this owner passes its descriptor; neither the reply nor diagnostics read
 // the token bytes. Issuer exit/reaping precedes delivery to a worker.
 final class ExtensionSession {
-    static let tokenBytes = 16384
-    static let pathBytes = 1024
-    static let channelBytes = 17472
-    static let issuerWaitMs = 5000
-    static let tokenOffset = 1088
+    static let tokenBytes = PWExtensionLayout.tokenBytes
+    static let pathBytes = PWExtensionLayout.pathBytes
+    static let channelBytes = PWExtensionLayout.channelBytes
+    static let issuerWaitMs = PWExtensionLayout.issuerWaitMs
+    static let tokenOffset = PWExtensionLayout.tokenOffset
     private(set) var descriptor: Int32 = -1
     private var mapping: UnsafeMutableRawPointer?
     var record: PWRunnerExtensionRecord
@@ -50,8 +72,8 @@ final class ExtensionSession {
         mapping = base
         memset(base, 0, Self.channelBytes)
         let bytes = base.assumingMemoryBound(to: UInt8.self)
-        writeU32(bytes, offset: 0, 0x50574558)
-        _ = resolved.withUnsafeBytes { memcpy(bytes.advanced(by: 64), $0.baseAddress!, Self.pathBytes) }
+        writeU32(bytes, offset: PWExtensionLayout.magicOffset, PWExtensionLayout.magic)
+        _ = resolved.withUnsafeBytes { memcpy(bytes.advanced(by: PWExtensionLayout.targetOffset), $0.baseAddress!, Self.pathBytes) }
         // dup2(fd, fd) preserves FD_CLOEXEC; always use a distinct source.
         let spawnFD = fcntl(fd, F_DUPFD_CLOEXEC, 64)
         guard spawnFD >= 0 else { record.issuance_status = "channel_setup_failed"; return }
@@ -101,36 +123,42 @@ final class ExtensionSession {
             if (status & 0x7f) == 0 { issuer.exit_code = (status >> 8) & 0xff }
             else { issuer.term_signal = status & 0x7f }
         }
-        issuer.call_boundary_observed = loadAcquire(bytes, offset: 4) == 1
-        let published = loadAcquire(bytes, offset: 8) == 1
+        issuer.call_boundary_observed = loadAcquire(bytes, offset: PWExtensionLayout.callBoundaryOffset) == 1
+        let published = loadAcquire(bytes, offset: PWExtensionLayout.completedOffset) == 1
         issuer.result_published = published
         record.issuance_status = stop == "deadline" ? "issuer_timeout" : stop == "wait_error" ? "issuer_wait_error" : "issuer_result_missing"
         if published {
-            let state = UInt32(bitPattern: readI32(bytes, offset: 12))
-            issuer.uid = UInt32(bitPattern: readI32(bytes, offset: 28))
-            issuer.euid = UInt32(bitPattern: readI32(bytes, offset: 32))
-            issuer.gid = UInt32(bitPattern: readI32(bytes, offset: 36))
-            issuer.egid = UInt32(bitPattern: readI32(bytes, offset: 40))
+            let state = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.statusOffset))
+            let validHeader = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.magicOffset)) == PWExtensionLayout.magic
+                && readI32(bytes, offset: PWExtensionLayout.pidOffset) == pid && [1, 2, 3, 4].contains(state)
+                && (state == 4 ? !issuer.call_boundary_observed : issuer.call_boundary_observed)
+            if !validHeader {
+                record.issuance_status = "invalid_transport"
+            } else {
+            issuer.uid = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.uidOffset))
+            issuer.euid = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.euidOffset))
+            issuer.gid = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.gidOffset))
+            issuer.egid = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.egidOffset))
             if [1, 2, 3].contains(state) {
                 issuer.native_nonnull = state != 2
-                issuer.errno = readI32(bytes, offset: 16)
+                issuer.errno = readI32(bytes, offset: PWExtensionLayout.errnoOffset)
             }
-            let length = UInt32(bitPattern: readI32(bytes, offset: 20))
+            let length = UInt32(bitPattern: readI32(bytes, offset: PWExtensionLayout.tokenLengthOffset))
             if state == 1 { issuer.token_length = length }
             if state == 4 { capabilityUnavailable = true; record.issuance_status = "native_api_unavailable" }
             else if state == 2 { record.issuance_status = "native_refusal" }
             else if state == 3 { record.issuance_status = "token_oversized" }
-            else if state != 1 || !issuer.call_boundary_observed || readI32(bytes, offset: 24) != pid
-                        || length == 0 || length >= Self.tokenBytes {
+            else if length == 0 || length >= Self.tokenBytes {
                 record.issuance_status = "invalid_transport"
             } else if child.status != nil && issuer.exit_code == 0 && stop == "reaped" {
                 record.issuance_status = "issued"
+            }
             }
         }
         record.issuer = issuer
         // No delivery after unconfirmed cleanup, abnormal exit, malformed or
         // incomplete publication. Clearing the publication prevents consumption.
-        if record.issuance_status != "issued" { pw_cworker_store_release_u32(bytes.advanced(by: 8).withMemoryRebound(to: UInt32.self, capacity: 1) { $0 }, 0) }
+        if record.issuance_status != "issued" { pw_cworker_store_release_u32(bytes.advanced(by: PWExtensionLayout.completedOffset).withMemoryRebound(to: UInt32.self, capacity: 1) { $0 }, 0) }
     }
 
     var deliveryDescriptor: Int32? { record.issuance_status == "issued" ? descriptor : nil }

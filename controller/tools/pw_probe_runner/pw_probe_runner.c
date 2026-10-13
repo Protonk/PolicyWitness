@@ -1037,6 +1037,13 @@ static pw_extension_channel_t *extension_channel;
 static int64_t extension_handle = -1;
 static int consume_decided, release_decided;
 
+/* Compile-time observation seam for controlled interruption tests. The shipped
+ * worker has no callback or request knob. 1 is after the pre-call publication;
+ * 2 is after native return and before any result payload/publication. */
+#ifndef PW_EXTENSION_OBSERVE
+#define PW_EXTENSION_OBSERVE(stage, release, result) ((void)0)
+#endif
+
 static void prepare_extension(pw_shm_header_t *hdr, int fd) {
     if (!hdr->extension_requested) { if (fd >= 0) close(fd); return; }
     uint32_t status = 2;
@@ -1081,10 +1088,12 @@ static void attempt_extension(pw_shm_slot_t *slot, int release) {
     else if (!release && !extension_channel) slot->unavailable_code = 1;
     else {
         atomic_store_explicit(&slot->call_boundary, 1, memory_order_release);
+        PW_EXTENSION_OBSERVE(1, release, 0);
         errno = 0;
         int64_t result = release ? (int64_t)extension_release(extension_handle)
                                  : extension_consume(extension_channel->token);
         int saved = errno;
+        PW_EXTENSION_OBSERVE(2, release, result);
         slot->native_result = result;
         slot->native_errno = saved;
         slot->native_result_valid = 1;

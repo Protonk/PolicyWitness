@@ -49,7 +49,7 @@ def validate_fresh_read(attempt):
         if not _integer(read.get('open_errno'), 0, (1 << 31) - 1) or any(read.get(k) is not None
                 for k in ('read_rc', 'read_errno', 'stat_rc', 'stat_errno', 'identity', 'close_rc', 'close_errno', 'content_hex')):
             errors.append('failed fresh open cannot supply read/stat/close evidence')
-        if (attempt.get('rc'), attempt.get('errno'), attempt.get('outcome')) != (-1, read.get('open_errno'), 'read_failed'):
+        if (attempt.get('rc'), attempt.get('errno'), attempt.get('outcome')) != (-1, read.get('open_errno') or None, 'read_failed'):
             errors.append('fresh open failure disagrees with attempt')
         return errors
     if read.get('open_errno') is not None:

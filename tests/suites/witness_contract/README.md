@@ -25,6 +25,28 @@ aggregate timeout and stdout byte cutoff. It asserts supplied override echoes,
 real collection stop/reap evidence, unavailable later predictions, and retained
 successful attempts. These are driver controls, not sandbox predictions.
 
+## Native extension boundaries
+
+`extensions` exercises ordinary-authority issuance, native consumption and release
+in one worker, with fresh descriptor identity, bounded bytes and syscall results
+on either side of both interventions. Each phase collects its own queries.
+Native return values and observed access remain independent evidence.
+
+`extension_boundaries` compiles the production issuer and worker with the
+[controlled native entrypoints](../../fixtures/extension_controls/README.md).
+It drives native refusal, absent APIs, issuer death/deadline, malformed transport
+and interrupted consumption/release through the CLI. Independent receipts
+distinguish death after the pre-call marker, inside a replacement function, and
+after the real native return but before publication. PW must retain unresolved
+results and earlier completed evidence regardless of what the fixture knows.
+
+The test compares real token bytes with captured output in memory before saving
+output, checks argv/environment confinement, production descriptor closure and
+buffer erasure, and retains only observations. A deliberately contaminated
+in-memory string checks detector sensitivity. Raw tokens never enter fixtures.
+The observer's ownership receipt records cleanup; an unconfirmed native child
+retains its named channel and recovery record.
+
 ## Invariants
 
 - The suite is included in the default battery, including regression guards

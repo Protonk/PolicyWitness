@@ -511,6 +511,7 @@
       "stage" : "string"
     },
     "reply.test_overrides" : {
+      "issuer_executable_path" : "string",
       "validator_executable_path" : "string",
       "validator_io_timeout_ms" : "number",
       "validator_total_timeout_ms" : "number",

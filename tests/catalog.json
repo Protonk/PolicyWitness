@@ -1418,6 +1418,18 @@
             "bash",
             "tests/suites/witness_contract/extensions.sh"
           ]
+        },
+        {
+          "id": "extension_boundaries",
+          "description": "Native issuer faults and consume/release interruption with independent transient-token confinement and descriptor observations",
+          "requires": [
+            "app",
+            "clang"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extension_boundaries.sh"
+          ]
         }
       ],
       "include": [

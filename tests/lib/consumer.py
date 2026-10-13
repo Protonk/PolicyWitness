@@ -420,7 +420,8 @@ def _validate_reply(runner):
                 type(failure.get('evidence_retained')) is not bool:
             errors.append('invalid reporting_failure diagnostics')
         elif not failure['evidence_retained'] and (runner.get('steps') != [] or
-                runner.get('runner_subprocess') is not None or runner.get('phases') != []):
+                runner.get('runner_subprocess') is not None or runner.get('phases') != [] or
+                runner.get('extensions') or runner.get('extension_events')):
             errors.append('reporting failure without evidence retention must omit steps, subprocesses and validator spawn evidence')
     steps_value = runner.get('steps')
     if not isinstance(steps_value, list):

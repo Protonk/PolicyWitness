@@ -24,4 +24,7 @@ int pw_cworker_shm_open_create(const char *name, mode_t mode);
 uint32_t pw_cworker_load_acquire_u32(const uint32_t *p);
 void     pw_cworker_store_release_u32(uint32_t *p, uint32_t value);
 
+// Volatile clearing of transient authority-bearing storage.
+void pw_extension_clear(void *bytes, size_t length);
+
 #endif /* PW_CWORKER_SHIM_H */

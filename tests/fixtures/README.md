@@ -53,6 +53,9 @@ deterministic, and checked into the repo so tests are hermetic.
 - `sandbox_extensions/`: independent signed native issuer/worker experiment with
   transient token transport, fresh file-access evidence and allocation controls;
   see its [README](sandbox_extensions/README.md).
+- `extension_controls/`: production issuer/worker boundary substitutions with
+  transient independent receipts for native interruption and token confinement;
+  see its [README](extension_controls/README.md).
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
 - `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,

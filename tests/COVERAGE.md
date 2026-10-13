@@ -64,6 +64,13 @@ identity/content observations, issuer lifetime comparisons and allocation
 controls. It neither produces nor validates PW outcomes; production extension
 and phase integration is outside that case.
 
+The default `witness_contract/extensions` and `extension_boundaries` cases cover
+the integrated native lifecycle and its failure boundaries. Issuance refusal,
+missing native APIs, malformed channels, issuer death/deadline, consume/release
+failure and interrupted publication retain separate native, delivery and access
+observations. The independent token detector compares actual bytes in memory;
+controlled return values establish reporting behavior, not effective permissions.
+
 The default `witness_contract/phases` case exercises the public phase grammar
 through the signed CLI: an independently observed unlink makes the next path
 query unavailable while its attempt reports ENOENT, and a third phase receives

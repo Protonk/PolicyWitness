@@ -314,7 +314,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_exec_lifecycle` | Baseline | CLI exec deadlines stop observed helper trees, preserve output and allow later effects; early EOF, surviving descendants and worker death are covered. | App, XPC, clang and Python. | [Suite](suites/runner_exec_lifecycle/README.md) |
 | `runner_exec_inheritance` | Baseline + opt-in | Children report isolated environments/descriptors and usable streams; controlled resources and opt-in mutations establish leak detection. | App/XPC for CLI cases; clang/Python for worker and mutation controls. | [Suite](suites/runner_exec_inheritance/README.md) |
 | `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Registry](OPT_IN_TESTS.md) |
-| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics, dossier and log correlation; opt-in barrier mutations and BYOXPC dossier. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
+| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics, dossier and log correlation; opt-in barrier mutations and BYOXPC dossier. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
 
 ## Shared test infrastructure
 

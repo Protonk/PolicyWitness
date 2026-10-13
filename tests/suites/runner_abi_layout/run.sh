@@ -270,6 +270,18 @@ then
   test_fail "layout check failed: ${LAYOUT_ERR}" "{\"diff_report\":\"${DIFF_REPORT}\",\"stderr_log\":\"${PW_TEST_ARTIFACTS}/layout-check.err\"}"
 fi
 
+test_step extension_layout "compare transient issuer channel sizeof and offsets with Swift"
+if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Werror -O2 -std=c11 \
+    -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/extension_printer.c" -o "${PW_TEST_ARTIFACTS}/extension-printer" \
+    2>"${PW_TEST_ARTIFACTS}/extension-printer.err"; then
+  test_fail "extension channel printer failed to compile"
+fi
+"${PW_TEST_ARTIFACTS}/extension-printer" >"${PW_TEST_ARTIFACTS}/extension-layout.txt"
+if ! /usr/bin/python3 "${SUITE_DIR}/extension_layout.py" "${PW_TEST_ARTIFACTS}/extension-layout.txt" \
+    >"${PW_TEST_ARTIFACTS}/extension-layout.log" 2>&1; then
+  test_fail "transient extension channel layout disagrees"
+fi
+
 test_step "capture" "exercise bounded profile reads against independently constructed objects"
 if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Wno-deprecated-declarations -O2 -std=c11 \
     -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/capture.c" -o "${PW_TEST_ARTIFACTS}/capture" \

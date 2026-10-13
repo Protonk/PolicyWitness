@@ -1,0 +1,204 @@
+/* Controlled native entrypoints in the production issuer/worker. The observer
+ * is test-owned POSIX shared memory, never a file containing token bytes.
+ * Production binaries compile none of this instrumentation. */
+#include <dlfcn.h>
+#include <crt_externs.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#include "pw_extension_channel.h"
+
+#ifndef PW_CONTROL_MODE
+#error PW_CONTROL_MODE is required
+#endif
+#ifndef PW_CONTROL_CHANNEL
+#error PW_CONTROL_CHANNEL is required
+#endif
+
+#define OBSERVER_BYTES 32768
+typedef struct {
+    uint32_t magic;
+    uint32_t issuer_pid, worker_pid;
+    uint32_t stage, operation, actual_returned;
+    int64_t actual_result;
+    uint32_t issuer_core_disabled, worker_core_disabled;
+    uint32_t issuer_channel_closed, worker_channel_closed;
+    _Atomic uint32_t token_length;
+    uint32_t issuer_argv_clean, issuer_env_clean, worker_argv_env_clean;
+    uint32_t worker_token_erased, issuer_token_erased;
+    uint32_t reserved[14];
+    char token[PW_EXTENSION_TOKEN_BYTES];
+} observer_t;
+_Static_assert(offsetof(observer_t, token) == 128, "test observer token offset");
+static observer_t *observer;
+static void *native_lookup(void *library, const char *name) { return dlsym(library, name); }
+static int native_unmap(void *p, size_t n) { return munmap(p, n); }
+
+static void observe_setup(void) {
+    if (observer) return;
+    int fd = shm_open(PW_CONTROL_CHANNEL, O_RDWR, 0600);
+    if (fd < 0) _exit(100 + errno);
+    void *p = mmap(NULL, OBSERVER_BYTES, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if (p == MAP_FAILED) _exit(81);
+    observer = p;
+    if (observer->magic != 0x43545845) _exit(82);
+}
+
+static void interrupted(unsigned stage, unsigned release, int64_t result) {
+    observe_setup();
+    observer->worker_pid = (uint32_t)getpid();
+    observer->operation = release ? 2 : 1;
+    observer->stage = stage;
+    observer->actual_returned = stage == 2;
+    observer->actual_result = result;
+    struct rlimit limit;
+    observer->worker_core_disabled = getrlimit(RLIMIT_CORE, &limit) == 0 && limit.rlim_cur == 0;
+    errno = 0;
+    observer->worker_channel_closed = fcntl(5, F_GETFD) == -1 && errno == EBADF;
+    unsigned expected = (release ? 200 : 100) + stage;
+    /* Mode 102/202 is inside the substituted operation, before its return.
+     * Mode 103/203 is after the real native call returned. */
+    if (PW_CONTROL_MODE == (int)(stage == 2 ? expected + 1 : stage == 3 ? expected - 1 : expected)) {
+        kill(getpid(), SIGKILL);
+        _exit(83);
+    }
+}
+
+static char *controlled_issue(const char *, const char *, uint32_t);
+static int64_t controlled_consume(const char *);
+static int controlled_release(int64_t);
+static void *controlled_lookup(void *, const char *);
+static int controlled_unmap(void *, size_t);
+static void controlled_erase(void *, size_t);
+
+#define pw_extension_erase controlled_erase
+
+#if defined(PW_CONTROL_ISSUER)
+#define dlsym controlled_lookup
+#define munmap controlled_unmap
+#include "pw_extension_issuer.c"
+#undef dlsym
+#undef munmap
+#else
+#define dlsym controlled_lookup
+#define PW_EXTENSION_OBSERVE(stage, release, result) interrupted((stage), (release), (result))
+#include "pw_probe_runner.c"
+#undef dlsym
+#endif
+#undef pw_extension_erase
+
+static char *(*native_issue)(const char *, const char *, uint32_t);
+static int64_t (*native_consume)(const char *);
+static int (*native_release)(int64_t);
+
+static int vector_excludes(char **values, const char *token) {
+    if (!token || !*token) return 0;
+    for (char **p = values; p && *p; ++p) if (strstr(*p, token)) return 0;
+    return 1;
+}
+
+static void controlled_erase(void *bytes, size_t length) {
+    pw_extension_erase(bytes, length);
+    int clear = 1;
+    for (size_t i = 0; i < length; ++i) if (((unsigned char *)bytes)[i]) clear = 0;
+#if defined(PW_CONTROL_ISSUER)
+    observer->issuer_token_erased = clear;
+#else
+    observer->worker_token_erased = clear;
+#endif
+}
+
+static void *controlled_lookup(void *library, const char *name) {
+    observe_setup();
+    void *symbol = native_lookup(library, name);
+    if (strcmp(name, "sandbox_extension_issue_file") == 0) {
+        if (PW_CONTROL_MODE == 6) return NULL;
+        native_issue = (char *(*)(const char *, const char *, uint32_t))symbol;
+        return symbol ? (void *)controlled_issue : NULL;
+    }
+    if (strcmp(name, "sandbox_extension_consume") == 0) {
+        if (PW_CONTROL_MODE == 105) return NULL;
+        native_consume = (int64_t (*)(const char *))symbol;
+        return symbol ? (void *)controlled_consume : NULL;
+    }
+    if (strcmp(name, "sandbox_extension_release") == 0) {
+        native_release = (int (*)(int64_t))symbol;
+        return symbol ? (void *)controlled_release : NULL;
+    }
+    return symbol;
+}
+
+static char *controlled_issue(const char *kind, const char *path, uint32_t flags) {
+    observer->issuer_pid = (uint32_t)getpid();
+    struct rlimit limit;
+    observer->issuer_core_disabled = getrlimit(RLIMIT_CORE, &limit) == 0 && limit.rlim_cur == 0;
+    errno = 0;
+    observer->issuer_channel_closed = fcntl(3, F_GETFD) == -1 && errno == EBADF;
+    if (PW_CONTROL_MODE == 1) { errno = EACCES; return NULL; }
+    if (PW_CONTROL_MODE == 2) {
+        char *value = malloc(PW_EXTENSION_TOKEN_BYTES + 1);
+        if (!value) _exit(84);
+        memset(value, 'x', PW_EXTENSION_TOKEN_BYTES); value[PW_EXTENSION_TOKEN_BYTES] = 0;
+        errno = 0; return value;
+    }
+    if (PW_CONTROL_MODE == 3) { errno = 0; return calloc(1, 1); }
+    if (PW_CONTROL_MODE == 4) _exit(87);
+    if (PW_CONTROL_MODE == 5) { sleep(30); _exit(88); }
+    errno = 0;
+    char *value = native_issue(kind, path, flags);
+    int saved = errno;
+    if (value) {
+        observer->issuer_argv_clean = vector_excludes(*_NSGetArgv(), value);
+        observer->issuer_env_clean = vector_excludes(*_NSGetEnviron(), value);
+        size_t n = strnlen(value, PW_EXTENSION_TOKEN_BYTES);
+        if (n < PW_EXTENSION_TOKEN_BYTES) {
+            memcpy(observer->token, value, n);
+            atomic_store_explicit(&observer->token_length, (uint32_t)n, memory_order_release);
+        }
+    }
+    errno = saved;
+    return value;
+}
+
+static int controlled_unmap(void *p, size_t n) {
+    pw_extension_channel_t *channel = p;
+    if (n == PW_EXTENSION_CHANNEL_BYTES) {
+        /* Deliberately violate the immutable publication protocol. Host reaping
+         * precedes delivery, so it must inspect the final malformed transport. */
+        switch (PW_CONTROL_MODE) {
+        case 7: channel->token_length = PW_EXTENSION_TOKEN_BYTES; break;
+        case 8: if (channel->token_length) channel->token[channel->token_length - 1] = 0; break;
+        case 9: channel->token[channel->token_length] = 'x'; break;
+        case 10:
+            pw_extension_erase(channel->token, sizeof(channel->token));
+            strcpy(channel->token, "controlled-invalid-token");
+            channel->token_length = (uint32_t)strlen(channel->token);
+            break;
+        case 11: channel->magic ^= 1; break;
+        case 12: channel->pid += 1; break;
+        case 13: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;
+        case 14: channel->status = 99; break;
+        case 15: atomic_store_explicit(&channel->call_boundary, 0, memory_order_release); break;
+        }
+    }
+    return native_unmap(p, n);
+}
+
+static int64_t controlled_consume(const char *token) {
+    observer->worker_argv_env_clean = vector_excludes(*_NSGetArgv(), token) && vector_excludes(*_NSGetEnviron(), token);
+    if (PW_CONTROL_MODE == 102) interrupted(3, 0, 0);
+    if (PW_CONTROL_MODE == 104) { errno = EACCES; return -1; }
+    return native_consume(token);
+}
+static int controlled_release(int64_t handle) {
+    if (PW_CONTROL_MODE == 202) interrupted(3, 1, 0);
+    if (PW_CONTROL_MODE == 204) { errno = EIO; return -1; }
+    return native_release(handle);
+}

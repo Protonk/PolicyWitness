@@ -310,6 +310,62 @@
       "reason": "M3 reader integration diagnostic, capture or check; original result retained. Incremental working-tree source; see run configuration and app inventory.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/extensions-m3-native-boundaries-20261012",
+      "run_id": "20261013T005443Z_6f4769fb",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-native-boundaries2-20261012",
+      "run_id": "20261013T005825Z_9297dc20",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-native-boundaries3-20261012",
+      "run_id": "20261013T005937Z_5456c6b2",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-native-boundaries4-20261012",
+      "run_id": "20261013T010344Z_50fecfb7",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-native-boundaries5-20261012",
+      "run_id": "20261013T010558Z_be27d671",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-boundary-shape-20261012",
+      "run_id": "20261013T005655Z_5070748b",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-boundary-shape2-20261012",
+      "run_id": "20261013T005711Z_0b11e43e",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-boundary-accepted-20261012",
+      "run_id": "20261013T010431Z_8ce6e4fb",
+      "reason": "M3 native-boundary increment diagnostic or verification; original results preserved. See the investigative record for fixture failures and cleanup limits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

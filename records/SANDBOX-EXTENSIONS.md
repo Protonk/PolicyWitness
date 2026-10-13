@@ -662,3 +662,73 @@ effective access. These controls establish interpretation, not live native
 failure reachability. M3's native interruption, confinement and BYOXPC obligations,
 remaining manifest/documentation work, integrated gate and rendered assessment
 are still outstanding. No audit handoff is claimed.
+
+## M3 native boundary increment
+
+The signed app is now build 553, source stamp `d4f512a-dirty`, worker identity
+`5e8afcb85a49a54cb9df6b24cf594befd5b74712618161ebadd92679fc28c8a0`. It includes
+the prior independent Rust reader changes and current native publication guards.
+Malformed issuer magic, PID, state or call-marker association cannot promote
+native values or delivery. Swift rejects unsupported fresh-read observations,
+missing lifecycle publication and inconsistent retained-evidence claims. The
+separate transient channel has a compiled C/Swift layout check. The API constants
+remain in the standalone client compilation closure; an initial signed-build
+attempt exposed and corrected a reference to host-only constants.
+
+Registered `witness_contract/extension_boundaries` now uses production native
+sources with compile-time substitutions, entirely outside the inspected app.
+Its 25 controls include genuine native success; issuance refusal, oversize/empty
+tokens, issuer death/deadline and unavailable API; malformed channel headers and
+token framing; native consume/release failure and worker API absence; and three
+interruption positions for each lifecycle call. Independent receipts distinguish
+pre-call publication, execution inside a controlled replacement before return,
+and real native return before result publication. The middle position is not a
+claim about execution inside the kernel API. In every interrupted case PW keeps
+native results unresolved and retains earlier completed observations.
+
+Real token bytes remain in test-owned transient shared memory. The parent scans
+captured output in memory before saving it and tests detector sensitivity with
+an in-memory contaminated string. Receipts observe clean argv/environment,
+disabled core dumps, closed production channel descriptors and erased issuer and
+worker buffers. Host erasure is reported separately; a direct host-buffer control
+is still pending. Deliberately malformed or refused calls do not establish native
+permission effects. The app's signatures were valid before and its inventory
+unchanged after each live run.
+
+All rows below are local-only managed evidence, protected by `tests/RETAINED.json`.
+Commands used the established Rust PATH, fresh `PW_TEST_OUT_DIR` and `tests/run.sh`
+outside the automation sandbox. `native-boundaries*` selected the new boundary
+case; the first also selected `runner_abi_layout` and the ordinary extension case.
+`boundary-shape*` selected the Swift unit executable. `boundary-accepted` selected
+both `runner_unit` cases, `runner_abi_layout` and blackbox checker controls.
+
+| Run suffix after `extensions-m3-` and before `-20261012` | Run ID | Original result |
+| --- | --- | --- |
+| `native-boundaries` | `20261013T005443Z_6f4769fb` | 2/3 passed; test observer open failed and issuer override was absent from the shape fixture. |
+| `boundary-shape` | `20261013T005655Z_5070748b` | Swift test initializer argument order failed compilation. |
+| `boundary-shape2` | `20261013T005711Z_0b11e43e` | 400/401 Swift checks; generated shape candidate added only the issuer override path and was reviewed before installation. |
+| `native-boundaries2` | `20261013T005825Z_9297dc20` | Failed; diagnostic exit identified EACCES opening the test observer. |
+| `native-boundaries3` | `20261013T005937Z_5456c6b2` | Failed before native execution: `fchmod` on POSIX shared memory returned EINVAL. |
+| `native-boundaries4` | `20261013T010344Z_50fecfb7` | All 25 native controls passed after fixture setup corrections. |
+| `boundary-accepted` | `20261013T010431Z_8ce6e4fb` | 4/4 registered cases passed: 401 Swift checks and driver replay, service admission mutations, 123 worker-layout values plus 18 transient-layout values, independent-reader controls. |
+| `native-boundaries5` | `20261013T010558Z_be27d671` | All 25 controls passed with durable observer recovery receipts; all channel cleanup and recovery-record removal verified. |
+
+The observer failure was a fixture ABI error: macOS declares `shm_open` variadic,
+so ctypes must declare only its two fixed arguments on arm64. The failed
+`fchmod` retry then exposed an ownership bug in the fixture: it created 25 empty
+objects before recording their random names. No mapping, target, token or child
+was created in that run, but those object names cannot now be recovered from its
+artifacts and absence is unverified. No cleanup by name prefix was attempted.
+Subsequent setup records ownership before metadata checks, unlinks on setup
+failure, and retains a duplicate recovery record outside prunable output if
+native child cleanup is unconfirmed. All recorded channels in the first, second,
+fourth and fifth runs have verified unlink receipts. This is a test-fixture
+cleanup limitation, not evidence of token retention or production cleanup.
+
+Each run has an attached console transcript. The fifth native run's `checkpoint/`
+contains both signed-build logs, the tracked diff, source copies and SHA-256
+manifest against base `d4f512a`. Full-run source provenance remains null in the
+index because these were incremental working-tree runs. Attachments and retention
+updates used the checkout lock after checking run ownership and completion.
+This increment does not close M3 or prepare A1; the checkpoint lists remaining
+obligations. No release or external-runner installation occurred.

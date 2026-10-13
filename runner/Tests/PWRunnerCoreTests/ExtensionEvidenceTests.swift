@@ -42,26 +42,40 @@ func extensionReplyFixture(published: Bool = true, available: Bool = true) -> PW
     return PWRunnerRunResult(specimen_id: "constructed-extension", rc: 0, normalized_outcome: "ok", pid: 42,
         policy_format: "sbpl", sandboxed_after_apply: true, steps: ordinary,
         runner_subprocess: buildWorkerSubprocess(out, disposition: disposition), phases: [phase],
-        extensions: [declaration], extension_events: events)
+        extensions: [declaration], extension_events: events,
+        test_overrides: PWRunnerTestOverrides(issuer_executable_path: "/constructed/issuer"))
 }
 
 func extensionShapeDocuments() throws -> [[String: Any]] {
     var replies = [extensionReplyFixture(), extensionReplyFixture(published: false), extensionReplyFixture(available: false)]
     var failed = extensionReplyFixture(available: false)
-    failed.extensions?[0].preparation_status = "metadata_failed"
-    failed.extensions?[0].preparation_errno = 13
-    failed.extensions?[0].identity = nil
     failed.extensions?[0].issuance_status = "issuer_timeout"
     failed.extensions?[0].issuer?.termination_request = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: 1)
     failed.extensions?[0].issuer?.term_signal = 9
     failed.extensions?[0].issuer?.exit_code = nil
-    failed.extensions?[0].issuer?.spawn_failure = PWRunnerSpawnFailure(executable_path: "/constructed/issuer",
-        return_code: 2, diagnostic: "constructed")
     failed.steps[0].attempt.fresh_read = PWRunnerFreshRead(open_rc: -1, open_errno: 13)
+    failed.steps[0].attempt.rc = -1
+    failed.steps[0].attempt.errno = 13
+    failed.steps[0].attempt.outcome = AttemptOutcome.readFailed
     replies.append(failed)
+    var preparation = extensionReplyFixture(available: false)
+    preparation.extensions?[0].preparation_status = "metadata_failed"
+    preparation.extensions?[0].preparation_errno = 13
+    preparation.extensions?[0].identity = nil
+    preparation.extensions?[0].issuance_status = "not_started"
+    preparation.extensions?[0].issuer = nil
+    replies.append(preparation)
+    var spawn = extensionReplyFixture(available: false)
+    spawn.extensions?[0].issuance_status = "spawn_failed"
+    spawn.extensions?[0].issuer = PWRunnerIssuer(executable_path: "/constructed/issuer",
+        spawn_failure: PWRunnerSpawnFailure(executable_path: "/constructed/issuer", return_code: 2, diagnostic: "constructed"))
+    replies.append(spawn)
     var syscallFailure = extensionReplyFixture()
     syscallFailure.steps[0].attempt.fresh_read = PWRunnerFreshRead(open_rc: 5, read_rc: -1, read_errno: 5,
         stat_rc: -1, stat_errno: 9, close_rc: -1, close_errno: 4)
+    syscallFailure.steps[0].attempt.rc = -1
+    syscallFailure.steps[0].attempt.errno = 9
+    syscallFailure.steps[0].attempt.outcome = AttemptOutcome.readFailed
     replies.append(syscallFailure)
     return try replies.map { try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON($0)) as! [String: Any] }
 }
@@ -89,6 +103,8 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
         tk.run("encoder rejects invented publication and mismatched references") {
             let changes: [(inout PWRunnerRunResult) -> Void] = [
                 { $0.extension_events?[0].call_boundary_observed = false },
+                { $0.extension_events?[0].handle_ref = "token" },
+                { $0.extension_events?[0].errno = -1 },
                 { $0.extension_events?[0].result_published = false },
                 { $0.extension_events?[0].native_result = -1 },
                 { $0.extension_events?[1].handle_ref = "other" },
@@ -103,6 +119,25 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
                 var refused = false
                 do { _ = try pwRunnerEncodeJSON(reply) } catch { refused = true }
                 try expectTrue(refused, "encoder accepted unsupported native lifecycle evidence")
+            }
+        }
+        tk.run("fresh syscall payloads cannot invent bytes or follow an unsuccessful open") {
+            let changes: [(inout PWRunnerAttemptResult) -> Void] = [
+                { $0.fresh_read = nil },
+                { $0.fresh_read?.open_rc = -1 },
+                { $0.fresh_read?.read_rc = 65 },
+                { $0.fresh_read?.read_rc = -1 },
+                { $0.fresh_read?.identity = nil },
+                { $0.fresh_read?.content_hex = "ff" },
+                { $0.fresh_read?.close_rc = nil },
+                { $0.fresh_read?.open_errno = 13 },
+                { $0.result_source = "synthetic" },
+            ]
+            for change in changes {
+                var reply = extensionReplyFixture(); change(&reply.steps[0].attempt)
+                var refused = false
+                do { _ = try pwRunnerEncodeJSON(reply) } catch { refused = true }
+                try expectTrue(refused, "encoder accepted unsupported fresh-read observations")
             }
         }
     }

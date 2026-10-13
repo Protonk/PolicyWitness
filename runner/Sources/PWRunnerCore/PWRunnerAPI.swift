@@ -343,6 +343,17 @@ enum PWRunnerPhaseAction: Codable {
     }
 }
 
+// Wire-side bounds also compile into the client, without the worker driver.
+enum PWExtensionLimits {
+    static let declarations = 1
+    static let consumes = 1
+    static let releases = 1
+    static let referenceBytes = 63
+    static let targetBytes = 1023
+    static let tokenBytes = 16384
+    static let freshReadBytes = 64
+}
+
 struct PWRunnerExtensionDeclaration: Codable {
     var token_ref: String
     var target: String
@@ -2141,7 +2152,8 @@ struct PWRunnerRunResult: Codable {
                   rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
                   steps.allSatisfy({ $0.comparison == nil }),
-                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && phases.isEmpty) else {
+                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && phases.isEmpty &&
+                    (extensions ?? []).isEmpty && (extension_events ?? []).isEmpty) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
@@ -2192,6 +2204,9 @@ struct PWRunnerRunResult: Codable {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: issue))
             }
             for step in steps {
+                if let issue = step.attempt.freshReadEvidenceProblem() {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
+                }
                 guard let phase = phases.first(where: { $0.phase_id == step.phase_id }), phase.action_ids.contains(step.step_id) else {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
                         debugDescription: "step requires unique phase association"))
@@ -2262,6 +2277,8 @@ extension PWRunnerRunResult {
         var consume: PWRunnerExtensionEvent?
         var released = false
         for event in events {
+            func validReference(_ value: String) -> Bool { !value.isEmpty && value.utf8.count <= PWExtensionLimits.referenceBytes && !value.utf8.contains(0) }
+            if !validReference(event.handle_ref) || event.handle_ref == declarations.first?.token_ref { return "extension handle reference" }
             guard let phase = phases.first(where: { $0.phase_id == event.phase_id }), phase.action_ids.contains(event.step_id) else { return "extension event phase association" }
             if event.operation == "consume" {
                 if consume != nil || event.token_ref != declarations.first?.token_ref { return "extension consume reference" }
@@ -2277,10 +2294,10 @@ extension PWRunnerRunResult {
                 if event.result_published != (disposition.slot == "completed") || event.lifecycle?.boundary != disposition.questions["step_boundary_reached"] || event.lifecycle?.result != disposition.questions["step_result_published"] {
                     return "extension publication disagrees with disposition"
                 }
-            } else if runner_subprocess != nil { return "extension event lacks disposition" }
+            } else if runner_subprocess != nil || event.call_boundary_observed || event.result_published || event.lifecycle != nil { return "extension event lacks disposition" }
             switch event.status {
             case "returned":
-                if !event.result_published || !event.call_boundary_observed || event.native_result == nil || event.errno == nil || event.unavailable_reason != nil { return "native extension result lacks publication" }
+                if !event.result_published || !event.call_boundary_observed || event.native_result == nil || event.errno == nil || (event.errno ?? 0) < 0 || event.unavailable_reason != nil { return "native extension result lacks publication" }
                 if event.operation == "consume" && declarations.first?.delivery_status != "delivered" { return "consumption lacks delivery" }
             case "unavailable":
                 if !event.result_published || event.call_boundary_observed || event.native_result != nil || event.errno != nil || !["token_unavailable", "handle_unavailable", "native_api_unavailable", "repeated_action"].contains(event.unavailable_reason ?? "") { return "unavailable extension action fabricates a call" }
@@ -2288,9 +2305,17 @@ extension PWRunnerRunResult {
                 if event.result_published || event.native_result != nil || event.errno != nil || event.unavailable_reason != nil { return "unpublished extension result must stay unresolved" }
             default: return "invalid extension event status"
             }
-            if event.result_published && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
+            if (event.result_published || event.call_boundary_observed) && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
         }
         for declaration in declarations {
+            if declaration.issuance_status == "issued" {
+                guard declaration.preparation_status == "prepared", declaration.resolved_target != nil,
+                      declaration.identity != nil, declaration.issuer?.call_boundary_observed == true,
+                      declaration.issuer?.native_nonnull == true, declaration.issuer?.result_published == true,
+                      declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0,
+                      declaration.issuer?.term_signal == nil, let length = declaration.issuer?.token_length,
+                      length > 0 && length < PWExtensionLimits.tokenBytes else { return "issuance lacks bounded native result and issuer reap" }
+            }
             if declaration.delivery_status == "delivered" {
                 guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,
                       bytes > 0 && bytes < 16384, bytes == declaration.issuer?.token_length,
@@ -2298,6 +2323,37 @@ extension PWRunnerRunResult {
                       declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0 else { return "delivery lacks bounded issuance and issuer reap" }
             }
         }
+        return nil
+    }
+}
+
+extension PWRunnerAttemptResult {
+    func freshReadEvidenceProblem() -> String? {
+        let expected = requested_kind == "file" && requested_action == "read_fresh" && result_source == "worker"
+        guard let read = fresh_read else { return expected ? "completed fresh read lacks syscall observations" : nil }
+        guard expected, read.open_rc >= -1 else { return "fresh read requires a completed read_fresh attempt" }
+        if read.open_rc == -1 {
+            guard let error = read.open_errno, error >= 0, read.read_rc == nil, read.read_errno == nil,
+                  read.stat_rc == nil, read.stat_errno == nil, read.identity == nil,
+                  read.close_rc == nil, read.close_errno == nil, read.content_hex == nil,
+                  rc == -1, errno == (error == 0 ? nil : Int(error)), outcome == AttemptOutcome.readFailed else {
+                return "failed fresh open cannot supply read/stat/close evidence"
+            }
+            return nil
+        }
+        guard read.open_errno == nil, let count = read.read_rc, count >= -1 && count <= PWExtensionLimits.freshReadBytes,
+              let stat = read.stat_rc, [-1, 0].contains(stat), let close = read.close_rc, [-1, 0].contains(close) else { return "invalid fresh syscall results" }
+        func validErrno(_ result: Int64, _ error: Int32?) -> Bool { result < 0 ? error != nil && error! >= 0 : error == nil }
+        guard validErrno(count, read.read_errno), validErrno(Int64(stat), read.stat_errno), validErrno(Int64(close), read.close_errno),
+              (stat == 0) == (read.identity != nil) else { return "fresh syscall failure evidence disagrees" }
+        if count >= 0 {
+            guard let content = read.content_hex, content.utf8.count == Int(count) * 2,
+                  content.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { return "fresh read bytes disagree with native count" }
+        } else if read.content_hex != nil { return "failed fresh read cannot supply content" }
+        let failed = stat < 0 || count < 0 || close < 0
+        let error = stat < 0 ? read.stat_errno : count < 0 ? read.read_errno : close < 0 ? read.close_errno : nil
+        guard rc == (failed ? -1 : 0), errno == error.flatMap({ $0 == 0 ? nil : Int($0) }),
+              outcome == (failed ? AttemptOutcome.readFailed : AttemptOutcome.ok) else { return "fresh syscall results disagree with attempt" }
         return nil
     }
 }
