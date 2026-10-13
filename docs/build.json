@@ -677,8 +677,8 @@
       "variants": [
         "full"
       ],
-      "reads": "each service's Info.plist and builddir/ host, the worker and the validator",
-      "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker and the validator",
+      "reads": "each service's Info.plist and builddir/ host, the worker, validator and issuer",
+      "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker, validator and issuer",
       "refusals": [
         "missing_service_dir",
         "missing_service_plist",

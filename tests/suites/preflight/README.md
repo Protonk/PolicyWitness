@@ -13,7 +13,11 @@ Offline release controls also exercise the release procedure's decision points.
   symbol lookup. The [host-source check](../source_drift/README.md) covers
   literal lookup/load forms. Worker, validator and issuer native calls are
   expected; only the host must remain free of them. The issuer is required in
-  the bundle inventory and has separate signature, entitlement and hash checks.
+  the bundle inventory and has separate signature, signer and manifest-hash
+  checks. This inspector does not compare entitlement contents. Independent
+  issuer entitlement read-back belongs to the
+  [BYOXPC controls](../runner_byoxpc/README.md) and
+  [extension controls](../witness_contract/README.md#native-extension-boundaries).
 - Never executes `policy-witness` or the runner.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.
