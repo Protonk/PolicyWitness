@@ -6,7 +6,7 @@ import Foundation
 // a completed, ordered step populated here; the keys an ordinary reply cannot
 // carry at once (a degraded reply's `reporting_failure`, a synthetic attempt's
 // `missing_reason`, a signalled worker's `term_signal`, a slot conflict's
-// `issues`) come from the production-shaped documents `replyShapeDocuments()`
+// `issues`, a failed validator spawn) come from the production-shaped documents `replyShapeDocuments()`
 // adds beside this one for the reply shape golden.
 func replyFixture() throws -> PWRunnerRunResult {
     let json = #"""
@@ -350,19 +350,17 @@ func replyFixture() throws -> PWRunnerRunResult {
                 "raw_line": "native record bytes"
               }
             ]
-          },
-          "validator_spawn_failure": {
-            "origin": "runner_host",
-            "operation": "posix_spawn",
-            "executable_path": "/constructed/validator",
-            "return_code": 123456,
-            "diagnostic": "unfamiliar native failure"
           }
         }
       ]
     }
     """#.replacingOccurrences(of: "SCHEMA", with: String(PWContract.responseSchema))
     return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: Data(json.utf8))
+}
+
+func validatorSpawnFailureFixture() -> PWRunnerSpawnFailure {
+    PWRunnerSpawnFailure(executable_path: "/constructed/validator", return_code: 123456,
+        diagnostic: "unfamiliar native failure")
 }
 
 private func replyObject(_ data: Data) throws -> [String: Any] {

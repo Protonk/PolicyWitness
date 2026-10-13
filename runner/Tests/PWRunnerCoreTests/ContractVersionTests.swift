@@ -168,6 +168,12 @@ func replyShapeDocuments() throws -> [[String: Any]] {
     signalledValidator.phases[0].validator_subprocess?.term_signal = 9
     signalledValidator.phases[0].validator_subprocess?.exit_code = nil
     documents.append(try shapeObject(pwRunnerEncodeJSON(signalledValidator)))
+    var spawnFailed = base
+    spawnFailed.phases[0].validator_subprocess = nil
+    spawnFailed.phases[0].validator_spawn_failure = validatorSpawnFailureFixture()
+    spawnFailed.phases[0].ordering?.validator_disposition = "not_spawned"
+    spawnFailed.steps[0].comparison?.order = "unestablished"
+    documents.append(try shapeObject(pwRunnerEncodeJSON(spawnFailed)))
     for (out, plan) in shapeWorkerOutputs() {
         let record = resolveDisposition(out, plan: plan)
         let sub = buildWorkerSubprocess(out, disposition: record)

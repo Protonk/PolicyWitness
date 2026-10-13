@@ -45,7 +45,7 @@ func constructedPhase(_ out: CWorkerOutput?, ids: [String], validator: Validator
     PWRunnerPhaseResult(phase_id: "main", ordinal: 1, action_ids: ids,
         arrival_observed: out?.hookInvoked == true || out?.proceedObserved == true,
         completion_observed: out?.done == true && out?.proceedObserved == true,
-        collection_status: out?.hookInvoked == true ? "collected" : "not_reached",
+        collection_status: out?.hookInvoked == true ? (hasQueries ? "collected" : "not_needed") : "not_reached",
         ordering: out.map { buildOrdering($0, validatorOutput: validator, hasQueries: hasQueries) },
         validator_subprocess: validator.map(buildValidatorSubprocess))
 }
@@ -339,6 +339,20 @@ func runOrderingTests(_ tk: TestKit) {
                 if missing == "ownership" { w.proceedOwnershipEstablished = false }
                 if missing == "fault" { w.orderingProtocolViolations = ["attempt_before_release"] }
                 let envelope = orderingEnvelope(missing == "worker" ? nil : w, validator)
+                try expectEqual(envelope.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
+                if missing == "worker" || missing == "collection" {
+                    // Keep the deliberately contradictory validator observation;
+                    // normal encoding refuses it, and degradation retains it
+                    // without comparison claims.
+                    do { _ = try pwRunnerEncodeJSON(envelope); throw TestFailure(message: "contradictory collection accepted") }
+                    catch is EncodingError { }
+                    let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(envelope))
+                    try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
+                    try expectNil(degraded.steps[0].comparison)
+                    try expectEqual(try pwRunnerEncodeJSON(degraded.phases[0].validator_subprocess),
+                                    try pwRunnerEncodeJSON(envelope.phases[0].validator_subprocess))
+                    continue
+                }
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
                 try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)

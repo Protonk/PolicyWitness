@@ -7,7 +7,7 @@ import Foundation
 // per byte), the largest worker diagnostic, and the largest slash-heavy
 // compiled-profile receipt. The runner client's retention budget is derived from
 // this number, and the live max-target workload must stay under it. Separately
-// encoded extension and fresh-read components are added without subtracting
+// encoded spawn-failure, extension and fresh-read components are added without subtracting
 // ordinary fields they replace. This union is deliberately not a reachable reply.
 //
 // Every string key the fixture carries must be classified below as fixed
@@ -271,7 +271,19 @@ func maximalReplyEncodedSize() throws -> Int {
     let data = try JSONSerialization.data(withJSONObject: reply)
     let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
     try expectEqual(decoded.steps.count, count)
-    return try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance()
+    // A failed spawn cannot coexist with a validator in an ordinary phase.
+    // Encode its maximal member separately, preserving the conservative union
+    // without asking the full-reply encoder to accept contradictory evidence.
+    let spawnMember = try JSONSerialization.jsonObject(with:
+        pwRunnerEncodeJSON(["validator_spawn_failure": validatorSpawnFailureFixture()]))
+    let maximalSpawn = maximize(spawnMember, key: nil, unknown: &unknown)
+    if !unknown.isEmpty { throw Unclassified(keys: unknown) }
+    let spawn = try pwRunnerDecodeJSON([String: PWRunnerSpawnFailure].self,
+        from: JSONSerialization.data(withJSONObject: maximalSpawn))
+    // Remove one of the member object's two braces: inserting the member in
+    // a nonempty phase adds one comma instead. All key/value bytes stay counted.
+    let spawnAllowance = PWRunnerPhase.maximumCount * (try pwRunnerEncodeJSON(spawn).count - 1)
+    return try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + spawnAllowance
 }
 
 private struct Manifest: Decodable {

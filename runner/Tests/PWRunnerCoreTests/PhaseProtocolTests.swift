@@ -41,7 +41,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 phase.collection_status = row["status"] as! String
                 phase.arrival_observed = phase.collection_status != "not_reached"; phase.completion_observed = false
                 phase.ordering?.validator_disposition = row["disposition"] as! String
-                phase.ordering?.collection_closed_before_proceed = phase.ordering?.validator_disposition != "not_invoked"
+                phase.ordering?.collection_closed_before_proceed = (row["disposition"] as! String) != "not_invoked"
                 phase.ordering?.proceed_set = false; phase.ordering?.proceed_observed = false
                 phase.ordering?.worker_lifetime_established = false
                 if let reaped = row["reaped"] as? Bool {

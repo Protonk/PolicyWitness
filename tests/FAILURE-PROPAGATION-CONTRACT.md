@@ -1022,8 +1022,9 @@ failed cleanup, and no later record enters predictions.
 `phase_id`, ordered `action_ids`, `arrival_observed`, `completion_observed`,
 `collection_status`, and, when a worker exists, `ordering`. Validator process
 and spawn-failure evidence belong only to this record. `steps[].phase_id` must
-match the unique phase containing its `step_id`; concatenating all phase action
-IDs must equal the ordered step IDs. The simple `probe_plan` has one phase,
+match the unique phase containing its `step_id`. Concatenated phase action IDs
+partition ordinary steps and native events: filtering for either kind preserves
+that array's order, and every action occurs exactly once. The simple `probe_plan` has one phase,
 `main`. Admission refusals have no phases or steps.
 
 Collection status is `not_reached`, `not_needed`, `collected`,

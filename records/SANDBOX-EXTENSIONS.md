@@ -1304,3 +1304,38 @@ copies are retained locally with null source provenance in the index; the base
 is `cbb0ccf`. Attachment verified run IDs, ownership and terminal state under
 the stable checkout lock. Signed candidate build, Swift/live acceptance,
 rendered recheck and handoff back to the original auditor remain pending.
+
+The clean candidate `8707abc` built as signed build 565. Focused run
+`a1-repair-focused-20261013` (`20261013T170412Z_f0335f92`) passed eight of
+nine cases: all source-drift checks and repaired live isolation passed, while
+the new Swift test failed compilation on overlapping access to its optional
+ordering value. The test reads the disposition from the row before mutation.
+The next Swift run (`a1-repair-swift-20261013`,
+`20261013T170648Z_eaf9ab61`) passed 385/406: its new matrix passed, but the
+guard exposed an older field-complete fixture carrying both a validator and
+failed spawn in one phase. Those incompatible observations now have separate
+shape documents. The maximum-reply calculation encodes the spawn member
+separately and counts its insertion bytes per phase, preserving the exact
+52,414,779-byte conservative union and 152 MiB budget without asking the ordinary
+encoder to accept that contradiction. The shape golden is unchanged.
+
+The following run (`a1-repair-swift-fixtures-20261013`,
+`20261013T170908Z_46451de6`) passed 405/406. The remaining ordering control
+deliberately paired a validator with absent worker/collection evidence. It now
+asserts ordinary encoding rejection and retained validator evidence in the
+degraded reply, with comparisons withheld, rather than dropping the conflicting
+observation. `a1-repair-swift-accepted-20261013`
+(`20261013T171008Z_f1ddacae`) passes 406/406 and Rust/Python driver replay.
+All runs retain original results and attached console logs under the checkout
+lock. The focused run has clean `8707abc` hashes; the accepted Swift correction
+has the final working diff/hashes. Full intermediate source snapshots were not
+captured for the two failed Swift executions, whose index sources remain null;
+they are diagnostics, not final acceptance credits.
+
+Rendered inspection also corrected an older phase-partition sentence: action
+IDs partition both ordinary and native arrays while preserving each order.
+The preview's new collection table has a wider first column. Immutable initial
+and corrected rendered views are prepared for the existing documentation
+reviewer's bounded recheck; the external follow-up remains assigned to the
+original auditor. A final clean build and full default/opt-in acceptance follow
+this test-fixture correction increment.
