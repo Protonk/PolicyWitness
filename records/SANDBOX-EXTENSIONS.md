@@ -502,3 +502,110 @@ remains. The review does not substitute for runtime evidence or A1.
 
 Both baselines gained no entries. M2 is complete. M3 begins from the accepted
 source, retaining one applied policy/worker and the established phase protocol.
+
+## M3 pause checkpoint
+
+The user requested a clean pause before interrupting the network. Implementation
+is committed as `0daa018101ed39ecfd92d6d528b112784ed9c30f`. This is an unfinished
+milestone checkpoint, not acceptance or an A1 handoff. The subsequent interruption
+occurred before evidence attachment and resume-note edits; those bookkeeping
+steps were completed on resumption without further implementation changes.
+
+The checkpoint adds the bundle-local native issuer, a separate transient shared
+memory token channel, bounded extension declarations and consume/release actions,
+native lifecycle publications, and a fresh-read action retaining individual
+open/read/stat/close observations. The worker performs consumption and release
+under its once-applied policy. The host records preparation and issuer evidence,
+coordinates delivery and erases its mapping. Tokens are carried in the transient
+mapping, not serialized as lifecycle results. Dedicated token-confinement and
+interruption controls are still required before crediting those invariants.
+Build/signing integration and BYOXPC issuer registry/provenance fields are
+implemented but have not received their full acceptance controls. The response
+schema is now 17; request 4 and envelope 7 remain unchanged.
+
+The signed development build completed with
+`make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'`, with
+`/opt/homebrew/opt/rustup/bin` on PATH and outside the automation sandbox.
+Build 550 retains version 0.2.8 and stamp `b62509e-dirty`; the product source
+matches the implementation checkpoint committed afterward. Worker identity is
+`1b8b6623d0ecedee44f49a378226fc5b9264b61bf1438817e3534d5284073301`.
+Swift core compilation, production Rust `cargo check`, and worker-identity,
+contract and build generator `--check` commands passed. These are not the full
+Swift/Rust test suites, ABI check, `source_drift`, preflight or M3 gate.
+
+All three diagnostic runs selected `tests/run.sh --case witness_contract/extensions`
+with a fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>`, the Rust PATH above and
+execution outside the automation sandbox. Each run completed its one selected
+case with a failed result; no historical result has been changed:
+
+| Run directory | Run ID | Finding |
+| --- | --- | --- |
+| `extensions-m3-first-cli-20261012` | `20261012T230544Z_b10608a4` | Issuer exited 92 before issuance; exact shared-memory file-size comparison was incorrect. |
+| `extensions-m3-channel-cli-20261012` | `20261012T230814Z_90b3a9c6` | Issuer still exited 92 after the size correction; spawn descriptor inheritance required a distinct source descriptor. |
+| `extensions-m3-pause-check-20261012` | `20261012T230934Z_648b13f3` | Native lifecycle and fresh-read assertions passed; unfinished independent readers rejected the new response fields and phase action partition. |
+
+The channel correction follows two observations. A temporary, unlinked macOS
+shared-memory experiment requested 17,472 bytes with `ftruncate`, but `fstat`
+reported 32,768; the mapping now checks sufficient backing size while mapping
+only the fixed logical capacity. The issuer descriptor could originally equal
+its destination descriptor 3, leaving close-on-exec set through a same-descriptor
+spawn duplication. A separate source descriptor allocated at or above 64 now
+feeds the spawn duplication to descriptor 3. The third CLI run exercised both
+corrections together. These are implementation repairs within the planned
+transient-channel design, not authority or scope expansions.
+
+The third run records a nonnull native issuance result, a reaped issuer exiting
+0, token length/delivery of 328 bytes, consume handle `1` with errno 0, and release
+result `0` with errno 0 for that handle reference. Both calls have their boundary
+and result publications. The worker applied its policy and was reaped; all three
+phases retained arrival/completion and their ordinary `query_first` observations.
+Fresh open attempts before consumption and after release returned -1/EPERM. The
+middle attempt opened descriptor 5, read the expected 32 bytes, and recorded
+successful stat and close results. Independent observations retained matching
+device/inode and unchanged contents. These are this experiment's observations,
+not a general inference from release success to permission revocation.
+
+The failing independent-reader assertions identify unrecognized `extensions`,
+`extension_events`, `fresh_read` and issuer provenance fields, missing read-action
+comparison mappings, and phase partition logic that still counts only ordinary
+steps. Consequently the case remains failed despite its preceding native
+assertions. All three runs established valid app signatures before execution and
+unchanged inventories afterward. The first two pre-correction snapshots have no
+credited source commit; their retention entries deliberately use `source: null`.
+The third uses the exact implementation checkpoint above.
+
+The [third managed run](../tests/out/runs/extensions-m3-pause-check-20261012/)
+contains the raw specimen/envelope under
+`suites/witness_contract/extensions/artifacts/lifecycle/`, the assertion failure,
+and `independent-observations.json`. Its `checkpoint/` attachment contains all
+three build logs, all three diagnostic console logs, the Swift/Rust compile logs,
+and a SHA-256 manifest identifying source and build. All three runs are protected
+in `tests/RETAINED.json`. This evidence is gitignored and local-only. Attachment
+was performed under the stable checkout lock after validating ownership, run IDs
+and terminal completion; original evidence was preserved.
+
+Resume with independent reader integration in `tests/lib/consumer.py`, lifecycle
+adapter/oracle checks and Rust disposition validation, including rejected
+invented completion and reference/order controls. Then finish these M3 obligations:
+
+- Compile and update Swift/Rust tests and initializer fixtures; cover admission,
+  reference/limit refusals, issuer capability failures and lifecycle evidence.
+- Complete issuer/worker failure and interruption controls, token confinement,
+  target preparation and identity observations, fresh descriptor controls, and
+  lifecycle placement/omission cases on standard and BYOXPC runners. Check
+  BYOXPC signing/read-back and older-registry recovery.
+- Update C/Swift ABI printers and reviewed golden values for the new fields,
+  check the separate channel layout agreement, and reassess maximum-reply bounds.
+- Finish the limits, failure contract, scenario matrix, coverage/catalog,
+  architecture, public grammar/guide, FAQ and build/signing inventories through
+  their owning inputs and generators. Preserve earlier response captures while
+  adding genuine response-17 captures and updating current fixture references.
+- Inspect degraded/minimal reply fallback handling for the new evidence fields,
+  unpublished native outcomes, uncertain cleanup and token erasure claims.
+- Run the coordinated signed M3 checks and required ordering mutations, then
+  obtain and close the fresh rendered assessment. Prepare A1 only after M3 closes.
+
+No M3 BYOXPC installation was made. M2's owned fixture cleanup remains verified.
+The final process inspection found no matching build, issuer, worker, validator
+or runner task; the evidence lock was released normally. There is no active test
+or new cleanup obligation at this pause. No release was published.

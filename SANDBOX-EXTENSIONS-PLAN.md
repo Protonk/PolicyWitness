@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | Pending | Requires M1 and M2; public ordinary and extension phases, standard and BYOXPC runners, incomplete native results, token confinement controls and the M3 contract increment |
+| M3 Minimal extension experiment through PW | In progress; paused | Implementation checkpoint `0daa018`; signed build 550 exercises native issuance, consumption, release and fresh reads through the standard CLI. The diagnostic case fails at unfinished independent-reader integration; the M3 gate and rendered assessment remain incomplete. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -77,19 +77,29 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** the user authorized completion through the A1 audit
-boundary, then standing by without further assessment. M0, M1 and M2 are complete.
-M2's consolidated signed acceptance passed at `ac9c3b5` in
-`tests/out/runs/extensions-m2-accepted-20261012` (113/113 cases).
-Its worker identity is `78e5ab71d82e101486f291e133e1bdb1a912577f0dabee8ebb35ac63b3a5233d`.
-Diagnostic results, fixture provenance and remaining checks are in the
-[investigative record](records/SANDBOX-EXTENSIONS.md). The development identity
-remains `Developer ID Application: Adam Hyland (42D369QV8E)`.
+**Execution state:** paused at the user's request before a network interruption;
+the interrupted evidence-saving step is now complete. M0, M1 and M2 are complete.
+The broader authorization remains completion through A1 followed by standing by,
+but this checkpoint does not reach that audit boundary. M2's consolidated signed
+acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
+`0daa018101ed39ecfd92d6d528b112784ed9c30f`; no product edits remain uncommitted.
+The current development app is build 550, stamped `b62509e-dirty`, with worker
+identity `1b8b6623d0ecedee44f49a378226fc5b9264b61bf1438817e3534d5284073301`.
+Its source matches that implementation checkpoint; the stamp predates the commit.
+The signed build and narrow generator checks passed. Three failed M3 diagnostic
+runs retain their original results and are protected in the retention index;
+none receives M3 gate credit. Detailed findings, evidence locations and remaining
+work are in the [investigative record](records/SANDBOX-EXTENSIONS.md).
+The development identity remains
+`Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** implement and verify M3. Commit the A1 handoff only after M3's
-gate and assessment, mark A1 awaiting response, and stand by. Test-owned BYOXPC
-resources remain governed by their durable session records; the pre-gate registry
-and reconciliation inspection were empty. M3 has not begun.
+**Next action after resumption:** finish independent lifecycle/fresh-read readers
+and their rejection controls, then complete M3's remaining tests, contract and
+documentation increment, signed standard/BYOXPC acceptance and rendered assessment.
+Commit the A1 handoff only after that gate passes, mark A1 awaiting response, and
+stand by. No build or test process remains active, and the checkout lock was
+acquired and released while preserving evidence. M3 created no BYOXPC installation;
+M2's test-owned fixture removal was verified. No new cleanup obligation remains.
 
 After each increment and before any planned stopping point, update this table and
 execution state so another session can resume safely. Record the implementation
