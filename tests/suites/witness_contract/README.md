@@ -269,13 +269,17 @@ by literal, and independently checks every file's bytes before decoding.
 Both require eligible predictions to be `query_first`; allow/`succeeded` and
 deny/`permission_failure` records stay distinct, with no judgment of agreement.
 
-`max_targets_reply_survives` measures five admitted 256-step workloads: denied
+`max_targets_reply_survives` measures admitted 256-action workloads: denied
 ASCII reads of 511-byte targets with log capture, successful reads of
 JSON-escaped paths with observed paths, independent 511-byte query paths
 against plain attempt targets, 256 execs with stdout/stderr, and 256 native
 execs with 511-byte escaped executable targets and independent query paths,
 63-byte step IDs, maximal metadata, live profile capture and 1,023-byte
 stdout/stderr streams made of U+0001 (six JSON bytes per input byte).
+The explicit phase workload repeats collection across eight boundaries. Fresh-read
+workloads use 256 ordinary reads or 254 reads plus consume/release sharing the
+same action capacity. They compare returned prefixes and descriptor identities
+with independent file observations and require actual native lifecycle results.
 These require complete replies and exact targets, outcomes and applicable
 output; the control-character workload also requires every prediction to
 round-trip through the real validator. Every admitted workload must stay under

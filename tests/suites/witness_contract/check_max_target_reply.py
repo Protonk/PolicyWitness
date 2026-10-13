@@ -10,6 +10,7 @@ maximal reply recorded in docs/limits.json, from which the receiver budget is
 derived; the corpus is evidence that real replies stay inside that bound.
 """
 import errno
+import copy
 import json
 import secrets
 import shutil
@@ -67,7 +68,7 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
 
 
 def request_steps(request):
-    return request.get('probe_plan', [step for phase in request.get('phases', []) for step in phase['actions']])
+    return request.get('probe_plan', [step for phase in request.get('phases', []) for step in phase['actions'] if 'attempt' in step])
 
 
 def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False, exec_output=None):
@@ -78,7 +79,10 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
     assert not errors, errors
     if 'phases' in request:
         assert len(runner['phases']) == 8
-        assert all(p['arrival_observed'] and p['completion_observed'] and len(p['validator_subprocess']['records']) == 32 for p in runner['phases'])
+        for phase, planned in zip(runner['phases'], request['phases']):
+            ordinary = [action for action in planned['actions'] if 'attempt' in action]
+            assert phase['arrival_observed'] and phase['completion_observed']
+            assert len(phase['validator_subprocess']['records']) == len(ordinary)
         assert all(step['comparison']['order'] == 'query_first' for step in runner['steps'])
     for step, planned in zip(runner['steps'], request_steps(request)):
         check, attempt = step['sandbox_check'], step['attempt']
@@ -94,7 +98,15 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
         else:
             assert check['outcome'] == ('prediction_unavailable' if large_filter else 'allow')
             assert attempt['outcome'] == 'ok' and attempt['rc'] == 0, attempt
-            if planned['attempt']['kind'] != 'exec':
+            if planned['attempt']['action'] == 'read_fresh':
+                read = attempt['fresh_read']
+                independent = Path(target).read_bytes()
+                metadata = Path(target).stat()
+                assert read['open_rc'] >= 0 and read['stat_rc'] == 0 and read['close_rc'] == 0, read
+                assert read['read_rc'] == min(64, len(independent))
+                assert bytes.fromhex(read['content_hex']) == independent[:64]
+                assert (read['identity']['device'], read['identity']['inode']) == (metadata.st_dev, metadata.st_ino)
+            elif planned['attempt']['kind'] != 'exec':
                 # Independent native observation: these are existing canonical files.
                 assert attempt['observed_path'] == str(Path(target).resolve()), attempt
             else:
@@ -102,6 +114,13 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
                 stdout, stderr = exec_output or ('A' * 1023, exec_args[-1] + '\n')
                 assert attempt['stdout'] == stdout
                 assert attempt['stderr'] == stderr
+    if request.get('extensions'):
+        declaration, = runner['extensions']
+        assert declaration['issuance_status'] == 'issued' and declaration['delivery_status'] == 'delivered'
+        consume, release = runner['extension_events']
+        assert consume['status'] == release['status'] == 'returned'
+        assert consume['native_result'] != -1 and release['native_result'] == 0
+        assert consume['handle_ref'] == release['handle_ref']
 
 
 def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_FILTER_BYTES, step_index=0):
@@ -136,7 +155,8 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measu
     assert 3 * maximum <= budget < 3 * maximum + 4 * 1024 * 1024 and budget % (4 * 1024 * 1024) == 0, (maximum, budget)
     assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
     assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
-    observation = dict(case=name, steps=STEPS, target_bytes=TARGET_BYTES,
+    observation = dict(case=name, steps=len(request_steps(request)), target_bytes=TARGET_BYTES,
+                       extension_events=len(data['runner_result'].get('extension_events') or []),
                        runner_reply_bytes=client['stdout_bytes_received'],
                        capture_limit_bytes=client['capture_limit_bytes'],
                        envelope_bytes=run.stdout_path.stat().st_size)
@@ -194,6 +214,24 @@ def main():
         phased['phases'] = [dict(phase_id='p' + str(i), actions=actions[i * 32:(i + 1) * 32]) for i in range(8)]
         observations.append(run_case(pw, out, 'eight_phase_maximum', phased))
         assert all(Path(target).read_bytes() == b'x' for target in plain + escaped)
+
+        # Fresh descriptor/content evidence at the aggregate action maximum,
+        # with and without two native lifecycle actions sharing those 256 slots.
+        payload = bytes(range(65))
+        for target in plain:
+            Path(target).write_bytes(payload)
+        fresh = copy.deepcopy(phased)
+        for action in request_steps(fresh):
+            action['attempt']['action'] = 'read_fresh'
+        observations.append(run_case(pw, out, 'fresh_read_maximum', fresh))
+        mixed = copy.deepcopy(fresh)
+        mixed['extensions'] = [dict(token_ref='token', target=plain[0])]
+        mixed['phases'][0]['actions'][0] = dict(step_id='consume', extension=dict(
+            operation='consume', token_ref='token', handle_ref='handle'))
+        mixed['phases'][-1]['actions'][-1] = dict(step_id='release', extension=dict(
+            operation='release', handle_ref='handle'))
+        observations.append(run_case(pw, out, 'extension_action_maximum', mixed))
+        assert all(Path(target).read_bytes() == payload for target in plain)
 
         # The existing fixture has direct output/exit controls in exec_fixture.
         repo = Path(__file__).resolve().parents[3]

@@ -457,6 +457,27 @@
       "reason": "M3 pause checkpoint: corrected admission checker passed against unchanged build 556; source snapshot and signed-build log retained.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-reply-bound-20261013",
+      "run_id": "20261013T134922Z_9627e810",
+      "reason": "Initial conservative reply calculation: stale manifest value and newly discovered unclassified failure keys; CLI mixed-action corpus passed.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-reply-bound2-20261013",
+      "run_id": "20261013T135147Z_6f841544",
+      "reason": "Final conservative component calculation; expected refusal of stale documented bound; string classification passed.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-reply-accepted-20261013",
+      "run_id": "20261013T135316Z_076616a9",
+      "reason": "M3 reply bound and aggregate admission: 403 Swift checks, shared corpus and live maximum-action reply workloads passed.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

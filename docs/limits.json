@@ -1227,7 +1227,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52257718,
+      "value": 52414779,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1262,7 +1262,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The production encoder sizes a conservative field-complete constructed reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Fields that cannot coexist are included, so this is an upper bound rather than a reachable output claim. Distinct maximal control-character identities satisfy phase/action association. An unclassified string key fails the test. The real transport controls separately run admitted workloads and measure their actual replies."
+      "behavior": "The production encoder sizes a conservative ordinary reply: 256 actions and disposition entries in eight phases, 512 retained validator records with each bounded scalar and raw line maximized, up to 768 association issues, per-phase diagnostics, and maximal profile capture. Separately encoded declaration/issuer and two lifecycle-event records, the issuer override, and 256 fresh-read payloads are added without subtracting the ordinary fields they replace. Those components include mutually exclusive optional fields, maximal native-width values, and JSON member punctuation. This is an upper bound, not a reachable reply. Distinct maximal control-character identities satisfy the ordinary phase/action association. Every string key across all reply-shape documents must have a size policy. Real transport controls separately measure admitted ordinary, fresh-read and mixed native workloads."
     },
     {
       "id": "controller_output",
@@ -1299,7 +1299,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Five admitted 256-step CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Admitted 256-action CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, plus fresh-read and mixed consume/release workloads, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
     },
     {
       "id": "log_observer_output",

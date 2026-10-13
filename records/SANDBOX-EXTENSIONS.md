@@ -926,3 +926,57 @@ comparison matrix response-version update, consolidated signed M3 checks and a
 fresh rendered assessment. Preserve generator ownership and the distinction
 between independent native observations and constructed interpretation tests.
 Only after M3 closes should the A1 handoff be prepared; H1 and M4 are not started.
+
+
+## M3 maximum reply and aggregate admission increment
+
+Resumed from `7f0dbd9` at the user's instruction. The conservative reply bound is
+now 52,414,779 bytes. The production encoder sizes the ordinary full reply plus
+separate maximal declaration/issuer, lifecycle-event, issuer-override and fresh-read
+components. The added components include incompatible optional fields and are
+counted without subtracting the ordinary records they would replace. This is a
+conservative union, not a reachable response. Four issuer wait-error records
+cover two lifetime EINTR retries and the final wait at each host boundary.
+Native-width values, escaped references/paths, event lifecycle claims and a full
+fresh-read prefix are included. Every string key in all shape documents is
+classified; the expanded check exposed previously unclassified failure keys.
+The existing 152 MiB receiver budget still equals three times the bound rounded
+up to 4 MiB; no runtime budget or signed artifact changed.
+
+The shared corpus now has 83 examples. Its compact repeat recipe preserves
+trailing lifecycle actions in both Swift and Python. New exact/over cases admit
+254 ordinary actions plus consume/release and refuse 255 ordinary actions plus
+those two actions, through both CLI and direct XPC. The live maximum-reply case
+adds 256 fresh reads and 254 fresh reads plus native consume/release in eight
+phases. It checks actual returned prefixes, descriptor identities, native handle
+and release results against independent observations; files remain unchanged.
+These measurements establish transport behavior separately from the constructed
+size bound. All targets are owned temporary files outside Desktop.
+
+| Run under `tests/out/runs/` | Run ID | Original result |
+| --- | --- | --- |
+| `extensions-m3-reply-bound-20261013` | `20261013T134922Z_9627e810` | Swift failed the stale bound and four unclassified string keys; expanded CLI/direct-XPC corpus passed. |
+| `extensions-m3-reply-bound2-20261013` | `20261013T135147Z_6f841544` | String classification passed; two Swift checks still rejected the old manifest value, providing the final measured bound. |
+| `extensions-m3-reply-accepted-20261013` | `20261013T135316Z_076616a9` | All three registered cases passed: 403 Swift checks and driver replay, shared request corpus, maximum-target/native/fresh-read transport. |
+
+Commands used `tests/run.sh` with fresh managed output and the established Rust
+PATH, outside the automation sandbox. The final selection was
+`--case runner_unit/pwrunner_core_unit_executable
+--case runner_outcome_bad_request/accepted_input_contract
+--case witness_contract/max_targets_reply_survives`. A preceding misspelled case
+selector was refused before creating output; its console is retained with the
+accepted run. Live fresh-read and mixed-native replies measured 1,771,243 and
+1,760,931 bytes; the escaped exec workload measured 9,473,544 bytes. Build 556
+remained valid before and unchanged after each run, with the identity recorded
+above. This increment did not require rebuilding production code.
+
+Original results and console logs are retained. The accepted run's `checkpoint/`
+contains the source/diff/hash snapshot against `7f0dbd9`; it also captures
+independent documentation work in progress. Attachment and indexing used the
+checkout lock after run ownership/completion checks. Source provenance remains
+null for these incremental working-tree runs. Evidence is gitignored and local-only.
+After execution, only the shell case's report text changed to stop saying there
+were five workloads; invocation and assertions are identical, a reviewed evidence
+reuse exception. No active run or new external-runner installation remains.
+M3 still requires its permanent account, consolidated checks and rendered
+assessment before the A1 handoff. The earlier empty-object limitation remains.

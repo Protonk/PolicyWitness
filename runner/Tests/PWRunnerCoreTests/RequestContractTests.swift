@@ -48,9 +48,9 @@ func runRequestContractTests(_ tk: TestKit) {
                     let step = (phases[0]["actions"] as! [[String: Any]])[0]
                     let actions = (0..<count).map { index -> [String: Any] in
                         var copy = step; copy["step_id"] = "s\(index)"; return copy
-                    }
+                    } + Array((phases[0]["actions"] as! [[String: Any]]).dropFirst())
                     request["phases"] = (0..<8).map { index -> [String: Any] in
-                        ["phase_id": "p\(index)", "actions": Array(actions[(index * 32)..<(index == 7 ? count : (index + 1) * 32)])]
+                        ["phase_id": "p\(index)", "actions": Array(actions[(index * 32)..<(index == 7 ? actions.count : (index + 1) * 32)])]
                     }
                 }
                 let encoded = try JSONSerialization.data(withJSONObject: request)

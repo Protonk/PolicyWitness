@@ -1,13 +1,14 @@
 import Foundation
 @testable import PWRunnerCore
 
-// The largest reply the current response schema can encode for an admitted
-// specimen, synthesized rather than measured: the field-complete fixture with
+// A conservative bound on replies for admitted specimens: the ordinary fixture with
 // 256 steps, 256 validator records and disposition entries, every request- or
 // host-derived string at its documented limit and made of U+0001 (six JSON bytes
 // per byte), the largest worker diagnostic, and the largest slash-heavy
 // compiled-profile receipt. The runner client's retention budget is derived from
-// this number, and the live max-target workload must stay under it.
+// this number, and the live max-target workload must stay under it. Separately
+// encoded extension and fresh-read components are added without subtracting
+// ordinary fields they replace. This union is deliberately not a reachable reply.
 //
 // Every string key the fixture carries must be classified below as fixed
 // vocabulary (kept) or bounded (replaced by a maximal string). An unclassified
@@ -38,6 +39,9 @@ private let stringPolicy: [String: Int?] = [
     "filter_type": 63, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
     "abi_identity": nil, "code": nil, "collection_status": nil,
+    "original_normalized_outcome": nil, "unavailable_reason": nil,
+    "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
+    "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
@@ -47,7 +51,10 @@ private let stringPolicy: [String: Int?] = [
     "requested_action": probePlanLabelMaxBytes, "requested_path": PWShmLayout.targetMax - 1,
     "parameter_key": PWShmLayout.paramKeyMax - 1, "expected_step_ids": PWShmLayout.stepIdMax - 1,
     "worker_executable_path": testOverridePathMaxBytes,
+    "issuer_executable_path": testOverridePathMaxBytes,
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
+    "token_ref": PWExtensionLimits.referenceBytes, "handle_ref": PWExtensionLimits.referenceBytes,
+    "submitted_target": PWExtensionLimits.targetBytes, "resolved_target": PWExtensionLimits.targetBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
     "realpath_resolved": 1023, "firmlink_resolved": maximalFirmlinkPathBytes,
@@ -55,7 +62,7 @@ private let stringPolicy: [String: Int?] = [
     "observed_path": PWShmLayout.observedPathMax - 1, "stdout": PWShmLayout.childOutputBytes - 1,
     "stderr": PWShmLayout.childOutputBytes - 1, "text": PWShmLayout.diagnosticBytes - 1,
     // Generated below rather than filled: valid base64 and the validator's own line.
-    "bytecode_b64": nil, "context_b64": nil, "raw_line": nil,
+    "bytecode_b64": nil, "context_b64": nil, "raw_line": nil, "content_hex": nil,
 ]
 
 private struct Unclassified: Error, CustomStringConvertible {
@@ -161,7 +168,57 @@ private func maximalRecord() throws -> [String: Any] {
     return record
 }
 
-/// Encoded size of the synthesized maximal reply through the production encoder.
+/// Additional JSON members, including punctuation, encoded with the production
+/// encoder. Optional failure/success fields coexist here solely to upper-bound
+/// size; these components do not claim to satisfy full-reply evidence guards.
+/// Count two events in addition to all 256 ordinary slots, and a fresh-read
+/// payload beside every ordinary attempt, without reclaiming replaced fields.
+private func extensionReplyAllowance() throws -> Int {
+    let identity = PWFileIdentity(device: UInt64.max, inode: UInt64.max,
+        mode: UInt32.max, uid: UInt32.max, gid: UInt32.max)
+    var issuer = PWRunnerIssuer(executable_path: maximal(testOverridePathMaxBytes), pid: Int32.max,
+        uid: UInt32.max, euid: UInt32.max, gid: UInt32.max, egid: UInt32.max,
+        call_boundary_observed: false, result_published: false, native_nonnull: false,
+        errno: Int32.max, token_length: UInt32.max, reaped: false, exit_code: Int32.max, term_signal: Int32.max)
+    // Two lifetime EINTR retries plus a final failed wait at each boundary.
+    issuer.wait_errors = Array(repeating: "after_termination", count: 4).map {
+        PWRunnerWaitError(stage: $0, rc: -1, errno: Int32.max)
+    }
+    issuer.termination_request = PWRunnerTerminationRequest(signal: Int32.max, rc: -1, errno: Int32.max)
+    issuer.spawn_failure = PWRunnerSpawnFailure(executable_path: maximal(testOverridePathMaxBytes),
+        return_code: Int32.max, diagnostic: maximal(1023))
+    let declaration = PWRunnerExtensionRecord(token_ref: maximal(PWExtensionLimits.referenceBytes),
+        submitted_target: maximal(PWExtensionLimits.targetBytes), resolved_target: maximal(PWExtensionLimits.targetBytes),
+        preparation_status: "resolution_failed", preparation_errno: Int32.max, identity: identity,
+        issuance_status: "native_api_unavailable", issuer: issuer, delivery_status: "token_unavailable",
+        delivered_bytes: UInt32.max, host_buffer_erased: false)
+    let claim = PWDispositionClaim(state: "inapplicable", answer: "unpublished",
+        value: .integer(Int.min), reason: "unsupported_attempt", issue: Int.max,
+        basis: PWDisposition.runReferences + PWDisposition.stepReferences)
+    let lifecycle = PWAttemptLifecycle(summary: "started_without_result", boundary: claim, result: claim)
+    let events = ["consume", "release"].map { operation -> PWRunnerExtensionEvent in
+        return PWRunnerExtensionEvent(phase_id: maximal(requestLabelMaxBytes), step_id: maximal(PWShmLayout.stepIdMax - 1),
+            operation: operation, token_ref: maximal(PWExtensionLimits.referenceBytes),
+            handle_ref: maximal(PWExtensionLimits.referenceBytes), call_boundary_observed: false, result_published: false,
+            status: "unavailable", native_result: operation == "consume" ? Int64.min : Int64(Int32.min),
+            errno: Int32.max, unavailable_reason: "native_api_unavailable", lifecycle: lifecycle)
+    }
+    struct NativeFields: Encodable {
+        let extensions: [PWRunnerExtensionRecord]
+        let extension_events: [PWRunnerExtensionEvent]
+    }
+    let native = try pwRunnerEncodeJSON(NativeFields(extensions: [declaration], extension_events: events))
+    let fresh = PWRunnerFreshRead(open_rc: Int32.max, open_errno: Int32.max,
+        read_rc: Int64(PWExtensionLimits.freshReadBytes), read_errno: Int32.max,
+        stat_rc: -1, stat_errno: Int32.max, identity: identity, close_rc: -1, close_errno: Int32.max,
+        content_hex: String(repeating: "f", count: PWExtensionLimits.freshReadBytes * 2))
+    // Object braces overcount the actual comma joining these members, safely.
+    let freshMember = try pwRunnerEncodeJSON(["fresh_read": fresh])
+    let overrideMember = try pwRunnerEncodeJSON(["issuer_executable_path": maximal(testOverridePathMaxBytes)])
+    return native.count + PWShmLayout.maxSteps * freshMember.count + overrideMember.count
+}
+
+/// Ordinary full-reply encoding plus conservative, separately encoded additions.
 func maximalReplyEncodedSize() throws -> Int {
     let fixture = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
     var unknown = Set<String>()
@@ -214,7 +271,7 @@ func maximalReplyEncodedSize() throws -> Int {
     let data = try JSONSerialization.data(withJSONObject: reply)
     let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
     try expectEqual(decoded.steps.count, count)
-    return try pwRunnerEncodeJSON(decoded).count
+    return try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance()
 }
 
 private struct Manifest: Decodable {
@@ -243,13 +300,12 @@ func runReplyMaximumTests(_ tk: TestKit) {
             try expectEqual(budget % rounding, 0, "budget is a whole number of 4 MiB")
         }
         tk.run("every reply string key is classified before it can grow the maximum") {
-            // A key added to the field-complete fixture without a policy fails
-            // maximalReplyEncodedSize with the unclassified key names.
+            // Inspect every shape document, including native/failure variants.
             var unknown = Set<String>()
-            let fixture = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
-            _ = maximize(fixture, key: nil, unknown: &unknown)
+            let fixtures = try replyShapeDocuments()
+            for fixture in fixtures { _ = maximize(fixture, key: nil, unknown: &unknown) }
             try expectTrue(unknown.isEmpty, Unclassified(keys: unknown).description)
-            var probe = fixture
+            var probe = fixtures[0]
             probe["future_reply_string"] = "unclassified"
             _ = maximize(probe, key: nil, unknown: &unknown)
             try expectEqual(unknown, ["future_reply_string"])
