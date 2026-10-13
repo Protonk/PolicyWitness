@@ -604,6 +604,13 @@
       "reason": "A1 follow-up out-of-band audit: the full default battery at the follow-up handoff commit against unchanged signed build 566; auditor reader probes (Python and Rust replay), wrapper-control mutations and console attached under audit/.",
       "source": "9a1f20b7e5517d67177e753996c19b3dbe0ae7df",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/a1-f10-20261013",
+      "run_id": "20261013T205716Z_b30e0bce",
+      "reason": "A1-F10 complete witness wrapper coverage, exact omission rejection controls, mechanical/dispatcher checks and H1 preparation evidence",
+      "source": "7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89",
+      "app_inventory": null
     }
   ]
 }

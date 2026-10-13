@@ -61,8 +61,8 @@ outside this plan.
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
-| A1 Middle out-of-band audit | Re-audit reviewed; small wrapper repair pending | Original auditor accepts M3, collection/version repair, bound, documentation and 196-case provenance; their independent default run passes 174/174. Lead reproduces A1-F10 and requires its test-only repair before closure; A1-F11 is explicitly carried to M5.1. [Dispositions](records/SANDBOX-EXTENSIONS-AUDIT.md#executing-agent-disposition-of-follow-up) preserve the returned text. |
-| H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
+| A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 remains M5.1 work. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
+| H1 Prepared human review | Awaiting user | [Briefing and implementation evidence](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) prepared after M3/A1 closure. Recommend retaining the bounded design; pause before M4 until the user response permits continuation. |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
 | M5.2 Limits account | Pending | Requires M5.1 |
@@ -77,29 +77,53 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** the returned A1 re-audit has been reviewed and dispositioned.
-The original auditor's text and retention entry are preserved at `682fda9`.
-M3 and the substantive A1 corrections remain supported. The lead independently
-reproduced A1-F10: the broad catalog exclusion weakens the wrapper control.
-A1 stays open for this small test-only repair and verification; A1-F11 is carried
-explicitly to M5.1. This turn records review and conclusions only. H1 and M4
-have not started; no implementation change was made during this review.
+**Execution state:** A1 is complete and H1 is prepared. F10 is repaired at
+`7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89`: complete sibling coverage is restored,
+the missing extension-boundary wrapper child is included, and three omission
+controls prove that missing phase/extension children are rejected. The fresh
+rendered recheck has no findings. Original auditor answers remain unchanged.
+F11 remains assigned to M5.1. Execution pauses at H1 awaiting the user's response;
+M4 has not started.
 
-Reviewed source is `efb588b54fd01caf1d91683e9df6a1bff8e45bbd`, with
-implementation unchanged from `52bb1b96df168033ccd24bb0ec96dc1385d30ffc`.
+The [H1 briefing](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) ties
+rendered architecture/contract/test passages and A1 Q6/F8 to the implementation.
+Recommendation: retain the separate ordinary-authority issuer, fresh validator
+per phase, independent evidence checks, all-action disposition index, narrow
+compile-time interruption hooks and local repeated-action guard. No substantial
+unnecessary general mechanism or competing model was found. Reader consistency
+is a maintenance cost; F11's malformed-type checks remain required. Isolated
+validator launch cost has not been measured and is required before considering
+persistence; aggregate timing is not that measurement. The briefing records the
+alternatives and consequences rather than treating those costs as resolved facts.
+
+The preceding A1 re-audit source is `efb588b54fd01caf1d91683e9df6a1bff8e45bbd`,
+with implementation unchanged from `52bb1b96df168033ccd24bb0ec96dc1385d30ffc`.
+The current F10 test candidate is clean `7bfbdcd`; it changes no product input.
 The signed app is version 0.2.8, build 566, from clean source
 `2f380d02632ea4ae02fe47c78d389eaebb831dc2`, stamp `v0.2.8-46-g2f380d0`,
 with worker identity
 `d728670539b289721b4cfbc567df5c14ec76917c09311bba283e64a39ba36957`.
 Signer remains `Developer ID Application: Adam Hyland (42D369QV8E)`.
-The reviewed-source delta after the app build changes only test readers/controls,
-failure-contract prose, plan/records and retention metadata; no app input changed.
+The reviewed-source delta after the app build changes only test code and its
+documentation, plan/records and retention metadata; no app input changed.
 Production repair is `8707abc`, fixture correction is `2f380d0`, and final
-oracle robustness/wording correction is `52bb1b9`. The handoff commit changes
-only plan, records and retention metadata.
+oracle robustness/wording correction is `52bb1b9`. The H1 preparation changes
+only plan, records and retention metadata after the tested F10 commit.
 
 **Acceptance:** all 196 canonical cases have passing evidence: the full default
-174 plus 22 required opt-ins. `a1-repair-resume-20261013`
+174 plus 22 required opt-ins. The current manifest is
+`a1-f10-20261013/checkpoint/acceptance-credits.json`. Its clean-`7bfbdcd` run
+(`20261013T205716Z_b30e0bce`) passes 13/13: script groups and all source-drift and
+dispatcher cases. It replaces 13 earlier credits and retains 183 after an explicit
+source/dependency review. Wrapper success and baseline failure each record all
+37 children; each of three omission controls records 36 and rejects exactly the
+missing receipt. The script-group inventory contains 35 controls. Registered
+witness cases use explicit child commands; build-guard fixtures copy the changed
+scripts but do not execute them. These copied-file exceptions are recorded in
+`source-applicability.json`, alongside exact deltas and all 21 matching app hashes.
+No fresh default battery, signed build, or live/TCC-sensitive run is claimed.
+
+The preceding acceptance history remains unchanged: `a1-repair-resume-20261013`
 (`20261013T185935Z_3249b0bd`) passed 166/166 at clean `efb588b`, with no skips,
 unrun cases or harness errors and unchanged build-566 inventories. This includes
 all 406 Swift checks and driver replay, native/phase/extension boundaries,
@@ -112,7 +136,7 @@ a separate historical run. No old-build or pre-correction oracle result receives
 final acceptance credit. Maximum reply remains 52,414,779 bytes; the shape
 golden, ABI layout and both documentation baselines are unchanged.
 
-The resumed run's `checkpoint/acceptance-credits.json` identifies each case,
+The resumed run's prior `checkpoint/acceptance-credits.json` identifies each case,
 command/configuration, source, app and originating run. Its
 `source-applicability.json` records exact file comparisons and separately labels
 the review judgments for the 30 retained results, including changed metadata
@@ -123,9 +147,12 @@ and provenance; the investigative record explains them.
 
 The existing documentation reviewer closed its sole setup/spawn wording finding
 after inspecting the corrected page. All twelve final changed document sources
-match the immutable reviewed bytes. Report, source/HTML/PDF/PNG views, manifests
-and renderer scripts remain in the cancelled run's `reviews/`; current
-applicability is rechecked in the resumed run's checkpoint. Prior M3 review
+match the immutable reviewed bytes after replacing the shell-helper view with
+the F10 render. That focused recheck by `/root/m3_rendered_review` found no issue
+on actual page 2; the lead accepts it. Its report and source/HTML/PDF/PNG manifests
+are retained under `a1-f10-20261013/reviews/`. The preceding report, immutable
+views, manifests and renderer scripts remain in the cancelled run's `reviews/`; current
+applicability is rechecked in the F10 run's checkpoint. Prior M3 review
 applies only to unchanged surfaces. Evidence and previews are gitignored and
 local-only. The unfinished pause-time draft remains historical; the current
 handoff is in the shared audit document.
@@ -136,7 +163,7 @@ All 26 native observer channels and recovery paths from the resumed run are
 absent by exact-name checks. No build, test or render process remains active.
 The older 25 empty M3 shared-memory objects with unrecorded names remain an
 explicit cleanup limitation; their absence is unverified and no prefix cleanup
-was attempted. No product change or correction-pass cleanup action is pending.
+was attempted. No correction-pass cleanup action is pending.
 
 The auditor's new `a1-recheck-default-20261013` run
 (`20261013T193011Z_7e1b6661`) passes 174/174 at `9a1f20b` on unchanged build
@@ -146,16 +173,16 @@ probes. Their evidence is attached under that run's `lead-review-20261013/`;
 original auditor artifacts remain intact. Their 22 opt-in credits were reviewed
 from retained provenance, not independently rerun by the auditor.
 
-**Next action:** finish A1-F10 by adding `extension_boundaries.sh` to the witness
-wrapper, restoring complete sibling expectations and adding omission mutations
-that fail when an expected child is removed. Update the test account and verify
-the affected controls without weakening their assertions. Then record closure
-when justified and prepare H1; M4 remains after H1. A1-F11's wrong-type/absence
-handling, adjacent malformed-record validation scope, and the optional versioning
-clarification are explicit M5.1 work below. The
-[lead dispositions](records/SANDBOX-EXTENSIONS-AUDIT.md#executing-agent-disposition-of-follow-up)
-and [investigative record](records/SANDBOX-EXTENSIONS.md) distinguish the small
-unfinished test repair from the accepted production/evidence corrections.
+**Next action:** stand by at H1. Present the prepared recommendation and wait
+for the user's response permitting continuation. Then record any redirection,
+update affected plan/evidence, close H1, and begin M4. Do not infer permission
+from elapsed time or from the earlier instruction to prepare H1. A1-F11's
+wrong-type/absence handling, adjacent malformed-record validation scope and the
+optional versioning clarification remain explicit M5.1 work below. The
+[final A1 disposition](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure)
+and [H1 briefing](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review)
+contain the evidence and design recommendation. No process remains active and
+there is no new cleanup ownership from this offline increment.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

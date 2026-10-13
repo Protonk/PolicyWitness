@@ -9,12 +9,11 @@ section. Execution dispositions remain separate from the attributed audit text.
 
 ## A1 Middle audit — after M3
 
-Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent review and corrections are recorded below. Final acceptance and
-the rendered recheck are complete; the original auditor's follow-up answers were
-returned on 2026-10-13 and the executing-agent review is recorded below. M3 remains
-valid. The lead assigns the small A1-F10 wrapper-control repair before A1 closure
-and explicitly carries A1-F11 to M5.1. A1 remains open; H1 and M4 have not started.
+Status: complete. Original auditor answers and follow-up returned on 2026-10-13
+(Claude Fable 5.1, out of band) remain attributed and unchanged. The executing
+agent's corrections, review and final F10 verification are recorded below.
+M3 remains valid; F10 is closed and F11 is explicitly assigned to M5.1. H1 is
+prepared and awaiting the user's response; M4 has not started.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -1178,6 +1177,64 @@ review boundary. No new live, signed or TCC-sensitive test ran in this review;
 no implementation or permanent-documentation source was changed.
 
 
+
+### A1-F10 verification and closure
+
+The authorized repair is committed at
+`7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89`. The witness wrapper now includes
+`extension_boundaries.sh`. Its independent expectation again contains every
+sibling script, baseline first, without a catalog exclusion. Both all-pass and
+baseline-failure controls require all 37 child receipts. Three separate copied
+wrapper mutations remove `phases.sh`, `extensions.sh`, or
+`extension_boundaries.sh`; each is rejected by the same receipt check for exactly
+its missing child, after checking exit status, streams and other observations.
+An unrelated assertion or fixture failure cannot count as the expected rejection.
+
+The registered run [a1-f10-20261013](../tests/out/runs/a1-f10-20261013/run.json),
+ID `20261013T205716Z_b30e0bce`, passed 13/13 at clean `7bfbdcd`, with no skips,
+unrun cases or harness errors: `shell_helpers/script_groups`, all six
+`source_drift` cases and all six dispatcher cases. The script-group case passes
+35 controls. Positive wrapper controls record 37 children each; each omission
+records 36 and retains the exact rejection. Source/selection/command snapshots,
+console, raw fixture outputs, and the
+[wrapper observations](../tests/out/runs/a1-f10-20261013/checkpoint/wrapper-observations.json)
+are retained. No live runner, signing, native boundary, or TCC-sensitive test ran.
+
+The updated [196-case credit manifest](../tests/out/runs/a1-f10-20261013/checkpoint/acceptance-credits.json)
+replaces 13 earlier credits and retains 183 after the recorded conservative
+[source applicability review](../tests/out/runs/a1-f10-20261013/checkpoint/source-applicability.json).
+Only the wrapper, its checker, README and bookkeeping changed. Registered witness
+cases dispatch their explicit child commands; the wrapper does not execute on
+those paths. Build-guard fixtures copy the changed files but neither changed
+script is a build input or executed build-guard control. Copied retention metadata
+uses the already reviewed isolated-fixture semantics. These are explicit
+applicability judgments, not a claim that every copied input is identical.
+All 21 current app content hashes match the accepted build-566 inventory.
+No app rebuild or new signature verification is claimed; no production input,
+protocol, worker identity, baseline, or layout changed.
+
+The existing rendered reviewer `/root/m3_rendered_review` inspected the changed
+shell-helper account on actual page 2 at this source, found no issue, and
+recommended closing the documentation checkpoint. Its report records a
+historical requested model of `gpt-6-astra`; runtime identity was not independently
+exposed. The lead independently inspected the page and accepts the no-finding
+assessment. The [retained review](../tests/out/runs/a1-f10-20261013/reviews/a1-f10-rendered-recheck.txt)
+and immutable source/HTML/PDF/PNG/manifests are local-only. Source hashes for all
+twelve final document surfaces match their applicable renders, substituting
+this review for the previous shell-helper page. The bounded scope and prior
+review omissions remain explicit.
+
+**Disposition:** F10 and the remaining half of F2 are closed. A1 is complete:
+the original auditor accepted the substantive correction and candidate evidence,
+its remaining small test repair is now verified, and no current-gate blocker
+remains. Attributed auditor answers are unchanged. F11 and the adjacent malformed
+record scope remain explicitly assigned to M5.1. Existing M4 combined-fault,
+actual missing-helper-file, issuer-grant and BYOXPC maximum-reply work remains
+assigned there. F8 is incorporated into H1 as a conditional measurement note,
+with no persistence change proposed. H1 is prepared and awaiting the user under
+the plan's human review boundary; M4 has not started. Evidence is gitignored and
+available only in this checkout. Prior cleanup observations and the limitation
+concerning 25 unnamed empty objects are unchanged.
 
 ## A2 Final audit — after M5.6
 

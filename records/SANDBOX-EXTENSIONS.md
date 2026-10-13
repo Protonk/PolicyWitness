@@ -2,6 +2,16 @@
 
 ## Scope and checkpoint
 
+Current status: M0–M3 and A1 are complete. F10 is repaired and verified at
+`7bfbdcd`; H1 is prepared and awaiting the user's response. M4 has not started.
+The signed app remains build 566 from clean `2f380d0`. The latest acceptance
+account and design recommendation are at [F10 closure](#a1-f10-closure) and
+[H1 prepared human review](#h1-prepared-human-review) below. Historical entries
+retain their original observations and status; the associated plan owns the
+current resume instructions.
+
+### M1 initial checkpoint
+
 M1 is complete: the native feasibility controls, registered mechanical checks,
 and fresh rendered-documentation assessment passed. The sole rendering finding
 was corrected and rechecked. The M1-only scope remains in force, with M0 pending.
@@ -1503,3 +1513,156 @@ finding invalidates M3; A1 remains open for F10 verification as a completion
 choice, with F11 and existing M4/H1 items explicitly carried. H1 and M4 have
 not started. No live, signing, XPC or TCC-sensitive execution occurred during
 this review.
+
+
+## A1-F10 closure
+
+Commit `7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89` adds the extension-boundary
+script to the witness wrapper and restores the independent inventory of every
+sibling. All-pass and failing-baseline cases each observe all 37 children.
+Three omission controls remove one phase/extension script at a time; the same
+checker rejects exactly the missing receipt, and other failures cannot satisfy
+that rejection. This supersedes the broad catalog-exclusion repair described
+in earlier entries; those original findings and failures remain preserved.
+
+Run [a1-f10-20261013](../tests/out/runs/a1-f10-20261013/run.json), ID
+`20261013T205716Z_b30e0bce`, passes 13/13 at clean `7bfbdcd`: the script-group
+case (35 controls), all six source-drift cases and all six dispatcher cases.
+There are no skips, unrun cases or harness errors. No live runner, signing or
+TCC-sensitive execution was needed. The signed app is unchanged: all 21 retained
+content hashes still match build 566. Both documentation baselines, worker
+identity, protocol and layout remain unchanged.
+
+The [credit manifest](../tests/out/runs/a1-f10-20261013/checkpoint/acceptance-credits.json)
+keeps the 196-case acceptance set (174 defaults plus 22 required opt-ins), with
+13 replacements and 183 explicitly reviewed reuses. Its sibling
+`source-applicability.json` identifies exact deltas and the copied-file exceptions:
+the dispatcher runs explicit witness children, while build fixtures copy but do
+not execute the changed wrapper/checker. Original provenance and cancelled-run
+status remain intact. This pass adds no fresh default-battery or native claim.
+
+The existing documentation reviewer inspected actual shell-helper README page 2
+at `7bfbdcd`, matched it to the complete wrapper inventory and exact omission
+checks, and found no issue. The lead accepts that disposition after independent
+page inspection. The [report](../tests/out/runs/a1-f10-20261013/reviews/a1-f10-rendered-recheck.txt)
+records `/root/m3_rendered_review`, the historical requested `gpt-6-astra`, and
+unavailable independent runtime-model identity. Its source SHA-256 is
+`51dbbd412ec59d97d59a89d4e23b74115b1408585a36600c51d1b79f69f4832a`.
+Immutable renders, report, renderer scripts, commands, snapshots, receipts and
+rejection records are retained under that run. All twelve current document
+surfaces match their applicable reviewed source bytes. These artifacts are
+local-only and gitignored; coverage omissions in earlier reviews remain.
+
+F10/F2 is closed and A1 is complete. Original attributed audit answers remain
+unchanged; F11 remains M5.1 work, F5 and the named additional controls remain
+M4 work, and F8 is included in the H1 briefing below. No new cleanup ownership
+was introduced. The existing verified removals and unverified absence of the
+25 historical unnamed empty objects remain as recorded.
+
+## H1 prepared human review
+
+Status: awaiting the user's response. A1 is closed by the F10 disposition above;
+M4 has not started. The lead recommends retaining the implemented bounded design
+and proceeding with the already assigned M4/M5 work after the user's response
+permits continuation. Neither the fresh rendered M3 assessment nor the original
+auditor identified a substantial unnecessary general mechanism or competing
+model. The repeated evidence rules are a real maintenance cost, demonstrated by
+A1-F3 and F11; the recommendation does not imply that every reader now rejects
+every malformed shape identically.
+
+The following briefing reconciles A1 Q6/F8, the M3 rendered findings (including
+resolved concerns), and the current source. The lead re-inspected actual retained
+architecture pages 5–6, failure-contract pages 3–4, and witness-suite page 1.
+The latest source hashes for all twelve A1 document surfaces match their retained
+rendered versions after substituting the F10 shell-helper review. These views and
+reports are local-only, gitignored evidence. They are useful as a human review
+account, not a new runtime test or a substitute for the original auditor.
+
+1. **Separate issuer and phase-local collection.** The rendered architecture's
+   [issuer and phase timeline](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-candidate/print/docs--ARCHITECTURE-05.png)
+   continues on [page 6](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-candidate/print/docs--ARCHITECTURE-06.png):
+   issue before worker creation, then collect and release each phase in order.
+   The auditor found this coherent and the fresh validator the simplest protocol.
+   [ExtensionSession](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) owns
+   the bounded token channel and delivery after clean reap; the
+   [phase callback](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+   reuses the existing bounded `runValidator` driver and cumulative budget.
+   Reusing the sandboxed worker for ordinary-authority issuance cannot serve
+   that responsibility; issuing in the host would move native sandbox work
+   into the process whose reply path must survive. A persistent validator could
+   avoid launches but would add reset, phase-association and cleanup rules.
+   **Retain the separate issuer and fresh validator.** The isolated launch cost
+   has not been measured. A1-F8 correctly identifies that omission; the plan
+   requires measurement before considering persistence, which is not proposed.
+   Aggregate collection timings cannot supply isolated launch cost. Existing
+   phase controls establish distinct children and collection/cleanup behavior,
+   not an optimal performance tradeoff.
+
+2. **Independent evidence checks in Swift, Rust and Python.** The rendered
+   [native-evidence account](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-contract-final/print/tests--FAILURE-PROPAGATION-CONTRACT-04.png)
+   names producer encoding, controller withholding and independent controls.
+   The auditor considered the repetition justified but costly. The lead agrees:
+   [Swift encoding](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift),
+   [Rust disposition reading](../controller/src/disposition.rs), and
+   [Python collection checking](../tests/lib/phase_evidence.py) operate at
+   different boundaries. The existing vocabulary/contract generators can keep
+   names aligned; using the producer's decision function as the test oracle
+   would lose an independent check. **Retain the boundary checks and explicit
+   positive/negative controls.** A1-F3 is repaired; M5.1 must finish F11's
+   wrong-type/absence distinction and state which readers promise structural
+   validation versus claim validation. A shared semantic engine would reduce
+   repeated code but spread a single interpretation error across those checks.
+
+3. **One action index, separate ordinary and native records.** The rendered
+   [worker-disposition passage](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-contract-final/print/tests--FAILURE-PROPAGATION-CONTRACT-03.png)
+   says `phases[].action_ids` partitions `steps` and `extension_events`.
+   The auditor found the reader join justified. The
+   [orchestrator](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) uses
+   the existing worker slot/disposition model for all actions, then emits
+   ordinary query/attempt pairs separately from native interventions. A `steps`
+   index alone cannot identify slots after lifecycle actions are interleaved.
+   **Retain this representation.** It requires joins by action identity and
+   partition controls, but avoids inventing queries/comparisons for native
+   calls. Replacing it with a new unified wire union would change the public
+   record and readers without removing the underlying ordering responsibility.
+
+4. **Compile-time interruption hooks.** The
+   [rendered witness account](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-candidate/print/tests--suites--witness_contract--README-1.png)
+   now states the alternate-build limitation explicitly, resolving A1-F7.
+   [The fixture](../tests/fixtures/extension_controls/control.c) includes the
+   production C sources and supplies `PW_EXTENSION_OBSERVE`; the
+   [shipped worker](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+   compiles that hook to a no-op. Existing executable overrides select the
+   fixture, but cannot themselves observe the interval between a native return
+   and its publication. **Retain the narrow test-only hooks.** They establish
+   publication/interruption handling in an instrumented build. Ordinary signed
+   CLI controls separately establish real native results and fresh access;
+   neither source instrumentation nor those results prove private API internals.
+   Removing the hooks would lose the discriminating interval controls, while a
+   public runtime interruption knob would add production machinery.
+
+5. **Defensive repeated-action refusal.** Page 4's native-event table retains
+   `repeated_action`, although
+   [admission](../runner/Sources/PWRunnerCore/ProbeRunner.swift) already rejects
+   repeated consume/release. The auditor explicitly left keeping this duplicate
+   guard to the lead. In the C worker's `attempt_extension`, two decision bits
+   prevent a second native call even if an invalid internal action sequence
+   reaches the worker. **Retain the small local guard and its honest vocabulary.**
+   Admission remains the public rule; the guard is not an additional supported
+   grammar path or a separately demonstrated public scenario. Removing it saves
+   little state/code and makes the worker's at-most-once behavior depend entirely
+   on upstream admission. No general reference graph or additional lifecycle
+   state machine is proposed.
+
+The allocation qualification also remains unchanged: PW's extension report and
+coordination storage is fixed before application, but private native calls have
+no established allocation bound. The explicit old limitation concerning 25 unnamed empty shared-memory
+objects remains; no claim of their absence is added. The authorized F10 work used
+no live runner, signing or TCC-sensitive test. M4 retains the combined-fault and
+missing-helper-file controls; M5.1 retains F11. Neither is silently discharged
+by this design recommendation.
+
+**Decision requested at H1:** retain these choices and permit continuation to M4,
+or redirect a specific mechanism. This is the plan's scheduled human review:
+“Resume only when the user's response permits continuation.” The preparation is
+committed before pausing; record the response and close H1 before starting M4.
