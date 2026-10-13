@@ -2,11 +2,12 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M5.5, A1 and H1 are complete. The user authorized continuation
-through A2. M5.6 final signed acceptance is next. Signed build 582 remains from
-`ea10ce3`; the accepted documentation/test-catalog candidate is `80d9daf`.
-Current gate evidence and review dispositions are appended below; the associated
-plan owns resume instructions.
+Current status: M0–M5.6, A1 and H1 are complete. A2 is prepared and awaiting
+the out-of-band auditor; execution is paused at that boundary. The accepted code,
+tests and permanent documentation are clean `2e9cac4`; signed app 0.2.8 build 594
+is from the same source. The final gate freshly passed all 197 required cases.
+The associated plan owns resume instructions; the final audit exchange is in
+`records/SANDBOX-EXTENSIONS-AUDIT.md`. Detailed findings and evidence remain below.
 
 ### M1 initial checkpoint
 
@@ -2063,3 +2064,79 @@ the narrow README correction. The recheck covers that changed paragraph and the
 catalog's corrected descriptions/prerequisites. Coverage omissions are explicit
 in the report; no blanket visual inspection of every legacy page is claimed.
 M5.6 will freshly consolidate the whole required selection on a new signed build.
+
+
+## M5.6 integrated acceptance and A2 handoff
+
+M5.6 is complete at clean `2e9cac496979acd79617bf7a1043973f30997999`. The signed
+app is version 0.2.8 build 594, stamp `v0.2.8-74-g2e9cac4`, from the same source,
+signed by `Developer ID Application: Adam Hyland (42D369QV8E)`. Worker identity is
+`5fd52343fc4431d5d7f7ab0f7aed326d432950ec9922a98c9a16d0226ab6de2e`; request,
+response and envelope remain 4/18/7. Production/build sources are unchanged from
+`ea10ce3`; this build consolidates the accepted reader-test, documentation and
+catalog corrections. The checkpoint/handoff commit changes only plan, records and
+retention metadata; it is not a new app build or a new executed test snapshot.
+
+[Final run](../tests/out/runs/extensions-m56-20261013/)
+`20261013T232911Z_a2153a42` passed **197/197**, comprising all 175 default and
+22 required opt-in cases, with no failure, skip or unrun selection. Every final
+case credit is fresh. Its checkpoint preserves exact commands/configuration,
+source/hash snapshot, signed-build log, console, selection and a 197-case ledger.
+The inspected app remained byte-identical through execution. Rust, all 416 Swift
+tests, compiled C/Swift layout/limit tests, generator/reader/matrix checks, native
+worker/validator cases, ordering mutations, signing/build controls, maximum replies
+and BYOXPC authentication/provenance/entitlements/recovery all passed. Both
+documentation baselines remain unchanged from `4688743`. The historical observer
+flake did not recur; its cause remains unresolved.
+
+Both standard and BYOXPC native lifecycle captures record issuance, consume handle
+1 and release native result 0 on that handle. Their before/during/after predictions
+were deny/allow/deny. Fresh open failed with errno 1 before and after, while the
+intervening read returned the independently known 32 bytes and descriptor identity.
+Those observations describe the controlled experiments, not general permission
+or revocation. Native return, prediction, publication and access remain separate.
+The checkpoint's lifecycle extraction preserves each channel and links its source
+envelope; assertions and independent target observations remain beside the runs.
+
+Each transport path passed eight admitted maximum workloads and four refusal
+controls. Largest measured standard/BYOXPC replies were 9,473,544 / 9,473,558
+bytes, with no receiver loss. The encoder-derived 52,414,779-byte conservative
+union includes mutually incompatible optional evidence and is not represented as
+a reachable live response. The 159,383,552-byte receiver budget, constructed
+sizing controls, aggregate action/phase limits and real-transport measurements
+retain their separate meanings.
+
+Fresh Astra reviewer `/root/m56_rendered_review` reconciled all prior findings
+and their scope against this candidate, independently checked current and archived
+source hashes, inspected final corrected pages/full build and BYOXPC graph rasters,
+and sampled decisive implementation/control bodies. No new substantive finding
+was reported. The lead accepts that bounded result. The report preceded terminal
+acceptance; its pending-execution statement is preserved, and the lead disposition
+records subsequent completion without changing source/build or reviewed documents.
+The review does not perform or close A2.
+
+[Final review archive](../tests/out/runs/extensions-m56-20261013/reviews/) preserves
+21 immutable source/HTML/PDF documents, 199 PNG pages, graph rasters, reports,
+reconciliation/hash manifests and recipes (Pandoc 3.12, WeasyPrint 70, Poppler
+26.10; full graph rasterization via `rsvg-convert`). Source/HTML/PDF/PNG hashes
+and staged-guide equality were checked. Each final document matches at least one
+prior assessed snapshot; reports identify visual samples, semantic traces and
+omissions. Matching bytes are not exhaustive visual coverage. All run/render
+evidence is gitignored and local; HTML links may retain `/private/tmp` preview
+paths, while retained source/PDF/PNG preserve the inspected content.
+
+Exact post-run observation confirms absence of 33 named channels/recovery
+directories, six regular installed services/staging/plists and seven exact
+registry-recovery identities. Runner list/reconcile and ownership receipts are
+retained, as is independent cleanup of the combined-phase test child. No prefix
+cleanup was used. The older 25 unnamed empty M3 objects still have unverified
+absence. Existing private-native/hook/allocation, client-cancellation, escaped-
+descendant, source-inspected limits and build-refusal coverage restrictions remain
+explicit. H1's further interruption-hook investigation stays deferred.
+
+The final exchange in `records/SANDBOX-EXTENSIONS-AUDIT.md` now identifies this
+candidate, actual evidence, six audit questions and accepted limitations, with
+answers pending. Original A1 attributed text is preserved. Execution stops at A2;
+no build, test, render, reviewer or owned cleanup task remains active. Resume by
+reviewing the returned audit, then verify required corrections before closing the
+plan. This implementation gate does not publish or accept a notarized release.

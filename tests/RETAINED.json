@@ -702,6 +702,13 @@
       "reason": "M5.5 user-account closure: source drift, dispatcher and corrected GUI-requiring BYOXPC controls; fresh rendered review and focused recheck.",
       "source": "80d9daf8e1729c71394579b1f6b62787022613ee",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m56-20261013",
+      "run_id": "20261013T232911Z_a2153a42",
+      "reason": "M5.6 final signed acceptance: all 197 required cases fresh at clean 2e9cac4/build594; final rendered reconciliation and A2 handoff evidence.",
+      "source": "2e9cac496979acd79617bf7a1043973f30997999",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

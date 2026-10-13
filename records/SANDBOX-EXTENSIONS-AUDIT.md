@@ -12,9 +12,10 @@ section. Execution dispositions remain separate from the attributed audit text.
 Status: complete. Original auditor answers and follow-up returned on 2026-10-13
 (Claude Fable 5.1, out of band) remain attributed and unchanged. The executing
 agent's corrections, review and F10/F11 verification are recorded below.
-M3 remains valid; F10 and F11 are closed. H1, M4 and M5.1 are complete; execution
-is stopped at the user's M5.1 boundary. The historical audit and preparation
-entries below retain their context and attributed text.
+M3 remains valid; F10 and F11 are closed. The M5.1 checkpoint stopped at the
+user's requested boundary; subsequent work and the current final handoff are in
+A2 below. Historical audit and preparation entries retain their context and
+attributed text.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -1270,12 +1271,179 @@ A2 remains pending after M5.6.
 
 ## A2 Final audit — after M5.6
 
-Status: not prepared.
+Status: **awaiting the out-of-band auditor**. M5.6 is complete; execution stops
+at this handoff. The plan is not complete until returned findings are dispositioned
+and any required corrections are verified. This is separate from the fresh
+rendered-documentation assessments. Please attribute answers and any additional
+findings; retain the original A1 exchange above.
 
 ### A2 Handoff, questions and auditor answers
 
-To be populated at the waypoint.
+Prepared by executing agent `/root` on 2026-10-13 after final acceptance.
+The commit containing this handoff changes only the plan, investigative record,
+audit record and retention index. The code, tests, permanent documentation and
+signed app under review are the clean candidate below; the handoff commit is not
+a new app build. Git history is unnecessary for locating the evidence and open
+questions in this section.
+
+#### Candidate and acceptance
+
+| Item | Identity / evidence |
+| --- | --- |
+| Accepted source | `2e9cac496979acd79617bf7a1043973f30997999` |
+| Signed app | `dist/PolicyWitness.app`, version `0.2.8`, build `594`, stamp `v0.2.8-74-g2e9cac4`; source equals accepted source |
+| Signer | `Developer ID Application: Adam Hyland (42D369QV8E)` |
+| Host/worker identity | `5fd52343fc4431d5d7f7ab0f7aed326d432950ec9922a98c9a16d0226ab6de2e`; source identity, not independent compiler provenance |
+| Contracts | Request 4, response 18, envelope 7; ABI geometry unchanged |
+| Final run | [extensions-m56-20261013](../tests/out/runs/extensions-m56-20261013/), ID `20261013T232911Z_a2153a42`; 197/197 pass, no skip or unrun case |
+| Selection | 175 default cases plus 22 required opt-ins, all fresh; no reused case credit in this final gate. [Case ledger](../tests/out/runs/extensions-m56-20261013/checkpoint/acceptance-credits.json) preserves commands, configuration, requirements, source and app identity. |
+| Artifact integrity | [Inspection and before/after inventories](../tests/out/runs/extensions-m56-20261013/artifact-integrity/): signatures, signer consistency, embedded hashes, host imports and unchanged inspected app |
+| Build/source | [Checkpoint](../tests/out/runs/extensions-m56-20261013/checkpoint/): clean source/hash snapshot, build log, console, selection, launcher and cleanup observations |
+| Baselines | `tests/fixtures/docs/prose_baseline.json` and `build_baseline.json` unchanged from `4688743`; no added waiver |
+| Final rendered account | [M5.6 render/review archive](../tests/out/runs/extensions-m56-20261013/reviews/): 21 source/HTML/PDF documents, 199 PNG pages, manifests, complete graph rasters, reviewer report and lead disposition |
+
+All linked test evidence and render artifacts are **gitignored and local to this
+checkout**. They have not been published or made portable. HTML links may retain
+original `/private/tmp` preview paths; retained source, PDF and PNG files preserve
+what was inspected. Renderers were Pandoc 3.12, WeasyPrint 70 and Poppler 26.10;
+full graph rasters used `rsvg-convert`. Hash verification establishes artifact
+identity, not exhaustive visual or semantic coverage. The reports name actual
+inspected pages and omissions.
+
+The final Astra rendered reviewer reconciled M0–M5.5 findings with the current
+account, independently checked the 21 document source hashes, sampled corrected
+surfaces and decisive source/control bodies, and found no new substantive issue.
+Its report predates terminal acceptance and correctly says that execution was
+pending then; the lead's separate disposition records the subsequent 197 passes
+on the same source/build. It does not answer A2.
+
+#### Evidence to inspect directly
+
+- [Standard native lifecycle](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extensions/artifacts/lifecycle/run.json)
+  and [BYOXPC native lifecycle](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extensions_byoxpc/artifacts/extensions/lifecycle/run.json):
+  both record `issued`, consume handle `1`, and release native result `0` on that
+  handle. Before/during/after predictions were deny/allow/deny; fresh opens failed
+  with errno 1 before and after, while the intervening read returned the 32 known
+  bytes with descriptor identity. These are observations of these experiments,
+  not an effective-permission or general revocation claim. Independent assertions
+  and target observations are retained beside the envelopes; the checkpoint also
+  extracts the native, prediction and access records without collapsing them.
+- [Maximum replies, standard](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/max_targets_reply_survives/artifacts/observations.json)
+  and [BYOXPC](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extensions_byoxpc/artifacts/maximum/observations.json):
+  eight admitted workloads and four refusal controls each. The largest measured
+  replies were 9,473,544 and 9,473,558 bytes. The 52,414,779-byte encoder-derived
+  bound is a conservative union including incompatible optional evidence, not a
+  claimed reachable live response. Its sizing controls and the 159,383,552-byte
+  controller budget are separate from the real-transport measurements.
+- [Swift driver/unit evidence](../tests/out/runs/extensions-m56-20261013/suites/runner_unit/pwrunner_core_unit_executable/artifacts/):
+  416/416 pass, production-encoded combined-phase replay through Rust/Python,
+  and independent kill/wait cleanup receipt. [Ordering mutations](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/order_barrier_mutations/)
+  reject both worker and host bypasses using independent effects.
+- [Native boundary controls](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extension_boundaries/)
+  and [combined faults](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extension_combinations/)
+  distinguish pre-call markers, native returns, publication, delivery and earlier
+  completed observations, while checking transient-token confinement.
+- [BYOXPC witness](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extensions_byoxpc/),
+  [installed entitlement read-back](../tests/out/runs/extensions-m56-20261013/suites/runner_byoxpc/entitlement_readback/)
+  and [registry recovery](../tests/out/runs/extensions-m56-20261013/suites/runner_byoxpc/registry_recovery/)
+  cover issuer authority/provenance, missing-installed-issuer refusal with exact
+  restoration, retained ownership and observed cleanup. Exact post-run checks
+  confirm all 33 named channels/recovery directories, six regular installed test
+  services and seven registry-recovery service identities absent. No prefix-based
+  cleanup was used; runner list/reconcile and receipts are in the checkpoint.
+
+The implementation account and review dispositions are in
+`records/SANDBOX-EXTENSIONS.md`, under “M5.6 integrated acceptance and A2 handoff”.
+Principal post-A1 corrections are F10 `7bfbdcd`, M4 combined-fault work through
+`2e6a2c1`, F11 `de8b343`, phase-detail/contract correction `ea10ce3`, and test/reader
+wording correction `e1231bd`. M5.2–M5.5 changed documentation/structured account
+inputs and GUI prerequisite metadata, through `80d9daf`; production and build
+sources are unchanged from `ea10ce3`. The final signed build and fresh full run
+consolidate these increments rather than relying on their earlier reuse ledgers.
+
+#### Limitations carried into this audit
+
+The 25 older empty M3 shared-memory objects whose names were not recorded still
+have unverified absence. The historical M4
+`log_capture::tests::both_raw_streams_are_bounded_at_exact_edges` failure remains
+unexplained; its preserved output showed a reaped successful child but missing
+stdout EOF and `pipe_open_after_exit`. It passed in this final run; that does not
+explain or erase the prior failure. Neither limitation is relabelled as resolved.
+
+H1 accepted the bounded interruption design. Native control builds instrument
+production sources and independent observers; they do not interrupt the shipped
+bytes at every private native boundary, reveal private API internals, or prove
+all library allocations/erasure. Further hook investigation remains deferred.
+Client timeout still does not cancel the host; cleanup can overrun a stage wait;
+escaped exec descendants remain outside the containment claim. The six pre-existing
+source-inspected limit rows and 27 build-refusal control gaps retain their stated
+coverage limits. No release publication or notarization acceptance is claimed.
+
+#### Q1 — Reader closure and valid-document meaning
+
+Does the final F11 repair reject present wrong-type phase containers, ordering,
+validator disposition and spawn evidence without rejecting supported optional
+absence or erasing degraded raw evidence? Assess the division between Rust claim
+validation and Python full-shape validation, the unknown-string controls and
+phase-detail units. Are the current 4/18/7 contract versions and copied reading
+rules justified by the actual valid-document semantics?
+
+Auditor answer: **pending**.
+
+#### Q2 — Phase and native publication boundaries
+
+Do the implementation and independent controls support each claimed phase-local
+ordering, collection closure, native result and incomplete-publication distinction,
+including M08's failed validator termination and late write, interrupted token
+validation and native return before publication? Identify any field or summary
+that still invents completion, borrows another phase's evidence, or conflates a
+requested intervention with an observed effect.
+
+Auditor answer: **pending**.
+
+#### Q3 — Bounds, tokens and resources
+
+Is the completed account of issuer/phase/worker/client budgets, token storage,
+post-apply PW-owned allocation and cleanup faithful to its actual observations?
+Assess the distinction between the conservative reply bound and measured live
+maximum workloads, and whether the declared native-hook/private-library limits
+leave any required claim unsupported rather than merely bounded.
+
+Auditor answer: **pending**.
+
+#### Q4 — BYOXPC authority and recovery
+
+Do standard and BYOXPC issuer signing, independent entitlement/hash read-back,
+capability refusals, conditional issuer validation and old-record unknowns agree
+across code, public output and documentation? Do the owned cleanup/recovery
+receipts support the absence claims without using a label prefix as authority?
+
+Auditor answer: **pending**.
+
+#### Q5 — Completed documentation and check scope
+
+Does the final rendered account accurately describe the delivered system across
+failure contract/matrix, guide/staged guide, limits, architecture and build views?
+In particular, assess the narrowed preflight entitlement and host-binding scanner
+claims, issuer assembly/registry/validation rows, budget clocks and GUI catalog
+prerequisites. Are any remaining claims unsupported by what the cited control
+actually observes, even though generation and drift checks pass?
+
+Auditor answer: **pending**.
+
+#### Q6 — Acceptance sufficiency and remaining findings
+
+Does the clean candidate/build identity, fresh 197-case ledger, independent
+native/access evidence and scoped rendered reconciliation establish M5.6, with
+historical failures and known gaps represented honestly? Are any required
+corrections still needed before closing this plan, including issues outside the
+questions above? State inaccessible evidence and any limits on your conclusion.
+
+Auditor answer: **pending**.
 
 ### A2 Execution dispositions and follow-up
 
-Pending the returned audit.
+Awaiting the auditor's attributed answers and additional findings. No executing-
+agent disposition or plan-completion claim is made in advance. Resume with review
+of the returned exchange; required corrections and their affected verification
+must precede A2 closure.
