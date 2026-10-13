@@ -63,8 +63,8 @@ outside this plan.
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
 | A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 remains M5.1 work. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
 | H1 Prepared human review | Complete | User accepted the recommendations on 2026-10-13 after discussion of interruption hooks and diagnostic-host alternatives. Retain the bounded design; further hook investigation is deferred, not an added gate. The [briefing and disposition](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) record the agreement. |
-| M4 Failure combinations and adversarial coverage | In progress | User authorized continuation through M5.1; combined-fault implementation and signed-candidate verification underway. |
-| M5.1 Evidence contract closure | Pending | Requires M4 |
+| M4 Failure combinations and adversarial coverage | Complete | Build 578 acceptance: 197 passing case credits, 17 fresh at `2e6a2c1` and 180 reviewed reuses from `b641054`. Eight shared combined-fault rows, BYOXPC controls and independent cleanup passed; both rendered-review findings corrected and rechecked. One earlier intermittent observer failure remains preserved and unexplained. See the investigative record. |
+| M5.1 Evidence contract closure | In progress | M4 closed; implement A1-F11, reconcile reader responsibilities and verify the full evidence account before the requested stop. |
 | M5.2 Limits account | Pending | Requires M5.1 |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
 | M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
@@ -77,116 +77,56 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** A1 and H1 are complete. The user accepted the design
-recommendations on 2026-10-13 after discussing interruption hooks and possible
-diagnostic-host experiments. Those future investigations do not change the
-current design or add a milestone prerequisite. F10 is repaired at
-`7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89`: complete sibling coverage is restored,
-the missing extension-boundary wrapper child is included, and three omission
-controls prove that missing phase/extension children are rejected. The fresh
-rendered recheck has no findings. Original auditor answers remain unchanged.
-F11 remains assigned to M5.1. The human review boundary is closed; M4 has not
-started and is the next implementation milestone.
+**Execution state:** M0–M4, A1 and H1 are complete. M5.1 is next within the
+user's authorization; stop after its completed gate with a clean tree. Do not
+advance M5.2. A1-F11 remains required: present wrong-type phase containers and
+validator-disposition values must not collapse into optional absence. Review
+empty spawn objects and document claim versus full-shape validation. The
+accepted H1 design remains unchanged; no diagnostic-host experiment is required.
 
-The [H1 briefing](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) ties
-rendered architecture/contract/test passages and A1 Q6/F8 to the implementation.
-Accepted recommendation: retain the separate ordinary-authority issuer, fresh validator
-per phase, independent evidence checks, all-action disposition index, narrow
-compile-time interruption hooks and local repeated-action guard. No substantial
-unnecessary general mechanism or competing model was found. Reader consistency
-is a maintenance cost; F11's malformed-type checks remain required. Isolated
-validator launch cost has not been measured and is required before considering
-persistence; aggregate timing is not that measurement. The briefing records the
-alternatives and consequences rather than treating those costs as resolved facts.
+**Candidate:** M4 implementation and fixture corrections culminate in clean
+`b6410544738ecd32feef95915363f4e51af82403`; rendered-review corrections are
+`2e6a2c1ffcca48211d91dce9755a47a9a7527780`, changing tests and documentation only.
+Signed app 0.2.8 build 578 is from `b641054`, with worker identity
+`5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2`.
+Signer: `Developer ID Application: Adam Hyland (42D369QV8E)`.
+Wire contracts are request 4, response 18, envelope 7. The response bump covers
+`issuer_abnormal_exit`; captures and shape fixture are current. Maximum reply
+remains 52,414,779 bytes; ABI geometry and both documentation baselines are unchanged.
 
-The preceding A1 re-audit source is `efb588b54fd01caf1d91683e9df6a1bff8e45bbd`,
-with implementation unchanged from `52bb1b96df168033ccd24bb0ec96dc1385d30ffc`.
-The current F10 test candidate is clean `7bfbdcd`; it changes no product input.
-The signed app is version 0.2.8, build 566, from clean source
-`2f380d02632ea4ae02fe47c78d389eaebb831dc2`, stamp `v0.2.8-46-g2f380d0`,
-with worker identity
-`d728670539b289721b4cfbc567df5c14ec76917c09311bba283e64a39ba36957`.
-Signer remains `Developer ID Application: Adam Hyland (42D369QV8E)`.
-The reviewed-source delta after the app build changes only test code and its
-documentation, plan/records and retention metadata; no app input changed.
-Production repair is `8707abc`, fixture correction is `2f380d0`, and final
-oracle robustness/wording correction is `52bb1b9`. The H1 preparation changes
-only plan, records and retention metadata after the tested F10 commit.
+**Acceptance:** the full `extensions-m4-acceptance-20261013` run
+(`20261013T215322Z_49c4e35f`) completed all 197 cases: 196 pass, one fail,
+no skipped or unrun cases, unchanged app inventory. The failing Rust observer
+edge test reported `pipe_open_after_exit`, matching a previously retained
+intermittent failure outside M4's changed code. An unchanged-source isolated
+retry and fresh registered Rust run passed; the cause remains unexplained.
+The original run remains failed. The corrected `extensions-m4-review-fixes-20261013`
+run (`20261013T220720Z_b95d4ee4`) passed 17/17, including six mechanical checks,
+all Rust checks, 416 Swift checks plus Rust/Python driver replay, blackbox checker
+controls and all direct matrix readers. Its `checkpoint/acceptance-credits.json`
+credits 17 replacements and 180 reviewed reuses for 175 default plus 22 required
+opt-in cases. `source-applicability.json` separates exact file/app comparisons
+from the conservative dependency review and copied-fixture exceptions.
 
-**Acceptance:** all 196 canonical cases have passing evidence: the full default
-174 plus 22 required opt-ins. The current manifest is
-`a1-f10-20261013/checkpoint/acceptance-credits.json`. Its clean-`7bfbdcd` run
-(`20261013T205716Z_b30e0bce`) passes 13/13: script groups and all source-drift and
-dispatcher cases. It replaces 13 earlier credits and retains 183 after an explicit
-source/dependency review. Wrapper success and baseline failure each record all
-37 children; each of three omission controls records 36 and rejects exactly the
-missing receipt. The script-group inventory contains 35 controls. Registered
-witness cases use explicit child commands; build-guard fixtures copy the changed
-scripts but do not execute them. These copied-file exceptions are recorded in
-`source-applicability.json`, alongside exact deltas and all 21 matching app hashes.
-No fresh default battery, signed build, or live/TCC-sensitive run is claimed.
+**Rendered assessment:** fresh `/root/m4_rendered_review` (Astra) inspected the
+combined-fault matrix, ownership, coverage, architecture citations and affected
+copies. F1 omitted M-row reader ownership; F2 left M08 raw assertions unused and
+inconsistent with its 22-byte target. Both are corrected and closed after the
+focused rendered recheck and fresh execution. Source/HTML/PDF/PNG manifests,
+reports and renderer scripts are retained in the correction run's `reviews/`;
+full details and limits are in the investigative record. These are local-only,
+gitignored evidence. Earlier diagnostics remain separately retained.
 
-The preceding acceptance history remains unchanged: `a1-repair-resume-20261013`
-(`20261013T185935Z_3249b0bd`) passed 166/166 at clean `efb588b`, with no skips,
-unrun cases or harness errors and unchanged build-566 inventories. This includes
-all 406 Swift checks and driver replay, native/phase/extension boundaries,
-ordering mutations, BYOXPC and integrated failure controls. The other 30 results
-come from completed passing cases at clean `52bb1b9` in
-`a1-repair-accepted-20261013` (`20261013T173617Z_a52124f2`). That cancelled
-run remains `ok: false` with 166 unrun cases; it is not relabeled as passing.
-The earlier `a1-repair-default-20261013` passed 174/174 at `2f380d0` and remains
-a separate historical run. No old-build or pre-correction oracle result receives
-final acceptance credit. Maximum reply remains 52,414,779 bytes; the shape
-golden, ABI layout and both documentation baselines are unchanged.
+**Cleanup and resume:** all 40 native observer channels across these two runs
+and their exact recovery directories are absent. Six regular BYOXPC sessions
+have verified service/staging/plist absence; registry-recovery controls report
+verified cleanup. No test/build/render process is active at M4 closure. The old
+25 empty M3 shared-memory objects whose names were not recorded remain an
+explicit unverified-absence limitation; no prefix cleanup was attempted.
 
-The resumed run's prior `checkpoint/acceptance-credits.json` identifies each case,
-command/configuration, source, app and originating run. Its
-`source-applicability.json` records exact file comparisons and separately labels
-the review judgments for the 30 retained results, including changed metadata
-copied by dispatcher and build fixtures. The two source snapshots, full command
-and selection records, app inventories, cleanup observations and final metadata
-diff remain available. Earlier diagnostic failures keep their original results
-and provenance; the investigative record explains them.
-
-The existing documentation reviewer closed its sole setup/spawn wording finding
-after inspecting the corrected page. All twelve final changed document sources
-match the immutable reviewed bytes after replacing the shell-helper view with
-the F10 render. That focused recheck by `/root/m3_rendered_review` found no issue
-on actual page 2; the lead accepts it. Its report and source/HTML/PDF/PNG manifests
-are retained under `a1-f10-20261013/reviews/`. The preceding report, immutable
-views, manifests and renderer scripts remain in the cancelled run's `reviews/`; current
-applicability is rechecked in the F10 run's checkpoint. Prior M3 review
-applies only to unchanged surfaces. Evidence and previews are gitignored and
-local-only. The unfinished pause-time draft remains historical; the current
-handoff is in the shared audit document.
-
-All eight regular BYOXPC session fixtures and the seven exact registry-recovery
-service identities are absent, with their owned staging/plist paths removed.
-All 26 native observer channels and recovery paths from the resumed run are
-absent by exact-name checks. No build, test or render process remains active.
-The older 25 empty M3 shared-memory objects with unrecorded names remain an
-explicit cleanup limitation; their absence is unverified and no prefix cleanup
-was attempted. No correction-pass cleanup action is pending.
-
-The auditor's new `a1-recheck-default-20261013` run
-(`20261013T193011Z_7e1b6661`) passes 174/174 at `9a1f20b` on unchanged build
-566. The lead verified terminal ownership and current app hashes, independently
-reproduced the wrapper mutation results, and replayed all 33 retained Python
-probes. Their evidence is attached under that run's `lead-review-20261013/`;
-original auditor artifacts remain intact. Their 22 opt-in credits were reviewed
-from retained provenance, not independently rerun by the auditor.
-
-**Next action:** finish M4 and M5.1, then stop with a clean tree as requested.
-M4 is in progress. The candidate introduces `issuer_abnormal_exit` and advances
-the response contract; current captures and shape evidence must be refreshed
-from the signed build before gate acceptance.
-M3, A1 and H1 prerequisites are complete. Keep the accepted design and the named
-M4 corrections/controls; no diagnostic-host build or new debugger mechanism is
-required by this plan. A1-F11's wrong-type/absence handling, adjacent malformed
-record validation scope and optional versioning clarification remain M5.1 work.
-The H1 closure changes only records and checkpoint prose; existing runtime and
-rendered implementation evidence remains applicable. No test, build or render
-process is active, and there is no new cleanup ownership.
+**Next action:** complete M5.1's reader repair, contract review, required checks
+and fresh rendered assessment, commit its evidence/checkpoint, then stop. M5.2
+and subsequent milestones remain pending.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

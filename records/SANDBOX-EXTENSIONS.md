@@ -2,21 +2,13 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M3, A1 and H1 are complete. The user authorized M4 through
-M5.1 with a stop at completed M5.1. M4's build-578 candidate (`b641054`, clean)
-finished 197 selected cases: 196 passed and `unit/rust.unit` failed the existing
-observer `both_raw_streams_are_bounded_at_exact_edges` control with
-`pipe_open_after_exit`. The exact isolated rerun passed; this does not establish
-cause or resolution of the intermittent failure previously retained during the
-Meson cutover. The original run remains failed. Focused replacement evidence,
-M4 rendered-review recheck and gate closure remain pending.
-
-The fresh M4 rendered review found incomplete M-row ownership text and M08's
-unused, mismatching raw assertions. The correction aligns M08's 22-byte target,
-consumes every shared raw expectation and checks that a wrong byte count is
-rejected. It also completes the reader and ownership inventories. No product
-input changes in this correction. Historical entries retain original results;
-the associated plan owns current resume instructions.
+Current status: M0–M4, A1 and H1 are complete. The user authorized continuation
+through M5.1 and a clean stop there. M4 acceptance, rendered findings and their
+corrections are recorded under [M4 closure](#m4-closure). M5.1 remains in progress;
+A1-F11 and evidence-account closure are its remaining work. Signed build 578 is
+from clean `b641054`; M4's corrected test source is `2e6a2c1`. Historical entries
+retain their original observations; the associated plan owns current resume
+instructions.
 
 ### M1 initial checkpoint
 
@@ -1698,3 +1690,117 @@ for this documentation-only closure. The accepted implementation and its test
 and rendered-documentation evidence are unchanged. A1's named M4/M5 follow-ups
 remain assigned; H1 is complete and M4 is next. No active task process or new
 cleanup ownership remains.
+
+## M4 closure
+
+M4 is complete at tested correction source `2e6a2c1ffcca48211d91dce9755a47a9a7527780`.
+The signed app is build 578, source `b6410544738ecd32feef95915363f4e51af82403`,
+request/response/envelope 4/18/7, worker identity
+`5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2`.
+The response vocabulary now distinguishes published bounded issuer output followed
+by a confirmed abnormal exit (`issuer_abnormal_exit`) from missing publication.
+Delivery remains withheld; the independent native result and process observation
+both survive. Actual response-18 captures and the version-only shape-golden
+refresh are retained with their producer provenance. No ABI geometry, aggregate
+reply bound or documentation-baseline entry changed.
+
+The shared matrix has eight new combined-fault rows, each also read by Swift
+comparison controls. M01 and M07 retain issuer publication plus exit 87, including
+omitted lifecycle actions; M02 kills the worker during bounded token-framing
+validation; M03 combines consume EACCES with omitted release; M04 retains earlier
+consume/access when cross-phase release returns EIO; M05 and M06 interrupt
+consume/release publication while preserving earlier observations. M08 combines
+validator timeout, failed termination, unconfirmed host reap and late EPIPE with
+a separate next-phase validator and exact phase-local record IDs. A separate
+test-owned kill/wait receipt establishes final cleanup without upgrading the
+host's retained unconfirmed account. Constructed validator records are not
+credited as kernel predictions.
+
+The plan's partial-token-delivery example is implemented at the actual mapped
+channel's framing-validation boundary: an independently recorded valid prefix
+precedes death before delivery publication. It is not a partially copied stream.
+Compile-time instrumentation remains narrow; no diagnostic-host/debugger design
+was added. Native fixture executables, targets and recovery ownership now live
+under owned `/private/tmp` paths to avoid Desktop TCC access during direct fixture
+execution. Retained executable copies are evidence, not the executed location.
+
+BYOXPC controls independently check empty issuer grants, carry the maximum
+ordinary/phased/fresh-read/lifecycle/escaped-exec workloads through the installed
+service, and remove only its owned issuer file to establish the named capability
+refusal. They restore exact bytes, validate that service again, and verify removal.
+Registry recovery and provenance controls also passed. No issuer authority was
+expanded.
+
+### M4 execution evidence and applicability
+
+The full [candidate run](../tests/out/runs/extensions-m4-acceptance-20261013/run.json)
+(`20261013T215322Z_49c4e35f`, clean `b641054`) completed 197/197 selected cases:
+196 passed, `unit/rust.unit` failed, zero skips/unrun, unchanged signed inventory.
+Its `sandbox-log-observer` unit binary's
+`log_capture::tests::both_raw_streams_are_bounded_at_exact_edges` collected 63
+expected bytes but reported stdout EOF false and `pipe_open_after_exit` after
+exit 0; the full Rust case therefore failed. The same failure was already retained
+in the Meson-cutover investigation, and `log_capture.rs` is unchanged. The exact
+isolated retry passed. Neither recurrence nor passing retry explains its cause;
+this remains an intermittent supervision limitation, not a repaired defect.
+The failed run keeps its original status and logs.
+
+The [correction run](../tests/out/runs/extensions-m4-review-fixes-20261013/run.json)
+(`20261013T220720Z_b95d4ee4`, clean `2e6a2c1`) passed 17/17, zero skips/unrun or
+harness errors. It includes all six source-drift checks, five registered Rust
+checks, both runner-unit cases (416/416 Swift checks and production driver replay
+through Rust and both Python readers), the independent blackbox checker, and the
+ordinary matrix, FIFO and seven combined-extension CLI rows. The M08 raw assertion
+reader rejects a substituted 20-byte count while accepting the independently
+prepared 22-byte target and all other shared raw expectations.
+
+Its [acceptance credits](../tests/out/runs/extensions-m4-review-fixes-20261013/checkpoint/acceptance-credits.json)
+contain all 197 passing case credits: 175 default and 22 required opt-ins, with 17
+fresh replacements and 180 reviewed reuses. The adjacent `source-applicability.json`
+records exact changed-file hashes, identical app inventories and the dependency
+judgment. Changes after the full run are confined to Swift tests, M08 expectations,
+ownership prose and record/retention metadata. Every direct matrix reader and
+mechanical account check was rerun. Other scripts, shared helpers, fixture code
+and product inputs are unchanged; copied-document/test-file exceptions in build
+and dispatcher controls are identified as review judgments, not hash proof.
+
+Exact-name read-only checks establish absence of 33 full-run and seven correction
+observer channels and their recovery directories. All six regular full-run BYOXPC
+sessions have observed launchd/registry/staging/plist absence. Registry recovery's
+own receipt records verified cleanup and removed staging. The old 25 unnamed M3
+empty shared-memory objects remain unverified; no prefix cleanup was attempted.
+The build log, source snapshots, exact commands/configurations, cleanup observations,
+original observer failure and passing retry remain in retained evidence. All
+linked evidence and renders are gitignored and local-only.
+
+### M4 rendered assessment and disposition
+
+Fresh reviewer `/root/m4_rendered_review` (gpt-6-astra) inspected immutable
+`m4-readable` at `b641054`, rendered using Pandoc 3.12, WeasyPrint 70.0 and
+Poppler 26.10.0. Selected actual PNGs cover native evidence, the complete wide
+M01–M08 table and ownership, guide/staged-guide native rules, contract versions,
+coverage, fixture and suite accounts, and architecture topology/channel/timeline
+and citation tables. The report distinguishes visual inspection from additional
+rendered-text/source tracing and does not claim every page or link was inspected.
+The comparison table uses a wider review page so all eleven columns remain visible;
+this is a rendering adjustment, not a contract change.
+
+F1 (documentation, accepted): opening inventory and Ownership table omitted M rows
+and their distinct live owners. Corrected the handwritten introductions/table and
+reader inventory; generated comparison rows remain generator-owned.
+
+F2 (test/fixture defect, accepted): M08 advertised shared raw assertions but only
+consumed its comparison, and its unused raw expectation described a different
+20-byte target. Aligned constructed/raw expectations to independently prepared
+22-byte `combined phase witness`, asserted every raw path, and added the wrong-count
+negative check. Existing phase-isolation/native-cleanup observations remained valid;
+this was not evidence of a product phase-protocol failure.
+
+The focused reviewer recheck at `2e6a2c1` closed both findings after inspecting
+corrected PNGs, all changed source, fresh M08 receipts and Rust/Python replay. No
+new substantive finding remained. It verified that all other previously reviewed
+document sources are byte-identical. The lead accepts those dispositions and the
+197-case credits above, closing M4. Full initial/recheck reports, immutable sources,
+HTML/PDF/PNG manifests and renderer scripts are under the correction run's
+[reviews](../tests/out/runs/extensions-m4-review-fixes-20261013/reviews/).
+A1-F11 and the broader evidence-account review remain M5.1 work.
