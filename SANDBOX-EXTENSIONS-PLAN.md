@@ -60,8 +60,8 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, public/generated accounts and rendered corrections pass. Final signed consolidation at `6744f3c` passed 147/147. A subsequent gate trace identified missing explicit phase-log coverage; test-only additions and their focused rendered/check closure remain pending. |
-| A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
+| M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
+| A1 Middle out-of-band audit | Awaiting response | Handoff and actual questions populated in the [shared audit document](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-middle-audit--after-m3); auditor answers and execution dispositions remain pending. |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
@@ -77,45 +77,49 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** resumed at the user's instruction from `7f0dbd9`. The
-authorized scope remains completion to the A1 audit handoff and then standing by. M0, M1 and M2 are complete; M3 remains open.
-This checkpoint does not reach that audit boundary. M2's consolidated signed
-acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
-`0daa018101ed39ecfd92d6d528b112784ed9c30f`, followed by the reader integration
-increment described in the investigative record.
-The current development app is build 560, stamped `6744f3c`, with worker
+**Execution state:** M0–M3 are complete and execution is standing by at the A1
+audit boundary. The reviewed source is
+`fdbd89b215125b50fc6030e09bdc4a66b56e48f2`. The signed development app is build
+560, version 0.2.8, from clean source
+`6744f3c0652fac983d2823dfcc9cb848efb105af` (`v0.2.8-40-g6744f3c`), with worker
 identity `12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
-It includes the Rust reader checks, native publication guards, issuer binary dossier
-and shared extension-limit constants. The native
-boundary increment passes its registered live controls and the coordinated
-Swift, ABI and independent-reader selection. Diagnostic failures and accepted
-runs retain their original results, console logs and source snapshots; the
-[investigative record](records/SANDBOX-EXTENSIONS.md) identifies each run.
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
+The intervening source delta changes tests and their account only; Rust edits
+are confined to `#[cfg(test)]`, and production bytes and the app are unchanged.
+This handoff increment changes only the plan, records and retention index.
 
-**Next action:** run the added explicit phase-log controls, affected Rust and
-source-drift checks, and a focused rendered recheck of their documentation.
-The clean signed candidate at `6744f3c` passed all 147 consolidated cases in
-`extensions-m3-accepted-20261013`. The lead's gate trace found that existing
-log tests covered repeated targets within a flat plan but not explicit phases.
-The added tests exercise the same ambiguity and execution-independence rules
-across phases; production code and build 560 are unchanged. Rust changes are
-confined to `#[cfg(test)]`; their production prefix matches the signed source.
+The 147-case signed consolidation is retained as
+`extensions-m3-accepted-20261013` (`20261013T143650Z_763cbafa`). The final
+13-case run at `fdbd89b`, `extensions-m3-phase-logs-20261013`
+(`20261013T145127Z_5507dc70`), replaces 13 credits and supplies the explicit
+phase-log controls. Its `checkpoint/acceptance-credits.json` records every
+canonical ID and the reviewed applicability exception for 134 reused results,
+including the changed test module copied by driver/build fixtures. File identity
+and execution-path judgments are recorded separately. Both runs have no skipped
+or unrun cases and unchanged artifact inventories. Diagnostic results remain
+intact; the [investigative record](records/SANDBOX-EXTENSIONS.md) identifies them.
 
-The broad fresh rendered review and first focused recheck closed F1–F5 plus
+The broad rendered review and first focused recheck closed F1–F5 plus
 collection-closure wording and the test-path account. Reviewer
 `/root/m3_rendered_review` (gpt-6-astra requested; runtime identifier not independently
-exposed) inspected retained Pandoc/WeasyPrint/Poppler views under
-`tests/out/runs/extensions-m3-review-corrections-20261013/reviews/`.
-The late phase-log test account will receive its own focused recheck; other
-rendered document bytes are unchanged. Coverage omissions and lead dispositions
-are in the investigative record. Both baselines are unchanged. All eight owned
-BYOXPC staging paths and all 26 native observer recovery records from final
-consolidation are absent after verified cleanup. The earlier empty shared-memory
-objects with unrecorded names remain an explicit limitation. No build or test
-process remains active at this checkpoint. Prepare A1 only after the final
-coverage correction passes, then stand by for the auditor.
+exposed) also completed the final phase-log recheck with no findings. Reports,
+immutable source/HTML/PDF/PNG views and render manifests are retained under the
+correction and phase-log runs' `reviews/` directories. Fourteen previously
+reviewed documents are byte-identical; all three final changed/additional
+documents were rechecked. Coverage omissions and lead dispositions remain in
+the investigative record. These artifacts are gitignored and local-only.
+
+Neither documentation baseline changed. All eight owned BYOXPC staging paths
+and all 26 native observer recovery records from final consolidation are absent
+after verified cleanup. The earlier 25 empty shared-memory objects with
+unrecorded names remain an explicit cleanup limitation. No build, test or render
+process remains active, and no product edit is pending at this checkpoint.
+
+**Next action:** await the external auditor's attributed answers in the shared
+audit document. Disposition them separately, resolve any findings invalidating
+M3 or blocking dependent work, and commit corrections and evidence before closing
+A1. H1 preparation and M4 have not started; an unanswered A1 is not closure.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

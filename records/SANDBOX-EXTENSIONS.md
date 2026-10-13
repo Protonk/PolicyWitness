@@ -1154,3 +1154,64 @@ name the added coverage, and architecture B8 cites its unit and live controls.
 This is a required coverage repair, not an implementation behavior change or M4
 expansion. The focused Rust/live/source checks and rendered recheck remain
 pending at this commit; M3 and A1 preparation remain open.
+
+The final focused run at clean source
+`fdbd89b215125b50fc6030e09bdc4a66b56e48f2`,
+`extensions-m3-phase-logs-20261013` (`20261013T145127Z_5507dc70`), passed
+13/13 cases with no skipped or unrun cases. The command used the established
+Rust PATH, escalation and fresh output, selecting `--suite unit --suite
+source_drift --case preflight/codesign.preflight --case
+witness_contract/worker_termination_and_log_correlation`. All five unit cases,
+six source-drift cases, signature preflight and the live correlation case passed.
+The deterministic phased collector test passed all capture-state variants. The
+live checker passed six flat/phased variants; the phased signal-capture and
+success-capture specimens each recovered two events with two ambiguous
+associations. Actual OS retrieval is an observation for this run, not a required
+availability guarantee. The signed app remained build 560 throughout.
+
+[The credit manifest](../tests/out/runs/extensions-m3-phase-logs-20261013/checkpoint/acceptance-credits.json)
+maps all 147 canonical cases to 13 replacement results and 134 retained results.
+Both runs' inspected app inventories are byte-identical and each changes report
+is empty. Both documentation baselines are byte-identical to `ac9c3b5`. These
+are mechanical facts. The applicability judgment is separate: the full unit
+rerun covers the changed test helper; the changed live checker and all source
+checks were rerun. The driver replay filters the unchanged
+`policy_transfer_driver_replies_cross_assembly_and_consumer` test and unchanged
+production dependencies. Build guards copy the changed docs and Rust test
+module, but their Cargo build excludes `cfg(test)`; minimum-version/signing
+refusal logic and tool substitutions are unchanged. Current source-drift checks
+accept the new documentation and citations. Reuse for these changed-file paths
+is a reviewed exception, not a claim that all their inputs are byte-identical.
+Other credited cases retain unchanged scripts, fixtures, production inputs and
+app. The focused checkpoint contains clean tracked-source hashes, the exact
+test-only delta from the signed source, console transcript and credit manifest.
+
+The same fresh read-only reviewer completed the focused rendered recheck at
+`fdbd89b`. Actual PNG inspection covered architecture page 11 (B8), witness
+README page 6 (termination/log controls), and coverage page 3 (record
+preservation). No documentation issue, implementation problem or investigation
+blocker was found. The lead accepts the report: its assertions agree with the
+deterministic and live controls, and their separate runtime results above now
+establish execution. This closes the remaining M3 rendered-review obligation;
+it does not constitute A1. Unchanged surfaces were not re-inspected, and the
+earlier bounded-review omissions remain applicable.
+
+[The final review directory](../tests/out/runs/extensions-m3-phase-logs-20261013/reviews/)
+retains the report, immutable source/HTML/PDF/PNG views and renderer scripts.
+Its `applicability.json` verifies current source hashes for 14 unchanged earlier
+reviewed documents and all three documents in the final recheck. The final
+report and applicability attachment held the checkout lock after confirming
+managed ownership, run ID and completed state. All detailed test/rendered
+evidence is gitignored and available only in this checkout; it has not been
+published or packaged for another checkout. No original result was overwritten.
+
+M3 is complete at this handoff. The A1 exchange has been prepared from the
+implemented candidate and evidence; auditor answers and execution dispositions
+remain pending. No build, test or render process remains active. No additional
+BYOXPC fixture was installed by the final run; the consolidated cleanup receipts
+remain applicable. The earlier 25 unrecorded empty shared-memory objects remain
+unverified and are not silently discharged by later cleanup. The allocation
+invariant remains limited to PW-owned preallocated reporting/coordination with
+no explicit PW allocator use after application; private API internal resource
+behavior is not guaranteed. Issuer authority has not been expanded. Execution
+stands by at A1; H1 and M4 have not started.
