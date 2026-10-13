@@ -4823,7 +4823,7 @@
           "kind": "record",
           "facts": {
             "Ownership": "the installer",
-            "Contents": "the host, the worker and the validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"
+            "Contents": "the host, worker, validator and issuer, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name"
           },
           "sources": [
             {
@@ -4880,7 +4880,7 @@
           "label": "runner install",
           "kind": "command",
           "facts": {
-            "Behavior": "signs the worker, the validator and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables"
+            "Behavior": "signs the worker, validator, issuer and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables"
           },
           "sources": [
             {
@@ -5008,7 +5008,7 @@
           "kind": "record",
           "facts": {
             "Lifecycle": "pending, installed, pending_cleanup",
-            "Contents": "service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true)"
+            "Contents": "service name, scope, bundle path, and separate host/worker/validator/issuer signature and entitlement read-backs, each entitlement set with its keys and the keys granted (value true); absent helper observations in older records remain unknown"
           },
           "sources": [
             {
@@ -5350,7 +5350,7 @@
           "label": "runner validate",
           "kind": "command",
           "facts": {
-            "Behavior": "verifies each record's bundle recursively and the host, worker and validator individually, re-reads every signature and entitlement set, reports failures by record and binary; consults no launchctl"
+            "Behavior": "verifies each record's bundle recursively and the host, worker and validator individually; also verifies the issuer when its file exists or prior issuer evidence is recorded; re-reads those signatures and entitlement sets, reports failures by record and binary, and leaves an absent unrecorded issuer unknown; consults no launchctl"
           },
           "sources": [
             {
