@@ -10,10 +10,10 @@ section. Execution dispositions remain separate from the attributed audit text.
 ## A1 Middle audit — after M3
 
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent review recorded below; corrections committed, final acceptance
-paused at the user's request. The follow-up handoff is not yet ready. M3 implementation and its
-rendered-documentation assessment are complete. This exchange is not A1
-closure; execution is standing by before H1 and M4.
+executing-agent review and corrections are recorded below. Final acceptance and
+the rendered recheck are complete; the focused follow-up handoff is ready for
+the original auditor. This exchange is not A1 closure; execution is standing
+by before H1 and M4.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -731,6 +731,221 @@ checkpoint contains exact resume instructions. The completed follow-up will
 return to the original out-of-band auditor; no replacement auditor is being
 commissioned. Original attributed answers remain unchanged. A1 stays open;
 H1 and M4 have not started.
+
+### A1 correction follow-up — handoff to the original auditor
+
+Prepared by executing agent `/root` on 2026-10-13 for the original out-of-band
+auditor, Claude Fable 5.1. The user requested this return to the same auditor.
+This is a focused continuation of A1. The earlier attributed answers and
+findings remain unchanged. A1 remains open; H1 and M4 have not started.
+Please append your attributed follow-up answers below. This handoff records the
+final implementation and evidence directly; reviewing commit history is optional.
+
+#### Final candidate and acceptance
+
+| Item | Identity |
+| --- | --- |
+| Reviewed source | `efb588b54fd01caf1d91683e9df6a1bff8e45bbd` (implementation unchanged from `52bb1b9`) |
+| Signed app source | `2f380d02632ea4ae02fe47c78d389eaebb831dc2`, clean stamp `v0.2.8-46-g2f380d0` |
+| Local app | `dist/PolicyWitness.app`, version 0.2.8, build 566 |
+| Signer / host | Same Developer ID identity and certificate as above; macOS 26.7.1 / 25G241, arm64 |
+| Wire versions | Request 4, response 17, envelope 7 |
+| Worker identity | `d728670539b289721b4cfbc567df5c14ec76917c09311bba283e64a39ba36957` |
+| Embedded manifest SHA-256 | `21d83af0bfd2e63197996038cd326e4b247f449ccdaa71e6c7fb72bf27839913` |
+
+Production corrections are committed at `8707abc`; fixture corrections at
+`2f380d0`; final Python oracle robustness and wording corrections at `52bb1b9`.
+The reviewed source differs from the app source only in the plan, audit and
+investigative records, retention index, handwritten failure-contract wording,
+Python lifecycle oracle, and its blackbox controls. None is an app build input.
+The handoff commit changes only the plan, records and retention index. It is not the source
+of the earlier build or test execution.
+
+**Final acceptance: 196/196 canonical cases have passing evidence**, covering
+all 174 default cases plus the 22 required opt-ins. The resumed run
+[`a1-repair-resume-20261013`](../tests/out/runs/a1-repair-resume-20261013/run.json),
+ID `20261013T185935Z_3249b0bd`, passed 166/166 at clean `efb588b`, with no
+skips, unrun cases or harness errors and unchanged app inventories. It includes
+all 406 Swift checks plus Rust/Python driver replay, public phase/extension
+controls, native boundaries, ordering mutations, BYOXPC and failure boundaries.
+The other 30 completed passes are from
+[`a1-repair-accepted-20261013`](../tests/out/runs/a1-repair-accepted-20261013/run.json),
+ID `20261013T173617Z_a52124f2`, at clean `52bb1b9`. The user-requested pause
+cancelled that run after those cases; its original unsuccessful terminal
+accounting and 166 unrun selections are preserved.
+
+The complete case-credit manifest is
+[checkpoint/acceptance-credits.json](../tests/out/runs/a1-repair-resume-20261013/checkpoint/acceptance-credits.json).
+It names every canonical case and its command/configuration, source and app.
+Final credits combine 30 completed cases from the cancelled run with the
+166 fresh results from the resumed run. The cancelled run remains `ok: false`;
+none of its unrun cases is credited there. No result from the preceding oracle
+revision or old build 560 receives final credit. Source hashes, selection and
+command records, source applicability checks, cleanup observations and app
+inventories are retained with the runs; the signed-build console is in the
+cancelled run's checkpoint. The earlier
+[174/174 default run](../tests/out/runs/a1-repair-default-20261013/run.json), ID
+`20261013T171246Z_a9d472bc`, remains a separate passing historical run.
+
+The [applicability review](../tests/out/runs/a1-repair-resume-20261013/checkpoint/source-applicability.json)
+records the exact delta from `52bb1b9` to `efb588b`: the plan, two audit/investigation
+records, and one appended retention-index entry. All implementation, test-code,
+fixture, manifest and permanent-document bytes are unchanged. It separately
+records execution-path judgments for the 30 reused cases. In particular,
+dispatcher fixtures copy the index, while retention-specific controls replace
+it with their independent index; the new retained path does not overlap their
+controlled output paths. Build guards copy all tracked files, but the changed
+metadata is not a build input. These are reviewed exceptions for copied bytes,
+not claims that every fixture input is byte-identical or that hashes prove
+complete dependency coverage. The handoff's final metadata-only delta is retained
+alongside that review.
+
+The diagnostic executions remain intact. The sandboxed first offline run left
+one case unrun after signature inspection failed; the same selection outside
+the automation sandbox passed 7/7 on unchanged build 560. The first signed
+focused run passed 8/9, with a Swift test-only overlapping-access compile error.
+Subsequent Swift runs passed 385/406 and 405/406 while incompatible legacy
+fixtures were corrected. The accepted Swift correction then passed 406/406 and
+Rust/Python driver replay. Full intermediate source snapshots were not captured
+for those two failed Swift executions; their index sources remain null and they
+receive no acceptance credit. The focused final malformed-input checker passed
+before its commit, with exact working hashes/diff and null index source.
+`tests/RETAINED.json` names all runs and their original provenance.
+
+#### Corrections and carried findings
+
+| Finding | Executed correction / disposition at this handoff |
+| --- | --- |
+| A1-F1 | The executing-agent Q1 citation now points to `controller/src/disposition.rs`. Attributed auditor wording is preserved. |
+| A1-F2 | Wrapper expectations derive independently cataloged commands from `tests/catalog.json`, excluding those scripts from wrapper-only coverage while preserving all other siblings. The isolation controls separately reject step-only reversal as a broken phase partition, and reverse steps plus the sole phase's action IDs for the pure order mutation. The bad-attempt/order control retains its independent failure. Default and required opt-in coverage have explicit case credits above. |
+| A1-F3 | The Swift ordinary encoder, Rust execution-diagnostics reader, and Python consumer/oracle reject incompatible collection status, disposition and native child/spawn observations. Positive controls preserve setup failure before spawn, failed spawn, unreaped child and clock/budget failure. Degraded reporting failures preserve raw conflict without restoring claims. See the source and control account below. |
+| A1-F4 | The guide and failure contract explain that existing `malformed_transport` includes rejected publication or local setup failure; that label alone does not establish malformed input. No vocabulary change was made. M4 retains responsibility for a distinct setup-failure code if combined-fault observations need it. |
+| A1-F5 | Still assigned to M4: an issuer publishing and then exiting abnormally must retain both observations and receive an appropriate status. Delivery is already withheld. No new claim of coverage for this combination is made. |
+| A1-F6 | The guide limits the precise missing-helper refusal to a current runner copy and says older protocol binaries may refuse earlier. M4 still owns the live owned-copy control with the actual helper removed. |
+| A1-F7 | Fixture and witness-suite accounts now explicitly identify the separate instrumented clang `-O2` build with `PW_EXTENSION_OBSERVE`; source-boundary controls do not interrupt shipped bytes or observe private API internals. |
+| A1-F8 | Retained for H1. No persistent validator is proposed, so the plan's conditional isolated launch-cost measurement has not been performed. Aggregate/collection timings are not presented as isolated launch cost. |
+| A1-F9 | The historical M2 reply-size figure points to the superseding M3 calculation; neither original measurement is rewritten. The current conservative bound remains unchanged by the fixture repair. |
+| A1-L1 | Guide and regenerated staged copy distinguish `extension_api_unavailable` from `extension_issuer_unavailable`. |
+| Additional phase-partition wording | The failure contract now states that phase action IDs partition ordinary steps and native events, preserving each array's order. |
+| Rendered recheck F1 | The ordering table now says an observed native spawn failure is retained, while local setup can fail before such a record exists. The documentation reviewer rechecked the actual final page and closed this finding. |
+
+The optional independent assertion that the issuer's grant set is empty and the
+BYOXPC maximum-reply-path control remain M4 work, as dispositioned above.
+The current run does not claim to supply either missing control. Issuer
+privilege, extension classes, lifecycle limits and worker scheduling are unchanged.
+
+#### Collection consistency and fixture review targets
+
+[`collectionEvidenceConsistent`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
+is enforced by the ordinary full-reply encoder.
+[`phase_collection_issues`](../controller/src/disposition.rs) feeds execution
+diagnostics and withholds disposition claims for contradictions.
+[phase_evidence.py](../tests/lib/phase_evidence.py) is an independent Python
+implementation used by the consumer and lifecycle oracle. The oracle also
+returns diagnostics for malformed phase containers/entries instead of raising.
+The handwritten [failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#phase-association-and-partial-publication)
+records compatible combinations:
+
+- `not_reached`: no disposition or `not_invoked`, with no child/spawn record.
+- `not_needed`: `not_needed`, with no child/spawn record.
+- `collected`: `not_spawned` with no child and an optional native spawn failure;
+  or `reaped`/`unconfirmed` with the corresponding child/reap observation and
+  no spawn-failure record.
+- `budget_exhausted`: `not_spawned`, with no child/spawn record.
+- `clock_unavailable`: `not_needed` before planning or `not_spawned` after a
+  nonempty plan, with no child/spawn record.
+
+Collection does not require successful spawning, complete output, zero child
+exit or confirmed cleanup. The hand-reviewed
+[phase fixture](../tests/fixtures/contract/phase_collection.json) contains nine
+compatible and twelve contradictory states. Full Swift encoding, Rust
+execution diagnostics and both Python entry points exercise those rows; public
+phase controls mutate real capture states as well. Five additional malformed
+container/entry controls exercise the Python diagnostics. None imports the
+production classifier into the Python oracle.
+
+Version values remain unchanged because this correction enforces existing
+status meanings rather than changing a valid record's field type, vocabulary
+or interpretation. The earlier accepted contradictory records were defects in
+validation. This is the executing agent's application of the wire contract,
+and is explicitly offered for your review. Worker identity was regenerated
+because its conservative source inputs include the Swift encoder; the native
+wait, release store, eligibility rule and ABI layout did not change.
+
+The new consistency guard exposed an older field-complete Swift fixture that
+placed both a validator child and a failed spawn in one phase. It now has
+separate ordinary and failed-spawn shape documents; the committed response-shape
+golden is unchanged. The missing-ordering-evidence control explicitly checks
+ordinary encoding rejection and degraded preservation of the validator record,
+with comparisons withheld. It does not remove the conflicting observation.
+The maximum-reply test encodes a maximized typed spawn member separately and
+adds its full insertion allowance per phase to the ordinary reply. The exact
+conservative union remains **52,414,779 bytes**, under the **152 MiB** controller
+budget. Splitting incompatible shapes does not lower the bound.
+
+#### Documentation assessment and evidence limits
+
+The existing `/root/m3_rendered_review` documentation reviewer performed a
+focused recheck, separate from this external audit. The requested model was
+gpt-6-astra; its runtime identifier is not independently exposed. It inspected
+actual PNG derivatives of the changed architecture B4, public/staged guide,
+failure contract, test/fixture indexes and affected suite READMEs, tracing the
+changed claims to owners and controls. Its sole finding was the setup/spawn
+wording above; the final rendered recheck has no remaining findings. The lead
+also inspected the final ordering table. Prior M3 review applies only to
+unchanged surfaces; the report states the pages inspected and omissions.
+
+The [review report](../tests/out/runs/a1-repair-accepted-20261013/reviews/a1-rendered-recheck.txt),
+immutable source/HTML/PDF/PNG snapshots, manifests, renderer scripts and current
+source applicability record are retained under the cancelled run's `reviews/`.
+Both documentation baselines are byte-identical to M2. These review artifacts
+and test outputs are gitignored and **local-only**; the tracked record/index is
+not a portable evidence archive. No publication or release is claimed.
+
+The [cleanup verification](../tests/out/runs/a1-repair-resume-20261013/checkpoint/cleanup-verification.json)
+records absence of all eight ordinary BYOXPC session fixtures and their staging
+and plist paths, plus the seven exact registry-recovery service identities and
+that isolated staging directory. These checks use owned receipts, exact
+`launchctl` targets, registry/pending-cleanup observations and independent path
+checks. All 26 native observer channels return ENOENT for their exact recorded
+names; their recovery paths are absent. No build, test or render process remains
+active. No cleanup warning from this correction pass remains unresolved.
+
+The earlier M3 experiment's 25 empty POSIX shared-memory objects with unrecorded
+random names remain an explicit cleanup limitation; their absence is unverified.
+No prefix-based removal was attempted. The allocation claim remains limited to
+PW-owned preallocated reporting/coordination and no explicit PW allocator use
+after apply; private API internal resource behavior is unverified. Test targets
+use owned `/private/tmp` paths to reduce TCC exposure. No new permission prompt
+was reported during this correction pass; unattended prompt absence is not
+independently established.
+
+#### Questions for the original auditor
+
+1. Does the coordinated collection-consistency repair reject the reported
+   contradiction while preserving valid failed collection and degraded raw
+   evidence? Is retaining wire versions 4/17/7 justified under the existing
+   contract, or does a reading-rule change require a bump?
+2. Do the wrapper and isolation corrections preserve their intended independent
+   rejection controls? Do the Swift shape/degradation corrections and separate
+   maximum-size spawn allowance preserve coverage and the conservative bound?
+3. Does the combined final acceptance and its source/app provenance close
+   the default-coverage gap? Identify any missing dependency, unsupported
+   applicability claim or resource-cleanup issue.
+4. Do the current documentation corrections address your findings, and are the
+   explicitly carried M4/H1 items still appropriately deferred without
+   invalidating M3 or blocking preparation of H1? Please identify any remaining
+   blocker separately from later milestone work.
+
+#### Original auditor follow-up answers
+
+Pending. Please attribute answers and findings here without rewriting the
+original audit or the executing-agent dispositions.
+
+#### Executing-agent disposition of follow-up
+
+Pending the original auditor's return. A1 is not closed by this handoff.
+
 
 ## A2 Final audit — after M5.6
 

@@ -1395,3 +1395,64 @@ and credit wording still need completed evidence. Resume with a fresh managed
 run for the remaining cases, review source applicability for the 30 prior passes,
 and produce the exact final credit manifest before returning the handoff to the
 original auditor. A1 stays open; H1 and M4 have not started.
+
+## A1 corrections verified and returned for re-audit
+
+The user resumed work through the re-audit point. No implementation or test-code
+change was needed after `52bb1b9`. Run `a1-repair-resume-20261013`, ID
+`20261013T185935Z_3249b0bd`, executed the exact 166 remaining canonical cases
+at clean `efb588b54fd01caf1d91683e9df6a1bff8e45bbd` against unchanged signed
+build 566. All 166 passed, with no skipped/unrun cases, harness errors or app
+inventory changes. All 406 Swift checks and the Rust/Python actual-reply replay
+passed, as did public phases/extensions, native boundaries, ordering mutations,
+BYOXPC and integrated failure controls. The combined final credit set is 196:
+the 174 default cases plus 22 required opt-ins.
+
+Thirty final credits are completed passes from the cancelled `52bb1b9` run;
+none is an unrun selection. Its unsuccessful original terminal summary remains
+unchanged. Exact source comparison with `efb588b` changes only the plan, two
+records and one appended retention-index entry. The review traced the commands,
+shared helpers and fixtures by case group; 45 source anchors and all tracked
+hashes are retained. Generator targets and scanned documents exclude the changed
+plan/records. Release-publish/rotation fixtures make independent empty indexes;
+retention controls replace the copied index with their controlled one. Other
+dispatcher fixtures copy the changed index, whose new path does not overlap their
+controlled outputs. Build guards copy all tracked bytes, but unchanged build
+inputs do not consume this metadata. These are explicitly reviewed applicability
+exceptions for copied files, not a claim that hashes prove complete dependency
+coverage or that every input is identical. No older app or pre-correction oracle
+result receives final credit. `checkpoint/acceptance-credits.json` and
+`source-applicability.json` contain the per-case mapping, commands/configuration,
+source/app provenance, exact deltas and review judgments.
+
+The lead independently checked absence of eight owned ordinary BYOXPC sessions,
+including exact service targets, registry/pending-cleanup membership, staging and
+plist paths. Registry-recovery controls independently verified cleanup; the lead
+also checked their removed staging directory and all seven exact service names
+recovered from owned install receipts. All 26 observer-channel receipts show
+completed cleanup; read-only `shm_open` returned ENOENT for each exact name,
+and every recovery path is absent. These observations are retained in
+`checkpoint/cleanup-verification.json`. No build, test or render process remains
+active. The historical 25 unrecorded empty shared-memory objects remain a known
+limitation, not silently credited as cleaned.
+
+All twelve final changed document sources still match the completed rendered
+review, retained under the cancelled run with its report and immutable views.
+The source-applicability record identifies the final contract view superseding
+the earlier wording. Both documentation baselines are unchanged from M2; the
+response-shape golden and ABI layout are unchanged from the audit baseline.
+All 21 app-file hashes still match the accepted inventory, including embedded
+manifest SHA-256 `21d83af0bfd2e63197996038cd326e4b247f449ccdaa71e6c7fb72bf27839913`.
+Attachments and retention updates were made only under the checkout lock after
+terminal, owner and run-ID checks. These artifacts remain gitignored/local-only.
+
+The focused follow-up is now in the shared audit document for the original
+out-of-band auditor, Claude Fable 5.1. It reports the final state without
+requiring a git-history investigation, preserves all seven original answers and
+additional findings, maps corrections and carried work, and asks for review of
+collection consistency/version neutrality, fixture and reply-bound coverage,
+acceptance applicability, current documentation and deferrals. F5 and the named
+M4 controls remain deferred as previously dispositioned; F8 remains an H1 design
+note. A1 is open pending the auditor's return and lead dispositions. H1/M4 have
+not started. The tree is being committed at this re-audit boundary; no further
+implementation is authorized before the boundary is resolved.
