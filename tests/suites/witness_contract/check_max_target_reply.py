@@ -24,6 +24,8 @@ import consumer
 from run_capture import RunCapture
 from log_capture_contract import check_live_capture
 
+SESSION = None
+
 def documented_limit(ident):
     manifest = json.loads((Path(__file__).resolve().parents[3] / 'docs/limits.json').read_text())
     return next(row['value'] for row in manifest['limits'] if row['id'] == ident)
@@ -139,6 +141,12 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
 
 
 def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measure_margin=False, **expectations):
+    if SESSION:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/byoxpc'))
+        import session
+        request['runner'] = dict(mode='byoxpc', service=SESSION['service_name'])
+        (out / name).mkdir(parents=True, exist_ok=True)
+        session.retire_host(SESSION, out / name, session.command)
     run = RunCapture(pw, out / name, request,
                      cli_args=['--timeout-ms', '120000'] + ([] if capture_logs else ['--no-log-capture']))
     with run:
@@ -195,7 +203,10 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measu
 
 
 def main():
-    pw, directory = sys.argv[1:]
+    global SESSION
+    pw, directory = sys.argv[1:3]
+    if len(sys.argv) == 4:
+        SESSION = json.loads(Path(sys.argv[3]).read_text())
     out = Path(directory)
     observations = []
     with tempfile.TemporaryDirectory(prefix='pw-max-', dir='/private/tmp') as work:

@@ -155,7 +155,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 17
+    static let responseSchema: Int = 18
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -2334,6 +2334,14 @@ extension PWRunnerRunResult {
             if (event.result_published || event.call_boundary_observed) && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
         }
         for declaration in declarations {
+            if declaration.issuance_status == "issuer_abnormal_exit" {
+                guard let issuer = declaration.issuer, issuer.result_published,
+                      issuer.call_boundary_observed, issuer.native_nonnull == true,
+                      issuer.reaped == true, let length = issuer.token_length,
+                      length > 0 && length < PWExtensionLimits.tokenBytes,
+                      (issuer.term_signal != nil || (issuer.exit_code != nil && issuer.exit_code != 0)),
+                      declaration.delivery_status != "delivered" else { return "abnormal issuer exit lacks publication and reap" }
+            }
             if declaration.issuance_status == "issued" {
                 guard declaration.preparation_status == "prepared", declaration.resolved_target != nil,
                       declaration.identity != nil, declaration.issuer?.call_boundary_observed == true,

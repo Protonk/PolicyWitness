@@ -63,7 +63,7 @@ outside this plan.
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
 | A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 remains M5.1 work. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
 | H1 Prepared human review | Complete | User accepted the recommendations on 2026-10-13 after discussion of interruption hooks and diagnostic-host alternatives. Retain the bounded design; further hook investigation is deferred, not an added gate. The [briefing and disposition](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) record the agreement. |
-| M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
+| M4 Failure combinations and adversarial coverage | In progress | User authorized continuation through M5.1; combined-fault implementation and signed-candidate verification underway. |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
 | M5.2 Limits account | Pending | Requires M5.1 |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
@@ -176,7 +176,10 @@ probes. Their evidence is attached under that run's `lead-review-20261013/`;
 original auditor artifacts remain intact. Their 22 opt-in credits were reviewed
 from retained provenance, not independently rerun by the auditor.
 
-**Next action:** begin M4 under its existing scope and verification requirements.
+**Next action:** finish M4 and M5.1, then stop with a clean tree as requested.
+M4 is in progress. The candidate introduces `issuer_abnormal_exit` and advances
+the response contract; current captures and shape evidence must be refreshed
+from the signed build before gate acceptance.
 M3, A1 and H1 prerequisites are complete. Keep the accepted design and the named
 M4 corrections/controls; no diagnostic-host build or new debugger mechanism is
 required by this plan. A1-F11's wrong-type/absence handling, adjacent malformed

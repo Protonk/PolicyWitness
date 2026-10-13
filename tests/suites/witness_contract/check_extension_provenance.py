@@ -8,7 +8,7 @@ out = Path(sys.argv[1])
 state = json.loads((out / 'session.json').read_text())
 record = json.loads((out / 'readback/record.json').read_text())
 count = 0
-for directory in ('extensions', 'phases'):
+for directory in ('extensions', 'phases', 'maximum'):
     for path in (out / directory).rglob('run.json'):
         envelope = json.loads(path.read_text())
         provenance = envelope['data']['specimen']['runner_provenance']
@@ -16,6 +16,7 @@ for directory in ('extensions', 'phases'):
         assert provenance['runner_registry_id'] == record['id'] == state['runner_id']
         assert provenance['runner_service_name'] == state['service_name']
         assert provenance['runner_bundle_path'] == state['bundle_path']
+        assert provenance['runner_issuer_entitlements']['granted'] == []
         binary = envelope['data']['specimen']['binaries']['issuer']
         request = json.loads((path.parent / 'specimen.json').read_text())
         override = request.get('_test_overrides', {}).get('issuer_executable_path')

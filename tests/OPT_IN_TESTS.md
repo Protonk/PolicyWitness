@@ -101,7 +101,8 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Purpose:** Run the shared native lifecycle, placement, omission, target
   preparation and ordinary-phase controls through an owned BYOXPC runner.
   Compare issuer and worker authority read-backs with registry and envelope
-  provenance; verify removal afterward.
+  provenance; exercise maximum replies and an actual missing installed issuer
+  with exact-byte restoration; verify removal afterward.
 - **Opt-in reason:** Installs a launchd service in a logged-in GUI session and
   requires the selected app's Developer ID identity.
 - **Resource dependency:** Signed app, signing identity, GUI session and clang.

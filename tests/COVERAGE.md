@@ -64,7 +64,8 @@ identity/content observations, issuer lifetime comparisons and allocation
 controls. It neither produces nor validates PW outcomes; production extension
 and phase integration is outside that case.
 
-The default `witness_contract/extensions` and `extension_boundaries` cases cover
+The default `witness_contract/extensions`, `extension_boundaries` and
+`extension_combinations` cases cover
 the integrated native lifecycle and its failure boundaries. Issuance refusal,
 missing native APIs, malformed channels, issuer death/deadline, consume/release
 failure and interrupted publication retain separate native, delivery and access
@@ -90,6 +91,14 @@ attempt outcome names are introduced by phases.
 file effects, injects stale/future release ordinals, kills the worker during a
 later collection and checks earlier evidence. The required barrier mutation
 control independently removes the worker wait and moves host release early.
+
+The combined-fault matrix rows are shared by `extension_combinations`, the
+ordinary-phase `runner_unit` driver control and the Swift comparison tests.
+They retain published issuer results beside abnormal exit, withhold delivery
+after interrupted validation, and preserve earlier ordinary and native evidence
+through same-phase and cross-phase interruption. The ordinary driver combines
+timeout, failed termination, unconfirmed reap and rejected late output; its reply
+is replayed through Rust assembly and both independent Python readers.
 
 ## Attempt outcome coverage matrix
 

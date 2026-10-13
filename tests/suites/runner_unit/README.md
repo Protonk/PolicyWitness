@@ -133,3 +133,10 @@ checks the C capture helper against constructed objects.
 They inspect physical zeroization and descriptor closure, and substitute failed
 wait/kill observations after independent test cleanup to verify that published
 issuance cannot supply a delivery descriptor without confirmed host reaping.
+
+The combined-phase driver control (`PhaseProtocolTests`, matrix M08) retains a
+validator deadline, failed termination and unconfirmed reap while its late write
+independently observes EPIPE. A fresh validator supplies only the next phase’s
+record. The registered reader replay checks the encoded reply through Rust
+assembly and the Python consumer and lifecycle oracle; fixture query answers
+are controlled data, and the test independently cleans up the surviving child.

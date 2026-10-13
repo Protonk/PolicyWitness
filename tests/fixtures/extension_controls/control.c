@@ -77,6 +77,7 @@ static int controlled_release(int64_t);
 static void *controlled_lookup(void *, const char *);
 static int controlled_unmap(void *, size_t);
 static void controlled_erase(void *, size_t);
+static void *controlled_memchr(const void *, int, size_t);
 
 #define pw_extension_erase controlled_erase
 
@@ -88,9 +89,11 @@ static void controlled_erase(void *, size_t);
 #undef munmap
 #else
 #define dlsym controlled_lookup
+#define memchr controlled_memchr
 #define PW_EXTENSION_OBSERVE(stage, release, result) interrupted((stage), (release), (result))
 #include "pw_probe_runner.c"
 #undef dlsym
+#undef memchr
 #endif
 #undef pw_extension_erase
 
@@ -193,9 +196,28 @@ static int controlled_unmap(void *p, size_t n) {
         case 13: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;
         case 14: channel->status = 99; break;
         case 15: atomic_store_explicit(&channel->call_boundary, 0, memory_order_release); break;
+        case 17:
+            observer->reserved[0] = atomic_load_explicit(&channel->completed, memory_order_acquire);
+            _exit(87);
         }
     }
     return native_unmap(p, n);
+}
+
+static void *controlled_memchr(const void *bytes, int value, size_t length) {
+#if !defined(PW_CONTROL_ISSUER)
+    if (PW_CONTROL_MODE == 106 && extension_channel && bytes == extension_channel->token) {
+        /* Delivery is a mapped channel, not a stream copy. Stop halfway through
+         * framing validation, after mapping/FD close and before publication. */
+        size_t prefix = length / 2;
+        observer->reserved[0] = (uint32_t)prefix;
+        observer->reserved[1] = memchr(bytes, value, prefix) == NULL;
+        interrupted(4, 0, 0);
+        kill(getpid(), SIGKILL);
+        _exit(83);
+    }
+#endif
+    return memchr(bytes, value, length);
 }
 
 static int64_t controlled_consume(const char *token) {

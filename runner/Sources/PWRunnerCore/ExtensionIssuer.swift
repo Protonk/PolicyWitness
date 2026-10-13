@@ -152,6 +152,8 @@ final class ExtensionSession {
                 record.issuance_status = "invalid_transport"
             } else if child.status != nil && issuer.exit_code == 0 && stop == "reaped" {
                 record.issuance_status = "issued"
+            } else if child.status != nil && stop == "reaped" {
+                record.issuance_status = "issuer_abnormal_exit"
             }
             }
         }

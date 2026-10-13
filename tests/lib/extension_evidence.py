@@ -105,7 +105,7 @@ def validate_extensions(runner):
         if prepared != 'prepared' and declaration.get('identity') is not None:
             errors.append('extension identity lacks successful preparation')
         if declaration.get('issuance_status') not in ('not_started', 'issuer_unavailable', 'channel_setup_failed',
-                'spawn_failed', 'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'native_api_unavailable',
+                'spawn_failed', 'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'issuer_abnormal_exit', 'native_api_unavailable',
                 'native_refusal', 'token_oversized', 'invalid_transport', 'issued'):
             errors.append('invalid extension issuance status')
         issuer = declaration.get('issuer')
@@ -121,6 +121,12 @@ def validate_extensions(runner):
                 for k in ('native_nonnull', 'errno', 'token_length', 'uid', 'euid', 'gid', 'egid')):
             errors.append('unpublished issuer result carries payload')
         issued = declaration.get('issuance_status') == 'issued'
+        if declaration.get('issuance_status') == 'issuer_abnormal_exit' and (
+                issuer.get('result_published') is not True or issuer.get('call_boundary_observed') is not True
+                or issuer.get('native_nonnull') is not True or issuer.get('reaped') is not True
+                or not _integer(issuer.get('token_length'), 1, 16383)
+                or not (_integer(issuer.get('term_signal'), 1, 31) or _integer(issuer.get('exit_code'), 1, 255))):
+            errors.append('abnormal issuer exit lacks publication and reap')
         if issued and (prepared != 'prepared' or issuer.get('native_nonnull') is not True
                 or issuer.get('result_published') is not True or issuer.get('call_boundary_observed') is not True
                 or issuer.get('reaped') is not True or issuer.get('exit_code') != 0 or issuer.get('term_signal') is not None

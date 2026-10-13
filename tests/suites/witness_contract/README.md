@@ -49,7 +49,7 @@ read-backs establish that the issuer receives the selected identity without the
 worker's supplied entitlements. Envelope provenance must match the registry's
 per-binary records, and issuer dossier hashes must match independently read
 installed bytes and the shipped baseline. A missing issuer path must produce
-the named capability refusal before worker launch. Cleanup verifies service removal. These workloads place
+the named capability refusal before worker launch. The owned installed-copy control removes the actual issuer, retains a restoration receipt, checks public validation, then restores and verifies the exact bytes. The same BYOXPC session runs the maximum-reply workloads. Cleanup verifies service removal. These workloads place
 their targets in owned temporary directories to avoid requesting Desktop access.
 
 `extension_boundaries` compiles the production issuer and worker with the
@@ -69,6 +69,22 @@ buffer erasure, and retains only observations. A deliberately contaminated
 in-memory string checks detector sensitivity. Raw tokens never enter fixtures.
 The observer's ownership receipt records cleanup; an unconfirmed native child
 retains its named channel and recovery record.
+
+`extension_combinations` reads the M rows of the shared comparison matrix. It combines
+published issuance with abnormal exit, worker death during mapped-token validation,
+same-phase consume failure with omitted release, cross-phase release failure,
+and native-call interruption with earlier ordinary observations. Independent
+receipts and both readers check each row; Swift comparison tests read the same
+expectations. Token validation interruption occurs before delivery publication;
+the channel is mapped, not copied as a byte stream. No new worker setup status
+is needed: unobserved delivery remains distinct from a published setup refusal.
+
+The ordinary-phase combined control is in `runner_unit` (`PhaseProtocolTests`):
+a real validator times out, a substituted termination call fails, and its late
+write observes EPIPE while a fresh next-phase validator runs. The retained reply
+keeps the first child unreaped and each phase’s records separate; the test owns
+independent child cleanup. Rust assembly and the Python consumer/oracle replay
+that production-encoded reply. The fixture’s query answers are controlled data.
 
 ## Invariants
 

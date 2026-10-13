@@ -915,6 +915,17 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
     }
     let issued = declaration["issuance_status"] == "issued";
     let length = issuer["token_length"].as_u64();
+    if declaration["issuance_status"] == "issuer_abnormal_exit"
+        && (issuer["result_published"] != true
+            || issuer["call_boundary_observed"] != true
+            || issuer["native_nonnull"] != true
+            || issuer["reaped"] != true
+            || !length.is_some_and(|v| v > 0 && v < 16384)
+            || !(issuer["term_signal"].as_i64().is_some_and(|v| v > 0)
+                || issuer["exit_code"].as_i64().is_some_and(|v| v != 0)))
+    {
+        reject("abnormal issuer exit lacks publication and reap");
+    }
     if issued
         && (declaration["preparation_status"] != "prepared"
             || issuer["native_nonnull"] != true

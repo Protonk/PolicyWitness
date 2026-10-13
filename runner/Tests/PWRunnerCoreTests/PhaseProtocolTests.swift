@@ -180,5 +180,67 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             try expectEqual(reply.steps[1].comparison?.order, "unestablished")
             _ = try pwRunnerEncodeJSON(reply)
         }
+        tk.run("M08: timeout, failed cleanup and late output cannot enter the next phase") {
+            guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
+                  let artifacts = ProcessInfo.processInfo.environment["PW_TEST_ARTIFACTS"] else {
+                throw TestFailure(message: "required fixture and receipt directory missing")
+            }
+            let id = UUID().uuidString
+            let gate = "/tmp/pw-order-late-" + id
+            let target = URL(fileURLWithPath: "/private/tmp/pw-phase-combined-" + id)
+            try Data("combined phase witness".utf8).write(to: target)
+            defer { try? FileManager.default.removeItem(at: target); try? FileManager.default.removeItem(atPath: gate) }
+            var spawned: [pid_t] = []
+            defer {
+                for pid in spawned {
+                    // Reap first: never signal a PID the production driver already reaped.
+                    var status: Int32 = 0
+                    let rc = Darwin.waitpid(pid, &status, WNOHANG)
+                    if rc == 0 {
+                        _ = Darwin.kill(pid, SIGKILL)
+                        while Darwin.waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+                    }
+                }
+            }
+            let request = PWRunnerRunSpec(specimen_id: "M08",
+                policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
+                phases: [PWRunnerPhase(phase_id: "timed", actions: [.probe(phaseProbe("early", target.path, operation: "io_hang_late:" + id))]),
+                         PWRunnerPhase(phase_id: "later", actions: [.probe(phaseProbe("later", target.path, action: "read_fresh"))])],
+                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 100))
+            let reply = CWorkerOrchestrator.run(parsed: request, policyHash: "controlled-validator", bundleId: nil,
+                workerExecutablePath: phaseEquipment("pw-probe-runner"), validatorExecutablePath: fixture + ".validator",
+                validatorSpawn: { pid, path, actions, argv in
+                    if !spawned.isEmpty { FileManager.default.createFile(atPath: gate, contents: Data()) }
+                    let rc = nativeValidatorSpawn(pid, path, actions, argv)
+                    if rc == 0 { spawned.append(pid.pointee) }
+                    return rc
+                }, validatorProcessCalls: { index in
+                    var calls = ChildProcessCalls()
+                    if index == 0 { calls.kill = { _, _ in errno = EPERM; return -1 } }
+                    return calls
+                })
+            try expectEqual(spawned.count, 2)
+            try expectTrue(spawned[0] != spawned[1])
+            let deadline = Date().addingTimeInterval(2)
+            while Date() < deadline && !((try? String(contentsOfFile: gate))?.contains("late_write=-1 errno=\(EPIPE)") ?? false) { usleep(1000) }
+            let receipt = try String(contentsOfFile: gate)
+            try expectContains(receipt, "late_write=-1 errno=\(EPIPE)")
+            try expectEqual(reply.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
+            try expectEqual(reply.phases[0].validator_subprocess?.reaped, false)
+            try expectEqual(reply.phases[0].validator_subprocess?.termination_request?.errno, EPERM)
+            try expectEqual(reply.phases[0].ordering?.validator_disposition, "unconfirmed")
+            try expectEqual(reply.phases[0].validator_subprocess?.records?.map { $0.stepId }, ["early"])
+            try expectEqual(reply.phases[1].validator_subprocess?.records?.map { $0.stepId }, ["later"])
+            try expectTrue(reply.phases.allSatisfy { $0.completion_observed })
+            try expectEqual(try Data(contentsOf: target), Data("combined phase witness".utf8))
+            let matrix = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot()
+                .appendingPathComponent("tests/fixtures/comparison/matrix.json"))) as! [String: Any]
+            let row = (matrix["rows"] as! [[String: Any]]).first { $0["id"] as? String == "M08" }!
+            let actual = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(reply.steps[1].comparison!)) as! NSDictionary
+            try expectTrue(actual.isEqual(to: row["comparison"] as! [String: Any]))
+            let output = URL(fileURLWithPath: artifacts)
+            try pwRunnerEncodeJSON(reply).write(to: output.appendingPathComponent("combined-phases.json"))
+            try Data(receipt.utf8).write(to: output.appendingPathComponent("combined-phases-late-write.txt"))
+        }
     }
 }

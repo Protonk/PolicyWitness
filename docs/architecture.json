@@ -340,6 +340,11 @@
               "path": "tests/suites/witness_contract/check_extension_boundaries.py",
               "symbol": "run_case",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
+              "form": "test"
             }
           ]
         },
@@ -583,6 +588,11 @@
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
+              "form": "test"
             }
           ]
         }
@@ -762,6 +772,11 @@
               "path": "tests/suites/witness_contract/check_extension_boundaries.py",
               "symbol": "run_case",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
+              "form": "test"
             }
           ]
         },
@@ -874,6 +889,11 @@
             {
               "path": "tests/suites/witness_contract/check_extension_boundaries.py",
               "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
               "form": "test"
             }
           ]
@@ -1034,6 +1054,11 @@
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
+              "form": "test"
             }
           ],
           "note": "Issuer wait {limit:extension_issuer_wait}; cleanup may overrun. Missing capability refuses extension specimens."
@@ -1064,6 +1089,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
               "form": "test"
             }
           ],
@@ -1558,6 +1588,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
               "form": "test"
             }
           ]
@@ -2091,6 +2126,11 @@
               "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
               "symbol": "runExtensionEvidenceTests",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
+              "form": "test"
             }
           ]
         },
@@ -2120,6 +2160,11 @@
             {
               "path": "tests/suites/witness_contract/check_extensions.py",
               "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_combinations.py",
+              "symbol": "check_row",
               "form": "test"
             }
           ]

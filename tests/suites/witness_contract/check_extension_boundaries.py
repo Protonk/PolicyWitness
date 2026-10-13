@@ -39,6 +39,7 @@ def compile_fixture(out, channel, mode, issuer):
     if issuer:
         command.append('-DPW_CONTROL_ISSUER')
     command += [str(ROOT / 'tests/fixtures/extension_controls/control.c'), '-lsandbox', '-o', str(path)]
+    write_json(out / (path.name + '-build-command.json'), command)
     result = subprocess.run(command, capture_output=True, timeout=30)
     (out / (path.name + '-build.log')).write_bytes(result.stdout + result.stderr)
     assert result.returncode == 0, f'{path.name} compile failed; see build log'
@@ -58,10 +59,12 @@ def observations(mapping):
         issuer_env_clean=bool(struct.unpack_from('I', mapping, 56)[0]),
         worker_argv_env_clean=bool(struct.unpack_from('I', mapping, 60)[0]),
         worker_token_erased=bool(struct.unpack_from('I', mapping, 64)[0]),
-        issuer_token_erased=bool(struct.unpack_from('I', mapping, 68)[0]))
+        issuer_token_erased=bool(struct.unpack_from('I', mapping, 68)[0]),
+        control_value=struct.unpack_from('I', mapping, 72)[0],
+        prefix_valid=bool(struct.unpack_from('I', mapping, 76)[0]))
 
 
-def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
+def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
     out = out / name
     out.mkdir()
     channel = '/pwext_' + uuid.uuid4().hex[:20]
@@ -69,7 +72,7 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
     assert fd >= 0, f'create transient observer failed: errno {ctypes.get_errno()}'
     owner = dict(channel=channel, creator_pid=os.getpid(), exclusive_creation=True, bytes=SIZE,
                  token_bytes_retained=False, cleanup_retained=True)
-    recovery = Path(tempfile.mkdtemp(prefix='pw-extension-control-')) / 'owner.json'
+    recovery = Path(tempfile.mkdtemp(prefix='pw-extension-control-', dir='/private/tmp')) / 'owner.json'
     owner.update(recovery_path=str(recovery), case_directory=str(out))
     def save_owner():
         write_json(out / 'channel-owner.json', owner)
@@ -108,6 +111,10 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
         spec = specimen(target, [[probe('before', target), intervention('consume', 'consume')],
                                  [probe('during', target), intervention('release', 'release')],
                                  [probe('after', target)]])
+        if row is not None:
+            spec = specimen(target, [[intervention(action, action) if action in ('consume', 'release')
+                else probe(action, target) for action in phase] for phase in row['actions']])
+            spec['specimen_id'] = row['id']
         spec['_test_overrides'] = dict(issuer_executable_path=str(issuer))
         if worker:
             spec['_test_overrides']['worker_executable_path'] = str(worker)
@@ -165,7 +172,10 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
                 if path.is_file():
                     assert token not in path.read_bytes(), 'token found in retained artifact'
         events = runner.get('extension_events', [])
-        if issuer_mode == 6:
+        if row is not None:
+            from check_extension_combinations import check_row
+            check_row(row, runner, observed)
+        elif issuer_mode == 6:
             assert runner['normalized_outcome'] == 'bad_request'
             assert runner['request_failure']['code'] == 'extension_api_unavailable'
             assert declaration['issuance_status'] == 'native_api_unavailable'

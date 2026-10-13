@@ -51,15 +51,16 @@ enum CWorkerOrchestrator {
             validatorSpawn: nativeValidatorSpawn)
     }
 
-    // Tests substitute only the native validator launch; worker orchestration,
-    // classification, evidence assembly and reply encoding remain production.
+    // Tests substitute native validator launch or child-process calls; worker
+    // orchestration, classification, assembly and encoding remain production.
     static func run(
         parsed: PWRunnerRunSpec,
         policyHash: String,
         bundleId: String?,
         workerExecutablePath: String,
         validatorExecutablePath: String,
-        validatorSpawn: @escaping ValidatorSpawnCall
+        validatorSpawn: @escaping ValidatorSpawnCall,
+        validatorProcessCalls: @escaping (Int) -> ChildProcessCalls = { _ in ChildProcessCalls() }
     ) -> PWRunnerRunResult {
         if let refused = admissionFailure(for: parsed) {
             return admissionRefusalReply(parsed: parsed, refused: refused, bundleId: bundleId, policyHash: policyHash)
@@ -151,7 +152,7 @@ enum CWorkerOrchestrator {
                               Int((collectionRemainingNs - planningNs) / 1_000_000))
             let input = ValidatorClientInput(executablePath: validatorExecutablePath, targetPid: workerPid,
                 probes: probes, verdictReadTimeoutMs: timeout)
-            validatorResults[index] = runValidator(input, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
+            validatorResults[index] = runValidator(input, processCalls: validatorProcessCalls(index), spawn: validatorSpawn)
             collectionStatuses[index] = "collected"
         })
 

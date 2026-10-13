@@ -2,7 +2,7 @@
 
 `matrix.json` is the single source of comparison-record expectations: one row
 per scenario of the [failure contract's comparison record](../../FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
-(S01–S25 with S04 unused, B1–B7, C1 and T), each with the inputs that produce
+(S01–S27 with S04 unused, B1–B7, C1 and T), each with the inputs that produce
 it, the raw channel values a unit reader feeds to the producer, the raw fields
 a live reader asserts beside the record, and the expected `comparison` object
 at the current response schema. Expectations were reviewed against the record's
@@ -113,3 +113,10 @@ runs registered in `tests/RETAINED.json` carry them.
 The `query` column in each row is a test column, not a record field: it is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome
 is `allow` or `deny`, otherwise `unavailable`.
+
+The M rows add combined faults. `extension_combinations` reads each extension
+row’s placement, native seam modes, runner and observer assertions, and ordinary
+comparison. `PhaseProtocolTests` reads the ordinary-phase row for timeout plus
+late output and unconfirmed cleanup. All rows also feed the Swift comparison
+producer tests. A row’s ordinary comparison never stands in for its separate
+lifecycle, delivery or child-cleanup observations.

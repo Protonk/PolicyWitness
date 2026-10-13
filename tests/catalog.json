@@ -1432,6 +1432,18 @@
           ]
         },
         {
+          "id": "extension_combinations",
+          "description": "Matrix-driven issuer publication/exit, interrupted delivery and same/cross-phase native failures with token confinement",
+          "requires": [
+            "app",
+            "clang"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/extension_combinations.sh"
+          ]
+        },
+        {
           "id": "extensions_byoxpc",
           "default": false,
           "description": "Native lifecycle, placement and ordinary phases on an owned BYOXPC runner with issuer authority read-back and provenance",

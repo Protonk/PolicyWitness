@@ -31,8 +31,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/extensions.log" "BYOXPC extension worklo
 test_step phases "repeat independent unlink, fresh unavailable planning and later native query through BYOXPC"
 test_check_python "${PW_TEST_ARTIFACTS}/phases.log" "BYOXPC ordinary phases failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_phases.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/phases" "${PW_TEST_ARTIFACTS}/session.json"
+test_step maximum "exercise maximum ordinary, phased, fresh-read, lifecycle and escaped-output replies through BYOXPC"
+test_check_python "${PW_TEST_ARTIFACTS}/maximum.log" "BYOXPC maximum replies failed" \
+  "${ROOT_DIR}/tests/suites/witness_contract/check_max_target_reply.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}/maximum" "${PW_TEST_ARTIFACTS}/session.json"
 test_check_python "${PW_TEST_ARTIFACTS}/provenance.log" "BYOXPC extension provenance failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_extension_provenance.py" "${PW_TEST_ARTIFACTS}"
+test_step missing_issuer "remove only the owned installed issuer, observe refusal and validation, then restore exact bytes"
+test_check_python "${PW_TEST_ARTIFACTS}/missing-issuer.log" "live missing issuer control failed" \
+  "${ROOT_DIR}/tests/suites/witness_contract/check_missing_issuer.py" "$PW_BIN" "${PW_TEST_ARTIFACTS}"
 test_check_python "${PW_TEST_ARTIFACTS}/cleanup.log" "BYOXPC extension cleanup failed" \
   "$SESSION_TOOL" cleanup "$PW_BIN" "${PW_TEST_ARTIFACTS}/session.json"
 trap - EXIT

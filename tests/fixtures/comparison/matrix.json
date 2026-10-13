@@ -2,7 +2,7 @@
   "schema_version": 1,
   "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected current-response comparison object.",
   "contract": {
-    "response_schema": 17,
+    "response_schema": 18,
     "request_schema": 4
   },
   "placeholders": {
@@ -2596,6 +2596,607 @@
         ]
       },
       "notes": "the later 'hosts' step may retain an allow query answer and query_first with attempt:not_reached; failure to complete an attempt does not erase an earlier query"
+    },
+    {
+      "id": "M01",
+      "scenario": "issuer publishes a token then exits abnormally; consume and release cannot run",
+      "specimen": "extension_combinations",
+      "step_id": "before",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 1,
+          "outcome": "read_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: issuer publishes a token then exits abnormally; consume and release cannot run; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before",
+          "consume"
+        ],
+        [
+          "during",
+          "release"
+        ],
+        [
+          "after"
+        ]
+      ],
+      "issuer_mode": 17,
+      "worker_mode": 0,
+      "runner_assert": {
+        "extensions.0.host_buffer_erased": true,
+        "extensions.0.issuer.result_published": true,
+        "extensions.0.issuer.exit_code": 87,
+        "extensions.0.issuance_status": "issuer_abnormal_exit",
+        "extensions.0.delivery_status": "token_unavailable",
+        "extension_events.0.status": "unavailable",
+        "extension_events.0.unavailable_reason": "token_unavailable",
+        "extension_events.1.unavailable_reason": "handle_unavailable"
+      },
+      "observer_assert": {
+        "control_value": 1
+      }
+    },
+    {
+      "id": "M02",
+      "scenario": "worker dies midway through framing validation, before delivery publication",
+      "specimen": "extension_combinations",
+      "step_id": "before",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "error",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "validator_no_verdict",
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": null,
+          "outcome": "not_run_worker_died",
+          "error": "no completed attempt result: slot publication incomplete",
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "synthetic",
+          "missing_reason": "slot_incomplete",
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "not_reached"
+      },
+      "assert": {
+        "attempt.result_source": "synthetic",
+        "attempt.requested_action": "read_fresh",
+        "attempt.lifecycle.summary": "not_reached"
+      },
+      "control": "witness_contract/extension_combinations: worker dies midway through framing validation, before delivery publication; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "unavailable",
+        "observation_basis": "no_completed_worker_result",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "attempt:not_reached"
+        ]
+      },
+      "actions": [
+        [
+          "before",
+          "consume"
+        ],
+        [
+          "during",
+          "release"
+        ]
+      ],
+      "issuer_mode": 0,
+      "worker_mode": 106,
+      "runner_assert": {
+        "extensions.0.issuance_status": "issued",
+        "extensions.0.delivery_status": "not_observed",
+        "extensions.0.delivered_bytes": null,
+        "runner_subprocess.reaped": true,
+        "runner_subprocess.term_signal": 9,
+        "sandboxed_after_apply": false,
+        "extension_events.0.status": "unresolved",
+        "extension_events.0.call_boundary_observed": false,
+        "extension_events.0.result_published": false,
+        "extension_events.1.status": "unresolved"
+      },
+      "observer_assert": {
+        "stage": 4,
+        "control_value": ">0",
+        "prefix_valid": true,
+        "worker_core_disabled": true,
+        "worker_channel_closed": true
+      }
+    },
+    {
+      "id": "M03",
+      "scenario": "same-phase consume fails natively; release is omitted and fresh read still fails",
+      "specimen": "extension_combinations",
+      "step_id": "during",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 1,
+          "outcome": "read_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: same-phase consume fails natively; release is omitted and fresh read still fails; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before",
+          "consume",
+          "during"
+        ],
+        [
+          "after"
+        ]
+      ],
+      "issuer_mode": 0,
+      "worker_mode": 104,
+      "runner_assert": {
+        "extension_events.0.status": "returned",
+        "extension_events.0.native_result": -1,
+        "extension_events.0.errno": 13,
+        "extension_events.1": null,
+        "phases.1.completion_observed": true
+      },
+      "observer_assert": {}
+    },
+    {
+      "id": "M04",
+      "scenario": "cross-phase release returns native failure; earlier consume and fresh read survive",
+      "specimen": "extension_combinations",
+      "step_id": "during",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: cross-phase release returns native failure; earlier consume and fresh read survive; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before",
+          "consume"
+        ],
+        [
+          "during",
+          "release"
+        ],
+        [
+          "after"
+        ]
+      ],
+      "issuer_mode": 0,
+      "worker_mode": 204,
+      "runner_assert": {
+        "extension_events.0.status": "returned",
+        "extension_events.1.status": "returned",
+        "extension_events.1.native_result": -1,
+        "extension_events.1.errno": 5,
+        "phases.0.completion_observed": true,
+        "phases.2.completion_observed": true
+      },
+      "observer_assert": {}
+    },
+    {
+      "id": "M05",
+      "scenario": "same-phase consume returns natively then worker dies before publication; release omitted",
+      "specimen": "extension_combinations",
+      "step_id": "before",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 1,
+          "outcome": "read_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: same-phase consume returns natively then worker dies before publication; release omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before",
+          "consume",
+          "during"
+        ]
+      ],
+      "issuer_mode": 0,
+      "worker_mode": 103,
+      "runner_assert": {
+        "runner_subprocess.term_signal": 9,
+        "runner_subprocess.reaped": true,
+        "extension_events.0.status": "unresolved",
+        "extension_events.0.call_boundary_observed": true,
+        "extension_events.0.native_result": null,
+        "extension_events.0.result_published": false,
+        "extension_events.1": null,
+        "steps.1.attempt.result_source": "synthetic"
+      },
+      "observer_assert": {
+        "stage": 2,
+        "actual_returned": true,
+        "worker_core_disabled": true,
+        "worker_channel_closed": true
+      }
+    },
+    {
+      "id": "M06",
+      "scenario": "cross-phase release is interrupted before its native call; prior phase evidence survives",
+      "specimen": "extension_combinations",
+      "step_id": "during",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: cross-phase release is interrupted before its native call; prior phase evidence survives; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before",
+          "consume"
+        ],
+        [
+          "during",
+          "release"
+        ],
+        [
+          "after"
+        ]
+      ],
+      "issuer_mode": 0,
+      "worker_mode": 201,
+      "runner_assert": {
+        "runner_subprocess.term_signal": 9,
+        "runner_subprocess.reaped": true,
+        "extension_events.0.status": "returned",
+        "extension_events.1.status": "unresolved",
+        "extension_events.1.call_boundary_observed": true,
+        "extension_events.1.result_published": false,
+        "extension_events.1.native_result": null,
+        "phases.0.completion_observed": true,
+        "phases.1.completion_observed": false,
+        "phases.2.arrival_observed": false
+      },
+      "observer_assert": {
+        "stage": 1,
+        "actual_returned": false,
+        "worker_core_disabled": true,
+        "worker_channel_closed": true
+      }
+    },
+    {
+      "id": "M07",
+      "scenario": "published issuer output and abnormal exit survive when both lifecycle actions are omitted",
+      "specimen": "extension_combinations",
+      "step_id": "before",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/target",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 1,
+          "outcome": "read_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/target",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "attempt.result_source": "worker",
+        "attempt.requested_action": "read_fresh"
+      },
+      "control": "witness_contract/extension_combinations: published issuer output and abnormal exit survive when both lifecycle actions are omitted; compile-time native seam receipt, unchanged independently prepared bytes, transient token leak detector, consumer and lifecycle-oracle checks.",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "actions": [
+        [
+          "before"
+        ],
+        [
+          "after"
+        ]
+      ],
+      "issuer_mode": 17,
+      "worker_mode": 0,
+      "runner_assert": {
+        "extensions.0.host_buffer_erased": true,
+        "extensions.0.issuer.result_published": true,
+        "extensions.0.issuer.exit_code": 87,
+        "extensions.0.issuance_status": "issuer_abnormal_exit",
+        "extensions.0.delivery_status": "token_unavailable",
+        "extension_events": [],
+        "phases.1.completion_observed": true
+      },
+      "observer_assert": {
+        "control_value": 1
+      }
+    },
+    {
+      "id": "M08",
+      "scenario": "validator timeout, failed termination and unconfirmed reap followed by late output during a fresh next-phase collection",
+      "specimen": "combined_phase_driver",
+      "step_id": "later",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null,
+          "fresh_read": {
+            "open_rc": 5,
+            "stat_rc": 0,
+            "identity": {
+              "device": 1,
+              "inode": 2,
+              "mode": 33152,
+              "uid": 501,
+              "gid": 20
+            },
+            "read_rc": 20,
+            "content_hex": "696e646570656e64656e74207769746e6573730a",
+            "close_rc": 0
+          }
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "read_fresh",
+        "attempt.result_source": "worker",
+        "attempt.fresh_read.open_rc": ">0",
+        "attempt.fresh_read.stat_rc": 0,
+        "attempt.fresh_read.read_rc": 20,
+        "attempt.fresh_read.content_hex": "696e646570656e64656e74207769746e6573730a",
+        "attempt.fresh_read.close_rc": 0
+      },
+      "control": "runner_unit PhaseProtocolTests M08: native kill substitution returns EPERM; surviving validator observes EPIPE after collection closure; distinct validator PIDs and exact phase-local record IDs; unchanged target bytes; Rust/Python replay of the production-encoded reply.",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
     }
   ]
 }

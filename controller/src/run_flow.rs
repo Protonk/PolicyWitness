@@ -1128,15 +1128,16 @@ mod tests {
         use std::process::{Command, Stdio};
         let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES")
             .expect("runner_unit receipt directory required");
-        for name in ["timeout", "unconfirmed"] {
+        for (name, filename) in [("timeout", "policy-transfer-timeout.json"),
+            ("unconfirmed", "policy-transfer-unconfirmed.json"), ("combined", "combined-phases.json")] {
             let reply: Value = serde_json::from_slice(
                 &std::fs::read(
-                    std::path::Path::new(&directory).join(format!("policy-transfer-{name}.json")),
+                    std::path::Path::new(&directory).join(filename),
                 )
                 .unwrap(),
             )
             .unwrap();
-            assert_eq!(reply["normalized_outcome"], "runner_timeout");
+            assert_eq!(reply["normalized_outcome"], if name == "combined" { "validator_no_reply" } else { "runner_timeout" });
             let (result, data, code) = attach_sandbox_logs(
                 complete_execution(execution_data(Some(reply.clone()))),
                 &json!({"probe_plan":[]}),
@@ -1150,9 +1151,12 @@ mod tests {
             .unwrap();
             assert_eq!(wire["data"]["runner_result"], reply);
             let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
-            assert_eq!(diagnostics["stop_reason"], "policy_transfer_deadline");
             assert_eq!(diagnostics["disposition_integrity"], "valid");
-            if name == "timeout" {
+            if name == "combined" {
+                assert_eq!(reply["phases"][0]["ordering"]["validator_disposition"], "unconfirmed");
+                assert_eq!(reply["phases"][1]["validator_subprocess"]["records"][0]["step_id"], "later");
+            } else if name == "timeout" {
+                assert_eq!(diagnostics["stop_reason"], "policy_transfer_deadline");
                 assert_eq!(
                     diagnostics["termination_cause"],
                     "host_cleanup_after_transfer_timeout"
@@ -1166,10 +1170,18 @@ mod tests {
             let mut child = Command::new("/usr/bin/python3").args(["-B", "-c", r#"import json,sys
 sys.path.insert(0,sys.argv[1])
 from consumer import validate,lifecycle
+from lifecycle_oracle import check_record
 e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
+errors=check_record(e); assert not errors,errors
 sub=e['data']['runner_result']['runner_subprocess']
-assert sub.get('policy_transfer_error') is None and sub['policy_transfer_timeout']['bytes_written'] < sub['policy_transfer_timeout']['bytes_expected']
-assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
+if e['data']['runner_result']['specimen_id']=='M08':
+    phases=e['data']['runner_result']['phases']
+    assert phases[0]['validator_subprocess']['stdout_collection_stop']=='deadline'
+    assert phases[0]['validator_subprocess']['reaped'] is False
+    assert [r['step_id'] for r in phases[1]['validator_subprocess']['records']]==['later']
+else:
+    assert sub.get('policy_transfer_error') is None and sub['policy_transfer_timeout']['bytes_written'] < sub['policy_transfer_timeout']['bytes_expected']
+    assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
 "#]).arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
                 .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
             child

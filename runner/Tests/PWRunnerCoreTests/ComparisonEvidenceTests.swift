@@ -104,14 +104,14 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
     tk.group("comparison matrix rows through comparisonEvidence") {
         var rows: [MatrixRow] = []
         var vocabulary: Set<String> = []
-        tk.run("the fixture carries every S, B, C and T row with a vocabulary-bound record") {
+        tk.run("the fixture carries every S, B, C, T and M row with a vocabulary-bound record") {
             rows = try matrixRows()
             vocabulary = try matrixVocabulary()
             let ids = Set(rows.map { $0.id })
             let expected = Set((1...27).filter { $0 != 4 }.map { String(format: "S%02d", $0) }
-                + (1...7).map { "B\($0)" } + ["C1", "T"])
+                + (1...7).map { "B\($0)" } + ["C1", "T"] + (1...8).map { String(format: "M%02d", $0) })
             try expectEqual(ids, expected, "matrix rows")
-            try expectEqual(rows.count, 35)
+            try expectEqual(rows.count, 43)
             for row in rows {
                 let limits = row.comparison["limitations"] as! [String]
                 try expectTrue(Set(limits).isSubset(of: vocabulary), "\(row.id): \(limits)")

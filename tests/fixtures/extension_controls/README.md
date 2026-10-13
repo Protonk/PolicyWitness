@@ -6,7 +6,11 @@ pre-call marker, inside a substituted operation before return, or after the real
 native call returned but before result publication. The middle control establishes
 position inside the controlled replacement, not inside the kernel extension API.
 Other modes supply native refusal, issuer death/deadline, unavailable symbols,
-invalid token contents and malformed transient-channel publications.
+invalid token contents and malformed transient-channel publications. A post-publication
+issuer exit retains an independent publication receipt. A worker-side `memchr`
+substitution scans a prefix of the mapped token and kills the worker before
+framing validation and delivery publication finish; the receipt records the
+checked prefix, descriptor closure and disabled core dumps.
 
 A unique test-owned POSIX shared-memory object receives independent intervention
 receipts and a copy of the real issued token. The checking process compares
