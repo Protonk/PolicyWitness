@@ -695,6 +695,13 @@
       "reason": "M5.4 final architecture gate and M5.5 public-account controls: ten passing cases after both rendered findings corrected.",
       "source": "a1112bc6627f07abb27478bfcfe9db7b45453fac",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m55-20261013",
+      "run_id": "20261013T232419Z_c076273a",
+      "reason": "M5.5 user-account closure: source drift, dispatcher and corrected GUI-requiring BYOXPC controls; fresh rendered review and focused recheck.",
+      "source": "80d9daf8e1729c71394579b1f6b62787022613ee",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

@@ -2,11 +2,11 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M5.2, A1 and H1 are complete. The user authorized continuation
-through A2. M5.3 is in progress with two documentation findings from its fresh
-review. Signed build 582 remains from `ea10ce3`; the M5.2 documentation candidate
-is `c76975a`. Current gate evidence and review dispositions are appended below;
-the associated plan owns resume instructions.
+Current status: M0–M5.5, A1 and H1 are complete. The user authorized continuation
+through A2. M5.6 final signed acceptance is next. Signed build 582 remains from
+`ea10ce3`; the accepted documentation/test-catalog candidate is `80d9daf`.
+Current gate evidence and review dispositions are appended below; the associated
+plan owns resume instructions.
 
 ### M1 initial checkpoint
 
@@ -2029,3 +2029,37 @@ are local/gitignored source, HTML/PDF/PNG, enlarged graphs and manifests from
 Pandoc 3.12, WeasyPrint 70 and Poppler 26.10. This bounded review does not certify
 every cited test body or private native state. The independent user-facing
 review continues in M5.5; its public behavior controls are already fresh here.
+
+
+## M5.5 user-account closure
+
+Closed at clean `80d9daf8e1729c71394579b1f6b62787022613ee`, build 582 unchanged.
+Fresh Astra reviewer `/root/m55_rendered_review` inspected the rendered source and
+staged guide, grammar, FAQ, operating references and test guidance, tracing public
+examples and capability refusals to independent controls. The lead accepts F1
+(documentation): removed a stale mutation tally and rewrote the maximum-reply
+catalog description to include ordinary/phased/fresh-read/lifecycle workloads.
+F2 (harness metadata): both standalone BYOXPC witness cases now declare `gui`,
+matching their installation mechanism and documented prerequisite. Existing
+dispatcher equipment handling remains unchanged. Focused rendered/source recheck
+closes both findings. No product behavior, public contract or generator input changed.
+
+`extensions-m55-20261013` (20261013T232419Z_c076273a) passed 9/9: six source-drift cases, dispatcher
+selection controls and both affected BYOXPC witness cases. The plan records the
+GUI requirement for each, and the standard public corpus/phases/lifecycle/reader
+checks passed at the immediately preceding M5.4 candidate with identical inputs.
+The checkpoint maps 197 passing credits to nine fresh and 188 reviewed reuses;
+changed catalog requirements were rerun, other case commands/requirements/context/
+dependencies/membership remain unchanged, and the maximum-reply description is
+display-only. Hash/app facts remain separate from applicability judgments. Guide
+staging and both unchanged baselines pass. Exact cleanup confirms both owned
+services, staging and plists absent; no native observer channels were created.
+
+[Initial and corrected renders/reports](../tests/out/runs/extensions-m55-20261013/reviews/)
+are local gitignored evidence, using Pandoc 3.12, WeasyPrint 70 and Poppler 26.10.
+The initial archive's architecture is superseded by M5.4's final reviewed snapshot;
+its other twenty source documents matched the user-facing review candidate before
+the narrow README correction. The recheck covers that changed paragraph and the
+catalog's corrected descriptions/prerequisites. Coverage omissions are explicit
+in the report; no blanket visual inspection of every legacy page is claimed.
+M5.6 will freshly consolidate the whole required selection on a new signed build.
