@@ -2,7 +2,7 @@
   "schema_version": 1,
   "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected current-response comparison object.",
   "contract": {
-    "response_schema": 16,
+    "response_schema": 17,
     "request_schema": 4
   },
   "placeholders": {
@@ -454,6 +454,36 @@
             "kind": "file",
             "action": "open_read",
             "target": "{{SCEN_ROOT}}/unlink_s19"
+          }
+        },
+        {
+          "step_id": "s26",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s27",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/denied"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "read_fresh",
+            "target": "{{SCEN_ROOT}}/denied"
           }
         }
       ],
@@ -1947,6 +1977,138 @@
         "limitations": []
       },
       "notes": "as S14"
+    },
+    {
+      "id": "S26",
+      "scenario": "fresh read returns independently known bytes",
+      "specimen": "S",
+      "step_id": "s26",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null,
+          "fresh_read": {
+            "open_rc": 5,
+            "stat_rc": 0,
+            "identity": {
+              "device": 1,
+              "inode": 2,
+              "mode": 33152,
+              "uid": 501,
+              "gid": 20
+            },
+            "read_rc": 20,
+            "content_hex": "696e646570656e64656e74207769746e6573730a",
+            "close_rc": 0
+          }
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "read_fresh",
+        "attempt.result_source": "worker",
+        "attempt.fresh_read.open_rc": ">0",
+        "attempt.fresh_read.stat_rc": 0,
+        "attempt.fresh_read.read_rc": 20,
+        "attempt.fresh_read.content_hex": "696e646570656e64656e74207769746e6573730a",
+        "attempt.fresh_read.close_rc": 0
+      },
+      "control": "Returned bytes equal the independently prepared readable file; its bytes remain unchanged after the run.",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S27",
+      "scenario": "fresh open fails with permission errno",
+      "specimen": "S",
+      "step_id": "s27",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/denied",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 1,
+          "outcome": "read_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/denied",
+          "requested_kind": "file",
+          "requested_action": "read_fresh",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null,
+          "fresh_read": {
+            "open_rc": -1,
+            "open_errno": 1
+          }
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "deny",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "read_failed",
+        "attempt.rc": -1,
+        "attempt.errno": 1,
+        "attempt.requested_action": "read_fresh",
+        "attempt.fresh_read.open_rc": -1,
+        "attempt.fresh_read.open_errno": 1,
+        "attempt.fresh_read.read_rc": null
+      },
+      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record)",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
     },
     {
       "id": "B1",

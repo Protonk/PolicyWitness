@@ -24,14 +24,16 @@ executable; it does not build the shipped service bundle.
 | Listener and bundle | [PWRunnerListener.swift](Sources/PWRunnerCore/PWRunnerListener.swift): listener selection; [Services/PWRunner/](Services/PWRunner/): entry point, Info.plist and entitlements. |
 | Orchestration | [CWorkerOrchestrator.swift](Sources/PWRunnerCore/CWorkerOrchestrator.swift): query planning, driver invocation, evidence association, disposition, classification and comparisons. |
 | Child drivers | [CWorker.swift](Sources/PWRunnerCore/CWorker.swift): worker launch, shared memory, publication polling and the shared child lifecycle observer; [ValidatorClient.swift](Sources/PWRunnerCore/ValidatorClient.swift): concurrent probe writes/verdict reads and partial-evidence collection. |
+| Extension preparation | [ExtensionIssuer.swift](Sources/PWRunnerCore/ExtensionIssuer.swift): target resolution/metadata, separate issuer lifetime, bounded transient token delivery and host erasure. |
 | Time and native shim | [MonotonicDeadline.swift](Sources/PWRunnerCore/MonotonicDeadline.swift): deadlines and policy-pipe delivery; [PWCWorkerShim/](Sources/PWCWorkerShim/): fixed-argument shared-memory opening and acquire/release helpers. |
 | Request and path helpers | [ProbeRunner.swift](Sources/PWRunnerCore/ProbeRunner.swift): request meaning and prediction-exclusion definitions; [SandboxApply.swift](Sources/PWRunnerCore/SandboxApply.swift): policy hashing; [PathUtils.swift](Sources/PWRunnerCore/PathUtils.swift): planning and later host path observations. |
 | Client and tests | [Clients/PWRunnerClient/main.swift](Clients/PWRunnerClient/main.swift): JSON-over-Data XPC client; [Tests/PWRunnerCoreTests/](Tests/PWRunnerCoreTests/): explicitly registered TestKit groups. |
 
 The native [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
-[batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) live
-outside this directory. Meson embeds them as `pw-probe-runner` and
-`sb_api_validator` in each service's `Contents/MacOS/`; the host resolves them
+[batch validator](../controller/tools/sb_api_validator/sb_api_validator.c) and
+[extension issuer](../controller/tools/pw_probe_runner/pw_extension_issuer.c)
+live outside this directory. Meson embeds them as `pw-probe-runner`,
+`sb_api_validator` and `pw-extension-issuer` in each service's `Contents/MacOS/`; the host resolves them
 relative to its own bundle for both built-in and external runners. Only these
 runner children call the sandbox APIs. The host's source and shipped imports
 are checked by [source drift](../tests/suites/source_drift/README.md) and
@@ -47,6 +49,11 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
    creating children. `probe_plan` becomes one phase named `main`; explicit
    phases share one total action capacity. The worker receives policy bytes on
    its input pipe and shares fixed-layout inputs/publications with the host.
+   An extension declaration requires explicit phases. Before worker creation,
+   the host resolves its target and records metadata, then launches the issuer
+   under ordinary authority. Only bounded issuance with a confirmed clean reap
+   permits delivery. Missing helper/native issuance capability is a named refusal;
+   preparation and other issuance failures remain evidence beside unavailable actions.
 3. The worker applies the policy once, then publishes arrival at each phase.
    The host checks successful application, identity and worker ownership, plans
    that phase's queries afresh and collects eligible queries with a fresh
@@ -59,6 +66,14 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
    stop progression; earlier observations remain.
 5. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
+
+The issuer's token channel is separate from the worker evidence mapping. The
+issuer and worker close inherited channel descriptors after mapping; neither
+arguments nor environment carry tokens. The worker erases its token bytes after
+the consumption decision or normal completion, and the host clears the mapping
+before reply assembly. Consume/release markers precede calls; immutable result
+publication is required before reporting a native return. Lifecycle actions
+share the ordered action capacity but do not create validator queries.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
@@ -90,6 +105,13 @@ versions, unsupported attempt/filter names and ineffective combinations produce
 `bad_request` with a bounded `request_failure`. Capacity admission is shared
 between service handling and direct orchestration.
 
+The optional `extensions` array declares a local token reference and target.
+An explicit phase action is either an ordinary pair or a `step_id` plus
+`extension` operation. At most one declaration, consume and release are admitted;
+release references the earlier consume handle. Actions may be omitted or placed
+in separate phases. Token bytes, caller-selected classes, repeated lifecycle
+actions and mixing exec with an extension declaration are refused.
+
 The controller resolves `policy.augments` and removes selection fields before
 delivery. Direct XPC requests containing nonempty unresolved augments or
 controller selection fields are refused. The [request grammar](../docs/REQUEST-GRAMMAR.md)
@@ -113,11 +135,14 @@ sandbox or declaring prediction/enforcement agreement. Its principal records are
 | `runner_subprocess` | Worker publications and independent host observations; [worker evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract) and [disposition](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record). Its PID is authoritative for worker correlation. |
 | `phases[].validator_subprocess`, `phases[].validator_spawn_failure` | Observed validator execution, accepted records and collection faults, or a failed native launch. A failed launch creates no subprocess record; [receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). |
 | `phases[]` | Ordered arrival/completion observations, collection status, action membership and phase-local ordering. Missing publications remain missing. |
+| `extensions[]`, `extension_events[]` | Preparation/issuer/delivery observations and separately published consume/release results; [native evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence). Raw tokens are absent. |
 | `steps[].sandbox_check`, `attempt`, `comparison` | Predictions, attempted-operation evidence, and their submitted-scope/order relations; [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record). Later host path resolution is separately attributed. |
 | `normalized_outcome`, `reporting_failure` | Classification of available observations and any reply-construction failure; [classification](../tests/FAILURE-PROPAGATION-CONTRACT.md#evidence-and-classification) and [reply failure](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure). |
 
 Native observations remain distinct from summaries: the query's `native_rc`
 carries a native return, while attempt `rc` is PolicyWitness status.
+`file/read_fresh` retains open/stat/read/close results and descriptor identity
+under `attempt.fresh_read`; `open_read` remains open-only.
 `not_run_worker_died` means no completed attempt result, not proof an operation
 never began. Missing subprocess records or lifecycle fields establish neither
 successful execution nor cleanup.

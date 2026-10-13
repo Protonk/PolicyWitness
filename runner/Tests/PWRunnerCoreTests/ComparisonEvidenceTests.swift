@@ -108,10 +108,10 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
             rows = try matrixRows()
             vocabulary = try matrixVocabulary()
             let ids = Set(rows.map { $0.id })
-            let expected = Set((1...25).filter { $0 != 4 }.map { String(format: "S%02d", $0) }
+            let expected = Set((1...27).filter { $0 != 4 }.map { String(format: "S%02d", $0) }
                 + (1...7).map { "B\($0)" } + ["C1", "T"])
             try expectEqual(ids, expected, "matrix rows")
-            try expectEqual(rows.count, 33)
+            try expectEqual(rows.count, 35)
             for row in rows {
                 let limits = row.comparison["limitations"] as! [String]
                 try expectTrue(Set(limits).isSubset(of: vocabulary), "\(row.id): \(limits)")

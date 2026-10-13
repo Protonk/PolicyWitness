@@ -14,6 +14,11 @@ and `github-release.json` once published); a guide is included when it shipped.
 Only this README and AGENTS.md are tracked. Artifacts are local and may be absent
 in a fresh checkout. An acceptance result identifies an exact ZIP hash.
 
+The app's XPC bundle includes its worker, validator and `pw-extension-issuer`,
+with separate entries in embedded signed evidence. Copy the complete bundle for
+BYOXPC use; an older copy without the issuer can still serve ordinary specimens
+but cannot perform an extension experiment.
+
 Portable test evidence lives under `evidence/test-runs/`: `runs.tar.gz` holds
 the complete acceptance and battery directories; `manifest.json` inventories
 and hashes them; standalone JSON summaries are addressed relative to the

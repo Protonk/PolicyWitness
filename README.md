@@ -14,7 +14,10 @@ Querying `sandbox_check` about a process and attempting an operation in that pro
 
 PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The
 controller hands each specimen to a fresh runner, an unsandboxed XPC host that
-spawns a C worker that applies the policy to itself once. A simple `probe_plan`
+spawns a C worker that applies the policy to itself once. An optional file-extension
+declaration first runs a separate issuer outside that policy; bounded token bytes
+travel through a transient channel to the worker. Explicit lifecycle actions
+consume the token and release its native handle in that same worker. A simple `probe_plan`
 runs as one phase; an explicit `phases` sequence divides actions into ordered
 intervals in that same worker. At each phase arrival, the host plans queries
 afresh and, when eligible queries exist, starts a fresh validator against the
@@ -23,14 +26,17 @@ including on collection failure. The host joins the observations into one
 reply and exits; the
 controller wraps the reply in the envelope it prints.
 
-Each step carries three records: the prediction, the attempt, and a
+Each ordinary step carries three records: the prediction, the attempt, and a
 comparison that relates the two. The comparison says what was observed and
 in what order; it never says whether prediction and enforcement agree, and no
 failure is attributed to the sandbox without evidence. Kernel denial records
 from the unified log are attached out of band, as candidates rather than
 verdicts, and cannot change the execution result. The guide's
 [reading rules](docs/PolicyWitness.md#reading-a-comparison-record) say how to
-use each record.
+use each record. Extension preparation, issuance and delivery have their own
+records; consume/release events carry native results and publication evidence
+without a comparison. Fresh reads retain descriptor identity and bounded bytes.
+None of these records declares effective permission or successful revocation.
 
 > How one run unfolds in time, the boundaries it crosses and the checks that
 > pin each of them: the [architecture tour](docs/ARCHITECTURE.md).

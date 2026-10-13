@@ -111,6 +111,40 @@ meaning and no child is launched on either refusal. The guide's
 [ordered-phase example](PolicyWitness.md#ordered-phases) describes the sequence
 and how fresh planning can leave a later query unavailable after an unlink.
 
+## Declare authority separately from lifecycle placement
+
+The [sandbox-extension example](PolicyWitness.md#sandbox-extensions) uses one
+local declaration under `extensions`, with `token_ref` and `target`, plus explicit
+phases. An action is either a complete ordinary pair or `step_id` and an
+`extension` object. `consume` names `token_ref` and a distinct `handle_ref`;
+`release` names only that earlier handle. Native events do not have queries.
+Unknown fields remain closed at the declaration, action and operation objects.
+
+The corpus's `extension_paired_create` combines an ordinary create with consume
+and release. Its issuance target is absent during preparation; accepting the
+request and observing creation do not imply that a token was issued. The later
+native actions therefore retain their unavailable reasons. The guide example
+uses an existing file to exercise the full native path. Both forms distinguish
+request acceptance from native availability.
+
+| Corpus family | Meaning or refusal |
+| --- | --- |
+| `extension_requires_phases`, `extension_declarations_over` | Explicit phases and the declaration cap are admission requirements. |
+| `extension_empty_token`, `extension_empty_handle`, `extension_unknown_token`, `extension_duplicate_reference` | References must be nonempty, declared and distinct. |
+| `extension_release_first`, `extension_unknown_handle`, `extension_release_token` | Release follows consumption and names only its handle reference. |
+| `extension_repeated_consume`, `extension_repeated_release` | Counts apply across phases, even if the earlier action would fail. |
+| `extension_unknown_action`, `extension_exec`, `extension_raw_token`, `extension_class` | Operation vocabulary, exec exclusion and fixed issuer interface are explicit. |
+| `extension_missing_issuer` | Admission can pass before the live host reports `extension_issuer_unavailable`. The corpus records that difference. |
+| Reference and target exact/over cases | UTF-8 byte limits apply to ASCII and multibyte strings. |
+| `extension_total_actions_256`, `extension_total_actions_257` | Ordinary and lifecycle actions share the aggregate capacity. |
+
+The compact `repeat_phase_actions` recipe repeats its first ordinary action,
+then preserves trailing lifecycle actions while partitioning the total into
+phases. Swift admission and the Python CLI/XPC materializer implement that same
+recipe. Expected refusals remain independent corpus data. Consume/release may
+be omitted or share a phase; their order is an action-order rule, not a promise
+that effective permissions are stable during a phase.
+
 ## The entry point matters
 
 The controller accepts an authored specimen and resolves controller-owned

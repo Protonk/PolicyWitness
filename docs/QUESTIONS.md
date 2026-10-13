@@ -46,11 +46,11 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
-No. PolicyWitness does not issue, consume, release, or otherwise track sandbox extensions, and it does not model changes in access caused by extension state. Policies containing extension predicates may compile and run, but PolicyWitness does not provide first-class probes or comparison semantics for extension lifecycle behavior.
+Yes, for a bounded file-read experiment. A fresh issuer outside the specimen sandbox prepares one `com.apple.app-sandbox.read` token under its ordinary authority. Explicit phases can consume it once and release the returned handle once in the same worker under one fixed policy. Issuance, delivery, native lifecycle results, predictions and fresh-descriptor reads remain separate observations. A successful consume or release does not establish effective permission or revocation. Raw tokens never enter the request or reply. See [sandbox extensions](PolicyWitness.md#sandbox-extensions).
 
 ## Which happens first, the prediction or the attempt?
 
-A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged that phase's host release, which precedes its actions. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot.
 
 ## How do I read the denial log?
 

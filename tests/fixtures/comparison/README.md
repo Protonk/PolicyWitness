@@ -87,6 +87,14 @@ is what makes partial records observable with every step result present.
 
 ## Row provenance
 
+S26 and S27 cover `file/read_fresh` separately from open-only actions: the
+successful row compares the returned prefix with independently prepared bytes,
+and the denied row retains the failed open and absent later syscall results.
+Native consume/release events have no comparison row; their independent evidence
+and reader controls belong to `witness_contract/extensions` and
+`extension_boundaries`. The current matrix marker follows the current response
+contract, while historical captures keep their original versions.
+
 `baseline_response12/` holds the verification of these rows against the
 response 12 producer that preceded the record (`ff2b192`): retained run
 output supplied twenty-five rows and two live specimens supplied the rest. The

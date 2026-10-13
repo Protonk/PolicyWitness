@@ -137,7 +137,8 @@
           "nodes": [
             "host",
             "worker",
-            "validator"
+            "validator",
+            "issuer"
           ]
         },
         {
@@ -301,7 +302,7 @@
             "Where": "inside the XPC bundle",
             "Started by": "the host",
             "Sandboxed": "yes; applies the specimen policy to itself",
-            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply",
+            "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release",
             "Lifetime": "one specimen; one application and all ordered phases"
           },
           "sources": [
@@ -328,6 +329,16 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
               "form": "test"
             }
           ]
@@ -534,6 +545,46 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "issuer",
+          "label": "pw-extension-issuer",
+          "kind": "executable",
+          "facts": {
+            "Where": "inside the XPC bundle",
+            "Lifetime": "one declaration before worker creation; confirmed clean reap required for delivery",
+            "Language": "C",
+            "Started by": "the host",
+            "Sandboxed": "outside the specimen policy; ordinary process authority",
+            "Native sandbox API": "sandbox_extension_issue_file"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "sandbox_extension_issue_file"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            }
+          ]
         }
       ],
       "edges": [
@@ -670,8 +721,8 @@
           "from": "host",
           "to": "worker",
           "kind": "spawn",
-          "label": "posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe",
-          "short": "posix_spawn; fds 0, 3, 4",
+          "label": "posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe; optional fd 5 transient token channel",
+          "short": "posix_spawn; fds 0, 3, 4; optional 5",
           "note": "Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling.",
           "sources": [
             {
@@ -705,6 +756,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
               "symbol": "runPolicyTransferTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
               "form": "test"
             }
           ]
@@ -779,7 +835,7 @@
           "from": "worker",
           "to": "host",
           "kind": "channel",
-          "label": "immutable phase arrivals, acknowledgements and completions; numbered releases before actions",
+          "label": "immutable phase arrivals, acknowledgements and completions; numbered releases before actions; separate native call markers/results and fresh-read syscall observations",
           "short": "shared-region evidence",
           "sources": [
             {
@@ -813,6 +869,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
               "form": "test"
             }
           ]
@@ -940,6 +1001,73 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "T13",
+          "from": "host",
+          "to": "issuer",
+          "kind": "spawn",
+          "label": "fresh ordinary-authority issuer; fd 3 token mapping, stdio /dev/null, empty environment",
+          "short": "spawn issuer; fd 3",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "posix_spawn"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            }
+          ],
+          "note": "Issuer wait {limit:extension_issuer_wait}; cleanup may overrun. Missing capability refuses extension specimens."
+        },
+        {
+          "id": "T14",
+          "from": "issuer",
+          "to": "host",
+          "kind": "channel",
+          "label": "native issuance publication and bounded transient token bytes; host owns cleanup and delivery eligibility",
+          "short": "transient token and publication",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "token_length"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "deliveryDescriptor"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            }
+          ],
+          "note": "Token storage {limit:extension_token_storage}; raw bytes never enter reply fields."
         }
       ]
     },
@@ -972,7 +1100,9 @@
             "shm_region",
             "validator_wire",
             "reply",
-            "profile_capture"
+            "profile_capture",
+            "extension_preparation",
+            "token_channel"
           ]
         },
         {
@@ -1364,6 +1494,73 @@
               "form": "test"
             }
           ]
+        },
+        {
+          "id": "extension_preparation",
+          "label": "extension declaration and preparation",
+          "kind": "record",
+          "facts": {
+            "Owner": "host; submitted references and paths remain distinct from observations",
+            "Form": "bounded references, realpath result and metadata before issuer launch"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+              "symbol": "extensionMeaningFailure"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "realpath"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+              "symbol": "runRequestContractTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "token_channel",
+          "label": "transient token channel",
+          "kind": "record",
+          "facts": {
+            "Owner": "host owns mapping; issuer writes token/publication; worker consumes and erases",
+            "Form": "separate bounded shared mapping; inherited descriptors closed after mapping; never retained JSON"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "PWExtensionLayout"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "extension_channel"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_abi_layout/run.sh",
+              "symbol": "c_swift_layout_agreement",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            }
+          ]
         }
       ],
       "edges": [
@@ -1496,7 +1693,7 @@
           "from": "shm_region",
           "to": "reply",
           "kind": "guard",
-          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts",
+          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts; native result publication and fresh-read consistency before claims",
           "short": "phase publication; ordinal release",
           "sources": [
             {
@@ -1510,6 +1707,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
               "symbol": "PWRunnerOrdering"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "symbol": "extensionEvidenceProblem"
             }
           ],
           "checks": [
@@ -1526,6 +1727,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
               "form": "test"
             }
           ]
@@ -1794,6 +2000,132 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift",
               "symbol": "runAppliedProfileCaptureTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "B13",
+          "from": "run_spec",
+          "to": "extension_preparation",
+          "kind": "guard",
+          "label": "explicit phases, declaration/action caps, reference order and exec exclusion before preparation",
+          "short": "admit native intent",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+              "symbol": "extensionMeaningFailure"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "requestAdmissionFailure"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/RequestContractTests.swift",
+              "symbol": "runRequestContractTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            }
+          ],
+          "note": "Declaration count {limit:extension_declarations}; consume count {limit:extension_consumes}; release count {limit:extension_releases}; references {limit:extension_reference}; target {limit:extension_target}."
+        },
+        {
+          "id": "B14",
+          "from": "extension_preparation",
+          "to": "token_channel",
+          "kind": "guard",
+          "label": "resolved target and metadata before native issuance; clean issuer reap and bounded publication before worker delivery",
+          "short": "prepare, issue, reap, deliver",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "PW_EXTENSION_TOKEN_BYTES"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "B15",
+          "from": "token_channel",
+          "to": "shm_region",
+          "kind": "channel",
+          "label": "worker receives transient token separately; publishes delivery and ordered consume/release facts in evidence slots",
+          "short": "consume/release publications",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "sandbox_extension_consume"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "sandbox_extension_release"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+              "symbol": "run_case",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "B16",
+          "from": "extension_preparation",
+          "to": "reply",
+          "kind": "writes",
+          "label": "preparation, authority and native issuer/cleanup observations without token bytes",
+          "short": "issuer evidence",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+              "symbol": "PWRunnerExtensionRecord"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "record"
+            }
+          ],
+          "checks": [
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift",
+              "symbol": "runExtensionEvidenceTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
               "form": "test"
             }
           ]
@@ -4370,10 +4702,11 @@
         },
         {
           "id": "reached",
-          "label": "the processes the policy reaches",
+          "label": "bundle-local native helpers",
           "nodes": [
             "worker",
-            "validator"
+            "validator",
+            "issuer"
           ]
         },
         {
@@ -4517,7 +4850,7 @@
           "label": "codesign of the bundle tree",
           "kind": "command",
           "facts": {
-            "Identity": "the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle with the identity and the entitlements",
+            "Identity": "the embedded worker with the identity and the supplied entitlements, the validator and issuer with the identity alone, then the enclosing bundle with the identity and the entitlements",
             "Checks": "the sealed bundle recursively (--deep --strict) before anything is recorded"
           },
           "sources": [
@@ -4639,6 +4972,11 @@
             {
               "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
               "symbol": "registry_recovery",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "registry_records_without_helper_read_backs_still_load",
               "form": "test"
             },
             {
@@ -4812,7 +5150,7 @@
           "label": "runner provenance and binary baselines",
           "kind": "record",
           "facts": {
-            "Contents": "runner kind, service name, registry id, and the host's, the worker's and the validator's signatures and entitlements; hashes of the bundle's service, worker and validator files as observed before invocation"
+            "Contents": "runner kind, service name, registry id and separate host/worker/validator/issuer signature and entitlement read-backs; selected binary hashes observed before invocation; missing older issuer observations remain unknown"
           },
           "sources": [
             {
@@ -4838,6 +5176,11 @@
             {
               "path": "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh",
               "symbol": "dossier_witness_byoxpc",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
               "form": "test"
             }
           ]
@@ -5031,6 +5374,37 @@
             {
               "path": "tests/suites/runner_byoxpc/run.sh",
               "symbol": "runner_install",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "issuer",
+          "label": "pw-extension-issuer in the copy",
+          "kind": "executable",
+          "facts": {
+            "Identity": "installed identity alone, no supplied worker entitlements",
+            "Behavior": "bundle-local ordinary-authority issuance before the worker"
+          },
+          "sources": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "sign_install_tree"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "defaultIssuerExecutablePath"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/preflight/run.sh",
+              "symbol": "byoxpc_verification_controls",
               "form": "test"
             }
           ]
@@ -5391,6 +5765,11 @@
               "path": "tests/suites/witness_contract/check_dossier.py",
               "symbol": "byoxpc_binaries",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
+              "form": "test"
             }
           ]
         },
@@ -5638,6 +6017,86 @@
             {
               "path": "tests/suites/runner_byoxpc/run.sh",
               "symbol": "runner_install",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "X26",
+          "from": "signing",
+          "to": "issuer",
+          "kind": "writes",
+          "label": "issuer receives identity alone; signature and entitlements read back independently",
+          "short": "sign and read back issuer",
+          "sources": [
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "sign_install_tree"
+            },
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "read_back"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_manager.rs",
+              "symbol": "install_signing_signs_helpers_before_the_bundle",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "X27",
+          "from": "host",
+          "to": "issuer",
+          "kind": "spawn",
+          "label": "copy-local issuer path; named extension capability refusal if missing",
+          "short": "spawn local issuer",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "defaultIssuerExecutablePath"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "capabilityUnavailable"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "X28",
+          "from": "issuer",
+          "to": "provenance",
+          "kind": "reads",
+          "label": "actual selected path and hash compared with shipped issuer baseline; separate installed read-backs",
+          "short": "issuer provenance",
+          "sources": [
+            {
+              "path": "controller/src/dossier.rs",
+              "symbol": "issuer"
+            },
+            {
+              "path": "controller/src/runner_select.rs",
+              "symbol": "runner_issuer_signature"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
+              "symbol": "extensions_byoxpc",
               "form": "test"
             }
           ]

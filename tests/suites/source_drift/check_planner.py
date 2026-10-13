@@ -20,6 +20,7 @@ def main(out):
     paths = ['AGENTS.md', 'meson.build', 'meson.options', 'runner/README.md', 'runner/AGENTS.md', 'tests/README.md', 'tests/AGENTS.md',
              'tests/lib/native_sources.py', 'docs/generate_worker_identity.py',
              'controller/tools/pw_probe_runner/pw_worker_evidence.h', 'controller/tools/pw_probe_runner/pw_profile_capture.h',
+             'controller/tools/pw_probe_runner/pw_extension_channel.h',
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',

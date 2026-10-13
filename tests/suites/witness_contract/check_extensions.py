@@ -99,6 +99,24 @@ def run_targets(pw, out, target_dir, session_state):
     assert all(x['comparison']['order'] == 'query_first' for x in runner['steps'])
     assert all(p['arrival_observed'] and p['completion_observed'] for p in runner['phases'])
     assert target.read_bytes() == contents
+    # Execute the public example's actual JSON, preserving its phase/action names.
+    guide = (ROOT / 'docs/PolicyWitness.md').read_text()
+    example = guide.split('cat > "$PW_EXTENSION_DIR/request.json" <<JSON\n', 1)[1].split('\nJSON\n', 1)[0]
+    request = json.loads(example.replace('$PW_EXTENSION_DIR/target', str(target)))
+    _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)
+    assert documented['extensions'][0]['issuance_status'] == 'issued'
+    assert documented['extensions'][0]['delivery_status'] == 'delivered'
+    consumed, released = documented['extension_events']
+    assert consumed['status'] == released['status'] == 'returned'
+    assert consumed['native_result'] != -1 and released['native_result'] == 0
+    assert documented['steps'][0]['attempt']['rc'] != 0
+    guide_during = documented['steps'][1]['attempt']
+    assert guide_during['rc'] == 0 and bytes.fromhex(guide_during['fresh_read']['content_hex']) == contents
+    after_example = documented['steps'][2]['attempt']
+    if after_example['rc'] == 0:
+        assert bytes.fromhex(after_example['fresh_read']['content_hex']) == contents
+    assert all(step['comparison']['order'] == 'query_first' for step in documented['steps'])
+    assert target.read_bytes() == contents
     (out / 'independent-observations.json').write_text(json.dumps({'device': metadata.st_dev,
         'inode': metadata.st_ino, 'content_hex': contents.hex(), 'unchanged_contents': True}, indent=2) + '\n')
     for size in (63, 64, 65):

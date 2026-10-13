@@ -116,11 +116,11 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 ### Can PolicyWitness test sandbox-extension behavior?
 
-No. PolicyWitness does not issue, consume, release, or otherwise track sandbox extensions, and it does not model changes in access caused by extension state. Policies containing extension predicates may compile and run, but PolicyWitness does not provide first-class probes or comparison semantics for extension lifecycle behavior.
+Yes, for a bounded file-read experiment. A fresh issuer outside the specimen sandbox prepares one `com.apple.app-sandbox.read` token under its ordinary authority. Explicit phases can consume it once and release the returned handle once in the same worker under one fixed policy. Issuance, delivery, native lifecycle results, predictions and fresh-descriptor reads remain separate observations. A successful consume or release does not establish effective permission or revocation. Raw tokens never enter the request or reply. See [sandbox extensions](#sandbox-extensions).
 
 ### Which happens first, the prediction or the attempt?
 
-A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged that phase's host release, which precedes its actions. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot.
 
 ### How do I read the denial log?
 
@@ -149,6 +149,7 @@ Top-level fields:
 - Exactly one non-null plan form: `probe_plan` (array of paired steps) or
   `phases` (ordered array of phase objects)
 - `runner`: object (optional; select runner mode and external runners)
+- `extensions`: array (optional; file-extension declaration, requires `phases`)
 
 Minimal skeleton (copy/paste):
 
@@ -216,6 +217,109 @@ Worker loss or an expired worker release wait stops further progression.
 
 At most <!-- span limits.phase_count.value -->8<!-- /span --> phases and <!-- span limits.probe_steps.value -->256<!-- /span --> total actions fit one specimen; phases do not multiply the action or query allowance. The
 [limits](#limits) describe cumulative collection and per-phase wait bounds.
+
+### Sandbox extensions
+
+An extension specimen declares a local token reference and a target path, then
+places native consume/release actions in explicit phases. The issuer prepares
+one `com.apple.app-sandbox.read` token outside the specimen sandbox under ordinary
+authority. The worker applies the submitted policy once and keeps that policy
+through every phase. Successful native issuance, consumption and release do not
+by themselves establish effective access or revocation.
+
+| Input | Meaning |
+| --- | --- |
+| `extensions: [{"token_ref": "token", "target": "/absolute/path"}]` | A local reference and issuance target; raw token bytes and caller-selected classes are not accepted. |
+| `{"step_id": "consume", "extension": {"operation": "consume", "token_ref": "token", "handle_ref": "handle"}}` | Consume the declared token and associate an observed native handle with a distinct local reference. |
+| `{"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}` | Release the earlier consume result if it supplied a handle. No token reference belongs on release. |
+
+The limits are <!-- span limits.extension_declarations.value -->1<!-- /span -->
+declaration, <!-- span limits.extension_consumes.value -->1<!-- /span --> consume
+and <!-- span limits.extension_releases.value -->1<!-- /span --> release across
+the entire specimen. References are nonempty and at most
+<!-- span limits.extension_reference.value -->63<!-- /span --> UTF-8 bytes.
+Declaration targets have their own
+<!-- span limits.extension_target.value -->1,023<!-- /span -->-byte cap, distinct
+from ordinary attempt targets. References and paths cannot contain NUL.
+Unknown references, duplicate token/handle names, release before consume,
+repeated actions, unknown fields and mixing an extension declaration with exec
+are refused before execution. Additional declarations are refused even when
+placed in separate phases. The lifecycle actions share the total action cap.
+
+Omitting consumption or release is allowed. Issuance/delivery without consumption,
+consumption without release, and phases containing only lifecycle actions retain
+those distinctions. An action is either an ordinary query/attempt pair or a
+lifecycle action, never a mixture. Lifecycle actions have no predictions or
+comparison records. All queries in a phase are collected before any of that
+phase's actions, so a read after a consume in the same phase still has a query
+from before the consume. Place the read in a later phase to collect again.
+
+Use an investigator-owned file in a temporary directory for a repeatable example:
+
+```sh
+PW=/Applications/PolicyWitness.app/Contents/MacOS/policy-witness
+PW_EXTENSION_DIR=$(mktemp -d /private/tmp/pw-extension.XXXXXX)
+printf 'extension witness\n' > "$PW_EXTENSION_DIR/target"
+cat > "$PW_EXTENSION_DIR/request.json" <<JSON
+{
+  "schema_version": 4,
+  "specimen_id": "extension_lifecycle",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)(allow default)(deny file-read-data)(allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+  },
+  "extensions": [{"token_ref": "token", "target": "$PW_EXTENSION_DIR/target"}],
+  "phases": [
+    {"phase_id": "before", "actions": [
+      {"step_id": "read_before",
+       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
+       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
+      {"step_id": "consume", "extension": {"operation": "consume", "token_ref": "token", "handle_ref": "handle"}}
+    ]},
+    {"phase_id": "consumed", "actions": [
+      {"step_id": "read_consumed",
+       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
+       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
+      {"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}
+    ]},
+    {"phase_id": "released", "actions": [
+      {"step_id": "read_released",
+       "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}},
+       "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}
+    ]}
+  ]
+}
+JSON
+"$PW" run "$PW_EXTENSION_DIR/request.json" --no-log-capture > "$PW_EXTENSION_DIR/run.json"
+```
+
+Inspect `extensions`, `extension_events`, `phases` and `steps` under
+`data.runner_result`. Compare successful `fresh_read.content_hex` with the file's
+known bytes, and retain failed reads and the native release result independently.
+A later successful read does not negate a successful release call. The example's
+phase names describe action placement, not established sandbox states. Keep the
+request, file and envelope together when investigating the result.
+
+Target preparation records the submitted path, `realpath` result and metadata
+before issuance. There is no owner, regular-file or no-symlink admission rule.
+Resolution/metadata failure is retained without inventing issuance. A symlink can
+resolve successfully, and replacement after preparation can make later access
+reach another object. Ordinary query and attempt targets stay as submitted;
+the declaration does not rewrite them. No open target descriptor is passed to
+the worker. `read_fresh` opens after application, records descriptor metadata,
+reads at most <!-- span limits.fresh_read_bytes.value -->64<!-- /span --> bytes
+once, and closes it; it does not establish EOF or read an entire file.
+
+A selected bundle without the issuer, or an issuer without the native issuance
+API, returns `bad_request` with `extension_issuer_unavailable`. Native refusal,
+issuer death, timeout, malformed publication and unconfirmed cleanup retain their
+own issuance evidence and withhold delivery. Worker-side API absence is an
+unavailable lifecycle action. An issued token and a delivered token remain
+separate observations. Raw token bytes travel only through a bounded transient
+channel, never the request, argv, environment, reply or ordinary diagnostics.
+The host clears its mapping before replying; this is not a claim about every
+copy a native library might hold. BYOXPC uses its own bundle-local issuer,
+[signed without the worker's entitlements](#install-a-byoxpc-runner).
 
 ### Try an accepted request and a refusal
 
@@ -1002,7 +1106,7 @@ Reply fields beyond `pid` / `runner_subprocess`:
   `permission_errno`, `bootstrap_permission_result`, `spawned_child` or
   `no_completed_worker_result`). `operation_relation` (`matched`, `different`
   or `unresolved`) says whether the submitted query operation is the attempt's
-  mapped operation: file `open_read`/`access` map to `file-read-data`,
+  mapped operation: file `open_read`/`read_fresh`/`access` map to `file-read-data`,
   `open_write` to `file-write-data`, `unlink` to `file-write-unlink`, exec
   `spawn` to `process-exec*`, mach lookup to `mach-lookup` and sysctl read to
   `sysctl-read`. `target_relation` (`same_submitted`, `different_submitted` or
@@ -1194,19 +1298,48 @@ jq '.data.specimen | {request_path, policy: {augmentation: .policy.augmentation.
 jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.policy_sha256]' run.json
 ```
 
+### Extension and fresh-read output
+
+The lifecycle [example](#sandbox-extensions) returns these records under
+`data.runner_result`, separately from ordinary `steps`:
+
+| Record | Fields and supported reading |
+| --- | --- |
+| `extensions[]` | `token_ref`, `extension_class`, `submitted_target`, optional `resolved_target` and `identity`, preparation status/errno, `issuance_status`, optional `issuer`, `delivery_status`, optional `delivered_bytes`, and `host_buffer_erased`. Target identity includes device, inode, mode, UID and GID at preparation time. |
+| `extensions[].issuer` | Selected executable, PID and UID/EUID/GID/EGID, call marker and result publication, pointer nonnullness, errno and token length, plus independent spawn, termination, wait and reap observations. No token or pointer value is exposed. |
+| `extension_events[]` | `phase_id`, `step_id`, operation and references, `call_boundary_observed`, `result_published`, status, optional `native_result`, errno, unavailability reason and lifecycle claims. |
+| `steps[].attempt.fresh_read` | `open_rc` / `open_errno`, `stat_rc` / `stat_errno`, optional descriptor identity, `read_rc` / `read_errno`, `close_rc` / `close_errno` and `content_hex`. Each errno belongs to its failed syscall; successful read count determines the hex length. |
+
+An event status of `returned` requires native result publication; consumption's
+signed handle value of -1 supplies no handle. Release's native result stays
+separate from later file access. `unavailable` records a published no-call
+decision (`token_unavailable`, `handle_unavailable`, `native_api_unavailable` or
+defensive `repeated_action`). `unresolved` has no published result, even if a
+pre-call marker survived. An omitted action has no event. Completed disposition
+slots can therefore describe unavailable actions without implying a native call.
+
+A failed fresh open has no stat/read/close evidence. A completed fresh read keeps
+the first failure in syscall order as the aggregate `read_failed` outcome;
+missing action publication supplies no fresh-read payload. Returned bytes are a
+bounded prefix, not an EOF assertion. Issuer and worker identities describe their
+observed authority separately; the host's buffer-erasure observation does not
+certify erasure inside private libraries. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
+defines producer and reader validation.
+
 ### Per-step shape
 
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, filter_kind, filter_value, filter_type_id, errno, error, result_source, native_rc, missing_reason?, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr? }`
+- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, fresh_read?, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr? }`
 - `steps[].comparison`: `{ observation, observation_basis, operation_relation, target_relation, order, limitations }` — see [Top-level fields](#top-level-fields) and [Reading a comparison record](#reading-a-comparison-record).
 
 Notes:
 - `requested_path` echoes the attempt target for every attempt kind
   (path, Mach service name, sysctl name, etc.). `observed_path` is the
-  worker's own `F_GETPATH` observation of a successful open, explicit `null`
-  otherwise. `path_diagnostics` is the host's later resolution of a file or
+  worker's own `F_GETPATH` observation for successful `open_read`, `open_write`
+  or `create`, explicit `null` otherwise. A `read_fresh` action instead retains
+  descriptor metadata under `fresh_read.identity`. `path_diagnostics` is the host's later resolution of a file or
   exec attempt target (see [attempt.path_diagnostics](#attemptpath_diagnostics));
   other attempt kinds omit it.
 - `filter_value` is the exact string the runner passes to `sandbox_check`,
@@ -1273,6 +1406,7 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
 `steps[].attempt.outcome` values:
 
 - `ok` — the attempt's syscall returned success (allow).
+- `read_failed` — a fresh-descriptor open, stat, read or close failed; inspect `fresh_read` for the separate syscall observations.
 - `open_failed` — file `open()` (for `open_read` / `open_write` /
   `create`) returned non-zero; errno in `attempt.errno`. EPERM /
   EACCES are ambiguous between sandbox and DAC (see
@@ -1354,6 +1488,13 @@ Read it with these rules, in order:
     path after the run.
 12. An attempt the worker does not support has `attempt.outcome` and
     `missing_reason` saying so, and both relations `unresolved`.
+13. Extension issuance, delivery, consumption and release are independent
+    observations. A pre-call marker without result publication supplies no
+    native result. A successful consume/release does not establish effective
+    access or revocation; read later fresh-descriptor attempts separately.
+14. A lifecycle action has no ordinary comparison. `query_first` on an ordinary
+    action refers to its phase's collection, including when an earlier consume
+    or release in that phase changed what the attempt later encountered.
 
 <!-- END COPIED READING RULES -->
 
@@ -1605,7 +1746,7 @@ Currently in this category:
 The C worker implements these `(attempt.kind, attempt.action)`
 combinations:
 
-- `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
+- `("file", "open_read" | "read_fresh" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
 - `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
 - `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
@@ -1765,7 +1906,7 @@ Supported operations are:
 
 | Attempt | Relevant event operations |
 | --- | --- |
-| file open_read/access | file-read-data |
+| file open_read/read_fresh/access | file-read-data |
 | file open_write | file-write-data |
 | file create | file-write-create or file-write-data |
 | file unlink | file-write-unlink |
@@ -1887,11 +2028,12 @@ Notes:
   otherwise record entitlements that the kernel will not enforce.
 - The installer signs the copy's embedded worker
   (`Contents/MacOS/pw-probe-runner`) with the identity and the supplied plist,
-  its validator (`Contents/MacOS/sb_api_validator`) with the identity alone,
+  its validator (`Contents/MacOS/sb_api_validator`) and issuer
+  (`Contents/MacOS/pw-extension-issuer`) with the identity alone,
   and then the enclosing bundle with both. The worker is the process the
   specimen policy is applied to, so the plist you supply is what the kernel
   consults for that policy's `require-entitlement` rules. A copy missing
-  either helper is refused.
+  a required helper is refused.
 - Installation verifies the sealed bundle recursively
   (`codesign --verify --deep --strict`): a copy whose embedded code changed
   after sealing is refused.
@@ -1910,12 +2052,19 @@ The registry record reads each binary back separately (`codesign -d
 --entitlements` and `codesign -dv`), never from the command line: `signature`
 and `entitlements` describe the host executable, `worker_signature` and
 `worker_entitlements` the worker, `validator_signature` and
-`validator_entitlements` the validator. Each entitlement object lists `keys`
+`validator_entitlements` the validator, and `issuer_signature` /
+`issuer_entitlements` the issuer. The issuer receives no supplied worker
+entitlements. Each entitlement object lists `keys`
 (every key the plist names) and `granted` (the keys whose value is `true`).
 A record written by an earlier policy-witness carries no worker read-back: it
 can be listed, validated and removed, and it serves specimens that require no
 entitlements, but a specimen with `required_entitlements` is refused until the
-runner is reinstalled.
+runner is reinstalled. Older records without issuer read-back similarly retain
+unknown issuer provenance and remain manageable. Selecting an older bundle that
+lacks the helper refuses extension specimens with `extension_issuer_unavailable`;
+ordinary specimens remain supported. `runner validate` checks any recorded helper
+against the current copy and reports missing or invalid code; `runner reconcile`
+remains a report of installation state, not a provenance upgrade.
 
 ### Caller authentication and ad-hoc signing
 

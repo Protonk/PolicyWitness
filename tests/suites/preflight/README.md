@@ -11,7 +11,9 @@ Offline release controls also exercise the release procedure's decision points.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
   `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
   symbol lookup. The [host-source check](../source_drift/README.md) covers
-  literal lookup/load forms. Worker and validator native imports are expected.
+  literal lookup/load forms. Worker, validator and issuer native calls are
+  expected; only the host must remain free of them. The issuer is required in
+  the bundle inventory and has separate signature, entitlement and hash checks.
 - Never executes `policy-witness` or the runner.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.

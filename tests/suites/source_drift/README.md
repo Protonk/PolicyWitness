@@ -13,7 +13,7 @@ with `meson introspect meson.build --targets`, which needs no build directory
 and lists every declaration regardless of the `xpc` option, refuses a target
 name declared more than once (a dead declaration could otherwise stand in for
 the live one), and pins every target: the host's core files plus the service
-entry point, the shim's C files, and the client's, worker's and validator's
+entry point, the shim's C files, and the client's, worker's, validator's and issuer's
 single files. `build.sh` applies the same expectation to the configured
 build directory after compiling, which reads what Meson actually evaluated.
 Both check membership only; what the compiler does to those files is the
@@ -25,7 +25,8 @@ introspection is a script error, never a pass.
 - The tree and meson.build's targets must agree on every compiled file set,
   compared as repository-relative paths: the `PWRunner` target carries the
   core files plus the service entry point, `PWCWorkerShim` the shim's C
-  files, and `pw-runner-client`, `pw-probe-runner` and `sb_api_validator`
+  files, and `pw-runner-client`, `pw-probe-runner`, `sb_api_validator` and
+  `pw-extension-issuer`
   their single known files. A missing, duplicated or unexpected target is
   named.
 - Discovery is recursive under the target dirs
@@ -50,7 +51,8 @@ The host-source check covers Swift and C sources and headers under
 `runner/Sources/`. It rejects direct calls/declarations and string-named
 bindings to `sandbox_check`, `sandbox_apply`, `sandbox_compile_string`,
 `sandbox_create_params`, `sandbox_set_param`, `sandbox_free_params`,
-`sandbox_free_profile` and `sandbox_free_error`. It also rejects `dlsym` of
+`sandbox_free_profile`, `sandbox_free_error` and the native extension
+issue/consume/release functions. It also rejects `dlsym` of
 those symbols and `dlopen` of literal libsandbox paths, including simple named
 constants. Schema properties, comments, explanatory strings, unrelated dynamic
 loads and C calling conventions are accepted. Controls exercise both groups.

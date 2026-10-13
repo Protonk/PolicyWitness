@@ -1168,6 +1168,13 @@ label.
     path after the run.
 12. An attempt the worker does not support has `attempt.outcome` and
     `missing_reason` saying so, and both relations `unresolved`.
+13. Extension issuance, delivery, consumption and release are independent
+    observations. A pre-call marker without result publication supplies no
+    native result. A successful consume/release does not establish effective
+    access or revocation; read later fresh-descriptor attempts separately.
+14. A lifecycle action has no ordinary comparison. `query_first` on an ordinary
+    action refers to its phase's collection, including when an earlier consume
+    or release in that phase changed what the attempt later encountered.
 
 <!-- END SHARED READING RULES -->
 
@@ -1218,6 +1225,8 @@ summary.
 | S23 | S | allow, access succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | readable bytes unchanged |
 | S24 | S | allow, open_write succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | writable exists before the run with its 20-byte content and holds exactly the worker's one written byte after it |
 | S25 | S | read of the path S19 unlinked, ENOENT | `allow` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | the query ran before release while unlink_s19 existed; S19's unlink preceded this read |
+| S26 | S | fresh read returns independently known bytes | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | Returned bytes equal the independently prepared readable file; its bytes remain unchanged after the run. |
+| S27 | S | fresh open fails with permission errno | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record) |
 | B1 | B | steered deny, read succeeds, ordered | `deny` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub transcript supplies deny; b_readable bytes unchanged; the real read succeeds under (allow default) |
 | B2 | B | verdict omitted, read succeeds | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b2; b_readable bytes unchanged |
 | B3 | B | verdict omitted, unlink of queried path | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b3; unlink_b3 exists before the run and is absent after it |

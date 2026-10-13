@@ -58,8 +58,15 @@ carries a compile diagnostic, which matters inside an
 establishes nothing about how far a host or worker progressed before the
 connection failed.
 
-Only the worker (compile and apply), the validator (`sandbox_check`) and
-`sbpl-check` (compile only) call native sandbox APIs; the topology table's
+The issuer is separate so native issuance occurs before worker creation under
+ordinary authority, outside the specimen policy. It receives no worker entitlement
+plist. The host prepares the target and observes issuance and cleanup without
+calling sandbox APIs. A bounded transient channel carries the token to the worker;
+only references and publication facts enter retained evidence. The worker consumes
+and releases in its existing phase sequence.
+
+Only the worker (compile/apply and consume/release), the issuer (file issuance),
+the validator (`sandbox_check`) and `sbpl-check` (compile only) call native sandbox APIs; the topology table's
 Native sandbox API column is the record. The controller, the client, the
 host and the observer do not, and for the host
 that is enforced rather than assumed (see [Principles](#principles-as-enforced-constraints)).
@@ -69,7 +76,7 @@ that is enforced rather than assumed (see [Principles](#principles-as-enforced-c
 Who starts whom, over what channel, with what lifetime. Locations are given
 at the granularity of "app top level" and "inside the XPC bundle"; the exact
 bundle paths are the contract in the README's
-[Build and bundle](../README.md#build-and-bundle). The C worker and the validator sit
+[Build and bundle](../README.md#build-and-bundle). The C worker, validator and issuer sit
 inside the XPC bundle so that the built-in runner and a BYOXPC copy each
 resolve their own helpers relative to their own bundle.
 
@@ -79,7 +86,7 @@ resolve their own helpers relative to their own bundle.
 *Figure: process topology. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-topology.dot](architecture-topology.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>Process topology: 11 nodes and 12 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>Process topology: 12 nodes and 14 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### Process topology nodes
 
@@ -89,13 +96,14 @@ resolve their own helpers relative to their own bundle.
 | controller | policy-witness | executable | app top level | one run | Rust | the caller | no | none | [`fn main`](../controller/src/main.rs); [`cmd_run`](../controller/src/run_flow.rs) | [`consumer_controls`](../tests/suites/blackbox_e2e/checker_controls.py); [`inventory`](../tests/lib/artifact.py) |  |
 | client | pw-runner-client | executable | app top level | one run | Swift | the controller | no | none | [`readDataToEndOfFile`](../runner/Clients/PWRunnerClient/main.swift); [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift) | [`path_wire_fixtures_survive_capture_serialization_and_independent_consumer`](../controller/src/runner_client.rs); [`client_output_control`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
 | host | PWRunner | executable | inside the XPC bundle | one specimen; exits 50 milliseconds after replying | Swift | launchd: XPC service lookup, or a Mach service for BYOXPC | no | none, by the invariance rule | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`hostExitDelayMs`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`inspect`](../tests/lib/artifact.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`runServiceAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift); [`single_use`](../tests/suites/runner_byoxpc/opt_in/single_use.sh) | [`host_exit_delay`](LIMITS.md#execution-budgets) |
-| worker | pw-probe-runner | sandboxed | inside the XPC bundle | one specimen; one application and all ordered phases | C | the host | yes; applies the specimen policy to itself | sandbox_compile_string, params, sandbox_apply | [`sandbox_compile_string`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_apply`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| worker | pw-probe-runner | sandboxed | inside the XPC bundle | one specimen; one application and all ordered phases | C | the host | yes; applies the specimen policy to itself | sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release | [`sandbox_compile_string`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_apply`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift); [`run_targets`](../tests/suites/witness_contract/check_extensions.py); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py) |  |
 | exec_child | exec helper children | sandboxed | the caller's path | the worker's waits are bounded by the exec deadline and the attempt budget; a descendant that leaves the child's process group is not contained | caller-supplied | the worker | inherit the worker's sandbox | none of PolicyWitness's | [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`timeout_preserves_output_and_continues`](../tests/suites/runner_exec_lifecycle/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |  |
 | validator | sb_api_validator | executable | inside the XPC bundle | one phase collection | C | the host at each eligible phase arrival | no | sandbox_check | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`bothBinariesExist`](../runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | observer | sandbox-log-observer | executable | app top level | one scan | Rust | the controller, after execution completes, in its own process group | no | none | [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs); [`process_group`](../controller/src/log_capture.rs) | [`parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims`](../controller/src/bin/sandbox-log-observer.rs); [`checked_reads`](../tests/suites/witness_contract/check_deny_capture_window.py) |  |
 | log_show | log show | os | /usr/bin/log | one query | OS | the observer | no | none | [`Command::new("/usr/bin/log")`](../controller/src/bin/sandbox-log-observer.rs) | [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) |  |
 | sbpl_check | sbpl-check | executable | app top level | one compile | Rust | the controller, only for an admitted xpc_error reply | no | sandbox_compile_string and params; never applies | [`sandbox_compile_string`](../controller/src/bin/sbpl-check.rs); [`run_policy_check`](../controller/src/policy_check.rs) | [`fallback_compilation_is_requested_only_for_an_admitted_xpc_error`](../controller/src/run_flow.rs) |  |
 | launchd | launchd | os | system |  | OS |  | no | none | [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`MachServices`](../controller/src/runner_manager.rs) | [`pwrunner_survives_mach_service_launch`](../tests/suites/runner_mach_service_liveness/run.sh); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
+| issuer | pw-extension-issuer | executable | inside the XPC bundle | one declaration before worker creation; confirmed clean reap required for delivery | C | the host | outside the specimen policy; ordinary process authority | sandbox_extension_issue_file | [`sandbox_extension_issue_file`](../controller/tools/pw_probe_runner/pw_extension_issuer.c); [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) | [`run_targets`](../tests/suites/witness_contract/check_extensions.py); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) |  |
 
 #### Process topology edges
 
@@ -105,19 +113,23 @@ resolve their own helpers relative to their own bundle.
 | T2 | controller | client | spawn | spawn; held request on stdin, read to EOF; reply on stdout | [`run_pw_runner_client`](../controller/src/runner_client.rs); [`readDataToEndOfFile`](../runner/Clients/PWRunnerClient/main.swift) | [`path_wire_fixtures_survive_capture_serialization_and_independent_consumer`](../controller/src/runner_client.rs); [`client_output_control`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
 | T3 | client | host | channel | NSXPC runSpecimen(Data) and its reply | [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh) |  |
 | T4 | launchd | host | launch | start on XPC lookup, or as a Mach service (BYOXPC) | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`launchctl_bootstrap`](../controller/src/runner_manager.rs) | [`pwrunner_survives_mach_service_launch`](../tests/suites/runner_mach_service_liveness/run.sh); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
-| T5 | host | worker | spawn | posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe | [`posix_spawn_file_actions_adddup2`](../runner/Sources/PWRunnerCore/CWorker.swift); [`F_SETNOSIGPIPE`](../runner/Sources/PWRunnerCore/CWorker.swift); [`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift); [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPolicyTransferTests`](../runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift) |  |
+| T5 | host | worker | spawn | posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe; optional fd 5 transient token channel | [`posix_spawn_file_actions_adddup2`](../runner/Sources/PWRunnerCore/CWorker.swift); [`F_SETNOSIGPIPE`](../runner/Sources/PWRunnerCore/CWorker.swift); [`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift); [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPolicyTransferTests`](../runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py) |  |
 | T6 | host | validator | spawn | fresh posix_spawn --batch <pid> per eligible phase; bounded NDJSON | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | T7 | validator | worker | native | sandbox_check against the worker PID, with SANDBOX_CHECK_NO_REPORT | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh) |  |
-| T8 | worker | host | channel | immutable phase arrivals, acknowledgements and completions; numbered releases before actions | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`CWorkerStepResult`](../runner/Sources/PWRunnerCore/CWorker.swift); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| T8 | worker | host | channel | immutable phase arrivals, acknowledgements and completions; numbered releases before actions; separate native call markers/results and fresh-read syscall observations | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`CWorkerStepResult`](../runner/Sources/PWRunnerCore/CWorker.swift); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py) |  |
 | T9 | worker | exec_child | spawn | posix_spawn after apply; stdout and stderr pipes into bounded slot buffers | [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`timeout_preserves_output_and_continues`](../tests/suites/runner_exec_lifecycle/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | T10 | controller | observer | spawn | spawn in its own process group after execution; budget on argv; JSON report on stdout | [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs); [`capture_with_ops`](../controller/src/log_capture.rs); [`process_group`](../controller/src/log_capture.rs) | [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs); [`checked_reads`](../tests/suites/witness_contract/check_deny_capture_window.py) |  |
 | T11 | observer | log_show | spawn | log show over the padded client span; text on stdout, bounded | [`Command::new("/usr/bin/log")`](../controller/src/bin/sandbox-log-observer.rs); [`capture_sandbox_logs_with_timeout`](../controller/src/sandbox_log.rs) | [`run_span_window_floors_start_ceils_end_and_never_collapses`](../controller/src/sandbox_log.rs); [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) |  |
 | T12 | controller | sbpl_check | spawn | spawn only for an admitted xpc_error reply; held request in; helper envelope out | [`fallback_policy_check`](../controller/src/run_flow.rs); [`run_policy_check`](../controller/src/policy_check.rs) | [`fallback_compilation_is_requested_only_for_an_admitted_xpc_error`](../controller/src/run_flow.rs); [`refused_reply_versions_request_no_fallback_compilation`](../controller/src/run_flow.rs) |  |
+| T13 | host | issuer | spawn | fresh ordinary-authority issuer; fd 3 token mapping, stdio /dev/null, empty environment | [`posix_spawn`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift); [`main`](../controller/tools/pw_probe_runner/pw_extension_issuer.c) | [`run_targets`](../tests/suites/witness_contract/check_extensions.py); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) | [`extension_issuer_wait`](LIMITS.md#execution-budgets) |
+| T14 | issuer | host | channel | native issuance publication and bounded transient token bytes; host owns cleanup and delivery eligibility | [`token_length`](../controller/tools/pw_probe_runner/pw_extension_issuer.c); [`deliveryDescriptor`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) | [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) | [`extension_token_storage`](LIMITS.md#queries-and-transport) |
 
 Notes:
 
 - `host`: All authorized connections share one terminal, locked request claim. Only its owner schedules host exit; connections racing retirement can still fail before refusal.
 - `T5`: Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling.
+- `T13`: Issuer wait 5,000 milliseconds; cleanup may overrun. Missing capability refuses extension specimens.
+- `T14`: Token storage 16,384 bytes; raw bytes never enter reply fields.
 
 Every node and edge above cites at least one test or rule.
 
@@ -134,6 +146,26 @@ and observed collection, release, acknowledgement and ownership chain
 policy application. The sequence below follows [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift),
 [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 and the [C worker](../controller/tools/pw_probe_runner/pw_probe_runner.c).
+
+With a declaration, admission also checks references, lifecycle caps and exec
+exclusion. The host then resolves the submitted target and records metadata,
+launches its bundle-local issuer, and waits for its native result and cleanup.
+Only complete bounded issuance and confirmed clean reaping permit delivery.
+Preparation failure and other issuance failures remain observations; missing
+helper/native issuance capability produces a named refusal before the worker.
+The submitted query and attempt targets are never rewritten from that preparation.
+
+```text
+host                                      issuer (before worker creation)
+----                                      ------------------------------
+resolve target; record metadata
+create transient mapping; spawn --------> map fd 3; close fd; issue file token
+                                          publish native result and length
+                                          erase private token; exit
+wait; terminate if needed; reap
+validate publication and token bound
+pass eligible channel as worker fd 5
+```
 
 ```text
 controller / client          host                        worker                validator
@@ -153,14 +185,14 @@ stdin to EOF; XPC ----------> authorize; decode; admit
                              collection closes
                              recheck phase + ownership
                              numbered release ----------> acknowledge ordinal
-                                                         actions in order
+                                                         ordinary/native actions in order
                                                          publish completion
                              <--------------------------- next phase arrival
                              repeat collection/release   repeat until done
                              exit request --------------> exit
                              grace; kill if needed; reap
                              final snapshot; disposition;
-                             phase evidence; comparisons
+                             phase/native evidence; comparisons; erase token mapping
 reply <--------------------- encode; schedule host exit
 admit reply version;
 complete execution;
@@ -173,6 +205,11 @@ cleanup. Release still requires a live, correctly waiting worker. A failed
 phase wait, invalid release ordinal or loss of worker ownership prevents later
 actions without erasing earlier publications. A boundary publication is an
 observation of progress; it does not manufacture a missing action result.
+Native pre-call markers and completed result publication are distinct. A call
+without a published result remains unresolved even if an independent test knows
+it returned. A consume/release action before an ordinary action in the same
+phase can change what that action encounters after its query was collected.
+Operational phase progress is not a snapshot of sandbox state or effective access.
 
 Where each stage is pinned:
 
@@ -182,6 +219,16 @@ Where each stage is pinned:
   `resolve_runner_target_with_registry`, `resolve_augments`, the dossier, and
   `strip_runner_selector` before the held bytes are serialized. Checked by the
   `orchestration` tests in the same file.
+- **Extension preparation and issuer lifetime.**
+  [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
+  records target resolution and metadata before a fresh native issuer, admits
+  bounded publication only after confirmed clean reap, and clears the mapping.
+  [`run_targets`](../tests/suites/witness_contract/check_extensions.py) checks
+  placement, symlinks, preparation failure and replacement independently;
+  [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py)
+  drives native interruption, malformed transport and token confinement.
+  [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift)
+  inspects actual mapping erasure and withholds delivery after an unconfirmed reap.
 - **Caller authorization.** [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) runs when the connection is
   accepted, before any request is read.
 - **Host admission.** `runSpecimen` decodes with closed keys, then
@@ -289,6 +336,9 @@ them, and the controller does the same with the host's.
 | --- | --- | --- | --- | --- |
 | Prediction | the validator | an explicit `prediction_unavailable` observation for a step the planner excluded; path diagnostics after orchestration | `steps[].sandbox_check` | one `sandbox_check` verdict per predicted step |
 | Attempt | the worker, through the shared region | the lifecycle copies; path diagnostics after orchestration | `steps[].attempt` | the attempted operation's own result, with `rc` and `errno` |
+| Extension preparation/issuance | issuer publishes native facts | resolved target/metadata, process authority and independent cleanup; delivery and host erasure observations | `extensions[]` | no token bytes; target identity at preparation is not a later-open identity promise |
+| Native lifecycle | worker call marker and result slot | phase/reference association and lifecycle claims | `extension_events[]` | consume handle or release result only when published; no ordinary comparison |
+| Fresh read | worker syscalls after apply | nothing about effective authority | `steps[].attempt.fresh_read` | fresh descriptor identity and bounded bytes, separate open/stat/read/close results |
 | Comparison | the host | nothing further | `steps[].comparison` | the attempt's classified observation, the submitted-scope relations, the order established, and the limitations |
 | Disposition | the host, from raw facts it cites | the controller's projection | `runner_subprocess.disposition`; `data.runner_sandbox_diagnostics` (execution fields) | what happened to the worker process, answered only from the cited facts |
 | Compiled-object receipt | the worker, before apply, when asked | admission after application, completion, PID, nonce and integrity checks | `applied_profile` | a copy of the compiled object; not a kernel readback |
@@ -331,7 +381,7 @@ together, and the edge table says which.
 *Figure: boundaries and their guards. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-boundaries.dot](architecture-boundaries.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>Boundaries and their guards: 12 nodes and 12 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>Boundaries and their guards: 14 nodes and 16 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### Boundaries and their guards nodes
 
@@ -349,6 +399,8 @@ together, and the edge table says which.
 | helper_envelope | sbpl-check envelope (nested) | record | sbpl-check | envelope frame; kind sbpl_check | [`run_policy_check`](../controller/src/policy_check.rs); [`sandbox_compile_string`](../controller/src/bin/sbpl-check.rs) | [`_validate_policy_check_reply`](../tests/lib/consumer.py); [`policy_check_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |  |
 | evidence_manifest | evidence manifest (in the app) | record | the build | hashes and entitlements of every shipped binary; its own schema_version (EVIDENCE_SCHEMA_VERSION) | [`manifest.json`](../tests/build-evidence.py); [`EVIDENCE_SCHEMA_VERSION`](../controller/src/evidence.rs) | [`codesign.preflight`](../tests/suites/preflight/run.sh); [`dossier_witness`](../tests/suites/witness_contract/dossier_witness.sh) |  |
 | runner_registry | runner registry (BYOXPC installs) | record | the runner commands | additive-field loader; retired kind aliases kept for recovery; its own schema_version (RUNNER_REGISTRY_SCHEMA_VERSION) | [`load_registry`](../controller/src/runner_manager.rs); [`RUNNER_REGISTRY_SCHEMA_VERSION`](../controller/src/runner_manager.rs); [`alias = "machme"`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
+| extension_preparation | extension declaration and preparation | record | host; submitted references and paths remain distinct from observations | bounded references, realpath result and metadata before issuer launch | [`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift); [`realpath`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) | [`run_targets`](../tests/suites/witness_contract/check_extensions.py); [`runRequestContractTests`](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift) |  |
+| token_channel | transient token channel | record | host owns mapping; issuer writes token/publication; worker consumes and erases | separate bounded shared mapping; inherited descriptors closed after mapping; never retained JSON | [`PWExtensionLayout`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift); [`extension_channel`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) |  |
 
 #### Boundaries and their guards edges
 
@@ -357,7 +409,7 @@ together, and the edge table says which.
 | B1 | request_file | held_request | guard | request version gate; selector parse; augment resolution | [`validate_request_version`](../controller/src/request_patch.rs); [`parse_runner_selector_value`](../controller/src/runner_select.rs); [`pub fn resolve_augments`](../controller/src/augments.rs) | [`invalid_request_version_stops_before_selection_augments_or_client_invocation`](../controller/src/run_flow.rs); [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh) |  |
 | B2 | held_request | run_spec | guard | caller authorization; closed-key decode; capacity, then meaning; policy hash | [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`CodingKeys`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`admissionFailure(for`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`requestMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift); [`computePolicyHash`](../runner/Sources/PWRunnerCore/SandboxApply.swift) | [`admission`](../tests/suites/failure_boundaries/check.py); [`runEnvelopeInvariantTests`](../runner/Tests/PWRunnerCoreTests/EnvelopeInvariantTests.swift) |  |
 | B3 | run_spec | shm_region | guard | host writes identity, counts, phase partitions and slots; worker refuses mismatched identity or invalid partition | [`abiIdentityHex`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PW_WORKER_ABI_IDENTITY`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`return 4`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`c_swift_layout_agreement`](../tests/suites/runner_abi_layout/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
-| B4 | shm_region | reply | guard | per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PWRunnerOrdering`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
+| B4 | shm_region | reply | guard | per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts; native result publication and fresh-read consistency before claims | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PWRunnerOrdering`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`extensionEvidenceProblem`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) |  |
 | B5 | run_spec | validator_wire | guard | fresh phase planning; bounded strict NDJSON decode; unique step association within the phase | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | B6 | validator_wire | reply | guard | verdict joined only to its phase and step, or explicit unavailable prediction | [`ComparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`happy_default_allow`](../tests/suites/runner_use_c_worker/run.sh); [`runPhaseProtocolTests`](../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) |  |
 | B7 | reply | envelope | guard | exact response version; disposition validated and projected; reply retained unread when refused | [`reply_version`](../controller/src/run_flow.rs); [`complete_execution`](../controller/src/run_flow.rs); [`execution_diagnostics`](../controller/src/disposition.rs); [`validate_disposition`](../controller/src/disposition.rs) | [`reply_versions_are_gated_exactly`](../controller/src/run_flow.rs); [`rust_wrapper_controls`](../tests/suites/blackbox_e2e/disposition_controls.py) |  |
@@ -366,10 +418,15 @@ together, and the edge table says which.
 | B10 | evidence_manifest | envelope | guard | dossier compares selected binaries with manifest baselines; lookup by exact path and kind | [`unique_typed_entry`](../controller/src/evidence.rs); [`pub struct Binaries`](../controller/src/dossier.rs) | [`codesign.preflight`](../tests/suites/preflight/run.sh); [`dossier_witness`](../tests/suites/witness_contract/dossier_witness.sh) |  |
 | B11 | runner_registry | held_request | guard | selection resolves a BYOXPC target; selector fields stripped before XPC | [`resolve_runner_target_with_registry`](../controller/src/runner_select.rs); [`strip_runner_selector`](../controller/src/runner_select.rs); [`load_registry`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | B12 | profile_capture | reply | guard | admitted only after successful application, worker completion, PID, nonce, input identity and payload integrity checks | [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`runAppliedProfileCaptureTests`](../runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift) |  |
+| B13 | run_spec | extension_preparation | guard | explicit phases, declaration/action caps, reference order and exec exclusion before preparation | [`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift); [`requestAdmissionFailure`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runRequestContractTests`](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift); [`run_targets`](../tests/suites/witness_contract/check_extensions.py) | [`extension_consumes`](LIMITS.md#specimen-admission); [`extension_declarations`](LIMITS.md#specimen-admission); [`extension_reference`](LIMITS.md#specimen-admission); [`extension_releases`](LIMITS.md#specimen-admission); [`extension_target`](LIMITS.md#specimen-admission) |
+| B14 | extension_preparation | token_channel | guard | resolved target and metadata before native issuance; clean issuer reap and bounded publication before worker delivery | [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift); [`PW_EXTENSION_TOKEN_BYTES`](../controller/tools/pw_probe_runner/pw_extension_issuer.c) | [`run_targets`](../tests/suites/witness_contract/check_extensions.py); [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift) |  |
+| B15 | token_channel | shm_region | channel | worker receives transient token separately; publishes delivery and ordered consume/release facts in evidence slots | [`sandbox_extension_consume`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_extension_release`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`run_case`](../tests/suites/witness_contract/check_extension_boundaries.py); [`run_targets`](../tests/suites/witness_contract/check_extensions.py) |  |
+| B16 | extension_preparation | reply | writes | preparation, authority and native issuer/cleanup observations without token bytes | [`PWRunnerExtensionRecord`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`record`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) | [`runExtensionEvidenceTests`](../runner/Tests/PWRunnerCoreTests/ExtensionEvidenceTests.swift); [`run_targets`](../tests/suites/witness_contract/check_extensions.py) |  |
 
 Notes:
 
 - `B8`: The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.
+- `B13`: Declaration count 1 item; consume count 1 item; release count 1 item; references 63 UTF-8 bytes; target 1,023 UTF-8 bytes.
 
 Every node and edge above cites at least one test or rule.
 
@@ -446,11 +503,19 @@ runtime guarantee.
   no constant defines.
 - **Runner simplicity.** Host orchestration is `PWRunnerService.swift` and
   `CWorkerOrchestrator.swift`; everything after apply is the C worker, which
-  allocates nothing after `sandbox_apply` because the host pre-touched every
-  page of the region before the spawn. Hidden pre-sandbox acquisition is the
-  thing the exec attempt machinery avoids: its pipes and spawn handles are
+  uses preallocated PW-owned request, evidence and token storage after
+  `sandbox_apply`; the host pre-touches the evidence mapping before spawning.
+  PW introduces no post-apply heap allocation for native lifecycle actions. This
+  does not claim that private sandbox calls or system libraries allocate nothing.
+  The explicit token channel carries authority, not an open target descriptor.
+  Hidden pre-sandbox acquisition is the thing the exec attempt machinery avoids: its pipes and spawn handles are
   acquired after apply, inside the attempt, and released before the slot
   completes.
+
+Known gap: private extension calls may allocate or retain internal state that PW
+cannot inspect. Erasure observations cover PW-owned transient buffers; successful
+native results and phase progress do not establish kernel extension state,
+stable identity, effective permissions or access revocation.
 
 Known gap: a connection that races the host's retirement can fail before it
 is refused. Later requests are promised `already_ran`, but a connection that
@@ -655,16 +720,16 @@ service, in user or system scope, by the `runner` subcommands
 Four things change and nothing else. The client connects with
 `NSXPCConnection(machServiceName:)` instead of a bundle lookup. The host binds
 `NSXPCListener(machServiceName:)` instead of `NSXPCListener.service()` and
-resolves its worker and validator relative to its own bundle, exactly as the
+resolves its worker, validator and issuer relative to its own bundle, exactly as the
 built-in one does. The request names the runner through the selector fields
 the controller strips before XPC delivery, and the registry supplies the
 service name and scope. The installer signs the copy's embedded worker with
-the supplied identity and entitlements plist, the validator with the identity
-alone, then the enclosing bundle, verifies the seal recursively, and the
+the supplied identity and entitlements plist, the validator and issuer with the
+identity alone, then the enclosing bundle, verifies the seal recursively, and the
 registry records each binary's signature and entitlements as read back
 ([`sign_install_tree`](../controller/src/runner_manager.rs), [`read_back`](../controller/src/runner_manager.rs) in
 runner_manager.rs). The dossier
-records the hashes of the bundle's service, worker and validator files as
+records the hashes of the bundle's service, worker, validator and issuer files as
 observed before invocation and compares them with the manifest baselines
 ([`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs)
 in run_flow.rs); the
@@ -674,7 +739,11 @@ not change the run's outcome. The registry is read by an additive loader
 that still accepts retired kind spellings so an old install can be listed
 and removed; recovery of a half-removed install is the
 [registry ownership](../controller/README.md#registry-ownership-and-recovery)
-procedure, not a run-time concern.
+procedure, not a run-time concern. Absent issuer fields in older registry records
+remain unknown; validation and removal still work. An older bundle without the
+issuer can serve ordinary specimens but receives a named capability refusal for
+extension specimens. Shared standard/BYOXPC extension and phase controls establish
+the behavior with independent binary read-back and verified owned cleanup.
 
 `--env` configures the host's launchd environment and nothing records the
 environment the worker itself holds; the worker spawns exec children with
@@ -695,7 +764,7 @@ read-back records with the value `true`, never by the host's.
 *Figure: the byoxpc apparatus. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-byoxpc.dot](architecture-byoxpc.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The BYOXPC apparatus: 19 nodes and 25 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The BYOXPC apparatus: 20 nodes and 28 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The BYOXPC apparatus nodes
 
@@ -705,21 +774,22 @@ read-back records with the value `true`, never by the host's.
 | bundle_copy | copied XPC bundle | record |  | the host, the worker and the validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name | the installer |  |  |  |  |  | [`Install a BYOXPC runner`](../docs/PolicyWitness.md); [`sign_macho`](../build.sh) | [`owned_bundle`](../tests/fixtures/byoxpc/session.py); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | entitlements_plist | the installer's entitlements plist | record |  |  | the installer | the host executable and the embedded worker, the process the policy is applied to |  |  |  |  | [`--entitlements`](../controller/src/runner_commands.rs) | [`binary_entitlements`](../tests/fixtures/byoxpc/session.py); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | install | runner install | command |  |  |  | signs the worker, the validator and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables |  |  |  |  | [`cmd_runner_install`](../controller/src/runner_commands.rs); [`--env`](../controller/src/runner_commands.rs); [`sign_install_tree`](../controller/src/runner_manager.rs) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh); [`install`](../tests/fixtures/byoxpc/session.py); [`entitlement_readback`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh) |  |
-| signing | codesign of the bundle tree | command |  |  |  |  | the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle with the identity and the entitlements | the sealed bundle recursively (--deep --strict) before anything is recorded |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`codesign_sign`](../controller/src/runner_manager.rs); [`codesign_verify`](../controller/src/runner_manager.rs) | [`install_signing_signs_helpers_before_the_bundle`](../controller/src/runner_manager.rs); [`byoxpc_verification_controls`](../tests/suites/preflight/run.sh); [`binary_entitlements`](../tests/fixtures/byoxpc/session.py) |  |
+| signing | codesign of the bundle tree | command |  |  |  |  | the embedded worker with the identity and the supplied entitlements, the validator and issuer with the identity alone, then the enclosing bundle with the identity and the entitlements | the sealed bundle recursively (--deep --strict) before anything is recorded |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`codesign_sign`](../controller/src/runner_manager.rs); [`codesign_verify`](../controller/src/runner_manager.rs) | [`install_signing_signs_helpers_before_the_bundle`](../controller/src/runner_manager.rs); [`byoxpc_verification_controls`](../tests/suites/preflight/run.sh); [`binary_entitlements`](../tests/fixtures/byoxpc/session.py) |  |
 | plist | LaunchAgent or LaunchDaemon plist | record |  | MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env, ThrottleInterval of 1 second |  |  |  |  | the user's LaunchAgents or /Library/LaunchDaemons |  | [`build_launchd_plist`](../controller/src/runner_manager.rs); [`MachServices`](../controller/src/runner_manager.rs); [`EnvironmentVariables`](../controller/src/runner_manager.rs); [`launchd_plist_path`](../controller/src/runner_manager.rs); [`BYOXPC_THROTTLE_INTERVAL_SECONDS`](../controller/src/runner_manager.rs) | [`byoxpc_setup`](../tests/suites/shell_helpers/run.sh); [`runner_install`](../tests/suites/runner_byoxpc/run.sh); [`byoxpc_plist_sets_the_respawn_throttle`](../controller/src/runner_manager.rs) | [`byoxpc_throttle_interval`](LIMITS.md#execution-budgets) |
-| registry | runner registry | record |  | service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true) |  |  |  |  |  | pending, installed, pending_cleanup | [`install_record`](../controller/src/runner_manager.rs); [`RunnerState`](../controller/src/runner_manager.rs); [`PendingCleanup`](../controller/src/runner_manager.rs); [`entitlements_from_codesign`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh); [`registry_records_without_helper_read_backs_still_load`](../controller/src/runner_manager.rs) |  |
+| registry | runner registry | record |  | service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true) |  |  |  |  |  | pending, installed, pending_cleanup | [`install_record`](../controller/src/runner_manager.rs); [`RunnerState`](../controller/src/runner_manager.rs); [`PendingCleanup`](../controller/src/runner_manager.rs); [`entitlements_from_codesign`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh); [`registry_records_without_helper_read_backs_still_load`](../controller/src/runner_manager.rs); [`registry_records_without_helper_read_backs_still_load`](../controller/src/runner_manager.rs) |  |
 | launchd | launchd | os |  |  |  | the host on demand for its Mach service |  |  |  | one launch per ThrottleInterval, 1 second in the generated plist; launchd's own default applies without the key | [`launchctl_bootstrap`](../controller/src/runner_manager.rs); [`launchctl_target`](../controller/src/runner_manager.rs) | [`pwrunner_survives_mach_service_launch`](../tests/suites/runner_mach_service_liveness/run.sh); [`service_present`](../tests/fixtures/byoxpc/session.py) | [`byoxpc_throttle_interval`](LIMITS.md#execution-budgets) |
 | host | PWRunner as a Mach service | executable |  |  |  | NSXPCListener(machServiceName:) from --mach-service | the installed identity and entitlements |  | relative to its own bundle |  | [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`pwrunner_survives_mach_service_launch`](../tests/suites/runner_mach_service_liveness/run.sh); [`single_use`](../tests/suites/runner_byoxpc/opt_in/single_use.sh) |  |
 | client | pw-runner-client --mach-service | executable |  |  |  | NSXPCConnection(machServiceName:), with the privileged option for system scope |  |  |  |  | [`--mach-service`](../runner/Clients/PWRunnerClient/main.swift); [`--privileged`](../runner/Clients/PWRunnerClient/main.swift) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | caller_auth | caller authorization | check |  | PWRunnerRequireSignedCaller and PWRunnerAllowedIdentifiers in the host's Info.plist, inherited by a copy |  |  |  | the caller's Team ID equals the host's; an optional identifier allowlist |  |  | [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerRequireSignedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerAllowedIdentifiers`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runner_auth_external`](../tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh) |  |
 | selector | request runner selector | record |  | the runner by id or service, with mode and required_entitlements |  |  |  | every required key present with the value true in the worker's recorded read-back; the host's entitlements are recorded, not consulted; a record without a worker read-back is refused with a reinstall message when anything is required |  | before XPC delivery | [`parse_runner_selector_value`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs); [`strip_runner_selector`](../controller/src/runner_select.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs); [`selection_refuses_a_false_valued_required_key`](../controller/src/runner_select.rs); [`entitlement_gate_consults_the_worker_not_the_host`](../controller/src/runner_select.rs) |  |
-| provenance | runner provenance and binary baselines | record |  | runner kind, service name, registry id, and the host's, the worker's and the validator's signatures and entitlements; hashes of the bundle's service, worker and validator files as observed before invocation |  |  |  |  |  |  | [`runner_provenance_from_target`](../controller/src/runner_select.rs); [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs); [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py); [`dossier_witness_byoxpc`](../tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh) |  |
+| provenance | runner provenance and binary baselines | record |  | runner kind, service name, registry id and separate host/worker/validator/issuer signature and entitlement read-backs; selected binary hashes observed before invocation; missing older issuer observations remain unknown |  |  |  |  |  |  | [`runner_provenance_from_target`](../controller/src/runner_select.rs); [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs); [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py); [`dossier_witness_byoxpc`](../tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh); [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh) |  |
 | worker | pw-probe-runner in the copy | sandboxed |  |  |  | the installed plist's entitlements; a require-entitlement rule consults this process | the installed identity and the supplied entitlements, signed before the bundle seal |  |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`single_use`](../tests/suites/runner_byoxpc/opt_in/single_use.sh); [`entitlement_transfer`](../tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh) |  |
 | validator | sb_api_validator in the copy | executable |  |  |  |  | the installed identity alone, no entitlements |  |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`defaultValidatorExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh); [`entitlement_readback`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh) |  |
 | verify | runner verify | command |  |  |  | sends a fixed allow-all request through the client and waits 5,000 milliseconds by default |  |  |  | the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for the generated plist's 1 second ThrottleInterval; a refusal executed nothing and the request can be sent again | [`cmd_runner_verify`](../controller/src/runner_commands.rs); [`verify_request`](../controller/src/runner_commands.rs); [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`verification_request_is_the_fixed_allow_all_specimen`](../controller/src/runner_commands.rs) | [`byoxpc_throttle_interval`](LIMITS.md#execution-budgets); [`runner_verify_wait`](LIMITS.md#execution-budgets) |
 | validate | runner validate | command |  |  |  | verifies each record's bundle recursively and the host, worker and validator individually, re-reads every signature and entitlement set, reports failures by record and binary; consults no launchctl |  |  |  |  | [`cmd_runner_validate`](../controller/src/runner_commands.rs); [`codesign_metadata`](../controller/src/runner_manager.rs); [`validate_record`](../controller/src/runner_manager.rs) | [`validation_reports_the_bundle_and_each_binary_that_fails`](../controller/src/runner_manager.rs); [`byoxpc_verification_controls`](../tests/suites/preflight/run.sh); [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | remove | runner remove | command |  |  |  | moves ownership to pending_cleanup, boots the service out, removes the plist, retires the record after verified absence |  |  |  |  | [`cmd_runner_remove`](../controller/src/runner_commands.rs); [`bootout_service`](../controller/src/runner_manager.rs); [`cleanup_complete`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh); [`cleanup`](../tests/fixtures/byoxpc/session.py) |  |
 | reconcile | runner reconcile | command |  |  |  | reports launchd services and plists that look owned, changing nothing |  |  |  |  | [`cmd_runner_reconcile`](../controller/src/runner_commands.rs); [`inspect_service`](../controller/src/runner_manager.rs); [`inspect_plist`](../controller/src/runner_manager.rs) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
+| issuer | pw-extension-issuer in the copy | executable |  |  |  | bundle-local ordinary-authority issuance before the worker | installed identity alone, no supplied worker entitlements |  |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`defaultIssuerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh); [`byoxpc_verification_controls`](../tests/suites/preflight/run.sh) |  |
 
 #### The BYOXPC apparatus edges
 
@@ -738,7 +808,7 @@ read-back records with the value `true`, never by the host's.
 | X11 | install | registry | writes | install_record: pending before the plist, installed after the bootstrap | [`install_record`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh) |  |
 | X12 | user | selector | channel | the specimen's runner field: mode, id or service, required_entitlements | [`parse_runner_selector_value`](../controller/src/runner_select.rs) | [`parses_runner_selector_from_nested_runner`](../controller/src/runner_select.rs) |  |
 | X13 | selector | registry | reads | resolve by id or service; every required entitlement must be granted (value true) in the worker's recorded read-back | [`resolve_runner_target_with_registry`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs); [`selection_refuses_a_false_valued_required_key`](../controller/src/runner_select.rs) |  |
-| X14 | registry | provenance | reads | runner_provenance_from_target copies kind, service, id and each binary's signature and entitlements | [`runner_provenance_from_target`](../controller/src/runner_select.rs) | [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py) |  |
+| X14 | registry | provenance | reads | runner_provenance_from_target copies kind, service, id and each binary's signature and entitlements | [`runner_provenance_from_target`](../controller/src/runner_select.rs) | [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py); [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh) |  |
 | X15 | bundle_copy | provenance | reads | Binaries::observe hashes the service, worker and validator files before invocation | [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs) |  |
 | X16 | client | caller_auth | channel | NSXPCConnection(machServiceName:), privileged for system scope | [`--mach-service`](../runner/Clients/PWRunnerClient/main.swift) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | X17 | caller_auth | host | guard | shouldAcceptNewConnection: the caller's Team ID equals the host's, and the identifier allowlist if present | [`shouldAcceptNewConnection`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runner_auth_external`](../tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh) |  |
@@ -750,6 +820,9 @@ read-back records with the value `true`, never by the host's.
 | X23 | remove | registry | writes | pending_cleanup first; retired only after verified absence of service and plist | [`PendingCleanup`](../controller/src/runner_manager.rs); [`cleanup_complete`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh) |  |
 | X24 | reconcile | launchd | checks | inspect_service lists candidate services without changes | [`inspect_service`](../controller/src/runner_manager.rs) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
 | X25 | reconcile | plist | checks | inspect_plist lists candidate plists without changes | [`inspect_plist`](../controller/src/runner_manager.rs) | [`runner_install`](../tests/suites/runner_byoxpc/run.sh) |  |
+| X26 | signing | issuer | writes | issuer receives identity alone; signature and entitlements read back independently | [`sign_install_tree`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh); [`install_signing_signs_helpers_before_the_bundle`](../controller/src/runner_manager.rs) |  |
+| X27 | host | issuer | spawn | copy-local issuer path; named extension capability refusal if missing | [`defaultIssuerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`capabilityUnavailable`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) | [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh) |  |
+| X28 | issuer | provenance | reads | actual selected path and hash compared with shipped issuer baseline; separate installed read-backs | [`issuer`](../controller/src/dossier.rs); [`runner_issuer_signature`](../controller/src/runner_select.rs) | [`extensions_byoxpc`](../tests/suites/witness_contract/opt_in/extensions_byoxpc.sh) |  |
 
 Every node and edge above cites at least one test or rule.
 
@@ -763,6 +836,9 @@ only points there, in document order.
 
 - [One run in time](#one-run-in-time): an exec child's descendant that
   leaves the child's process group is not contained.
+- [Principles as enforced constraints](#principles-as-enforced-constraints):
+  private extension calls have unobserved allocation/state behavior beyond
+  PW-owned buffers and native publication.
 - [Principles as enforced constraints](#principles-as-enforced-constraints):
   a connection that races the host's retirement can fail before it is
   refused.

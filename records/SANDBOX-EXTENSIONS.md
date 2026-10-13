@@ -980,3 +980,54 @@ were five workloads; invocation and assertions are identical, a reviewed evidenc
 reuse exception. No active run or new external-runner installation remains.
 M3 still requires its permanent account, consolidated checks and rendered
 assessment before the A1 handoff. The earlier empty-object limitation remains.
+
+
+## M3 public and generated account increment
+
+The guide now defines extension declarations/actions, placement and omission,
+target preparation, fresh reads, native event validity and unavailable capability.
+Its complete temporary-file lifecycle example is executed directly from the
+Markdown JSON by the shared standard/BYOXPC case. The FAQ and shared reading
+rules are updated at their owning sources and regenerated into the guide.
+The request lesson connects named corpus examples to admission versus later
+capability refusal. README Flow, runner/controller references, signing and
+distribution/preflight accounts now include the ordinary-authority issuer.
+The build manifest already owns its signing call, inventory and native target;
+regeneration confirms those accounts without adding any build refusal or baseline.
+
+Architecture input now owns issuer topology, transient transport, preparation
+and publication guards, plus separate BYOXPC signing/read-back/provenance.
+Regenerated SVGs/tables have source and control citations; those checks establish
+mechanical grounding, not semantic truth. Handwritten rationale/timeline/evidence
+paths describe native actions and distinguish operational progress from sandbox
+state. The allocation invariant is limited to PW-owned preallocated storage;
+private-library allocation and state are an explicit indexed gap. Neither docs
+baseline gained an entry. The matrix now follows response 17 and adds S26/S27
+for successful and denied fresh reads, with independently prepared content and
+separate syscall observations. Native lifecycle events have no comparison rows.
+
+| Run under `tests/out/runs/` | Run ID | Original result |
+| --- | --- | --- |
+| `extensions-m3-doc-contract-20261013` | `20261013T140803Z_3f47daad` | 8/11 passed. Source mutation's disposable checkout omitted the new channel header; shared-rule and Swift matrix cardinality checks expected their old counts. Signature inspection, contract/architecture/build/generator checks, live matrix and actual public example on both runner kinds passed. |
+| `extensions-m3-doc-corrections-20261013` | `20261013T141149Z_778afdcd` | 4/4 passed: corrected source/header fixture, shared-rule count, all 405 Swift checks and driver replay, and standard public example/extension workload. |
+
+The first command selected `--suite source_drift --case preflight/codesign.preflight
+--case runner_unit/pwrunner_core_unit_executable --case witness_contract/comparison_matrix
+--case witness_contract/extensions --case witness_contract/extensions_byoxpc`.
+The correction selected the two failed source-drift cases, Swift unit executable
+and standard extensions. Commands used the established PATH, fresh managed output
+and escalation. Original failed evidence remains unchanged. Build 558 is signed
+with the established identity, stamped `4158716-dirty`, and retains native identity
+`12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
+Both runs verified signatures before and unchanged artifact inventories afterward.
+The BYOXPC fixture's receipt marks removal and its owned staging path is absent.
+No newly owned external fixture or active test remains at this increment.
+
+The two completed runs and console logs are retained with null incremental-source
+provenance. The correction checkpoint contains the signed-build log and source,
+diff and hash snapshot against `4158716`; attachment used the stable checkout
+lock after ownership/run-ID/completion checks. Evidence is gitignored and local-only.
+A local immutable HTML/PDF/page-image snapshot is being prepared with the existing
+Pandoc/WeasyPrint/Poppler toolchain for the plan's fresh rendered review. That
+assessment and the consolidated M3 acceptance remain pending; no A1 handoff or
+M3 completion is claimed. The earlier unrecorded empty-object limitation remains.

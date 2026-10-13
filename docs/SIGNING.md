@@ -32,6 +32,12 @@ for options, source checks and toolchain assumptions.
 
 See [the signing contract](BUILD.md#the-signing-contract) for identity checks,
 the generated signing order, inventory agreement and post-seal verification.
+The embedded `pw-extension-issuer` is signed before the XPC bundle seal and is
+included in its evidence inventory. It receives the identity without an
+entitlement plist. BYOXPC installation likewise signs its bundle-local issuer
+with the selected identity alone, separately from the worker's supplied
+entitlements. Read-back and validation retain each helper's actual signature
+and entitlements; the host signature alone is insufficient.
 
 ## Evidence artifacts
 
@@ -44,7 +50,9 @@ These are derived from the **actual signed binaries on disk** (hashes and
 entitlements extracted via `codesign -d --entitlements`), and are intended to
 make “what shipped” auditable. They are generated after the helpers and the
 service are signed and before the outer seal, so the manifest describes
-signed bytes and is itself sealed by the app signature.
+signed bytes and is itself sealed by the app signature. The issuer has its own
+manifest entry and symbol inventory. Those observations identify signed bytes,
+not whether issuance will grant authority for a particular target.
 
 ## Release procedure
 

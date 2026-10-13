@@ -80,7 +80,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         shared = self.contract.split(generator.RULES_START)[1].split(generator.RULES_END)[0].strip()
         copied = self.guide.split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0].strip()
         self.assertEqual(copied, shared)
-        self.assertEqual(len(re.findall(r'^\d+\. ', shared, re.MULTILINE)), 12)
+        self.assertEqual(len(re.findall(r'^\d+\. ', shared, re.MULTILINE)), 14)
         self.assertNotIn('](', shared)
 
     def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):

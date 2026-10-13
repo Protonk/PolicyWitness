@@ -27,7 +27,8 @@ successful attempts. These are driver controls, not sandbox predictions.
 
 ## Native extension boundaries
 
-`extensions` exercises ordinary-authority issuance, native consumption and release
+`extensions` executes the public guide's actual extension example as well as
+ordinary-authority issuance, native consumption and release
 in one worker, with fresh descriptor identity, bounded bytes and syscall results
 on either side of both interventions. Each phase collects its own queries.
 Native return values and observed access remain independent evidence.

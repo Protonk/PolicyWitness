@@ -24,8 +24,9 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 [sandbox-log-observer.rs](src/bin/sandbox-log-observer.rs) captures unified-log
 denials; [sbpl-check.rs](src/bin/sbpl-check.rs) independently compiles SBPL.
 Meson builds [pw_probe_runner.c](tools/pw_probe_runner/pw_probe_runner.c) and
-[sb_api_validator.c](tools/sb_api_validator/sb_api_validator.c) into
-`pw-probe-runner` and `sb_api_validator`. Those native helpers live inside each
+[sb_api_validator.c](tools/sb_api_validator/sb_api_validator.c) and
+[pw_extension_issuer.c](tools/pw_probe_runner/pw_extension_issuer.c) into
+`pw-probe-runner`, `sb_api_validator` and `pw-extension-issuer`. Those native helpers live inside each
 XPC service's `Contents/MacOS/`, resolved relative to that service's bundle.
 The [runner README](../runner/README.md) describes their implementation.
 
@@ -33,7 +34,11 @@ The [runner README](../runner/README.md) describes their implementation.
 
 The controller uses the app's `Contents/MacOS/pw-runner-client` Swift helper for
 `NSXPCConnection` wiring. Rust owns orchestration and capture, and consumes the
-host's reply without directly managing its worker or validator.
+host's reply without directly managing its worker, validator or issuer. Issuer
+binary provenance uses the same observed-path/hash/baseline rules as the other
+helpers. Reply admission checks native publication, local-reference association
+and fresh-read consistency before exposing derived claims; rejected parsed
+evidence remains available under the receiver contract.
 
 ## CLI surface (contract)
 

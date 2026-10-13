@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, remaining contract work and consolidated gate/rendered assessment remain pending. |
+| M3 Minimal extension experiment through PW | In progress | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply and public/generated accounts now pass targeted checks; consolidated gate and rendered assessment remain pending. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -83,7 +83,7 @@ This checkpoint does not reach that audit boundary. M2's consolidated signed
 acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
 `0daa018101ed39ecfd92d6d528b112784ed9c30f`, followed by the reader integration
 increment described in the investigative record.
-The current development app is build 556, stamped `0a41ed1-dirty`, with worker
+The current development app is build 558, stamped `4158716-dirty`, with worker
 identity `12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
 It includes the Rust reader checks, native publication guards, issuer binary dossier
 and shared extension-limit constants. The native
@@ -94,8 +94,8 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** complete the permanent documentation/generator increment,
-then consolidated signed acceptance and the rendered assessment. Prepare A1
+**Next action:** run consolidated signed M3 acceptance and complete the fresh
+rendered assessment of the permanent documentation/generator increment. Prepare A1
 only after that gate passes. Maximum-reply and mixed-action admission controls
 now pass: the conservative bound is 52,414,779 bytes and the existing 152 MiB
 receiver allowance remains sufficient. Issuer dossier, older-record interpretation
