@@ -1995,3 +1995,37 @@ gitignored evidence. Pandoc 3.12, WeasyPrint 70 and Poppler 26.10 produced the
 views. The local print renderer's earlier clipping/wrapping is corrected; the
 reviewer inspected the full graph and readable corrected tables. Existing build
 refusal coverage gaps remain explicit, and this is not release acceptance.
+
+
+## M5.4 architecture-account closure
+
+Closed at clean `a1112bc6627f07abb27478bfcfe9db7b45453fac`, build 582 unchanged.
+Lead corrections distinguish action publication from process exit, explicit
+identity generation from build checks, documentation inputs from runtime evidence
+manifests, and request overrides from direct-driver/native fixture seams.
+Fresh Astra reviewer `/root/m54_rendered_review` inspected all four graph rasters,
+generated table bodies/captions, timeline, evidence paths, principles and gaps.
+F1 found four incomplete BYOXPC node facts; the lead accepted it and corrected
+`docs/architecture.json`, regenerating tables/DOT/SVG. Current issuer signing and
+read-back are explicit; validation checks an existing or previously recorded
+issuer, while an absent unrecorded issuer stays unknown. F2 found an exhaustive
+host-binding-check overclaim; handwritten prose now distinguishes direct and
+literal/simple-constant scans from undefined-import inspection, and excludes
+arbitrary computed names. Focused rendered recheck closes both with no new finding.
+
+Initial runs `extensions-m54-20261013` (`20261013T231554Z_32d4b770`, `9333cdb`)
+and `extensions-m54-closure-20261013` (`20261013T231834Z_ff43635d`, `9eac2a2`)
+each passed six source-drift cases and retain their intermediate renders/reports.
+Final `extensions-m54-final-20261013` (20261013T232042Z_2053ece7) passed 10/10: six source-drift plus
+accepted-input corpus, blackbox readers, ordinary phases and native lifecycle.
+Its 197-case ledger credits ten fresh results and 187 reviewed reuses. Exact
+source/app comparisons are separate from dependency judgments: architecture
+description changes do not alter executable paths or controlled inputs. Both
+baselines remain unchanged. Exact cleanup observations confirm owned resources
+absent; detailed counts and receipts are in the checkpoint.
+
+[Final renders and reports](../tests/out/runs/extensions-m54-final-20261013/reviews/)
+are local/gitignored source, HTML/PDF/PNG, enlarged graphs and manifests from
+Pandoc 3.12, WeasyPrint 70 and Poppler 26.10. This bounded review does not certify
+every cited test body or private native state. The independent user-facing
+review continues in M5.5; its public behavior controls are already fresh here.
