@@ -1330,7 +1330,15 @@ func classify(
                     4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply", 11: "proceed wait"]
                 let operation = names[failure.operation] ?? "operation \(failure.operation)"
                 var detail = "pw-probe-runner reported \(operation) failure (code=\(failure.code))"
-                if failure.operation == 11 { detail += "; budget=\(failure.detail) ms; release not observed" }
+                if failure.operation == 11 {
+                    switch (failure.code, failure.native_kind) {
+                    case (8, 0), (1, 3):
+                        detail += "; budget=\(failure.detail) ms; release not observed"
+                    case (11, 0):
+                        detail += "; observed_release_ordinal=\(failure.detail); phase release rejected"
+                    default: break // Unknown detail units remain uninterpreted.
+                    }
+                }
                 if let rc = failure.native_result { detail += "; native_kind=\(failure.native_kind), result=\(rc)" }
                 if let error = failure.errno { detail += "; errno=\(error)" }
                 if let text = evidence.diagnostic.text, !text.isEmpty { detail += ": " + text }

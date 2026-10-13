@@ -140,3 +140,8 @@ independently observes EPIPE. A fresh validator supplies only the next phase’s
 record. The registered reader replay checks the encoded reply through Rust
 assembly and the Python consumer and lifecycle oracle; fixture query answers
 are controlled data, and the test independently cleans up the surviving child.
+
+The live stale/future phase-release controls also check failure-detail units:
+wait expiry reports its millisecond budget, while a rejected future release
+reports the observed ordinal. Constructed unknown failure codes retain raw
+detail without acquiring either interpretation.

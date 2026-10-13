@@ -131,6 +131,25 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 try expectEqual(out.workerEvidence?.failure?.operation, 11)
                 try expectEqual(out.workerEvidence?.failure?.index, 1)
                 try expectEqual(out.workerEvidence?.failure?.code, ordinal == 1 ? 8 : 11)
+                let summary = classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0)
+                try expectEqual(summary.outcome, NormalizedOutcome.runnerFailed)
+                if ordinal == 1 {
+                    try expectEqual(out.workerEvidence?.failure?.detail, 80)
+                    try expectContains(summary.error ?? "", "budget=80 ms; release not observed")
+                } else {
+                    try expectEqual(out.workerEvidence?.failure?.detail, ordinal)
+                    try expectContains(summary.error ?? "", "observed_release_ordinal=3; phase release rejected")
+                    try expectFalse((summary.error ?? "").contains("budget="))
+                }
+                // Constructed future codes retain the raw detail without a
+                // known code's budget or release-ordinal interpretation.
+                var unfamiliar = out
+                unfamiliar.workerEvidence?.failure?.code = 4_000_000_001
+                let unknown = classify(workerResult: .success(unfamiliar), validatorResult: nil, expectedVerdictCount: 0)
+                try expectContains(unknown.error ?? "", "code=4000000001")
+                try expectFalse((unknown.error ?? "").contains("budget="))
+                try expectFalse((unknown.error ?? "").contains("observed_release_ordinal="))
+                try expectEqual(unfamiliar.workerEvidence?.failure?.detail, out.workerEvidence?.failure?.detail)
                 try expectEqual(out.exitCode, 0)
             }
         }

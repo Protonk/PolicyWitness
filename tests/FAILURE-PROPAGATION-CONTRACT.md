@@ -268,7 +268,7 @@ mapping). They agree with the step channel: `attempt.result_source` is
 runner_subprocess.disposition = {
   "questions": { <run question>: <claim>, ... },   // all seven run questions, always present
   "steps": [ { "index": i, "step_id": "...", "slot": "...", "attempt_support": "...",
-               "questions": { <step question>: <claim>, ... } }, ... ],   // one per submitted step, in plan order
+               "questions": { <step question>: <claim>, ... } }, ... ],   // one per declared action, in phase order
   "issues": [ { "kind": "conflict", "rule": "D1" | "D5", "question": "...",
                 "step_index": i?, "observations": [ <reference>, ... ], "detail": "..." }, ... ]
 }
@@ -311,7 +311,7 @@ array element.
 | `poll_stop_reason`, `exit_requested`, `termination_request`, `wait_errors`, `done_observed` | the same-named `runner_subprocess` fields |
 | `cleanup_trigger`, `grace_end`, `collection_basis` | the new host facts above |
 | `progress`, `worker_failure` | `runner_subprocess.worker_evidence.progress` and `.failure` |
-| `plan` | the submitted probe plan's step count and order |
+| `plan` | the declared actions across all phases, including native interventions, in execution order |
 | `slot`, `attempt_support` | this step entry's own facts (step questions only) |
 
 ### Questions, answers and witnesses
@@ -330,8 +330,12 @@ question is not missing evidence.
 
 Protocol position orders progress words by the worker protocol, not by opcode:
 header 1, policy read 2, parameter allocation 3, parameter assignment 4,
-compilation 5, capture 6, readiness 7, application 8, proceed 11, then attempt
-9 for each step in plan order, then completion 10. An attempt word's item
+compilation 5, capture 6, readiness 7, application 8, then proceed 11 before each phase's action batch, attempt 9
+for each action in execution order, and completion 10. Here a disposition
+"step" means any declared action, including consumption and release. Indexed
+proceed progress names the waiting phase's first action and occupies the position
+immediately before that action; an empty final phase can name the total action
+count. It does not mean that action began. An attempt word's item
 index names the step; a parameter word's names the parameter. An attempt index
 that names no submitted step, including any attempt index for an empty plan,
 is `invalid`; a mismatch between the encoded word and its decoded fields, or
@@ -346,7 +350,7 @@ position at or after that step's `started` word.
 | Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
 | | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
 | Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error`, `policy_transfer_deadline` | the host's poll-loop observation | any | D2 |
-| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
+| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error or timeout | direct host observation of why exit was requested | any | D2 |
 | Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
 | Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
 | Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
@@ -669,12 +673,20 @@ Published payload fields have the same names and integer types in Swift/JSON:
 with UINT32_MAX meaning absent. JSON renames the latter two to optional `errno`
 and `index`. Native kind 0 means no native return (stored result is padding,
 JSON native_result is omitted); 1 is a signed integer return; 2 is a NULL pointer
-return represented by zero, never a pointer address. Unfamiliar kinds retain
+return represented by zero, never a pointer address; 3 is a native clock-call
+return. Unfamiliar kinds retain
 the raw signed result. Unknown operation/code/detail are transported unchanged;
 recognition is not validity. Invalid errno presence or a nonzero result tagged as NULL rejects payload decoding.
 Code 1 is native failure, 2 source capacity rejection (detail is maximum source
 bytes, excluding NUL), 3 policy read error, 4 step capacity, 5 parameter capacity,
-6 defensive parameter encoding rejection, 7 unprepared header. No errno is claimed for libsandbox
+6 defensive parameter encoding rejection, 7 unprepared header, 8 proceed-wait
+expiry, 9 embedded policy NUL, 10 invalid phase partition/publication input, and
+11 a future release ordinal. Code 9's detail is the NUL byte offset; code 10's
+is the phase capacity. For proceed operation 11, failure index names the zero-based
+phase: code 8 and native-clock failure code 1/kind 3 carry the wait budget in
+milliseconds, while code 11 carries the observed release ordinal. Human diagnostics
+interpret those units only for the known code/kind combination; unknown details
+remain raw. No errno is claimed for libsandbox
 allocation/parameter/compile calls, whose return contracts do not establish it.
 Failed apply and failed read capture errno immediately; zero remains a value.
 
@@ -716,15 +728,16 @@ result_source=synthetic and missing_reason=validator_not_invoked (no validator
 process), or validator_no_verdict (process ran without this verdict). Excluded
 queries use query_not_requested. Received verdicts use result_source=validator;
 native_rc is present only for actual allow/deny/error native call results, not
-parse/unsupported/filter rejections. Run-level validator subprocess metadata
-remains authoritative; per-step fields do not duplicate PID/disposition.
+parse/unsupported/filter rejections. The matching phase's validator subprocess metadata remains authoritative;
+per-step fields do not duplicate the validator PID/disposition.
 
 Attempts use the spelling `not_run_worker_died` for a missing result; it means
 no completed result, never proof of non-start. They use result_source=synthetic
 and missing_reason=slot_absent or slot_incomplete. Completed supported slots use
 result_source=worker. Their rc is PW attempt status (often 0/1, or aggregated
-exec disposition), not a native syscall return such as an open FD; the worker
-ABI does not carry that raw return, so no attempt field presents one.
+exec disposition), not a native syscall return such as an open FD. The separate
+`fresh_read` payload carries the individual open/stat/read/close native returns;
+`attempt.rc` does not substitute for any of them.
 Unsupported/skipped attempts use synthetic and attempt_not_supported. A null
 step `errno` requires key presence.
 
@@ -917,9 +930,10 @@ diagnostic without a native return retains `result_source="validator"`,
 claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
 missing reason. `outcome="error"` alone does not identify a native call failure.
 
-Query planning records each submitted probe or exclusion reason before attempts
-run. A later create/unlink cannot change that decision, including when all
-queries are excluded and no validator runs. Only unique records matching the
+Query planning records each phase's submitted probes or exclusions before that
+phase's actions run. A later create/unlink does not revise the retained decision,
+including when all queries were excluded and no validator ran. The next phase
+plans afresh and can observe a changed path. Only unique records matching the
 submitted `(operation, filter_type, filter_value)` supply a step prediction.
 Mismatch records remain under `phases[].validator_subprocess.records`, with
 `association_issues.kind="query_mismatch"`, a missing step prediction and a
