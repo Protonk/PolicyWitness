@@ -1456,3 +1456,50 @@ M4 controls remain deferred as previously dispositioned; F8 remains an H1 design
 note. A1 is open pending the auditor's return and lead dispositions. H1/M4 have
 not started. The tree is being committed at this re-audit boundary; no further
 implementation is authorized before the boundary is resolved.
+
+## A1 re-audit returned and reviewed
+
+The original auditor's follow-up and retention entry are preserved at `682fda9`
+before lead disposition. Their independent default run
+`a1-recheck-default-20261013` (`20261013T193011Z_7e1b6661`) passes 174/174
+at `9a1f20b` on unchanged build 566. The lead verified terminal ownership,
+counts, unchanged inventories and all 21 current app-file hashes. The auditor
+accepts the collection/status repair, valid failed collections, degraded raw
+evidence, unchanged versions 4/17/7, Swift fixture split and conservative reply
+bound, 196-case credit/provenance record, current documentation and cleanup.
+They did not independently rerun opt-ins because of their keychain restriction;
+that is an audit-scope limitation, not a new implementation-workflow restriction.
+
+A1-F10 identifies an error in the lead's earlier wrapper-control repair. The
+catalog exclusion removes every cataloged witness script from the expectation,
+leaving the baseline and only two validator scripts. The lead independently
+reproduced the auditor's observations in an offline scratch copy: the unchanged
+wrapper passes all 31 controls, removing phases.sh and extensions.sh also passes
+all 31, and removing the unexcluded validator script fails. The dispatcher
+still executes cataloged cases independently, so this does not invalidate the
+runtime acceptance or M3, but it is unfinished A1-F2 work. The lead assigns the
+small repair before A1 closure: include extension_boundaries.sh in the wrapper,
+restore complete sibling coverage and add omission mutations that must fail.
+No implementation or test repair is made in this review turn.
+
+A1-F11 is accepted as M5.1 hardening. Rust's as_array/as_str paths conflate
+present wrong-type data with absence for the reported phase container and
+validator-disposition cases. The lead inspected the retained Rust replay and
+its appended-test-only diff, traced the current branch, and replayed all 33
+retained inputs through both Python entry points with identical outputs; the
+Rust scratch build was not independently rerun. This confirms the narrower
+malformed-evidence gap without demonstrating fabricated native completion,
+access or ordering. The adjacent empty spawn-failure-object probe is carried
+with the review of reader validation responsibilities. The recommendation to
+clarify version-neutral enforcement of existing meanings is also recorded for
+M5.1; no permanent contract wording is changed here.
+
+Independent lead reproduction scripts, exact mutated wrappers, copied-input
+hashes and outputs are retained in the auditor run's `lead-review-20261013/`.
+Attachments were added under the checkout lock after owner/run-ID/terminal
+checks. They are local-only diagnostics, not extra registered acceptance
+credits. The returned attributed text is unchanged. The lead agrees that no
+finding invalidates M3; A1 remains open for F10 verification as a completion
+choice, with F11 and existing M4/H1 items explicitly carried. H1 and M4 have
+not started. No live, signing, XPC or TCC-sensitive execution occurred during
+this review.

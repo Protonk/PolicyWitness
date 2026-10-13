@@ -12,9 +12,9 @@ section. Execution dispositions remain separate from the attributed audit text.
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
 executing-agent review and corrections are recorded below. Final acceptance and
 the rendered recheck are complete; the original auditor's follow-up answers were
-returned on 2026-10-13 (two new findings, no remaining blocker), and the
-executing-agent disposition of the follow-up is pending. This exchange is not
-A1 closure; execution is standing by before H1 and M4.
+returned on 2026-10-13 and the executing-agent review is recorded below. M3 remains
+valid. The lead assigns the small A1-F10 wrapper-control repair before A1 closure
+and explicitly carries A1-F11 to M5.1. A1 remains open; H1 and M4 have not started.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -1124,7 +1124,59 @@ reader-hardening work rather than with this follow-up.
 
 #### Executing-agent disposition of follow-up
 
-Pending the original auditor's return. A1 is not closed by this handoff.
+Reviewed by executing agent `/root` on 2026-10-13. Commit `682fda9` preserves
+the returned follow-up and its retention entry before this disposition. The
+original answers, findings and follow-up text are unchanged. This turn reviews
+and records conclusions; it does not repair implementation or prepare H1.
+
+**Conclusion:** the re-audit supports M3 and the substantive A1 corrections.
+Collection-status consistency, valid failed collections, degraded evidence,
+unchanged wire versions, Swift fixture coverage and the unchanged maximum-reply
+bound are supported. The default-coverage gap is closed. I accept the auditor's
+provenance judgments and current-account corrections, and the existing M4/H1
+deferrals. The auditor found no blocker to H1 preparation. As a completion
+choice, I will finish the small unfinished A1-F2/F10 test repair before closing
+A1 instead of carrying that known regression forward. This does not reclassify
+it as a product failure or invalidate the 196-case acceptance evidence.
+
+I checked ownership and terminal accounting of `a1-recheck-default-20261013`
+(`20261013T193011Z_7e1b6661`): all 174 default cases passed, with no skips,
+unrun cases or artifact changes. All 21 current app-file hashes still match its
+inventory. The auditor did not rerun the 22 opt-ins because of their separate
+keychain restriction; they accepted the retained opt-in evidence after reviewing
+source/app provenance. That restriction is an account of their audit scope, not
+a new restriction on the authorized implementation workflow.
+
+I inspected the retained probes, Rust replay output and test-only scratch diff,
+and replayed all 33 documents through the current Python consumer/oracle with
+identical results. Observe-only rows deliberately expose differences; matching
+outputs do not establish universal shape-validation agreement. I did not rerun
+the auditor's scratch Rust build. Its results for the two reported malformed
+types follow directly from the current `as_array`/`as_str` paths. The lead's
+[offline review evidence](../tests/out/runs/a1-recheck-default-20261013/lead-review-20261013/README.md)
+retains the reproduction script, copied-input hashes, mutated wrappers and raw
+outputs. These artifacts are local-only and do not add registered case credits.
+
+| Item | Lead disposition |
+| --- | --- |
+| Follow-up 1: collection and versions | Accepted. No conforming producer shape changes meaning; the repaired checks enforce the existing status meanings and preserve raw degraded evidence. Keep versions 4/17/7. Carry the suggested concise clarification of the versioning rule to M5.1 contract review. |
+| Follow-up 2: isolation, Swift fixtures and bound | Accepted. The independent order/partition checks, conflicting-evidence degradation checks, shape golden and 52,414,779-byte conservative union remain intact. F10 is the exception below. |
+| Follow-up 3: acceptance and cleanup | Accepted. The 30 completed prior passes plus 166 resumed passes support the 196-case set, with explicitly reviewed copied-metadata exceptions. The independent 174/174 default run strengthens the result; the historical unnamed-shared-memory limitation remains unchanged. |
+| Follow-up 4: current documentation and deferrals | Accepted. Current wording matches the bounded behavior. F5, actual missing-helper-file, empty issuer-grant assertion and BYOXPC maximum-reply controls remain M4 work; F8 remains an H1 design note. |
+| A1-F10 | Accepted; repair within A1 before closure. My catalog-derived exclusion was too broad: it leaves the baseline and only two nonbaseline siblings in the expectation. Independent reproduction confirms that deleting both `phases.sh` and `extensions.sh` still passes all 31 controls, while deleting an unexcluded validator script fails. Restore complete sibling coverage by adding `extension_boundaries.sh` to the witness wrapper and removing the broad catalog exclusion, then add omission mutations that must fail. Update the account and run the affected controls; this is test coverage repair, not a change to the dispatcher's case coverage or product behavior. |
+| A1-F11 | Accepted and explicitly assigned to M5.1. Present wrong-type containers/values must not collapse into valid absence. Harden the Rust phase reader with negative controls for `phases: 7` and integer validator disposition, preserving optional absence and degraded raw evidence. No native completion, fresh-access or ordering fabrication was demonstrated by these probes, and the typed producer cannot emit the malformed shapes. |
+
+The adjacent probe with an empty spawn-failure object is also retained for
+M5.1: the full Python consumer rejects its shape while the narrower oracle/Rust
+checks do not. Review and document the boundaries of structural validation and
+claim validation rather than implying that all readers perform identical work.
+This is carried with F11's malformed-evidence review, not a new M3 defect.
+
+A1 remains open for the bounded F10 repair and its verification. Once that work
+is recorded, reevaluate closure and prepare H1 under the plan's existing human
+review boundary. No new live, signed or TCC-sensitive test ran in this review;
+no implementation or permanent-documentation source was changed.
+
 
 
 ## A2 Final audit — after M5.6

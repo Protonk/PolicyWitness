@@ -61,7 +61,7 @@ outside this plan.
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
-| A1 Middle out-of-band audit | Original-auditor follow-up ready; standing by | Corrections through `52bb1b9`; 196/196 final case credits (30 completed before the requested pause, 166 resumed at `efb588b`) and final rendered recheck pass. Exact applicability and cleanup evidence retained. [Focused follow-up](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-correction-follow-up--handoff-to-the-original-auditor) is ready; A1 remains open pending the original auditor's return and lead dispositions. |
+| A1 Middle out-of-band audit | Re-audit reviewed; small wrapper repair pending | Original auditor accepts M3, collection/version repair, bound, documentation and 196-case provenance; their independent default run passes 174/174. Lead reproduces A1-F10 and requires its test-only repair before closure; A1-F11 is explicitly carried to M5.1. [Dispositions](records/SANDBOX-EXTENSIONS-AUDIT.md#executing-agent-disposition-of-follow-up) preserve the returned text. |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
@@ -77,11 +77,13 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** standing by at the A1 re-audit boundary. The correction
-pass and its verification are complete; the focused handoff is ready for the
-original out-of-band auditor, Claude Fable 5.1. A1 remains open pending that
-return and the executing agent's dispositions. H1 and M4 have not started.
-Do not advance beyond this boundary on the strength of this handoff alone.
+**Execution state:** the returned A1 re-audit has been reviewed and dispositioned.
+The original auditor's text and retention entry are preserved at `682fda9`.
+M3 and the substantive A1 corrections remain supported. The lead independently
+reproduced A1-F10: the broad catalog exclusion weakens the wrapper control.
+A1 stays open for this small test-only repair and verification; A1-F11 is carried
+explicitly to M5.1. This turn records review and conclusions only. H1 and M4
+have not started; no implementation change was made during this review.
 
 Reviewed source is `efb588b54fd01caf1d91683e9df6a1bff8e45bbd`, with
 implementation unchanged from `52bb1b96df168033ccd24bb0ec96dc1385d30ffc`.
@@ -136,12 +138,24 @@ The older 25 empty M3 shared-memory objects with unrecorded names remain an
 explicit cleanup limitation; their absence is unverified and no prefix cleanup
 was attempted. No product change or correction-pass cleanup action is pending.
 
-**Next action:** await the original auditor's answers in the
-[focused follow-up](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-correction-follow-up--handoff-to-the-original-auditor).
-Then disposition them, resolve any blockers and close A1 only when justified.
-Formal H1 preparation remains after that closure; M4 remains after H1. Detailed
-correction history and diagnostics are in the
-[investigative record](records/SANDBOX-EXTENSIONS.md).
+The auditor's new `a1-recheck-default-20261013` run
+(`20261013T193011Z_7e1b6661`) passes 174/174 at `9a1f20b` on unchanged build
+566. The lead verified terminal ownership and current app hashes, independently
+reproduced the wrapper mutation results, and replayed all 33 retained Python
+probes. Their evidence is attached under that run's `lead-review-20261013/`;
+original auditor artifacts remain intact. Their 22 opt-in credits were reviewed
+from retained provenance, not independently rerun by the auditor.
+
+**Next action:** finish A1-F10 by adding `extension_boundaries.sh` to the witness
+wrapper, restoring complete sibling expectations and adding omission mutations
+that fail when an expected child is removed. Update the test account and verify
+the affected controls without weakening their assertions. Then record closure
+when justified and prepare H1; M4 remains after H1. A1-F11's wrong-type/absence
+handling, adjacent malformed-record validation scope, and the optional versioning
+clarification are explicit M5.1 work below. The
+[lead dispositions](records/SANDBOX-EXTENSIONS-AUDIT.md#executing-agent-disposition-of-follow-up)
+and [investigative record](records/SANDBOX-EXTENSIONS.md) distinguish the small
+unfinished test repair from the accepted production/evidence corrections.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
@@ -908,6 +922,16 @@ matrix and shared guide rules against the delivered encoders, consumers and
 controls. Review claim ownership, phase ordering, protocol names, worker progress,
 lifecycle records and incomplete publication together. Confirm that rules for
 phase association and native outcomes retain their meaning across all views.
+
+Carry A1-F11 into this review: reject present wrong-type phase containers and
+validator-disposition values in the Rust reader rather than treating them as
+absent. Add controls for the auditor's `phases: 7` and integer-disposition probes
+while preserving valid optional absence and degraded raw evidence. Review the
+adjacent empty spawn-failure-object probe and explicitly state the readers'
+structural-validation versus claim-validation responsibilities. Consider the
+re-auditor's suggested concise versioning clarification: enforcing already
+specified meanings for impossible producer combinations does not change the
+valid-document contract; genuine reading-rule changes still require a bump.
 
 **Completion gate:** `generator_contract`, `limits_documentation`, the blackbox
 checker controls and the Swift comparison tests pass together; every vocabulary
