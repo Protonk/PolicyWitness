@@ -495,9 +495,12 @@ report a response number without carrying the shape that number names.
 
 ## Public compatibility and correlation
 
-The response, request, controller envelope and worker ABI are separate
-contracts, owned by [docs/contract.json](../docs/CONTRACT.md). Semantic readers
-accept exactly the current numbers (see [Supported versions](#supported-versions)).
+The response, request and controller envelope are separate public contracts;
+[docs/contract.json](../docs/contract.json) owns their version numbers. Semantic
+readers accept exactly the current numbers (see [Supported versions](#supported-versions)).
+The internal host/worker boundary instead requires the same generated source
+identity, as described in [the wire contract](../docs/CONTRACT.md#internal-hostworker-identity).
+That identity is independent of the public JSON versions.
 Steps carry no signal channel; a null per-step `errno` requires key presence.
 
 No outcome spelling claims a sandbox termination cause or a precise
@@ -620,9 +623,15 @@ missing. Constructed classifier/encoding cases have separate credit.
 ## Worker evidence contract
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
-following the capture bytes. Host and worker require exactly the same generated source identity, with no fallback. The [layout golden](fixtures/contract/abi_layout.txt), checked against compiled C and Swift, owns offsets and sizes. The header carries the latest release ordinal, latest observed acknowledgement and fixed per-phase arrival, acknowledgement and completion records; the magic and identity bootstrap locations remain fixed. The reply carries the ordering evidence described below.
+following the capture bytes. Host and worker require exactly the same generated
+source identity, with no fallback. The [layout golden](fixtures/contract/abi_layout.txt),
+checked against compiled C and Swift, owns offsets and sizes. The header carries
+the latest release ordinal, latest observed acknowledgement and fixed per-phase
+arrival, acknowledgement and completion records; the magic and identity bootstrap
+locations remain fixed. The reply carries the ordering evidence described below.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
-Its `abi_identity` is the host-selected SHA-256 source identity encoded as a hex string, not proof the child reached ABI validation.
+Its `abi_identity` is the host-selected SHA-256 source identity encoded as a hex
+string, not proof the child reached ABI validation.
 An entirely absent publication remains explicit even after a mapping failure.
 Host process observations remain independent.
 
@@ -637,8 +646,8 @@ payload is read through progress. This is the latest milestone, not a history.
 
 Operations: 1 compatible header validation, 2 policy read, 3 parameter allocation,
 4 parameter assignment, 5 compilation, 6 optional profile capture, 7 readiness
-write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait. Started means
-control reached the call boundary; returned means control returned, regardless
+write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait.
+Started means control reached the call boundary; returned means control returned, regardless
 of success. Application is established only by `applied == 1`. Completed attempt
 outputs are established only by that slot's `completed == 1`.
 
@@ -674,9 +683,9 @@ with UINT32_MAX meaning absent. JSON renames the latter two to optional `errno`
 and `index`. Native kind 0 means no native return (stored result is padding,
 JSON native_result is omitted); 1 is a signed integer return; 2 is a NULL pointer
 return represented by zero, never a pointer address; 3 is a native clock-call
-return. Unfamiliar kinds retain
-the raw signed result. Unknown operation/code/detail are transported unchanged;
-recognition is not validity. Invalid errno presence or a nonzero result tagged as NULL rejects payload decoding.
+return. Unfamiliar kinds retain the raw signed result. Unknown operation/code/detail
+are transported unchanged; recognition is not validity. Invalid errno presence
+or a nonzero result tagged as NULL rejects payload decoding.
 Code 1 is native failure, 2 source capacity rejection (detail is maximum source
 bytes, excluding NUL), 3 policy read error, 4 step capacity, 5 parameter capacity,
 6 defensive parameter encoding rejection, 7 unprepared header, 8 proceed-wait
@@ -722,7 +731,8 @@ or success. A malformed/incomplete failure publication cannot yield `ok`.
 
 Both step channels carry `result_source` and optional `missing_reason`; the
 query channel also carries `native_rc`, emitted as explicit null when
-unavailable. The attempt channel has no native-return field.
+unavailable. Ordinary attempts have no general `attempt.native_rc` field;
+the separate `fresh_read` payload retains its individual syscall returns.
 Prediction rc=0 with outcome=error is a synthetic sentinel:
 result_source=synthetic and missing_reason=validator_not_invoked (no validator
 process), or validator_no_verdict (process ran without this verdict). Excluded
@@ -851,7 +861,8 @@ evidence and no request override selects them.
 `phases[].validator_subprocess` retains all accepted `records` with original `raw_line`,
 including explicit null step IDs. Its `expected_step_ids` and `association_issues`
 record missing, duplicate, unexpected and unassociated IDs, plus query mismatches.
-Only a unique record matching the submitted query enters the step join; duplicate records remain at run scope
+Only a unique record matching the submitted query enters the step join;
+duplicate records remain in the matching phase's `validator_subprocess.records`
 and produce no guessed prediction. Existing uniquely associated per-step error
 and unsupported-operation semantics remain: their diagnostic alone does not fail
 the run. Run-level framing/association gaps do fail it.

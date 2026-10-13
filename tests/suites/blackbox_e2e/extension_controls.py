@@ -56,9 +56,10 @@ def run_extension_controls(run):
         assert (not findings) == case['accepted'], (case['name'], findings)
         if case['accepted'] and case['status'] == 'not_reached':
             for field in ('ordering', 'ordering.validator_disposition'):
-                for value in (7, True, 'wrong', [], {}):
-                    if field == 'ordering' and value == {}:
-                        continue  # Full shape validation owns missing required fields.
+                # An ordering string has the wrong type; a disposition string
+                # has the right type and belongs to the vocabulary control below.
+                values = (7, True, 'wrong', []) if field == 'ordering' else (7, True, [], {})
+                for value in values:
                     changed = deepcopy(document)
                     changed_phase = changed['data']['runner_result']['phases'][-1]
                     if field == 'ordering':
@@ -68,6 +69,11 @@ def run_extension_controls(run):
                     run('phase_type_' + field + '_' + type(value).__name__, changed,
                         rejected_by='phase collection evidence has an invalid type')
                     assert any(f['kind'] == 'phase_collection' for f in check_record(changed))
+            changed = deepcopy(document)
+            changed['data']['runner_result']['phases'][-1]['ordering']['validator_disposition'] = 'wrong'
+            run('phase_unknown_validator_disposition', changed,
+                rejected_by='phase collection status contradicts validator evidence')
+            assert any(f['kind'] == 'phase_collection' for f in check_record(changed))
         if case['accepted'] and case['status'] == 'collected' and case['disposition'] == 'not_spawned':
             changed = deepcopy(document)
             changed['data']['runner_result']['phases'][-1]['validator_spawn_failure'] = {}

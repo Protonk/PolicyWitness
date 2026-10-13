@@ -646,6 +646,13 @@
       "reason": "M5.1 initial candidate deliberately cancelled after discovering proceed-failure formatter and contract omissions; preserve completed and unrun accounting without final acceptance credit.",
       "source": "de8b343e6f3e27f0f4e0045bdf888128c0aa7999",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m51-final-20261013",
+      "run_id": "20261013T221825Z_ab6a8824",
+      "reason": "M5.1 full 197-case run at clean ea10ce3/build 582: 196 pass, blackbox checker assertion misclassifies an unknown disposition string as wrong type; retained unchanged before correction.",
+      "source": "ea10ce39b418694630ba63c92d6a515d1006466e",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
