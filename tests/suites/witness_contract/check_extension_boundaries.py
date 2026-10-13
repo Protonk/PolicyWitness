@@ -185,9 +185,12 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None):
             if which:
                 assert events[0]['status'] == 'returned' and events[0]['native_result'] != -1
                 assert runner['steps'][1]['attempt']['result_source'] == 'worker'
-        elif worker_mode == 104 or issuer_mode == 10:
+        elif worker_mode == 104 or issuer_mode in (10, 16):
             assert events[0]['status'] == 'returned' and events[0]['native_result'] == -1
             assert events[1]['status'] == 'unavailable' and events[1]['unavailable_reason'] == 'handle_unavailable'
+            if issuer_mode == 16:
+                assert declaration['issuer']['token_length'] == 16383
+                assert declaration['delivery_status'] == 'delivered' and declaration['delivered_bytes'] == 16383
         elif worker_mode == 204:
             assert events[0]['native_result'] != -1
             assert events[1]['status'] == 'returned' and events[1]['native_result'] == -1 and events[1]['errno'] == 5
@@ -223,7 +226,7 @@ def main():
     pw, directory = sys.argv[1:]
     out = Path(directory).resolve()
     results = []
-    cases = [('native', 0, 0)] + [(f'issuer-{mode}', mode, None) for mode in range(1, 16)] \
+    cases = [('native', 0, 0)] + [(f'issuer-{mode}', mode, None) for mode in range(1, 17)] \
         + [(f'worker-{mode}', 0, mode) for mode in (101, 102, 103, 104, 105, 201, 202, 203, 204)]
     for name, issuer, worker in cases:
         try:

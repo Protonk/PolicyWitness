@@ -2000,7 +2000,7 @@
       },
       "phases": [
         {
-          "phase_id": "éééééééééééééééééééééééééééééééx",
+          "phase_id": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x",
           "actions": [
             {
               "step_id": "create",
@@ -2039,7 +2039,7 @@
       },
       "phases": [
         {
-          "phase_id": "éééééééééééééééééééééééééééééééé",
+          "phase_id": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
           "actions": [
             {
               "step_id": "create",
@@ -2235,5 +2235,2590 @@
       }
     },
     "repeat_phase_actions": 257
+  },
+  {
+    "id": "extension_paired_create",
+    "phase": "execution",
+    "lesson": "Preparation precedes actions: unavailable issuance does not suppress an ordinary create or fabricate lifecycle calls.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_declarations_over",
+    "phase": "meaning",
+    "lesson": "The declaration cap applies even if each declaration would be sequential.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        },
+        {
+          "token_ref": "other",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "extensions"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "extensions"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_requires_phases",
+    "phase": "meaning",
+    "lesson": "Declarations require explicit phase placement.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "extensions_require_phases",
+        "path": [
+          "extensions"
+        ]
+      },
+      "xpc": {
+        "code": "extensions_require_phases",
+        "path": [
+          "extensions"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_empty_token",
+    "phase": "meaning",
+    "lesson": "References are nonempty.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "empty_reference",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "empty_reference",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_empty_handle",
+    "phase": "meaning",
+    "lesson": "Consume must name its local handle reference.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": ""
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "empty_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "empty_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_unknown_token",
+    "phase": "meaning",
+    "lesson": "Consume resolves only the declaration in this specimen.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "other",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_token_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_token_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_duplicate_reference",
+    "phase": "meaning",
+    "lesson": "Token and handle references identify different observations.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "token"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "duplicate_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "duplicate_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_release_first",
+    "phase": "meaning",
+    "lesson": "A declared release needs an earlier consume even if runtime consumption might fail.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "release_before_consume",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "extension"
+        ]
+      },
+      "xpc": {
+        "code": "release_before_consume",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "0",
+          "extension"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_unknown_handle",
+    "phase": "meaning",
+    "lesson": "Release names the handle reference from an earlier consume.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "other"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_handle_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "2",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_handle_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "2",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_release_token",
+    "phase": "meaning",
+    "lesson": "Release accepts a handle reference only.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle",
+                "token_ref": "token"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "inapplicable_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "2",
+          "extension",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "inapplicable_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "2",
+          "extension",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_repeated_consume",
+    "phase": "meaning",
+    "lesson": "The consume cap holds across phases.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "later",
+          "actions": [
+            {
+              "step_id": "again",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "second"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "repeated_consume",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "extension"
+        ]
+      },
+      "xpc": {
+        "code": "repeated_consume",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "extension"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_repeated_release",
+    "phase": "meaning",
+    "lesson": "The release cap holds across phases.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        },
+        {
+          "phase_id": "later",
+          "actions": [
+            {
+              "step_id": "again",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "repeated_release",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "extension"
+        ]
+      },
+      "xpc": {
+        "code": "repeated_release",
+        "path": [
+          "phases",
+          "1",
+          "actions",
+          "0",
+          "extension"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_unknown_action",
+    "phase": "meaning",
+    "lesson": "Lifecycle operations are a closed vocabulary.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "transfer",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_extension_action",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "operation"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_extension_action",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "operation"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_exec",
+    "phase": "meaning",
+    "lesson": "Extension specimens cannot spawn an exec child.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "exec",
+                "action": "spawn",
+                "target": "/usr/bin/touch",
+                "args": [
+                  "$EFFECT"
+                ]
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "extension_exec_unsupported",
+        "path": [
+          "phases"
+        ]
+      },
+      "xpc": {
+        "code": "extension_exec_unsupported",
+        "path": [
+          "phases"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_raw_token",
+    "phase": "meaning",
+    "lesson": "Raw tokens are not an input field.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "token": "not-a-token"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "extensions",
+          "0",
+          "token"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "extensions",
+          "0",
+          "token"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_class",
+    "phase": "meaning",
+    "lesson": "The declaration does not accept arbitrary extension classes.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT",
+          "extension_class": "arbitrary"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "extensions",
+          "0",
+          "extension_class"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "extensions",
+          "0",
+          "extension_class"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_mixed_action",
+    "phase": "meaning",
+    "lesson": "An intervention cannot hide an ordinary pair on the same action.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "attempt"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "attempt"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_unknown_field",
+    "phase": "meaning",
+    "lesson": "Intervention field names are closed.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle",
+                "handl_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handl_ref"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handl_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_duplicate_step",
+    "phase": "meaning",
+    "lesson": "Ordinary and lifecycle IDs share one uniqueness rule.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "create",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "duplicate_step_id",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "step_id"
+        ]
+      },
+      "xpc": {
+        "code": "duplicate_step_id",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "step_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_missing_issuer",
+    "phase": "meaning",
+    "lesson": "Admission can succeed while the selected issuer capability is absent.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ],
+      "_test_overrides": {
+        "issuer_executable_path": "/private/tmp/pw-absent-request-corpus-issuer"
+      }
+    },
+    "expected": {
+      "cli": {
+        "code": "extension_issuer_unavailable",
+        "path": [
+          "extensions"
+        ]
+      },
+      "xpc": {
+        "code": "extension_issuer_unavailable",
+        "path": [
+          "extensions"
+        ]
+      },
+      "admission": null
+    }
+  },
+  {
+    "id": "extension_token_ref_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_token_ref_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_token_ref_unicode_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_token_ref_unicode_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_handle_ref_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_handle_ref_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_handle_ref_unicode_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_handle_ref_unicode_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_target_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_target_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "target"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "target"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_target_unicode_exact",
+    "phase": "execution",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9x"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "extension_target_unicode_over",
+    "phase": "meaning",
+    "lesson": "UTF-8 capacity is measured independently of scalar count.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "target"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "extensions",
+          "0",
+          "target"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_undeclared",
+    "phase": "meaning",
+    "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_token_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "token_ref"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_token_reference",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "token_ref"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_empty_step",
+    "phase": "meaning",
+    "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": "handle"
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "empty_step_id",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "step_id"
+        ]
+      },
+      "xpc": {
+        "code": "empty_step_id",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "step_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "extension_reference_type",
+    "phase": "meaning",
+    "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "extensions": [
+        {
+          "token_ref": "token",
+          "target": "$EFFECT"
+        }
+      ],
+      "phases": [
+        {
+          "phase_id": "main",
+          "actions": [
+            {
+              "step_id": "create",
+              "sandbox_check": {
+                "operation": "file-write-create",
+                "filter": {
+                  "kind": "path",
+                  "value": "$EFFECT"
+                }
+              },
+              "attempt": {
+                "kind": "file",
+                "action": "create",
+                "target": "$EFFECT"
+              }
+            },
+            {
+              "step_id": "consume",
+              "extension": {
+                "operation": "consume",
+                "token_ref": "token",
+                "handle_ref": 7
+              }
+            },
+            {
+              "step_id": "release",
+              "extension": {
+                "operation": "release",
+                "handle_ref": "handle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "phases",
+          "0",
+          "actions",
+          "1",
+          "extension",
+          "handle_ref"
+        ]
+      }
+    }
   }
 ]

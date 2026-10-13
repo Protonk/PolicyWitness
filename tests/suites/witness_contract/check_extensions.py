@@ -101,6 +101,17 @@ def run_targets(pw, out, target_dir, session_state):
     assert target.read_bytes() == contents
     (out / 'independent-observations.json').write_text(json.dumps({'device': metadata.st_dev,
         'inode': metadata.st_ino, 'content_hex': contents.hex(), 'unchanged_contents': True}, indent=2) + '\n')
+    for size in (63, 64, 65):
+        bounded = target_dir / f'read-{size}'
+        payload = bytes(range(size))
+        bounded.write_bytes(payload)
+        request = specimen(bounded, [[intervention('consume', 'consume'), probe('read', bounded),
+                                     intervention('release', 'release')]])
+        _, observed = capture(pw, out, f'fresh_read_{size}', request, session_state=session_state)
+        attempt = observed['steps'][0]['attempt']
+        assert attempt['rc'] == 0 and attempt['fresh_read']['read_rc'] == min(size, 64)
+        assert bytes.fromhex(attempt['fresh_read']['content_hex']) == payload[:64]
+        assert bounded.read_bytes() == payload
     read_observations = {'before': before['fresh_read'], 'during': during['fresh_read'],
                          'after': after['fresh_read'], 'release_result': release['native_result']}
     (out / 'access-observations.json').write_text(json.dumps(read_observations, indent=2) + '\n')

@@ -50,7 +50,7 @@
       "value": 256,
       "unit": "items",
       "refusal_field": "`probe_plan` or `phases.actions`",
-      "counting": "Total ordinary paired actions across the entire plan. Each action supplies at most one query; phases do not multiply this cap.",
+      "counting": "Total ordinary pairs and extension lifecycle actions across the complete plan. Lifecycle actions occupy slots but supply no query; phases do not multiply this cap.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -595,8 +595,8 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`_test_overrides.worker_executable_path` or `_test_overrides.validator_executable_path`",
-      "counting": "Each of `_test_overrides.worker_executable_path` and `_test_overrides.validator_executable_path`. Every path that fails byte or NUL admission is omitted from a refusal's `test_overrides`, even when another field is refused first.",
+      "refusal_field": "`_test_overrides.worker_executable_path`, `validator_executable_path` or `issuer_executable_path`",
+      "counting": "Each executable override path. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
       "sources": [
@@ -2534,6 +2534,385 @@
         }
       ],
       "behavior": "Bytes in a decoded validator error string, when present. The entire overlong record is rejected with bounded context; accepted values are never truncated."
+    },
+    {
+      "id": "extension_declarations",
+      "section": "admission",
+      "title": "Extension declarations",
+      "value": 1,
+      "unit": "items",
+      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "effect": "Additional declarations return `admission_refused`.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "symbol": "extensionMeaningFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+      "refusal_field": "`extensions`"
+    },
+    {
+      "id": "extension_consumes",
+      "section": "admission",
+      "title": "Consume actions",
+      "value": 1,
+      "unit": "items",
+      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "effect": "A repeated consume returns `repeated_consume`.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "symbol": "extensionMeaningFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+      "refusal_field": "`phases.actions.extension`"
+    },
+    {
+      "id": "extension_releases",
+      "section": "admission",
+      "title": "Release actions",
+      "value": 1,
+      "unit": "items",
+      "counting": "Across the complete specimen, including separate phases. Omitted actions are legal.",
+      "effect": "A repeated release returns `repeated_release`.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ProbeRunner.swift",
+          "symbol": "extensionMeaningFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+      "refusal_field": "`phases.actions.extension`"
+    },
+    {
+      "id": "extension_reference",
+      "section": "admission",
+      "title": "Token and handle references",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Each nonempty local token or handle reference; embedded NUL is refused.",
+      "effect": "Excess returns `admission_refused`; references must also satisfy declaration and action order.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "requestAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+      "refusal_field": "`extensions.token_ref` or `phases.actions.extension.token_ref` / `handle_ref`"
+    },
+    {
+      "id": "extension_target",
+      "section": "admission",
+      "title": "Issuance target path",
+      "value": 1023,
+      "unit": "UTF-8 bytes",
+      "counting": "Submitted target path, before host realpath preparation; excludes terminating NUL. This is separate from an ordinary attempt target.",
+      "effect": "Excess or embedded NUL returns `admission_refused`. Resolution and metadata failures remain preparation evidence.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "symbol": "PW_EXTENSION_PATH_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_outcome_bad_request/contract.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
+      "refusal_field": "`extensions.target`"
+    },
+    {
+      "id": "extension_token_storage",
+      "section": "transport",
+      "title": "Transient token storage",
+      "value": 16384,
+      "unit": "bytes",
+      "counting": "Fixed token array including its terminating NUL; never part of a retained reply.",
+      "effect": "Empty, oversized or malformed publications cannot supply a consumed token.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "symbol": "PW_EXTENSION_TOKEN_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+          "symbol": "run_case",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+    },
+    {
+      "id": "extension_token_payload",
+      "section": "transport",
+      "title": "Maximum token payload",
+      "value": 16383,
+      "unit": "bytes",
+      "counting": "Nonempty token bytes excluding the required trailing NUL.",
+      "effect": "Larger native results report `token_oversized`; malformed delivery is unavailable.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "symbol": "PW_EXTENSION_TOKEN_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+          "symbol": "run_case",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+    },
+    {
+      "id": "extension_channel",
+      "section": "transport",
+      "title": "Transient extension channel",
+      "value": 17472,
+      "unit": "bytes",
+      "counting": "Logical mapped channel with header, resolved path and token array. The OS backing object may round its storage up.",
+      "effect": "Insufficient backing size or invalid channel geometry cannot supply a token.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "symbol": "PW_EXTENSION_CHANNEL_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+          "symbol": "run_case",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+    },
+    {
+      "id": "extension_issuer_wait",
+      "section": "execution",
+      "title": "Issuer collection wait",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Monotonic host wait for the fresh issuer before worker creation. Separate from per-phase collection and worker waits.",
+      "effect": "Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_extension_channel.h",
+          "symbol": "PW_EXTENSION_ISSUER_WAIT_MS"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+          "symbol": "ExtensionSession"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_extension_boundaries.py",
+          "symbol": "run_case",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
+    },
+    {
+      "id": "fresh_read_bytes",
+      "section": "evidence",
+      "title": "Fresh file-read prefix",
+      "value": 64,
+      "unit": "bytes",
+      "counting": "At most one read from a freshly opened descriptor; content_hex encodes only the returned prefix.",
+      "effect": "Longer files remain readable experiments; the bounded result does not claim complete file contents.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_FRESH_READ_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "PWExtensionLimits"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "compare",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_extensions.py",
+          "symbol": "run_targets",
+          "kind": "boundary",
+          "form": "test"
+        }
+      ],
+      "behavior": "Known file contents just below, at and above the prefix capacity, descriptor identity and unchanged source bytes through standard and BYOXPC CLI."
     }
   ]
 }

@@ -847,3 +847,82 @@ local-only. M3 still requires its limits/maximum-reply and admission corpus,
 permanent contract/architecture/build/user accounts, consolidated acceptance and
 rendered assessment before A1. The earlier empty shared-memory object cleanup
 limitation remains recorded and is not revised by these passing controls.
+
+## M3 limits/admission pause checkpoint
+
+The user requested a clean pause during this increment. The active selection
+finished, its single checker defect was corrected and rerun, and no further
+implementation work was started. M3 and A1 remain open.
+
+The limits manifest now owns ten additional extension/fresh-read bounds:
+declarations, consume/release counts, reference and target bytes, token storage
+and payload bytes, transient-channel size, issuer wait and fresh-read prefix.
+Swift and C/layout checks establish the applicable values. Admission and reply
+guards use the shared Swift constants. The owning generator regenerated the
+limits account and guide; worker-identity copies were regenerated too.
+
+The shared request corpus adds 35 examples (81 total), covering native-action
+grammar, ordering/references, unsupported combinations, capacity boundaries in
+ASCII and multibyte UTF-8, and missing issuer capability. The Swift corpus can
+distinguish successful admission from a later helper-capability refusal. Signed
+CLI admission controls now include the issuer override path. A 16,383-byte
+synthetic token reaches delivery at the exact payload bound and is rejected by
+the real consume API; it is not an authority token. The separate real-token
+confinement controls remain intact. Fresh reads of independently known 63-, 64-
+and 65-byte files verify the 64-byte prefix bound and unchanged file contents.
+
+| Run suffix after `extensions-m3-` and before `-20261012` | Run ID | Original result |
+| --- | --- | --- |
+| `admission-unit` | `20261013T012656Z_0d5a7df7` | 380/403 Swift checks: real-driver cases refused the stale signed worker identity after source regeneration. Original diagnostics explicitly name the identity mismatch. |
+| `limits-admission` | `20261013T012952Z_f559434e` | Five of six cases passed; the admission checker raised KeyError because its expected-error map lacked the issuer override field. |
+| `admission-correction` | `20261013T013418Z_971c42bb` | `failure_boundaries/admission` passed after adding the expected `extension_issuer_unavailable` code, against the unchanged app. |
+
+The six-case selection used `tests/run.sh` with
+`--case runner_unit/pwrunner_core_unit_executable --suite runner_abi_layout
+--case runner_outcome_bad_request/accepted_input_contract
+--case failure_boundaries/admission --case witness_contract/extensions
+--case witness_contract/extension_boundaries`. Passing cases include all 403
+Swift checks and real-driver reader replay, the 81-example request corpus,
+both native layouts and manifest limits, extension placement/fresh reads, and
+all 26 native boundary controls. The correction selected only
+`failure_boundaries/admission`; it changed one test expectation map, so the other
+five results remain applicable. This is a reviewed reuse judgment, not a claim
+that an entire consolidated run passed. No product source changed after building.
+
+Build 556 reports `v0.2.8-36-g0a41ed1-dirty`, source
+`0a41ed11df580adcebab3431c653c96a5590d2d9`, and native identity
+`12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
+Signing used the established Developer ID identity. The two post-build runs
+verified valid app signatures before execution and unchanged app bytes afterward.
+Protocol versions remain request 4, response 17 and envelope 7. Generator checks
+and `git diff --check` pass. No broad acceptance credit is taken from this
+selection; the required coordinated admission and full M3 checks remain pending.
+
+All three runs are retained in `tests/RETAINED.json` with their original failed
+or passing status and attached console logs. The correction run's `checkpoint/`
+contains the signed-build log, build manifest, tracked diff, changed source copies
+and SHA-256 manifest based on `0a41ed1`. Snapshot collection preceded pause-note
+and retention-index edits. It records final source after the checker correction,
+not an exact source snapshot for either failed original run. Full-run source
+provenance stays null. Evidence is gitignored and local-only; attachment used
+the stable checkout lock after verifying run ID, completed state and ownership.
+
+All 26 observer receipts report completed cleanup; their target and recovery
+paths are absent. This selection installed no BYOXPC runner. Earlier verified
+BYOXPC removal and the earlier unrecorded empty shared-memory object limitation
+remain as recorded above. Build and test sessions have exited, and the process
+check found no runner/native test children. The checkout lock was acquired and
+released for evidence attachment without replacing its inode. The TCC preference
+remains in effect: extension/phase targets use owned temporary locations.
+
+Resume at the maximum-reply work in `ReplyMaximumTests.swift` and
+`docs/limits.json`: the old 52,257,718-byte reply bound and 152 MiB controller
+output cap have not yet been reassessed for extension and fresh-read fields.
+Cover the new string/numeric fields through the production encoder, and add
+mixed ordinary/native 256-action aggregate admission boundaries. Remaining work
+also includes the public grammar/examples, permanent guide/FAQ/build/signing
+and runner/controller accounts, architecture manifest and generated views,
+comparison matrix response-version update, consolidated signed M3 checks and a
+fresh rendered assessment. Preserve generator ownership and the distinction
+between independent native observations and constructed interpretation tests.
+Only after M3 closes should the A1 handoff be prepared; H1 and M4 are not started.

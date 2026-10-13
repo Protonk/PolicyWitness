@@ -64,7 +64,9 @@ func runRequestContractTests(_ tk: TestKit) {
                         failure = requestCapacityFailure(capacity, parsed: parsed)
                     } else { failure = requestMeaningFailure(parsed) }
                 } catch { failure = requestDecodeFailure(error) }
-                let expected = (example["expected"] as! [String: Any])["xpc"]!
+                let expectations = example["expected"] as! [String: Any]
+                // Capability refusals occur after admission in the live host.
+                let expected = expectations["admission"] ?? expectations["xpc"]!
                 let name = example["id"] as! String
                 if expected is NSNull { try expectNil(failure, name) }
                 else {

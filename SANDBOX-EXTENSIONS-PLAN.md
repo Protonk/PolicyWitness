@@ -60,7 +60,7 @@ outside this plan.
 | M0 Run-stage vocabulary | Complete | Six registered source-drift checks, unchanged worker identity and fresh rendered assessment passed; no findings. See the investigative record. |
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
-| M3 Minimal extension experiment through PW | In progress | Native and reader checkpoints `0daa018` and `d4f512a`; native boundary/confinement controls, independent readers, Swift evidence guards and both channel layouts pass. Preparation/placement, physical host erasure and shared standard/BYOXPC controls now pass. Limits, remaining contract work and consolidated gate/rendered assessment remain pending. |
+| M3 Minimal extension experiment through PW | In progress; paused on user request | Native, reader, placement/BYOXPC and issuer-dossier increments pass their targeted controls. Extension limits, admission corpus and native token/read boundaries now have passing targeted evidence. Maximum reply, remaining contract work and consolidated gate/rendered assessment remain pending. |
 | A1 Middle out-of-band audit | Pending | After M3; committed questions, returned auditor answers and execution dispositions in the shared audit document |
 | H1 Prepared human review | Pending | After M3's documentation assessment and A1 closure; prepared assessment, user response permitting continuation, and recorded disposition |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
@@ -77,15 +77,17 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** resumed at the user's instruction, with authorization to
-complete through A1 and then stand by. M0, M1 and M2 are complete; M3 is active.
+**Execution state:** paused at the user's instruction after the limits/admission
+increment. On resumption, the authorized scope remains completion through A1 and
+then standing by. M0, M1 and M2 are complete; M3 remains open.
 This checkpoint does not reach that audit boundary. M2's consolidated signed
 acceptance at `ac9c3b5` remains 113/113 cases. M3 implementation is committed at
 `0daa018101ed39ecfd92d6d528b112784ed9c30f`, followed by the reader integration
 increment described in the investigative record.
-The current development app is build 555, stamped `21b01d6-dirty`, with worker
-identity `5e8afcb85a49a54cb9df6b24cf594befd5b74712618161ebadd92679fc28c8a0`.
-It includes the Rust reader checks, native publication guards and issuer binary dossier. The native
+The current development app is build 556, stamped `0a41ed1-dirty`, with worker
+identity `12a5db4345b0801bd519224e65955eeb623f06664ed058c9a5c34ba7acbfc91d`.
+It includes the Rust reader checks, native publication guards, issuer binary dossier
+and shared extension-limit constants. The native
 boundary increment passes its registered live controls and the coordinated
 Swift, ABI and independent-reader selection. Diagnostic failures and accepted
 runs retain their original results, console logs and source snapshots; the
@@ -93,8 +95,10 @@ runs retain their original results, console logs and source snapshots; the
 The development identity remains
 `Developer ID Application: Adam Hyland (42D369QV8E)`.
 
-**Next action:** complete the limits/maximum-reply and admission corpus, permanent
-documentation/generator increment, then consolidated signed acceptance and the
+**Next action after resumption:** extend the maximum-reply bound and its string
+policy for extension/fresh-read evidence, and add mixed ordinary/native aggregate
+admission controls. The existing reply bound has not yet been reassessed. Then
+complete the permanent documentation/generator increment, consolidated signed acceptance and the
 rendered assessment. Prepare A1 only after that gate passes. Issuer dossier,
 older-record interpretation and signed-copy validation/capability controls pass.
 Issuer cleanup and
@@ -106,7 +110,11 @@ use and verify cleanup on success. One earlier diagnostic failed before writing
 ownership receipts and left empty shared-memory objects whose random names were
 not retained; their absence cannot be verified. That limitation is recorded
 explicitly. No token or native child was created in that attempt. All M3 BYOXPC fixtures have been removed with absence verified. No build or
-test process remains active at this increment.
+test process remains active at this pause. The final targeted selection passed
+five cases (including 403 Swift checks, ABI checks and 26 native controls); its
+admission checker failure was corrected and that case passed in a separate run
+against the unchanged app. Both original failures and replacement evidence are
+retained. This is incremental evidence, not consolidated M3 acceptance.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future

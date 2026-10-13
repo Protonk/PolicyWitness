@@ -510,9 +510,9 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
         if let refused = rule.failure(value) { return refused }
     }
     if let declarations = parsed.extensions {
-        if declarations.count > 1 { return PWRunnerAdmissionFailure(field: "extensions", actual: declarations.count, maximum: 1, unit: "items") }
+        if declarations.count > PWExtensionLimits.declarations { return PWRunnerAdmissionFailure(field: "extensions", actual: declarations.count, maximum: PWExtensionLimits.declarations, unit: "items") }
         for (i, declaration) in declarations.enumerated() {
-            for (key, value, cap) in [("token_ref", declaration.token_ref, requestLabelMaxBytes), ("target", declaration.target, 1023)] {
+            for (key, value, cap) in [("token_ref", declaration.token_ref, PWExtensionLimits.referenceBytes), ("target", declaration.target, PWExtensionLimits.targetBytes)] {
                 if let failure = AdmissionStringRule(field: "extensions.\(i).\(key)", maximum: cap, requiresCString: true).failure(value) { return failure }
             }
         }
@@ -522,7 +522,8 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
             guard case .extensionAction(let value) = action else { continue }
             for (key, text) in [("step_id", value.step_id), ("extension.operation", value.intervention.operation),
                                 ("extension.token_ref", value.intervention.token_ref), ("extension.handle_ref", value.intervention.handle_ref)] {
-                if let failure = AdmissionStringRule(field: "phases.\(pi).actions.\(ai).\(key)", maximum: requestLabelMaxBytes, requiresCString: true).failure(text) { return failure }
+                let cap = key.hasSuffix("_ref") ? PWExtensionLimits.referenceBytes : requestLabelMaxBytes
+                if let failure = AdmissionStringRule(field: "phases.\(pi).actions.\(ai).\(key)", maximum: cap, requiresCString: true).failure(text) { return failure }
             }
         }
     }

@@ -149,6 +149,13 @@ static char *controlled_issue(const char *kind, const char *path, uint32_t flags
         errno = 0; return value;
     }
     if (PW_CONTROL_MODE == 3) { errno = 0; return calloc(1, 1); }
+    if (PW_CONTROL_MODE == 16) {
+        char *value = malloc(PW_EXTENSION_TOKEN_BYTES);
+        if (!value) _exit(84);
+        memset(value, 'x', PW_EXTENSION_TOKEN_BYTES - 1);
+        value[PW_EXTENSION_TOKEN_BYTES - 1] = 0;
+        errno = 0; return value;
+    }
     if (PW_CONTROL_MODE == 4) _exit(87);
     if (PW_CONTROL_MODE == 5) { sleep(30); _exit(88); }
     errno = 0;

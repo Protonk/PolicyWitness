@@ -46,6 +46,16 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "phase_id": requestLabelMaxBytes,
                 "phase_publications": PWShmLayout.maxPhases * PWShmLayout.phaseBytes,
                 "phase_collection_wait": phaseCollectionBudgetMs,
+                "extension_declarations": PWExtensionLimits.declarations,
+                "extension_consumes": PWExtensionLimits.consumes,
+                "extension_releases": PWExtensionLimits.releases,
+                "extension_reference": PWExtensionLimits.referenceBytes,
+                "extension_target": PWExtensionLimits.targetBytes,
+                "extension_token_storage": PWExtensionLimits.tokenBytes,
+                "extension_token_payload": PWExtensionLimits.tokenBytes - 1,
+                "extension_channel": ExtensionSession.channelBytes,
+                "extension_issuer_wait": ExtensionSession.issuerWaitMs,
+                "fresh_read_bytes": PWExtensionLimits.freshReadBytes,
                 "validator_reply_frame": ValidatorReplyLimits.frameBytes,
                 "validator_records_per_query": ValidatorReplyLimits.recordsPerProbe,
                 "validator_reply_bytes_per_query": ValidatorReplyLimits.frameBytes * ValidatorReplyLimits.recordsPerProbe,
@@ -91,6 +101,9 @@ func runLimitsContractTests(_ tk: TestKit) {
             try expectTrue(observed["worker_proceed_wait"]! > validator.verdictReadTimeoutMs
                 + validator.exitGraceMs + validatorReleaseMarginMs)
             try expectEqual(PWRunnerPhase.maximumCount, PWShmLayout.maxPhases)
+            try expectEqual(PWExtensionLimits.tokenBytes, PWExtensionLayout.tokenBytes)
+            try expectEqual(PWExtensionLimits.targetBytes + 1, PWExtensionLayout.pathBytes)
+            try expectEqual(PWExtensionLimits.freshReadBytes, PWShmLayout.freshReadBytes)
             try expectEqual(timeoutMsForValidator(override: nil), validator.verdictReadTimeoutMs)
             try expectEqual(timeoutMsForValidator(override: -100), 50)
             try expectEqual(timeoutMsForValidator(override: 70), 70)

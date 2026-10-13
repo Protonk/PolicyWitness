@@ -2272,7 +2272,7 @@ extension PWRunnerRunResult {
     func extensionEvidenceProblem() -> String? {
         let events = extension_events ?? []
         let declarations = extensions ?? []
-        if declarations.count > 1 || events.count > 2 || (!events.isEmpty && declarations.count != 1) { return "extension record capacity or association" }
+        if declarations.count > PWExtensionLimits.declarations || events.count > PWExtensionLimits.consumes + PWExtensionLimits.releases || (!events.isEmpty && declarations.count != 1) { return "extension record capacity or association" }
         let ids = phases.flatMap { $0.action_ids }
         var consume: PWRunnerExtensionEvent?
         var released = false
@@ -2318,7 +2318,7 @@ extension PWRunnerRunResult {
             }
             if declaration.delivery_status == "delivered" {
                 guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,
-                      bytes > 0 && bytes < 16384, bytes == declaration.issuer?.token_length,
+                      bytes > 0 && bytes < PWExtensionLimits.tokenBytes, bytes == declaration.issuer?.token_length,
                       declaration.issuer?.native_nonnull == true, declaration.issuer?.result_published == true,
                       declaration.issuer?.reaped == true, declaration.issuer?.exit_code == 0 else { return "delivery lacks bounded issuance and issuer reap" }
             }

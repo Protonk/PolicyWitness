@@ -436,6 +436,27 @@
       "reason": "M3 issuer binary dossier, capability and signed validation diagnostics/verification; original outcomes retained.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-admission-unit-20261012",
+      "run_id": "20261013T012656Z_0d5a7df7",
+      "reason": "M3 diagnostic: regenerated source identity with stale signed worker; original 380/403 Swift result retained.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-limits-admission-20261012",
+      "run_id": "20261013T012952Z_f559434e",
+      "reason": "M3 limits/admission increment: five cases passed including 403 Swift checks and 26 native controls; admission checker failed on missing expected-code entry.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m3-admission-correction-20261012",
+      "run_id": "20261013T013418Z_971c42bb",
+      "reason": "M3 pause checkpoint: corrected admission checker passed against unchanged build 556; source snapshot and signed-build log retained.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
