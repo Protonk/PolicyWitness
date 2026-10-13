@@ -2,8 +2,9 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M3 and A1 are complete. F10 is repaired and verified at
-`7bfbdcd`; H1 is prepared and awaiting the user's response. M4 has not started.
+Current status: M0–M3, A1 and H1 are complete. F10 is repaired and verified at
+`7bfbdcd`; the user accepted the H1 recommendations on 2026-10-13. M4 has not
+started and is the next implementation milestone.
 The signed app remains build 566 from clean `2f380d0`. The latest acceptance
 account and design recommendation are at [F10 closure](#a1-f10-closure) and
 [H1 prepared human review](#h1-prepared-human-review) below. Historical entries
@@ -1561,10 +1562,10 @@ was introduced. The existing verified removals and unverified absence of the
 
 ## H1 prepared human review
 
-Status: awaiting the user's response. A1 is closed by the F10 disposition above;
-M4 has not started. The lead recommends retaining the implemented bounded design
-and proceeding with the already assigned M4/M5 work after the user's response
-permits continuation. Neither the fresh rendered M3 assessment nor the original
+Status: complete. The user accepted the recommendations on 2026-10-13 after
+discussion of interruption hooks and diagnostic-host alternatives. The prepared
+briefing is preserved below; the user disposition follows it. A1 is closed by
+the F10 disposition above. M4 has not started. Neither the fresh rendered M3 assessment nor the original
 auditor identified a substantial unnecessary general mechanism or competing
 model. The repeated evidence rules are a real maintenance cost, demonstrated by
 A1-F3 and F11; the recommendation does not imply that every reader now rejects
@@ -1662,7 +1663,31 @@ no live runner, signing or TCC-sensitive test. M4 retains the combined-fault and
 missing-helper-file controls; M5.1 retains F11. Neither is silently discharged
 by this design recommendation.
 
-**Decision requested at H1:** retain these choices and permit continuation to M4,
-or redirect a specific mechanism. This is the plan's scheduled human review:
-“Resume only when the user's response permits continuation.” The preparation is
-committed before pausing; record the response and close H1 before starting M4.
+**Decision requested when H1 was prepared:** retain these choices and permit
+continuation to M4, or redirect a specific mechanism. The preparation was
+committed at `772d06b` before the scheduled human review pause.
+
+
+### H1 user disposition
+
+On 2026-10-13 the user requested the interruption-hook outflow note and said
+H1 could be considered complete with their agreement on the recommendations.
+The executing agent accepts this as closure of the scheduled H1 boundary.
+Retain the separate issuer, fresh per-phase validator, independent evidence
+checks, common action index, current interruption hooks and local repeated-action
+guard. No API, implementation or evidence requirement was redirected.
+
+The discussion distinguished future diagnostic-host controls with an unchanged
+worker from precise interruption of a separately debug-eligible worker. It also
+identified the possible redundancy of the replacement-function interruption,
+instrumentation fidelity, per-executable signing, and the current BYOXPC
+installer's coupling of worker/host entitlements as matters to revisit. A
+standalone outflow note preserves that investigation without an inbound plan
+link, as requested. It is deferred work, not a new prerequisite or a promise to
+build a debugging framework during M4.
+
+No build, runtime test, attachment, injection or signing experiment was performed
+for this documentation-only closure. The accepted implementation and its test
+and rendered-documentation evidence are unchanged. A1's named M4/M5 follow-ups
+remain assigned; H1 is complete and M4 is next. No active task process or new
+cleanup ownership remains.

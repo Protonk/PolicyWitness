@@ -12,8 +12,9 @@ section. Execution dispositions remain separate from the attributed audit text.
 Status: complete. Original auditor answers and follow-up returned on 2026-10-13
 (Claude Fable 5.1, out of band) remain attributed and unchanged. The executing
 agent's corrections, review and final F10 verification are recorded below.
-M3 remains valid; F10 is closed and F11 is explicitly assigned to M5.1. H1 is
-prepared and awaiting the user's response; M4 has not started.
+M3 remains valid; F10 is closed and F11 is explicitly assigned to M5.1. The user
+accepted the H1 recommendations on 2026-10-13; H1 is complete and M4 has not
+started. The historical audit and preparation entries below retain their context.
 
 ### A1 Handoff, questions and auditor answers
 

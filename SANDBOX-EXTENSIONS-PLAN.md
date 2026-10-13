@@ -62,7 +62,7 @@ outside this plan.
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
 | A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 remains M5.1 work. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
-| H1 Prepared human review | Awaiting user | [Briefing and implementation evidence](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) prepared after M3/A1 closure. Recommend retaining the bounded design; pause before M4 until the user response permits continuation. |
+| H1 Prepared human review | Complete | User accepted the recommendations on 2026-10-13 after discussion of interruption hooks and diagnostic-host alternatives. Retain the bounded design; further hook investigation is deferred, not an added gate. The [briefing and disposition](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) record the agreement. |
 | M4 Failure combinations and adversarial coverage | Pending | Requires M3, A1 and H1 closure; extends the boundary controls already required in M2 and M3, plus the M4 contract increment |
 | M5.1 Evidence contract closure | Pending | Requires M4 |
 | M5.2 Limits account | Pending | Requires M5.1 |
@@ -77,17 +77,20 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** A1 is complete and H1 is prepared. F10 is repaired at
+**Execution state:** A1 and H1 are complete. The user accepted the design
+recommendations on 2026-10-13 after discussing interruption hooks and possible
+diagnostic-host experiments. Those future investigations do not change the
+current design or add a milestone prerequisite. F10 is repaired at
 `7bfbdcdcb30bbc55b74a28561eb2fd1ffeeeee89`: complete sibling coverage is restored,
 the missing extension-boundary wrapper child is included, and three omission
 controls prove that missing phase/extension children are rejected. The fresh
 rendered recheck has no findings. Original auditor answers remain unchanged.
-F11 remains assigned to M5.1. Execution pauses at H1 awaiting the user's response;
-M4 has not started.
+F11 remains assigned to M5.1. The human review boundary is closed; M4 has not
+started and is the next implementation milestone.
 
 The [H1 briefing](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) ties
 rendered architecture/contract/test passages and A1 Q6/F8 to the implementation.
-Recommendation: retain the separate ordinary-authority issuer, fresh validator
+Accepted recommendation: retain the separate ordinary-authority issuer, fresh validator
 per phase, independent evidence checks, all-action disposition index, narrow
 compile-time interruption hooks and local repeated-action guard. No substantial
 unnecessary general mechanism or competing model was found. Reader consistency
@@ -173,16 +176,14 @@ probes. Their evidence is attached under that run's `lead-review-20261013/`;
 original auditor artifacts remain intact. Their 22 opt-in credits were reviewed
 from retained provenance, not independently rerun by the auditor.
 
-**Next action:** stand by at H1. Present the prepared recommendation and wait
-for the user's response permitting continuation. Then record any redirection,
-update affected plan/evidence, close H1, and begin M4. Do not infer permission
-from elapsed time or from the earlier instruction to prepare H1. A1-F11's
-wrong-type/absence handling, adjacent malformed-record validation scope and the
-optional versioning clarification remain explicit M5.1 work below. The
-[final A1 disposition](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure)
-and [H1 briefing](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review)
-contain the evidence and design recommendation. No process remains active and
-there is no new cleanup ownership from this offline increment.
+**Next action:** begin M4 under its existing scope and verification requirements.
+M3, A1 and H1 prerequisites are complete. Keep the accepted design and the named
+M4 corrections/controls; no diagnostic-host build or new debugger mechanism is
+required by this plan. A1-F11's wrong-type/absence handling, adjacent malformed
+record validation scope and optional versioning clarification remain M5.1 work.
+The H1 closure changes only records and checkpoint prose; existing runtime and
+rendered implementation evidence remains applicable. No test, build or render
+process is active, and there is no new cleanup ownership.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
