@@ -10,7 +10,8 @@ section. Execution dispositions remain separate from the attributed audit text.
 ## A1 Middle audit — after M3
 
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent review recorded below; corrective follow-up pending. M3 implementation and its
+executing-agent review recorded below; corrections committed, final acceptance
+paused at the user's request. The follow-up handoff is not yet ready. M3 implementation and its
 rendered-documentation assessment are complete. This exchange is not A1
 closure; execution is standing by before H1 and M4.
 
@@ -716,6 +717,20 @@ Before A1 closes, commit the test/reader and current-account corrections,
 affected checks, rendered rechecks and updated applicability evidence. Obtain
 auditor follow-up where changes or disputed semantics require it. This review
 does not relabel the 172/174 audit run as passing or replace its original output.
+
+### A1 correction checkpoint — requested pause
+
+Corrections are committed at `52bb1b96df168033ccd24bb0ec96dc1385d30ffc`;
+current signed app is build 566 from `2f380d0`. The earlier full default run
+passed 174/174. The final 196-case selection was stopped at the user's request:
+[the terminal partial run](../tests/out/runs/a1-repair-accepted-20261013/run.json)
+records 30 passed and 166 unrun, with an unchanged app inventory. It is not
+acceptance. The final rendered recheck has no remaining findings; artifacts and
+an explicitly unfinished handoff draft are retained under that run. The plan's
+checkpoint contains exact resume instructions. The completed follow-up will
+return to the original out-of-band auditor; no replacement auditor is being
+commissioned. Original attributed answers remain unchanged. A1 stays open;
+H1 and M4 have not started.
 
 ## A2 Final audit — after M5.6
 

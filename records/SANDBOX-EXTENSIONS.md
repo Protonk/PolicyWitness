@@ -1355,3 +1355,43 @@ record exists. The corrected cell qualifies that claim and has a new immutable
 render for recheck. These final changes affect test readers and prose only.
 The next acceptance run consolidates all default and required opt-in cases,
 so final credits need no reuse of results from the earlier oracle revision.
+
+## A1 requested pause during final acceptance
+
+The user requested a safe pause while the final combined default/opt-in run was
+active. Correction commit `52bb1b96df168033ccd24bb0ec96dc1385d30ffc` is clean;
+signed app build 566 remains from `2f380d0`. The final selection contains 196
+canonical cases. Run `a1-repair-accepted-20261013`, ID
+`20261013T173617Z_a52124f2`, was interrupted with one SIGINT to the verified
+owned dispatcher PID 3029. Its terminal report is unsuccessful because 166
+cases are unrun; 30 completed cases passed, none failed or skipped. The wrapper
+exited 1, the app inventory is unchanged, and no build/test/render process
+remained at the process check. The output name does not confer acceptance.
+
+The earlier default run passed all 174 cases at `2f380d0`. All 26 of that run's
+owned observer-channel receipts report completed cleanup; an independent
+read-only `shm_open` check returned ENOENT for each exact recorded name, and
+all recovery paths are absent. No live BYOXPC or native observer case started
+in the cancelled run. Its shell-helper session records are constructed test
+controls, not installed services. The older 25 unrecorded empty shared-memory
+names remain an unchanged historical limitation.
+
+The existing documentation reviewer completed its final recheck: the setup/spawn
+wording finding is closed and no findings remain. The lead inspected the final
+page as well. All twelve final changed document sources match the selected
+immutable render snapshots. The report, all initial/superseding rendered views,
+source/HTML/PDF/PNG manifests and renderer scripts were copied into the partial
+run's `reviews/` under the checkout lock after owner/run-ID/terminal validation.
+`reviews/current-source-applicability.json` records exact hashes and reuse scope.
+No runtime acceptance is inferred from the rendered review. Both documentation
+baselines remain byte-identical to M2.
+
+The same locked attachment retained the signed-build log, console, source hashes,
+full selection/command, 22 opt-in IDs, 166 remaining case IDs, cleanup observations
+and an explicitly unfinished audit-handoff template in `checkpoint/`. These
+artifacts are local-only and gitignored. The final handoff is not published into
+the audit exchange: its acceptance/cleanup placeholders, final run references
+and credit wording still need completed evidence. Resume with a fresh managed
+run for the remaining cases, review source applicability for the 30 prior passes,
+and produce the exact final credit manifest before returning the handoff to the
+original auditor. A1 stays open; H1 and M4 have not started.
