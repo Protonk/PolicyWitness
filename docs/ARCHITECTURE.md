@@ -33,10 +33,12 @@ The reply path must stay outside the policy under test. A `(deny default)`
 profile can deny the worker's own writes and even its exit, so the worker
 never reports over a pipe after applying. It publishes into a shared region
 the host mapped and pre-touched before the spawn, and the host, which never
-applies anything, assembles the reply. The same split makes the worker's exit
-status the source of truth about what happened to it, which is what the
+applies anything, assembles the reply. Published attempt, native-call and progress
+records describe the worker's observations; the host separately observes process
+exit and cleanup. The
 [disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)
-is built from.
+keeps those sources distinct. Exit status alone does not establish an action's
+outcome or whether a native call completed.
 
 The host is an XPC service that launchd starts for one specimen and that exits
 shortly after replying, so no host state outlives a run. The controller is a
@@ -371,8 +373,9 @@ this document links it wherever it needs a rule and never restates one.
 
 Each node below is a record that crosses from one owner to another, and each
 edge is the guard that lets it cross. [contract.json](contract.json) owns the
-wire version numbers and the build generates one source identity
-([CONTRACT.md](CONTRACT.md)). The records that carry a local version field
+wire version numbers. The identity generator produces one host/worker source
+identity; the build checks its copies and refuses stale ones without rewriting
+them ([CONTRACT.md](CONTRACT.md#internal-hostworker-identity)). The records that carry a local version field
 of their own, each read by exactly one receiver, are the observer report,
 the evidence manifest, the runner registry, the validator NDJSON and the compiled-object receipt,
 and the node table's Form column names each one's field. Every other
@@ -552,8 +555,10 @@ this section names the mechanisms they are built from.
   a test. Prose that still states a value, a count or a citation outside
   these mechanisms is listed in the
   [prose baseline](../tests/fixtures/docs/prose_baseline.json), which grows
-  only by an explicit entry and which a release cannot grow. Nothing reads a
-  manifest at run time.
+  only by an explicit entry and which a release cannot grow. These documentation
+  input manifests are not runtime inputs. The separate embedded evidence manifest
+  is read by the controller during a run, as the
+  [run inventory](../controller/README.md#what-a-run-reads-and-launches) describes.
 - **Source-drift rules.** Mechanical checks over text that is not generated,
   from the host invariance rule to the harness note's copies. Each rule is a
   citation of the drift node in the document graph, and a test holds that
@@ -562,12 +567,15 @@ this section names the mechanisms they are built from.
   envelope on exact versions, validates every step against its raw channel
   fields through the goldens, and selects steps by field; it is the reader
   the suites share and the reader an external consumer is expected to copy.
-- **The test seam.** `_test_overrides` is the only way a test reaches inside
-  a run: deadlines, hangs, a self-signal, and replacement worker or
-  validator executables, each honored and echoed in the reply. The supported
+- **Request-exposed test controls.** `_test_overrides` can select deadlines,
+  hangs, a self-signal, and replacement worker, validator or issuer executables.
+  Supplied controls are echoed when available, subject to refusal sanitization;
+  an echo does not prove that execution reached the selected boundary. The supported
   keys are the table in [runner/README.md](../runner/README.md), locked to
-  the Swift type by a drift rule, and the four-assertion recipe for using
-  them is in [runner/AGENTS.md](../runner/AGENTS.md).
+  the Swift type by a drift rule, and the assertion recipe is in
+  [runner/AGENTS.md](../runner/AGENTS.md). Direct driver tests also inject process
+  calls, and [native extension fixtures](../tests/fixtures/extension_controls/README.md)
+  instrument separately compiled helpers; these are distinct test boundaries.
 - **The C harness.** `runner_c_worker_harness` drives the real worker
   through the shared-memory ABI from a C program with no host, so the
   worker's publication and failure paths are pinned independently of the
