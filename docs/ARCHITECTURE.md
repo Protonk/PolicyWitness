@@ -483,10 +483,13 @@ runtime guarantee.
   host's worker relationship, refusal without a file effect, owner completion
   and successful service from a fresh host.
 - **Host/worker split.** The host never links, loads or calls libsandbox.
-  Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
-  any binding under `runner/Sources/`, and [`host_invariance`](../tests/lib/artifact.py) in
-  artifact.py runs `nm -u` on the shipped host
-  before any app-dependent suite runs.
+  `check_host_invariance` checks sources under `runner/Sources/` for direct
+  sandbox calls and bindings or lookups named by literals and simple constants.
+  [`host_invariance`](../tests/lib/artifact.py) inspects the shipped host's
+  undefined imports with `nm -u` before any app-dependent suite runs.
+  These checks do not resolve arbitrary computed library or symbol names; the
+  [source-drift invariants](../tests/suites/source_drift/README.md#invariants)
+  describe their coverage.
 - **Witness over interpretation.** An attempt's `rc` is never the claim; the
   comparison record names its `observation_basis`. The consumer,
   [consumer.py](../tests/lib/consumer.py), re-derives every step's expected
