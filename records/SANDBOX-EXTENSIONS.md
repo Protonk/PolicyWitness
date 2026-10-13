@@ -2,13 +2,13 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M4, A1 and H1 are complete. The user authorized continuation
-through M5.1 and a clean stop there. M4 acceptance, rendered findings and their
-corrections are recorded under [M4 closure](#m4-closure). M5.1 remains in progress;
-A1-F11 and evidence-account closure are its remaining work. Signed build 578 is
-from clean `b641054`; M4's corrected test source is `2e6a2c1`. Historical entries
-retain their original observations; the associated plan owns current resume
-instructions.
+Current status: M0–M5.1, A1 and H1 are complete. Work is stopped at the user's
+requested M5.1 boundary with M5.2 and later milestones pending. A1-F11 and the
+evidence account are closed; [M5.1 closure](#m51-closure) records corrections,
+197 passing case credits, final rendered review and cleanup. Signed build 582
+is from clean `ea10ce3`; corrected test/documentation source is `e1231bd`.
+Historical entries retain their observations; the associated plan owns current
+resume instructions.
 
 ### M1 initial checkpoint
 
@@ -1804,3 +1804,128 @@ document sources are byte-identical. The lead accepts those dispositions and the
 HTML/PDF/PNG manifests and renderer scripts are under the correction run's
 [reviews](../tests/out/runs/extensions-m4-review-fixes-20261013/reviews/).
 A1-F11 and the broader evidence-account review remain M5.1 work.
+
+## M5.1 closure
+
+M5.1 is complete at corrected test/documentation source
+`e1231bd4f4c3ebcf74cbfc6e261658f3212e991d`. Signed app 0.2.8 build 582 is from
+`ea10ce39b418694630ba63c92d6a515d1006466e`, clean stamp `v0.2.8-62-gea10ce3`;
+its worker identity is
+`5fd52343fc4431d5d7f7ab0f7aed326d432950ec9922a98c9a16d0226ab6de2e`.
+Request/response/envelope remain 4/18/7. Maximum reply remains 52,414,779 bytes;
+ABI geometry and both documentation baselines are unchanged. The final checkpoint
+commit adds plan, record and retention metadata; it is not the source of that build.
+
+A1-F11 is repaired in `de8b343`. The Rust claim reader rejects present wrong-type
+phase containers, entries, ordering objects, dispositions and spawn-failure
+objects before interpreting optional values. Missing/null optional evidence stays
+absent; degraded reporting-failure replies retain their raw evidence. Production
+assembly controls assert unchanged raw replies and withheld ordinary projections
+for the auditor's `phases: 7` and integer-disposition probes. The independent
+Python claim reader rejects the same impossible types. Empty spawn objects expose
+the documented responsibility boundary: full consumers require complete record
+shape, while the disposition reader checks supported claims and contradictions.
+A valid disposition projection is not whole-response structural certification.
+
+The two new Rust controls first failed on the old reader and passed after the
+repair, alongside the existing phase consistency control. The retained red/green
+logs and exact test-only red diff are in the cancelled initial run's `checkpoint/`.
+The versioning clarification distinguishes enforcement of an existing invariant
+from a change to valid-document meanings; genuinely changed reading rules still
+require the wire-contract bump. This repair introduces no new accepted document
+shape or vocabulary.
+
+The contract review also found that host diagnostics labeled every operation-11
+failure detail as a wait budget. The production worker's future-release failure
+instead publishes the observed ordinal. `ea10ce3` formats known code/kind pairs
+with their actual units and leaves unfamiliar details uninterpreted. Real C-worker
+stale/future second-release controls distinguish the 80 ms timeout from ordinal 3,
+retain earlier phase completion and reject invented later action evidence. An
+unfamiliar-code control requires raw detail without either interpretation. Worker
+identity was regenerated because host orchestration is one of its inputs; the
+wait, release store and eligibility behavior did not change.
+
+The handwritten account now includes lifecycle actions in disposition step
+indexing, phase-relative progress positions, transfer timeout cleanup, clock-native
+results, failure codes 8–11 and their units, fresh-read syscall returns, and
+phase-local validator retention and replanning. It distinguishes public version
+numbers from the internal source identity. Shared reading rules and guide copies
+already preserve these meanings; regeneration leaves their bytes unchanged.
+The comparison vocabulary check records agreement for four observations, five
+bases, three operation relations, three target relations, two orders and eight
+limitations. Three limitations occur in the matrix's declared vocabulary and
+separate constructed controls rather than a live matrix row; spelling checks alone
+are not semantic evidence. The retained review records the corresponding source
+traces and limits.
+
+### M5.1 verification and corrections
+
+- `extensions-m51-acceptance-20261013`, run ID `20261013T221346Z_bccd72df`,
+  is an intentionally cancelled initial attempt at clean `de8b343`, build 581.
+  Eleven completed cases passed and 186 were unrun. The phase-detail finding
+  prompted cancellation through the dispatcher's supported SIGINT path. Original
+  terminal accounting, unchanged-app result, source snapshot, build log and
+  cancellation reason remain retained. It contributes no acceptance credits.
+- `extensions-m51-final-20261013`, run ID `20261013T221825Z_ab6a8824`, at clean
+  `ea10ce3`, build 582, completed 197/197 cases: 196 pass, one fail, no skips or
+  unrun cases, unchanged app inventory. `blackbox_e2e/checker_controls` failed
+  because its new mutation expected an unknown disposition string to be a type
+  error; the reader correctly rejected the value with a vocabulary/consistency
+  diagnostic. `e1231bd` separates wrong types from the unknown string, retaining
+  both negative checks. The original full run remains failed.
+- `extensions-m51-doc-closure-20261013`, run ID `20261013T223127Z_78754a9d`, at clean
+  `e1231bd`, unchanged build 582, passed 9/9: all six `source_drift` cases,
+  both `runner_unit` cases and the complete blackbox checker. Thus
+  `generator_contract`, `limits_documentation`, checker controls and Swift
+  comparison tests pass together. Actual Swift output is 416/416 with no guarded
+  skip, including real phase controls and Rust/Python driver replay.
+
+The final run's `checkpoint/acceptance-credits.json` maps 197 passing credits
+(175 default plus 22 required opt-ins) to nine fresh replacements and 188 reviewed
+reuses. `source-applicability.json` records the exact three-file delta, identical
+app inventories and dependency judgments. The changed blackbox helper is imported
+only by the freshly rerun checker case. All generated/shared-copy inputs,
+production code, remaining executable test paths and fixtures are unchanged;
+source-drift owns and freshly checks the handwritten prose. Build/dispatcher
+fixture copies can include that prose and the test helper without executing the
+changed path; those are reviewed exceptions, not deductions from app identity.
+The initial cancelled and full failed histories are not rewritten.
+
+The full run includes native lifecycle on standard and BYOXPC runners, maximum
+reply on both paths, all eight combined-fault matrix controls, actual failure
+boundaries, ordering mutations, signing/build guards and registry recovery.
+The old M4 observer failure did not recur in this run, but its cause remains
+unexplained; these passes do not establish its resolution.
+
+### M5.1 rendered assessment and pause
+
+Fresh read-only reviewer `/root/m51_rendered_review` (Astra) reviewed the immutable
+`m51-corrected` render at `ea10ce3`. Its report identifies actual PNG inspection,
+source/control traces and sampling limits; it found no substantive issue. The
+lead separately identified the public-version/worker-identity sentence, generic
+attempt-native-return wording and run-scope duplicate-record wording. All three
+are corrected in `e1231bd`. The follow-up review of `m51-final` inspected those
+changed rendered pages and the blackbox-control correction; it accepts all
+corrections with no additional findings.
+The lead accepts the disposition within the stated coverage; the review does not
+replace execution or certify every page pixel by pixel.
+
+Source/HTML/PDF/PNG manifests, reports, rendering scripts, the signed-build log,
+contract/vocabulary review, source snapshots and exact cleanup receipts are in
+[the final focused run](../tests/out/runs/extensions-m51-doc-closure-20261013/).
+They are gitignored and **local to this checkout**. HTML links can preserve their
+original `/private/tmp` preview paths; retained source, PDFs and PNGs preserve the
+inspected content independently. Pandoc 3.12, WeasyPrint 70 and Poppler 26.10
+produced the views.
+
+Exact cleanup observations confirm absence of all 33 named native observer
+channels/recovery directories in the full run, six regular BYOXPC services/staging/plists
+and seven exact registry-recovery service identities. The focused run created no
+such owned channels or BYOXPC sessions. No prefix-based cleanup was used. The older 25 empty M3
+shared-memory objects with unrecorded names remain an explicit unverified-absence
+limitation. No test, build, render or owned recovery task is active at closure.
+
+The requested stop is M5.1. M5.2 and later milestones remain pending. Resume only
+when the user authorizes continuation; the associated plan identifies the next
+milestone and accepted evidence. H1's deferred hook investigation remains outside
+this gate.

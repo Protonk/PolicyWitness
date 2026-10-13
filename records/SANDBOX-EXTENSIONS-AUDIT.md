@@ -11,10 +11,10 @@ section. Execution dispositions remain separate from the attributed audit text.
 
 Status: complete. Original auditor answers and follow-up returned on 2026-10-13
 (Claude Fable 5.1, out of band) remain attributed and unchanged. The executing
-agent's corrections, review and final F10 verification are recorded below.
-M3 remains valid; F10 is closed and F11 is explicitly assigned to M5.1. The user
-accepted the H1 recommendations on 2026-10-13; H1 is complete and M4 has not
-started. The historical audit and preparation entries below retain their context.
+agent's corrections, review and F10/F11 verification are recorded below.
+M3 remains valid; F10 and F11 are closed. H1, M4 and M5.1 are complete; execution
+is stopped at the user's M5.1 boundary. The historical audit and preparation
+entries below retain their context and attributed text.
 
 ### A1 Handoff, questions and auditor answers
 
@@ -1236,6 +1236,37 @@ with no persistence change proposed. H1 is prepared and awaiting the user under
 the plan's human review boundary; M4 has not started. Evidence is gitignored and
 available only in this checkout. Prior cleanup observations and the limitation
 concerning 25 unnamed empty objects are unchanged.
+
+
+### A1-F11 verification and closure in M5.1
+
+Executing-agent disposition on 2026-10-13, separate from the original auditor's
+text: F11 is closed. `de8b343` rejects present wrong-type phase containers and
+validator dispositions in the Rust claim reader, including `phases: 7` and an
+integer disposition. Adjacent ordering/entry/spawn types are covered; missing/null
+optional evidence and degraded raw forwarding retain their documented behavior.
+Production assembly controls preserve the complete raw reply while withholding
+unsupported ordinary projections. New Rust controls failed before the repair and
+passed afterward; their red/green evidence is retained in the initial M5.1 run's
+`checkpoint/`.
+
+The empty-spawn-object probe now has an explicit responsibility account and
+independent controls: the full consumer rejects missing required fields; the
+claim reader does not certify complete record shape. The versioning clarification
+requires bumps for genuine valid-document meaning changes while distinguishing
+repairs that enforce already specified invariants.
+
+The full build-582 run at `ea10ce3` passed the Rust controls and 195 other cases,
+but failed the new blackbox check's expected diagnostic for an unknown string.
+`e1231bd` corrects that test expectation while retaining rejection. The original
+run remains failed. Final `extensions-m51-doc-closure-20261013`
+(`20261013T223127Z_78754a9d`) passes all nine selected cases, including the complete
+checker and 416 Swift checks with Rust/Python replay. Its checkpoint credits nine
+fresh replacements plus 188 reviewed reuses, with exact source/app applicability.
+Fresh rendered assessment and the focused recheck accept the final reading
+account. This execution closure does not claim a new out-of-band auditor review;
+A2 remains pending after M5.6.
+
 
 ## A2 Final audit — after M5.6
 

@@ -61,10 +61,10 @@ outside this plan.
 | M1 Native feasibility and independent controls | Complete | 18 native experiments, six registered mechanical checks, and fresh rendered assessment passed; F1 rendering correction rechecked. See the [investigative record](records/SANDBOX-EXTENSIONS.md). |
 | M2 Ordered phases in the existing worker | Complete | Consolidated signed acceptance at `ac9c3b5`: 113/113 registered cases; fresh rendered review findings corrected and rechecked. See the investigative record. |
 | M3 Minimal extension experiment through PW | Complete | Signed consolidation at `6744f3c`: 147/147 passed. Explicit phase-log coverage added at `fdbd89b`: 13/13 focused checks passed, replacing 13 credits; 134 earlier credits remain applicable under the recorded review. Public/generated accounts, maximum reply, standard/BYOXPC lifecycle and boundary controls pass. Rendered findings corrected and rechecked, including the final phase-log account; neither baseline changed. |
-| A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 remains M5.1 work. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
+| A1 Middle out-of-band audit | Complete | Original auditor accepts M3 and substantive corrections; F10 is repaired at `7bfbdcd` and passes 13/13 focused checks, including 35 script-group controls. Final 196-case credits contain 13 replacements and 183 reviewed reuses. F11 is closed in M5.1. [Closure](records/SANDBOX-EXTENSIONS-AUDIT.md#a1-f10-verification-and-closure) preserves the returned text and records the final evidence. |
 | H1 Prepared human review | Complete | User accepted the recommendations on 2026-10-13 after discussion of interruption hooks and diagnostic-host alternatives. Retain the bounded design; further hook investigation is deferred, not an added gate. The [briefing and disposition](records/SANDBOX-EXTENSIONS.md#h1-prepared-human-review) record the agreement. |
 | M4 Failure combinations and adversarial coverage | Complete | Build 578 acceptance: 197 passing case credits, 17 fresh at `2e6a2c1` and 180 reviewed reuses from `b641054`. Eight shared combined-fault rows, BYOXPC controls and independent cleanup passed; both rendered-review findings corrected and rechecked. One earlier intermittent observer failure remains preserved and unexplained. See the investigative record. |
-| M5.1 Evidence contract closure | In progress | M4 closed; implement A1-F11, reconcile reader responsibilities and verify the full evidence account before the requested stop. |
+| M5.1 Evidence contract closure | Complete | A1-F11 repaired; build 582 has 197 passing credits, nine fresh at `e1231bd` and 188 reviewed reuses from `ea10ce3`. The shared generator/limits/blackbox/Swift gate and final rendered recheck pass. Evidence account and native-detail units reconciled; neither baseline changed. |
 | M5.2 Limits account | Pending | Requires M5.1 |
 | M5.3 Build and bundle account | Pending | Requires M4; independent of M5.1 and M5.2 |
 | M5.4 Architecture account | Pending | Requires M5.2 and M5.3 |
@@ -77,56 +77,59 @@ Each implementation gate includes its
 and the lead agent's disposition of the findings. A1 and A2 use the separate
 out-of-band handoff below; H1 uses the prepared human review briefing.
 
-**Execution state:** M0–M4, A1 and H1 are complete. M5.1 is next within the
-user's authorization; stop after its completed gate with a clean tree. Do not
-advance M5.2. A1-F11 remains required: present wrong-type phase containers and
-validator-disposition values must not collapse into optional absence. Review
-empty spawn objects and document claim versus full-shape validation. The
-accepted H1 design remains unchanged; no diagnostic-host experiment is required.
+**Execution state:** M0–M5.1, A1 and H1 are complete. Stopped at the user's
+requested M5.1 boundary; do not start M5.2 until continuation is authorized.
+A1-F11 is closed: wrong-type phase evidence is rejected, optional absence and
+degraded raw forwarding remain supported, and full-shape versus claim-validation
+responsibilities are explicit. H1's accepted design remains unchanged.
 
-**Candidate:** M4 implementation and fixture corrections culminate in clean
-`b6410544738ecd32feef95915363f4e51af82403`; rendered-review corrections are
-`2e6a2c1ffcca48211d91dce9755a47a9a7527780`, changing tests and documentation only.
-Signed app 0.2.8 build 578 is from `b641054`, with worker identity
-`5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2`.
+**Candidate:** A1-F11 is implemented in `de8b343e6f3e27f0f4e0045bdf888128c0aa7999`.
+The phase-detail formatter and contract account are corrected in
+`ea10ce39b418694630ba63c92d6a515d1006466e`; final test/documentation corrections
+are `e1231bd4f4c3ebcf74cbfc6e261658f3212e991d`. Signed app 0.2.8 build 582 is
+from clean `ea10ce3`, with worker identity
+`5fd52343fc4431d5d7f7ab0f7aed326d432950ec9922a98c9a16d0226ab6de2e`.
 Signer: `Developer ID Application: Adam Hyland (42D369QV8E)`.
-Wire contracts are request 4, response 18, envelope 7. The response bump covers
-`issuer_abnormal_exit`; captures and shape fixture are current. Maximum reply
-remains 52,414,779 bytes; ABI geometry and both documentation baselines are unchanged.
+Wire contracts remain request 4, response 18, envelope 7. Maximum reply remains
+52,414,779 bytes; ABI geometry and both documentation baselines are unchanged.
+The checkpoint commit adds only plan, record and retention metadata.
 
-**Acceptance:** the full `extensions-m4-acceptance-20261013` run
-(`20261013T215322Z_49c4e35f`) completed all 197 cases: 196 pass, one fail,
-no skipped or unrun cases, unchanged app inventory. The failing Rust observer
-edge test reported `pipe_open_after_exit`, matching a previously retained
-intermittent failure outside M4's changed code. An unchanged-source isolated
-retry and fresh registered Rust run passed; the cause remains unexplained.
-The original run remains failed. The corrected `extensions-m4-review-fixes-20261013`
-run (`20261013T220720Z_b95d4ee4`) passed 17/17, including six mechanical checks,
-all Rust checks, 416 Swift checks plus Rust/Python driver replay, blackbox checker
-controls and all direct matrix readers. Its `checkpoint/acceptance-credits.json`
-credits 17 replacements and 180 reviewed reuses for 175 default plus 22 required
-opt-in cases. `source-applicability.json` separates exact file/app comparisons
-from the conservative dependency review and copied-fixture exceptions.
+**Acceptance:** `extensions-m51-final-20261013` (`20261013T221825Z_ab6a8824`)
+completed 197 cases at clean `ea10ce3`: 196 pass, one fail, no skips or unrun
+cases, unchanged app inventory. The new blackbox mutation incorrectly expected
+an unknown disposition string to be rejected as a wrong type. The reader rejected
+it correctly; the test now checks types and unknown vocabulary separately.
+The original run remains failed. `extensions-m51-doc-closure-20261013`
+(`20261013T223127Z_78754a9d`) passed 9/9 at clean `e1231bd`: six mechanical
+checks, both runner-unit cases (416 Swift checks plus Rust/Python replay), and
+the full blackbox checker. Its `checkpoint/acceptance-credits.json` maps 197
+passing credits to nine replacements and 188 reviewed reuses: 175 default plus
+22 required opt-ins. `source-applicability.json` separates exact three-file/app
+comparisons from dependency judgments and copied-fixture exceptions. The cancelled
+initial build-581 run is retained but contributes no acceptance credit.
 
-**Rendered assessment:** fresh `/root/m4_rendered_review` (Astra) inspected the
-combined-fault matrix, ownership, coverage, architecture citations and affected
-copies. F1 omitted M-row reader ownership; F2 left M08 raw assertions unused and
-inconsistent with its 22-byte target. Both are corrected and closed after the
-focused rendered recheck and fresh execution. Source/HTML/PDF/PNG manifests,
-reports and renderer scripts are retained in the correction run's `reviews/`;
-full details and limits are in the investigative record. These are local-only,
-gitignored evidence. Earlier diagnostics remain separately retained.
+**Rendered assessment:** fresh `/root/m51_rendered_review` (Astra) inspected
+claim ownership, reader scope, lifecycle/publication, phase/order/progress and
+shared guide rules, with actual page inspection and source/control traces. It
+reported no substantive finding in that bounded review. The lead identified
+three remaining sentences concerning worker identity, fresh-read returns and
+phase-local duplicate records; the focused recheck accepts all corrections and
+the blackbox test fix without further findings. Source/HTML/PDF/PNG manifests,
+reports and renderer scripts are retained in the final focused run's `reviews/`;
+full coverage limits and execution results are in the investigative record.
+These artifacts are local-only and gitignored.
 
-**Cleanup and resume:** all 40 native observer channels across these two runs
-and their exact recovery directories are absent. Six regular BYOXPC sessions
-have verified service/staging/plist absence; registry-recovery controls report
-verified cleanup. No test/build/render process is active at M4 closure. The old
-25 empty M3 shared-memory objects whose names were not recorded remain an
-explicit unverified-absence limitation; no prefix cleanup was attempted.
+**Cleanup and resume:** the full run's 33 named observer channels and exact
+recovery directories are absent; the focused run created no such owned channels.
+Six regular BYOXPC sessions and seven registry-recovery service identities have
+verified absence. No test/build/render process or owned recovery task is active.
+The old 25 empty M3 shared-memory objects with unrecorded names remain an explicit
+unverified-absence limitation; no prefix cleanup was attempted. The earlier M4
+observer failure did not recur in M5.1, but its cause remains unexplained.
 
-**Next action:** complete M5.1's reader repair, contract review, required checks
-and fresh rendered assessment, commit its evidence/checkpoint, then stop. M5.2
-and subsequent milestones remain pending.
+**Next action:** await the user's continuation at this completed M5.1 stop.
+Then begin M5.2's limits-account review under its existing gate. M5.2–M5.6 and
+A2 remain pending; no later milestone is credited by the broader M5.1 run.
 
 **User testing preference:** avoid TCC prompts unless necessary. The user observed
 and approved a Desktop-access prompt during the first BYOXPC experiment; future
