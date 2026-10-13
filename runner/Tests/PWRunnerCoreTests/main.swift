@@ -26,6 +26,8 @@ runComparisonEvidenceTests(tk)
 runOrderingTests(tk)
 // Repeated production barriers, fresh planning, ordinal refusal and interrupted phases.
 runPhaseProtocolTests(tk)
+// Native lifecycle publications, local references, fresh reads and shape coverage.
+runExtensionEvidenceTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.
 runReplyFailureTests(tk)
 // Shared host admission, concurrent exported objects and owner-only exit scheduling.

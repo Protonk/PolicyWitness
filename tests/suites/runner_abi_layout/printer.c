@@ -114,6 +114,32 @@ int main(void) {
     printf("offsetof.pw_shm_slot_t.child_stderr=%zu\n",       offsetof(pw_shm_slot_t, child_stderr));
     printf("offsetof.pw_shm_slot_t.completed=%zu\n",          offsetof(pw_shm_slot_t, completed));
 
+    /* Native lifecycle publications and independently observed fresh reads. */
+    printf("PW_SHM_FRESH_READ_BYTES=%u\n", PW_SHM_FRESH_READ_BYTES);
+    printf("offsetof.pw_shm_header_t.extension_requested=%zu\n", offsetof(pw_shm_header_t, extension_requested));
+    printf("offsetof.pw_shm_header_t.extension_delivery_published=%zu\n", offsetof(pw_shm_header_t, extension_delivery_published));
+    printf("offsetof.pw_shm_header_t.extension_delivery_status=%zu\n", offsetof(pw_shm_header_t, extension_delivery_status));
+    printf("offsetof.pw_shm_header_t.extension_delivered_bytes=%zu\n", offsetof(pw_shm_header_t, extension_delivered_bytes));
+    printf("offsetof.pw_shm_slot_t.call_boundary=%zu\n", offsetof(pw_shm_slot_t, call_boundary));
+    printf("offsetof.pw_shm_slot_t.native_result_valid=%zu\n", offsetof(pw_shm_slot_t, native_result_valid));
+    printf("offsetof.pw_shm_slot_t.native_result=%zu\n", offsetof(pw_shm_slot_t, native_result));
+    printf("offsetof.pw_shm_slot_t.native_errno=%zu\n", offsetof(pw_shm_slot_t, native_errno));
+    printf("offsetof.pw_shm_slot_t.unavailable_code=%zu\n", offsetof(pw_shm_slot_t, unavailable_code));
+    printf("offsetof.pw_shm_slot_t.access_open_rc=%zu\n", offsetof(pw_shm_slot_t, access_open_rc));
+    printf("offsetof.pw_shm_slot_t.access_open_errno=%zu\n", offsetof(pw_shm_slot_t, access_open_errno));
+    printf("offsetof.pw_shm_slot_t.access_read_rc=%zu\n", offsetof(pw_shm_slot_t, access_read_rc));
+    printf("offsetof.pw_shm_slot_t.access_read_errno=%zu\n", offsetof(pw_shm_slot_t, access_read_errno));
+    printf("offsetof.pw_shm_slot_t.access_close_rc=%zu\n", offsetof(pw_shm_slot_t, access_close_rc));
+    printf("offsetof.pw_shm_slot_t.access_close_errno=%zu\n", offsetof(pw_shm_slot_t, access_close_errno));
+    printf("offsetof.pw_shm_slot_t.access_stat_rc=%zu\n", offsetof(pw_shm_slot_t, access_stat_rc));
+    printf("offsetof.pw_shm_slot_t.access_stat_errno=%zu\n", offsetof(pw_shm_slot_t, access_stat_errno));
+    printf("offsetof.pw_shm_slot_t.access_mode=%zu\n", offsetof(pw_shm_slot_t, access_mode));
+    printf("offsetof.pw_shm_slot_t.access_device=%zu\n", offsetof(pw_shm_slot_t, access_device));
+    printf("offsetof.pw_shm_slot_t.access_inode=%zu\n", offsetof(pw_shm_slot_t, access_inode));
+    printf("offsetof.pw_shm_slot_t.access_uid=%zu\n", offsetof(pw_shm_slot_t, access_uid));
+    printf("offsetof.pw_shm_slot_t.access_gid=%zu\n", offsetof(pw_shm_slot_t, access_gid));
+    printf("offsetof.pw_shm_slot_t.access_bytes=%zu\n", offsetof(pw_shm_slot_t, access_bytes));
+
     /* Param field offsets. */
     printf("offsetof.pw_shm_param_t.key=%zu\n",   offsetof(pw_shm_param_t, key));
     printf("offsetof.pw_shm_param_t.value=%zu\n", offsetof(pw_shm_param_t, value));

@@ -1308,7 +1308,7 @@ mod tests {
 
     #[test]
     fn install_signing_signs_helpers_before_the_bundle() {
-        // The worker takes the entitlements, the validator the identity
+        // The worker takes the entitlements, validator and issuer the identity
         // alone, and the enclosing bundle is sealed last so it records the
         // helpers' new hashes. Pinned with a recording signer; no codesign.
         let root = std::env::temp_dir().join(format!(
@@ -1322,7 +1322,12 @@ mod tests {
         let bundle = root.join("Runner.xpc");
         let macos = bundle.join(crate::app_layout::BUNDLE_MACOS_REL);
         fs::create_dir_all(&macos).unwrap();
-        for name in ["PWRunner", "pw-probe-runner", "sb_api_validator"] {
+        for name in [
+            "PWRunner",
+            "pw-probe-runner",
+            "sb_api_validator",
+            "pw-extension-issuer",
+        ] {
             fs::write(macos.join(name), name).unwrap();
         }
         let plist = root.join("entitlements.plist");
@@ -1356,6 +1361,11 @@ mod tests {
                     None
                 ),
                 (
+                    macos.join("pw-extension-issuer"),
+                    "Developer ID".to_string(),
+                    None
+                ),
+                (
                     bundle.clone(),
                     "Developer ID".to_string(),
                     Some(plist.clone())
@@ -1381,7 +1391,36 @@ mod tests {
                 macos.join("sb_api_validator")
             ]
         );
+        // Issuer signing failure stops before sealing, independently of validator success.
+        let mut sealed = Vec::new();
+        let err = sign_install_tree(&bundle, "-", None, &mut |target, _, _| {
+            sealed.push(target.to_path_buf());
+            if target.ends_with("pw-extension-issuer") {
+                Err("issuer controlled".into())
+            } else {
+                Ok(())
+            }
+        })
+        .unwrap_err();
+        assert_eq!(err, "issuer controlled");
+        assert_eq!(
+            sealed,
+            vec![
+                macos.join("pw-probe-runner"),
+                macos.join("sb_api_validator"),
+                macos.join("pw-extension-issuer")
+            ]
+        );
         // An incomplete copy is refused before any signing.
+        fs::remove_file(macos.join("pw-extension-issuer")).unwrap();
+        let mut touched = 0;
+        let err = sign_install_tree(&bundle, "-", None, &mut |_, _, _| {
+            touched += 1;
+            Ok(())
+        })
+        .unwrap_err();
+        assert!(err.contains("no embedded issuer"), "{err}");
+        assert_eq!(touched, 0);
         fs::remove_file(macos.join("sb_api_validator")).unwrap();
         let mut touched = 0;
         let err = sign_install_tree(&bundle, "-", None, &mut |_, _, _| {

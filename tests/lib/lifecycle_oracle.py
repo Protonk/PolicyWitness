@@ -489,7 +489,10 @@ def check_record(envelope):
         _compare_claim(name, claims[name], view['questions'].get(name), findings, None, obs, None)
     for extra in set(view['questions']) - set(C.RUN_QUESTIONS):
         findings.append(_finding('D8', 'unknown_question', f'question {extra!r} is not registered', extra))
-    runner_steps = envelope['data']['runner_result'].get('steps') or []
+    from extension_evidence import ordered_actions, validate_extensions
+    runner_steps = ordered_actions(envelope['data']['runner_result'])
+    for error in validate_extensions(envelope['data']['runner_result']):
+        findings.append(_finding('D6', 'extension_evidence', error))
     if len(view['steps']) != len(runner_steps):
         findings.append(_finding('D8', 'step_count', f'record has {len(view["steps"])} steps, reply has {len(runner_steps)}'))
     for i, entry in enumerate(view['steps']):
@@ -499,12 +502,14 @@ def check_record(envelope):
                                      step_index=i))
         attempt = reply_step.get('attempt') or {}
         completed = entry['slot'] == 'completed' and entry['attempt_support'] == 'supported'
-        if (attempt.get('result_source') == 'worker') != completed:
+        is_event = 'operation' in reply_step
+        published = reply_step.get('result_published') if is_event else attempt.get('result_source') == 'worker'
+        if published != completed:
             findings.append(_finding('D6', 'slot_fact_disagrees', 'attempt.result_source disagrees with the record slot facts',
                                      step_index=i))
         expected_reason = (None if completed else 'attempt_not_supported' if entry['attempt_support'] == 'unsupported'
                            else 'slot_absent' if entry['slot'] == 'absent' else 'slot_incomplete')
-        if attempt.get('missing_reason') != expected_reason:
+        if not is_event and attempt.get('missing_reason') != expected_reason:
             findings.append(_finding('D6', 'missing_reason_disagrees',
                                      f'missing_reason {attempt.get("missing_reason")!r} vs slot facts {expected_reason!r}',
                                      step_index=i))
@@ -554,7 +559,8 @@ def check_record(envelope):
         runner = envelope['data']['runner_result']
         withheld_comparison = runner.get('normalized_outcome') == 'runner_reporting_failed' \
             and isinstance(runner.get('reporting_failure'), dict) and runner_steps[i].get('comparison') is None
-        if required and required not in limits and not withheld_comparison:
+        is_event = i < len(runner_steps) and 'operation' in runner_steps[i]
+        if required and required not in limits and not withheld_comparison and not is_event:
             findings.append(_finding('D7', 'limitation', f'comparison lacks {required}', step_index=i))
         for present in limits:
             if present in C.LIMITATION_FOR_SUMMARY.values() and present != required:

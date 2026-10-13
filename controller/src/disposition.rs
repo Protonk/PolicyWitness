@@ -870,6 +870,217 @@ fn project_disposition(
     }
 }
 
+// Native events are actions in the worker account, but do not have ordinary
+// query/attempt comparisons. Check their distinct publication and reference
+// requirements before allowing the disposition projection to use them.
+fn extension_account_issues(runner: &Value) -> Vec<Value> {
+    let mut issues = Vec::new();
+    let mut reject =
+        |detail: &str| issues.push(integrity_issue("extension_evidence", detail.into()));
+    let empty = Vec::new();
+    let events = match runner.get("extension_events") {
+        None | Some(Value::Null) => &empty,
+        Some(Value::Array(events)) => events,
+        _ => {
+            reject("extension events must be an array");
+            return issues;
+        }
+    };
+    let declarations = match runner.get("extensions") {
+        None | Some(Value::Null) => &empty,
+        Some(Value::Array(declarations)) => declarations,
+        _ => {
+            reject("extension declarations must be an array");
+            return issues;
+        }
+    };
+    if events.len() > 2 || declarations.len() > 1 || (!events.is_empty() && declarations.len() != 1)
+    {
+        reject("extension capacity or declaration association");
+        return issues;
+    }
+    if events.is_empty() && declarations.is_empty() {
+        return issues;
+    }
+    let declaration = declarations.first().unwrap_or(&Value::Null);
+    let issuer = &declaration["issuer"];
+    let reference = |v: &Value| {
+        v.as_str()
+            .is_some_and(|s| !s.is_empty() && s.len() <= 63 && !s.contains('\0'))
+    };
+    if !reference(&declaration["token_ref"])
+        || declaration["extension_class"] != "com.apple.app-sandbox.read"
+    {
+        reject("invalid extension declaration reference or class");
+    }
+    let issued = declaration["issuance_status"] == "issued";
+    let length = issuer["token_length"].as_u64();
+    if issued
+        && (declaration["preparation_status"] != "prepared"
+            || issuer["native_nonnull"] != true
+            || issuer["call_boundary_observed"] != true
+            || issuer["result_published"] != true
+            || issuer["reaped"] != true
+            || issuer["exit_code"].as_i64() != Some(0)
+            || !issuer["term_signal"].is_null()
+            || !length.is_some_and(|v| v > 0 && v < 16384))
+    {
+        reject("issued extension lacks bounded native result and clean issuer reap");
+    }
+    if declaration["delivery_status"] == "delivered"
+        && (!issued
+            || declaration["delivered_bytes"].as_u64() != length
+            || !length.is_some_and(|v| v > 0 && v < 16384))
+    {
+        reject("extension delivery lacks bounded issuance");
+    }
+    let phases = runner["phases"].as_array().unwrap_or(&empty);
+    let action_ids: Vec<&str> = phases
+        .iter()
+        .flat_map(|p| p["action_ids"].as_array().into_iter().flatten())
+        .filter_map(Value::as_str)
+        .collect();
+    let ordinary = runner["steps"].as_array().unwrap_or(&empty);
+    let step_ids: Vec<&str> = ordinary
+        .iter()
+        .filter_map(|s| s["step_id"].as_str())
+        .collect();
+    let event_ids: Vec<&str> = events
+        .iter()
+        .filter_map(|s| s["step_id"].as_str())
+        .collect();
+    let all_ids: std::collections::HashSet<&str> =
+        step_ids.iter().chain(event_ids.iter()).copied().collect();
+    if action_ids.len() != ordinary.len() + events.len()
+        || all_ids.len() != action_ids.len()
+        || action_ids.iter().any(|id| !all_ids.contains(id))
+        || action_ids
+            .iter()
+            .filter(|id| step_ids.contains(id))
+            .copied()
+            .collect::<Vec<_>>()
+            != step_ids
+        || action_ids
+            .iter()
+            .filter(|id| event_ids.contains(id))
+            .copied()
+            .collect::<Vec<_>>()
+            != event_ids
+    {
+        reject("phase actions do not partition ordinary and native events");
+    }
+    let mut consume: Option<&Value> = None;
+    let mut released = false;
+    for event in events {
+        let matches: Vec<&Value> = phases
+            .iter()
+            .filter(|phase| {
+                phase["phase_id"] == event["phase_id"]
+                    && phase["action_ids"]
+                        .as_array()
+                        .is_some_and(|ids| ids.contains(&event["step_id"]))
+            })
+            .collect();
+        if matches.len() != 1
+            || !reference(&event["step_id"])
+            || !reference(&event["handle_ref"])
+            || event["handle_ref"] == declaration["token_ref"]
+        {
+            reject("native event lacks unique phase or valid local references");
+        }
+        let native = event["native_result"].as_i64();
+        match event["operation"].as_str() {
+            Some("consume") => {
+                if consume.is_some() || released || event["token_ref"] != declaration["token_ref"] {
+                    reject("consume reference or order is invalid");
+                }
+                consume = Some(event);
+                if event["status"] == "returned" && declaration["delivery_status"] != "delivered" {
+                    reject("consumption lacks delivery");
+                }
+            }
+            Some("release") => {
+                if released
+                    || !event["token_ref"].is_null()
+                    || !consume.is_some_and(|prior| {
+                        prior["handle_ref"] == event["handle_ref"]
+                            && action_ids
+                                .iter()
+                                .position(|id| Some(*id) == prior["step_id"].as_str())
+                                < action_ids
+                                    .iter()
+                                    .position(|id| Some(*id) == event["step_id"].as_str())
+                    })
+                {
+                    reject("release reference or order is invalid");
+                }
+                if event["status"] == "returned"
+                    && !consume.is_some_and(|prior| {
+                        prior["status"] == "returned"
+                            && prior["native_result"]
+                                .as_i64()
+                                .is_some_and(|handle| handle != -1)
+                    })
+                {
+                    reject("release lacks an observed consume handle");
+                }
+                if native.is_some_and(|v| i32::try_from(v).is_err()) {
+                    reject("release result exceeds native int");
+                }
+                released = true;
+            }
+            _ => reject("unknown native extension operation"),
+        }
+        let published = event["result_published"].as_bool();
+        let called = event["call_boundary_observed"].as_bool();
+        let valid = match event["status"].as_str() {
+            Some("returned") => {
+                published == Some(true)
+                    && called == Some(true)
+                    && native.is_some()
+                    && event["errno"]
+                        .as_u64()
+                        .is_some_and(|v| v <= i32::MAX as u64)
+                    && event["unavailable_reason"].is_null()
+            }
+            Some("unavailable") => {
+                published == Some(true)
+                    && called == Some(false)
+                    && event["native_result"].is_null()
+                    && event["errno"].is_null()
+                    && event["unavailable_reason"].as_str().is_some_and(|s| {
+                        [
+                            "token_unavailable",
+                            "handle_unavailable",
+                            "native_api_unavailable",
+                            "repeated_action",
+                        ]
+                        .contains(&s)
+                    })
+            }
+            Some("unresolved") => {
+                published == Some(false)
+                    && called.is_some()
+                    && event["native_result"].is_null()
+                    && event["errno"].is_null()
+                    && event["unavailable_reason"].is_null()
+            }
+            _ => false,
+        };
+        if !valid {
+            reject("native lifecycle publication is inconsistent");
+        }
+        if (published == Some(true) || called == Some(true))
+            && (runner["sandboxed_after_apply"] != true
+                || matches.len() != 1
+                || matches[0]["ordering"]["proceed_observed"] != true)
+        {
+            reject("native action lacks application and phase acknowledgement");
+        }
+    }
+    issues
+}
+
 pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
@@ -903,7 +1114,7 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
             });
         }
     }
-    let projection = match (pid, sub) {
+    let mut projection = match (pid, sub) {
         (Some(_), Some(sub)) => project_disposition(
             sub,
             &reply_steps,
@@ -920,6 +1131,15 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
             issues: vec![],
         },
     };
+    if let Some(runner) = runner {
+        let native_issues = extension_account_issues(runner);
+        if !native_issues.is_empty() {
+            projection.disposition = "withheld";
+            projection.cause = Some("unknown");
+            projection.integrity = Some("invalid");
+            projection.issues.extend(native_issues);
+        }
+    }
     RunnerExecutionDiagnostics {
         process_disposition: projection.disposition,
         termination_cause: projection.cause,
@@ -936,6 +1156,52 @@ mod tests {
 
     fn diagnostics(runner: &Value) -> RunnerExecutionDiagnostics {
         execution_diagnostics(Some(runner))
+    }
+
+    #[test]
+    fn native_event_references_and_publication_gate_disposition() {
+        let envelope: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/blackbox_e2e/checker/response17/extension_run.json"
+        ))
+        .unwrap();
+        let runner = &envelope["data"]["runner_result"];
+        assert_eq!(diagnostics(runner).disposition_integrity, Some("valid"));
+        let faults = [
+            ("/extension_events/0/native_result", json!(-1)),
+            ("/extension_events/0/native_result", json!(true)),
+            ("/extension_events/0/native_result", json!(1.0)),
+            ("/extension_events/0/call_boundary_observed", json!(false)),
+            ("/extension_events/0/result_published", json!(false)),
+            ("/extension_events/0/status", json!("unresolved")),
+            ("/extension_events/1/handle_ref", json!("other")),
+            ("/extension_events/1/phase_id", json!("other")),
+            ("/extension_events/1/native_result", json!(i64::MAX)),
+            ("/extensions/0/delivered_bytes", json!(16384)),
+            ("/extensions/0/issuer/reaped", json!(false)),
+            ("/extensions/0/issuer/result_published", json!(false)),
+            ("/phases/0/ordering/proceed_observed", json!(false)),
+            (
+                "/runner_subprocess/disposition/steps/1/slot",
+                json!("incomplete"),
+            ),
+        ];
+        for (path, value) in faults {
+            let mut broken = runner.clone();
+            *broken.pointer_mut(path).unwrap() = value;
+            let diag = diagnostics(&broken);
+            assert_eq!(diag.disposition_integrity, Some("invalid"), "{path}");
+            assert_eq!(diag.process_disposition, "withheld", "{path}");
+            assert_eq!(diag.termination_cause, Some("unknown"), "{path}");
+        }
+        let mut refused = runner.clone();
+        refused["extension_events"][0]["native_result"] = json!(-1);
+        let release = refused["extension_events"][1].as_object_mut().unwrap();
+        release.insert("status".into(), json!("unavailable"));
+        release.insert("unavailable_reason".into(), json!("handle_unavailable"));
+        release.insert("call_boundary_observed".into(), json!(false));
+        release.remove("native_result");
+        release.remove("errno");
+        assert_eq!(diagnostics(&refused).disposition_integrity, Some("valid"));
     }
 
     #[test]
@@ -1140,7 +1406,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response16/a1_expected.json"
+            "../../tests/fixtures/disposition/response17/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

@@ -540,6 +540,8 @@ func runReplyFailureTests(_ tk: TestKit) {
         }
         tk.run("every stored result field has a coding key and survives a populated round trip") {
             var result = try replyFixture()
+            result.extensions = []
+            result.extension_events = []
             result.steps[0].comparison = nil
             result = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(result))
             let labels = Set(Mirror(reflecting: result).children.compactMap { $0.label })

@@ -55,10 +55,12 @@ and does not skip the case.
 ## Fixtures
 
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
-- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response16/valid_run.json`
-  and `response16/missing_path_run.json`
+- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response17/valid_run.json`
+  and `response17/missing_path_run.json`
+- `response17/extension_run.json` and `extension_specimen.json`: the unmodified
+  public CLI extension capture and its exact request, from `witness_contract/extensions`.
 
-The `response16/` envelopes are unmodified captures from the corresponding
+The `response17/` envelopes are unmodified captures from the corresponding
 current-producer cases; each carries its own build stamp, binary hashes and
 worker source identity. Their sibling `valid_specimen.json` and
 `missing_path_specimen.json` files are the exact submitted requests. Refresh
@@ -91,7 +93,7 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
-The expected-fixture controls accept `tests/fixtures/disposition/response16/a1_expected.json`
+The expected-fixture controls accept `tests/fixtures/disposition/response17/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), refuse the
 captured `a1_known_loss.json` as the unsupported version it is before any
 claim is read, and reject named mutations of the accepted baseline (missing
@@ -153,6 +155,15 @@ Constructed captures also check event retention, candidate provenance and
 distinct availability states. The consumer's `denials` command returns capture
 and candidate references separately from execution validation and selection;
 lifecycle projections select only execution diagnostic fields.
+
+Native extension controls reject invented call/results, missing or mismatched
+token/handle references, phase and disposition association faults, unsupported
+integer representations, and delivery without bounded issuance and a confirmed
+issuer reap. Fresh-read controls reject byte-count/content mismatches and
+read/stat/close evidence after a failed open. A positive native-refusal control
+retains successful access evidence independently of the unavailable release.
+The separate lifecycle oracle checks the native-event mutations as well as the
+ordinary action account; no constructed mutation establishes a native effect.
 
 `comparison_controls` exercises `tests/lib/envelope_compare.py` through its CLI
 using the checked-in live envelope and constructed mutations. It runs offline

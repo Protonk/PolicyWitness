@@ -1216,7 +1216,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response16/a1_expected.json"
+            "../../tests/fixtures/disposition/response17/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1410,7 +1410,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response16/a1_expected.json"
+            "../../tests/fixtures/disposition/response17/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();
@@ -2678,6 +2678,8 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 worker_entitlements: Some(entitlements(keys)),
                 validator_signature: Some(signature()),
                 validator_entitlements: Some(entitlements(&[])),
+                issuer_signature: Some(signature()),
+                issuer_entitlements: Some(entitlements(&[])),
             }
         }
 
@@ -3543,6 +3545,19 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                     adhoc: false,
                 }),
                 validator_entitlements: Some(RunnerEntitlements {
+                    raw_plist: Some("<plist/>".into()),
+                    keys: vec![],
+                    granted: vec![],
+                    error: Some("constructed".into()),
+                }),
+                issuer_signature: Some(RunnerSignature {
+                    team_id: Some("TEAM123456".into()),
+                    identity: Some("constructed".into()),
+                    cdhash: Some("12".repeat(20)),
+                    valid: true,
+                    adhoc: false,
+                }),
+                issuer_entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec![],
                     granted: vec![],

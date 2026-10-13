@@ -478,6 +478,8 @@
       "runner_bundle_path": "string",
       "runner_entitlements": "object",
       "runner_executable_path": "string",
+      "runner_issuer_entitlements": "object",
+      "runner_issuer_signature": "object",
       "runner_kind": "string",
       "runner_registry_id": "string",
       "runner_service_name": "string",
@@ -492,6 +494,19 @@
       "granted": "array",
       "keys": "array",
       "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_issuer_entitlements": {
+      "error": "string",
+      "granted": "array",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_issuer_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
     },
     "envelope.data.specimen.runner_provenance.runner_signature": {
       "adhoc": "boolean",

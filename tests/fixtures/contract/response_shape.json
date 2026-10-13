@@ -1,11 +1,13 @@
 {
-  "response_schema" : 16,
+  "response_schema" : 17,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
       "applied_profile" : "object",
       "bundle_id" : "string",
       "error" : "string",
+      "extension_events" : "array",
+      "extensions" : "array",
       "normalized_outcome" : "string",
       "phases" : "array",
       "pid" : "number",
@@ -47,6 +49,93 @@
       "source_sha256" : "string",
       "status" : "string",
       "worker_pid" : "number"
+    },
+    "reply.extension_events[]" : {
+      "call_boundary_observed" : "boolean",
+      "errno" : "number",
+      "handle_ref" : "string",
+      "lifecycle" : "object",
+      "native_result" : "number",
+      "operation" : "string",
+      "phase_id" : "string",
+      "result_published" : "boolean",
+      "status" : "string",
+      "step_id" : "string",
+      "token_ref" : "string",
+      "unavailable_reason" : "string"
+    },
+    "reply.extension_events[].lifecycle" : {
+      "boundary" : "object",
+      "result" : "object",
+      "summary" : "string"
+    },
+    "reply.extension_events[].lifecycle.boundary" : {
+      "answer" : "string",
+      "basis" : "array",
+      "reason" : "string",
+      "state" : "string"
+    },
+    "reply.extension_events[].lifecycle.result" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.extensions[]" : {
+      "delivered_bytes" : "number",
+      "delivery_status" : "string",
+      "extension_class" : "string",
+      "host_buffer_erased" : "boolean",
+      "identity" : "object",
+      "issuance_status" : "string",
+      "issuer" : "object",
+      "preparation_errno" : "number",
+      "preparation_status" : "string",
+      "resolved_target" : "string",
+      "submitted_target" : "string",
+      "token_ref" : "string"
+    },
+    "reply.extensions[].identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
+    },
+    "reply.extensions[].issuer" : {
+      "call_boundary_observed" : "boolean",
+      "egid" : "number",
+      "errno" : "number",
+      "euid" : "number",
+      "executable_path" : "string",
+      "exit_code" : "number",
+      "gid" : "number",
+      "native_nonnull" : "boolean",
+      "pid" : "number",
+      "reaped" : "boolean",
+      "result_published" : "boolean",
+      "spawn_failure" : "object",
+      "term_signal" : "number",
+      "termination_request" : "object",
+      "token_length" : "number",
+      "uid" : "number",
+      "wait_errors" : "array"
+    },
+    "reply.extensions[].issuer.spawn_failure" : {
+      "diagnostic" : "string",
+      "executable_path" : "string",
+      "operation" : "string",
+      "origin" : "string",
+      "return_code" : "number"
+    },
+    "reply.extensions[].issuer.termination_request" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
+    },
+    "reply.extensions[].issuer.wait_errors[]" : {
+      "errno" : "number",
+      "rc" : "number",
+      "stage" : "string"
     },
     "reply.phases[]" : {
       "action_ids" : "array",
@@ -331,6 +420,7 @@
       "child_term_signal" : "number",
       "errno" : "number",
       "error" : "string",
+      "fresh_read" : "object",
       "lifecycle" : "object",
       "missing_reason" : "string",
       "observed_path" : "string",
@@ -343,6 +433,25 @@
       "result_source" : "string",
       "stderr" : "string",
       "stdout" : "string"
+    },
+    "reply.steps[].attempt.fresh_read" : {
+      "close_errno" : "number",
+      "close_rc" : "number",
+      "content_hex" : "string",
+      "identity" : "object",
+      "open_errno" : "number",
+      "open_rc" : "number",
+      "read_errno" : "number",
+      "read_rc" : "number",
+      "stat_errno" : "number",
+      "stat_rc" : "number"
+    },
+    "reply.steps[].attempt.fresh_read.identity" : {
+      "device" : "number",
+      "gid" : "number",
+      "inode" : "number",
+      "mode" : "number",
+      "uid" : "number"
     },
     "reply.steps[].attempt.lifecycle" : {
       "boundary" : "object",

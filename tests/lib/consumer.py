@@ -28,6 +28,7 @@ import contract
 import lifecycle_contract
 from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
+from extension_evidence import validate_extensions, validate_fresh_read
 
 
 # The comparison record vocabulary (docs/PolicyWitness.md, "Reading a comparison record").
@@ -60,13 +61,14 @@ IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
 # Attempt-to-query mapping: the operation and filter kind a completed attempt corresponds to.
 ATTEMPT_OPERATIONS = {
     ('file', 'open_read'): ('file-read-data', 'path'), ('file', 'access'): ('file-read-data', 'path'),
+    ('file', 'read_fresh'): ('file-read-data', 'path'),
     ('file', 'open_write'): ('file-write-data', 'path'), ('file', 'unlink'): ('file-write-unlink', 'path'),
     ('mach_lookup', 'bootstrap_look_up'): ('mach-lookup', 'global_name'),
     ('sysctl', 'read'): ('sysctl-read', 'sysctl_name'), ('exec', 'spawn'): ('process-exec*', 'path'),
     ('file', 'create'): (None, 'path'),
 }
 PERMISSION_ERRNOS = (1, 13)
-PERMISSION_OUTCOMES = ('open_failed', 'unlink_failed', 'access_failed', 'sysctl_failed', 'exec_failed')
+PERMISSION_OUTCOMES = ('open_failed', 'read_failed', 'unlink_failed', 'access_failed', 'sysctl_failed', 'exec_failed')
 
 PATH_FORMS = ('realpath_resolved', 'firmlink_resolved')
 ATTEMPT_PATH_FORMS = ('realpath_resolved', 'parent_realpath_resolved')
@@ -328,6 +330,7 @@ def _validate_step(runner, step, failed_reporting):
         errors.append(f'{sid}: invalid attempt.rc')
     if attempt.get('errno') is not None and type(attempt.get('errno')) is not int:
         errors.append(f'{sid}: invalid attempt.errno')
+    errors.extend(f'{sid}: {error}' for error in validate_fresh_read(attempt))
     if not isinstance(query.get('operation'), str) or not isinstance(query.get('filter_kind'), str):
         errors.append(f'{sid}: missing sandbox_check.operation or filter_kind')
     if query.get('outcome') == 'prediction_unavailable' and query.get('rc') != -1:
@@ -430,6 +433,7 @@ def _validate_reply(runner):
         errors.extend(_validate_step(runner, step, failed_reporting))
     if not failed_reporting:
         errors.extend(_validate_phases(runner))
+        errors.extend(validate_extensions(runner))
     sub = runner.get('runner_subprocess')
     if isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
         timeout = sub['policy_transfer_timeout']
@@ -484,7 +488,15 @@ def _validate_phases(runner):
     if len({str(x) for x in ids}) != len(ids) or len(set(actions)) != len(actions):
         errors.append('duplicate phase/action identity')
     steps = [x for x in runner.get('steps', []) if isinstance(x, dict)]
-    if actions != [x.get('step_id') for x in steps] or any(not _step_phase(runner, step) for step in steps):
+    events = runner.get('extension_events', [])
+    events = [x for x in events if isinstance(x, dict)] if isinstance(events, list) else []
+    step_ids = [x.get('step_id') for x in steps]
+    event_ids = [x.get('step_id') for x in events]
+    all_ids = step_ids + event_ids
+    if len(actions) > 256 or any(not isinstance(x, str) for x in all_ids) or \
+            sorted(actions) != sorted(x for x in all_ids if isinstance(x, str)) or \
+            [x for x in actions if x in step_ids] != step_ids or [x for x in actions if x in event_ids] != event_ids or \
+            any(not _step_phase(runner, action) for action in steps + events):
         errors.append('phase actions do not partition the ordered steps')
     return errors
 

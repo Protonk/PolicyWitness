@@ -171,6 +171,68 @@ omission is a contract violation (`disposition_integrity: invalid` with a
 record's own version is the response schema; it carries no separate number,
 and readers accept exactly the current response schema.
 
+The account indexes every declared phase action in execution order, including
+extension consumption and release. `steps` contains ordinary query/attempt pairs;
+`extension_events` contains the native interventions. `phases[].action_ids`
+partitions their union, preserving each array's relative order. Consumers join
+disposition entries by action identity; an index in `steps` alone is not the
+worker slot index when interventions are present.
+
+### Native extension evidence
+
+`extensions[]` records target preparation, issuance and worker delivery
+independently. It carries a specimen-local `token_ref`, the fixed
+`com.apple.app-sandbox.read` class, submitted and resolved targets, preparation
+status/errno and the prepared target's device, inode, mode, UID and GID. Resolution
+and metadata are host observations before issuance; neither establishes that a
+later open reached the same object. Preparation failure retains its status and
+withholds the unavailable identity or resolved path. It does not fabricate a
+native issuance call.
+
+The nested `issuer` records its executable, PID, authority IDs, pre-call boundary,
+result publication, native pointer nonnullness, errno and bounded token length,
+plus independent spawn/wait/termination/reap observations. The pointer and token
+bytes are not reply fields. `issuance_status: issued` requires a complete bounded
+native result and a clean, confirmed issuer reap; abnormal or unconfirmed cleanup
+withholds delivery. `delivery_status` and `delivered_bytes` describe the worker's
+published channel observation separately from issuance. `host_buffer_erased`
+records clearing the host's mapping, not proof that every process or native
+library has erased every copy.
+
+Each `extension_events[]` entry identifies its phase, action, operation and local
+handle reference; consumption also identifies its token reference. These events
+have no ordinary query or comparison. `call_boundary_observed` is a separately
+published pre-call marker, not proof of native entry, return or effect.
+`result_published` means the worker completed that action's immutable slot.
+
+| Event status | Supported reading |
+| --- | --- |
+| `returned` | The call marker and slot publication support `native_result` and `errno`. Consumption retains the full signed native handle; -1 supplies no handle. Release retains its native int result and requires the matching earlier observed consume handle. |
+| `unavailable` | The worker published its decision without making the call. The reason is `token_unavailable`, `handle_unavailable`, `native_api_unavailable` or defensive `repeated_action`; native return and errno remain absent. |
+| `unresolved` | The action has no published result. A pre-call marker may survive, but no native return, errno or unavailability decision is inferred. |
+
+The event's `lifecycle` copies the corresponding disposition claims. A completed
+slot can record an unavailable action; it does not imply native success. A call
+whose return was not published remains unresolved even when an independent test
+intervention knows that it returned. Issuance, consumption, release, predictions
+and access remain independent observations; no field states effective permission
+or prediction/enforcement agreement.
+
+The ordinary `file/read_fresh` action opens a fresh descriptor, records `fstat`,
+performs one bounded read and closes the descriptor. `attempt.fresh_read` retains
+the native results and failure errnos separately, the descriptor identity after
+successful stat, and hexadecimal bytes whose length equals the nonnegative read
+count. A failed open supplies no read/stat/close evidence. The aggregate attempt
+preserves the first failure in syscall order as `read_failed`; missing slot
+publication supplies no fresh-read payload. This establishes the recorded bytes,
+not EOF or a whole-file read. `open_read` keeps its existing open-only meaning.
+
+`witness_contract/extensions` establishes native calls and independent file
+observations through the public CLI. `blackbox_e2e/checker_controls` mutates its
+retained capture to reject fabricated native completion, bad references and
+inconsistent read observations. Swift extension evidence controls and Rust
+disposition tests check producer encoding and controller withholding separately.
+
 ### Raw host facts the record needs
 
 Three host observations join `runner_subprocess` beside the fields in

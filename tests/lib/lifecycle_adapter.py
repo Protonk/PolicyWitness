@@ -26,6 +26,7 @@ from copy import deepcopy
 
 import lifecycle_contract as C
 from document_versions import require_supported
+from extension_evidence import ordered_actions
 
 
 def _claim(name, raw, malformed, where):
@@ -83,9 +84,10 @@ def read_lifecycle(envelope):
     view['schema_version'] = runner.get('schema_version')
     view['projections']['error'] = runner.get('error')
     sub = runner.get('runner_subprocess')
-    steps = runner.get('steps') if isinstance(runner.get('steps'), list) else []
+    steps = ordered_actions(runner)
     view['projections']['step_lifecycle'] = [
-        ((s.get('attempt') or {}).get(C.STEP_LIFECYCLE_KEY) if isinstance(s, dict) else None) for s in steps]
+        ((s if 'operation' in s else s.get('attempt') or {}).get(C.STEP_LIFECYCLE_KEY)
+         if isinstance(s, dict) else None) for s in steps]
     view['projections']['step_limitations'] = [
         [l for l in (((s.get('comparison') or {}).get('limitations') or []) if isinstance(s, dict) else [])
          if isinstance(l, str) and l.startswith('attempt:')] for s in steps]

@@ -220,6 +220,8 @@ def consumer_controls(artifacts, current):
     run('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
     policy_check_controls(run)
     observer_controls(run)
+    from extension_controls import run_extension_controls
+    run_extension_controls(run)
 
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)
@@ -582,7 +584,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response16/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response17/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -658,7 +660,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response16/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response17/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)
