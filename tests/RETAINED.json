@@ -660,6 +660,13 @@
       "reason": "M5.1 final nine-case gate at clean e1231bd/build 582: all six source-drift checks, both runner-unit cases and blackbox checker pass; final review and 197-case applicability credits retained.",
       "source": "e1231bd4f4c3ebcf74cbfc6e261658f3212e991d",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/extensions-m52-20261013",
+      "run_id": "20261013T230245Z_e01bd438",
+      "reason": "M5.2 limits-account gate at clean c76975a/build582; full source-drift, Rust/Swift/C limit, failure and native boundary checks.",
+      "source": "c76975aeff2a5ef41bb8a2216e5a59c3b9ca7eb1",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

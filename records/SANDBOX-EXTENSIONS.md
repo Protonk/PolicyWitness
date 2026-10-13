@@ -2,13 +2,11 @@
 
 ## Scope and checkpoint
 
-Current status: M0–M5.1, A1 and H1 are complete. Work is stopped at the user's
-requested M5.1 boundary with M5.2 and later milestones pending. A1-F11 and the
-evidence account are closed; [M5.1 closure](#m51-closure) records corrections,
-197 passing case credits, final rendered review and cleanup. Signed build 582
-is from clean `ea10ce3`; corrected test/documentation source is `e1231bd`.
-Historical entries retain their observations; the associated plan owns current
-resume instructions.
+Current status: M0–M5.2, A1 and H1 are complete. The user authorized continuation
+through A2. M5.3 is in progress with two documentation findings from its fresh
+review. Signed build 582 remains from `ea10ce3`; the M5.2 documentation candidate
+is `c76975a`. Current gate evidence and review dispositions are appended below;
+the associated plan owns resume instructions.
 
 ### M1 initial checkpoint
 
@@ -1929,3 +1927,41 @@ The requested stop is M5.1. M5.2 and later milestones remain pending. Resume onl
 when the user authorizes continuation; the associated plan identifies the next
 milestone and accepted evidence. H1's deferred hook investigation remains outside
 this gate.
+
+
+## M5.2 limits-account closure
+
+Closed at clean `c76975aeff2a5ef41bb8a2216e5a59c3b9ca7eb1`, signed build 582
+unchanged. Lead review traced all new phase/extension limits to source/value-test
+owners and boundary controls; the existing source-inspected rows retain their
+coverage limits. Runtime values, public versions and worker identity did not change.
+The corrections describe the issuer clock starting after spawn, its separation
+from worker/phase allowances, and admission precedence/NUL handling for extension
+fields. Owning inputs are `docs/limits.json` and handwritten LIMITS/architecture
+explanations; the limits generator regenerated and staged the guide copies.
+
+`extensions-m52-20261013` (`20261013T230245Z_e01bd438`) passed 24/24 without skips
+or unrun cases. Six source-drift, five Rust, both runner-unit, compiled C/Swift ABI
+and limits, seven failure-boundary and three phase/extension/maximum-reply cases
+all passed. Swift output is 416/416. The run's checkpoint maps all 197 required
+case credits to 24 fresh results and 173 reviewed reuses. Exact file/app comparison
+is separated from dependency judgments: changed manifest counting prose does not
+alter numeric consumers; those reading the manifest as contract input were rerun;
+build/dispatcher copies preserve unchanged executable paths. App inventories and
+both baselines are unchanged. Exact observation confirms all 26 named observer
+channels and recovery directories absent; this run created no BYOXPC sessions.
+
+Fresh Astra reviewer `/root/m52_rendered_review` inspected actual LIMITS, budget
+and source/staged guide PNGs, with source/control traces. No semantic issue was
+found. M52-R1 identified narrow local preview columns fragmenting quantities and
+ownership identifiers. The local rendering stylesheet now uses wide table pages,
+normal cell wrapping and minimum widths; no repository document or generator was
+changed for this presentation issue. Focused reinspection of LIMITS and both guide
+copies closed R1. The lead accepts the bounded disposition; source-inspected waits
+and other declared behavioral gaps were not upgraded to tested guarantees.
+
+Initial and corrected immutable source/HTML/PDF/PNG artifacts and reports are in
+[the retained M5.2 run](../tests/out/runs/extensions-m52-20261013/reviews/), local
+and gitignored. Pandoc 3.12, WeasyPrint 70 and Poppler 26.10 rendered the account.
+The initial snapshot also contains the surfaces used by the independent M5.3
+review, whose two documentation findings remain pending at this checkpoint.
