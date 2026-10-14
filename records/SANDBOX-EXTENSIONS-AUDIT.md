@@ -1271,9 +1271,10 @@ A2 remains pending after M5.6.
 
 ## A2 Final audit — after M5.6
 
-Status: **awaiting the out-of-band auditor**. M5.6 is complete; execution stops
-at this handoff. The plan is not complete until returned findings are dispositioned
-and any required corrections are verified. This is separate from the fresh
+Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
+executing-agent review and recommendations recorded below. M5.6 remains complete;
+A2 is open pending direction on the recommended nonblocking correction pass.
+No product repair or plan-completion claim is made by this review. This is separate from the fresh
 rendered-documentation assessments. Please attribute answers and any additional
 findings; retain the original A1 exchange above.
 
@@ -1331,7 +1332,7 @@ on the same source/build. It does not answer A2.
 - [Maximum replies, standard](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/max_targets_reply_survives/artifacts/observations.json)
   and [BYOXPC](../tests/out/runs/extensions-m56-20261013/suites/witness_contract/extensions_byoxpc/artifacts/maximum/observations.json):
   eight admitted workloads and four refusal controls each. The largest measured
-  replies were 9,473,544 and 9,473,558 bytes. The 52,414,779-byte encoder-derived
+  runner replies were 9,473,544 and 9,473,558 bytes. The 52,414,779-byte encoder-derived
   bound is a conservative union including incompatible optional evidence, not a
   claimed reachable live response. Its sizing controls and the 159,383,552-byte
   controller budget are separate from the real-transport measurements.
@@ -1379,6 +1380,33 @@ escaped exec descendants remain outside the containment claim. The six pre-exist
 source-inspected limit rows and 27 build-refusal control gaps retain their stated
 coverage limits. No release publication or notarization acceptance is claimed.
 
+#### Auditor review scope (A2)
+
+Auditor (Claude Fable 5.1, out of band, 2026-10-13). Reviewed at the handoff
+commit `3284c85beae8114e019a944f74bd659d64a91664`, whose delta from the accepted
+source `2e9cac4` is the plan, two records and the retention index. The local app
+reports source `2e9cac4`, build 594, and embeds the worker identity
+`5fd52343…6de2e` that the worker header, Swift layout and `tests/lib/contract.py`
+carry. I read every production, reader, test, fixture and document change since
+my A1 follow-up (`9a1f20b..3284c85`), the M4 to M5.6 sections of the
+investigative record, the final rendered review report and lead disposition, and
+the retained artifacts each question names. My own evidence is retained under
+[a2-audit-default-20261013](../tests/out/runs/a2-audit-default-20261013/audit/):
+39 reader probes built from the retained response-18 envelopes (standard
+lifecycle, ordinary phases, M02, M05, M06), the committed abnormal-issuer
+fixture and one response-17 envelope, replayed through the Python consumer, the
+lifecycle oracle and the Rust `execution_diagnostics` entry point (scratch copy
+of `controller/` at this commit with one appended replay test; production source
+byte-identical; diff retained), plus the full default battery at this commit
+against unchanged build 594 (run `20261014T001209Z_07203f6c`: 175 of 175 passed, 0 failed, 0 skipped, 0 unrun; 416 of 416 Swift
+checks; M01 to M07 passing; the maximal-reply figure reproduced; app inventory
+unchanged). I did not rerun the 22 credited opt-in cases: each needs the signing
+identity directly or through its installation dependency, and the standing
+instruction is to pause at keychain-dependent steps; their evidence is accepted
+on the provenance checks in Q6. I did not re-inspect rendered pages visually; I
+verified the review archive's manifest hashes against the current tree and read
+the sources. Nothing else was inaccessible.
+
 #### Q1 — Reader closure and valid-document meaning
 
 Does the final F11 repair reject present wrong-type phase containers, ordering,
@@ -1388,7 +1416,49 @@ validation and Python full-shape validation, the unknown-string controls and
 phase-detail units. Are the current 4/18/7 contract versions and copied reading
 rules justified by the actual valid-document semantics?
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes on all three
+parts.
+
+*F11 closure.* `phase_collection_issues` in
+[`disposition.rs`](../controller/src/disposition.rs) now distinguishes a present
+wrong type from optional absence: a non-array `phases`, a non-object entry,
+ordering or spawn-failure value, or a non-string disposition is an integrity
+issue that withholds the projection, while a missing or null optional field is
+tolerated. My probes 10 to 16 (`phases: 7`, `[7]`, ordering `7` and `"wrong"`,
+disposition `7` and `[]`, spawn failure `7`) are rejected by the consumer, the
+oracle and the Rust reader with the same `phase_collection` kind; probes 18 and
+19 (null disposition, absent ordering on a `not_reached` phase) are valid for
+the Rust claim reader and the oracle while the full consumer rejects them as
+shape violations, which is the division the failure contract's new "Reader
+validation responsibilities" section states. The unknown string `wrong` (probe
+17) is rejected by all three as a vocabulary and consistency contradiction, not
+a type error, matching the corrected blackbox control. The empty spawn object
+(probe 1a) is rejected only by the full consumer, as documented. Degraded raw
+evidence survives: a degraded reply carrying the A1-F3 contradiction (probe 1c)
+is accepted by all three with no claims, and a degraded reply with `phases: 7`
+(probe 1b) is forwarded unchanged by the Rust reader with no phase issue, while
+the consumer still rejects its shape; the `run_flow` control pins the same
+behavior.
+
+*Phase-detail units.* The worker publishes the budget for code 8 and the
+observed ordinal for code 11
+([`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c)),
+and `classify` now interprets only `(8, 0)` and `(1, 3)` as a budget and
+`(11, 0)` as an ordinal, leaving unfamiliar details raw; `PhaseProtocolTests`
+checks the 80 ms budget, ordinal 3 and an unfamiliar code against the real
+worker. The failure contract's code table matches.
+
+*Versions.* 4/18/7 is justified. Response 18 adds `issuer_abnormal_exit` to the
+issuance vocabulary; a closed-vocabulary reader at 17 rejects that value, so the
+change places a new requirement on readers and the contract's rule requires the
+bump. Both Python readers now report the A1-era response-17 envelope as
+unsupported (probe 01), which is the correct gate behavior. The request and
+envelope carry no changed field, and the disposition record's "one per declared
+action" wording describes indexing that version 17 already used. The new
+sentence in [CONTRACT.md](../docs/CONTRACT.md#when-a-number-moves) records the
+reading I gave at A1: enforcing an existing invariant moves no number, a changed
+meaning does. One reader gap that this repair did not reach is recorded as
+A2-F1.
 
 #### Q2 — Phase and native publication boundaries
 
@@ -1399,7 +1469,63 @@ validation and native return before publication? Identify any field or summary
 that still invents completion, borrows another phase's evidence, or conflates a
 requested intervention with an observed effect.
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes. Each claimed
+distinction has an implementation path, a live or driver control, and an
+independent receipt, and I found no field that invents completion, borrows
+another phase's evidence or conflates a request with an effect in a way that
+reaches a claim. One reader gap and two accepted limits are recorded below.
+
+*Published issuer output then abnormal exit* (M01, M07; fixture mode 17 exits
+87 inside the unmap substitution after publication).
+[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) sets
+`issuer_abnormal_exit` only inside the published, valid-header, state-1,
+bounded-length branch when the reaped exit is not clean, and clears the
+publication so the worker receives no descriptor. The retained M01 envelope
+shows exit 87, `result_published: true`, `token_length: 220`, delivery
+`token_unavailable`, consume `unavailable: token_unavailable`, release
+`handle_unavailable`, every fresh open failing with errno 1, and the observer's
+`control_value: 1` for the completion flag it saw at exit. Timeout and
+wait-error keep their own statuses because the override applies only when the
+stop was a reap.
+
+*Interrupted token validation* (M02; worker mode 106 substitutes `memchr` and
+kills the worker halfway through framing). The envelope shows issuance `issued`,
+delivery `not_observed`, worker reaped with signal 9, `sandboxed_after_apply:
+false`, both phases `not_reached` and both events `unresolved` with no boundary
+marker; the receipt records stage 4, a valid 110-byte prefix of the 220-byte
+token, the descriptor closed and core dumps disabled before the interruption.
+
+*Native return before publication* (M05, worker mode 103). The consume event is
+`unresolved` with `call_boundary_observed: true`, `result_published: false` and
+no native fields, while the observer recorded `actual_returned: true` with
+result 1; phase p0 has arrival without completion, its `before` read completed
+with errno 1, and `during` is synthetic `not_reached`. M06 shows the mirror for
+release interrupted before its call, with the earlier consume `returned` and the
+20-byte fresh read of the independently prepared file retained.
+
+*M08* runs the production phase driver with a kill substitution that returns
+EPERM: `termination_request.errno` is EPERM, `reaped` is false, the disposition
+is `unconfirmed`, stdout collection stopped at the deadline, the surviving
+validator's late write observed EPIPE through the test's gate file, the two
+validator PIDs differ, phase-local records are `['early']` and `['later']`, the
+target bytes are unchanged, and every shared raw assertion is checked with a
+deliberately wrong `read_rc` rejected. The production-encoded reply is replayed
+through Rust assembly and both Python readers in `runner_unit`, which passed in
+my battery.
+
+*Reader resistance.* Relabelling an unresolved event as `returned`, adding a
+native result to an unpublished event, marking it published, borrowing the
+consume result into the release, relabelling it `unavailable`, turning a
+synthetic step into a worker result, and claiming consumption without delivery
+(probes 28, 30 to 35, 38) are rejected by all three readers.
+
+*Accepted limits, by design.* `delivery_status: delivered` has no second witness
+in the reply: probe 33 writes it beside the M02 worker that died before applying
+and all three readers accept, because that combination is also producible when
+a worker dies after delivery. Delivery alone is not a completion or permission
+claim. The same-length fresh-read byte alteration (probe 39) remains the A1
+limit; the live controls compare bytes with the investigator's file. Borrowed
+validator evidence across phases is a reader gap, recorded as A2-F2.
 
 #### Q3 — Bounds, tokens and resources
 
@@ -1409,7 +1535,58 @@ Assess the distinction between the conservative reply bound and measured live
 maximum workloads, and whether the declared native-hook/private-library limits
 leave any required claim unsupported rather than merely bounded.
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes, with one
+wording note. The account matches the code and the retained observations, and
+the declared limits bound the claims without leaving a gate claim unsupported.
+
+*Budgets.* The corrected LIMITS, guide and architecture text says the issuer
+wait starts after a successful spawn, that preparation and the spawn call
+precede it, and that cleanup can overrun it. `ExtensionSession` does exactly
+that: `realpath`/`fstatat`, then `posix_spawn`, then
+`MonotonicDeadline(issuerWaitMs)`, then a termination request and reap when the
+wait expires. The phase collection allowance is deducted per phase in the
+orchestrator's boundary callback and caps each validator deadline, with
+`budget_exhausted` decided before any spawn. The client wait's inability to
+cancel the host is stated. The admission precedence and NUL rules added for
+extension fields match the orchestrator's `requestAdmissionFailure` order.
+
+*Token storage.* The payload, token array and channel sizes are owned by
+`limits.json` and the ABI header; the reply carries only `token_length` and
+`delivered_bytes`; the controls scan every retained artifact and the captured
+output for the token, record issuer argv and environment hygiene, and record
+host and worker erasure flags. `host_buffer_erased` is described as the host's
+mapping only.
+
+*Allocation.* The architecture's principle text claims preallocated PW-owned
+request, evidence and token storage after application and no post-apply heap
+allocation for native lifecycle actions, and explicitly does not claim that
+private calls or system libraries allocate nothing; its known-gap paragraph
+repeats the limit. That is the M1 revision, stated faithfully.
+
+*Cleanup.* Receipts name exact channels, labels and paths. I rechecked now: all
+33 recorded observer channels return ENOENT from `shm_open`, all 13 session and
+registry labels are absent from the user launchd domain, all 7 staging paths are
+absent, and no `pw-byoxpc-*` or `pw-extension-control-*` directory remains. The
+25 unnamed M3 objects remain unverifiable, as stated.
+
+*Bound versus measurement.* The 52,414,779-byte figure is the encoder-derived
+union of incompatible optional evidence; `ReplyMaximumTests` is unchanged since
+A1 and both the final run and my run print it beside the 159,383,552-byte
+budget. The live measurements are separate: eight admitted workloads and four
+refusals per path, the largest being `control_character_exec` at 9,473,544
+(standard) and 9,473,558 (BYOXPC) runner-reply bytes, about 0.18 of the bound.
+Wording note, not a finding: those figures are runner-reply bytes; the
+enclosing envelopes were 9,968,550 and 9,972,082 bytes. The receiver budget
+applies to the runner reply, so the comparison is the right one, but the record
+should name the quantity.
+
+*Hook and private-library limits.* The required claims are publication
+distinctions, delivery eligibility, token confinement and erasure of PW-owned
+buffers. They rest on instrumented builds of the production source with
+independent observer receipts, on signed-CLI lifecycle controls, and on reader
+rules; the declared limits (shipped bytes not interrupted, private internals
+unobserved, allocations beyond PW buffers unknown) bound those claims without
+leaving any of them unsupported. H1's deferral of further hook work stands.
 
 #### Q4 — BYOXPC authority and recovery
 
@@ -1418,7 +1595,36 @@ capability refusals, conditional issuer validation and old-record unknowns agree
 across code, public output and documentation? Do the owned cleanup/recovery
 receipts support the absence claims without using a label prefix as authority?
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes. Code, public
+output and documentation agree, and the absence claims rest on owned receipts.
+
+*Signing and read-back.* `sign_install_tree` signs the worker with the supplied
+entitlements, the validator and issuer with the identity alone, then the bundle,
+and `validate_record` verifies the host, worker and validator and the issuer
+whenever its file exists or a prior issuer read-back was recorded, leaving an
+absent unrecorded issuer unknown. The architecture's BYOXPC rows say the same.
+The retained BYOXPC registry record reads back a valid Developer ID signature
+and an empty grant set for the issuer, `com.apple.security.cs.allow-jit` for the
+worker from the supplied plist, and nothing for the validator; the provenance
+checker asserts `runner_issuer_entitlements.granted == []` on every BYOXPC
+envelope. The standard build's issuer carries no entitlements on read-back.
+
+*Capability refusals.* The live missing-issuer control removes only the owned
+installed issuer after retiring the host, observes `bad_request` with
+`extension_issuer_unavailable`, `issuance_status: issuer_unavailable`,
+`preparation_status: not_started`, no worker and no steps, and an issuer
+binary verification of `unavailable`; `runner validate` reports that service's
+issuer failure; the exact bytes are restored under a recorded SHA-256 and
+validation is clean again. Missing native API, standard-path refusal and
+`extension_api_unavailable` are covered by the boundary controls as before.
+
+*Old records.* Absent helper read-backs stay unknown in the loader control and
+in the guide's and architecture's wording.
+
+*Recovery.* Cleanup checks use the session receipts' exact service names,
+staging and plist paths, and the registry-recovery receipts' exact identities;
+`launchctl print gui/501/<label>` returns 113 for all 13, the registry is empty,
+and no prefix is used as authority. My rechecks agree.
 
 #### Q5 — Completed documentation and check scope
 
@@ -1429,7 +1635,35 @@ claims, issuer assembly/registry/validation rows, budget clocks and GUI catalog
 prerequisites. Are any remaining claims unsupported by what the cited control
 actually observes, even though generation and drift checks pass?
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes within the
+scope the reviews state, with one documentation gap recorded as A2-F3.
+
+*Preflight and host-binding scanner.* The preflight README now claims
+inventory, signature, signer and manifest-hash checks and disclaims entitlement
+comparison; `tests/lib/artifact.py` inspects the four shipped binaries and runs
+`nm -u` on the host for `_sandbox_*` imports, and `check_host_invariance` scans
+`runner/Sources` for direct calls and literal or simple-constant bindings with
+accept and reject controls. The architecture's narrowed principle text says
+exactly that and excludes computed names.
+
+*Issuer assembly, registry and validation.* `build.json` and the BUILD table
+include the issuer in the assembly reads and writes; the BYOXPC registry and
+validate rows match `validate_record`, including the present-or-recorded issuer
+condition and unknown absence.
+
+*Budget clocks and GUI prerequisites.* The issuer clock wording matches the
+code (Q3). The catalog adds `gui` to both standalone BYOXPC witness cases and
+the dispatcher probes `launchctl print gui/<uid>` when a case declares it.
+
+*Contract and matrix.* The eight M rows' placement, runner, observer and
+comparison assertions match what the live checker reads and the retained
+envelopes show; the contract's ownership table names each row's live owner.
+The staged guide is byte-identical to its source, the review archive's 21
+document hashes match the current tree, and `source_drift` passes in my battery.
+
+*Unsupported claims.* None found where a cited control is narrower than the
+sentence citing it. The gap is enumeration rather than overclaim: the
+`issuance_status` vocabulary is not listed anywhere public (A2-F3).
 
 #### Q6 — Acceptance sufficiency and remaining findings
 
@@ -1439,11 +1673,156 @@ historical failures and known gaps represented honestly? Are any required
 corrections still needed before closing this plan, including issues outside the
 questions above? State inaccessible evidence and any limits on your conclusion.
 
-Auditor answer: **pending**.
+Auditor answer (Claude Fable 5.1, out of band, 2026-10-13): Yes. M5.6 is
+established, the history is represented honestly, and no correction is required
+before closing the plan. Three low findings follow; I recommend finishing two of
+them before closure because they are small.
+
+*Candidate and build.* The handoff commit differs from `2e9cac4` by the plan,
+two records and the retention index. The app reports source `2e9cac4`, build
+594, with the worker identity embedded. The final run's source snapshot covers
+all 650 tracked files and every hash equals the git tree at `2e9cac4`; the four
+`CLAUDE.md` entries are symlinks hashed by target content rather than link text,
+a method note and not a difference. The 21 app inventory entries match the
+current app.
+
+*Ledger.* The 197 credits are exactly the dispatcher's 175 default cases plus 22
+of the 25 opt-ins, all fresh at build 594, and equal both the recorded selection
+and the run's completed passes; the three uncredited opt-ins are not gate
+controls. Cleanup receipts hold under recheck (Q3).
+
+*History.* The M4 `unit/rust.unit` failure is preserved with its log and
+remains unexplained; the M5.1 cancelled and failed runs keep their status and
+reasons in the index; the 25 unnamed objects are stated as unverifiable.
+
+*My discriminating run.* The default battery at this commit on build 594: run
+`20261014T001209Z_07203f6c`, 175 of 175 passed, 0 failed, 0 skipped, 0 unrun, 416 of 416 Swift checks, M01 to M07 passing, the
+maximal-reply figure reproduced, inventory unchanged. The 22 opt-ins were not
+rerun by me (identity dependence; standing pause rule) and are accepted on the
+provenance above. No evidence was inaccessible; renders were checked by hash and
+source rather than re-inspected visually.
+
+*Corrections before closure.* None required. A2-F1 (an issuance status that no
+reader cross-checks against publication) and A2-F3 (the vocabulary is not
+documented) are small enough to finish within A2 and I recommend doing so. A2-F2
+(validator evidence not tied to its phase) can be fixed or recorded as an
+accepted reader limit beside the delivery-witness limit in Q2. Nothing here
+invalidates M5.6 or any earlier gate.
+
+#### Additional auditor findings (A2)
+
+Auditor findings (Claude Fable 5.1, out of band, 2026-10-13). Numbering
+continues from A1-F11. None is a product defect that invents completion,
+permission or revocation; none blocks closure.
+
+**A2-F1 — `issuer_result_missing` is accepted beside a published, bounded
+native result (low; reader hardening).** Probe 27 relabels the committed
+abnormal-exit fixture's status to `issuer_result_missing` while keeping
+`result_published: true`, `token_length: 220`, exit 87 and a confirmed reap; the
+consumer, the oracle and the Rust reader all accept it. The producer cannot emit
+it, because `ExtensionSession` overwrites that default whenever the publication
+is valid, and no claim follows, because delivery is withheld for every status
+other than `issued`. The readers check the unpublished direction ("unpublished
+issuer result carries payload") but not this one. Smallest correction: require
+`result_published: false` and no payload for `issuer_result_missing` in the
+Swift encoder, Rust reader and Python module, with a negative control; or, if
+the status is meant to cover "no decision reached", say so and name it in the
+documentation (A2-F3).
+
+**A2-F2 — Validator evidence is not tied to its phase by any reader (low;
+hardening or accepted limit).** Probe 37 copies phase p0's `validator_subprocess`
+into phase p1, whose only action is `missing`, and marks p1
+`collected`/`reaped`; all three readers accept. The borrowed block carries
+`expected_step_ids: ['unlink']`, a record for `unlink` and p0's validator PID,
+none of which belong to p1. No prediction can be borrowed, because step IDs are
+unique across the reply and the step join requires an exact match, so there is
+no claim path; the gap is that the contract's statement "validator process and
+spawn-failure evidence belong only to this record" is not enforced by readers.
+Hardening: `expected_step_ids` and `records[].step_id` must lie within the
+phase's `action_ids`, and validator PIDs must differ across phases, which the
+production driver guarantees and M08 asserts. Alternatively record it as an
+accepted reader limit.
+
+**A2-F3 — The `issuance_status` vocabulary is not enumerated publicly (low;
+documentation).** The guide's extension evidence table names the field without
+its values; the failure contract describes `issued`, `issuer_abnormal_exit` and
+the timeout and wait-error statuses in prose; `token_oversized` appears in the
+limits table; `issuer_result_missing`, `issuer_unavailable`,
+`channel_setup_failed`, `spawn_failed`, `native_refusal`, `invalid_transport`
+and `not_started` appear only in `extension_evidence.py` and
+`ExtensionIssuer.swift`. The delivery vocabulary is enumerated only partially.
+A consumer copying the independent reader takes the vocabulary from code.
+Smallest correction: a status table in the guide's extension section and the
+failure contract, owned like the comparison vocabulary, giving each status its
+publication and cleanup meaning, including the A2-F1 relationship.
 
 ### A2 Execution dispositions and follow-up
 
-Awaiting the auditor's attributed answers and additional findings. No executing-
-agent disposition or plan-completion claim is made in advance. Resume with review
-of the returned exchange; required corrections and their affected verification
-must precede A2 closure.
+Executing agent `/root`, 2026-10-13. The returned audit establishes M5.6 and
+identifies no blocking correction. I agree with that conclusion. The original
+auditor answers and findings above remain unchanged; the qualifications and
+recommendations below are mine. The user's current request is to review and
+report, so this increment records the review without implementing optional
+repairs or closing A2.
+
+**Review verification.** I inspected the attributed answers, probe construction,
+retained Rust replay diff/results, production paths and reader contracts. I
+replayed all 39 saved probes through the current Python consumer and lifecycle
+oracle; both exactly reproduced the auditor's saved results, including acceptance
+of probes 27 and 37. This was offline replay, not another live battery or Rust
+run. The auditor's terminal run records 175/175 passes, zero skips/unrun cases,
+no harness errors and 416/416 Swift checks. Its 650 source hashes match git
+`3284c85` under its documented blob-content hashing rule; its before/after app
+inventories are equal and all 21 file hashes match the current build 594 app.
+The auditor accepted the prior 22 opt-in results on provenance and checked
+render sources/hashes without a new visual inspection. Those scope limits remain.
+The linked audit artifacts are gitignored and local to this checkout.
+
+**A2-F1 — accepted; recommend a bounded repair.**
+[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
+uses `issuer_result_missing` after a reap with no publication. Every published
+branch replaces that default; timeout and wait-error have separate statuses.
+The contradictory probe therefore identifies a reader invariant gap, not an
+observed producer failure. Require missing-result status to have no publication
+or native payload, consistently in the Swift encoding guard, Rust claim reader
+and independent Python rules. Add passing missing-publication and rejected
+contradiction controls, preserving timeout/wait-error observations. Do not
+redefine the status or infer a native result. No repair is applied in this review.
+
+**A2-F2 — gap accepted; proposed repair qualified.** The copied validator block
+is accepted, but the exact step/query join prevents it from supplying a prediction
+for another phase's differently named action. I recommend documenting this as an
+explicit reader limit for closure, rather than adopting the suggested checks
+unchanged. The [validator contract](../tests/FAILURE-PROPAGATION-CONTRACT.md)
+and [`associateValidatorVerdicts`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
+deliberately preserve unexpected, duplicate and null-ID records with association
+issues. Requiring every raw record ID to belong to the phase would reject that
+supported evidence. The production driver starts a new validator per collection;
+M08's differing PIDs distinguish a still-unreaped earlier child from the next
+child. That control does not establish that numeric PIDs can never repeat after
+earlier children have been reaped, and the driver has no all-phase PID uniqueness
+check. A later repair can validate host-owned `expected_step_ids` against the
+phase's eligible queries and check association consistency while preserving raw
+anomalies. Such a repair needs its own positive anomalous-evidence controls.
+
+**A2-F3 — accepted; recommend documentation completion.** Enumerate issuance
+and delivery values and their publication/cleanup meaning. Keep the failure
+contract as owner and generate any copied guide table through the existing
+documentation mechanism; update generator controls and inspect the resulting
+rendered account. In particular, distinguish result publication from issuer
+cleanup, delivery and native action completion. This is an account correction,
+not a new status vocabulary. No permanent documentation is changed here.
+
+**Q3 wording note — corrected.** The handoff and investigative record now name
+the 9,473,544 / 9,473,558 measurements as runner-reply bytes. They are not the
+enclosing envelope sizes. The auditor's text and original retained observations
+are unchanged.
+
+**Recommendation and checkpoint.** Finish F1 and F3, record F2's bounded reader
+limit, and refresh affected checks and review evidence before closing A2. Any
+changed candidate must have applicable acceptance evidence; this review does not
+pre-credit a future repair. Alternatively the auditor permits closure without
+those nonblocking changes. M5.6, H1's deferred hooks and historical limitations
+remain as recorded. No build, live test, render or cleanup operation was started
+by this review; the offline replays are complete. Await the user's direction on
+the recommended pass.

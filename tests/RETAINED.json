@@ -709,6 +709,13 @@
       "reason": "M5.6 final signed acceptance: all 197 required cases fresh at clean 2e9cac4/build594; final rendered reconciliation and A2 handoff evidence.",
       "source": "2e9cac496979acd79617bf7a1043973f30997999",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/a2-audit-default-20261013",
+      "run_id": "20261014T001209Z_07203f6c",
+      "reason": "A2 out-of-band audit: the full default battery at the A2 handoff commit against unchanged signed build 594; auditor reader probes (Python and Rust replay) and console attached under audit/.",
+      "source": "3284c85beae8114e019a944f74bd659d64a91664",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

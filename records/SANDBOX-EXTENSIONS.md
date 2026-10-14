@@ -2099,7 +2099,7 @@ The checkpoint's lifecycle extraction preserves each channel and links its sourc
 envelope; assertions and independent target observations remain beside the runs.
 
 Each transport path passed eight admitted maximum workloads and four refusal
-controls. Largest measured standard/BYOXPC replies were 9,473,544 / 9,473,558
+controls. Largest measured standard/BYOXPC runner replies were 9,473,544 / 9,473,558
 bytes, with no receiver loss. The encoder-derived 52,414,779-byte conservative
 union includes mutually incompatible optional evidence and is not represented as
 a reachable live response. The 159,383,552-byte receiver budget, constructed
@@ -2140,3 +2140,37 @@ answers pending. Original A1 attributed text is preserved. Execution stops at A2
 no build, test, render, reviewer or owned cleanup task remains active. Resume by
 reviewing the returned audit, then verify required corrections before closing the
 plan. This implementation gate does not publish or accept a notarized release.
+
+
+## A2 returned-audit review
+
+Reviewed by executing agent `/root` on 2026-10-13. The returned out-of-band
+audit accepts M5.6 with no blocking correction and three low findings. The full
+attributed exchange and separate lead dispositions are in
+`records/SANDBOX-EXTENSIONS-AUDIT.md`; original auditor wording is preserved.
+The auditor's [retained run and probes](../tests/out/runs/a2-audit-default-20261013/)
+are local/gitignored evidence. Run `20261014T001209Z_07203f6c` passed 175/175
+default cases and 416/416 Swift checks at handoff `3284c85` with unchanged signed
+build 594. The 22 earlier opt-ins were accepted on provenance; renders were
+checked by source/hash, not visually re-inspected by that auditor.
+
+Lead review reproduced all 39 saved probes through both Python readers, inspected
+the retained Rust replay, verified all 650 audit source hashes against the handoff
+commit and all 21 app file hashes against the current bundle, and confirmed equal
+before/after app inventories. No live test or Rust replay was rerun by the lead.
+
+F1's missing-result status accepts contradictory publication; the producer does
+not emit it. F3 lacks full public issuance/delivery vocabulary. The recommendation
+is to finish both, then refresh affected checks and documentation review. F2's
+borrowed phase block reaches no prediction claim; recommend explicitly recording
+that reader limit. Do not blindly require every retained raw validator ID to
+belong to the phase: unexpected/null/duplicate records are supported evidence.
+M08's distinct live PIDs likewise do not establish universal numeric uniqueness
+after prior children are reaped. A future ownership check needs to distinguish
+host-owned expected query IDs from retained anomalous records.
+
+The Q3 wording note is corrected above: maximum measurements are runner-reply
+bytes, distinct from envelope bytes. No production, test implementation or permanent document
+was changed by this review. A2 remains open pending direction on the recommended
+nonblocking pass; M5.6, H1 and historical limitations remain unchanged. No build,
+test, render or owned cleanup task remains active from this review.
