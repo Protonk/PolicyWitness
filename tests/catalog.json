@@ -1703,6 +1703,7 @@
       "include": [
         "preflight/signed_artifact_controls",
         "preflight/build_guard_controls",
+        "preflight/build_refusal_controls",
         "runner_exec_inheritance/mutation_controls",
         "smoke/runner_caller_auth",
         "runner_byoxpc/runner_auth_external",
