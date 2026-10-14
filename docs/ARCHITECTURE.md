@@ -3,19 +3,16 @@
 A tour of the internals at the level between the [README](../README.md)'s
 Flow paragraph and the directory READMEs: how one run unfolds in time and the
 boundaries it crosses. It is for a developer or agent who has read the README
-and is about to open a directory. It is not a field reference, a contract, a
-module list, a test map or a build guide; each of those exists and is linked
-from the section that would otherwise restate it.
+and is about to open a directory. Each section links to the relevant field
+reference, contract, module list, test map or build guide.
 
 The <!-- span architecture.graphs -->4<!-- /span --> figures are generated from [architecture.json](architecture.json)
 by [generate_architecture.py](generate_architecture.py). Every node and edge in
 a figure has an id, and the table beside the figure names, for that id, the
 source symbol that implements it and the test or rule the manifest names. The
-generator verifies symbol presence and test definition; a
-citation is a place to look, not a proof that the test asserts the whole
-row. A node or edge is chased by its id, not by prose. The one figure that
-is not a graph, the run timeline, is drawn by hand below and cites its
-sources the same way. Behavior that falls short of a stated promise is
+generator verifies symbol presence and test definition. Follow a node or edge's
+id to inspect its cited implementation and checks. The hand-drawn run timeline
+below cites its sources the same way. Behavior that falls short of a stated promise is
 written where the promise is stated, in a paragraph that opens with "Known
 gap", and indexed in the [last section](#known-gaps).
 
@@ -23,25 +20,23 @@ gap", and indexed in the [last section](#known-gaps).
 
 Two facts about the macOS sandbox shape everything. `sandbox_check` answers
 for a live process, and `sandbox_apply` is one-way: a process that has applied
-a profile cannot shed it. A specimen therefore needs a process that applies
-the policy and then stays alive long enough to be queried and to attempt
-things, and that process cannot serve the next specimen. PolicyWitness spawns
+a profile keeps it for the rest of its lifetime. A specimen therefore needs a
+fresh process that applies the policy and stays alive long enough to be queried
+and to attempt things. PolicyWitness spawns
 one worker per specimen, applies the policy inside it, and queries it from
 outside.
 
 The reply path must stay outside the policy under test. A `(deny default)`
-profile can deny the worker's own writes and even its exit, so the worker
-never reports over a pipe after applying. It publishes into a shared region
-the host mapped and pre-touched before the spawn, and the host, which never
-applies anything, assembles the reply. Published attempt, native-call and progress
+profile can deny the worker's own writes and even its exit. The worker therefore
+publishes into a shared region the host mapped and pre-touched before the spawn.
+The unsandboxed host assembles the reply. Published attempt, native-call and progress
 records describe the worker's observations; the host separately observes process
 exit and cleanup. The
 [disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)
-keeps those sources distinct. Exit status alone does not establish an action's
-outcome or whether a native call completed.
+keeps those sources distinct.
 
 The host is an XPC service that launchd starts for one specimen and that exits
-shortly after replying, so no host state outlives a run. The controller is a
+shortly after replying, giving each run fresh host state. The controller is a
 separate process so that an envelope is printed whatever the host does,
 including never answering. The controller is Rust and `NSXPCConnection` is an
 Objective-C API, so a small Swift client owns the connection
@@ -56,9 +51,8 @@ touching execution evidence
 `sbpl-check` compiles the policy in the controller's own context when the
 client reported the runner unreachable (`xpc_error`), so the envelope still
 carries a compile diagnostic, which matters inside an
-[automation sandbox](../AGENTS.md#sandboxed-automation-harnesses). It
-establishes nothing about how far a host or worker progressed before the
-connection failed.
+[automation sandbox](../AGENTS.md#sandboxed-automation-harnesses). The diagnostic
+records this separate compilation in the controller's context.
 
 The issuer is separate so native issuance occurs before worker creation under
 ordinary authority, outside the specimen policy. It receives no worker entitlement
@@ -69,9 +63,8 @@ and releases in its existing phase sequence.
 
 Only the worker (compile/apply and consume/release), the issuer (file issuance),
 the validator (`sandbox_check`) and `sbpl-check` (compile only) call native sandbox APIs; the topology table's
-Native sandbox API column is the record. The controller, the client, the
-host and the observer do not, and for the host
-that is enforced rather than assumed (see [Principles](#principles-as-enforced-constraints)).
+Native sandbox API column records these roles. Source and artifact checks
+enforce the host's separation (see [Principles](#principles-as-enforced-constraints)).
 
 ## Process topology
 
@@ -155,7 +148,7 @@ launches its bundle-local issuer, and waits for its native result and cleanup.
 Only complete bounded issuance and confirmed clean reaping permit delivery.
 Preparation failure and other issuance failures remain observations; missing
 helper/native issuance capability produces a named refusal before the worker.
-The submitted query and attempt targets are never rewritten from that preparation.
+The submitted query and attempt targets retain their original values.
 
 ```text
 host                                      issuer (before worker creation)
@@ -205,13 +198,13 @@ print envelope
 Collection can close with unavailable predictions or incomplete validator
 cleanup. Release still requires a live, correctly waiting worker. A failed
 phase wait, invalid release ordinal or loss of worker ownership prevents later
-actions without erasing earlier publications. A boundary publication is an
-observation of progress; it does not manufacture a missing action result.
+actions while preserving earlier publications. A boundary publication records
+progress; each action publishes its result separately.
 Native pre-call markers and completed result publication are distinct. A call
 without a published result remains unresolved even if an independent test knows
 it returned. A consume/release action before an ordinary action in the same
 phase can change what that action encounters after its query was collected.
-Operational phase progress is not a snapshot of sandbox state or effective access.
+Read phase progress as the observed sequence of collections and actions.
 
 Where each stage is pinned:
 
@@ -253,8 +246,8 @@ Where each stage is pinned:
   (`pw_capture_profile`). The host admits that copy only after successful
   application, worker completion, PID, nonce, input identity and payload
   integrity checks (`decodeProfileCapture`); the
-  [guide](PolicyWitness.md#compiled-object-receipt-opt-in) distinguishes it
-  from a kernel readback. Checked by `AppliedProfileCaptureTests`.
+  [guide](PolicyWitness.md#compiled-object-receipt-opt-in) defines the receipt's
+  provenance and reading rules. Checked by `AppliedProfileCaptureTests`.
 - **The barrier.** The `phaseBoundary` callback collects against the worker's
   PID. The driver observes arrival and checks child ownership before collection
   and again before release. Its ordinal store cannot reuse an earlier release;
@@ -276,24 +269,21 @@ Where each stage is pinned:
   log evidence without touching execution fields. Checked by the Rust unit
   tests named in the boundary tables below.
 
-What a reply does not establish: the client's timeout ends the controller's
-wait and yields a synthetic `xpc_timeout` reply, and it cancels nothing in
-the host. The host's cleanup can fail: `terminate` makes one blocking wait
+The client's timeout ends the controller's wait and yields a synthetic
+`xpc_timeout` reply. Host work continues independently. The host's cleanup can
+fail: `terminate` makes one blocking wait
 after a successful kill request, and when no reap is confirmed the
 collection basis reads `execution_may_continue` rather than
 `after_confirmed_reap`. The
 [failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#host-observations)
-adds no global lifecycle deadline, so a reply, the end of observation and
-the end of execution are three different moments, and each record says
-which one it describes.
+records reply delivery, the end of observation and the end of execution
+separately. There is no global lifecycle deadline.
 
 Known gap: an exec child's descendant that leaves the child's process group
-is not contained. The worker kills the group at the exec deadline and at
-cleanup, and the lifecycle record says what it observed, but a process that
-has left the group outlives the run unseen, and no record establishes that
-every descendant stopped.
+can outlive the run unobserved. The worker targets the child's process group
+when sending cleanup signals at the exec deadline and at cleanup.
 
-Each budget covers one stage and no more. The issuer's monotonic wait,
+Each budget covers a specific stage. The issuer's monotonic wait,
 [`extension_issuer_wait`](LIMITS.md#execution-budgets), begins after issuer spawn
 and precedes worker creation. Target preparation and spawn are outside that wait;
 issuer cleanup can overrun it. The client reply window includes this work, while
@@ -326,7 +316,7 @@ MonotonicDeadline.swift).
 Partial writes, interruptions and backpressure consume the same allowance.
 Expiry records `policy_transfer_timeout` separately from any write errno,
 closes input and enters cleanup without starting readiness or sentinel polling.
-Counts describe accepted writes, not child receipt. `PolicyTransferTests`
+Counts describe writes accepted by the pipe. `PolicyTransferTests`
 checks a stalled reader, exact draining delivery, deadline edge cases and
 cleanup failures; the actual driver replies pass through controller assembly
 and the independent consumer. The deadline does not bound final reap or cancel
@@ -335,25 +325,25 @@ an earlier client timeout.
 ## Evidence channels and ownership
 
 The channels that reach the envelope are tabulated below. Each native result has one writer. The
-host adds its own observations beside a native result and overwrites none of
-them, and the controller does the same with the host's.
+host preserves native results and adds its own observations beside them; the
+controller does the same with the host's.
 
 | Channel | Native result written by | Host adds | Where it lands | What it is |
 | --- | --- | --- | --- | --- |
 | Prediction | the validator | an explicit `prediction_unavailable` observation for a step the planner excluded; path diagnostics after orchestration | `steps[].sandbox_check` | one `sandbox_check` verdict per predicted step |
 | Attempt | the worker, through the shared region | the lifecycle copies; path diagnostics after orchestration | `steps[].attempt` | the attempted operation's own result, with `rc` and `errno` |
-| Extension preparation/issuance | issuer publishes native facts | resolved target/metadata, process authority and independent cleanup; delivery and host erasure observations | `extensions[]` | no token bytes; target identity at preparation is not a later-open identity promise |
-| Native lifecycle | worker call marker and result slot | phase/reference association and lifecycle claims | `extension_events[]` | consume handle or release result only when published; no ordinary comparison |
-| Fresh read | worker syscalls after apply | nothing about effective authority | `steps[].attempt.fresh_read` | fresh descriptor identity and bounded bytes, separate open/stat/read/close results |
+| Extension preparation/issuance | issuer publishes native facts | resolved target/metadata, process authority and independent cleanup; delivery and host erasure observations | `extensions[]` | target identity at preparation, native issuance and delivery observations |
+| Native lifecycle | worker call marker and result slot | phase/reference association and lifecycle claims | `extension_events[]` | consume handle or release result when published |
+| Fresh read | worker syscalls after apply | phase and step association | `steps[].attempt.fresh_read` | fresh descriptor identity and bounded bytes, separate open/stat/read/close results |
 | Comparison | the host | nothing further | `steps[].comparison` | the attempt's classified observation, the submitted-scope relations, the order established, and the limitations |
 | Disposition | the host, from raw facts it cites | the controller's projection | `runner_subprocess.disposition`; `data.runner_sandbox_diagnostics` (execution fields) | what happened to the worker process, answered only from the cited facts |
-| Compiled-object receipt | the worker, before apply, when asked | admission after application, completion, PID, nonce and integrity checks | `applied_profile` | a copy of the compiled object; not a kernel readback |
+| Compiled-object receipt | the worker, before apply, when asked | admission after application, completion, PID, nonce and integrity checks | `applied_profile` | a worker copy of the compiled object before apply |
 | Dossier | the controller | nothing further | `data.specimen` | the request as submitted, augmentation and imports, host facts, runner and app provenance, binary hashes observed before invocation |
-| Log capture | the observer | the controller's correlation fields | `data.sandbox_log_capture`; `data.runner_sandbox_diagnostics` (log fields) | deny records the unified log showed in the padded window, with candidate associations; never a verdict |
+| Log capture | the observer | the controller's correlation fields | `data.sandbox_log_capture`; `data.runner_sandbox_diagnostics` (log fields) | deny records the unified log showed in the padded window, with candidate associations |
 
-The rule that holds the channels apart: log evidence never changes execution
-evidence. The assembly seam is [`attach_sandbox_logs`](../controller/src/run_flow.rs) in
-run_flow.rs, where the collector receives
+Log evidence is attached after execution evidence is complete. The assembly
+seam is [`attach_sandbox_logs`](../controller/src/run_flow.rs) in run_flow.rs,
+where the collector receives
 read-only execution evidence and returns only log-owned fields; the unit test
 `collector_states_preserve_the_serialized_execution_half` checks it, and the
 controller README's
@@ -363,11 +353,8 @@ names the owner of every field. The host's additions are
 PWRunnerService.swift
 and the planner's synthesized observations in
 [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift).
-No record asserts agreement or disagreement between the prediction and
-attempt channels; the reading rules for the comparison record are in the
-[failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
-The normative semantics of the reply live in that contract, under `tests/`;
-this document links it wherever it needs a rule and never restates one.
+The [failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
+defines the reply's normative semantics and the comparison record's reading rules.
 
 ## Boundaries
 
@@ -468,8 +455,7 @@ kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 The core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
 instructions. A drift rule compares the bold labels and their order with the
 list below; explanatory prose is independent. The mechanisms described here
-support the constraints on each stage; label agreement alone establishes no
-runtime guarantee.
+support the constraints on each stage.
 
 - **One-way sandbox per process.** Every authorized connection shares the
   host's [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
@@ -490,21 +476,20 @@ runtime guarantee.
   These checks do not resolve arbitrary computed library or symbol names; the
   [source-drift invariants](../tests/suites/source_drift/README.md#invariants)
   describe their coverage.
-- **Witness over interpretation.** An attempt's `rc` is never the claim; the
-  comparison record names its `observation_basis`. The consumer,
+- **Witness over interpretation.** The comparison record names the raw evidence
+  for an observation in `observation_basis`. The consumer,
   [consumer.py](../tests/lib/consumer.py), re-derives every step's expected
   observation from the raw channels before accepting an envelope. Bounded
-  operational state routes actions and coordinates phases; it supplies no model
-  of effective kernel permissions. Release requests and worker acknowledgements
-  remain separate observations.
+  operational state routes actions and coordinates phases. Release requests and
+  worker acknowledgements remain separate observations.
 - **Predictions precede attempts.** `proceed` and `proceed_observed` in the
   shared region identify the latest ordinal; immutable per-phase publications,
   `collection_closed_before_proceed` in each `PWRunnerOrdering`,
   and the worker's `wait_for_proceed`. Checked by `OrderingTests` and the
   opt-in order-barrier mutation control, which must be rerun whenever the
   wait, the release store or the eligibility rule changes.
-- **No dishonest attribution.** No outcome spelling claims a sandbox cause: a
-  signal is `runner_failed` with the signal preserved, and
+- **No dishonest attribution.** A signal is `runner_failed` with the signal
+  preserved, and
   `termination_cause` is projected only from a disposition record whose cited
   facts support it ([`CAUSE_FOR_TRIGGER`](../controller/src/disposition.rs) in
   disposition.rs). Log correlation is a
@@ -515,12 +500,10 @@ runtime guarantee.
   `CWorkerOrchestrator.swift`; everything after apply is the C worker, which
   uses preallocated PW-owned request, evidence and token storage after
   `sandbox_apply`; the host pre-touches the evidence mapping before spawning.
-  PW introduces no post-apply heap allocation for native lifecycle actions. This
-  does not claim that private sandbox calls or system libraries allocate nothing.
-  The explicit token channel carries authority, not an open target descriptor.
-  Hidden pre-sandbox acquisition is the thing the exec attempt machinery avoids: its pipes and spawn handles are
-  acquired after apply, inside the attempt, and released before the slot
-  completes.
+  Native lifecycle actions use that preallocated storage. The explicit token
+  channel carries authority; fresh reads acquire their target descriptors after
+  apply. Exec pipes and spawn handles are also acquired after apply, inside the
+  attempt, and released before the slot completes.
 
 Known gap: private extension calls may allocate or retain internal state that PW
 cannot inspect. Erasure observations cover PW-owned transient buffers; successful
@@ -559,8 +542,8 @@ this section names the mechanisms they are built from.
   these mechanisms is listed in the
   [prose baseline](../tests/fixtures/docs/prose_baseline.json), which grows
   only by an explicit entry and which a release cannot grow. These documentation
-  input manifests are not runtime inputs. The separate embedded evidence manifest
-  is read by the controller during a run, as the
+  input manifests feed build-time checks. The embedded evidence manifest is read
+  by the controller during a run, as the
   [run inventory](../controller/README.md#what-a-run-reads-and-launches) describes.
 - **Source-drift rules.** Mechanical checks over text that is not generated,
   from the host invariance rule to the harness note's copies. Each rule is a
@@ -732,10 +715,9 @@ Every node and edge above cites at least one test or rule.
 A BYOXPC runner is a copy of the XPC bundle registered as a launchd Mach
 service, in user or system scope, by the `runner` subcommands
 ([controller/README.md](../controller/README.md#runner-external-runner-manager)).
-Four things change and nothing else. The client connects with
-`NSXPCConnection(machServiceName:)` instead of a bundle lookup. The host binds
-`NSXPCListener(machServiceName:)` instead of `NSXPCListener.service()` and
-resolves its worker, validator and issuer relative to its own bundle, exactly as the
+The client connects with `NSXPCConnection(machServiceName:)`. The host binds
+`NSXPCListener(machServiceName:)` and resolves its worker, validator and issuer
+relative to its own bundle, exactly as the
 built-in one does. The request names the runner through the selector fields
 the controller strips before XPC delivery, and the registry supplies the
 service name and scope. The installer signs the copy's embedded worker with
@@ -748,21 +730,19 @@ records the hashes of the bundle's service, worker, validator and issuer files a
 observed before invocation and compares them with the manifest baselines
 ([`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs)
 in run_flow.rs); the
-[guide](PolicyWitness.md#the-specimen-dossier) states the limit of that
-record: it does not prove which bytes were launched, and a mismatch does
-not change the run's outcome. The registry is read by an additive loader
+[guide](PolicyWitness.md#the-specimen-dossier) defines how to interpret these
+pre-invocation observations. The registry is read by an additive loader
 that still accepts retired kind spellings so an old install can be listed
 and removed; recovery of a half-removed install is the
 [registry ownership](../controller/README.md#registry-ownership-and-recovery)
-procedure, not a run-time concern. Absent issuer fields in older registry records
+procedure. Absent issuer fields in older registry records
 remain unknown; validation and removal still work. An older bundle without the
 issuer can serve ordinary specimens but receives a named capability refusal for
 extension specimens. Shared standard/BYOXPC extension and phase controls establish
 the behavior with independent binary read-back and verified owned cleanup.
 
-`--env` configures the host's launchd environment and nothing records the
-environment the worker itself holds; the worker spawns exec children with
-an empty environment, so no shipped path reads it back.
+`--env` configures the host's launchd environment. The worker's own environment
+is unrecorded; it spawns exec children with an empty environment.
 
 The apparatus itself, from the copied bundle to the processes the policy
 reaches, has the last figure. Two of its facts are easy to miss from the
@@ -771,7 +751,7 @@ the host it reaches, and the next request meets that host's terminal claim
 or waits for the generated plist's `ThrottleInterval` of
 <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->; and a
 selector's `required_entitlements` is satisfied only by keys the worker's
-read-back records with the value `true`, never by the host's.
+read-back records with the value `true`.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH byoxpc -->
 ![The BYOXPC apparatus](architecture-byoxpc.svg)
@@ -850,7 +830,7 @@ Each gap is stated in full where the promise it limits is stated; this list
 only points there, in document order.
 
 - [One run in time](#one-run-in-time): an exec child's descendant that
-  leaves the child's process group is not contained.
+  leaves the child's process group can outlive the run unobserved.
 - [Principles as enforced constraints](#principles-as-enforced-constraints):
   private extension calls have unobserved allocation/state behavior beyond
   PW-owned buffers and native publication.

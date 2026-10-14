@@ -4,8 +4,8 @@ This document is the account of one build in time: what each step reads,
 writes and refuses; the two knobs and what each governs; what `meson.build`
 owns and what `build.sh` owns; the trust placed in the build directories; the
 signing contract; the evidence the build embeds; and how the build verifies
-itself. It does not ship. The [user guide](PolicyWitness.md) keeps its one
-sentence on the supported macOS,
+itself. The release ships the [user guide](PolicyWitness.md), which states
+the supported macOS;
 [CONTRACT.md](CONTRACT.md#internal-hostworker-identity) keeps the identity's
 definition, and [SIGNING.md](SIGNING.md) keeps evidence, notarization,
 release and the archives.
@@ -30,14 +30,14 @@ partial app and no ZIP; a refusal after the seal leaves a sealed app that
 failed verification, the signer check, the observer's signature or packaging,
 and no ZIP or a partial one. The test inspector checks the app's signatures,
 its inventory and evidence, including signer consistency for the listed
-executables ([`inspect`](../tests/lib/artifact.py)); it does not certify that
-the build completed. A failure signing the standalone observer, staging the
-guide or writing the ZIP can leave an app that passes inspection.
+executables ([`inspect`](../tests/lib/artifact.py)). A failure signing the
+standalone observer, staging the guide or writing the ZIP can leave an app
+that passes inspection.
 
-Two consequences follow. The build writes no tracked file: a stale generated
-copy is refused with the command that regenerates it, never repaired in place,
-so a clean checkout builds with a clean stamp; its writes go to the two build
-directories, to the standalone observer's signature inside Cargo's, and to the
+The build preserves tracked files: a stale generated copy is refused with the
+command that regenerates it, so a clean checkout builds with a clean stamp.
+Its writes go to the two build directories, to the standalone observer's
+signature inside Cargo's, and to the
 output directory, which defaults to the ignored `dist/` but can be placed
 elsewhere with `DIST_DIR`. The build is a function of the checkout, its two
 build directories and the [inputs beyond the tree](#inputs-beyond-the-tree).
@@ -45,7 +45,7 @@ It relies on the tools' records to decide whether cached outputs are current,
 and refuses a Meson build directory that belongs to another checkout.
 
 `make build` is the documented entry and the first row of the step table. It
-is the caller, not the unit: the release targets reach the same row through
+calls `build.sh`: the release targets reach the same row through
 `$(MAKE) build`, and a direct `./build.sh` skips the Makefile's guard and
 meets the script's own.
 
@@ -54,23 +54,21 @@ meets the script's own.
 What the order establishes. The documentation and identity checks precede
 every compile, each compile's own checks follow it and precede any copy, the
 copies precede every signature, and the signatures precede the ZIP, as the
-table shows and the rule compares. That is textual order. Whether a refusal
-fires and stops the next operation is established only where a control drives
-the build and observes it; the refusals table says which rows have one.
+table shows and the rule compares. The refusals table distinguishes this
+textual check from controls that drive the build and observe it stopping.
 
 The partial build. With `BUILD_XPC=0` the script still runs Cargo, builds and
 minimum-checks the C executables, checks the signing identity, and signs
 and packages a bundle without the client, the service or the embedded helpers;
 the `skip_xpc` row stands in for the embed and service-signing rows it skips.
 That bundle passes evidence generation and the seal, fails the full inspector,
-and cannot run a specimen, because its evidence manifest names no runner. It
-is an iteration convenience, never a release or test artifact, though the
-script still writes its ZIP under the release name.
+and cannot run a specimen, because its evidence manifest names no runner.
+Use it only for iteration; the script still writes its ZIP under the release name.
 
 Packaging. After the signer check and the standalone observer, the script
 stages the checked user guide beside the app and writes the ZIP for
 notarization; the staging command checks the guide's sources again before it
-writes; the staged copy itself is compared by a test, not by the build.
+writes. A test compares the staged copy itself.
 
 <!-- BEGIN GENERATED BUILD FIGURE -->
 ![One build in time](build-steps.svg)
@@ -130,9 +128,9 @@ so that every refusal follows the banner of the step it protects, which is
 what makes that rule honest. Variants are `full` (`BUILD_XPC=1`) and `partial`
 (`BUILD_XPC=0`); a row marked `both` runs in either. `--help` prints the usage
 and exits before any check, once the knobs are validated. The script prints
-one warning that is not a refusal, when the augments directory holds no
-augment; warnings are not in the tables. Reads and Writes are the manifest's
-description of each step, and nothing compares them to the script.
+a warning and continues when the augments directory holds no augment.
+The tables cover refusals; their Reads and Writes columns are manually
+maintained descriptions of each step.
 
 ## Inputs beyond the tree
 
@@ -156,16 +154,15 @@ The build depends on these inputs and working state, in the order it meets them.
   SDK once, under whatever `DEVELOPER_DIR` names, and the script exports it
   as `SDKROOT` for Cargo and Meson alike; a failed selection refuses before
   the build directory and the signing identity are checked. Which toolchain
-  `xcrun` resolves is the operator's choice and is not fingerprinted.
+  `xcrun` resolves is the operator's choice.
 - **The two build directories.** Meson's is checked: a directory whose
   recorded source is another checkout, or whose record cannot be read, is
   refused before Cargo. Cargo's is pinned with `--target-dir`, and Cargo is
   asked to report the executables it produced, so one placed under another
   directory by a target triple or a Cargo setting is refused before any copy.
 - **The signing identity.** `IDENTITY` must name a Developer ID Application
-  identity that `security find-identity` lists; nothing is selected
-  automatically, and any other class is refused before Cargo. Whether the
-  keychain is unlocked is not checked until the first signature.
+  identity that `security find-identity` lists; any other class is refused before
+  Cargo. The first signature checks whether the keychain is unlocked.
 - **Cargo's environment.** `cargo` is resolved on `PATH` and brings its own
   configuration, caches and registries. The script adds the four stamp
   variables, `MACOSX_DEPLOYMENT_TARGET`, `SDKROOT`, and `RUSTFLAGS` with
@@ -192,13 +189,12 @@ To discard incremental build state, remove `builddir/` and
 next `make build` recreates them. `make prune` manages test output only and
 does not remove either cache or the distribution directory.
 
-Some prerequisites are the operator's and are not checked. Meson and Ninja
-must be installed; their presence and Ninja's version are checked, the
-toolchain they drive is not. A compiler or SDK change needs a fresh build
-directory, because nothing fingerprints the toolchain. Signing needs an
+The build checks that Meson and Ninja are installed and checks Ninja's version.
+The operator selects their toolchain. A compiler or SDK change needs a fresh
+build directory because the toolchain is not fingerprinted. Signing needs an
 unsandboxed shell with the login keychain and network access for the
 timestamp service. A release needs a clean checkout at the release commit,
-which the release preflight checks and an ordinary build does not.
+enforced by release preflight.
 The harness constraints below apply to signing and compiler discovery.
 
 ### Sandboxed automation harnesses
@@ -310,9 +306,9 @@ Statuses. The script's own refusals exit 2. A refusal that a check or a tool
 produces propagates that tool's status: 1 for a stale generated copy or a
 source list that differs from the tree, 2 when a check could not read what it
 needed, Cargo's 101, and 1 from Meson, Ninja or codesign. Under `set -e` the
-script exits with the failing command's status, so the status alone does not
-say which step refused; the message does. The propagated statuses in the table
-are the tools' documented ones, verified only where a control asserts them.
+script exits with the failing command's status; the message identifies the
+step that refused. The propagated statuses in the table are the tools' documented
+ones, verified only where a control asserts them.
 The table lists the refusals the script declares, Meson's assertions and the
 checks and tools the script names; any other failing command also stops the
 build with its own status, a plist key PlistBuddy cannot read, a copy or
@@ -320,10 +316,9 @@ removal that fails, `dsymutil`, `ditto`, and those stops have no row.
 
 Coverage. Each row's coverage column says what produces the refusal in a test:
 a control that drives the build and observes the message and the operation it
-prevented; a control that drives the helper that prints it, which proves the
-diagnostic but not its place in the script; or only the grounding rule that
-compares the message with the script. The rows with nothing are listed in [the
-baseline](../tests/fixtures/docs/build_baseline.json), each with the control
+prevented; a control that drives the helper that prints it, establishing the
+helper's diagnostic; or only the grounding rule that compares the message with
+the script. The rows with only a grounding rule are listed in [the baseline](../tests/fixtures/docs/build_baseline.json), each with the control
 that would retire it, and
 [release_preflight.py](../tests/lib/release_preflight.py) refuses a release
 whose baseline grew or rewrote an entry since the previous release, as it does
@@ -331,9 +326,8 @@ for the prose baseline.
 
 Known gap: <!-- span build.uncovered -->27<!-- /span --> of the
 <!-- span build.refusals -->65<!-- /span --> refusals have no control that
-produces them, so for those rows the table establishes that the message
-exists in the script under that banner, not that the build stops there. The
-baseline names them.
+produces them. Those rows establish message placement under a banner; the
+build's stopping behavior remains untested. The baseline names them.
 
 The opt-in [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py)
 control drives the unchanged build script with real compilers and signing
@@ -342,20 +336,19 @@ a wrong-minimum Cargo or native output; the build must name it and exit 2
 before assembly, leaving previous distribution bytes intact. Another wrapper
 signs a helper ad hoc: deep verification must succeed, then the signer check
 must name the helper and exit 1 before observer signing, guide staging or ZIP
-creation. Successful sibling builds package both variants. The control
-observes those boundaries; it does not simulate the checks that enforce them.
+creation. Successful sibling builds package both variants.
 
 ## What Meson owns and what the script owns
 
 [meson.build](../meson.build) owns the native compile: source lists, module
 names and flags, the supported macOS passed at compile and at link, and the
 fixed policy for the targets in the [shipped inventory](../README.md#build-and-bundle).
-The C shim is linked into the host and is not a standalone product. Both
+The C shim is linked into the host. Both
 `meson.build` and `meson.options` are host/worker identity inputs. The policy is
 an enumerated list of options asserted as effective values
 ([`fixed_options`](../meson.build)), with two more inside
-the Swift branch; every option it names is refused at any other value, and
-an option it does not name is not policed. The two public knobs are the only
+the Swift branch; every option it names is refused at any other value. These
+assertions cover the listed options. The two public knobs are the only
 configuration the script passes:
 
 <!-- BEGIN GENERATED BUILD KNOBS -->
@@ -375,7 +368,7 @@ directory. Meson reads `CFLAGS` and the other flag variables only at setup,
 so a fresh directory refuses them the same way. Executables are linked with
 `b_asneeded=false` declared per target; Meson's own additions to the compile
 and link lines (`-headerpad_max_install_names` and `-fdiagnostics-color`)
-are accepted, and recorded by the comparison tools rather than by the build.
+are accepted and recorded by the comparison tools.
 Compilation and linking are separate steps; the script runs `dsymutil` for
 inspection builds. Changing the supported macOS requires changing the plist
 and Meson's pinned minimum together. Building for an older macOS this way is
@@ -395,7 +388,8 @@ files the tree holds for it, reads Ninja's dependency log and refuses, for the
 worker and the shim, an include of a repository file outside the identity's
 inputs or of a file outside the checkout that is not under the selected SDK or
 the developer directory, and repeats the checkout comparison. Both are
-membership checks: what the compiler did with those files is not established.
+membership checks; binary provenance relies on the tools' records, as described
+under [Known gaps](#known-gaps).
 
 ### Native compile with Meson
 
@@ -406,7 +400,6 @@ SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir -Dinspectio
 meson compile -C builddir
 ```
 
-Toolchain selection is the operator's responsibility and is not fingerprinted.
 Use separate build directories for different toolchains, and a fresh directory
 or `meson setup --wipe` after changing the compiler or SDK. For example:
 
@@ -419,20 +412,19 @@ meson setup builddir-clt
 `build.sh` uses `builddir/`; a separately named directory is for direct Meson
 work. Swift discovery uses swiftc's default module cache, while the targets
 use `builddir/swift-module-cache`. The [comparison tools](../tests/README.md#comparing-native-builds)
-can record effective commands and output metadata after compilation; the
-build itself writes no receipt.
+can record effective commands and output metadata after compilation.
 
 ## The signing contract
 
 Identity. `IDENTITY` must name a Developer ID Application identity that the
-keychain lists, and the script signs with that identity or not at all. The
+keychain lists; the script requires it for every signature. The
 tests resolve their own identity separately: `PW_BYOXPC_IDENTITY`, then
 `IDENTITY`, then a keychain identity whose team matches the app's.
 
 Gates before any signature. The generated identity copies must be current,
 checked again after assembly so an identity input edited during the build
-without regeneration is refused before signing; the build otherwise trusts the
-checkout not to change under it. Every Cargo and Meson executable carried the
+without regeneration is refused before signing. The build assumes a stable
+checkout throughout execution. Every Cargo and Meson executable carried the
 plist's minimum, and the configured source lists and closure matched the tree,
 before assembly began.
 
@@ -459,9 +451,9 @@ Order. Signing is inside-out, in the table's order, every signature and seal
 with `--force --options runtime --timestamp`, so the timestamp service must be
 reachable; the evidence manifest is written between the service seal and the
 app seal, so the app seal covers it. The dSYM bundles beside the Swift
-executables are sealed as resources; their DWARF files are not signed. The
-standalone observer under `controller/target/release` is signed in place, for
-direct use; it is not part of the bundle.
+executables, including their DWARF files, are sealed as resources. The
+standalone observer under `controller/target/release` is signed in place for
+direct use outside the bundle.
 
 The list and the inventory. [`sign_macho`](../build.sh) refuses a missing or
 non-Mach-O target: the list names exactly the executables this build
@@ -470,8 +462,8 @@ bundle paths and requires them, plus the bundle mains the seals sign, to
 equal [`EXECUTABLES`](../tests/lib/artifact.py), the helper list in
 [build-evidence.py](../tests/build-evidence.py) and the README's inventory
 ([`check_inventory`](../tests/suites/source_drift/build_rules.py)). Do not
-add `--deep` to a signing step; it would sign whatever happens to be nested,
-which is the opposite of a list.
+add `--deep` to a signing step; it would sign nested code outside the explicit
+inventory.
 
 After the seal. `codesign --verify --deep --strict` checks the bundle seal.
 Then [signer_check.py](../tests/lib/signer_check.py) examines every regular
@@ -490,7 +482,7 @@ throughout stays consistent.
 The standalone validator build script,
 `controller/tools/sb_api_validator/build.sh`, supports local debugging. It
 compiles the validator beside its source and signs the result ad hoc with
-`debug.ent`. That output is ignored by git and never copied into the app bundle.
+`debug.ent`. That git-ignored output is for direct local use.
 
 ## The evidence the build embeds
 
@@ -499,15 +491,15 @@ After the nested signatures and before the app seal,
 files in the [evidence inventory](SIGNING.md#evidence-artifacts): the hash of
 every helper and of each service's main executable as signed, with each one's
 load-command UUID, entitlements and exported marker symbols as far as the
-tools can read them (a tool's failure is recorded in the entry, not refused),
+tools can read them (a tool's failure is recorded in the entry),
 the hashes of the shipped augments, and the time of writing. The manifest is
 then sealed by the app signature, so it describes signed bytes and is itself
 signed. It omits the main executable's hash, which the seal records. The
 controller reads it at run time to locate its runner, which is why a partial
 bundle refuses to run a specimen.
 
-The build writes no native build receipt. The tools that record one and
-compare one native build with another are test equipment, described under
+To record a native build receipt or compare native builds, use the test
+equipment described under
 [comparing native builds](../tests/README.md#comparing-native-builds).
 
 ## How the build verifies itself
@@ -515,8 +507,8 @@ compare one native build with another are test equipment, described under
 The figure and the tables are generated from [build.json](build.json) by
 [generate_build.py](generate_build.py), which parses the script and refuses
 a manifest that disagrees with it. Every row cites the source symbol that
-implements it and the test or rule that covers it; a citation is a place to
-look, not proof that a test asserts the row. The build has
+implements it and the test or rule named by the manifest. Review that test or
+rule to assess coverage of the row. The build has
 <!-- span build.steps -->30<!-- /span --> steps,
 <!-- span build.refusals -->65<!-- /span --> refusals, of which
 <!-- span build.uncovered -->27<!-- /span --> have no control that produces
@@ -532,8 +524,8 @@ also parses the script and refuses a manifest that disagrees with it in what
 the parser compares: the banner order, the refusal messages with their steps
 and the script's own statuses, the knob values, the signing calls with their
 flags, the helper and tool invocations with their listed flags, the signing
-inventory, and the `set -euo pipefail` opening. A condition or an argument the
-parser does not record is not compared.
+inventory, and the `set -euo pipefail` opening. Other conditions and arguments
+fall outside this comparison.
 
 The helpers and tools the build invokes, with the step each runs in:
 
@@ -586,12 +578,6 @@ prevents. Early refusals stop before compilation; the opt-in build guard
 controls compile and sign to reach later refusals. The helper controls drive
 Meson, the configured source check and the signer check directly.
 
-What none of this establishes: that a refusal precedes the operation it
-protects, except for the rows a behavioral control observes; that the
-compiler used the files the membership checks name; or that the build
-directories hold outputs of the current sources, which rests on Meson's,
-Ninja's and Cargo's own records.
-
 Known gap: the build relies on Cargo, Meson and Ninja to determine whether
 cached outputs match the current sources. It does not independently verify
 that binaries in `builddir/` or `controller/target/` were produced from those
@@ -603,7 +589,7 @@ binary provenance or reproducibility.
 Each gap is stated in full where the promise it limits is stated; this list
 only points there, in document order.
 
-- [Refusals](#refusals): the refusals without a control establish a message
-  under a banner, not a stop.
+- [Refusals](#refusals): behavioral controls are still missing for the listed
+  refusals.
 - [How the build verifies itself](#how-the-build-verifies-itself): the build
   relies on the tools' records to establish whether cached outputs are current.

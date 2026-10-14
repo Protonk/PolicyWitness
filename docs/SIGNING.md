@@ -37,7 +37,7 @@ included in its evidence inventory. It receives the identity without an
 entitlement plist. BYOXPC installation likewise signs its bundle-local issuer
 with the selected identity alone, separately from the worker's supplied
 entitlements. Read-back and validation retain each helper's actual signature
-and entitlements; the host signature alone is insufficient.
+and entitlements.
 
 ## Evidence artifacts
 
@@ -51,8 +51,7 @@ entitlements extracted via `codesign -d --entitlements`), and are intended to
 make “what shipped” auditable. They are generated after the helpers and the
 service are signed and before the outer seal, so the manifest describes
 signed bytes and is itself sealed by the app signature. The issuer has its own
-manifest entry and symbol inventory. Those observations identify signed bytes,
-not whether issuance will grant authority for a particular target.
+manifest entry and symbol inventory, identifying its signed bytes.
 
 ## Release procedure
 
@@ -87,8 +86,8 @@ Finally, `tests/lib/release_rotate.py` removes eligible older working test outpu
 as described below. Commit the resulting retention index change.
 Archiving and rotation each hold the test checkout lock across their reads and
 mutations; acceptance and the battery also use that lock. Run no other battery
-while `make release` runs. Nothing in `make release` leaves the machine except
-the notarization submission.
+while `make release` runs. The notarization submission is the only remote step
+in `make release`.
 
 ### Portable test evidence and release cleanup
 
@@ -99,20 +98,18 @@ hashes, modes, symlink targets, and checksums of the compressed archive and
 standalone summaries. `release.json` binds that manifest by SHA-256. Its
 `acceptance.path` and `battery.path` resolve to summaries within the release
 archive; `original_path` records the former location under `tests/out`.
-Original command receipts retain their original paths. Verifying the portable
-copy does not need the working test directories or extract any archive member.
+Original command receipts retain their original paths. Verification reads the
+portable copy directly, independently of the working test directories.
 
-Successful release packaging is the automatic cleanup checkpoint. Tests can
-create fresh run directories freely during development; no new-test hook,
-schedule, age threshold or disk-size threshold prunes other output. Growth
-during a refactor is expected until the next packaged release.
+Successful release packaging is the automatic cleanup checkpoint. Test output
+accumulates during development until the next packaged release or explicit
+manual pruning.
 
 Cleanup keeps the new release's working acceptance and battery plus the newest
 completed local output under `tests/out/runs/` or `tests/out/release-acceptance/`.
 The recorded completion timestamp determines newest, including failed runs;
-ties are all kept. Names, file modification times and sizes do not determine
-retention. Starting cleanup for an older release while a newer one is indexed
-is refused. Explicit manual pins remain protected exceptions.
+ties are all kept. Starting cleanup for an older release while a newer one is
+indexed is refused. Explicit manual pins remain protected exceptions.
 
 Both release retention entries carry `"release": "v<version>"`, making them
 eligible at a later release checkpoint. An omitted or null `release` is an
@@ -158,9 +155,9 @@ python3 -B tests/lib/release_rotate.py dist/archive/v0.2.7 --apply
 
 Preview is read-only. `--apply` either creates a journal or resumes its existing
 transaction; a completed journal is a no-op, so later test runs cannot trigger
-another sweep under the same release. A cleanup failure does not require
-rebuilding or resubmitting the release. Evidence archives remain local, ignored
-files; the three published assets do not include the test evidence bundle.
+another sweep under the same release. Resume a failed cleanup through the same
+journal. Evidence archives, including the test evidence bundle, remain local,
+ignored files.
 
 ### Publication
 
@@ -177,9 +174,9 @@ the archived notes.
 ### Lower-level notarization
 
 `make notarize` is the lower-level chain. It **builds again**, even if you
-already built and tested the app, and its last step tests the actual final ZIP;
-a successful earlier test run is not release acceptance. It prints the preflight
-findings as warnings rather than stopping, so a rehearsal still records what it
+already built and tested the app. Its last step establishes release acceptance
+by testing the actual final ZIP. It reports preflight findings as warnings and
+continues, so a rehearsal still records what it
 stamps. For an already-built ZIP, use the individual steps below.
 
 ```sh
@@ -187,8 +184,8 @@ make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Ap
 ```
 
 `entitlement-jail` is the working keychain profile on the maintainer's machine.
-It is an explicit input, not a built-in default. Other machines need their own
-configured profile and Developer ID identity.
+Pass it explicitly. Other machines need their own configured profile and
+Developer ID identity.
 
 The Makefile keeps these steps in order and stops on any failure. After the
 build, it creates one `dist/evidence/<UTC timestamp>-<unique suffix>/` attempt
@@ -215,11 +212,10 @@ directories hold raw receipts. Missing steps have no recorded result.
 as `evidence/<attempt>/notarization/submitted.zip` beside the input ZIP.
 That directory also holds `result.json`, the submission ID, the archive hash,
 and raw stdout/stderr plus command/exit/timing records for both calls. A zero
-exit requires recognized acceptance; process success alone is insufficient.
+exit requires recognized acceptance.
 It accepts extra response fields but treats malformed, missing, mismatched, or
 unrecognized status data as **unknown**, never as acceptance. The captured bytes
-remain authoritative for manual inspection; this parser is not a promise about
-Apple's future responses.
+remain authoritative for manual inspection.
 
 The upload has a 180-second local deadline. Apple's `notarytool wait` is invoked
 once with `--timeout 5m`, with a 330-second local backstop. The tool does its own
@@ -244,7 +240,8 @@ notarization directory. An existing attempt must identify the same archive and
 input hash; its notarization directory cannot be reused for a second submission.
 
 To perform its two Apple calls yourself, retain the submitted ZIP and their raw
-responses in a new evidence directory first. A successful upload is not approval:
+responses in a new evidence directory first. Upload the ZIP, then use the
+returned submission ID to obtain Apple's decision:
 
 ```sh
 RELEASE_EVIDENCE="$(/usr/bin/python3 -B tests/lib/release_evidence.py dist/PolicyWitness.zip)"
@@ -281,8 +278,8 @@ Run these one at a time and stop if any command fails. A named step cannot
 overwrite an earlier receipt. For a standalone command, omit `--step` and pass
 the distribution directory: `/usr/bin/python3 -B tests/lib/release_commands.py
 dist 60 COMMAND ...` creates a separate dated attempt under `dist/evidence/`.
-Manually issued Apple calls retain raw replies but do not synthesize the
-helper's `result.json`; their status must be read from those replies.
+Read the status of manually issued Apple calls from their retained raw replies.
+The helper writes `result.json` for calls it issues itself.
 Stapling intentionally changes the app after submission, and re-zipping changes
 the archive hash. The submitted and final ZIPs therefore have separate evidence.
 
@@ -293,7 +290,7 @@ stops automatic continuation. Read the recorded stdout **and** stderr. Do not
 infer rejection from a timeout, infer acceptance from an exit code or prose, or
 run `make notarize` again merely to check progress: it rebuilds and submits again.
 If Apple asks for a policy agreement, stop and let the maintainer resolve it and
-wait for Apple's systems. There is no special string-matching retry path.
+wait for Apple's systems.
 
 If an ID is available, a later **manual, one-shot** status query is:
 
@@ -305,13 +302,13 @@ xcrun notarytool log "$SUBMISSION_ID" --keychain-profile entitlement-jail
 
 Preserve that output as well. No ID means submission state is uncertain; inspect
 the responses and, if necessary, the account's submission history before deciding
-whether a new submission is appropriate. There is no automatic retry in either
-case. Do not edit or regenerate the manifest to make a failed artifact pass.
+whether a new submission is appropriate. Do not edit or regenerate the manifest
+to make a failed artifact pass.
 For a one-shot history query, use
 `xcrun notarytool history --keychain-profile entitlement-jail` and retain its output.
 
-After later acceptance, continue from stapling, not rebuilding. If `dist` has
-changed, set `NOTARY_EVIDENCE` to the retained submission directory and extract
+After later acceptance, continue from stapling the retained submitted app.
+If `dist` has changed, set `NOTARY_EVIDENCE` to the retained submission directory and extract
 its `submitted.zip` under `/private/tmp`:
 
 ```sh
@@ -343,8 +340,8 @@ is printed, and `acceptance.json` binds the result to the final archive hash.
 With `--evidence-dir`, a small `acceptance.json` pointer in the release attempt
 records that report's location, result and final hash; test evidence stays under
 `tests/out/release-acceptance/` and follows the existing retention rules.
-Only distribute the ZIP matching a successful report. This is a local macOS
-assessment, not a claim about every recipient's machine or Gatekeeper cache.
+Only distribute the ZIP matching a successful report. The assessment applies
+to the local macOS environment and Gatekeeper state at acceptance time.
 
 ## Preserved release archives
 
@@ -356,9 +353,9 @@ examples, `v2.3.0` and `v0.2.3`, were assembled by hand on either side of the
 version reset. The guide is included when it was distributed. Provenance records
 distinguish a verified published asset (`origin.kind: github_release`, written
 by `make publish`) from locally retained material; unknown source commits remain
-null. An archive's directory name is not evidence that a corresponding Git tag
-is available. Original command receipts retain their original paths.
+null. Check Git separately for the corresponding tag's availability. Original
+command receipts retain their original paths.
 
 These artifacts are ignored and local. Recover published assets from their
-recorded release URL and verify their checksums; a rebuild of a tag does not
-recover the original signed release bytes.
+recorded release URL and verify their checksums to recover the original signed
+release bytes.
