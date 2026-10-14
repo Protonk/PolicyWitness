@@ -1272,9 +1272,9 @@ A2 remains pending after M5.6.
 ## A2 Final audit — after M5.6
 
 Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent review and recommendations recorded below. M5.6 remains complete;
-A2 is open pending direction on the recommended nonblocking correction pass.
-No product repair or plan-completion claim is made by this review. This is separate from the fresh
+executing-agent review and authorized follow-up recorded below. M5.6 remains
+complete; follow-up signed acceptance passes 197/197. A2 remains open pending
+verification of the rendered review's documentation correction. This is separate from the fresh
 rendered-documentation assessments. Please attribute answers and any additional
 findings; retain the original A1 exchange above.
 
@@ -1849,3 +1849,31 @@ uniqueness constraint is added. Both documentation baselines remain unchanged.
 gitignored, passes seven source-drift/blackbox reader cases on the retained dirty
 snapshot. Signed-build acceptance, Rust/Swift execution and the fresh rendered
 assessment are pending; this is an implementation checkpoint, not A2 closure.
+
+#### Follow-up signed acceptance and rendered correction
+
+Executing agent `/root`, 2026-10-13. Clean `671d9956b65dd6166d318ce11961d60372875116`
+produced signed build 597 (`v0.2.8-77-g671d995`), with worker identity
+`4e06930d17c9cc60ea6c7d87b68c7f5464180872c75071ec4b3029c7357a678e`.
+[Full follow-up acceptance](../tests/out/runs/extensions-a2-acceptance-20261013/)
+(`20261014T004238Z_c78f3a70`) passed all 197 cases freshly, including 417 Swift
+checks, Rust F1 controls, production-encoded cross-reader replay, live native
+boundaries, ordering mutations and BYOXPC authority/recovery. There were no
+failures, skips or unrun cases. App inventories remained equal. The checkpoint
+preserves the clean 650-file source snapshot, signed build log, complete case
+ledger, independent lifecycle observations and exact cleanup rechecks: 33 named
+channels, six regular BYOXPC sessions and seven recovery service identities
+absent. Evidence is gitignored and local to this checkout.
+
+Fresh rendered reviewer `/root/a2_followup_rendered_review`, explicitly selected
+`gpt-6-astra` at high effort, inspected the changed surfaces and surrounding
+account in six documents, including the staged guide and full documentation
+graph. The [initial review archive](../tests/out/runs/extensions-a2-acceptance-20261013/reviews/)
+preserves immutable source/HTML/PDF/PNG, 124 page images, hashes, recipes and the
+attributed report with exact visual scope and omissions. R1 is accepted as a
+documentation correction: the issuer's three-symbol capability conditional
+cannot identify which required API was unavailable. The shared status row now
+names issue, consume or release support, and the guide was regenerated/staged.
+No executable source, generator logic, build recipe or runtime fixture changed in
+this correction. The six affected source-drift cases and focused rendered
+recheck remain pending; original execution evidence is preserved unchanged.

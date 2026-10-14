@@ -2174,3 +2174,33 @@ bytes, distinct from envelope bytes. No production, test implementation or perma
 was changed by this review. A2 remains open pending direction on the recommended
 nonblocking pass; M5.6, H1 and historical limitations remain unchanged. No build,
 test, render or owned cleanup task remains active from this review.
+
+
+## A2 authorized follow-up acceptance
+
+The user authorized the recommended pass. Implementation `671d995` repairs F1
+in Swift, Rust and Python, completes the contract-owned issuance/delivery tables
+and generated guide copy for F3, and documents F2's metadata ownership limit.
+The new controls reject publication/payload contradictions while retaining
+unpublished call markers, cleanup observations and valid published timeout/wait
+errors. Contract versions remain 4/18/7; the worker source identity was
+regenerated without changing ABI geometry. No raw anomalous validator records
+were discarded and no global PID uniqueness rule was introduced.
+
+[Signed follow-up acceptance](../tests/out/runs/extensions-a2-acceptance-20261013/)
+`20261014T004238Z_c78f3a70` passed 197/197 freshly at clean `671d995`, build 597;
+417/417 Swift checks and the Rust/independent reader controls passed. The app
+remained unchanged. Native lifecycle, interruption, ordering, maximum transport,
+signing and BYOXPC controls all passed. Exact post-run checks establish absence
+of 33 named channels, six regular BYOXPC sessions and seven recovery service
+identities. Build, source, app, case-credit and cleanup evidence is retained
+locally in the run, with no unresolved owned resource from this increment.
+
+Fresh Astra rendered review reports one documentation issue: the issuer's
+`native_api_unavailable` state observes missing issue, consume or release
+support, rather than specifically the issuance symbol. The lead accepts R1 and
+corrects the shared row, regenerating/staging the guide. Initial source/render
+snapshots and the attributed review remain immutable in the run's review archive.
+This follow-up changes only that row and its copy plus checkpoint/retention
+metadata; executable source, build recipe and test code remain `671d995`.
+Affected source-drift verification and the focused rendered recheck are pending.

@@ -225,7 +225,7 @@ for cleanup evidence.
 | `issuer_wait_error` | The issuer wait failed without a more specific publication status. Publication may be present; the wait error does not establish child exit. |
 | `issuer_result_missing` | The issuer was reaped without result publication. `result_published` is false, with no native result, errno, token length or published authority IDs. A pre-call marker and exit/signal observation may remain. |
 | `issuer_abnormal_exit` | A bounded token result was published, but the issuer was reaped with a nonzero exit or signal. Publication is retained and delivery withheld. |
-| `native_api_unavailable` | The issuer published that the issuance API was unavailable, without a native call. Capability refusal prevents a worker run; cleanup remains independently recorded. |
+| `native_api_unavailable` | The issuer published that at least one required extension API (issue, consume or release) was unavailable, without a native call. Capability refusal prevents a worker run; cleanup remains independently recorded. |
 | `native_refusal` | The issuer published a null native return and its errno. This observation does not establish why issuance was refused or whether cleanup was clean. |
 | `token_oversized` | A nonnull native return supplied an empty token or no terminator within the token buffer bound. The issuer published that rejection; no deliverable token length is supplied. |
 | `invalid_transport` | Publication was observed, but its header, state/marker relationship or token length failed host validation. Fields from an invalid header are not treated as native results. |
