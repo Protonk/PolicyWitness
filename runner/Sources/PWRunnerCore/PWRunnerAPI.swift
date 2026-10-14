@@ -465,7 +465,22 @@ struct PWRunnerExtensionRecord: Codable {
     /// Present exactly when the worker published `channel_rejected` or
     /// `local_setup_failed`.
     var delivery_failure: PWRunnerExtensionDeliveryFailure?
+    /// Cleanup after unavailable native APIs is independent of channel setup.
+    /// Absence means no cleanup failure was reported, not proof of cleanup.
+    var delivery_cleanup_failure: PWRunnerExtensionDeliveryCleanupFailure?
     var host_buffer_erased = false
+}
+
+struct PWRunnerExtensionDeliveryCleanupFailure: Codable, Equatable {
+    var stage: String
+    var errno: Int32
+
+    func problem(status: String) -> String? {
+        guard status == "native_api_unavailable", stage == "descriptor_close", errno >= 0 else {
+            return "invalid independent delivery cleanup failure"
+        }
+        return nil
+    }
 }
 
 /// The worker's delivery publication vocabulary. Codes and stage numbers are
@@ -2146,9 +2161,12 @@ func validatorOwnershipProblem(phase: PWRunnerPhaseResult, steps: [PWRunnerStepR
                                filterType: mapFilterKindToValidator(step.sandbox_check.filter_kind),
                                filterValue: step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterNone ? nil : step.sandbox_check.filter_value)
     }
-    let recomputed = validatorAssociationIssues(block.records ?? [], expected: probes).issues
+    guard let records = block.records, let issues = block.association_issues else {
+        return "validator collection lacks records or association issues"
+    }
+    let recomputed = validatorAssociationIssues(records, expected: probes).issues
     func key(_ issue: PWValidatorAssociationIssue) -> String { "\(issue.kind)|\(issue.step_id ?? "")|\(issue.count)" }
-    if (block.association_issues ?? []).map(key).sorted() != recomputed.map(key).sorted() {
+    if issues.map(key).sorted() != recomputed.map(key).sorted() {
         return "validator association issues disagree with its records"
     }
     return nil
@@ -2548,6 +2566,8 @@ extension PWRunnerRunResult {
                 if let issue = failure.problem(status: declaration.delivery_status) { return issue }
                 if declaration.delivery_status == "channel_rejected" && declaration.issuance_status != "issued" { return "channel rejection without an issued token" }
             } else if declaration.delivery_failure != nil { return "delivery failure account without a failure status" }
+            if let cleanup = declaration.delivery_cleanup_failure,
+               let issue = cleanup.problem(status: declaration.delivery_status) { return issue }
             if declaration.delivery_status != "delivered" && declaration.delivered_bytes != nil { return "undelivered extension carries delivered byte count" }
             if declaration.delivery_status == "delivered" {
                 guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,

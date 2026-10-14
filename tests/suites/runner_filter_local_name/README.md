@@ -4,16 +4,16 @@
 public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
 default to `tests/out/runs/direct`.
 
-Exercises `(mach-lookup, local_name)` with a policy that denies the lookup of
-`com.apple.logd` by `local-name`. The prediction is explicitly unavailable, and
-the real `bootstrap_look_up` attempt must complete with `outcome: ok` and
-`rc: 0`: on the verified host a `local-name` rule governs no lookup the worker
-can perform, so the attempt is the witness of that scope. The evidence behind
-the exclusion is recorded in
-[VERIFICATIONS.md](../witness_contract/harness/VERIFICATIONS.md) and
-reproduced by
-[verify_local_name.sh](../witness_contract/harness/verify_local_name.sh); this
-case does not establish what `local-name` would govern elsewhere.
+Exercises `(mach-lookup, local_name)` with a policy containing a local-name
+deny for `com.apple.logd`. The prediction is explicitly unavailable, while
+the worker's `bootstrap_look_up` attempt must complete with `outcome: ok`
+and `rc: 0` on this test host. That attempt uses a global-name lookup; it is
+not a positive local-name enforcement control. The capability exclusion's
+limits and the open empirical mapping gate are recorded in
+[VERIFICATIONS.md](../witness_contract/harness/VERIFICATIONS.md). The
+[exploratory harness](../witness_contract/harness/verify_local_name.sh) retains
+raw evidence for future investigation; this suite checks PW's conservative
+behavior, not the native mapping question.
 
 ## Shared filter contract
 

@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "41334ffdd8bdc07947645841efd342d54484f03a34ea33a4a94658bb41e7544d"
-    static let abiIdentity: [UInt8] = [0x41, 0x33, 0x4f, 0xfd, 0xd8, 0xbd, 0xc0, 0x79, 0x47, 0x64, 0x58, 0x41, 0xef, 0xd3, 0x42, 0xd5, 0x44, 0x84, 0xf0, 0x3a, 0x34, 0xea, 0x33, 0xa4, 0xa9, 0x46, 0x58, 0xbb, 0x41, 0xe7, 0x54, 0x4d]
+    static let abiIdentityHex = "00b9dadd112237a58453d0711a96c0cb6899133af3e67f803f1bcdc9d545693c"
+    static let abiIdentity: [UInt8] = [0x00, 0xb9, 0xda, 0xdd, 0x11, 0x22, 0x37, 0xa5, 0x84, 0x53, 0xd0, 0x71, 0x1a, 0x96, 0xc0, 0xcb, 0x68, 0x99, 0x13, 0x3a, 0xf3, 0xe6, 0x7f, 0x80, 0x3f, 0x1b, 0xcd, 0xc9, 0xd5, 0x45, 0x69, 0x3c]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -733,8 +733,8 @@ struct ChildProcessCalls {
 /// Progress, interrupted calls and sleep overruns never renew it; each sleep is
 /// bounded by the remaining allowance. Excluded intervals (synchronous phase
 /// collection) extend the allowance by exactly their measured length. When the
-/// clock fails or runs backwards the wait falls back to a bounded count of
-/// nominal sleeps from that point, so it still ends; the record says so.
+/// clock fails or runs backwards the wait spends only the last remaining
+/// allowance in nominal sleeps; it never restores time already charged.
 struct HostWaitClock {
     let budgetNs: UInt64
     let pollNs: UInt64
@@ -742,55 +742,74 @@ struct HostWaitClock {
     let started: UInt64?
     private(set) var excludedNs: UInt64 = 0
     private(set) var clockFault = false
-    private var fallbackPasses: Int
+    private var lastReading: UInt64?
+    private var fallbackRemainingNs: UInt64
 
     init(milliseconds: Int, pollNs: UInt64, calls: ChildProcessCalls) {
         budgetNs = min(UInt64(max(0, milliseconds)), UInt64.max / 1_000_000) * 1_000_000
-        self.pollNs = pollNs
+        self.pollNs = max(1, pollNs)
         self.calls = calls
         started = calls.clock()
+        lastReading = started
         clockFault = started == nil
-        fallbackPasses = Int(min(budgetNs / pollNs, UInt64(Int32.max)))
+        fallbackRemainingNs = budgetNs
+    }
+
+    /// Every reading, including exclusion boundaries, must follow the previous one.
+    private mutating func readClock() -> UInt64? {
+        guard !clockFault, let previous = lastReading, let now = calls.clock(), now >= previous else {
+            clockFault = true
+            return nil
+        }
+        lastReading = now
+        return now
+    }
+
+    private mutating func account(_ now: UInt64) {
+        guard let start = started else { return }
+        let elapsed = now - start
+        let allowance = budgetNs > UInt64.max - excludedNs ? UInt64.max : budgetNs + excludedNs
+        fallbackRemainingNs = elapsed >= allowance ? 0 : allowance - elapsed
     }
 
     /// Elapsed nanoseconds since the wait started, or nil once the clock is unusable.
     mutating func elapsedNs() -> UInt64? {
-        guard !clockFault, let start = started, let now = calls.clock(), now >= start else {
-            clockFault = true
-            return nil
-        }
+        guard let now = readClock(), let start = started else { return nil }
+        account(now)
         return now - start
     }
 
     /// The remaining allowance: budget plus excluded time minus elapsed time.
     mutating func remainingNs() -> UInt64? {
-        guard let elapsed = elapsedNs() else { return nil }
-        let allowance = budgetNs > UInt64.max - excludedNs ? UInt64.max : budgetNs + excludedNs
-        return elapsed >= allowance ? 0 : allowance - elapsed
+        guard elapsedNs() != nil else { return nil }
+        return fallbackRemainingNs
     }
 
     /// Decide whether the allowance is exhausted; otherwise sleep for at most
     /// the remaining allowance and report that the wait continues.
     mutating func expiredAfterSleeping() -> Bool {
-        if let remaining = remainingNs() {
-            if remaining == 0 { return true }
-            calls.sleep(min(pollNs, remaining))
-            return false
-        }
-        if fallbackPasses <= 0 { return true }
-        fallbackPasses -= 1
-        calls.sleep(pollNs)
+        _ = remainingNs()
+        if fallbackRemainingNs == 0 { return true }
+        let sleep = min(pollNs, fallbackRemainingNs)
+        // If the next clock read fails, this requested sleep is already charged.
+        // A working clock measures the actual interval on its next reading.
+        fallbackRemainingNs -= sleep
+        calls.sleep(sleep)
         return false
     }
 
     /// Mark the start of an interval the wait does not charge.
-    func mark() -> UInt64? { clockFault ? nil : calls.clock() }
+    mutating func mark() -> UInt64? {
+        guard elapsedNs() != nil else { return nil }
+        return lastReading
+    }
 
     /// Exclude the interval since `mark()`; an unreadable interval is a clock fault.
     mutating func excludeSince(_ mark: UInt64?) {
-        guard let start = mark, let end = calls.clock(), end >= start else { clockFault = true; return }
+        guard let start = mark, let end = readClock(), end >= start else { clockFault = true; return }
         let interval = end - start
         excludedNs = excludedNs > UInt64.max - interval ? UInt64.max : excludedNs + interval
+        account(end)
     }
 
     mutating func record(stop: String, nativeErrno: Int32? = nil, excluded: Bool = false) -> PWHostWait {

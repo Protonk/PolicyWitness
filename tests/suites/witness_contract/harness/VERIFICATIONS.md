@@ -15,44 +15,37 @@ documented commands on a Sonoma+ host to reproduce.
 verify_local_name.sh
 ```
 
-The harness compiles `local_name_probe.c`, builds a disposable app bundle whose
-`Contents/XPCServices` holds a copy of the selected app's `PWRunner.xpc`, and
-observes native lookups under controlled policies for a target and an
-independently exercised sibling:
+Disposition: **prediction unavailable** for `(mach-lookup, local_name)`.
+This is a conservative capability limit. The empirical mapping gate remains
+open: the experiment did not establish an attempted lookup governed by a
+`local-name` rule, so it cannot calibrate a filter ID against that operation.
 
-- `bootstrap_subset` is refused (`KERN_INVALID_RIGHT`): a process cannot create
-  a local bootstrap namespace here. `bootstrap_register` of a per-process name
-  succeeds, before and after `sandbox_init`.
-- Self-registered names (`registered`, `registered-after`): `(deny mach-lookup
-  (global-name target))` denies the target (kr=1100) and leaves the sibling
-  allowed; `(deny default)(allow mach-lookup (global-name sibling))` allows
-  only the sibling. The same rules written with `local-name` change nothing:
-  allow-default plus a local-name deny still allows the target, deny-default
-  plus a local-name allow still denies the sibling. `mach-register` behaves the
-  same way: a `global-name` rule governs registration, a `local-name` rule does
-  not.
-- Embedded XPC service (`bundle`, `com.policywitness.policy-witness.PWRunner`
-  looked up from inside the bundle's own domain): `xpc_connection_create`
-  reaches the service under allow-default and under a `local-name` deny
-  (connection established, then interrupted because the copied service exits
-  in the foreign bundle), and is refused (`Connection invalid`) under a
-  `global-name` deny or an unfiltered deny; `bootstrap_look_up` of the service
-  name answers 1102 in the allowed cases and 1100 when global-name denies it.
-- `sandbox_check` scan, probe held under `(allow default)(deny mach-lookup
-  (local-name X))`: ID **3** answers deny for X and allow for the sibling; ID 1
-  denies every string; ID 17 answers allow for X. Under the equivalent
-  `global-name` deny, IDs 2 and 12 answer deny as recorded below. IDs 10 and
-  18 return native errors, ID 11 makes `sb_api_validator` exit by signal 11
-  (a `RAW:` scan hazard, not a verdict), and IDs 20..200 return EINVAL.
+The original run's summary reported these observations on this host:
 
-Result: **prediction unavailable** for `(mach-lookup, local_name)`. The only
-discriminating ID (3) disagrees with every observation of enforcement the
-probe could make, because no reachable lookup is governed by a local-name
-rule on this host; the IDs that agree with enforcement do not discriminate.
-Routed to `prediction_unavailable` in `ProbeRunner.swift`. ID 17, previously
-emitted as the local-name filter, was never one. This describes the tested
-environment; namespaces a user process cannot reach, and other macOS
-releases, are not covered.
+- `bootstrap_subset` returned `KERN_INVALID_RIGHT`. That call did not create a
+  subset; it does not establish that every local namespace is inaccessible.
+- Self-registered names before and after `sandbox_init`: the tested
+  `global-name` rules changed the target/sibling lookup returns, while the
+  corresponding `local-name` rules did not. These operations do not supply a
+  positive local-name enforcement control.
+- The bundle probe observed XPC error descriptions (`Connection interrupted`
+  and `Connection invalid`) and `bootstrap_look_up` returns 1102 or 1100.
+  It had no independent service receipt and did not attempt the named sibling
+  service. Error text does not establish service receipt or a sandbox cause.
+- Under the local-name deny, the scan reported ID 3 returning deny for the
+  target and allow for the sibling, and ID 17 returning allow for both. This
+  identifies a candidate query filter, not a prediction/enforcement match.
+
+No raw transcript of that original experiment is retained with this account;
+these are reported observations, not independently replayable acceptance
+credits. `verify_local_name.sh --out <fresh-directory>` retains the native
+output, raw validator stdout/stderr/status, source and binary hashes, and host
+identity for subsequent investigation. Its registered-name controls exercise
+a sibling; its bundle probe does not. A future mapping decision needs matched
+scope, independently observed service receipt, positive and negative native
+controls, and retained raw evidence. Other namespaces and macOS releases remain
+unexamined. The live PW suite establishes only the current unavailable-query
+behavior and the independent attempt it records.
 
 ## 2026-05-29 — post-audit strict verification (sibling-allowed)
 

@@ -151,15 +151,11 @@ let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
     // iokit-specific.
     .init(operation: "sysctl-read",
           filterKind: PWRunnerWire.sandboxFilterSysctlName),
-    // mach-lookup + local-name: verified 2026-10-14 on macOS 26.7.1 (25G241,
-    // arm64) with tests/suites/witness_contract/harness/verify_local_name.sh.
-    // A (deny mach-lookup (local-name X)) rule changed no lookup the probe
-    // could perform, for a name the process registered itself and for an
-    // embedded XPC service looked up in its bundle's own domain, while the
-    // same rule written with global-name denied them. sandbox_check ID 3
-    // alone answers deny for X and allow for a sibling under the local-name
-    // rule, so it disagrees with observed enforcement; ID 17, which PW used
-    // to emit, never discriminates. No ID in 1..200 agrees with enforcement.
+    // Conservative capability limit: the local-name investigation did not
+    // establish a lookup governed by that rule, so no filter ID is calibrated
+    // against a matched native operation. ID 3 is only a query candidate;
+    // the former ID 17 did not discriminate in the reported scan. See
+    // tests/suites/witness_contract/harness/VERIFICATIONS.md for the open gate.
     .init(operation: "mach-lookup",
           filterKind: PWRunnerWire.sandboxFilterLocalName),
 ]

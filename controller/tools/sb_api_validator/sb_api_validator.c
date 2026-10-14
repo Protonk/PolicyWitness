@@ -19,13 +19,11 @@
  * unreliable for global-name" — that anomaly was at least partly
  * self-inflicted by querying with the wrong filter ID.
  *
- * LOCAL_NAME=3: the only ID that answers a (deny mach-lookup (local-name X))
- * rule (deny for X, allow for a sibling) in the 2026-10-14 scan recorded in
- * tests/suites/witness_contract/harness/VERIFICATIONS.md. The earlier 17
- * never discriminated. On the tested macOS no reachable lookup was governed
- * by local-name rules (self-registered names and embedded XPC services follow
- * global-name), so PW plans no local-name query; this constant serves the
- * CLI's RAW/LOCAL_NAME scans only. */
+ * LOCAL_NAME=3 is a query candidate from the reported 2026-10-14 scan,
+ * not a filter calibrated against local-name enforcement. The investigation
+ * established no matched native operation; its limits and open gate are in
+ * tests/suites/witness_contract/harness/VERIFICATIONS.md. PW plans no query
+ * for this pair. This constant serves the standalone LOCAL_NAME scan only. */
 #ifndef SANDBOX_FILTER_PATH
 #define SANDBOX_FILTER_PATH 1
 #endif

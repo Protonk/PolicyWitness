@@ -20,6 +20,10 @@ deterministic, and checked into the repo so tests are hermetic.
   collection/disposition observations to the Swift encoder, Rust disposition
   reader and Python consumer/oracle controls. Accepted failures include driver
   setup, native spawn failure and unconfirmed child cleanup.
+  `evidence_types.json` supplies malformed and valid neighboring delivery and
+  validator records to all three readers, including scalar types, integer
+  bounds, independent cleanup and mixed-type association issues. Its patches
+  apply to the retained issuer-abnormal capture; they are constructed controls.
   `path_diagnostics.json` contains independent compact path states,
   Unicode byte distinctions and malformed representations shared by Swift
   encoding/decoding, Rust forwarding and Python consumer checks.

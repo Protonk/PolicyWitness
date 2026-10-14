@@ -892,7 +892,7 @@ fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static st
     let err = failure["errno"].as_i64();
     if local {
         if !rc.is_some_and(|v| v != 0 && v >= i32::MIN as i64 && v <= i32::MAX as i64)
-            || !err.is_some_and(|v| v >= 0)
+            || !err.is_some_and(|v| v >= 0 && v <= i32::MAX as i64)
         {
             return Some("local setup failure lacks its native result");
         }
@@ -906,7 +906,9 @@ fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static st
     match failure["cleanup_stage"].as_str() {
         Some(cleanup) => {
             if !matches!(cleanup, "descriptor_close" | "unmap")
-                || !failure["cleanup_errno"].as_i64().is_some_and(|v| v >= 0)
+                || !failure["cleanup_errno"]
+                    .as_i64()
+                    .is_some_and(|v| v >= 0 && v <= i32::MAX as i64)
             {
                 return Some("delivery cleanup failure lacks its errno");
             }
@@ -914,7 +916,7 @@ fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static st
                 return Some("descriptor closed twice");
             }
         }
-        None if !failure["cleanup_errno"].is_null() => {
+        None if !failure["cleanup_stage"].is_null() || !failure["cleanup_errno"].is_null() => {
             return Some("delivery cleanup errno without a stage");
         }
         None => {}
@@ -1014,6 +1016,31 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
         reject("extension delivery lacks bounded issuance");
     }
     let delivery = declaration["delivery_status"].as_str().unwrap_or("");
+    if !matches!(
+        delivery,
+        "not_observed"
+            | "delivered"
+            | "token_unavailable"
+            | "channel_rejected"
+            | "native_api_unavailable"
+            | "local_setup_failed"
+    ) {
+        reject("unknown delivery status");
+    }
+    if delivery != "delivered" && !declaration["delivered_bytes"].is_null() {
+        reject("undelivered extension carries delivered byte count");
+    }
+    let cleanup = &declaration["delivery_cleanup_failure"];
+    if !cleanup.is_null()
+        && (delivery != "native_api_unavailable"
+            || !cleanup.is_object()
+            || cleanup["stage"] != "descriptor_close"
+            || !cleanup["errno"]
+                .as_i64()
+                .is_some_and(|v| v >= 0 && v <= i32::MAX as i64))
+    {
+        reject("invalid independent delivery cleanup failure");
+    }
     let failure = &declaration["delivery_failure"];
     if matches!(delivery, "channel_rejected" | "local_setup_failed") {
         if let Some(detail) = delivery_failure_problem(delivery, failure) {
@@ -1335,14 +1362,26 @@ fn validator_ownership_problem(
     let Some(expected) = block["expected_step_ids"].as_array() else {
         return Some("validator collection lacks its expected plan");
     };
+    if eligible
+        .iter()
+        .any(|s| !s["step_id"].is_string() || !s["sandbox_check"].is_object())
+        || expected.iter().any(|v| !v.is_string())
+    {
+        return Some("validator query plan has an invalid type");
+    }
     let mut plan: Vec<String> = eligible
         .iter()
-        .filter_map(|s| s["step_id"].as_str().map(str::to_string))
+        .map(|s| {
+            s["step_id"]
+                .as_str()
+                .expect("validated step ID")
+                .to_string()
+        })
         .collect();
     plan.sort();
     let mut named: Vec<String> = expected
         .iter()
-        .map(|v| v.as_str().map(str::to_string).unwrap_or_default())
+        .map(|v| v.as_str().expect("validated plan ID").to_string())
         .collect();
     named.sort();
     let unique = named.windows(2).all(|w| w[0] != w[1]);
@@ -1355,13 +1394,28 @@ fn validator_ownership_problem(
     ) else {
         return Some("validator collection lacks records or association issues");
     };
+    if records
+        .iter()
+        .any(|r| !r.is_object() || (!r["step_id"].is_null() && !r["step_id"].is_string()))
+        || issues.iter().any(|i| {
+            !i.is_object()
+                || !i["kind"].is_string()
+                || (!i["step_id"].is_null() && !i["step_id"].is_string())
+                || !i["count"].as_i64().is_some_and(|v| v >= 0)
+        })
+    {
+        return Some("validator association evidence has an invalid type");
+    }
     let mut reported: Vec<(String, Option<String>, usize)> = issues
         .iter()
         .map(|i| {
             (
-                i["kind"].as_str().unwrap_or("").to_string(),
+                i["kind"]
+                    .as_str()
+                    .expect("validated issue kind")
+                    .to_string(),
                 i["step_id"].as_str().map(str::to_string),
-                i["count"].as_u64().unwrap_or(0) as usize,
+                i["count"].as_u64().expect("validated association count") as usize,
             )
         })
         .collect();
@@ -1641,6 +1695,41 @@ mod tests {
         let mut reused = baseline.clone();
         reused["phases"][1]["validator_subprocess"]["pid"] = block(baseline, 0)["pid"].clone();
         assert_eq!(diagnostics(&reused).disposition_integrity, Some("valid"));
+    }
+
+    #[test]
+    fn shared_evidence_type_corpus() {
+        let envelope: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+        ))
+        .unwrap();
+        let rows: Vec<Value> = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/evidence_types.json"
+        ))
+        .unwrap();
+        for row in rows {
+            let mut reply = envelope["data"]["runner_result"].clone();
+            for patch in row["patches"].as_array().unwrap() {
+                let (parent, key) = patch["path"].as_str().unwrap().rsplit_once('/').unwrap();
+                let target = reply.pointer_mut(parent).unwrap();
+                if let Some(array) = target.as_array_mut() {
+                    array[key.parse::<usize>().unwrap()] = patch["value"].clone();
+                } else {
+                    target[key] = patch["value"].clone();
+                }
+            }
+            let diag = diagnostics(&reply);
+            assert_eq!(
+                diag.disposition_integrity == Some("valid"),
+                row["accepted"].as_bool().unwrap(),
+                "{}: {:?}",
+                row["name"],
+                diag.disposition_issues
+            );
+            if row["accepted"] == false {
+                assert_eq!(diag.process_disposition, "withheld");
+            }
+        }
     }
 
     #[test]

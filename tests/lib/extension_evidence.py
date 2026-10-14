@@ -47,7 +47,7 @@ def delivery_failure_problem(status, failure):
         if not _integer(rc, -(1 << 31), (1 << 31) - 1) or rc == 0 or not _integer(err, 0, (1 << 31) - 1):
             return 'local setup failure lacks its native result'
     elif stage == 'channel_size':
-        if rc != 0 or err is not None:
+        if not _integer(rc, 0, 0) or err is not None:
             return 'undersized channel misreports its inspection result'
     elif rc is not None or err is not None:
         return 'channel rejection invents a native result'
@@ -181,6 +181,11 @@ def validate_extensions(runner):
         if delivery not in DELIVERY_STATUSES:
             errors.append('invalid extension delivery status')
         failure = declaration.get('delivery_failure')
+        cleanup = declaration.get('delivery_cleanup_failure')
+        if cleanup is not None and (delivery != 'native_api_unavailable' or not isinstance(cleanup, dict)
+                or cleanup.get('stage') != 'descriptor_close'
+                or not _integer(cleanup.get('errno'), 0, (1 << 31) - 1)):
+            errors.append('invalid independent delivery cleanup failure')
         if delivery in DELIVERY_FAILURE_STATUSES:
             problem = delivery_failure_problem(delivery, failure)
             if problem:

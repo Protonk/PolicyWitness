@@ -71,10 +71,9 @@ static void xpc_probe(const char *label) {
     xpc_object_t reply = xpc_connection_send_message_with_reply_sync(connection, message);
     if (xpc_get_type(reply) == XPC_TYPE_ERROR) {
         const char *text = xpc_dictionary_get_string(reply, XPC_ERROR_KEY_DESCRIPTION);
-        /* "Connection invalid" is launchd refusing the lookup; "Connection
-         * interrupted" is a reached service that went away. */
-        printf("%s xpc: %s (%s)\n", label, text ? text : "error",
-               text && strstr(text, "invalid") ? "lookup refused" : "lookup reached the service");
+        /* Transport error text is an observation, not proof of service receipt
+         * or of the boundary that refused the operation. */
+        printf("%s xpc error: %s\n", label, text ? text : "no description");
     } else {
         printf("%s xpc: reply\n", label);
     }
@@ -118,7 +117,8 @@ int main(int argc, char **argv) {
         look("sandboxed", TARGET); look("sandboxed", SIBLING);
     } else if (strcmp(mode, "registered-after") == 0) {
         if (apply(policy)) return 6;
-        reg(TARGET); reg(SIBLING);
+        int target_failed = reg(TARGET), sibling_failed = reg(SIBLING);
+        if (target_failed || sibling_failed) printf("registration incomplete; lookups do not prove lookup-policy enforcement\n");
         look("sandboxed", TARGET); look("sandboxed", SIBLING);
     } else if (strcmp(mode, "bundle") == 0) {
         look("baseline", SERVICE); xpc_probe("baseline");

@@ -191,7 +191,9 @@ def _ordering_chain(runner, phase):
 
 def eligible_order(runner, step):
     """True when the step's native record and the run's chain support query_first."""
-    query = step.get('sandbox_check') or {}
+    query = step.get('sandbox_check')
+    if not isinstance(query, dict):
+        return False
     worker = runner.get('runner_subprocess') or {}
     phase = _step_phase(runner, step)
     validator = phase.get('validator_subprocess')

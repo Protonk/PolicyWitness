@@ -90,6 +90,42 @@ private func drive(_ mode: String, clock: ControlledClock, sentinelMs: Int, grac
 
 func runCWorkerClockTests(_ tk: TestKit) {
     tk.group("host waits are elapsed monotonic allowances") {
+        tk.run("small regression above the starting time faults without restoring spent time") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 7_000_000, calls: clock.calls)
+            clock.now += 90_000_000
+            try expectEqual(wait.remainingNs(), UInt64(10_000_000))
+            clock.now -= 40_000_000
+            try expectNil(wait.remainingNs())
+            try expectTrue(wait.clockFault)
+            while !wait.expiredAfterSleeping() {}
+            try expectEqual(clock.sleeps, [UInt64(7_000_000), UInt64(3_000_000)])
+        }
+        tk.run("a clock failure after a requested sleep does not spend that sleep twice") {
+            let clock = ControlledClock(); clock.realSleepNs = 0
+            var wait = HostWaitClock(milliseconds: 100, pollNs: 7_000_000, calls: clock.calls)
+            clock.now += 90_000_000
+            try expectFalse(wait.expiredAfterSleeping())
+            clock.failAfter = clock.readings
+            while !wait.expiredAfterSleeping() {}
+            try expectEqual(clock.sleeps.reduce(0, +), UInt64(10_000_000))
+        }
+        tk.run("both exclusion boundaries check the previous reading and retain remaining fallback") {
+            for atEnd in [false, true] {
+                let clock = ControlledClock(); clock.realSleepNs = 0
+                var wait = HostWaitClock(milliseconds: 100, pollNs: 7_000_000, calls: clock.calls)
+                clock.now += 90_000_000
+                _ = wait.remainingNs()
+                if !atEnd { clock.now -= 40_000_000 }
+                let mark = wait.mark()
+                if atEnd { clock.now -= 40_000_000 }
+                wait.excludeSince(mark)
+                try expectTrue(wait.clockFault)
+                while !wait.expiredAfterSleeping() {}
+                try expectEqual(clock.sleeps.reduce(0, +), UInt64(10_000_000))
+                try expectEqual(wait.excludedNs, UInt64(0))
+            }
+        }
         tk.run("oversleeping polls end the sentinel wait at the allowance, not after a fixed number of passes") {
             let clock = ControlledClock(); clock.overrun = 5   // every 2 ms sleep costs 10 ms of clock
             let out = try drive("no_report_hang", clock: clock, sentinelMs: 100)

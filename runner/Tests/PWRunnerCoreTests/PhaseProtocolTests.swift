@@ -24,6 +24,40 @@ private func phaseRun(_ phases: [PWRunnerPhase], overrides: PWRunnerTestOverride
 
 func runPhaseProtocolTests(_ tk: TestKit) {
     tk.group("ordered phases: production C/Swift and independent file effects") {
+        tk.run("shared evidence type corpus is rejected or preserved by the actual decoder and encoder") {
+            let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+                .deletingLastPathComponent().deletingLastPathComponent()
+            let fixtures = root.appendingPathComponent("tests/fixtures")
+            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
+                "blackbox_e2e/checker/response21/issuer_abnormal_run.json"))) as! [String: Any]
+            let baseline = (envelope["data"] as! [String: Any])["runner_result"]!
+            let cases = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
+                "contract/evidence_types.json"))) as! [[String: Any]]
+            func replace(_ value: Any, path: ArraySlice<String>, with replacement: Any) -> Any {
+                guard let key = path.first else { return replacement }
+                if var array = value as? [Any] {
+                    let index = Int(key)!
+                    array[index] = replace(array[index], path: path.dropFirst(), with: replacement)
+                    return array
+                }
+                var object = value as! [String: Any]
+                object[key] = replace(object[key] ?? NSNull(), path: path.dropFirst(), with: replacement)
+                return object
+            }
+            for row in cases {
+                var raw = baseline
+                for patch in row["patches"] as! [[String: Any]] {
+                    raw = replace(raw, path: (patch["path"] as! String).split(separator: "/").map(String.init)[...], with: patch["value"]!)
+                }
+                var accepted = false
+                do {
+                    let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+                    _ = try pwRunnerEncodeJSON(reply)
+                    accepted = true
+                } catch {}
+                try expectEqual(accepted, row["accepted"] as! Bool, row["name"] as! String)
+            }
+        }
         tk.run("collection states reject contradictions and retain failed driver evidence") {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()

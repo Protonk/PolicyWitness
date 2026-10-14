@@ -125,9 +125,11 @@ Offline release controls also exercise the release procedure's decision points.
 - `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts;
   configured hooks remove, move, truncate or rewrite a file beside one call, or
   answer a version query.
-- `tests/fixtures/build_refusals/xcodebuild_stub.c`: the `xcodebuild` of a
-  disposable developer directory that resolves the shims' tools and locates no
-  SDK, so the real `xcrun` fails and the script's SDK refusal is reached.
+- The SDK refusal control gives real `xcrun` an unconfigured developer directory
+  only for SDK selection. Its sandbox permits only that executable, denies Mach
+  service lookups and limits writes to the fixture. A containment control runs
+  first. Python/Git shims retain the actual developer environment; the fixture
+  assumes no Xcode or Command Line Tools directory layout.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles

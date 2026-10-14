@@ -82,6 +82,7 @@
     },
     "reply.extensions[]" : {
       "delivered_bytes" : "number",
+      "delivery_cleanup_failure" : "object",
       "delivery_failure" : "object",
       "delivery_status" : "string",
       "extension_class" : "string",
@@ -94,6 +95,10 @@
       "resolved_target" : "string",
       "submitted_target" : "string",
       "token_ref" : "string"
+    },
+    "reply.extensions[].delivery_cleanup_failure" : {
+      "errno" : "number",
+      "stage" : "string"
     },
     "reply.extensions[].delivery_failure" : {
       "cleanup_errno" : "number",

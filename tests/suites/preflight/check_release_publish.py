@@ -54,6 +54,21 @@ def expect_problem(problems, needle):
 
 
 def check_preflight(out):
+    # Version coordinates need not be consecutive. Use real annotated tags
+    # and a local bare remote; no product tag or external publication is made.
+    skipped = out / 'skipped-version'
+    skipped.mkdir()
+    skipped_repo = make_repo(skipped)
+    git(skipped_repo, 'tag', '-a', 'v0.2.8', '-m', 'previous release')
+    git(skipped_repo, 'commit', '-q', '--allow-empty', '-m', 'next release')
+    git(skipped_repo, 'tag', '-a', 'v0.3.0', '-m', 'skip 0.2.9')
+    stamp, problems = release_preflight.inspect(skipped_repo)
+    assert problems == [] and stamp['version'] == '0.3.0', (stamp, problems)
+    assert stamp['describe'] == 'v0.3.0' and stamp['build_number'] == '2', stamp
+    assert stamp['prose_baseline']['previous_tag'] == 'v0.2.8', stamp
+    assert stamp['build_baseline']['previous_tag'] == 'v0.2.8', stamp
+    (skipped / 'preflight.json').write_text(json.dumps(stamp, indent=2) + '\n')
+
     work = out / 'preflight'
     work.mkdir()
     repo = make_repo(work)

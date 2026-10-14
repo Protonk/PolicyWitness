@@ -18,6 +18,7 @@ from pathlib import Path
 import plistlib
 import re
 import shutil
+import shlex
 import signal
 import subprocess
 import sys
@@ -26,7 +27,6 @@ import time
 
 ROOT = Path(__file__).resolve().parents[4]
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
-STUB = ROOT / 'tests/fixtures/build_refusals/xcodebuild_stub.c'
 WRAPPED = ('cargo', 'meson', 'ninja', 'codesign', 'cp')
 VARIANTS = {'full': '1', 'partial': '0'}
 IDENTITY_INPUT = 'runner/Package.swift'   # a digest input Meson never compiles
@@ -293,54 +293,66 @@ def control_none(co, variant):
 
 
 def control_sdk_unavailable(co, variant):
-    """A developer directory whose tools resolve but whose xcodebuild locates no macOS SDK."""
-    fake = co.work / 'developer-without-sdk/Fake.app/Contents/Developer'
-    if not fake.exists():
-        fake_developer_dir(fake)
-    build = co.build('sdk_unavailable', variant, env=dict(DEVELOPER_DIR=str(fake)))
-    check(build, 2, f'xcrun could not select the macOS SDK (DEVELOPER_DIR={fake})',
+    """Only SDK selection sees a disposable developer directory, inside a restrictive sandbox.
+
+    The shell wrapper still invokes the real xcrun. It supplies the fixture's
+    unconfigured developer directory, not an exit status. All other build tools use the real
+    selected developer directory, including the /usr/bin Python/git shims.
+    """
+    fixture = co.work / 'developer-without-sdk'
+    if not fixture.exists():
+        fake_developer_dir(fixture)
+    build = co.build('sdk_unavailable', variant, env=dict(BASH_ENV=str(fixture / 'sdk-only.bash')))
+    check(build, 2, 'xcrun could not select the macOS SDK',
           present=('Checking host/worker identity', 'Selecting the macOS SDK'),
           absent=('Checking the native build directory', 'Checking the signing identity', 'Building Rust'))
     assert not build.receipts, build.receipts
-    # The shims offer a Command Line Tools installation when a lookup fails; the
-    # stand-in must have resolved every tool the script ran.
+    calls = (fixture / 'calls').read_text().splitlines()
+    assert calls[-1] == '--sdk macosx --show-sdk-path', calls
+    assert int((fixture / 'invocation.status').read_text()) != 0
+    assert 'invalid DEVELOPER_DIR path' in (fixture / 'invocation.stderr').read_text()
     assert 'requesting installation' not in build.output, build.output[-2000:]
+    shutil.copytree(fixture, co.out / f'{co.prefix}{variant}-sdk_unavailable' / 'sdk-fixture')
     preserved(build)
     return build
 
 
-def fake_developer_dir(fake):
-    """Xcode's shape around the tools the script runs before selecting the SDK, and an xcodebuild that locates no SDK.
+def fake_developer_dir(fixture):
+    """An unconfigured developer directory, independent of Xcode/CLT layout.
 
-    The /usr/bin shims validate DEVELOPER_DIR by running its xcodebuild and ask
-    it where their tools and the selected SDK are. The stand-in compiled from
-    xcodebuild_stub.c resolves python3 and git from this directory and answers
-    every SDK query with a failure, so xcrun selects nothing and the script's
-    own refusal is reached."""
-    developer = Path(subprocess.check_output(['/usr/bin/xcode-select', '-p'], text=True).strip())
-    xcode = developer.parent.parent
-    contents = fake.parent
-    (fake / 'usr/bin').mkdir(parents=True)
-    for entry in (xcode / 'Contents').iterdir():
-        if entry.name != 'Developer':
-            os.symlink(entry, contents / entry.name)
-    for name in ('Library', 'Toolchains', 'Makefiles', 'Tools'):
-        if (developer / name).exists():
-            os.symlink(developer / name, fake / name)
-    for name in ('lib', 'share', 'libexec'):
-        if (developer / 'usr' / name).exists():
-            os.symlink(developer / 'usr' / name, fake / 'usr' / name)
-    for tool in ('python3', 'git'):
-        os.symlink(developer / 'usr/bin' / tool, fake / 'usr/bin' / tool)
-    subprocess.run(['/usr/bin/xcrun', 'clang', '-o', str(fake / 'usr/bin/xcodebuild'), str(STUB)], check=True)
-    # Every tool the shims will be asked for must resolve through the stand-in
-    # before any shim runs under this directory.
-    for tool in ('python3', 'git', 'clang'):
-        found = subprocess.run([str(fake / 'usr/bin/xcodebuild'), '-sdk', 'macosx', '-find', tool], capture_output=True, text=True)
-        assert found.returncode == 0 and Path(found.stdout.strip()).exists(), (tool, found.returncode, found.stderr)
-    probe = subprocess.run(['/usr/bin/python3', '-c', 'print("resolved")'], env=dict(os.environ, DEVELOPER_DIR=str(fake)),
-                           capture_output=True, text=True, timeout=60)
-    assert probe.returncode == 0 and probe.stdout.strip() == 'resolved', (probe.returncode, probe.stderr)
+    No /usr/bin tool shim runs with the fake DEVELOPER_DIR. The isolated SDK
+    command may execute only xcrun, cannot make Mach service lookups or write
+    outside its own fixture. Its real configuration error drives the refusal;
+    no SDK response or exit status is fabricated.
+    """
+    fake = fixture / 'unconfigured-developer'
+    fake.mkdir(parents=True)
+    profile = fixture / 'sdk.sb'
+    # JSON string quoting is also valid for these SBPL path literals.
+    profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
+        '(allow process-exec (literal "/usr/bin/xcrun"))'
+        '(deny file-write*)(allow file-write* (subpath ' + json.dumps(str(fixture.resolve())) + '))\n')
+    prefix = ['/usr/bin/sandbox-exec', '-f', str(profile)]
+    env = dict(os.environ, DEVELOPER_DIR=str(fake))
+    # Verify containment before the SDK query. A general subprocess cannot run;
+    # the allowed SDK process must report the real developer-directory error.
+    denied = command(fixture / 'containment', prefix + ['/usr/bin/true'], cwd=fixture, env=env)
+    assert denied[0] != 0 and 'Operation not permitted' in denied[2], denied
+    refused = command(fixture / 'sdk-probe', prefix + ['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'],
+                      cwd=fixture, env=env)
+    assert refused[0] != 0 and 'invalid DEVELOPER_DIR path' in refused[2], refused
+    (fixture / 'sdk-only.bash').write_text(
+        '/usr/bin/xcrun() {\n'
+        '  [[ "$*" == "--sdk macosx --show-sdk-path" ]] || return 125\n'
+        '  printf "%s\\n" "$*" >> ' + shlex.quote(str(fixture / 'calls')) + '\n'
+        '  local sdk_status=0\n'
+        '  DEVELOPER_DIR=' + shlex.quote(str(fake)) + ' command ' + shlex.join(prefix) +
+        ' /usr/bin/xcrun "$@" > ' + shlex.quote(str(fixture / 'invocation.stdout')) +
+        ' 2> ' + shlex.quote(str(fixture / 'invocation.stderr')) + ' || sdk_status=$?\n'
+        '  cat ' + shlex.quote(str(fixture / 'invocation.stdout')) + '\n'
+        '  cat ' + shlex.quote(str(fixture / 'invocation.stderr')) + ' >&2\n'
+        '  printf "%s\\n" "$sdk_status" > ' + shlex.quote(str(fixture / 'invocation.status')) + '\n'
+        '  return "$sdk_status"\n}\n')
 
 
 def _cargo_output_removed(co, variant, binary, refusal):

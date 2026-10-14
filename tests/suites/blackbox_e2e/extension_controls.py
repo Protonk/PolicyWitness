@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from lifecycle_oracle import check_record
+from consumer import validate
 
 
 def run_extension_controls(run):
@@ -12,6 +13,20 @@ def run_extension_controls(run):
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)
     abnormal = json.loads(fixture.with_name('issuer_abnormal_run.json').read_text())
+    cases = json.loads((fixture.parents[3] / 'contract/evidence_types.json').read_text())
+    for case in cases:
+        document = deepcopy(abnormal)
+        for patch in case['patches']:
+            keys = patch['path'].lstrip('/').split('/')
+            target = document['data']['runner_result']
+            for key in keys[:-1]:
+                target = target[int(key)] if isinstance(target, list) else target[key]
+            target[int(keys[-1]) if isinstance(target, list) else keys[-1]] = deepcopy(patch['value'])
+        before = deepcopy(document)
+        errors, findings = validate(document), check_record(document)
+        assert (not errors) == case['accepted'], (case['name'], errors)
+        assert (not findings) == case['accepted'], (case['name'], findings)
+        assert document == before, case['name']
     run('issuer_abnormal_capture', abnormal)
     assert check_record(abnormal) == []
     missing = deepcopy(abnormal)

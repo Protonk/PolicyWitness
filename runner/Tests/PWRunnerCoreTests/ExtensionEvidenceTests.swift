@@ -71,6 +71,10 @@ func extensionShapeDocuments() throws -> [[String: Any]] {
     replies.append(deliveryFailureReply(status: "local_setup_failed",
         failure: PWRunnerExtensionDeliveryFailure(stage: "descriptor_metadata", native_rc: -1, errno: 5,
                                                   cleanup_stage: "descriptor_close", cleanup_errno: 9)))
+    var apiUnavailable = extensionReplyFixture(available: false)
+    apiUnavailable.extensions?[0].delivery_status = "native_api_unavailable"
+    apiUnavailable.extensions?[0].delivery_cleanup_failure = PWRunnerExtensionDeliveryCleanupFailure(stage: "descriptor_close", errno: 9)
+    replies.append(apiUnavailable)
     var failed = extensionReplyFixture(available: false)
     failed.extensions?[0].issuance_status = "issuer_timeout"
     failed.extensions?[0].issuer?.termination_request = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: 1)
@@ -283,6 +287,10 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
             try expectEqual(token.failure, PWRunnerExtensionDeliveryFailure(stage: "channel_token"))
             let mapping = extensionDeliveryObservation(words(5, 4, rc: -1, errno: 19, cleanup: 5, cleanupErrno: 9))
             try expectEqual(mapping.failure?.cleanup_stage, "descriptor_close")
+            let unavailable = extensionDeliveryObservation(words(4, cleanup: 5, cleanupErrno: 9))
+            try expectEqual(unavailable.status, "native_api_unavailable")
+            try expectNil(unavailable.failure)
+            try expectEqual(unavailable.cleanup, PWRunnerExtensionDeliveryCleanupFailure(stage: "descriptor_close", errno: 9))
             for plain in [words(1), words(2), words(4)] {
                 let observation = extensionDeliveryObservation(plain)
                 try expectEqual(observation.status, PWExtensionDelivery.statuses[plain.status]!)

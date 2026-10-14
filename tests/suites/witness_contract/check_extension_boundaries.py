@@ -243,10 +243,12 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
         elif worker_mode == 204:
             assert events[0]['native_result'] != -1
             assert events[1]['status'] == 'returned' and events[1]['native_result'] == -1 and events[1]['errno'] == 5
-        elif worker_mode == 105:
+        elif worker_mode in (105, 118):
             assert declaration['delivery_status'] == 'native_api_unavailable'
             assert declaration.get('delivery_failure') is None and declaration.get('delivered_bytes') is None, declaration
             assert all(e['status'] == 'unavailable' and e['unavailable_reason'] == 'native_api_unavailable' for e in events)
+            assert declaration.get('delivery_cleanup_failure') == ({'stage': 'descriptor_close', 'errno': 9} if worker_mode == 118 else None)
+            assert runner.get('reporting_failure') is None, runner
         elif ('worker', worker_mode) in DELIVERY_FAILURES:
             assert declaration['issuance_status'] == 'issued', declaration['issuance_status']
             assert worker_record['exit_code'] == 0 and worker_record['reaped'], worker_record
@@ -286,7 +288,7 @@ def main():
     out = Path(directory).resolve()
     results = []
     cases = [('native', 0, 0)] + [(f'issuer-{mode}', mode, None) for mode in range(1, 17)] \
-        + [(f'worker-{mode}', 0, mode) for mode in (101, 102, 103, 104, 105, 201, 202, 203, 204)] \
+        + [(f'worker-{mode}', 0, mode) for mode in (101, 102, 103, 104, 105, 118, 201, 202, 203, 204)] \
         + [(f'worker-{mode}', 0, mode) for mode in sorted(m for kind, m in DELIVERY_FAILURES if kind == 'worker')]
     for name, issuer, worker in cases:
         try:

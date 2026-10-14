@@ -1373,6 +1373,13 @@ keeps that wait status; clean and abnormal reaps distinguish `issued` from
 
 <!-- END COPIED EXTENSION STATUSES -->
 
+When native API support is unavailable, an optional `delivery_cleanup_failure`
+records a failed descriptor close independently of that primary status. It has
+`stage: "descriptor_close"` and the saved native `errno`. Its absence means no
+cleanup failure was reported, not proof that cleanup succeeded. For
+`channel_rejected` and `local_setup_failed`, cleanup observations remain in
+`delivery_failure.cleanup_stage` and `cleanup_errno`.
+
 An event status of `returned` requires native result publication; consumption's
 signed handle value of -1 supplies no handle. Release's native result stays
 separate from later file access. `unavailable` records a published no-call

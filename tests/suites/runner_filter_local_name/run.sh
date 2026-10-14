@@ -16,9 +16,9 @@ if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 
-# The policy denies the lookup by local-name. On the verified host that rule
-# governs no lookup the worker can perform, so the real bootstrap_look_up of
-# this launchd service completes while the host plans no prediction for it.
+# The local-name rule names this service, while the worker attempts a
+# global-name bootstrap lookup. This checks the unavailable-query contract;
+# it does not establish a matched local-name enforcement operation.
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 /usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
 import json, sys

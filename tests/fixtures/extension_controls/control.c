@@ -139,7 +139,7 @@ static void *controlled_lookup(void *library, const char *name) {
         return symbol ? (void *)controlled_issue : NULL;
     }
     if (strcmp(name, "sandbox_extension_consume") == 0) {
-        if (PW_CONTROL_MODE == 105) return NULL;
+        if (PW_CONTROL_MODE == 105 || PW_CONTROL_MODE == 118) return NULL;
         native_consume = (int64_t (*)(const char *))symbol;
         return symbol ? (void *)controlled_consume : NULL;
     }
@@ -267,7 +267,7 @@ static void *controlled_mmap(size_t length, int fd) {
 static int controlled_close(int fd) {
     int rc = close(fd);  /* the descriptor really closes; only the reported result is controlled */
     if (PW_CONTROL_MODE == 110) { errno = EIO; return -1; }    /* the inspected close after mapping */
-    if (PW_CONTROL_MODE == 111) { errno = EBADF; return -1; }  /* the cleanup close after the fstat failure */
+    if (PW_CONTROL_MODE == 111 || PW_CONTROL_MODE == 118) { errno = EBADF; return -1; }  /* cleanup after fstat/API lookup */
     return rc;
 }
 

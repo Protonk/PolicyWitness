@@ -80,19 +80,28 @@ def ownership_problem(runner, phase):
         return 'validator collection names another phase'
     steps = runner.get('steps')
     steps = [s for s in steps if isinstance(s, dict) and s.get('phase_id') == phase.get('phase_id')] if isinstance(steps, list) else []
-    eligible = [s for s in steps if (s.get('sandbox_check') or {}).get('missing_reason') != 'query_not_requested']
+    if any(not isinstance(s.get('sandbox_check'), dict) or not isinstance(s.get('step_id'), str) for s in steps):
+        return 'validator query plan has an invalid type'
+    eligible = [s for s in steps if s['sandbox_check'].get('missing_reason') != 'query_not_requested']
     expected = block.get('expected_step_ids')
     if not isinstance(expected, list):
         return 'validator collection lacks its expected plan'
     # Order is the step-order and partition checks' question; ownership asks
     # whether the plan names exactly this phase's eligible queries.
-    if len(set(map(str, expected))) != len(expected) or set(map(str, expected)) != {str(s.get('step_id')) for s in eligible}:
+    if any(not isinstance(sid, str) for sid in expected):
+        return 'validator query plan has an invalid type'
+    if len(set(expected)) != len(expected) or set(expected) != {s['step_id'] for s in eligible}:
         return "validator expected IDs disagree with the phase's eligible query plan"
     records, issues = block.get('records'), block.get('association_issues')
     if not isinstance(records, list) or not isinstance(issues, list):
         return 'validator collection lacks records or association issues'
-    reported = sorted(((i.get('kind'), i.get('step_id'), i.get('count')) for i in issues if isinstance(i, dict)),
-                      key=lambda item: (str(item[0]), item[1] or '', item[2] if type(item[2]) is int else -1))
+    if any(not isinstance(r, dict) or (r.get('step_id') is not None and not isinstance(r.get('step_id'), str)) for r in records) or any(
+            not isinstance(i, dict) or not isinstance(i.get('kind'), str)
+            or (i.get('step_id') is not None and not isinstance(i.get('step_id'), str))
+            or type(i.get('count')) is not int or not 0 <= i['count'] <= (1 << 63) - 1 for i in issues):
+        return 'validator association evidence has an invalid type'
+    reported = sorted(((i['kind'], i.get('step_id'), i['count']) for i in issues),
+                      key=lambda item: (item[0], item[1] or '', item[2]))
     if reported != association_issues(records, eligible):
         return 'validator association issues disagree with its records'
     return None

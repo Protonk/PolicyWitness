@@ -19,6 +19,8 @@ after the inspection failure, and header or token fields mutated in the mapped
 view. Every other call is real, so the production preparation path decides the
 published status, stage, native result, errno and cleanup fields; the controls
 check that account and that no consumption follows.
+Mode 118 combines unavailable consume API support with a failed cleanup close;
+both observations must survive without a reporting failure.
 
 A unique test-owned POSIX shared-memory object receives independent intervention
 receipts and a copy of the real issued token. The checking process compares

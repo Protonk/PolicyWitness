@@ -7,7 +7,7 @@
 # denies under the policy. local-name has no such lookup until a reachable
 # local namespace is found, so this driver first observes native lookups of a
 # target and an independently exercised sibling under controlled policies in
-# every namespace a user process can reach:
+# two tested registration/bundle arrangements:
 #
 #   registered / registered-after   names the process registers itself
 #   bundle                           an embedded XPC service looked up from a
@@ -21,19 +21,27 @@
 # disposition and records it in VERIFICATIONS.md. Nothing is a PolicyWitness
 # result, and the result describes this host only.
 #
-# Usage: verify_local_name.sh [--max-id N] [--keep]
+# Usage: verify_local_name.sh [--max-id N] [--keep] [--out FRESH_DIRECTORY]
 set -euo pipefail
+ulimit -c 0  # Unknown RAW filter IDs may crash the standalone validator.
 
 MAX_ID=200
 KEEP=0
+OUT=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --max-id) MAX_ID="$2"; shift 2 ;;
         --keep) KEEP=1; shift ;;
+        --out) OUT="$2"; shift 2 ;;
         -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
+if [[ -n "${OUT}" ]]; then mkdir "${OUT}"; else OUT="$(mktemp -d "${TMPDIR:-/tmp}/pw-local-name.XXXXXX")"; fi
+OUT="$(cd "${OUT}" && pwd)"
+mkdir "${OUT}/raw"
+exec > >(tee "${OUT}/transcript.txt") 2>&1
+echo "==> evidence: ${OUT}"
 
 HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${HARNESS_DIR}/../../../.." && pwd)"
@@ -59,7 +67,7 @@ if [[ ! -x "${PROBE_BIN}" || "${PROBE_SRC}" -nt "${PROBE_BIN}" ]]; then
 fi
 
 # A disposable bundle whose own domain holds a copy of the service. The copy
-# exits when launched outside its app, which leaves the lookup verdict visible.
+# may exit when launched outside its app. Its XPC errors do not prove receipt.
 rm -rf "${BUNDLE}"
 mkdir -p "${BUNDLE}/Contents/MacOS" "${BUNDLE}/Contents/XPCServices"
 cp "${PROBE_BIN}" "${BUNDLE}/Contents/MacOS/local_name_probe"
@@ -77,6 +85,10 @@ cat > "${BUNDLE}/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 BUNDLE_PROBE="${BUNDLE}/Contents/MacOS/local_name_probe"
+git -C "${REPO_ROOT}" rev-parse HEAD > "${OUT}/commit.txt"
+git -C "${REPO_ROOT}" diff HEAD --binary > "${OUT}/source.diff"
+shasum -a 256 "${PROBE_SRC}" "$0" "${PROBE_BIN}" "${SB_VALIDATOR}" \
+    "${SERVICE_BUNDLE}/Contents/MacOS/PWRunner" > "${OUT}/sha256.txt"
 
 HELD_PID=""
 cleanup() {
@@ -121,10 +133,13 @@ done < <(policies_for "${SERVICE}" "com.policywitness.probe.local-other")
 
 probe_id() {
     local pid="$1" type_id="$2" value="$3" out
+    local raw="${OUT}/raw/${pid}-${type_id}-${value##*.}"
     set +e
-    out="$("${SB_VALIDATOR}" --json "${pid}" mach-lookup "RAW:${type_id}" "${value}" 2>/dev/null)"
+    "${SB_VALIDATOR}" --json "${pid}" mach-lookup "RAW:${type_id}" "${value}" > "${raw}.stdout" 2> "${raw}.stderr"
     local code=$?
     set -e
+    printf '%s\n' "${code}" > "${raw}.status"
+    out="$(cat "${raw}.stdout")"
     [[ -n "${out}" ]] || { echo "no-output:${code}"; return; }
     /usr/bin/python3 -c '
 import json, sys
