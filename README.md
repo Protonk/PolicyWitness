@@ -1,9 +1,9 @@
 # PolicyWitness
 
 PolicyWitness is a witness harness for macOS sandbox policies: it applies an
-SBPL profile to a disposable process, records what the sandbox predicted for
-each probe and what happened when the probe was attempted, and prints the
-evidence as one JSON envelope.
+SBPL profile to a disposable process, records available predictions and what
+happened when each probe was attempted, and prints the evidence as one JSON
+envelope.
 
 Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
 
@@ -20,16 +20,18 @@ travel through a transient channel to the worker. Explicit lifecycle actions
 consume the token and release its native handle in that same worker. A simple `probe_plan`
 runs as one phase; an explicit `phases` sequence divides actions into ordered
 intervals in that same worker. At each phase arrival, the host plans queries
-afresh and, when eligible queries exist, starts a fresh validator against the
-worker's PID. Collection closes before that phase's actions are released,
-including on collection failure. The host joins the observations into one
-reply and exits; the
+afresh. When eligible queries exist and the clock and collection budget permit,
+the host tries to start a fresh validator against the worker's PID. Collection
+closes before that phase's actions are released, including on collection
+failure. The host joins the observations into one reply and exits; the
 controller wraps the reply in the envelope it prints.
 
-Each ordinary step carries three records: the prediction, the attempt, and a
-comparison that relates the two. The comparison says what was observed and
-in what order; it never says whether prediction and enforcement agree, and no
-failure is attributed to the sandbox without evidence. Kernel denial records
+In the ordinary reply format, each probe step carries three records: the
+prediction, the attempt, and a comparison that relates the two. The comparison
+says what was observed and in what order; it never says whether prediction
+and enforcement agree, and no failure is attributed to the sandbox without
+evidence. An evidence-preserving reporting failure retains observations and
+omits every comparison. Kernel denial records
 from the unified log are attached out of band, as candidates rather than
 verdicts, and cannot change the execution result. The guide's
 [reading rules](docs/PolicyWitness.md#reading-a-comparison-record) say how to

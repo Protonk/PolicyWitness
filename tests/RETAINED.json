@@ -786,6 +786,20 @@
       "reason": "Response 21 capture fixtures: BBX-001/BBX-002 checker envelopes, the extension lifecycle capture, the M01 abnormal-issuer capture and the a1 disposition capture, copied unmodified into tests/fixtures; the signed build of c11aa06 produced them.",
       "source": "c11aa0613150cb0bcada5d5ae4d8a59b86ccce95",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repairs-default-20261014",
+      "run_id": "20261014T213816Z_598379fd",
+      "reason": "Evidence-clarity repairs: 177/177 default cases on clean signed 0f4badd, including 435/435 Swift checks and the live combined API/cleanup failure. source-snapshot.json binds all tracked inputs; original run and artifact inventories retained.",
+      "source": "0f4badd4449fbd4e94fc18263d2bf3bdaf645eb4",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/repairs-optins-20261014",
+      "run_id": "20261014T214803Z_312536e4",
+      "reason": "Evidence-clarity repairs: ordering mutations, build guards, and 50 build-refusal controls with five bypass demonstrations pass on 0f4badd. SDK failure is isolated to real xcrun under a restrictive sandbox. source-snapshot.json records the inputs.",
+      "source": "0f4badd4449fbd4e94fc18263d2bf3bdaf645eb4",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
