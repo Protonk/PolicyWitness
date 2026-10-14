@@ -207,6 +207,46 @@ publication and local setup failure (`setrlimit`, descriptor metadata, mapping
 or descriptor close). This aggregate label withholds delivery but cannot
 distinguish malformed input from a local setup error.
 
+<!-- BEGIN SHARED EXTENSION STATUSES -->
+
+Issuance and delivery are separate observations. Only `issued` makes the token
+channel eligible for worker delivery. Other issuance statuses withhold it;
+none establishes consumption, effective permission or revocation. Read spawn,
+termination, wait and reap fields independently: a status does not substitute
+for cleanup evidence.
+
+| Issuance status | Publication and supported meaning |
+| --- | --- |
+| `not_started` | Issuance did not start, including when target preparation failed. No issuer result is supplied. |
+| `issuer_unavailable` | The selected issuer executable was unavailable. Preparation and issuance did not start; capability refusal prevents a worker run. |
+| `channel_setup_failed` | Host setup of the transient channel or its descriptor failed before issuer launch. No issuer result is supplied. |
+| `spawn_failed` | Spawn setup or `posix_spawn` failed. The issuer record retains the spawn failure; no child PID or native result is inferred. |
+| `issuer_timeout` | The issuer wait expired without a more specific publication status. Publication may be present; termination requests and final reap observations remain separate. |
+| `issuer_wait_error` | The issuer wait failed without a more specific publication status. Publication may be present; the wait error does not establish child exit. |
+| `issuer_result_missing` | The issuer was reaped without result publication. `result_published` is false, with no native result, errno, token length or published authority IDs. A pre-call marker and exit/signal observation may remain. |
+| `issuer_abnormal_exit` | A bounded token result was published, but the issuer was reaped with a nonzero exit or signal. Publication is retained and delivery withheld. |
+| `native_api_unavailable` | The issuer published that the issuance API was unavailable, without a native call. Capability refusal prevents a worker run; cleanup remains independently recorded. |
+| `native_refusal` | The issuer published a null native return and its errno. This observation does not establish why issuance was refused or whether cleanup was clean. |
+| `token_oversized` | A nonnull native return supplied an empty token or no terminator within the token buffer bound. The issuer published that rejection; no deliverable token length is supplied. |
+| `invalid_transport` | Publication was observed, but its header, state/marker relationship or token length failed host validation. Fields from an invalid header are not treated as native results. |
+| `issued` | The issuer published a nonnull native result with a bounded token length and was cleanly reaped. The worker still must validate the channel and publish its own delivery observation. |
+
+Published API unavailability, native refusal, token rejection or invalid transport
+has its own issuance status even if the host wait also timed out or failed.
+For a valid bounded token result, a wait timeout or error withholds delivery and
+keeps that wait status; clean and abnormal reaps distinguish `issued` from
+`issuer_abnormal_exit`.
+
+| Delivery status | Worker observation and supported meaning |
+| --- | --- |
+| `not_observed` | No worker delivery publication was collected. This includes no worker or interruption before publication; it does not negate completed issuance. |
+| `delivered` | The worker published successful channel validation; `delivered_bytes` matches the issued token length. This does not establish a consume call or result. |
+| `token_unavailable` | The worker published that no token descriptor was supplied. No delivered byte count is supplied. |
+| `malformed_transport` | The worker published channel rejection or local setup failure, including core-dump suppression, descriptor inspection, mapping or close failure. The aggregate status does not identify which cause occurred. |
+| `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
+
+<!-- END SHARED EXTENSION STATUSES -->
+
 Each `extension_events[]` entry identifies its phase, action, operation and local
 handle reference; consumption also identifies its token reference. These events
 have no ordinary query or comparison. `call_boundary_observed` is a separately
@@ -482,6 +522,16 @@ oracle do not infer a native spawn result from it. The full consumer rejects it
 because the required origin, operation, executable path, nonzero return code and
 diagnostic are missing. Reader controls pin both responsibilities, including
 wrong-type rejection, optional absence and unchanged degraded evidence.
+
+Reader validation does not fully establish ownership of a phase's validator
+subprocess block. A block copied from another phase can pass current checks,
+including its `expected_step_ids`, retained records and PID. Globally unique
+action IDs and the exact step/query join prevent that block from supplying a
+prediction for the other phase's differently named action. A valid disposition
+therefore does not certify all phase metadata associations. Unexpected,
+duplicate and null-ID validator records remain intentional diagnostic evidence;
+they are retained with association issues rather than discarded. Numeric PID
+uniqueness across all phases is not a reader invariant.
 
 ### Versions
 

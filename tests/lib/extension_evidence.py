@@ -110,6 +110,10 @@ def validate_extensions(runner):
             errors.append('invalid extension issuance status')
         issuer = declaration.get('issuer')
         issuer = issuer if isinstance(issuer, dict) else {}
+        if declaration.get('issuance_status') == 'issuer_result_missing' and (
+                issuer.get('result_published') is not False or any(issuer.get(k) is not None
+                for k in ('native_nonnull', 'errno', 'token_length', 'uid', 'euid', 'gid', 'egid'))):
+            errors.append('missing issuer result carries publication or payload')
         for key in ('call_boundary_observed', 'result_published'):
             if issuer and type(issuer.get(key)) is not bool:
                 errors.append('invalid issuer ' + key)

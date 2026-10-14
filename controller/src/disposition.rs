@@ -915,6 +915,22 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
     }
     let issued = declaration["issuance_status"] == "issued";
     let length = issuer["token_length"].as_u64();
+    if declaration["issuance_status"] == "issuer_result_missing"
+        && (issuer["result_published"] != false
+            || [
+                "native_nonnull",
+                "errno",
+                "token_length",
+                "uid",
+                "euid",
+                "gid",
+                "egid",
+            ]
+            .iter()
+            .any(|key| !issuer[key].is_null()))
+    {
+        reject("missing issuer result carries publication or payload");
+    }
     if declaration["issuance_status"] == "issuer_abnormal_exit"
         && (issuer["result_published"] != true
             || issuer["call_boundary_observed"] != true
@@ -1357,6 +1373,72 @@ mod tests {
         phase["ordering"]["validator_disposition"] = json!("not_spawned");
         phase["validator_spawn_failure"] = json!({});
         assert_eq!(diagnostics(&baseline).disposition_integrity, Some("valid"));
+    }
+
+    #[test]
+    fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
+        let envelope: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"
+        ))
+        .unwrap();
+        let baseline = &envelope["data"]["runner_result"];
+        let rule = "missing issuer result carries publication or payload";
+        let rejected = |runner: &Value| {
+            let diag = diagnostics(runner);
+            assert_eq!(diag.disposition_integrity, Some("invalid"));
+            assert_eq!(diag.process_disposition, "withheld");
+            assert!(diag.disposition_issues.iter().any(|i| i["detail"] == rule));
+        };
+        let mut missing = baseline.clone();
+        missing["extensions"][0]["issuance_status"] = json!("issuer_result_missing");
+        rejected(&missing); // The auditor's published-result relabelling.
+        let issuer = missing["extensions"][0]["issuer"].as_object_mut().unwrap();
+        issuer.insert("result_published".into(), json!(false));
+        for key in [
+            "native_nonnull",
+            "errno",
+            "token_length",
+            "uid",
+            "euid",
+            "gid",
+            "egid",
+        ] {
+            issuer.remove(key);
+        }
+        for called in [false, true] {
+            missing["extensions"][0]["issuer"]["call_boundary_observed"] = json!(called);
+            assert_eq!(diagnostics(&missing).disposition_integrity, Some("valid"));
+            assert_eq!(missing["extensions"][0]["issuer"]["exit_code"], 87);
+        }
+        for (key, value) in [
+            ("result_published", json!(true)),
+            ("result_published", Value::Null),
+            ("native_nonnull", json!(false)),
+            ("errno", json!(0)),
+            ("token_length", json!(0)),
+            ("uid", json!(0)),
+            ("euid", json!(0)),
+            ("gid", json!(0)),
+            ("egid", json!(0)),
+        ] {
+            let mut changed = missing.clone();
+            changed["extensions"][0]["issuer"][key] = value;
+            rejected(&changed);
+        }
+        let mut absent = missing.clone();
+        absent["extensions"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("issuer");
+        rejected(&absent);
+        for status in ["issuer_timeout", "issuer_wait_error"] {
+            let mut interrupted = baseline.clone();
+            interrupted["extensions"][0]["issuance_status"] = json!(status);
+            assert_eq!(
+                diagnostics(&interrupted).disposition_integrity,
+                Some("valid")
+            );
+        }
     }
 
     #[test]

@@ -1826,3 +1826,26 @@ those nonblocking changes. M5.6, H1's deferred hooks and historical limitations
 remain as recorded. No build, live test, render or cleanup operation was started
 by this review; the offline replays are complete. Await the user's direction on
 the recommended pass.
+
+#### Authorized follow-up implementation checkpoint
+
+Executing agent `/root`, 2026-10-13. The user authorized the recommended pass.
+F1 now rejects `issuer_result_missing` with publication or published payload in
+the Swift encoding guard, Rust disposition reader and independent Python rules.
+Controls cover each payload field, absent issuer evidence, the pre-call marker
+with no result, retained cleanup, the original auditor contradiction, and
+published results alongside timeout/wait-error statuses. No vocabulary or wire
+meaning changed: contracts stay 4/18/7. The conservative worker source identity
+was regenerated; ABI geometry is unchanged.
+
+F3's full issuance/delivery tables are owned by the failure contract and copied
+into the guide by `generate_limits.py`. The generator's region ownership,
+staleness/no-write/recovery controls and architecture account include that copy.
+F2 is documented as an explicit reader limit in both the contract and guide;
+unexpected/null/duplicate records remain evidence, and no global numeric PID
+uniqueness constraint is added. Both documentation baselines remain unchanged.
+
+[Precheck evidence](../tests/out/runs/extensions-a2-precheck-20261013/), local and
+gitignored, passes seven source-drift/blackbox reader cases on the retained dirty
+snapshot. Signed-build acceptance, Rust/Swift execution and the fresh rendered
+assessment are pending; this is an implementation checkpoint, not A2 closure.

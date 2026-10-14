@@ -5,7 +5,7 @@ One run renders the limits inventory into LIMITS.md, renders the comparison
 scenario matrix (tests/fixtures/comparison/matrix.json) into the failure
 contract's table, and copies the shared sections into the user guide: the
 limits tables from LIMITS.md, the questions from QUESTIONS.md and the
-comparison reading rules from the failure contract. References identify
+comparison reading rules and extension statuses from the failure contract. References identify
 owners, not proof of values. Compiled C, Swift and Rust tests compare
 implementation values with the limits manifest independently.
 --check verifies every document without writing. --stage-guide copies the
@@ -45,6 +45,10 @@ RULES_START = "<!-- BEGIN SHARED READING RULES -->"
 RULES_END = "<!-- END SHARED READING RULES -->"
 GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
 GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
+EXTENSION_START = "<!-- BEGIN SHARED EXTENSION STATUSES -->"
+EXTENSION_END = "<!-- END SHARED EXTENSION STATUSES -->"
+GUIDE_EXTENSION_START = "<!-- BEGIN COPIED EXTENSION STATUSES -->"
+GUIDE_EXTENSION_END = "<!-- END COPIED EXTENSION STATUSES -->"
 SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST-GRAMMAR.md",
                   "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md")
 GUIDE_NAME = "PolicyWitness.md"
@@ -193,6 +197,17 @@ def update_guide_rules(text, contract_document):
                          GUIDE_RULES_START + "\n\n" + shared_rules(contract_document) + "\n\n" + GUIDE_RULES_END)
 
 
+def update_guide_extension_statuses(text, contract_document):
+    """Copy the contract-owned issuance/delivery account without reinterpretation."""
+    begin, finish = block_bounds(contract_document, EXTENSION_START, EXTENSION_END)
+    shared = contract_document[begin + len(EXTENSION_START):finish - len(EXTENSION_END)].strip()
+    if not all(header in shared for header in ("| Issuance status |", "| Delivery status |")):
+        raise ValueError("shared extension statuses must contain issuance and delivery tables")
+    require_standalone(shared, "extension statuses")
+    return replace_block(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END,
+                         GUIDE_EXTENSION_START + "\n\n" + shared + "\n\n" + GUIDE_EXTENSION_END)
+
+
 def reference(ref):
     # Repository-relative paths in JSON become document-relative links here.
     return f"[`{ref['symbol']}`](../{ref['path']})"
@@ -336,6 +351,9 @@ def validate_guide(text, limits):
     if not re.search(r"^1\. ", rules, re.MULTILINE):
         raise ValueError("guide must contain the copied reading rules")
     require_standalone(rules, "copied reading rules")
+    begin, finish = block_bounds(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END)
+    statuses = text[begin + len(GUIDE_EXTENSION_START):finish - len(GUIDE_EXTENSION_END)]
+    require_standalone(statuses, "copied extension statuses")
 
     # Headings in this guide use ATX syntax. Match the punctuation-stripped
     # anchors used by its Markdown links, including duplicate-heading suffixes.
@@ -381,6 +399,7 @@ def main():
         guide_before = guide_bytes.decode("utf-8")
         guide_after = update_guide_rules(update_guide_questions(
             update_guide(render_spans(guide_before, "limits", span_values(limits)), after), questions), contract_after)
+        guide_after = update_guide_extension_statuses(guide_after, contract_after)
         validate_guide(guide_after, limits)
         question_count = len(re.findall(r"^### ", shared_questions(questions), re.MULTILINE))
         if args.check or args.stage_guide is not None:

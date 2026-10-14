@@ -2334,6 +2334,13 @@ extension PWRunnerRunResult {
             if (event.result_published || event.call_boundary_observed) && (phase.ordering?.proceed_observed != true || sandboxed_after_apply != true) { return "extension publication lacks application and phase acknowledgement" }
         }
         for declaration in declarations {
+            if declaration.issuance_status == "issuer_result_missing" {
+                guard let issuer = declaration.issuer, !issuer.result_published,
+                      issuer.native_nonnull == nil, issuer.errno == nil, issuer.token_length == nil,
+                      issuer.uid == nil, issuer.euid == nil, issuer.gid == nil, issuer.egid == nil else {
+                    return "missing issuer result carries publication or payload"
+                }
+            }
             if declaration.issuance_status == "issuer_abnormal_exit" {
                 guard let issuer = declaration.issuer, issuer.result_published,
                       issuer.call_boundary_observed, issuer.native_nonnull == true,

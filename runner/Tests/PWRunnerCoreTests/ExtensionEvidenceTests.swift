@@ -71,6 +71,11 @@ func extensionShapeDocuments() throws -> [[String: Any]] {
     spawn.extensions?[0].issuer = PWRunnerIssuer(executable_path: "/constructed/issuer",
         spawn_failure: PWRunnerSpawnFailure(executable_path: "/constructed/issuer", return_code: 2, diagnostic: "constructed"))
     replies.append(spawn)
+    var missing = extensionReplyFixture(available: false)
+    missing.extensions?[0].issuance_status = "issuer_result_missing"
+    missing.extensions?[0].issuer = PWRunnerIssuer(executable_path: "/constructed/issuer", pid: 43,
+        call_boundary_observed: true, reaped: true, exit_code: 87)
+    replies.append(missing)
     var syscallFailure = extensionReplyFixture()
     syscallFailure.steps[0].attempt.fresh_read = PWRunnerFreshRead(open_rc: 5, read_rc: -1, read_errno: 5,
         stat_rc: -1, stat_errno: 9, close_rc: -1, close_errno: 4)
@@ -141,12 +146,51 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
         }
     }
     tk.group("extension publication and reference evidence") {
+        tk.run("missing issuer result preserves the boundary and cleanup but rejects publication or payload") {
+            var missing = extensionReplyFixture(available: false)
+            missing.extensions?[0].issuance_status = "issuer_result_missing"
+            missing.extensions?[0].issuer = PWRunnerIssuer(executable_path: "/constructed/issuer", pid: 43,
+                call_boundary_observed: true, reaped: true, exit_code: 87)
+            for called in [false, true] {
+                missing.extensions?[0].issuer?.call_boundary_observed = called
+                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(missing))
+                try expectEqual(decoded.extensions?[0].issuer?.call_boundary_observed, called)
+                try expectEqual(decoded.extensions?[0].issuer?.exit_code, 87)
+            }
+            let changes: [(inout PWRunnerRunResult) -> Void] = [
+                { $0.extensions?[0].issuer?.result_published = true },
+                { $0.extensions?[0].issuer?.native_nonnull = false },
+                { $0.extensions?[0].issuer?.errno = 0 },
+                { $0.extensions?[0].issuer?.token_length = 0 },
+                { $0.extensions?[0].issuer?.uid = 0 },
+                { $0.extensions?[0].issuer?.euid = 0 },
+                { $0.extensions?[0].issuer?.gid = 0 },
+                { $0.extensions?[0].issuer?.egid = 0 },
+                { $0.extensions?[0].issuer = nil },
+            ]
+            for change in changes {
+                var broken = missing; change(&broken)
+                try expectEqual(broken.extensionEvidenceProblem(), "missing issuer result carries publication or payload")
+                try expectThrows { _ = try pwRunnerEncodeJSON(broken) }
+            }
+        }
         tk.run("published abnormal issuer exit retains both observations and rejects invented claims") {
             let raw = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot().appendingPathComponent(
                 "tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"))) as! [String: Any]
             let data = (raw["data"] as! [String: Any])["runner_result"]!
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: data))
             _ = try pwRunnerEncodeJSON(baseline)
+            var missing = baseline
+            missing.extensions?[0].issuance_status = "issuer_result_missing"
+            try expectEqual(missing.extensionEvidenceProblem(), "missing issuer result carries publication or payload")
+            try expectThrows { _ = try pwRunnerEncodeJSON(missing) }
+            // Timeout and wait failure may coexist with publication; they must
+            // not be subjected to the missing-result invariant.
+            for status in ["issuer_timeout", "issuer_wait_error"] {
+                var interrupted = baseline
+                interrupted.extensions?[0].issuance_status = status
+                _ = try pwRunnerEncodeJSON(interrupted)
+            }
             let changes: [(inout PWRunnerRunResult) -> Void] = [
                 { $0.extensions?[0].issuer?.exit_code = 0 },
                 { $0.extensions?[0].issuer?.result_published = false },

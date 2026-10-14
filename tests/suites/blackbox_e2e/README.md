@@ -168,6 +168,9 @@ integer representations, and delivery without bounded issuance and a confirmed
 issuer reap. Fresh-read controls reject byte-count/content mismatches and
 read/stat/close evidence after a failed open. A positive native-refusal control
 retains successful access evidence independently of the unavailable release.
+Missing-issuer-result controls reject publication and payload contradictions,
+retain pre-call and cleanup observations without a result, and accept published
+results alongside timeout or wait-error statuses.
 The separate lifecycle oracle checks the native-event mutations as well as the
 ordinary action account; no constructed mutation establishes a native effect.
 

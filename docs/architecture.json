@@ -2526,7 +2526,7 @@
           "label": "docs/PolicyWitness.md",
           "kind": "document",
           "facts": {
-            "Carries": "copied limits, questions and reading rules; the version sentence; the only document that ships"
+            "Carries": "copied limits, questions, reading rules and extension statuses; the version sentence; the only document that ships"
           },
           "sources": [
             {
@@ -2577,7 +2577,7 @@
           "label": "tests/FAILURE-PROPAGATION-CONTRACT.md",
           "kind": "document",
           "facts": {
-            "Carries": "the generated scenario matrix and the shared reading rules"
+            "Carries": "the generated scenario matrix, shared reading rules and extension statuses"
           },
           "sources": [
             {
@@ -2587,6 +2587,10 @@
             {
               "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
               "symbol": "BEGIN SHARED READING RULES"
+            },
+            {
+              "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+              "symbol": "BEGIN SHARED EXTENSION STATUSES"
             }
           ],
           "checks": [
@@ -3621,18 +3625,27 @@
           "from": "failure_contract",
           "to": "gen_limits",
           "kind": "reads",
-          "label": "shared reading rules",
-          "short": "reading rules",
+          "label": "shared reading rules and extension statuses",
+          "short": "rules and statuses",
           "sources": [
             {
               "path": "docs/generate_limits.py",
               "symbol": "RULES_START"
+            },
+            {
+              "path": "docs/generate_limits.py",
+              "symbol": "EXTENSION_START"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/limits.py",
               "symbol": "test_document_is_current",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "test_extension_statuses_are_complete_and_copied_from_the_contract",
               "form": "test"
             }
           ]
@@ -3684,7 +3697,7 @@
           "from": "gen_limits",
           "to": "guide",
           "kind": "writes",
-          "label": "copied limits, questions and reading rules; staged copy at build",
+          "label": "copied limits, questions, reading rules and extension statuses; staged copy at build",
           "short": "copies; staged at build",
           "sources": [
             {
@@ -3694,6 +3707,10 @@
             {
               "path": "build.sh",
               "symbol": "--stage-guide"
+            },
+            {
+              "path": "docs/generate_limits.py",
+              "symbol": "GUIDE_EXTENSION_START"
             }
           ],
           "checks": [

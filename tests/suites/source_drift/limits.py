@@ -60,6 +60,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertEqual(self.guide, generator.update_guide(self.guide, self.document))
         self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
         self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
+        self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
         subprocess.run([sys.executable, '-B', str(ROOT / 'docs/generate_limits.py'), '--check'], check=True)
 
     def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
@@ -116,6 +117,44 @@ class LimitsDocumentationTests(unittest.TestCase):
                 table = contract.read_text().split(generator.MATRIX_START)[1]
                 self.assertIn(expect, rules + table)
                 self.assertEqual(self.command(root, '--check').returncode, 0)
+
+    def test_extension_statuses_are_complete_and_copied_from_the_contract(self):
+        shared = self.contract.split(generator.EXTENSION_START)[1].split(generator.EXTENSION_END)[0].strip()
+        copied = self.guide.split(generator.GUIDE_EXTENSION_START)[1].split(generator.GUIDE_EXTENSION_END)[0].strip()
+        self.assertEqual(copied, shared)
+        issuance, delivery = shared.split('| Delivery status |')
+        self.assertEqual(set(re.findall(r'^\| `([^`]+)` \|', issuance, re.MULTILINE)), {
+            'not_started', 'issuer_unavailable', 'channel_setup_failed', 'spawn_failed',
+            'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'issuer_abnormal_exit',
+            'native_api_unavailable', 'native_refusal', 'token_oversized', 'invalid_transport', 'issued'})
+        self.assertEqual(set(re.findall(r'^\| `([^`]+)` \|', delivery, re.MULTILINE)), {
+            'not_observed', 'delivered', 'token_unavailable', 'malformed_transport', 'native_api_unavailable'})
+
+    def test_extension_status_copy_rejects_staleness_and_missing_regions_without_writes(self):
+        for filename, mutate, recoverable in [
+            (generator.CONTRACT_NAME, lambda t: t.replace('Only `issued` makes', 'Only the status `issued` makes', 1), True),
+            ('docs/PolicyWitness.md', lambda t: t.replace('Only `issued` makes', 'Only the status `issued` makes', 1), True),
+            (generator.CONTRACT_NAME, lambda t: t.replace(generator.EXTENSION_END, ''), False),
+            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_EXTENSION_END, ''), False),
+            (generator.CONTRACT_NAME, lambda t: t.replace('| Delivery status |', '| Missing table |'), False),
+        ]:
+            with self.subTest(filename=filename, mutation=mutate):
+                root = self.checkout()
+                path = root / filename
+                path.write_text(mutate(path.read_text()))
+                guide, contract = root / 'docs/PolicyWitness.md', root / generator.CONTRACT_NAME
+                before = guide.read_bytes(), contract.read_bytes()
+                self.assertEqual(self.command(root, '--check').returncode, 1)
+                self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
+                result = self.command(root)
+                self.assertEqual(result.returncode, 0 if recoverable else 1, result.stderr)
+                if recoverable:
+                    shared = contract.read_text().split(generator.EXTENSION_START)[1].split(generator.EXTENSION_END)[0].strip()
+                    copied = guide.read_text().split(generator.GUIDE_EXTENSION_START)[1].split(generator.GUIDE_EXTENSION_END)[0].strip()
+                    self.assertEqual(copied, shared)
+                    self.assertEqual(self.command(root, '--check').returncode, 0)
+                else:
+                    self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
 
     def test_matrix_fixture_rejects_rows_the_table_cannot_render(self):
         rows = json.loads((ROOT / generator.MATRIX_NAME).read_text())

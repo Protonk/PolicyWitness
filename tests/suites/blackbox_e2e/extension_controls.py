@@ -14,6 +14,37 @@ def run_extension_controls(run):
     abnormal = json.loads(fixture.with_name('issuer_abnormal_run.json').read_text())
     run('issuer_abnormal_capture', abnormal)
     assert check_record(abnormal) == []
+    missing = deepcopy(abnormal)
+    declaration = missing['data']['runner_result']['extensions'][0]
+    declaration['issuance_status'] = 'issuer_result_missing'
+    rule = 'missing issuer result carries publication or payload'
+    run('issuer_missing_published_result', missing, rejected_by=rule)
+    assert any(f.get('detail') == rule for f in check_record(missing))
+    issuer = declaration['issuer']
+    issuer['result_published'] = False
+    for key in ('native_nonnull', 'errno', 'token_length', 'uid', 'euid', 'gid', 'egid'):
+        issuer.pop(key, None)
+    for called in (False, True):
+        issuer['call_boundary_observed'] = called
+        run('issuer_missing_boundary_' + str(called), missing)
+        assert check_record(missing) == []
+        assert issuer['exit_code'] == 87 and issuer['reaped'] is True
+    for index, (key, value) in enumerate([
+            ('result_published', True), ('result_published', None), ('native_nonnull', False),
+            ('errno', 0), ('token_length', 0), ('uid', 0), ('euid', 0), ('gid', 0), ('egid', 0)]):
+        changed = deepcopy(missing)
+        changed['data']['runner_result']['extensions'][0]['issuer'][key] = value
+        run('issuer_missing_payload_' + str(index), changed, rejected_by=rule)
+        assert any(f.get('detail') == rule for f in check_record(changed))
+    changed = deepcopy(missing)
+    changed['data']['runner_result']['extensions'][0].pop('issuer')
+    run('issuer_missing_record', changed, rejected_by=rule)
+    assert any(f.get('detail') == rule for f in check_record(changed))
+    for status in ('issuer_timeout', 'issuer_wait_error'):
+        interrupted = deepcopy(abnormal)
+        interrupted['data']['runner_result']['extensions'][0]['issuance_status'] = status
+        run(status + '_retains_publication', interrupted)
+        assert check_record(interrupted) == []
     for key, value in [('exit_code', 0), ('result_published', False), ('reaped', False), ('token_length', 0)]:
         changed = deepcopy(abnormal)
         changed['data']['runner_result']['extensions'][0]['issuer'][key] = value
