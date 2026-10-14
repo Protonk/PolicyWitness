@@ -1098,13 +1098,16 @@ Reply fields beyond `pid` / `runner_subprocess`:
   subprocess object does not by itself establish why validator observation
   is missing.
 
-  Current readers do not fully validate ownership of the subprocess block:
-  copied `expected_step_ids`, raw records or a PID from another phase can pass
-  their checks. The exact step/query join prevents a prediction from being
-  borrowed for another phase's differently named action. A valid disposition
-  establishes the reported process status only. Unexpected, duplicate and null-ID
-  records are retained as diagnostic evidence; numeric PID uniqueness across
-  phases is not a reader invariant.
+  Readers require the block to name the phase it served (`phase_id` and
+  `ordinal` matching the containing phase) and its `expected_step_ids` to equal
+  that phase's eligible query plan; a block, plan or record set copied from
+  another phase is an ownership problem, as
+  [Receiver evidence](#receiver-evidence) describes. The exact step/query join
+  prevents a prediction from being borrowed for another phase's differently
+  named action. A valid disposition establishes the reported process status
+  only. Unexpected, duplicate and null-ID records are retained as diagnostic
+  evidence; numeric PID uniqueness across phases is not a reader invariant, so
+  a reused PID alone is not an ownership problem.
 - `phases[].validator_spawn_failure` — optional host launch evidence with `origin`,
   `operation`, `executable_path`, `return_code` and `diagnostic`. For a failed
   validator launch, these are `runner_host`, `posix_spawn`, the executable path,
