@@ -87,6 +87,13 @@ mutations. The same case drives cumulative collection exhaustion through
 completed attempts and independent cleanup evidence. No new normalized or
 attempt outcome names are introduced by phases.
 
+The opt-in `witness_contract/path_query_observations` case investigates native
+path queries independently of PW's planner, using the shipped validator and a
+separately signed target. It preserves missing/inaccessible path states and
+same-process unlink/recreate observations; it does not change eligibility or
+assert general prediction/enforcement agreement. The owning suite describes
+its scope and equipment limits.
+
 `runner_unit` / `PhaseProtocolTests` holds all phase boundaries while observing
 file effects, injects stale/future release ordinals, kills the worker during a
 later collection and checks earlier evidence. The required barrier mutation

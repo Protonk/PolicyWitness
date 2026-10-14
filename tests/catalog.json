@@ -1458,6 +1458,20 @@
             "clang",
             "gui"
           ]
+        },
+        {
+          "id": "path_query_observations",
+          "default": false,
+          "description": "Exploratory shipped-validator path queries against signed native targets, independent file effects, path resolution and same-worker unlink/recreate",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/path_query_observations.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "identity"
+          ]
         }
       ],
       "include": [
@@ -1663,7 +1677,8 @@
         "runner_byoxpc/entitlement_readback",
         "runner_byoxpc/entitlement_transfer",
         "sandbox_extensions_native/feasibility",
-        "witness_contract/extensions_byoxpc"
+        "witness_contract/extensions_byoxpc",
+        "witness_contract/path_query_observations"
       ]
     },
     "failure_boundaries": {

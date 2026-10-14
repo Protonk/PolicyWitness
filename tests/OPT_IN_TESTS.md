@@ -47,6 +47,22 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### Native path-query observations
+
+- **Case:** `witness_contract/path_query_observations`
+- **Location:** `tests/suites/witness_contract/opt_in/path_query_observations.sh`
+- **Purpose:** Investigate host-resolution eligibility using the shipped
+  validator and independent native targets, with retained query returns, file
+  operations, path state and same-process unlink/recreate observations.
+- **Opt-in reason:** Exploratory OS-sensitive native behavior and Developer ID
+  signing. No expected prediction/enforcement agreement is asserted.
+- **Equipment:** Built app, clang and an explicit `IDENTITY` or
+  `PW_BYOXPC_IDENTITY`. Run outside the automation sandbox. No service install,
+  GUI, TCC-protected target or network timestamp is required.
+- **Artifacts:** `<run>/suites/witness_contract/path_query_observations/artifacts/`
+  retains signed target/source, commands, policies, raw streams, per-boundary
+  observations, equipment hashes and exact child/workspace cleanup.
+
 ### signed artifact controls
 
 - **Case:** `preflight/signed_artifact_controls`

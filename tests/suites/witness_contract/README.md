@@ -28,6 +28,24 @@ supplied override echoes, real collection stop/reap evidence, unavailable later
 predictions, and retained successful attempts. These are driver controls, not
 sandbox predictions.
 
+## Native path-query observations
+
+The opt-in `path_query_observations` investigation uses the shipped validator
+against a separately signed native target, bypassing host query planning without
+changing the app. It pairs default-allow and narrow-deny policies across literal,
+subpath and regex predicates, four file operations, and nine path states:
+existing, absent leaf/parent, dangling leaf/parent symlink, symlink loop,
+non-directory component, non-searchable parent and mode-zero file. Existing
+anchor paths accompany each query batch. Separate same-PID controls query and
+attempt through unlink/recreate under one fixed policy.
+
+Host `realpath` and errno, raw validator records, syscall results, independent
+file state and exact child cleanup remain separate. The case asserts equipment,
+framing, coordination and observed effects, not prediction/enforcement agreement
+or a universal API outcome. This is exploratory native evidence, not a product
+eligibility-rule change or acceptance gate. Targets stay under `/private/tmp`.
+See the [fixture](../../fixtures/path_query/README.md) and opt-in registry.
+
 ## Native extension boundaries
 
 `extensions` executes the public guide's actual extension example as well as
