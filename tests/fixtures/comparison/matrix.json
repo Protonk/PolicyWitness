@@ -2506,7 +2506,7 @@
         "attempt": {
           "rc": -1,
           "errno": null,
-          "outcome": "not_run_worker_died",
+          "outcome": "no_completed_result",
           "error": "no completed attempt result: slot publication incomplete",
           "requested_path": "{{SCEN_ROOT}}/readable",
           "requested_kind": "file",
@@ -2524,7 +2524,7 @@
         "sandbox_check.outcome": "error",
         "sandbox_check.result_source": "synthetic",
         "sandbox_check.missing_reason": "validator_not_invoked",
-        "attempt.outcome": "not_run_worker_died",
+        "attempt.outcome": "no_completed_result",
         "attempt.result_source": "synthetic",
         "attempt.missing_reason": "slot_incomplete",
         "attempt.lifecycle.summary": "not_reached"
@@ -2562,7 +2562,7 @@
         "attempt": {
           "rc": -1,
           "errno": null,
-          "outcome": "not_run_worker_died",
+          "outcome": "no_completed_result",
           "error": "no completed attempt result: slot publication incomplete",
           "requested_path": "{{FIFO}}",
           "requested_kind": "file",
@@ -2579,7 +2579,7 @@
       "assert": {
         "sandbox_check.outcome": "allow",
         "sandbox_check.result_source": "validator",
-        "attempt.outcome": "not_run_worker_died",
+        "attempt.outcome": "no_completed_result",
         "attempt.result_source": "synthetic",
         "attempt.missing_reason": "slot_incomplete",
         "attempt.lifecycle.summary": "started_without_result"
@@ -2695,7 +2695,7 @@
         "attempt": {
           "rc": -1,
           "errno": null,
-          "outcome": "not_run_worker_died",
+          "outcome": "no_completed_result",
           "error": "no completed attempt result: slot publication incomplete",
           "requested_path": "{{SCEN_ROOT}}/target",
           "requested_kind": "file",

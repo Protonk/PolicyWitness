@@ -1,5 +1,5 @@
 {
-  "response_schema" : 18,
+  "response_schema" : 19,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -516,6 +516,7 @@
       "validator_io_timeout_ms" : "number",
       "validator_total_timeout_ms" : "number",
       "worker_executable_path" : "string",
+      "worker_kill_before_publish_slot" : "number",
       "worker_post_apply_hang_ms" : "number",
       "worker_post_apply_kill_signal" : "number",
       "worker_pre_ready_hang_ms" : "number",

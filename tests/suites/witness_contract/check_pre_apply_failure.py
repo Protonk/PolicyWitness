@@ -132,9 +132,9 @@ def common_evidence(envelope, rc, specimen, failure):
             prediction, attempt = step['sandbox_check'], step['attempt']
             assert isinstance(prediction['outcome'], str) and prediction['outcome'], prediction
             assert prediction['outcome'] not in ('allow', 'deny'), prediction
-            # This compatibility spelling means no completed result. It does
-            # not prove the worker never started the operation.
-            assert attempt['outcome'] == 'not_run_worker_died', attempt
+            # The outcome names the missing completed result. It does not say
+            # whether the worker started the operation.
+            assert attempt['outcome'] == 'no_completed_result', attempt
             assert attempt['errno'] is None, attempt
             assert attempt['requested_path'] == submitted['attempt']['target'], attempt
     else:

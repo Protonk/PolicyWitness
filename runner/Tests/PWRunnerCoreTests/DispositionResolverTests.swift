@@ -210,7 +210,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             let steps = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
                                          validatorOutput: nil, ordering: nil, disposition: record)
             try expectEqual(steps.map { $0.attempt.lifecycle?.summary }, ["started_without_result", "not_reached"])
-            try expectEqual(steps.map { $0.attempt.outcome }, [AttemptOutcome.notRunWorkerDied, AttemptOutcome.notRunWorkerDied])
+            try expectEqual(steps.map { $0.attempt.outcome }, [AttemptOutcome.noCompletedResult, AttemptOutcome.noCompletedResult])
             try expectEqual(steps.map { $0.attempt.missing_reason }, ["slot_incomplete", "slot_incomplete"])
             try expectTrue(steps[0].comparison?.limitations.contains("attempt:started_without_result") == true)
             try expectTrue(steps[1].comparison?.limitations.contains("attempt:not_reached") == true)
@@ -327,7 +327,7 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(stepClaim(record, 0, "step_boundary_reached")?.reason, "no_usable_progress")
             try expectEqual(stepClaim(record, 0, "step_result_published")?.answer, "unpublished")
             try expectEqual(lifecycleSummary(record.steps[0]), "unresolved")
-            try expectEqual(buildAttemptResult(step: probe("a"), slot: out.slots[0]).outcome, AttemptOutcome.notRunWorkerDied)
+            try expectEqual(buildAttemptResult(step: probe("a"), slot: out.slots[0]).outcome, AttemptOutcome.noCompletedResult)
         }
         tk.run("B3: unrecognized progress operation leaves completed results and their boundaries known") {
             let out = constructed(slots: [slot("a", completed: true), slot("b", completed: true)],

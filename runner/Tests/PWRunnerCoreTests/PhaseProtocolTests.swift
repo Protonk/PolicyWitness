@@ -29,7 +29,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
-                fixtures.appendingPathComponent("blackbox_e2e/checker/response18/extension_run.json"))) as! [String: Any]
+                fixtures.appendingPathComponent("blackbox_e2e/checker/response19/extension_run.json"))) as! [String: Any]
             let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:

@@ -1317,7 +1317,7 @@ else:
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response18/a1_expected.json"
+            "../../tests/fixtures/disposition/response19/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1511,7 +1511,7 @@ else:
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response18/a1_expected.json"
+            "../../tests/fixtures/disposition/response19/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();

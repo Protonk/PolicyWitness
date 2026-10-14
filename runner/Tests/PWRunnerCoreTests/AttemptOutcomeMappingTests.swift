@@ -13,7 +13,7 @@ import Foundation
  *   Layer 1  mapAttemptKindOrNil — which (kind, action) pairs are
  *            implemented; anything else routes to PW_ATTEMPT_NONE.
  *   Layer 2  buildAttemptResult — the disposition ladder
- *            (unsupported / not_run_worker_died / ok) plus, on a
+ *            (unsupported / no_completed_result / ok) plus, on a
  *            completed slot with rc != 0, an action switch that names
  *            the specific *_failed outcome.
  *
@@ -125,27 +125,27 @@ func runAttemptOutcomeMappingTests(_ tk: TestKit) {
             }
         }
 
-        // ---- slot missing → not_run_worker_died (no completed result) ----
-        tk.run("supported pair, slot missing → not_run_worker_died") {
+        // ---- slot missing → no_completed_result (no completed result) ----
+        tk.run("supported pair, slot missing → no_completed_result") {
             let at = buildAttemptResult(
                 step: step(kind: W.attemptKindFile, action: W.attemptActionOpenRead),
                 slot: nil
             )
-            if at.outcome != AttemptOutcome.notRunWorkerDied {
-                throw TestFailure(message: "expected not_run_worker_died, got \(at.outcome)")
+            if at.outcome != AttemptOutcome.noCompletedResult {
+                throw TestFailure(message: "expected no_completed_result, got \(at.outcome)")
             }
         }
 
-        // ---- slot present but not completed → not_run_worker_died ----
+        // ---- slot present but not completed → no_completed_result ----
         // Distinct from "missing": the worker reached the slot but exited
         // before finishing it.
-        tk.run("supported pair, slot present but !completed → not_run_worker_died") {
+        tk.run("supported pair, slot present but !completed → no_completed_result") {
             let at = buildAttemptResult(
                 step: step(kind: W.attemptKindFile, action: W.attemptActionOpenRead),
                 slot: slot(rc: 0, completed: false)
             )
-            if at.outcome != AttemptOutcome.notRunWorkerDied {
-                throw TestFailure(message: "expected not_run_worker_died, got \(at.outcome)")
+            if at.outcome != AttemptOutcome.noCompletedResult {
+                throw TestFailure(message: "expected no_completed_result, got \(at.outcome)")
             }
         }
 

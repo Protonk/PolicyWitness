@@ -12,7 +12,7 @@ private func requestFixture() -> [String: Any] {
      "_test_overrides": ["worker_executable_path": "/worker", "worker_timeout_ms": 1000,
                          "validator_executable_path": "/validator", "validator_io_timeout_ms": 500,
                          "worker_post_apply_hang_ms": 0, "worker_post_apply_kill_signal": 0,
-                         "worker_pre_ready_hang_ms": 0]]
+                         "worker_pre_ready_hang_ms": 0, "worker_kill_before_publish_slot": 1]]
 }
 
 private func replacing(_ node: Any, at path: [String], with value: Any) -> Any {

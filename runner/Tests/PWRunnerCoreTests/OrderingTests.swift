@@ -172,7 +172,7 @@ func runOrderingTests(_ tk: TestKit) {
                 }
                 try expectEqual(reply.phases.first?.ordering?.validator_disposition, "not_spawned")
                 try expectEqual(reply.phases.first?.ordering?.proceed_observed, true)
-                try expectEqual(reply.steps[0].attempt.outcome, workerFailed ? AttemptOutcome.notRunWorkerDied : AttemptOutcome.ok)
+                try expectEqual(reply.steps[0].attempt.outcome, workerFailed ? AttemptOutcome.noCompletedResult : AttemptOutcome.ok)
                 try expectEqual(reply.steps[0].sandbox_check.outcome, SandboxCheckOutcome.error)
                 try expectEqual(reply.steps[0].sandbox_check.missing_reason, "validator_not_invoked")
                 try expectEqual(reply.steps[0].comparison?.order, "unestablished")

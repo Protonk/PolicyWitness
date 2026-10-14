@@ -329,7 +329,7 @@ def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_versio
         completed = entry['slot'] == 'completed' and entry['supported']
         attempt = {'requested_kind': 'file', 'requested_action': 'open_read', 'requested_path': f'/target{i}',
                    'rc': 0 if completed else -1, 'errno': None, 'error': None, 'observed_path': None,
-                   'outcome': 'ok' if completed else C.COMPAT_MISSING_OUTCOME,
+                   'outcome': 'ok' if completed else C.MISSING_RESULT_OUTCOME,
                    'result_source': 'worker' if completed else 'synthetic',
                    C.STEP_LIFECYCLE_KEY: {'summary': summary,
                                           'boundary': deepcopy(record['steps'][i]['questions']['step_boundary_reached']),

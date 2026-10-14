@@ -467,7 +467,7 @@ answer from raw fields or prose.
 | `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. It does not say an attempt never began. |
 | `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
 | `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. Lifecycle entries never change the relations, order or sandbox attribution. |
-| `steps[].attempt.outcome`, `missing_reason`, `result_source` | `not_run_worker_died` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |
+| `steps[].attempt.outcome`, `missing_reason`, `result_source` | `no_completed_result` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |
 | `error` lifecycle clauses | Rendered from the account, text unchanged: a `sentinel_deadline` stop renders `pw-probe-runner sentinel deadline expired` followed by `host requested SIGKILL during cleanup` when a request was made or `no termination requested` otherwise. The `runner_failed` problem list keeps `process disposition unconfirmed`, `reaped with signal N`, `reaped with exit code N`, `reaped without usable exit status` and `host requested termination during cleanup`, each from the corresponding claim. Worker failure, validator and setup diagnostics keep their owners and precedence and are composed with, not generated from, these clauses. |
 
 `normalized_outcome` keeps its values and precedence. A deadline followed by a
@@ -564,8 +564,8 @@ record provides the precise account without adding outcome strings.
 
 The pre-apply CLI witness asserts excluded claims, not one exact summary;
 the table's classifier controls pin the mapping. The attempt
-spelling `not_run_worker_died` means no completed attempt result, not
-proof that an operation never started. Synthetic missing predictions retain
+outcome `no_completed_result` means no completed attempt result and makes no
+claim about whether an operation started. Synthetic missing predictions retain
 `rc=0` with an explicit result source, missing reason, and null native return.
 
 Worker identity comes only from a positive `runner_subprocess.pid`, never a
@@ -791,8 +791,8 @@ native_rc is present only for actual allow/deny/error native call results, not
 parse/unsupported/filter rejections. The matching phase's validator subprocess metadata remains authoritative;
 per-step fields do not duplicate the validator PID/disposition.
 
-Attempts use the spelling `not_run_worker_died` for a missing result; it means
-no completed result, never proof of non-start. They use result_source=synthetic
+Attempts use the outcome `no_completed_result` for a missing result; it means
+no completed result and does not say whether the operation started. They use result_source=synthetic
 and missing_reason=slot_absent or slot_incomplete. Completed supported slots use
 result_source=worker. Their rc is PW attempt status (often 0/1, or aggregated
 exec disposition), not a native syscall return such as an open FD. The separate

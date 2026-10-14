@@ -172,6 +172,13 @@ typedef struct {
      * establishes abnormal process disposition, never a kernel sandbox cause.
      * Defaults to 0 (no signal). */
     int post_apply_kill_signal;
+    /* Pre-publication fatal-signal gate (_test_overrides.worker_kill_before_publish_slot).
+     * When >= 0, run_attempt() raises SIGKILL on this process for that slot
+     * index after the native attempt returned and its result fields were
+     * written, but BEFORE the slot's `completed` flag is stored. The host then
+     * holds the slot's started progress word and no published result: the
+     * control for a native return without publication. Defaults to -1 (off). */
+    long kill_before_publish_slot;
     /* Pre-ready hang gate (_test_overrides.worker_pre_ready_hang_ms).
      * When > 0, the worker calls nanosleep(N ms) BEFORE writing the
      * pre-apply ready byte. Delays after compilation and optional capture, before readiness. It
@@ -251,6 +258,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->step_count             = 0;
     args->post_apply_hang_ms     = 0;
     args->post_apply_kill_signal = 0;
+    args->kill_before_publish_slot = -1;
     args->pre_ready_hang_ms      = 0;
     args->exec_child_deadline_ms = 0;
     args->proceed_wait_ms = PW_PROCEED_WAIT_MS_DEFAULT;
@@ -263,6 +271,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
             strcmp(flag, "--post-apply-kill-signal") == 0 ||
+            strcmp(flag, "--kill-before-publish-slot") == 0 ||
             strcmp(flag, "--pre-ready-hang-ms") == 0 ||
             strcmp(flag, "--exec-child-deadline-ms") == 0 ||
             strcmp(flag, "--exec-attempt-budget-ms") == 0 ||
@@ -316,6 +325,15 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->post_apply_kill_signal = (int)v;
+            } else if (strcmp(flag, "--kill-before-publish-slot") == 0) {
+                /* A slot index. The seam fires only when the loop reaches
+                 * that slot; an index beyond the plan never fires. */
+                if (v < 0 || v >= (long)PW_SHM_MAX_STEPS) {
+                    fprintf(stderr, "pw-probe-runner: --kill-before-publish-slot %ld out of range (0..%u)\n",
+                            v, PW_SHM_MAX_STEPS - 1u);
+                    return -1;
+                }
+                args->kill_before_publish_slot = v;
             } else if (strcmp(flag, "--pre-ready-hang-ms") == 0) {
                 /* Same one-minute cap as the post-apply hang: the seam
                  * only has to exceed the host's readyByteTimeout. */
@@ -1138,7 +1156,8 @@ static void attempt_file_read_fresh(pw_shm_slot_t *slot) {
  * (release ordering) so the host's acquire-load of completed
  * synchronizes with every other slot write. */
 static void run_attempt(pw_shm_slot_t *slot,
-                        const pw_attempt_budget_t *budget, long child_deadline_ms) {
+                        const pw_attempt_budget_t *budget, long child_deadline_ms,
+                        int kill_before_publish) {
     slot->rc = 0;
     slot->errno_val = 0;
     slot->observed_path[0] = '\0';
@@ -1166,6 +1185,12 @@ static void run_attempt(pw_shm_slot_t *slot,
                  "unsupported attempt_kind=%u", slot->attempt_kind);
         break;
     }
+
+    /* Test seam: die after the native return, before publication. The result
+     * fields above are written but never released, so the host must withhold
+     * them. SIGKILL cannot be caught; a return from kill() means delivery
+     * failed, and the slot then publishes normally. */
+    if (kill_before_publish) kill(getpid(), SIGKILL);
 
     atomic_store_explicit(&slot->completed, 1u, memory_order_release);
 }
@@ -1559,7 +1584,8 @@ int main(int argc, char **argv) {
         attempt_budget_exclude(&attempt_budget, release_wait_ns);
         for (uint32_t i = phase->first_slot; i < phase->end_slot; i++) {
             pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
-            run_attempt(&slots[i], &attempt_budget, child_deadline_ms);
+            run_attempt(&slots[i], &attempt_budget, child_deadline_ms,
+                        args.kill_before_publish_slot == (long)i);
             pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
         }
         atomic_store_explicit(&phase->completed, 1u, memory_order_release);

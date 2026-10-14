@@ -833,7 +833,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,414,779 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,414,815 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -979,7 +979,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 18, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 19, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1178,8 +1178,8 @@ use source `validator`; `native_rc` is retained only for native-call result reco
 For supported attempts, completed worker slots use
 `attempt.result_source: "worker"`, including completed failed operations.
 Absent or incomplete publications use `"synthetic"` with `missing_reason: "slot_absent"` or
-`"slot_incomplete"`, respectively. Their `not_run_worker_died` outcome means
-no completed result, not proof that the operation never started. The separate
+`"slot_incomplete"`, respectively, and the outcome `no_completed_result`, which
+names the missing result and does not say whether the operation ran. The
 `attempt.lifecycle` evidence addresses that question: its `summary` is
 `completed`, `started_without_result`, `not_reached`, `unsupported`, `unresolved`
 or `conflicting`, and its `boundary` and `result` claims carry the supporting
@@ -1484,7 +1484,11 @@ have source `"synthetic"` with `missing_reason: "slot_absent"` or
 - `unsupported` — defensive output for an unimplemented attempt combination;
   public admission refuses such combinations before children. See the
   [developer construction rule](REQUEST-GRAMMAR.md#what-the-implementation-promises).
-- `not_run_worker_died` — no completed attempt result. `attempt.lifecycle`
+- `no_completed_result` — no completed attempt result. The name makes no claim
+  about whether the operation ran: a worker can die before an attempt, while
+  the native call is in flight, or after the call returned but before the slot
+  published, and the reply withholds the unpublished result in every case.
+  `attempt.lifecycle`
   describes observed progress, and the comparison's limitation repeats its summary
   (`attempt:started_without_result`, `attempt:not_reached`,
   `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`) beside

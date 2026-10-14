@@ -297,9 +297,11 @@ LIMITATION_FOR_SUMMARY = {'started_without_result': 'attempt:started_without_res
                           'unsupported': 'attempt:unsupported',
                           'unresolved': 'attempt:lifecycle_unresolved',
                           'conflicting': 'attempt:lifecycle_conflicting'}
-# Compatibility spellings that stay as they are.
-COMPAT_MISSING_OUTCOME = 'not_run_worker_died'
-COMPAT_MISSING_REASONS = ('slot_incomplete', 'slot_absent', 'attempt_not_supported')
+# Spellings for a missing completed attempt result. The outcome names the
+# absence of a published result; whether the operation started is answered by
+# the lifecycle claims, never by this spelling.
+MISSING_RESULT_OUTCOME = 'no_completed_result'
+MISSING_RESULT_REASONS = ('slot_incomplete', 'slot_absent', 'attempt_not_supported')
 
 Projection = namedtuple('Projection', ['name', 'owner', 'source_questions', 'dependencies',
                                        'absence', 'controls'])
@@ -340,9 +342,9 @@ PROJECTIONS = (
                'exactly the one entry the summary projects; none for completed',
                {'positive': 'A2 limitations agree with lifecycle', 'negative': 'E2 limitation missing',
                 'transport': 'F1'}),
-    Projection('steps[].attempt.outcome, missing_reason, result_source (compatibility)', 'runner',
+    Projection('steps[].attempt.outcome, missing_reason, result_source', 'runner',
                ('step_result_published', 'step_requested_operation_applicability'), ('slot', 'attempt_support'),
-               'unchanged spellings; not_run_worker_died means no completed supported result',
+               'no_completed_result means no completed supported result; the lifecycle object says whether it started',
                {'positive': 'A2 both steps keep the triple', 'negative': 'worker_sparse_failure pins slot_incomplete',
                 'transport': 'F1 round trip'}),
     Projection('error (lifecycle clauses)', 'runner',

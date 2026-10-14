@@ -161,7 +161,7 @@ func runComparisonEvidenceTests(_ tk: TestKit) {
             var attempt = comparisonAttempt(target: "/B")
             attempt.result_source = "synthetic"
             attempt.missing_reason = "slot_incomplete"
-            attempt.outcome = AttemptOutcome.notRunWorkerDied
+            attempt.outcome = AttemptOutcome.noCompletedResult
             attempt.rc = -1
             let missing = comparisonEvidence(sandboxCheck: query, attempt: attempt).comparison
             try expectEqual(missing.observation, "unavailable")

@@ -456,6 +456,31 @@ Setup failure before launch permits removal on the test's own non-spawn observat
 Reused artifact directories are refused before creating staging. Cleanup reporting
 failures name the recovery path in stderr and preserve the original failure.
 
+## Death after the native return, before publication
+
+`worker_killed_before_slot_publication` runs one specimen under
+`(version 1) (allow default)` with `--no-log-capture`: `/etc/hosts`, a `create`
+of a fresh file in test-owned staging, then `/etc/hosts` again, with
+`worker_kill_before_publish_slot: 1`. The worker's `open(O_CREAT)` returns and
+the slot's fields are written; the seam then raises SIGKILL before the slot's
+`completed` flag. The check observes the created file itself before reading any
+JSON, so the native operation is established independently of the reply.
+
+The reply must withhold what the worker never published: the second step is
+`no_completed_result` with `rc: -1`, null `errno`, `result_source: synthetic`,
+`missing_reason: slot_incomplete`, lifecycle `started_without_result` and
+`observation: unavailable`, and its `error` text makes no claim that the
+operation did not run. The completed first step keeps `outcome: ok`,
+`result_source: worker` and `observation: succeeded`; the third step is
+`not_reached`. Host witnesses establish the position: `poll_stop_reason:
+child_reaped`, `term_signal: 9`, `reaped: true`, `done_observed: false`,
+`partial_steps: true`, the attempt 1 started progress word and no termination
+request; `normalized_outcome` is `runner_failed`, the disposition `signaled`
+and the cause `unknown`. The echoed override is setup only. The independent
+oracle must return no findings and the adapter must read `completed`,
+`started_without_result`, `not_reached`. Staging cleanup follows the in-flight
+case's rule: removal requires the envelope's reap witness.
+
 ## Failure before published application
 
 `pre_apply_failure_reports_no_policy_verdict` runs the same two-file specimen
@@ -473,9 +498,9 @@ allow/`succeeded` and deny/`permission_failure` records. Independent file
 reads precede JSON checking: both seeds survive the failure run; the positive
 control changes the allowed file and preserves the denied file. Both runs must
 avoid a sandbox-termination claim and carry no `deny_signal` or `drift` key on
-any step. Missing attempts use the spelling
-`not_run_worker_died`, meaning no completed result, without proving that the
-operation never started.
+any step. Missing attempts use the outcome
+`no_completed_result`, meaning no completed result, without saying whether the
+operation started.
 
 This is the one override-driven case exempt from the exact-outcome assertion in
 the `_test_overrides` recipe in [`runner/AGENTS.md`](../../../runner/AGENTS.md).

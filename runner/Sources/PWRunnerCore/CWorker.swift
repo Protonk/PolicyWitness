@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "4e06930d17c9cc60ea6c7d87b68c7f5464180872c75071ec4b3029c7357a678e"
-    static let abiIdentity: [UInt8] = [0x4e, 0x06, 0x93, 0x0d, 0x17, 0xc9, 0xcc, 0x60, 0xea, 0x6c, 0x7d, 0x87, 0xb6, 0x8c, 0x7f, 0x54, 0x64, 0x18, 0x08, 0x72, 0xc7, 0x50, 0x71, 0xec, 0x4b, 0x30, 0x29, 0xc7, 0x35, 0x7a, 0x67, 0x8e]
+    static let abiIdentityHex = "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a"
+    static let abiIdentity: [UInt8] = [0x4c, 0xff, 0x4f, 0x95, 0xc3, 0x9e, 0x28, 0x32, 0xf1, 0x73, 0xc4, 0xdd, 0xd9, 0x86, 0xbe, 0xa5, 0x22, 0xd8, 0xb6, 0x08, 0x80, 0xfd, 0xa2, 0xad, 0xb7, 0xce, 0xc6, 0x7e, 0x3c, 0xb3, 0x40, 0x6a]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -310,6 +310,13 @@ struct CWorkerInput {
     /// a shorter budget can expire before application. Production callers pass nil.
     var preReadyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
+    /// `--kill-before-publish-slot <N>`. When >= 0, the worker raises SIGKILL
+    /// on itself inside run_attempt() for slot N, after the native attempt
+    /// returned and before the slot's `completed` store. The host then holds
+    /// the started progress word for N and no published result: the control
+    /// for a native return without publication. Production callers pass nil.
+    var killBeforePublishSlot: Int?
+    /// Optional test-seam routed to pw-probe-runner as
     /// `--exec-child-deadline-ms <N>`. Overrides the worker's
     /// default per-exec wall-clock cap (10s). Test cases that pin
     /// the deadline-fired behavior pass a short value (e.g. 500)
@@ -332,6 +339,7 @@ struct CWorkerInput {
                 postApplyHangMs: Int? = nil,
                 postApplyKillSignal: Int? = nil,
                 preReadyHangMs: Int? = nil,
+                killBeforePublishSlot: Int? = nil,
                 execChildDeadlineMs: Int? = nil,
                 execAttemptBudgetMs: Int? = nil,
                 captureAppliedProfile: Bool = false,
@@ -347,6 +355,7 @@ struct CWorkerInput {
         self.postApplyHangMs = postApplyHangMs
         self.postApplyKillSignal = postApplyKillSignal
         self.preReadyHangMs = preReadyHangMs
+        self.killBeforePublishSlot = killBeforePublishSlot
         self.execChildDeadlineMs = execChildDeadlineMs
         self.execAttemptBudgetMs = execAttemptBudgetMs
         self.captureAppliedProfile = captureAppliedProfile
@@ -964,6 +973,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     if let preReadyMs = input.preReadyHangMs, preReadyMs > 0 {
         argv.append("--pre-ready-hang-ms")
         argv.append(String(preReadyMs))
+    }
+    if let slot = input.killBeforePublishSlot, slot >= 0 {
+        argv.append("--kill-before-publish-slot")
+        argv.append(String(slot))
     }
     if let deadlineMs = input.execChildDeadlineMs, deadlineMs > 0 {
         argv.append("--exec-child-deadline-ms")

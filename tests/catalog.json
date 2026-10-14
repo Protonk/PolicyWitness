@@ -1236,6 +1236,14 @@
           ]
         },
         {
+          "id": "worker_killed_before_slot_publication",
+          "description": "SIGKILL after a slot's native return and before its publication: the created file is observed independently while the reply withholds the result as no_completed_result with started_without_result, keeps the completed prefix and marks the rest not reached",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_killed_before_slot_publication.sh"
+          ]
+        },
+        {
           "id": "prediction_target_is_independent_of_attempt_target",
           "description": "Swapping real validator query targets reverses predictions while independently observed write effects stay fixed",
           "command": [

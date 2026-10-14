@@ -72,7 +72,7 @@ pub(crate) fn incomplete_step(id: &str, action: &str, path: &str) -> Value {
         "basis": ["slot", "collection_basis"]});
     json!({"step_id": id, "phase_id": "main", "sandbox_check": query(action, path),
         "attempt": {"requested_kind": "file", "requested_action": action, "requested_path": path,
-            "outcome": "not_run_worker_died", "rc": -1, "errno": null,
+            "outcome": "no_completed_result", "rc": -1, "errno": null,
             "error": "no completed attempt result: slot publication incomplete",
             "observed_path": null, "result_source": "synthetic", "missing_reason": "slot_incomplete",
             "path_diagnostics": attempt_paths(path),

@@ -116,6 +116,7 @@ enum CWorkerOrchestrator {
             postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms,
             postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
             preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms,
+            killBeforePublishSlot: parsed._test_overrides?.worker_kill_before_publish_slot,
             captureAppliedProfile: parsed.policy.capture_applied_profile == true,
             captureNonce: parsed.policy.capture_nonce
         )
@@ -836,13 +837,15 @@ func buildAttemptResult(
             observed_path: nil
         )
     }
-    // Missing or incomplete slots establish no completed attempt result.
-    // The compatibility spelling does not prove the operation never started.
+    // Missing or incomplete slots establish no completed attempt result. The
+    // outcome names that absence; the lifecycle evidence, not this builder,
+    // says whether the operation started. Nothing below reads the slot's
+    // unpublished fields: a result that was never released is withheld.
     guard let s = slot else {
         return PWRunnerAttemptResult(
             rc: -1,
             errno: nil,
-            outcome: AttemptOutcome.notRunWorkerDied,
+            outcome: AttemptOutcome.noCompletedResult,
             error: "no completed attempt result: slot unavailable",
             requested_path: step.attempt.target,
             observed_path: nil
@@ -852,7 +855,7 @@ func buildAttemptResult(
         return PWRunnerAttemptResult(
             rc: -1,
             errno: nil,
-            outcome: AttemptOutcome.notRunWorkerDied,
+            outcome: AttemptOutcome.noCompletedResult,
             error: "no completed attempt result: slot publication incomplete",
             requested_path: step.attempt.target,
             observed_path: nil

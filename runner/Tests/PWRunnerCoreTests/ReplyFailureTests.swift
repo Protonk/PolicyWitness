@@ -273,7 +273,8 @@ func replyFixture() throws -> PWRunnerRunResult {
         "validator_total_timeout_ms": 100,
         "worker_post_apply_hang_ms": 0,
         "worker_post_apply_kill_signal": 9,
-        "worker_pre_ready_hang_ms": 0
+        "worker_pre_ready_hang_ms": 0,
+        "worker_kill_before_publish_slot": 1
       },
       "phases": [
         {

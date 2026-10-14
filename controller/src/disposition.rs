@@ -1378,7 +1378,7 @@ mod tests {
     #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response19/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1444,7 +1444,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response18/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response19/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1466,7 +1466,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response18/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response19/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -1711,7 +1711,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response18/a1_expected.json"
+            "../../tests/fixtures/disposition/response19/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

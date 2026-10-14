@@ -84,7 +84,7 @@ def main():
                 assert rc != 0 and runner['normalized_outcome'] == 'runner_failed', runner['normalized_outcome']
                 assert runner['runner_subprocess']['term_signal'] == signal.SIGKILL
                 for step in (middle, last):
-                    assert step['attempt']['outcome'] == 'not_run_worker_died', step
+                    assert step['attempt']['outcome'] == 'no_completed_result', step
                     for field in ('child_pid', 'child_exit_code', 'child_term_signal'):
                         assert step['attempt'].get(field) is None, step
                     assert step['comparison']['observation'] == 'unavailable', step

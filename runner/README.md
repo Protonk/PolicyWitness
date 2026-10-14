@@ -93,7 +93,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 18, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 19, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -143,8 +143,8 @@ Native observations remain distinct from summaries: the query's `native_rc`
 carries a native return, while attempt `rc` is PolicyWitness status.
 `file/read_fresh` retains open/stat/read/close results and descriptor identity
 under `attempt.fresh_read`; `open_read` remains open-only.
-`not_run_worker_died` means no completed attempt result, not proof an operation
-never began. Missing subprocess records or lifecycle fields establish neither
+`no_completed_result` means no completed attempt result; the lifecycle evidence,
+not the outcome, says whether an operation began. Missing subprocess records or lifecycle fields establish neither
 successful execution nor cleanup.
 
 Readers and encoders require the current response version. If ordinary reply
@@ -171,11 +171,12 @@ not establish that a boundary was reached or that its requested effect occurred.
 | `worker_post_apply_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after completed slots and before `done`; paired with a shorter sentinel allowance it can exercise timeout handling. |
 | `worker_post_apply_kill_signal` | integer signal number | Disabled when absent or nonpositive. Requests self-signalling after completed slots and before `done`; observed fatal delivery can exercise `runner_failed`. |
 | `worker_pre_ready_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after compilation/optional capture, before the ready byte; publication depends on the remaining host allowance. |
+| `worker_kill_before_publish_slot` | integer slot index | Disabled when absent or negative. Requests SIGKILL on the worker itself after that slot's native attempt returns and before its `completed` flag is stored; the host then holds the slot's started progress word and no published result. An observed death establishes the withheld result, not a policy cause. |
 
 Decoding accepts representable integers. The host floors deadline overrides in
 [`timeoutMsForCWorker`](Sources/PWRunnerCore/CWorkerOrchestrator.swift) and
 [`timeoutMsForValidator`](Sources/PWRunnerCore/CWorkerOrchestrator.swift).
-It forwards only positive delay/signal values; the worker's
+It forwards only positive delay/signal values and nonnegative slot indexes; the worker's
 [`parse_args`](../controller/tools/pw_probe_runner/pw_probe_runner.c) enforces
 their upper bounds. A rejected native argument can stop the child before the
 intended seam. Failed signal delivery or a nonfatal/ignored signal can return

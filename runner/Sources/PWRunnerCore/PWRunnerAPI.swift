@@ -103,9 +103,10 @@ enum NormalizedOutcome {
 /// source_drift enforces that every constant has a row in
 /// tests/COVERAGE.md's attempt-outcome matrix.
 ///
-/// `not_run_worker_died` is a compatibility spelling for no completed attempt
-/// result. Missing publication does not prove the operation never started.
-/// Treat it as missing evidence, never as an access verdict.
+/// `no_completed_result` names the absence of a completed attempt result. It
+/// says nothing about whether the operation started: `attempt.lifecycle` and
+/// the worker's progress word carry that evidence. Treat it as missing
+/// evidence, never as an access verdict.
 enum AttemptOutcome {
     static let ok = "ok"
     static let openFailed = "open_failed"
@@ -116,7 +117,7 @@ enum AttemptOutcome {
     static let sysctlFailed = "sysctl_failed"
     static let execFailed = "exec_failed"
     static let unsupported = "unsupported"
-    static let notRunWorkerDied = "not_run_worker_died"
+    static let noCompletedResult = "no_completed_result"
 }
 
 // Canonical step.sandbox_check.outcome values. New constants should be
@@ -155,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 18
+    static let responseSchema: Int = 19
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -510,6 +511,10 @@ struct PWRunnerPhase: Codable {
 // |                             | (not evidence of a native compilation failure)                | runner_timeout if expired  |
 // | `worker_post_apply_kill_signal` | self-signal after applied/slots, before done               | runner_failed              |
 // |                             | Signal establishes disposition, not a sandbox cause.          |                            |
+// | `worker_kill_before_publish_slot` | SIGKILL on itself inside run_attempt() for that slot,   | runner_failed              |
+// |                             | after the native attempt returned and before the slot's       |                            |
+// |                             | `completed` store. The host holds a started progress word     |                            |
+// |                             | and no published result for that slot.                        |                            |
 //
 // See runner/AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -524,6 +529,7 @@ struct PWRunnerTestOverrides: Codable {
     var worker_post_apply_hang_ms: Int?
     var worker_post_apply_kill_signal: Int?
     var worker_pre_ready_hang_ms: Int?
+    var worker_kill_before_publish_slot: Int?
 
     init(
         worker_executable_path: String? = nil,
@@ -534,7 +540,8 @@ struct PWRunnerTestOverrides: Codable {
         validator_total_timeout_ms: Int? = nil,
         worker_post_apply_hang_ms: Int? = nil,
         worker_post_apply_kill_signal: Int? = nil,
-        worker_pre_ready_hang_ms: Int? = nil
+        worker_pre_ready_hang_ms: Int? = nil,
+        worker_kill_before_publish_slot: Int? = nil
     ) {
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
@@ -545,11 +552,12 @@ struct PWRunnerTestOverrides: Codable {
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
         self.worker_post_apply_kill_signal = worker_post_apply_kill_signal
         self.worker_pre_ready_hang_ms = worker_pre_ready_hang_ms
+        self.worker_kill_before_publish_slot = worker_kill_before_publish_slot
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case worker_executable_path, worker_timeout_ms, issuer_executable_path, validator_executable_path, validator_io_timeout_ms, validator_total_timeout_ms
-        case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms
+        case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms, worker_kill_before_publish_slot
     }
 
     init(from decoder: Decoder) throws {
@@ -573,6 +581,7 @@ struct PWRunnerTestOverrides: Codable {
         worker_post_apply_hang_ms = try optionalInteger(.worker_post_apply_hang_ms)
         worker_post_apply_kill_signal = try optionalInteger(.worker_post_apply_kill_signal)
         worker_pre_ready_hang_ms = try optionalInteger(.worker_pre_ready_hang_ms)
+        worker_kill_before_publish_slot = try optionalInteger(.worker_kill_before_publish_slot)
     }
 
 }
@@ -1051,8 +1060,8 @@ struct PWRunnerAttemptResult: Codable {
     var requested_action: String? = nil
     var result_source: String? = nil
     var missing_reason: String? = nil
-    /// Projection of this step's disposition claims.
-    /// `not_run_worker_died`/`slot_incomplete` stay as they are.
+    /// Projection of this step's disposition claims. It is the evidence for
+    /// whether a `no_completed_result`/`slot_incomplete` step started.
     var lifecycle: PWAttemptLifecycle? = nil
     /// PW's attempt status, not a raw syscall return.
     var fresh_read: PWRunnerFreshRead? = nil
