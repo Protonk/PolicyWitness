@@ -226,22 +226,6 @@
       "app_inventory": "artifact-integrity/before.json"
     },
     {
-      "path": "release-acceptance/run-f9e4d1aa976749cb9122ce28cf9aaae5",
-      "run_id": "accept-f438e770424c474b95a6557dd06795d6",
-      "reason": "PolicyWitness 0.2.8 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.2.8.",
-      "source": "9d35671e1e3e6a09e5c766cd6db73cc1d402fc8a",
-      "app_inventory": "before.json",
-      "release": "v0.2.8"
-    },
-    {
-      "path": "runs/release-0.2.8-default",
-      "run_id": "20261011T021733Z_0910d918",
-      "reason": "PolicyWitness 0.2.8 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.2.8.",
-      "source": "9d35671e1e3e6a09e5c766cd6db73cc1d402fc8a",
-      "app_inventory": "artifact-integrity/before.json",
-      "release": "v0.2.8"
-    },
-    {
       "path": "runs/extensions-m2-accepted-20261012",
       "run_id": "20261012T224802Z_44df7a6f",
       "reason": "M2 consolidated acceptance at ac9c3b5, including coordinated native/Swift/CLI/readers/order mutations and immutable rendered review with resolved findings.",
@@ -800,6 +784,22 @@
       "reason": "Evidence-clarity repairs: ordering mutations, build guards, and 50 build-refusal controls with five bypass demonstrations pass on 0f4badd. SDK failure is isolated to real xcrun under a restrictive sandbox. source-snapshot.json records the inputs.",
       "source": "0f4badd4449fbd4e94fc18263d2bf3bdaf645eb4",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "release-acceptance/run-505883ac9a7d4b85a90d07b1bc86ba51",
+      "run_id": "accept-f66ad6c3b1ce4a50813cc97e01ef1db7",
+      "reason": "PolicyWitness 0.3.0 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.3.0.",
+      "source": "1046c77bcb862eb9bcf231a2215af86613225371",
+      "app_inventory": "before.json",
+      "release": "v0.3.0"
+    },
+    {
+      "path": "runs/release-0.3.0-default",
+      "run_id": "20261014T221310Z_c1cdd37f",
+      "reason": "PolicyWitness 0.3.0 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.3.0.",
+      "source": "1046c77bcb862eb9bcf231a2215af86613225371",
+      "app_inventory": "artifact-integrity/before.json",
+      "release": "v0.3.0"
     }
   ]
 }
