@@ -1,8 +1,8 @@
 {
   "build": {
-    "commit": "2c3ab18280486f75f871e9cd2fd12f02d1cd89c4",
-    "describe": "v0.2.8-55-g2c3ab18",
-    "number": "575",
+    "commit": "f9f110d2bb9b7d8c5e0333981d8a15793cfea799",
+    "describe": "v0.2.8-88-gf9f110d",
+    "number": "608",
     "version": "0.2.8"
   },
   "data": {
@@ -18,13 +18,13 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1791927546199,
+      "ended_at_unix_ms": 1791997428012,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1397,
         "error": null
       },
-      "started_at_unix_ms": 1791927546140,
+      "started_at_unix_ms": 1791997427962,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -66,7 +66,7 @@
               "mach_lookup_invalid",
               "fs_read_allowed"
             ],
-            "pid": 23199,
+            "pid": 55212,
             "probe_bytes_expected": 292,
             "probe_bytes_written": 292,
             "reaped": true,
@@ -86,10 +86,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fs_read_allowed"
               }
@@ -100,7 +100,7 @@
           }
         }
       ],
-      "pid": 23198,
+      "pid": 55211,
       "policy_format": "sbpl",
       "policy_sha256": "cc62de644e7d1a9524ca536a2b040597918c0de536c96add0a8cd15b9c161eeb",
       "rc": 0,
@@ -269,13 +269,13 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 23198,
+        "pid": 55211,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2",
+          "abi_identity": "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -293,7 +293,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 18,
+      "schema_version": 19,
       "specimen_id": "BBX-002",
       "steps": [
         {
@@ -323,7 +323,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.SaSCFW/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.7a8HME/does-not-exist.txt",
               "observer": "runner_host",
               "realpath_resolved": null,
               "same_as_input": [
@@ -334,7 +334,7 @@
             "rc": 1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.SaSCFW/does-not-exist.txt",
+            "requested_path": "/private/tmp/pw-bbx.7a8HME/does-not-exist.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -350,23 +350,23 @@
           "phase_id": "main",
           "sandbox_check": {
             "errno": null,
-            "error": "target path /private/tmp/pw-bbx.SaSCFW/does-not-exist.txt did not resolve on the host when the query was planned",
+            "error": "target path /private/tmp/pw-bbx.7a8HME/does-not-exist.txt did not resolve on the host when the query was planned",
             "filter_kind": "path",
             "filter_type_id": null,
-            "filter_value": "/private/tmp/pw-bbx.SaSCFW/does-not-exist.txt",
+            "filter_value": "/private/tmp/pw-bbx.7a8HME/does-not-exist.txt",
             "missing_reason": "query_not_requested",
             "native_rc": null,
             "operation": "file-read-data",
             "outcome": "prediction_unavailable",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.SaSCFW/does-not-exist.txt",
-              "input": "/private/tmp/pw-bbx.SaSCFW/does-not-exist.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.7a8HME/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.7a8HME/does-not-exist.txt",
               "observer": "runner_host",
               "realpath_resolved": null,
               "same_as_input": [],
               "stage": "after_orchestration"
             },
-            "pid": 23198,
+            "pid": 55211,
             "rc": -1,
             "result_source": "synthetic"
           },
@@ -422,7 +422,7 @@
             "native_rc": 0,
             "operation": "mach-lookup",
             "outcome": "allow",
-            "pid": 23198,
+            "pid": 55211,
             "rc": 0,
             "result_source": "validator"
           },
@@ -451,10 +451,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -465,7 +465,7 @@
             "rc": 0,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -482,20 +482,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
-              "input": "/private/tmp/pw-bbx.SaSCFW/allow-read/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.7a8HME/allow-read/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23198,
+            "pid": 55211,
             "rc": 0,
             "result_source": "validator"
           },
@@ -520,9 +520,9 @@
       "observed_deny": false,
       "observer": {
         "build": {
-          "commit": "2c3ab18280486f75f871e9cd2fd12f02d1cd89c4",
-          "describe": "v0.2.8-55-g2c3ab18",
-          "number": "575",
+          "commit": "f9f110d2bb9b7d8c5e0333981d8a15793cfea799",
+          "describe": "v0.2.8-88-gf9f110d",
+          "number": "608",
           "version": "0.2.8"
         },
         "data": {
@@ -530,8 +530,8 @@
           "collection": {
             "boundary": "log_show",
             "budget": {
-              "deadline_monotonic_ns": 589908820358000,
-              "started_monotonic_ns": 589898820358000,
+              "deadline_monotonic_ns": 659790696590000,
+              "started_monotonic_ns": 659780696590000,
               "timeout_ms": 10000,
               "timeout_source": "default"
             },
@@ -546,14 +546,14 @@
               "signal": null,
               "signal_before_reap": false,
               "signal_result": null,
-              "target": 23201
+              "target": 55214
             },
             "cutoff": null,
             "elapsed_ms": 666,
             "process": {
               "exit_code": 0,
               "exit_observed": true,
-              "pid": 23201,
+              "pid": 55214,
               "reaped": true,
               "term_signal": null,
               "wait_error": null
@@ -579,7 +579,7 @@
           "correlation_id": null,
           "deny_events": [],
           "duration_ms": null,
-          "end": "2026-10-13 21:39:09+0000",
+          "end": "2026-10-14 17:03:51+0000",
           "last": null,
           "log_error": null,
           "log_rc": 0,
@@ -590,15 +590,15 @@
           "observed_deny": false,
           "observed_lines": 1,
           "observer_schema_version": 2,
-          "pid": 23198,
+          "pid": 55211,
           "plan_id": null,
-          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(23198\\\\)([ \\\\t]+.*)?\"",
+          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(55211\\\\)([ \\\\t]+.*)?\"",
           "process_name": "pw-probe-runner",
           "row_id": null,
-          "start": "2026-10-13 21:39:04+0000",
+          "start": "2026-10-14 17:03:45+0000",
           "stop_on_pid_exit": false
         },
-        "generated_at_unix_ms": 1791927546866,
+        "generated_at_unix_ms": 1791997428679,
         "kind": "sandbox_log_observer_report",
         "result": {
           "errno": null,
@@ -627,8 +627,8 @@
       "supervision": {
         "boundary": "observer",
         "budget": {
-          "deadline_monotonic_ns": 589908820358000,
-          "started_monotonic_ns": 589898820358000,
+          "deadline_monotonic_ns": 659790696590000,
+          "started_monotonic_ns": 659780696590000,
           "timeout_ms": 10000,
           "timeout_source": "default"
         },
@@ -649,14 +649,14 @@
             "errno": 1,
             "rc": -1
           },
-          "target": 23200
+          "target": 55213
         },
         "cutoff": null,
         "elapsed_ms": 669,
         "process": {
           "exit_code": 0,
           "exit_observed": true,
-          "pid": 23200,
+          "pid": 55213,
           "reaped": true,
           "term_signal": null,
           "wait_error": null
@@ -681,12 +681,12 @@
       },
       "tool_exit_code": 0,
       "window": {
-        "end": "2026-10-13 21:39:09+0000",
-        "ended_at_unix_ms": 1791927546199,
+        "end": "2026-10-14 17:03:51+0000",
+        "ended_at_unix_ms": 1791997428012,
         "kind": "runner_client_span",
         "pad_seconds": 2,
-        "start": "2026-10-13 21:39:04+0000",
-        "started_at_unix_ms": 1791927546140
+        "start": "2026-10-14 17:03:45+0000",
+        "started_at_unix_ms": 1791997427962
       }
     },
     "specimen": {
@@ -723,7 +723,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m4-development-20261013/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c1-captures-20261014/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -763,7 +763,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791927546869,
+  "generated_at_unix_ms": 1791997428681,
   "kind": "run",
   "result": {
     "errno": null,

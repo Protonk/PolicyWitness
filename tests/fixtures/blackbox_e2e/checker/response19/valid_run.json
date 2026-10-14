@@ -1,8 +1,8 @@
 {
   "build": {
-    "commit": "2c3ab18280486f75f871e9cd2fd12f02d1cd89c4",
-    "describe": "v0.2.8-55-g2c3ab18",
-    "number": "575",
+    "commit": "f9f110d2bb9b7d8c5e0333981d8a15793cfea799",
+    "describe": "v0.2.8-88-gf9f110d",
+    "number": "608",
     "version": "0.2.8"
   },
   "data": {
@@ -18,13 +18,13 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1791927544838,
+      "ended_at_unix_ms": 1791997426828,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1857,
         "error": null
       },
-      "started_at_unix_ms": 1791927544763,
+      "started_at_unix_ms": 1791997426766,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -67,7 +67,7 @@
               "fs_write_denied",
               "mach_lookup_denied"
             ],
-            "pid": 23143,
+            "pid": 55156,
             "probe_bytes_expected": 444,
             "probe_bytes_written": 444,
             "reaped": true,
@@ -76,10 +76,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
                 "operation": "file-write-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fs_write_allowed"
               },
@@ -87,10 +87,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+                "filter_value": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
                 "operation": "file-write-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "fs_write_denied"
               },
@@ -112,7 +112,7 @@
           }
         }
       ],
-      "pid": 23142,
+      "pid": 55155,
       "policy_format": "sbpl",
       "policy_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
       "rc": 0,
@@ -281,13 +281,13 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 23142,
+        "pid": 55155,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2",
+          "abi_identity": "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -305,7 +305,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 18,
+      "schema_version": 19,
       "specimen_id": "BBX-001",
       "steps": [
         {
@@ -331,10 +331,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -345,7 +345,7 @@
             "rc": 0,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -362,20 +362,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
             "native_rc": 0,
             "operation": "file-write-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.j1czfE/allow-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.eP1q7J/allow-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23142,
+            "pid": 55155,
             "rc": 0,
             "result_source": "validator"
           },
@@ -408,7 +408,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -419,7 +419,7 @@
             "rc": 1,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -436,20 +436,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
             "native_rc": 1,
             "operation": "file-write-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23142,
+            "pid": 55155,
             "rc": 1,
             "result_source": "validator"
           },
@@ -505,7 +505,7 @@
             "native_rc": 1,
             "operation": "mach-lookup",
             "outcome": "deny",
-            "pid": 23142,
+            "pid": 55155,
             "rc": 1,
             "result_source": "validator"
           },
@@ -529,25 +529,25 @@
       "deny_events": [
         {
           "operation": "file-write-data",
-          "path": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
-          "pid": 23142,
+          "path": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
+          "pid": 55155,
           "process": "pw-probe-runner",
-          "raw_line": "2026-10-13 14:39:04.831284-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) file-write-data /private/tmp/pw-bbx.j1czfE/deny-write/existing.txt"
+          "raw_line": "2026-10-14 10:03:46.804903-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) file-write-data /private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt"
         },
         {
           "operation": "mach-lookup",
           "path": "com.apple.cfprefsd.xpc.daemon",
-          "pid": 23142,
+          "pid": 55155,
           "process": "pw-probe-runner",
-          "raw_line": "2026-10-13 14:39:04.831403-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
+          "raw_line": "2026-10-14 10:03:46.804969-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
         }
       ],
       "observed_deny": true,
       "observer": {
         "build": {
-          "commit": "2c3ab18280486f75f871e9cd2fd12f02d1cd89c4",
-          "describe": "v0.2.8-55-g2c3ab18",
-          "number": "575",
+          "commit": "f9f110d2bb9b7d8c5e0333981d8a15793cfea799",
+          "describe": "v0.2.8-88-gf9f110d",
+          "number": "608",
           "version": "0.2.8"
         },
         "data": {
@@ -555,8 +555,8 @@
           "collection": {
             "boundary": "log_show",
             "budget": {
-              "deadline_monotonic_ns": 589907459105000,
-              "started_monotonic_ns": 589897459105000,
+              "deadline_monotonic_ns": 659789513331000,
+              "started_monotonic_ns": 659779513331000,
               "timeout_ms": 10000,
               "timeout_source": "default"
             },
@@ -571,14 +571,14 @@
               "signal": null,
               "signal_before_reap": false,
               "signal_result": null,
-              "target": 23145
+              "target": 55158
             },
             "cutoff": null,
-            "elapsed_ms": 922,
+            "elapsed_ms": 877,
             "process": {
               "exit_code": 0,
               "exit_observed": true,
-              "pid": 23145,
+              "pid": 55158,
               "reaped": true,
               "term_signal": null,
               "wait_error": null
@@ -605,40 +605,40 @@
           "deny_events": [
             {
               "operation": "file-write-data",
-              "path": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
-              "pid": 23142,
+              "path": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
+              "pid": 55155,
               "process": "pw-probe-runner",
-              "raw_line": "2026-10-13 14:39:04.831284-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) file-write-data /private/tmp/pw-bbx.j1czfE/deny-write/existing.txt"
+              "raw_line": "2026-10-14 10:03:46.804903-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) file-write-data /private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt"
             },
             {
               "operation": "mach-lookup",
               "path": "com.apple.cfprefsd.xpc.daemon",
-              "pid": 23142,
+              "pid": 55155,
               "process": "pw-probe-runner",
-              "raw_line": "2026-10-13 14:39:04.831403-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
+              "raw_line": "2026-10-14 10:03:46.804969-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
             }
           ],
           "duration_ms": null,
-          "end": "2026-10-13 21:39:07+0000",
+          "end": "2026-10-14 17:03:49+0000",
           "last": null,
           "log_error": null,
           "log_rc": 0,
           "log_stderr": "",
-          "log_stdout": "Timestamp                       (process)[PID]    \n2026-10-13 14:39:04.831284-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) file-write-data /private/tmp/pw-bbx.j1czfE/deny-write/existing.txt\n2026-10-13 14:39:04.831403-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(23142) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\n",
+          "log_stdout": "Timestamp                       (process)[PID]    \n2026-10-14 10:03:46.804903-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) file-write-data /private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt\n2026-10-14 10:03:46.804969-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(55155) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\n",
           "log_truncated": false,
           "mode": "show",
           "observed_deny": true,
           "observed_lines": 3,
           "observer_schema_version": 2,
-          "pid": 23142,
+          "pid": 55155,
           "plan_id": null,
-          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(23142\\\\)([ \\\\t]+.*)?\"",
+          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(55155\\\\)([ \\\\t]+.*)?\"",
           "process_name": "pw-probe-runner",
           "row_id": null,
-          "start": "2026-10-13 21:39:02+0000",
+          "start": "2026-10-14 17:03:44+0000",
           "stop_on_pid_exit": false
         },
-        "generated_at_unix_ms": 1791927545761,
+        "generated_at_unix_ms": 1791997427706,
         "kind": "sandbox_log_observer_report",
         "result": {
           "errno": null,
@@ -674,7 +674,7 @@
             {
               "operation": "file-write-data",
               "operation_source": "submitted_attempt",
-              "path": "/private/tmp/pw-bbx.j1czfE/deny-write/existing.txt",
+              "path": "/private/tmp/pw-bbx.eP1q7J/deny-write/existing.txt",
               "path_sources": [
                 "submitted_attempt.target",
                 "attempt.requested_path",
@@ -712,8 +712,8 @@
       "supervision": {
         "boundary": "observer",
         "budget": {
-          "deadline_monotonic_ns": 589907459105000,
-          "started_monotonic_ns": 589897459105000,
+          "deadline_monotonic_ns": 659789513331000,
+          "started_monotonic_ns": 659779513331000,
           "timeout_ms": 10000,
           "timeout_source": "default"
         },
@@ -734,14 +734,14 @@
             "errno": 1,
             "rc": -1
           },
-          "target": 23144
+          "target": 55157
         },
         "cutoff": null,
-        "elapsed_ms": 925,
+        "elapsed_ms": 879,
         "process": {
           "exit_code": 0,
           "exit_observed": true,
-          "pid": 23144,
+          "pid": 55157,
           "reaped": true,
           "term_signal": null,
           "wait_error": null
@@ -766,12 +766,12 @@
       },
       "tool_exit_code": 0,
       "window": {
-        "end": "2026-10-13 21:39:07+0000",
-        "ended_at_unix_ms": 1791927544838,
+        "end": "2026-10-14 17:03:49+0000",
+        "ended_at_unix_ms": 1791997426828,
         "kind": "runner_client_span",
         "pad_seconds": 2,
-        "start": "2026-10-13 21:39:02+0000",
-        "started_at_unix_ms": 1791927544763
+        "start": "2026-10-14 17:03:44+0000",
+        "started_at_unix_ms": 1791997426766
       }
     },
     "specimen": {
@@ -808,7 +808,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m4-development-20261013/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c1-captures-20261014/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -848,7 +848,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791927545764,
+  "generated_at_unix_ms": 1791997427708,
   "kind": "run",
   "result": {
     "errno": null,

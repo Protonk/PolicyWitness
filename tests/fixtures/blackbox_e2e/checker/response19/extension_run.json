@@ -1,8 +1,8 @@
 {
   "build": {
-    "commit": "2c3ab18280486f75f871e9cd2fd12f02d1cd89c4",
-    "describe": "v0.2.8-55-g2c3ab18",
-    "number": "575",
+    "commit": "f9f110d2bb9b7d8c5e0333981d8a15793cfea799",
+    "describe": "v0.2.8-88-gf9f110d",
+    "number": "608",
     "version": "0.2.8"
   },
   "data": {
@@ -18,13 +18,13 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1791927556125,
+      "ended_at_unix_ms": 1791997437825,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 2353,
         "error": null
       },
-      "started_at_unix_ms": 1791927556049,
+      "started_at_unix_ms": 1791997437762,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -112,7 +112,7 @@
           "identity": {
             "device": 16777233,
             "gid": 0,
-            "inode": 12613563,
+            "inode": 15032918,
             "mode": 33188,
             "uid": 501
           },
@@ -126,7 +126,7 @@
             "exit_code": 0,
             "gid": 20,
             "native_nonnull": true,
-            "pid": 23324,
+            "pid": 55332,
             "reaped": true,
             "result_published": true,
             "token_length": 230,
@@ -134,8 +134,8 @@
             "wait_errors": []
           },
           "preparation_status": "prepared",
-          "resolved_target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
-          "submitted_target": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+          "resolved_target": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
+          "submitted_target": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
           "token_ref": "token"
         }
       ],
@@ -165,7 +165,7 @@
             "expected_step_ids": [
               "before"
             ],
-            "pid": 23326,
+            "pid": 55334,
             "probe_bytes_expected": 152,
             "probe_bytes_written": 152,
             "reaped": true,
@@ -174,10 +174,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-uob6nt5u/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-7oksusxe/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "before"
               }
@@ -211,7 +211,7 @@
             "expected_step_ids": [
               "during"
             ],
-            "pid": 23327,
+            "pid": 55335,
             "probe_bytes_expected": 152,
             "probe_bytes_written": 152,
             "reaped": true,
@@ -220,10 +220,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-uob6nt5u/extension-target\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-7oksusxe/extension-target\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "during"
               }
@@ -256,7 +256,7 @@
             "expected_step_ids": [
               "after"
             ],
-            "pid": 23328,
+            "pid": 55336,
             "probe_bytes_expected": 151,
             "probe_bytes_written": 151,
             "reaped": true,
@@ -265,10 +265,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-uob6nt5u/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-7oksusxe/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "after"
               }
@@ -279,7 +279,7 @@
           }
         }
       ],
-      "pid": 23325,
+      "pid": 55333,
       "policy_format": "sbpl",
       "policy_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
       "rc": 0,
@@ -512,13 +512,13 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 23325,
+        "pid": 55333,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "5d5015722db1555ed399f3cac1890b11b41af7982986e717d77fbb9d96e87ff2",
+          "abi_identity": "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -536,7 +536,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 18,
+      "schema_version": 19,
       "specimen_id": "extensions",
       "steps": [
         {
@@ -569,7 +569,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -580,7 +580,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -597,20 +597,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-7oksusxe/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23325,
+            "pid": 55333,
             "rc": 1,
             "result_source": "validator"
           },
@@ -625,7 +625,7 @@
               "identity": {
                 "device": 16777233,
                 "gid": 0,
-                "inode": 12613563,
+                "inode": 15032918,
                 "mode": 33188,
                 "uid": 501
               },
@@ -656,7 +656,7 @@
             "observed_path": null,
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -667,7 +667,7 @@
             "rc": 0,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -684,20 +684,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-7oksusxe/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23325,
+            "pid": 55333,
             "rc": 0,
             "result_source": "validator"
           },
@@ -733,7 +733,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -744,7 +744,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -761,20 +761,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
-              "input": "/private/tmp/pw-extension-targets-uob6nt5u/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-7oksusxe/extension-target",
+              "input": "/private/tmp/pw-extension-targets-7oksusxe/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 23325,
+            "pid": 55333,
             "rc": 1,
             "result_source": "validator"
           },
@@ -826,7 +826,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m4-development-20261013/suites/witness_contract/extensions/artifacts/lifecycle/specimen.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c1-captures-20261014/suites/witness_contract/extensions/artifacts/lifecycle/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -866,7 +866,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791927556125,
+  "generated_at_unix_ms": 1791997437825,
   "kind": "run",
   "result": {
     "errno": null,

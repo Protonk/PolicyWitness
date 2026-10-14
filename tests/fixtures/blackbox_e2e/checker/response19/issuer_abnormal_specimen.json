@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-control-kyawgxy7/target"
+      "target": "/private/tmp/pw-extension-control-znk2uy4a/target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-kyawgxy7/target"
+              "value": "/private/tmp/pw-extension-control-znk2uy4a/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-kyawgxy7/target"
+            "target": "/private/tmp/pw-extension-control-znk2uy4a/target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-kyawgxy7/target"
+              "value": "/private/tmp/pw-extension-control-znk2uy4a/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-kyawgxy7/target"
+            "target": "/private/tmp/pw-extension-control-znk2uy4a/target"
           }
         },
         {
@@ -76,20 +76,20 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-kyawgxy7/target"
+              "value": "/private/tmp/pw-extension-control-znk2uy4a/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-kyawgxy7/target"
+            "target": "/private/tmp/pw-extension-control-znk2uy4a/target"
           }
         }
       ]
     }
   ],
   "_test_overrides": {
-    "issuer_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m4-development-20261013/suites/witness_contract/extension_combinations/artifacts/M01/issuer",
-    "worker_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/extensions-m4-development-20261013/suites/witness_contract/extension_combinations/artifacts/M01/worker"
+    "issuer_executable_path": "/private/tmp/pw-extension-control-znk2uy4a/issuer",
+    "worker_executable_path": "/private/tmp/pw-extension-control-znk2uy4a/worker"
   }
 }
