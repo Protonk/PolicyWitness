@@ -42,6 +42,7 @@ private let stringPolicy: [String: Int?] = [
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
     "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
+    "cleanup_stage": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
@@ -191,7 +192,10 @@ private func extensionReplyAllowance() throws -> Int {
         submitted_target: maximal(PWExtensionLimits.targetBytes), resolved_target: maximal(PWExtensionLimits.targetBytes),
         preparation_status: "resolution_failed", preparation_errno: Int32.max, identity: identity,
         issuance_status: "native_api_unavailable", issuer: issuer, delivery_status: "token_unavailable",
-        delivered_bytes: UInt32.max, host_buffer_erased: false)
+        delivered_bytes: UInt32.max,
+        delivery_failure: PWRunnerExtensionDeliveryFailure(stage: "descriptor_metadata", native_rc: Int32.min, errno: Int32.max,
+                                                           cleanup_stage: "descriptor_close", cleanup_errno: Int32.max),
+        host_buffer_erased: false)
     let claim = PWDispositionClaim(state: "inapplicable", answer: "unpublished",
         value: .integer(Int.min), reason: "unsupported_attempt", issue: Int.max,
         basis: PWDisposition.runReferences + PWDisposition.stepReferences)

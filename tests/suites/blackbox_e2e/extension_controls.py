@@ -7,7 +7,7 @@ from lifecycle_oracle import check_record
 
 
 def run_extension_controls(run):
-    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response19/extension_run.json'
+    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response20/extension_run.json'
     baseline = json.loads(fixture.read_text())
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)

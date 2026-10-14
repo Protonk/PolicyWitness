@@ -870,6 +870,58 @@ fn project_disposition(
     }
 }
 
+/// Structural rules for the worker's delivery failure account, shared with the
+/// Swift encoder and the Python reader: the stage class agrees with the status,
+/// native fields appear exactly for native stages, and cleanup fields are paired.
+fn delivery_failure_problem(status: &str, failure: &Value) -> Option<&'static str> {
+    if !failure.is_object() {
+        return Some("delivery failure lacks its account");
+    }
+    let stage = failure["stage"].as_str().unwrap_or("");
+    let local = matches!(
+        stage,
+        "core_limit" | "descriptor_metadata" | "mapping" | "descriptor_close"
+    );
+    if !local && !matches!(stage, "channel_size" | "channel_header" | "channel_token") {
+        return Some("unknown delivery failure stage");
+    }
+    if (status == "local_setup_failed") != local {
+        return Some("delivery failure stage disagrees with status");
+    }
+    let rc = failure["native_rc"].as_i64();
+    let err = failure["errno"].as_i64();
+    if local {
+        if !rc.is_some_and(|v| v != 0 && v >= i32::MIN as i64 && v <= i32::MAX as i64)
+            || !err.is_some_and(|v| v >= 0)
+        {
+            return Some("local setup failure lacks its native result");
+        }
+    } else if stage == "channel_size" {
+        if rc != Some(0) || !failure["errno"].is_null() {
+            return Some("undersized channel misreports its inspection result");
+        }
+    } else if !failure["native_rc"].is_null() || !failure["errno"].is_null() {
+        return Some("channel rejection invents a native result");
+    }
+    match failure["cleanup_stage"].as_str() {
+        Some(cleanup) => {
+            if !matches!(cleanup, "descriptor_close" | "unmap")
+                || !failure["cleanup_errno"].as_i64().is_some_and(|v| v >= 0)
+            {
+                return Some("delivery cleanup failure lacks its errno");
+            }
+            if cleanup == "descriptor_close" && stage == "descriptor_close" {
+                return Some("descriptor closed twice");
+            }
+        }
+        None if !failure["cleanup_errno"].is_null() => {
+            return Some("delivery cleanup errno without a stage");
+        }
+        None => {}
+    }
+    None
+}
+
 // Native events are actions in the worker account, but do not have ordinary
 // query/attempt comparisons. Check their distinct publication and reference
 // requirements before allowing the disposition projection to use them.
@@ -960,6 +1012,17 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
             || !length.is_some_and(|v| v > 0 && v < 16384))
     {
         reject("extension delivery lacks bounded issuance");
+    }
+    let delivery = declaration["delivery_status"].as_str().unwrap_or("");
+    let failure = &declaration["delivery_failure"];
+    if matches!(delivery, "channel_rejected" | "local_setup_failed") {
+        if let Some(detail) = delivery_failure_problem(delivery, failure) {
+            reject(detail);
+        } else if delivery == "channel_rejected" && !issued {
+            reject("channel rejection without an issued token");
+        }
+    } else if !failure.is_null() {
+        reject("delivery failure account without a failure status");
     }
     let phases = runner["phases"].as_array().unwrap_or(&empty);
     let action_ids: Vec<&str> = phases
@@ -1378,7 +1441,7 @@ mod tests {
     #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response19/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response20/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1444,7 +1507,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response19/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response20/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1466,7 +1529,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response19/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response20/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -1711,7 +1774,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response19/a1_expected.json"
+            "../../tests/fixtures/disposition/response20/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

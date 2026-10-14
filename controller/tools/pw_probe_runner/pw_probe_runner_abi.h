@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4c, 0xff, 0x4f, 0x95, 0xc3, 0x9e, 0x28, 0x32, 0xf1, 0x73, 0xc4, 0xdd, 0xd9, 0x86, 0xbe, 0xa5, 0x22, 0xd8, 0xb6, 0x08, 0x80, 0xfd, 0xa2, 0xad, 0xb7, 0xce, 0xc6, 0x7e, 0x3c, 0xb3, 0x40, 0x6a};
+#define PW_WORKER_ABI_IDENTITY_HEX "4e3ea0cacee3b2aa00abe8caf0e4e818f4e401e521125325bdd3100f4e55113b"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4e, 0x3e, 0xa0, 0xca, 0xce, 0xe3, 0xb2, 0xaa, 0x00, 0xab, 0xe8, 0xca, 0xf0, 0xe4, 0xe8, 0x18, 0xf4, 0xe4, 0x01, 0xe5, 0x21, 0x12, 0x53, 0x25, 0xbd, 0xd3, 0x10, 0x0f, 0x4e, 0x55, 0x11, 0x3b};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -63,7 +63,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4c, 0xff, 0x4f, 0x95, 0xc3,
 #define PW_SHM_PARAM_BYTES  512u
 #define PW_SHM_MAX_PHASES 8u
 #define PW_SHM_PHASE_BYTES 32u
-#define PW_SHM_HEADER_BYTES 384u
+#define PW_SHM_HEADER_BYTES 448u
 /* Optional compiled-object capture. The host pre-touches this bounded region;
  * no capture pipe or post-apply allocation/file output is needed. */
 #define PW_SHM_CAPTURE_HEADER_BYTES 144u
@@ -203,9 +203,20 @@ typedef struct {
     uint32_t phase_count;
     uint32_t extension_requested;
     _Atomic uint32_t extension_delivery_published;
-    uint32_t extension_delivery_status; /* 1 delivered, 2 absent, 3 malformed, 4 API unavailable */
+    uint32_t extension_delivery_status; /* PW_DELIVERY_*: 1 delivered, 2 token unavailable, 3 channel rejected, 4 API unavailable, 5 local setup failed */
     uint32_t extension_delivered_bytes;
-    uint8_t reserved[12];
+    /* Delivery failure account, valid with extension_delivery_published and a
+     * failure status. stage names the first failing preparation stage
+     * (PW_DELIVERY_STAGE_*); native_rc and errno are that stage's call result
+     * when it made a native call, otherwise 0 and not evidence. cleanup_stage
+     * and cleanup_errno record a close or unmap failure observed while undoing
+     * earlier setup after the first failure; they never change the status. */
+    uint32_t extension_delivery_stage;
+    int32_t extension_delivery_native_rc;
+    int32_t extension_delivery_errno;
+    uint32_t extension_delivery_cleanup_stage;
+    int32_t extension_delivery_cleanup_errno;
+    uint8_t reserved[56];
     pw_shm_phase_t phases[PW_SHM_MAX_PHASES];
 } pw_shm_header_t;
 

@@ -55,14 +55,14 @@ and does not skip the case.
 ## Fixtures
 
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
-- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response19/valid_run.json`
-  and `response19/missing_path_run.json`
-- `response19/extension_run.json` and `extension_specimen.json`: the unmodified
+- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response20/valid_run.json`
+  and `response20/missing_path_run.json`
+- `response20/extension_run.json` and `extension_specimen.json`: the unmodified
   public CLI extension capture and its exact request, from `witness_contract/extensions`.
-- `response19/issuer_abnormal_run.json` and its specimen: unmodified combined-fault
+- `response20/issuer_abnormal_run.json` and its specimen: unmodified combined-fault
   capture with independently observed issuer publication followed by abnormal exit.
 
-The `response19/` envelopes are unmodified captures from the corresponding
+The `response20/` envelopes are unmodified captures from the corresponding
 current-producer cases; each carries its own build stamp, binary hashes and
 worker source identity. Their sibling `valid_specimen.json` and
 `missing_path_specimen.json` files are the exact submitted requests. Refresh
@@ -99,7 +99,7 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
-The expected-fixture controls accept `tests/fixtures/disposition/response19/a1_expected.json`
+The expected-fixture controls accept `tests/fixtures/disposition/response20/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), refuse the
 captured `a1_known_loss.json` as the unsupported version it is before any
 claim is read, and reject named mutations of the accepted baseline (missing

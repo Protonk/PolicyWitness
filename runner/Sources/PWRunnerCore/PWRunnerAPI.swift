@@ -156,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 19
+    static let responseSchema: Int = 20
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -462,7 +462,59 @@ struct PWRunnerExtensionRecord: Codable {
     var issuer: PWRunnerIssuer?
     var delivery_status = "not_observed"
     var delivered_bytes: UInt32?
+    /// Present exactly when the worker published `channel_rejected` or
+    /// `local_setup_failed`.
+    var delivery_failure: PWRunnerExtensionDeliveryFailure?
     var host_buffer_erased = false
+}
+
+/// The worker's delivery publication vocabulary. Codes and stage numbers are
+/// the PW_DELIVERY_* enums in pw_probe_runner.c; an unrecognized value becomes
+/// the record status `invalid`.
+enum PWExtensionDelivery {
+    static let statuses: [UInt32: String] = [1: "delivered", 2: "token_unavailable", 3: "channel_rejected",
+                                             4: "native_api_unavailable", 5: "local_setup_failed"]
+    static let stages: [UInt32: String] = [1: "core_limit", 2: "descriptor_metadata", 3: "channel_size", 4: "mapping",
+                                           5: "descriptor_close", 6: "channel_header", 7: "channel_token", 8: "unmap"]
+    /// Stages whose failure is a native call result.
+    static let localStages: Set<String> = ["core_limit", "descriptor_metadata", "mapping", "descriptor_close"]
+    /// Stages that judged the channel itself; `channel_size` keeps the successful fstat return.
+    static let channelStages: Set<String> = ["channel_size", "channel_header", "channel_token"]
+    static let cleanupStages: Set<String> = ["descriptor_close", "unmap"]
+    static let failureStatuses: Set<String> = ["channel_rejected", "local_setup_failed"]
+    static let recordStatuses: Set<String> = ["not_observed", "delivered", "token_unavailable", "channel_rejected",
+                                              "native_api_unavailable", "local_setup_failed"]
+}
+
+/// The worker's account of a failed channel preparation: the first failing
+/// stage, that call's native return and the errno saved immediately after it
+/// when the stage made a native call, and a cleanup failure observed while
+/// undoing earlier setup. A format rejection carries no native result.
+struct PWRunnerExtensionDeliveryFailure: Codable, Equatable {
+    var stage: String
+    var native_rc: Int32?
+    var errno: Int32?
+    var cleanup_stage: String?
+    var cleanup_errno: Int32?
+
+    /// Structural rules every reader applies: the stage class agrees with the
+    /// status, native fields are present exactly for native stages, and
+    /// cleanup fields are paired.
+    func problem(status: String) -> String? {
+        let local = PWExtensionDelivery.localStages.contains(stage)
+        guard local || PWExtensionDelivery.channelStages.contains(stage) else { return "unknown delivery failure stage" }
+        if (status == "local_setup_failed") != local { return "delivery failure stage disagrees with status" }
+        if local {
+            guard let rc = native_rc, rc != 0, let value = errno, value >= 0 else { return "local setup failure lacks its native result" }
+        } else if stage == "channel_size" {
+            guard native_rc == 0, errno == nil else { return "undersized channel misreports its inspection result" }
+        } else if native_rc != nil || errno != nil { return "channel rejection invents a native result" }
+        if let cleanup = cleanup_stage {
+            guard PWExtensionDelivery.cleanupStages.contains(cleanup), let value = cleanup_errno, value >= 0 else { return "delivery cleanup failure lacks its errno" }
+            if cleanup == "descriptor_close" && stage == "descriptor_close" { return "descriptor closed twice" }
+        } else if cleanup_errno != nil { return "delivery cleanup errno without a stage" }
+        return nil
+    }
 }
 
 struct PWRunnerPhase: Codable {
@@ -2366,6 +2418,13 @@ extension PWRunnerRunResult {
                       declaration.issuer?.term_signal == nil, let length = declaration.issuer?.token_length,
                       length > 0 && length < PWExtensionLimits.tokenBytes else { return "issuance lacks bounded native result and issuer reap" }
             }
+            guard PWExtensionDelivery.recordStatuses.contains(declaration.delivery_status) else { return "unknown delivery status" }
+            if PWExtensionDelivery.failureStatuses.contains(declaration.delivery_status) {
+                guard let failure = declaration.delivery_failure else { return "delivery failure lacks its account" }
+                if let issue = failure.problem(status: declaration.delivery_status) { return issue }
+                if declaration.delivery_status == "channel_rejected" && declaration.issuance_status != "issued" { return "channel rejection without an issued token" }
+            } else if declaration.delivery_failure != nil { return "delivery failure account without a failure status" }
+            if declaration.delivery_status != "delivered" && declaration.delivered_bytes != nil { return "undelivered extension carries delivered byte count" }
             if declaration.delivery_status == "delivered" {
                 guard declaration.issuance_status == "issued", let bytes = declaration.delivered_bytes,
                       bytes > 0 && bytes < PWExtensionLimits.tokenBytes, bytes == declaration.issuer?.token_length,

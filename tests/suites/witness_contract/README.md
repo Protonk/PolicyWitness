@@ -87,7 +87,13 @@ The clang test build uses `PW_EXTENSION_OBSERVE` outside the inspected app.
 These controls establish boundary behavior of those instrumented sources;
 they do not interrupt the shipped executable bytes or observe private API internals.
 It drives native refusal, absent APIs, issuer death/deadline, malformed transport
-and interrupted consumption/release through the CLI. Independent receipts
+and interrupted consumption/release through the CLI, and forces each worker
+delivery failure class individually: every local setup failure (`core_limit`,
+`descriptor_metadata`, `mapping`, `descriptor_close`), a cleanup close failure
+after an earlier failure, an undersized channel and each header and token
+rejection. The published `delivery_status` and `delivery_failure` must identify
+the controlled failure with its native return and errno where a call supplied
+them, and consumption must stay unavailable. Independent receipts
 distinguish death after the pre-call marker, inside a replacement function, and
 after the real native return but before publication. PW must retain unresolved
 results and earlier completed evidence regardless of what the fixture knows.

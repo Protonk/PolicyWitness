@@ -12,6 +12,14 @@ substitution scans a prefix of the mapped token and kills the worker before
 framing validation and delivery publication finish; the receipt records the
 checked prefix, descriptor closure and disabled core dumps.
 
+Worker modes 107 to 117 substitute exactly one native call of the worker's
+channel preparation: a refused core limit, a failed or undersized descriptor
+inspection, a failed mapping, a failed inspected close, a failed cleanup close
+after the inspection failure, and header or token fields mutated in the mapped
+view. Every other call is real, so the production preparation path decides the
+published status, stage, native result, errno and cleanup fields; the controls
+check that account and that no consumption follows.
+
 A unique test-owned POSIX shared-memory object receives independent intervention
 receipts and a copy of the real issued token. The checking process compares
 captured output with those bytes in memory, then erases and unlinks the object

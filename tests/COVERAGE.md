@@ -67,9 +67,9 @@ and phase integration is outside that case.
 The default `witness_contract/extensions`, `extension_boundaries` and
 `extension_combinations` cases cover
 the integrated native lifecycle and its failure boundaries. Issuance refusal,
-missing native APIs, malformed channels, issuer death/deadline, consume/release
-failure and interrupted publication retain separate native, delivery and access
-observations. The independent token detector compares actual bytes in memory;
+missing native APIs, each worker channel rejection and local setup failure
+class, issuer death/deadline, consume/release failure and interrupted
+publication retain separate native, delivery and access observations. The independent token detector compares actual bytes in memory;
 controlled return values establish reporting behavior, not effective permissions.
 `witness_contract/extensions_byoxpc` repeats placement and ordinary-phase
 controls on an owned external runner, checking independent issuer/worker signing

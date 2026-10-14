@@ -128,7 +128,8 @@ class LimitsDocumentationTests(unittest.TestCase):
             'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'issuer_abnormal_exit',
             'native_api_unavailable', 'native_refusal', 'token_oversized', 'invalid_transport', 'issued'})
         self.assertEqual(set(re.findall(r'^\| `([^`]+)` \|', delivery, re.MULTILINE)), {
-            'not_observed', 'delivered', 'token_unavailable', 'malformed_transport', 'native_api_unavailable'})
+            'not_observed', 'delivered', 'token_unavailable', 'channel_rejected', 'native_api_unavailable',
+            'local_setup_failed'})
 
     def test_extension_status_copy_rejects_staleness_and_missing_regions_without_writes(self):
         for filename, mutate, recoverable in [

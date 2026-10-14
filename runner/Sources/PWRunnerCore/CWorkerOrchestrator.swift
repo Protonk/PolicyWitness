@@ -224,9 +224,11 @@ enum CWorkerOrchestrator {
             }
         }
         if let session {
-            if let delivery = workerOutput?.extensionDeliveryStatus {
-                session.record.delivery_status = [1: "delivered", 2: "token_unavailable", 3: "malformed_transport", 4: "native_api_unavailable"][Int(delivery)] ?? "invalid"
-                if delivery == 1 { session.record.delivered_bytes = workerOutput?.extensionDeliveredBytes }
+            if let delivery = workerOutput?.extensionDelivery {
+                let observation = extensionDeliveryObservation(delivery)
+                session.record.delivery_status = observation.status
+                session.record.delivery_failure = observation.failure
+                if observation.status == "delivered" { session.record.delivered_bytes = delivery.deliveredBytes }
             }
             session.erase()
         }
@@ -1099,6 +1101,30 @@ func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecor
     result.collection_basis = out.collectionBasis
     result.disposition = record
     return result
+}
+
+/// Map the worker's delivery publication to the record's status and failure
+/// account. A publication that contradicts the vocabulary is `invalid`; nothing
+/// is inferred from it, and no stage or native field survives it.
+func extensionDeliveryObservation(_ p: CWorkerExtensionDelivery) -> (status: String, failure: PWRunnerExtensionDeliveryFailure?) {
+    guard let status = PWExtensionDelivery.statuses[p.status] else { return ("invalid", nil) }
+    guard PWExtensionDelivery.failureStatuses.contains(status) else {
+        // A non-failure publication carries no stage or cleanup words.
+        return p.stage == 0 && p.cleanupStage == 0 ? (status, nil) : ("invalid", nil)
+    }
+    guard let stage = PWExtensionDelivery.stages[p.stage] else { return ("invalid", nil) }
+    var cleanup: String? = nil
+    if p.cleanupStage != 0 {
+        guard let name = PWExtensionDelivery.stages[p.cleanupStage] else { return ("invalid", nil) }
+        cleanup = name
+    }
+    let local = PWExtensionDelivery.localStages.contains(stage)
+    let failure = PWRunnerExtensionDeliveryFailure(stage: stage,
+        native_rc: local || stage == "channel_size" ? p.nativeRc : nil,
+        errno: local ? p.errno : nil,
+        cleanup_stage: cleanup, cleanup_errno: cleanup == nil ? nil : p.cleanupErrno)
+    if failure.problem(status: status) != nil { return ("invalid", nil) }
+    return (status, failure)
 }
 
 func buildValidatorSubprocess(_ out: ValidatorOutput) -> PWRunnerValidatorSubprocess {

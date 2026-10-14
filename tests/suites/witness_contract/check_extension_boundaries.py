@@ -32,6 +32,39 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
+# Worker delivery failures the control fixture forces, one substituted native
+# call each: (status, stage, native_rc, errno, cleanup_stage, cleanup_errno).
+# Issuer modes 8 and 9 publish a token the worker's own inspection rejects.
+DELIVERY_FAILURES = {
+    ('worker', 107): ('local_setup_failed', 'core_limit', -1, 1, None, None),
+    ('worker', 108): ('local_setup_failed', 'descriptor_metadata', -1, 5, None, None),
+    ('worker', 109): ('local_setup_failed', 'mapping', -1, 19, None, None),
+    ('worker', 110): ('local_setup_failed', 'descriptor_close', -1, 5, None, None),
+    ('worker', 111): ('local_setup_failed', 'descriptor_metadata', -1, 5, 'descriptor_close', 9),
+    ('worker', 112): ('channel_rejected', 'channel_size', 0, None, None, None),
+    ('worker', 113): ('channel_rejected', 'channel_header', None, None, None, None),
+    ('worker', 114): ('channel_rejected', 'channel_header', None, None, None, None),
+    ('worker', 115): ('channel_rejected', 'channel_header', None, None, None, None),
+    ('worker', 116): ('channel_rejected', 'channel_token', None, None, None, None),
+    ('worker', 117): ('channel_rejected', 'channel_token', None, None, None, None),
+    ('issuer', 8): ('channel_rejected', 'channel_token', None, None, None, None),
+    ('issuer', 9): ('channel_rejected', 'channel_token', None, None, None, None),
+}
+
+
+def check_delivery_failure(declaration, events, expected):
+    """The published classification identifies the controlled failure; nothing is consumed."""
+    status, stage, rc, err, cleanup, cleanup_errno = expected
+    assert declaration['delivery_status'] == status, declaration['delivery_status']
+    assert declaration.get('delivered_bytes') is None, declaration
+    failure = declaration['delivery_failure']
+    assert failure == dict(stage=stage, native_rc=rc, errno=err, cleanup_stage=cleanup, cleanup_errno=cleanup_errno) \
+        or {k: v for k, v in failure.items() if v is not None} == {k: v for k, v in dict(
+            stage=stage, native_rc=rc, errno=err, cleanup_stage=cleanup, cleanup_errno=cleanup_errno).items() if v is not None}, failure
+    assert events[0]['status'] == 'unavailable' and events[0]['unavailable_reason'] == 'token_unavailable', events[0]
+    assert events[1]['status'] == 'unavailable' and events[1]['unavailable_reason'] == 'handle_unavailable', events[1]
+
+
 def compile_fixture(out, channel, mode, issuer, executable_dir):
     path = executable_dir / ('issuer' if issuer else 'worker')
     command = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-O2', '-Wall', '-Wextra',
@@ -212,7 +245,13 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             assert events[1]['status'] == 'returned' and events[1]['native_result'] == -1 and events[1]['errno'] == 5
         elif worker_mode == 105:
             assert declaration['delivery_status'] == 'native_api_unavailable'
+            assert declaration.get('delivery_failure') is None and declaration.get('delivered_bytes') is None, declaration
             assert all(e['status'] == 'unavailable' and e['unavailable_reason'] == 'native_api_unavailable' for e in events)
+        elif ('worker', worker_mode) in DELIVERY_FAILURES:
+            assert declaration['issuance_status'] == 'issued', declaration['issuance_status']
+            assert worker_record['exit_code'] == 0 and worker_record['reaped'], worker_record
+            check_delivery_failure(declaration, events, DELIVERY_FAILURES[('worker', worker_mode)])
+            assert runner['steps'][0]['attempt']['result_source'] == 'worker'
         elif issuer_mode:
             expected = {1: 'native_refusal', 2: 'token_oversized', 3: 'token_oversized', 4: 'issuer_result_missing',
                         5: 'issuer_timeout', 7: 'invalid_transport', 8: 'issued', 9: 'issued',
@@ -220,10 +259,14 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
                         14: 'invalid_transport', 15: 'invalid_transport'}[issuer_mode]
             assert declaration['issuance_status'] == expected, declaration['issuance_status']
             if issuer_mode in (8, 9):
-                assert declaration['delivery_status'] == 'malformed_transport'
+                check_delivery_failure(declaration, events, DELIVERY_FAILURES[('issuer', issuer_mode)])
+            else:
+                assert declaration.get('delivery_failure') is None, declaration
             assert events[0]['status'] == 'unavailable' and events[0]['unavailable_reason'] == 'token_unavailable'
             assert events[1]['status'] == 'unavailable' and events[1]['unavailable_reason'] == 'handle_unavailable'
         else:
+            assert declaration['delivery_status'] == 'delivered' and declaration.get('delivery_failure') is None, declaration
+            assert declaration['delivered_bytes'] == declaration['issuer']['token_length'], declaration
             assert events[0]['native_result'] != -1 and events[1]['native_result'] == 0
             assert observed['worker_argv_env_clean'] and observed['worker_token_erased']
         assert declaration['host_buffer_erased'], 'host did not report clearing its channel'
@@ -243,7 +286,8 @@ def main():
     out = Path(directory).resolve()
     results = []
     cases = [('native', 0, 0)] + [(f'issuer-{mode}', mode, None) for mode in range(1, 17)] \
-        + [(f'worker-{mode}', 0, mode) for mode in (101, 102, 103, 104, 105, 201, 202, 203, 204)]
+        + [(f'worker-{mode}', 0, mode) for mode in (101, 102, 103, 104, 105, 201, 202, 203, 204)] \
+        + [(f'worker-{mode}', 0, mode) for mode in sorted(m for kind, m in DELIVERY_FAILURES if kind == 'worker')]
     for name, issuer, worker in cases:
         try:
             results.append(run_case(pw, out, name, issuer, worker))

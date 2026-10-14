@@ -1,5 +1,5 @@
 {
-  "response_schema" : 19,
+  "response_schema" : 20,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -82,6 +82,7 @@
     },
     "reply.extensions[]" : {
       "delivered_bytes" : "number",
+      "delivery_failure" : "object",
       "delivery_status" : "string",
       "extension_class" : "string",
       "host_buffer_erased" : "boolean",
@@ -93,6 +94,13 @@
       "resolved_target" : "string",
       "submitted_target" : "string",
       "token_ref" : "string"
+    },
+    "reply.extensions[].delivery_failure" : {
+      "cleanup_errno" : "number",
+      "cleanup_stage" : "string",
+      "errno" : "number",
+      "native_rc" : "number",
+      "stage" : "string"
     },
     "reply.extensions[].identity" : {
       "device" : "number",

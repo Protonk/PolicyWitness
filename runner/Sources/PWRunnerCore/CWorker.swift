@@ -48,14 +48,14 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "4cff4f95c39e2832f173c4ddd986bea522d8b60880fda2adb7cec67e3cb3406a"
-    static let abiIdentity: [UInt8] = [0x4c, 0xff, 0x4f, 0x95, 0xc3, 0x9e, 0x28, 0x32, 0xf1, 0x73, 0xc4, 0xdd, 0xd9, 0x86, 0xbe, 0xa5, 0x22, 0xd8, 0xb6, 0x08, 0x80, 0xfd, 0xa2, 0xad, 0xb7, 0xce, 0xc6, 0x7e, 0x3c, 0xb3, 0x40, 0x6a]
+    static let abiIdentityHex = "4e3ea0cacee3b2aa00abe8caf0e4e818f4e401e521125325bdd3100f4e55113b"
+    static let abiIdentity: [UInt8] = [0x4e, 0x3e, 0xa0, 0xca, 0xce, 0xe3, 0xb2, 0xaa, 0x00, 0xab, 0xe8, 0xca, 0xf0, 0xe4, 0xe8, 0x18, 0xf4, 0xe4, 0x01, 0xe5, 0x21, 0x12, 0x53, 0x25, 0xbd, 0xd3, 0x10, 0x0f, 0x4e, 0x55, 0x11, 0x3b]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
     static let abiIdentityBytes: Int = 32
 
-    static let headerBytes: Int     = 384
+    static let headerBytes: Int     = 448
     static let maxPhases: Int = 8
     static let phaseBytes: Int = 32
     static let slotBytes: Int       = 8192
@@ -102,8 +102,13 @@ enum PWShmLayout {
     static let extensionDeliveryPublishedOffset: Int = 104
     static let extensionDeliveryStatusOffset: Int = 108
     static let extensionDeliveredBytesOffset: Int = 112
+    static let extensionDeliveryStageOffset: Int = 116
+    static let extensionDeliveryNativeRcOffset: Int = 120
+    static let extensionDeliveryErrnoOffset: Int = 124
+    static let extensionDeliveryCleanupStageOffset: Int = 128
+    static let extensionDeliveryCleanupErrnoOffset: Int = 132
     static let phaseCountOffset: Int = 96
-    static let phaseRecordsOffset: Int = 128
+    static let phaseRecordsOffset: Int = 192
     static let phaseFirstSlotOffset: Int = 0
     static let phaseEndSlotOffset: Int = 4
     static let phaseArrivedOffset: Int = 8
@@ -428,8 +433,20 @@ struct CWorkerOutput {
     var cleanupTrigger: String? = nil
     var graceEnd: String? = nil
     var collectionBasis: String? = nil
-    var extensionDeliveryStatus: UInt32? = nil
-    var extensionDeliveredBytes: UInt32? = nil
+    /// The worker's delivery publication, read only after its release store.
+    var extensionDelivery: CWorkerExtensionDelivery? = nil
+}
+
+/// Raw delivery publication words. Codes are interpreted by the orchestrator;
+/// unknown values stay numbers here.
+struct CWorkerExtensionDelivery: Equatable {
+    var status: UInt32
+    var deliveredBytes: UInt32
+    var stage: UInt32
+    var nativeRc: Int32
+    var errno: Int32
+    var cleanupStage: UInt32
+    var cleanupErrno: Int32
 }
 
 
@@ -1331,8 +1348,16 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         cleanupTrigger: cleanupTrigger,
         graceEnd: graceEnd,
         collectionBasis: collectionBasis,
-        extensionDeliveryStatus: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1 ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStatusOffset)) : nil,
-        extensionDeliveredBytes: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1 ? UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveredBytesOffset)) : nil
+        extensionDelivery: loadAcquire(rawBase, offset: PWShmLayout.extensionDeliveryPublishedOffset) == 1
+            ? CWorkerExtensionDelivery(
+                status: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStatusOffset)),
+                deliveredBytes: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveredBytesOffset)),
+                stage: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryStageOffset)),
+                nativeRc: readI32(rawBase, offset: PWShmLayout.extensionDeliveryNativeRcOffset),
+                errno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryErrnoOffset),
+                cleanupStage: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupStageOffset)),
+                cleanupErrno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupErrnoOffset))
+            : nil
     )
     if let failure = transferFailure {
         return .failure(failure, output)

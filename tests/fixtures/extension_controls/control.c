@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "pw_extension_channel.h"
 
@@ -78,6 +79,10 @@ static void *controlled_lookup(void *, const char *);
 static int controlled_unmap(void *, size_t);
 static void controlled_erase(void *, size_t);
 static void *controlled_memchr(const void *, int, size_t);
+static int controlled_setrlimit(int, const struct rlimit *);
+static int controlled_fstat(int, struct stat *);
+static void *controlled_mmap(size_t, int);
+static int controlled_close(int);
 
 #define pw_extension_erase controlled_erase
 
@@ -91,6 +96,13 @@ static void *controlled_memchr(const void *, int, size_t);
 #define dlsym controlled_lookup
 #define memchr controlled_memchr
 #define PW_EXTENSION_OBSERVE(stage, release, result) interrupted((stage), (release), (result))
+/* Local preparation failures and channel rejections: exactly one native call
+ * of prepare_extension is substituted per mode; every other call is real, so
+ * the production path decides the published status, stage and native result. */
+#define PW_EXTENSION_SETRLIMIT(resource, limit) controlled_setrlimit((resource), (limit))
+#define PW_EXTENSION_FSTAT(fd, metadata) controlled_fstat((fd), (metadata))
+#define PW_EXTENSION_MMAP(length, fd) controlled_mmap((length), (fd))
+#define PW_EXTENSION_CLOSE(fd) controlled_close(fd)
 #include "pw_probe_runner.c"
 #undef dlsym
 #undef memchr
@@ -199,6 +211,7 @@ static int controlled_unmap(void *p, size_t n) {
         case 17:
             observer->reserved[0] = atomic_load_explicit(&channel->completed, memory_order_acquire);
             _exit(87);
+        default: break;
         }
     }
     return native_unmap(p, n);
@@ -218,6 +231,44 @@ static void *controlled_memchr(const void *bytes, int value, size_t length) {
     }
 #endif
     return memchr(bytes, value, length);
+}
+
+static int controlled_setrlimit(int resource, const struct rlimit *limit) {
+    int rc = setrlimit(resource, limit);  /* the real limit still applies */
+    if (PW_CONTROL_MODE == 107) { errno = EPERM; return -1; }
+    return rc;
+}
+
+static int controlled_fstat(int fd, struct stat *metadata) {
+    int rc = fstat(fd, metadata);
+    if (PW_CONTROL_MODE == 108 || PW_CONTROL_MODE == 111) { errno = EIO; return -1; }
+    if (PW_CONTROL_MODE == 112 && rc == 0) metadata->st_size = 0;  /* inspected, undersized */
+    return rc;
+}
+
+static void *controlled_mmap(size_t length, int fd) {
+    if (PW_CONTROL_MODE == 109) { errno = ENODEV; return MAP_FAILED; }  /* nothing mapped */
+    void *p = mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (p == MAP_FAILED || length != PW_EXTENSION_CHANNEL_BYTES) return p;
+    /* The host already validated and passed this channel; the worker's own
+     * inspection must reject the mutated view it maps. */
+    pw_extension_channel_t *channel = p;
+    switch (PW_CONTROL_MODE) {
+    case 113: channel->magic ^= 1; break;
+    case 114: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;
+    case 115: channel->status = 99; break;
+    case 116: channel->token_length = 0; break;
+    case 117: channel->token_length = PW_EXTENSION_TOKEN_BYTES; break;
+    default: break;
+    }
+    return p;
+}
+
+static int controlled_close(int fd) {
+    int rc = close(fd);  /* the descriptor really closes; only the reported result is controlled */
+    if (PW_CONTROL_MODE == 110) { errno = EIO; return -1; }    /* the inspected close after mapping */
+    if (PW_CONTROL_MODE == 111) { errno = EBADF; return -1; }  /* the cleanup close after the fstat failure */
+    return rc;
 }
 
 static int64_t controlled_consume(const char *token) {

@@ -202,10 +202,14 @@ published channel observation separately from issuance. `host_buffer_erased`
 records clearing the host's mapping, not proof that every process or native
 library has erased every copy.
 
-Worker `delivery_status: malformed_transport` covers both rejected channel
-publication and local setup failure (`setrlimit`, descriptor metadata, mapping
-or descriptor close). This aggregate label withholds delivery but cannot
-distinguish malformed input from a local setup error.
+A worker delivery failure publishes `delivery_status` as `channel_rejected` or
+`local_setup_failed` beside a `delivery_failure` account: `stage` names the
+first failing preparation stage, `native_rc` and `errno` are that call's return
+and the errno saved immediately after it when the stage made a native call,
+and `cleanup_stage` with `cleanup_errno` record a `descriptor_close` or `unmap`
+failure observed while undoing earlier setup. A cleanup failure never changes
+the status. The account is present exactly for those two statuses. Delivery
+success still establishes neither consumption nor effective access.
 
 <!-- BEGIN SHARED EXTENSION STATUSES -->
 
@@ -242,7 +246,8 @@ keeps that wait status; clean and abnormal reaps distinguish `issued` from
 | `not_observed` | No worker delivery publication was collected. This includes no worker or interruption before publication; it does not negate completed issuance. |
 | `delivered` | The worker published successful channel validation; `delivered_bytes` matches the issued token length. This does not establish a consume call or result. |
 | `token_unavailable` | The worker published that no token descriptor was supplied. No delivered byte count is supplied. |
-| `malformed_transport` | The worker published channel rejection or local setup failure, including core-dump suppression, descriptor inspection, mapping or close failure. The aggregate status does not identify which cause occurred. |
+| `channel_rejected` | The worker inspected the channel and rejected it. `delivery_failure.stage` is `channel_size` (a successful `fstat` reported an object smaller than the channel; `native_rc` 0 and no errno), `channel_header` (magic, completion or status) or `channel_token` (length, terminator or embedded NUL). Format rejections carry no native result. No delivered byte count is supplied. |
+| `local_setup_failed` | A local native call before channel validation failed. `delivery_failure.stage` is `core_limit` (`setrlimit`), `descriptor_metadata` (`fstat`), `mapping` (`mmap`) or `descriptor_close` (`close`), with that call's `native_rc` and the errno saved immediately after it. The channel contents were not judged. No delivered byte count is supplied. |
 | `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
 
 <!-- END SHARED EXTENSION STATUSES -->

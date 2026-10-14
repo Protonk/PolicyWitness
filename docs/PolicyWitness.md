@@ -317,10 +317,10 @@ own issuance evidence and withhold delivery. Worker-side API absence is an
 unavailable lifecycle action. An issued token and a delivered token remain
 separate observations. Raw token bytes travel only through a bounded transient
 channel, never the request, argv, environment, reply or ordinary diagnostics.
-Worker delivery status `malformed_transport` covers a rejected channel
-publication or failure of local core-limit, descriptor-metadata, mapping or
-descriptor-close setup. It withholds delivery without identifying which of
-those causes occurred.
+A worker delivery failure is `channel_rejected` or `local_setup_failed`, and
+its `delivery_failure` account names the failing stage with the native return
+and saved errno when a native call supplied them; a cleanup failure after the
+first failure is recorded separately and never changes the status.
 The host clears its own mapping before replying. Copies held inside native
 libraries are outside that observation. BYOXPC uses its own bundle-local issuer,
 [signed without the worker's entitlements](#install-a-byoxpc-runner).
@@ -833,7 +833,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,414,815 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,414,971 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -979,7 +979,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 19, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 20, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1355,7 +1355,8 @@ keeps that wait status; clean and abnormal reaps distinguish `issued` from
 | `not_observed` | No worker delivery publication was collected. This includes no worker or interruption before publication; it does not negate completed issuance. |
 | `delivered` | The worker published successful channel validation; `delivered_bytes` matches the issued token length. This does not establish a consume call or result. |
 | `token_unavailable` | The worker published that no token descriptor was supplied. No delivered byte count is supplied. |
-| `malformed_transport` | The worker published channel rejection or local setup failure, including core-dump suppression, descriptor inspection, mapping or close failure. The aggregate status does not identify which cause occurred. |
+| `channel_rejected` | The worker inspected the channel and rejected it. `delivery_failure.stage` is `channel_size` (a successful `fstat` reported an object smaller than the channel; `native_rc` 0 and no errno), `channel_header` (magic, completion or status) or `channel_token` (length, terminator or embedded NUL). Format rejections carry no native result. No delivered byte count is supplied. |
+| `local_setup_failed` | A local native call before channel validation failed. `delivery_failure.stage` is `core_limit` (`setrlimit`), `descriptor_metadata` (`fstat`), `mapping` (`mmap`) or `descriptor_close` (`close`), with that call's `native_rc` and the errno saved immediately after it. The channel contents were not judged. No delivered byte count is supplied. |
 | `native_api_unavailable` | The worker published that consume or release API support was unavailable. No delivered byte count is supplied. |
 
 <!-- END COPIED EXTENSION STATUSES -->

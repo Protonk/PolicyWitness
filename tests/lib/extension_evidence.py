@@ -24,6 +24,44 @@ def _integer(value, low, high):
     return type(value) is int and low <= value <= high
 
 
+DELIVERY_STATUSES = ('not_observed', 'delivered', 'token_unavailable', 'channel_rejected',
+                     'native_api_unavailable', 'local_setup_failed')
+DELIVERY_FAILURE_STATUSES = ('channel_rejected', 'local_setup_failed')
+LOCAL_STAGES = ('core_limit', 'descriptor_metadata', 'mapping', 'descriptor_close')
+CHANNEL_STAGES = ('channel_size', 'channel_header', 'channel_token')
+CLEANUP_STAGES = ('descriptor_close', 'unmap')
+
+
+def delivery_failure_problem(status, failure):
+    """Shared structural rules for a worker delivery failure account."""
+    if not isinstance(failure, dict):
+        return 'delivery failure lacks its account'
+    stage = failure.get('stage')
+    local = stage in LOCAL_STAGES
+    if not local and stage not in CHANNEL_STAGES:
+        return 'unknown delivery failure stage'
+    if (status == 'local_setup_failed') != local:
+        return 'delivery failure stage disagrees with status'
+    rc, err = failure.get('native_rc'), failure.get('errno')
+    if local:
+        if not _integer(rc, -(1 << 31), (1 << 31) - 1) or rc == 0 or not _integer(err, 0, (1 << 31) - 1):
+            return 'local setup failure lacks its native result'
+    elif stage == 'channel_size':
+        if rc != 0 or err is not None:
+            return 'undersized channel misreports its inspection result'
+    elif rc is not None or err is not None:
+        return 'channel rejection invents a native result'
+    cleanup, cleanup_errno = failure.get('cleanup_stage'), failure.get('cleanup_errno')
+    if cleanup is not None:
+        if cleanup not in CLEANUP_STAGES or not _integer(cleanup_errno, 0, (1 << 31) - 1):
+            return 'delivery cleanup failure lacks its errno'
+        if cleanup == 'descriptor_close' and stage == 'descriptor_close':
+            return 'descriptor closed twice'
+    elif cleanup_errno is not None:
+        return 'delivery cleanup errno without a stage'
+    return None
+
+
 def _reference(value):
     return isinstance(value, str) and 0 < len(value.encode('utf-8')) <= 63 and '\0' not in value
 
@@ -140,8 +178,17 @@ def validate_extensions(runner):
         if type(declaration.get('host_buffer_erased')) is not bool:
             errors.append('extension erasure observation must be boolean')
         delivery = declaration.get('delivery_status')
-        if delivery not in ('not_observed', 'delivered', 'token_unavailable', 'malformed_transport', 'native_api_unavailable'):
+        if delivery not in DELIVERY_STATUSES:
             errors.append('invalid extension delivery status')
+        failure = declaration.get('delivery_failure')
+        if delivery in DELIVERY_FAILURE_STATUSES:
+            problem = delivery_failure_problem(delivery, failure)
+            if problem:
+                errors.append(problem)
+            elif delivery == 'channel_rejected' and not issued:
+                errors.append('channel rejection without an issued token')
+        elif failure is not None:
+            errors.append('delivery failure account without a failure status')
         if delivery == 'delivered':
             if not issued or not _integer(declaration.get('delivered_bytes'), 1, 16383) \
                     or declaration['delivered_bytes'] != issuer.get('token_length'):

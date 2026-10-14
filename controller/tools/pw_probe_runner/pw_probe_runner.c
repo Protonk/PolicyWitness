@@ -1062,37 +1062,127 @@ static int consume_decided, release_decided;
 #define PW_EXTENSION_OBSERVE(stage, release, result) ((void)0)
 #endif
 
+/* Delivery status codes the worker publishes in hdr->extension_delivery_status.
+ * The host maps them to delivery_status strings; see PWExtensionDelivery. */
+enum {
+    PW_DELIVERY_DELIVERED = 1,          /* channel accepted; delivered_bytes is the token length */
+    PW_DELIVERY_TOKEN_UNAVAILABLE = 2,  /* no token descriptor was supplied */
+    PW_DELIVERY_CHANNEL_REJECTED = 3,   /* the channel was inspected and its contents or size rejected */
+    PW_DELIVERY_API_UNAVAILABLE = 4,    /* consume or release symbol unavailable */
+    PW_DELIVERY_LOCAL_SETUP_FAILED = 5  /* a local native call before validation failed */
+};
+/* Preparation stages. The first failing stage names the status; a cleanup
+ * failure after it is published separately and never changes the status. */
+enum {
+    PW_DELIVERY_STAGE_NONE = 0,
+    PW_DELIVERY_STAGE_CORE_LIMIT = 1,          /* setrlimit(RLIMIT_CORE) */
+    PW_DELIVERY_STAGE_DESCRIPTOR_METADATA = 2, /* fstat(fd) */
+    PW_DELIVERY_STAGE_CHANNEL_SIZE = 3,        /* fstat succeeded; st_size below the channel size */
+    PW_DELIVERY_STAGE_MAPPING = 4,             /* mmap */
+    PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE = 5,    /* close(fd) */
+    PW_DELIVERY_STAGE_CHANNEL_HEADER = 6,      /* magic, completed or status */
+    PW_DELIVERY_STAGE_CHANNEL_TOKEN = 7,       /* token length or bytes */
+    PW_DELIVERY_STAGE_UNMAP = 8                /* munmap during cleanup */
+};
+
+/* Compile-time native-call seams for controlled local failures. Production
+ * compiles each to the real call; the shipped worker has no request knob. */
+#ifndef PW_EXTENSION_SETRLIMIT
+#define PW_EXTENSION_SETRLIMIT(resource, limit) setrlimit((resource), (limit))
+#endif
+#ifndef PW_EXTENSION_FSTAT
+#define PW_EXTENSION_FSTAT(fd, metadata) fstat((fd), (metadata))
+#endif
+#ifndef PW_EXTENSION_MMAP
+#define PW_EXTENSION_MMAP(length, fd) mmap(NULL, (length), PROT_READ | PROT_WRITE, MAP_SHARED, (fd), 0)
+#endif
+#ifndef PW_EXTENSION_CLOSE
+#define PW_EXTENSION_CLOSE(fd) close(fd)
+#endif
+
 static void prepare_extension(pw_shm_header_t *hdr, int fd) {
     if (!hdr->extension_requested) { if (fd >= 0) close(fd); return; }
-    uint32_t status = 2;
-    struct rlimit core = {0, 0};
-    if (setrlimit(RLIMIT_CORE, &core)) { if (fd >= 0) close(fd); status = 3; goto publish; }
+    uint32_t status = PW_DELIVERY_TOKEN_UNAVAILABLE, stage = PW_DELIVERY_STAGE_NONE, cleanup_stage = PW_DELIVERY_STAGE_NONE;
+    int32_t native_rc = 0, saved_errno = 0, cleanup_errno = 0;
+    int rc;
+    /* The descriptor is closed exactly once: either as the inspected call
+     * (after mapping) or as cleanup after an earlier failure. */
+    int fd_open = fd >= 0;
+#define PW_DELIVERY_CLEANUP_CLOSE() do { \
+        if (fd_open) { errno = 0; if (PW_EXTENSION_CLOSE(fd)) { cleanup_stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; cleanup_errno = errno; } fd_open = 0; } \
+    } while (0)
+    /* Resolve the native entry points first, so a later local failure leaves
+     * the API question answered and the actions unavailable for want of a
+     * delivered token, not for an API absence that was never observed. */
     extension_consume = (pw_consume_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_consume");
     extension_release = (pw_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
-    if (!extension_consume || !extension_release) { if (fd >= 0) close(fd); status = 4; goto publish; }
-    if (fd >= 0) {
+    if (!extension_consume || !extension_release) {
+        status = PW_DELIVERY_API_UNAVAILABLE; PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
+    }
+    /* Core dumps are disabled before any token byte can be mapped. */
+    struct rlimit core = {0, 0};
+    errno = 0;
+    rc = PW_EXTENSION_SETRLIMIT(RLIMIT_CORE, &core);
+    if (rc) {
+        status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_CORE_LIMIT; native_rc = rc; saved_errno = errno;
+        PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
+    }
+    if (fd_open) {
         struct stat metadata;
-        if (fstat(fd, &metadata) || metadata.st_size < PW_EXTENSION_CHANNEL_BYTES) {
-            close(fd); status = 3; goto publish;
+        errno = 0;
+        rc = PW_EXTENSION_FSTAT(fd, &metadata);
+        if (rc) {
+            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_DESCRIPTOR_METADATA; native_rc = rc; saved_errno = errno;
+            PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
         }
-        void *p = mmap(NULL, PW_EXTENSION_CHANNEL_BYTES, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        int closed = close(fd);
-        if (p == MAP_FAILED) { status = 3; goto publish; }
+        if (metadata.st_size < (off_t)PW_EXTENSION_CHANNEL_BYTES) {
+            /* The inspection call succeeded; the object is too small to be the channel. */
+            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_SIZE; native_rc = rc;
+            PW_DELIVERY_CLEANUP_CLOSE(); goto publish;
+        }
+        errno = 0;
+        void *p = PW_EXTENSION_MMAP(PW_EXTENSION_CHANNEL_BYTES, fd);
+        int map_errno = errno;
+        errno = 0;
+        int closed = PW_EXTENSION_CLOSE(fd);
+        int close_errno = errno;
+        fd_open = 0;
+        if (p == MAP_FAILED) {
+            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_MAPPING; native_rc = -1; saved_errno = map_errno;
+            if (closed) { cleanup_stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; cleanup_errno = close_errno; }
+            goto publish;
+        }
         extension_channel = p;
+        if (closed) {
+            status = PW_DELIVERY_LOCAL_SETUP_FAILED; stage = PW_DELIVERY_STAGE_DESCRIPTOR_CLOSE; native_rc = closed; saved_errno = close_errno;
+            goto reject_mapping;
+        }
         uint32_t published = atomic_load_explicit(&extension_channel->completed, memory_order_acquire);
-        uint32_t n = published == 1 ? extension_channel->token_length : 0;
-        if (closed || extension_channel->magic != PW_EXTENSION_MAGIC || published != 1 ||
-            extension_channel->status != 1 || n == 0 || n >= PW_EXTENSION_TOKEN_BYTES ||
-            extension_channel->token[n] != 0 || memchr(extension_channel->token, 0, n) != NULL) {
-            pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
-            munmap(extension_channel, PW_EXTENSION_CHANNEL_BYTES); extension_channel = NULL;
-            status = 3; goto publish;
+        if (extension_channel->magic != PW_EXTENSION_MAGIC || published != 1 || extension_channel->status != 1) {
+            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_HEADER; goto reject_mapping;
+        }
+        uint32_t n = extension_channel->token_length;
+        if (n == 0 || n >= PW_EXTENSION_TOKEN_BYTES || extension_channel->token[n] != 0 ||
+            memchr(extension_channel->token, 0, n) != NULL) {
+            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_TOKEN; goto reject_mapping;
         }
         hdr->extension_delivered_bytes = n;
-        status = 1;
+        status = PW_DELIVERY_DELIVERED;
+        goto publish;
+    reject_mapping:
+        pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+        errno = 0;
+        if (munmap(extension_channel, PW_EXTENSION_CHANNEL_BYTES)) { cleanup_stage = PW_DELIVERY_STAGE_UNMAP; cleanup_errno = errno; }
+        extension_channel = NULL;
     }
 publish:
+#undef PW_DELIVERY_CLEANUP_CLOSE
     hdr->extension_delivery_status = status;
+    hdr->extension_delivery_stage = stage;
+    hdr->extension_delivery_native_rc = native_rc;
+    hdr->extension_delivery_errno = saved_errno;
+    hdr->extension_delivery_cleanup_stage = cleanup_stage;
+    hdr->extension_delivery_cleanup_errno = cleanup_errno;
     atomic_store_explicit(&hdr->extension_delivery_published, 1, memory_order_release);
 }
 
