@@ -76,3 +76,15 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build guard controls fa
   "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
 test_pass "wrong minima preserve previous outputs; an ad hoc helper passes deep verification but stops before packaging"
 fi
+
+if test_selected build_refusal_controls; then
+test_begin preflight build_refusal_controls
+test_step build "drive the unchanged build script through every baseline refusal and observe the operation each one protects"
+test_require_pw
+SIGNING_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
+[[ -n "${SIGNING_IDENTITY}" ]] || test_fail "matching signing identity required"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build refusal controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/opt_in/build_refusals.py" \
+  "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
+test_pass "every listed refusal fires in its variants before the operation it protects; bypassed and displaced guards fail their control"
+fi

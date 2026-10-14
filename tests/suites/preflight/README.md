@@ -46,6 +46,18 @@ Offline release controls also exercise the release procedure's decision points.
   created. Successful siblings must package both variants. Raw command and tool
   receipts survive temporary-checkout cleanup. This case requires the full
   toolchain and a Developer ID identity, and is opt-in.
+- `build_refusal_controls` runs the unchanged build script in a disposable
+  checkout once per refusal the build baseline used to list, in each variant the
+  refusal applies to. A fault is arranged beside one boundary: an environment
+  that cannot select the SDK or finds no Meson, a Cargo output removed or moved
+  under a target triple, an old Ninja, a poisoned Meson directory, a source that
+  does not compile, an input or output removed by a `cp`, `meson` or `codesign`
+  wrapper after a named call, a truncated Mach-O at signing or a tampered sealed
+  resource. Each control asserts the production diagnostic and status, the
+  banners before and after the refusal, the tool calls that did not happen and
+  the output left behind. Copies of the script with a guard removed or moved
+  past its operation must fail the matching control. Opt-in, with the same
+  toolchain and identity requirements as the guard controls.
 - `release_controls` accepts a recognized Apple acceptance with extra fields and
   stops on agreement errors, unknown responses, pending/rejected/unknown status,
   wrong submission IDs, ambiguous duplicate fields, simulated timeouts, and changed input archives. Independent
@@ -110,6 +122,12 @@ Offline release controls also exercise the release procedure's decision points.
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
 - `tests/fixtures/build_guards/tools.py`: real-tool delegation with one output
   replacement or ad hoc signature at the selected boundary.
+- `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts;
+  configured hooks remove, move, truncate or rewrite a file beside one call, or
+  answer a version query.
+- `tests/fixtures/build_refusals/xcodebuild_stub.c`: the `xcodebuild` of a
+  disposable developer directory that resolves the shims' tools and locates no
+  SDK, so the real `xcrun` fails and the script's SDK refusal is reached.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles
@@ -133,6 +151,7 @@ Run:
 ./tests/run.sh --case preflight/codesign.preflight
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/build_guard_controls
+./tests/run.sh --case preflight/build_refusal_controls
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls
 ./tests/run.sh --case preflight/release_publish_controls

@@ -106,6 +106,32 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Artifacts:** `<run>/suites/preflight/build_guard_controls/artifacts/` holds
   each build's raw output, status, tool and injection receipts, and output hashes.
 
+### build refusal controls
+
+- **Case:** `preflight/build_refusal_controls`
+- **Location:** `tests/suites/preflight/opt_in/build_refusals.py`
+- **Purpose:** Drive the unchanged build script through every refusal the
+  build baseline used to list, one disposable fault at a time, in each variant
+  the refusal applies to: a developer directory without the SDK, Cargo outputs
+  that vanish or land under a target triple, a missing or old Ninja, a poisoned
+  Meson directory, sources that do not compile, outputs and inputs removed at
+  the boundary a tool wrapper hooks, damaged or tampered signatures. Assert the
+  diagnostic, the status, the banners that must and must not follow, the tool
+  calls that must not happen and the preserved or partial output. Mutated
+  copies of the script with a guard removed or moved past its operation must
+  fail their control.
+- **Resource dependency:** Built app for identity resolution, matching Developer
+  ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
+  Builds run offline in a disposable checkout under `/private/tmp`; signing
+  still needs the timestamp service and an unsandboxed shell. No app is launched.
+- **Opt-in reason:** Runs about forty builds, most of them short, and signs with
+  keychain access. The source checkout's caches and distribution are untouched.
+- **When to run:** After changing a refusal, its placement, the tool wrappers'
+  boundaries or the generated refusal table.
+- **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
+  each build's raw output, status, tool receipts with the hooks that fired, the
+  output inventory, and the mutation results.
+
 ### BYOXPC dossier witness
 
 - **Case:** `witness_contract/dossier_witness_byoxpc`

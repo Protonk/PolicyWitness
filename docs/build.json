@@ -1146,6 +1146,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sdk_unavailable",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1338,6 +1344,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_controller",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1365,6 +1377,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_observer",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1392,6 +1410,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_sbpl_check",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1419,6 +1443,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_artifact_elsewhere",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1480,6 +1510,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_ninja_missing",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1507,6 +1543,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_ninja_old",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1534,6 +1576,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_native_output",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1561,6 +1609,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_info_plist",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1588,6 +1642,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_augments_dir",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1614,6 +1674,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_client_output",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1640,6 +1706,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_service_dir",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1666,6 +1738,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_service_plist",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1692,6 +1770,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_host_output",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1719,6 +1803,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_entitlements",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1748,6 +1838,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sign_target_missing",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1777,6 +1873,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sign_target_not_macho",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1803,6 +1905,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_service_bundle",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1829,6 +1937,12 @@
           "symbol": "check_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_service_entitlements",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2502,6 +2616,12 @@
           "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_buildtype",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2796,6 +2916,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_stale_identity_presign",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2823,6 +2949,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2855,6 +2987,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2923,6 +3061,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_native_sources_unreadable",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2953,6 +3097,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_codesign_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -2984,6 +3134,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_evidence_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -3011,6 +3167,12 @@
           "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_verify_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },

@@ -332,10 +332,20 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertTrue(any("README 'Build and bundle'" in p for p in generator.inventory_problems(manifest, model, root)))
         baseline = generator.load_baseline(ROOT / generator.BASELINE_NAME)
         self.assertEqual(generator.baseline_problems(manifest, baseline), [])
-        shorter = {'schema_version': 1, 'entries': baseline['entries'][1:]}
-        self.assertTrue(any('is not listed' in p for p in generator.baseline_problems(manifest, shorter)))
-        longer = {'schema_version': 1, 'entries': baseline['entries'] + [dict(baseline['entries'][0], refusal='knob_value')]}
-        self.assertTrue(any('now has a control' in p for p in generator.baseline_problems(manifest, longer)))
+        # A refusal whose only checks are textual must be listed; a listed refusal with a control must not be.
+        uncovered = copy.deepcopy(manifest)
+        first = uncovered['refusals'][0]
+        first['checks'] = [c for c in first['checks'] if c['coverage'] == 'textual']
+        self.assertEqual(generator.coverage(first), 'textual')
+        self.assertTrue(any(f"refusal {first['id']} has no behavioral or helper control and is not listed" in p
+                            for p in generator.baseline_problems(uncovered, baseline)))
+        entry = dict(refusal=first['id'], variants=first['variants'], claim='a claim', control='a control')
+        listed = {'schema_version': 1, 'entries': baseline['entries'] + [entry]}
+        self.assertEqual(generator.baseline_problems(uncovered, listed), [])
+        self.assertTrue(any(f"listed refusal {first['id']} is unknown or now has a control" in p
+                            for p in generator.baseline_problems(manifest, listed)))
+        variants = {'schema_version': 1, 'entries': baseline['entries'] + [dict(entry, variants=['full'] if first['variants'] != ['full'] else ['partial'])]}
+        self.assertTrue(any('variants' in p and 'differ' in p for p in generator.baseline_problems(uncovered, variants)))
         with self.assertRaises(ValueError):
             generator.load_baseline(root / 'docs/build.json')
 

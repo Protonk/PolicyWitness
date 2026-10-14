@@ -855,11 +855,12 @@ def render_refusals(manifest):
                      _variant_cell(refusal["variants"]), cell, *_cites(refusal)])
     counts = {kind: sum(r["kind"] == kind for r in manifest["refusals"]) for kind in REFUSAL_KINDS}
     uncovered = sum(coverage(r) == "textual" for r in manifest["refusals"])
+    baseline = (f"{uncovered} have no control that produces them and are listed in the baseline" if uncovered
+                else "every refusal has a control that produces it and the baseline is empty")
     summary = (f"<summary>{len(manifest['refusals'])} refusals ({counts['script']} the script's own, {counts['meson']} Meson "
                f"assertions, {counts['propagated']} propagated from a check or a tool, {counts['make']} in the Makefile), "
                f"with symbol presence and test definition verified and the messages, statuses and steps compared with the "
-               f"script; {uncovered} have no control that produces them and are listed in the baseline; whether a test "
-               f"asserts the row is not verified</summary>")
+               f"script; {baseline}; whether a test asserts the row is not verified</summary>")
     return "\n".join(["<details>", summary, "", arch._table(
         ["Id", "Message", "Steps", "Status", "Kind", "Variants", "Coverage", "Sources", "Checks"], rows), "", "</details>"])
 

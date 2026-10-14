@@ -38,6 +38,19 @@
           ]
         },
         {
+          "id": "build_refusal_controls",
+          "description": "Every refusal the build baseline listed fires through the unchanged build script in its applicable variants, before the operation it protects; bypassed or displaced guards fail their control",
+          "default": false,
+          "requires": [
+            "app",
+            "identity",
+            "cargo",
+            "meson",
+            "clang",
+            "swift"
+          ]
+        },
+        {
           "id": "byoxpc_verification_controls",
           "description": "Installation refuses, and validation reports, a never-launched copy whose worker or issuer code changed after sealing",
           "requires": [
