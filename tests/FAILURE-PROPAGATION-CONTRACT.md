@@ -528,15 +528,23 @@ because the required origin, operation, executable path, nonzero return code and
 diagnostic are missing. Reader controls pin both responsibilities, including
 wrong-type rejection, optional absence and unchanged degraded evidence.
 
-Reader validation does not fully establish ownership of a phase's validator
-subprocess block. A block copied from another phase can pass current checks,
-including its `expected_step_ids`, retained records and PID. Globally unique
-action IDs and the exact step/query join prevent that block from supplying a
-prediction for the other phase's differently named action. A valid disposition
-therefore does not certify all phase metadata associations. Unexpected,
-duplicate and null-ID validator records remain intentional diagnostic evidence;
-they are retained with association issues rather than discarded. Numeric PID
-uniqueness across all phases is not a reader invariant.
+Every semantic reader checks ownership of a phase's validator subprocess the
+same way. The block carries `phase_id` and `ordinal`, stamped by the host from
+the collection it ran, and both must equal the containing phase's. Its
+`expected_step_ids` must be exactly the phase's eligible query plan in action
+order: the phase's ordinary steps whose retained query decision is not
+`query_not_requested`, read from the reply rather than by resolving paths again,
+so a block beside a phase without eligible queries carries an empty plan. Its
+`association_issues` must be the
+issues its retained `records` and that plan imply, recomputed by the reader. A
+block copied from another phase, or copied expected IDs, records or identity
+fields, therefore fails validation even when every phase queries the same
+path under different action IDs, and a block missing these fields withholds
+the dependent claims. Unexpected, duplicate and null-ID validator records remain
+intentional diagnostic evidence, retained with their association issues. Numeric
+PID uniqueness across phases is not a reader invariant: sequential children may
+reuse a PID, and the collection identity does not authenticate the validator
+executable or prove that it made a native call.
 
 ### Versions
 
@@ -913,7 +921,8 @@ requiring English wording. Internal native-call controls exercise unfamiliar
 returns through orchestration and reply serialization; they are not policy
 evidence and no request override selects them.
 
-`phases[].validator_subprocess` retains all accepted `records` with original `raw_line`,
+`phases[].validator_subprocess` names its phase with `phase_id` and `ordinal`
+and retains all accepted `records` with original `raw_line`,
 including explicit null step IDs. Its `expected_step_ids` and `association_issues`
 record missing, duplicate, unexpected and unassociated IDs, plus query mismatches.
 Only a unique record matching the submitted query enters the step join;

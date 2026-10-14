@@ -156,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 4
-    static let responseSchema: Int = 20
+    static let responseSchema: Int = 21
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -2009,6 +2009,10 @@ struct PWValidatorAssociationIssue: Codable {
 /// evidence, independently retained even when association/transport/cleanup fails.
 /// A null-ID record is never assigned an invented step identity.
 struct PWRunnerValidatorSubprocess: Codable {
+    /// The phase this collection served, stamped by the host from the
+    /// collection it ran. Readers require agreement with the containing phase.
+    var phase_id: String?
+    var ordinal: Int?
     var pid: Int
     var term_signal: Int?
     var exit_code: Int?
@@ -2031,6 +2035,93 @@ struct PWRunnerValidatorSubprocess: Codable {
         self.term_signal = term_signal
         self.exit_code = exit_code
     }
+}
+
+/// The validator's filter type name for a wire filter kind. Shared by the
+/// host's query planner and by readers that rebuild a phase's query plan.
+func mapFilterKindToValidator(_ wireKind: String) -> String {
+    switch wireKind {
+    case PWRunnerWire.sandboxFilterNone:                     return "NONE"
+    case PWRunnerWire.sandboxFilterPath:                     return "PATH"
+    case PWRunnerWire.sandboxFilterGlobalName:               return "GLOBAL_NAME"
+    case PWRunnerWire.sandboxFilterLocalName:                return "LOCAL_NAME"
+    case PWRunnerWire.sandboxFilterIokitRegistryEntryClass:  return "IOKIT_REGISTRY_ENTRY_CLASS"
+    case PWRunnerWire.sandboxFilterIokitUserClientClass:     return "IOKIT_USER_CLIENT_CLASS"
+    case PWRunnerWire.sandboxFilterSysctlName:               return "SYSCTL_NAME"
+    default:
+        // validateSandboxChecks already rejected unknown kinds; this
+        // branch shouldn't fire. Emit the literal so a future extension
+        // pre-validateSandboxChecks fails loudly via the validator's
+        // bad_filter response.
+        return wireKind.uppercased()
+    }
+}
+
+/// The submitted query a validator record must describe.
+struct ValidatorQueryIdentity {
+    var stepId: String
+    var operation: String
+    var filterType: String
+    var filterValue: String?
+}
+
+/// The host's step/record join, shared with every reader that recomputes it.
+/// Duplicate IDs are ambiguous, so none of their records enters the step join.
+/// All accepted records remain at run scope, including unknown and null IDs.
+func validatorAssociationIssues(_ verdicts: [ValidatorVerdict], expected: [ValidatorQueryIdentity]) -> (byStep: [String: ValidatorVerdict], issues: [PWValidatorAssociationIssue]) {
+    let wanted = Set(expected.map { $0.stepId })
+    let groups = Dictionary(grouping: verdicts.compactMap { v in v.stepId.map { ($0, v) } }, by: { $0.0 })
+    var byStep: [String: ValidatorVerdict] = [:]
+    var issues: [PWValidatorAssociationIssue] = []
+    for probe in expected {
+        let id = probe.stepId
+        let matches = groups[id] ?? []
+        if matches.count == 1 {
+            let v = matches[0].1
+            // Diagnostics may omit query metadata. Any supplied metadata must
+            // agree; predictions must describe exactly the submitted query.
+            let prediction = v.outcome == "allow" || v.outcome == "deny"
+            let mismatch = (prediction || v.operation != nil) && v.operation != probe.operation
+                || (prediction || v.filterType != nil) && v.filterType != probe.filterType
+                || (prediction || v.filterValue != nil) && v.filterValue != probe.filterValue
+            if mismatch { issues.append(PWValidatorAssociationIssue(kind: "query_mismatch", step_id: id, count: 1)) }
+            else { byStep[id] = v }
+        }
+        else { issues.append(PWValidatorAssociationIssue(kind: matches.isEmpty ? "missing_id" : "duplicate_id", step_id: id, count: matches.count)) }
+    }
+    for id in groups.keys.sorted() where !wanted.contains(id) {
+        issues.append(PWValidatorAssociationIssue(kind: "unexpected_id", step_id: id, count: groups[id]!.count))
+    }
+    let unassociated = verdicts.filter { $0.stepId == nil }.count
+    if unassociated > 0 { issues.append(PWValidatorAssociationIssue(kind: "unassociated", count: unassociated)) }
+    return (byStep, issues)
+}
+
+/// Ownership of a phase's validator collection, applied by every reader: the
+/// block names its phase, its expected IDs are exactly this phase's eligible
+/// query plan in action order, and its association issues are the ones its
+/// records and that plan imply. The plan is read from the retained per-step
+/// query decisions, never by resolving paths again. Numeric PID uniqueness is
+/// not a rule: sequential children may reuse a PID. The identity does not
+/// authenticate the validator executable or prove a native call.
+func validatorOwnershipProblem(phase: PWRunnerPhaseResult, steps: [PWRunnerStepResult]) -> String? {
+    guard let block = phase.validator_subprocess else { return nil }
+    guard let owner = block.phase_id, let ordinal = block.ordinal else { return "validator collection lacks phase ownership" }
+    if owner != phase.phase_id || ordinal != phase.ordinal { return "validator collection names another phase" }
+    let eligible = steps.filter { $0.phase_id == phase.phase_id && $0.sandbox_check.missing_reason != "query_not_requested" }
+    guard let expected = block.expected_step_ids else { return "validator collection lacks its expected plan" }
+    if expected != eligible.map({ $0.step_id }) { return "validator expected IDs disagree with the phase's eligible query plan" }
+    let probes = eligible.map { step in
+        ValidatorQueryIdentity(stepId: step.step_id, operation: step.sandbox_check.operation,
+                               filterType: mapFilterKindToValidator(step.sandbox_check.filter_kind),
+                               filterValue: step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterNone ? nil : step.sandbox_check.filter_value)
+    }
+    let recomputed = validatorAssociationIssues(block.records ?? [], expected: probes).issues
+    func key(_ issue: PWValidatorAssociationIssue) -> String { "\(issue.kind)|\(issue.step_id ?? "")|\(issue.count)" }
+    if (block.association_issues ?? []).map(key).sorted() != recomputed.map(key).sorted() {
+        return "validator association issues disagree with its records"
+    }
+    return nil
 }
 
 /// Host admission: no worker publication or child process is implied.
@@ -2277,6 +2368,9 @@ struct PWRunnerRunResult: Codable {
                 guard phase.collectionEvidenceConsistent else {
                     throw EncodingError.invalidValue(phase, .init(codingPath: encoder.codingPath,
                         debugDescription: "phase collection status contradicts validator evidence"))
+                }
+                if let issue = validatorOwnershipProblem(phase: phase, steps: steps) {
+                    throw EncodingError.invalidValue(phase, .init(codingPath: encoder.codingPath, debugDescription: issue))
                 }
                 guard phase.ordinal == index + 1,
                       ["not_reached", "not_needed", "collected", "budget_exhausted", "clock_unavailable"].contains(phase.collection_status),

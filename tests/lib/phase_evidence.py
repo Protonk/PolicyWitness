@@ -33,3 +33,64 @@ def collection_problem(phase):
         if not valid:
             return 'phase collection status contradicts validator evidence'
     return None
+
+
+def association_issues(records, eligible):
+    """The issues a record list implies for an eligible query plan; mirrors the host's join."""
+    groups = {}
+    for record in records:
+        if isinstance(record, dict) and isinstance(record.get('step_id'), str):
+            groups.setdefault(record['step_id'], []).append(record)
+    wanted = [step.get('step_id') for step in eligible]
+    out = []
+    for step in eligible:
+        sid = step.get('step_id')
+        matches = groups.get(sid, [])
+        if len(matches) == 1:
+            record, query = matches[0], step.get('sandbox_check') or {}
+            prediction = record.get('outcome') in ('allow', 'deny')
+            filter_type = str(query.get('filter_kind')).upper()
+            filter_value = None if query.get('filter_kind') == 'none' else query.get('filter_value')
+            mismatch = ((prediction or record.get('operation') is not None) and record.get('operation') != query.get('operation')) or \
+                       ((prediction or record.get('filter_type') is not None) and record.get('filter_type') != filter_type) or \
+                       ((prediction or record.get('filter_value') is not None) and record.get('filter_value') != filter_value)
+            if mismatch:
+                out.append(('query_mismatch', sid, 1))
+        else:
+            out.append(('missing_id' if not matches else 'duplicate_id', sid, len(matches)))
+    for sid in sorted(groups):
+        if sid not in wanted:
+            out.append(('unexpected_id', sid, len(groups[sid])))
+    unassociated = sum(1 for record in records if isinstance(record, dict) and record.get('step_id') is None)
+    if unassociated:
+        out.append(('unassociated', None, unassociated))
+    return sorted(out, key=lambda item: (item[0], item[1] or '', item[2]))
+
+
+def ownership_problem(runner, phase):
+    """A phase's validator collection must name this phase, carry exactly its eligible
+    query plan and the association issues its records imply. The plan is read from
+    the retained per-step query decisions; PID uniqueness is not a rule."""
+    block = phase.get('validator_subprocess')
+    if not isinstance(block, dict):
+        return None
+    if not isinstance(block.get('phase_id'), str) or type(block.get('ordinal')) is not int:
+        return 'validator collection lacks phase ownership'
+    if block['phase_id'] != phase.get('phase_id') or block['ordinal'] != phase.get('ordinal'):
+        return 'validator collection names another phase'
+    steps = runner.get('steps')
+    steps = [s for s in steps if isinstance(s, dict) and s.get('phase_id') == phase.get('phase_id')] if isinstance(steps, list) else []
+    eligible = [s for s in steps if (s.get('sandbox_check') or {}).get('missing_reason') != 'query_not_requested']
+    expected = block.get('expected_step_ids')
+    if not isinstance(expected, list):
+        return 'validator collection lacks its expected plan'
+    if expected != [s.get('step_id') for s in eligible]:
+        return "validator expected IDs disagree with the phase's eligible query plan"
+    records, issues = block.get('records'), block.get('association_issues')
+    if not isinstance(records, list) or not isinstance(issues, list):
+        return 'validator collection lacks records or association issues'
+    reported = sorted(((i.get('kind'), i.get('step_id'), i.get('count')) for i in issues if isinstance(i, dict)),
+                      key=lambda item: (str(item[0]), item[1] or '', item[2] if type(item[2]) is int else -1))
+    if reported != association_issues(records, eligible):
+        return 'validator association issues disagree with its records'
+    return None

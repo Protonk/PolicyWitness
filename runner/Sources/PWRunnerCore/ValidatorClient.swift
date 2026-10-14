@@ -545,30 +545,7 @@ private func validatorStructureError(_ obj: [String: Any]) -> String? {
 /// Duplicate IDs are ambiguous, so none of their records enters the step join.
 /// All accepted records remain at run scope, including unknown and null IDs.
 func associateValidatorVerdicts(_ verdicts: [ValidatorVerdict], expected: [ValidatorProbe]) -> (byStep: [String: ValidatorVerdict], issues: [PWValidatorAssociationIssue]) {
-    let wanted = Set(expected.map { $0.stepId })
-    let groups = Dictionary(grouping: verdicts.compactMap { v in v.stepId.map { ($0, v) } }, by: { $0.0 })
-    var byStep: [String: ValidatorVerdict] = [:]
-    var issues: [PWValidatorAssociationIssue] = []
-    for probe in expected {
-        let id = probe.stepId
-        let matches = groups[id] ?? []
-        if matches.count == 1 {
-            let v = matches[0].1
-            // Diagnostics may omit query metadata. Any supplied metadata must
-            // agree; predictions must describe exactly the submitted query.
-            let prediction = v.outcome == "allow" || v.outcome == "deny"
-            let mismatch = (prediction || v.operation != nil) && v.operation != probe.operation
-                || (prediction || v.filterType != nil) && v.filterType != probe.filterType
-                || (prediction || v.filterValue != nil) && v.filterValue != probe.filterValue
-            if mismatch { issues.append(PWValidatorAssociationIssue(kind: "query_mismatch", step_id: id, count: 1)) }
-            else { byStep[id] = v }
-        }
-        else { issues.append(PWValidatorAssociationIssue(kind: matches.isEmpty ? "missing_id" : "duplicate_id", step_id: id, count: matches.count)) }
-    }
-    for id in groups.keys.sorted() where !wanted.contains(id) {
-        issues.append(PWValidatorAssociationIssue(kind: "unexpected_id", step_id: id, count: groups[id]!.count))
-    }
-    let unassociated = verdicts.filter { $0.stepId == nil }.count
-    if unassociated > 0 { issues.append(PWValidatorAssociationIssue(kind: "unassociated", count: unassociated)) }
-    return (byStep, issues)
+    validatorAssociationIssues(verdicts, expected: expected.map {
+        ValidatorQueryIdentity(stepId: $0.stepId, operation: $0.operation, filterType: $0.filterType, filterValue: $0.filterValue)
+    })
 }

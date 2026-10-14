@@ -25,7 +25,7 @@ import contract
 import lifecycle_contract as C
 from lifecycle_adapter import read_lifecycle
 from document_versions import version_errors
-from phase_evidence import collection_problem
+from phase_evidence import collection_problem, ownership_problem
 
 MISSING = C.MISSING
 ORDER = {op: position for position, op in enumerate(C.PROTOCOL_ORDER)}
@@ -476,7 +476,7 @@ def check_record(envelope):
             if not isinstance(phase, dict):
                 findings.append(_finding('D6', 'phase_collection', 'phase is not an object'))
             else:
-                problem = collection_problem(phase)
+                problem = collection_problem(phase) or ownership_problem(runner, phase)
                 if problem:
                     findings.append(_finding('D6', 'phase_collection', problem))
     if view['reporting'] == 'no_runner_reply':

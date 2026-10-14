@@ -47,7 +47,7 @@ func constructedPhase(_ out: CWorkerOutput?, ids: [String], validator: Validator
         completion_observed: out?.done == true && out?.proceedObserved == true,
         collection_status: out?.hookInvoked == true ? (hasQueries ? "collected" : "not_needed") : "not_reached",
         ordering: out.map { buildOrdering($0, validatorOutput: validator, hasQueries: hasQueries) },
-        validator_subprocess: validator.map(buildValidatorSubprocess))
+        validator_subprocess: validator.map { buildValidatorSubprocess($0, phaseId: "main", ordinal: 1) })
 }
 
 private func orderingEnvelope(_ worker: CWorkerOutput?, _ validator: ValidatorOutput?) -> PWRunnerRunResult {
@@ -323,7 +323,9 @@ func runOrderingTests(_ tk: TestKit) {
         }
     }
     tk.group("ordering eligibility and response-8 encoding") {
-        let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true)
+        // A constructed collection names the plan it served, as the host's does.
+        let plan = [ValidatorProbe(stepId: "s", operation: "file-read-data", filterType: "PATH", filterValue: "/etc/hosts")]
+        let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true, expectedProbes: plan)
         let worker = CWorkerOutput(workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0,
             applyErrno: 0, done: true, exitCode: 0, slots: [CWorkerSlotResult(stepId: "s", rc: 0, errnoVal: 0, completed: true)],
             reaped: true, waitErrors: [], hookInvoked: true, proceedSet: true, proceedObserved: true,
@@ -362,7 +364,8 @@ func runOrderingTests(_ tk: TestKit) {
         tk.run("NONE queries ignore the submitted unused value when matching native records") {
             var step = orderingStep(); step.sandbox_check.filter = PWRunnerSandboxFilter(kind: "none", value: "")
             var v = orderingVerdict(); v.filterType = "NONE"; v.filterValue = nil
-            let validator = ValidatorOutput(validatorPid: 7, verdicts: [v], reaped: true)
+            let validator = ValidatorOutput(validatorPid: 7, verdicts: [v], reaped: true,
+                expectedProbes: [ValidatorProbe(stepId: "s", operation: "file-read-data", filterType: "NONE")])
             var envelope = orderingEnvelope(worker, validator)
             envelope.steps = orderedSteps(worker, validator, step: step)
             try expectEqual(envelope.steps[0].comparison?.order, "query_first")

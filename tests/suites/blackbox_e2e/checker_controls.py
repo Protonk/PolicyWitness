@@ -584,7 +584,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response20/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response21/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -660,7 +660,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response20/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response21/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

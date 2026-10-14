@@ -1,5 +1,5 @@
 {
-  "response_schema" : 20,
+  "response_schema" : 21,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -177,6 +177,8 @@
       "exit_code" : "number",
       "expected_step_ids" : "array",
       "io_error" : "string",
+      "ordinal" : "number",
+      "phase_id" : "string",
       "pid" : "number",
       "probe_bytes_expected" : "number",
       "probe_bytes_written" : "number",

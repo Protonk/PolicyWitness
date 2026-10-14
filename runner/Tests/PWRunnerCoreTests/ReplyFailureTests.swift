@@ -295,6 +295,8 @@ func replyFixture() throws -> PWRunnerRunResult {
             "protocol_violations": []
           },
           "validator_subprocess": {
+            "phase_id": "main",
+            "ordinal": 1,
             "pid": 43,
             "exit_code": 0,
             "reaped": true,
@@ -332,8 +334,8 @@ func replyFixture() throws -> PWRunnerRunResult {
             "association_issues": [
               {
                 "origin": "runner_host",
-                "kind": "query_mismatch",
-                "step_id": "s",
+                "kind": "unexpected_id",
+                "step_id": "extra",
                 "count": 1
               }
             ],
@@ -349,6 +351,18 @@ func replyFixture() throws -> PWRunnerRunResult {
                 "outcome": "allow",
                 "error": "constructed",
                 "raw_line": "native record bytes"
+              },
+              {
+                "step_id": "extra",
+                "operation": "file-read-data",
+                "filter_type": "PATH",
+                "filter_value": "/elsewhere",
+                "filter_type_id": 1,
+                "rc": 0,
+                "errno": 0,
+                "outcome": "allow",
+                "error": null,
+                "raw_line": "unexpected native record"
               }
             ]
           }

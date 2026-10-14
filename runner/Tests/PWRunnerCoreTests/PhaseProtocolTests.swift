@@ -29,7 +29,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
-                fixtures.appendingPathComponent("blackbox_e2e/checker/response20/extension_run.json"))) as! [String: Any]
+                fixtures.appendingPathComponent("blackbox_e2e/checker/response21/extension_run.json"))) as! [String: Any]
             let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:
@@ -45,6 +45,11 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 phase.ordering?.proceed_set = false; phase.ordering?.proceed_observed = false
                 phase.ordering?.worker_lifetime_established = false
                 if let reaped = row["reaped"] as? Bool {
+                    // The carrier phase has no actions: its collection is its own,
+                    // with an empty plan and no records.
+                    phase.validator_subprocess?.phase_id = phase.phase_id; phase.validator_subprocess?.ordinal = phase.ordinal
+                    phase.validator_subprocess?.expected_step_ids = []; phase.validator_subprocess?.records = []
+                    phase.validator_subprocess?.association_issues = []
                     phase.validator_subprocess?.reaped = reaped
                     phase.validator_subprocess?.exit_code = nil; phase.validator_subprocess?.term_signal = nil
                 } else { phase.validator_subprocess = nil }
@@ -59,6 +64,40 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 }
                 try expectEqual(rejected, !(row["accepted"] as! Bool), row["name"] as! String)
             }
+        }
+        tk.run("a validator collection must belong to the phase that holds it") {
+            let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+                .deletingLastPathComponent().deletingLastPathComponent()
+            let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent(
+                "tests/fixtures/blackbox_e2e/checker/response21/extension_run.json"))) as! [String: Any]
+            let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
+            let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+            try expectEqual(baseline.phases.count, 3)
+            // Every phase queries the same path under a different action ID.
+            try expectEqual(Set(baseline.steps.map { $0.sandbox_check.filter_value }).count, 1)
+            _ = try pwRunnerEncodeJSON(baseline)
+            let transplants: [(String, (inout PWRunnerRunResult) -> Void, String)] = [
+                ("whole block", { r in let a = r.phases[0].validator_subprocess; r.phases[0].validator_subprocess = r.phases[1].validator_subprocess; r.phases[1].validator_subprocess = a }, "names another phase"),
+                ("identity only", { r in let id = r.phases[0].phase_id; r.phases[1].validator_subprocess?.phase_id = id }, "names another phase"),
+                ("ordinal only", { r in r.phases[1].validator_subprocess?.ordinal = 1 }, "names another phase"),
+                ("expected IDs only", { r in let ids = r.phases[0].validator_subprocess?.expected_step_ids; r.phases[1].validator_subprocess?.expected_step_ids = ids }, "eligible query plan"),
+                ("records only", { r in let records = r.phases[0].validator_subprocess?.records; r.phases[1].validator_subprocess?.records = records }, "association issues disagree"),
+                ("missing identity", { r in r.phases[1].validator_subprocess?.phase_id = nil }, "lacks phase ownership"),
+                ("missing plan", { r in r.phases[1].validator_subprocess?.expected_step_ids = nil }, "lacks its expected plan"),
+                ("issues erased", { r in r.phases[1].validator_subprocess?.records = []; }, "association issues disagree"),
+            ]
+            for (name, change, reason) in transplants {
+                var reply = baseline; change(&reply)
+                var rejected: String? = nil
+                do { _ = try pwRunnerEncodeJSON(reply) }
+                catch EncodingError.invalidValue(_, let context) { rejected = context.debugDescription }
+                try expectTrue(rejected?.contains(reason) == true, "\(name): expected rejection for \(reason), got \(rejected ?? "acceptance")")
+            }
+            // Sequential children may reuse a numeric PID; ownership does not read PIDs.
+            var reused = baseline
+            let firstPid = reused.phases[0].validator_subprocess!.pid
+            reused.phases[1].validator_subprocess?.pid = firstPid
+            _ = try pwRunnerEncodeJSON(reused)
         }
         tk.run("each of eight held arrivals precedes its own unlink and follows earlier effects") {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("pw-phases-" + UUID().uuidString)

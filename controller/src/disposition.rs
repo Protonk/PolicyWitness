@@ -1229,8 +1229,135 @@ fn phase_collection_issues(runner: &Value) -> Vec<Value> {
                 "phase collection status contradicts validator evidence".into(),
             ));
         }
+        if validator.is_object() {
+            if let Some(detail) = validator_ownership_problem(runner, phase, validator) {
+                issues.push(integrity_issue("phase_collection", detail.into()));
+            }
+        }
     }
     issues
+}
+
+/// The issues a record list implies for an eligible query plan, mirroring the
+/// host's join: (kind, step_id, count), sorted.
+fn association_issues(
+    records: &[Value],
+    eligible: &[&Value],
+) -> Vec<(String, Option<String>, usize)> {
+    let mut groups: std::collections::BTreeMap<&str, Vec<&Value>> = Default::default();
+    for record in records {
+        if let Some(id) = record["step_id"].as_str() {
+            groups.entry(id).or_default().push(record);
+        }
+    }
+    let wanted: Vec<&str> = eligible
+        .iter()
+        .filter_map(|s| s["step_id"].as_str())
+        .collect();
+    let mut out = Vec::new();
+    for step in eligible {
+        let sid = step["step_id"].as_str().unwrap_or("");
+        let matches = groups.get(sid).map(Vec::as_slice).unwrap_or(&[]);
+        if matches.len() == 1 {
+            let record = matches[0];
+            let query = &step["sandbox_check"];
+            let prediction = matches!(record["outcome"].as_str(), Some("allow" | "deny"));
+            let kind = query["filter_kind"].as_str().unwrap_or("");
+            let filter_type = kind.to_uppercase();
+            let filter_value = if kind == "none" {
+                Value::Null
+            } else {
+                query["filter_value"].clone()
+            };
+            let mismatch = ((prediction || !record["operation"].is_null())
+                && record["operation"] != query["operation"])
+                || ((prediction || !record["filter_type"].is_null())
+                    && record["filter_type"] != filter_type)
+                || ((prediction || !record["filter_value"].is_null())
+                    && record["filter_value"] != filter_value);
+            if mismatch {
+                out.push(("query_mismatch".to_string(), Some(sid.to_string()), 1));
+            }
+        } else {
+            let kind = if matches.is_empty() {
+                "missing_id"
+            } else {
+                "duplicate_id"
+            };
+            out.push((kind.to_string(), Some(sid.to_string()), matches.len()));
+        }
+    }
+    for (sid, group) in &groups {
+        if !wanted.contains(sid) {
+            out.push((
+                "unexpected_id".to_string(),
+                Some(sid.to_string()),
+                group.len(),
+            ));
+        }
+    }
+    let unassociated = records.iter().filter(|r| r["step_id"].is_null()).count();
+    if unassociated > 0 {
+        out.push(("unassociated".to_string(), None, unassociated));
+    }
+    out.sort();
+    out
+}
+
+/// A phase's validator collection must name this phase, carry exactly its
+/// eligible query plan and the association issues its records imply. The plan
+/// is read from the retained per-step query decisions; PID uniqueness is not a
+/// rule. Shared with the Swift encoder and the Python reader.
+fn validator_ownership_problem(
+    runner: &Value,
+    phase: &Value,
+    block: &Value,
+) -> Option<&'static str> {
+    let (Some(owner), Some(ordinal)) = (block["phase_id"].as_str(), block["ordinal"].as_i64())
+    else {
+        return Some("validator collection lacks phase ownership");
+    };
+    if Some(owner) != phase["phase_id"].as_str() || Some(ordinal) != phase["ordinal"].as_i64() {
+        return Some("validator collection names another phase");
+    }
+    let empty = Vec::new();
+    let eligible: Vec<&Value> = runner["steps"]
+        .as_array()
+        .unwrap_or(&empty)
+        .iter()
+        .filter(|s| {
+            s["phase_id"] == phase["phase_id"]
+                && s["sandbox_check"]["missing_reason"] != "query_not_requested"
+        })
+        .collect();
+    let Some(expected) = block["expected_step_ids"].as_array() else {
+        return Some("validator collection lacks its expected plan");
+    };
+    let plan: Vec<&Value> = eligible.iter().map(|s| &s["step_id"]).collect();
+    if expected.iter().collect::<Vec<_>>() != plan {
+        return Some("validator expected IDs disagree with the phase's eligible query plan");
+    }
+    let (Some(records), Some(issues)) = (
+        block["records"].as_array(),
+        block["association_issues"].as_array(),
+    ) else {
+        return Some("validator collection lacks records or association issues");
+    };
+    let mut reported: Vec<(String, Option<String>, usize)> = issues
+        .iter()
+        .map(|i| {
+            (
+                i["kind"].as_str().unwrap_or("").to_string(),
+                i["step_id"].as_str().map(str::to_string),
+                i["count"].as_u64().unwrap_or(0) as usize,
+            )
+        })
+        .collect();
+    reported.sort();
+    if reported != association_issues(records, &eligible) {
+        return Some("validator association issues disagree with its records");
+    }
+    None
 }
 
 pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
@@ -1325,7 +1452,10 @@ mod tests {
             phase["validator_subprocess"] = if case["reaped"].is_null() {
                 Value::Null
             } else {
-                json!({"pid": 43, "reaped": case["reaped"], "exit_code": null})
+                let mut block = phase["validator_subprocess"].clone();
+                block["reaped"] = case["reaped"].clone();
+                block["exit_code"] = Value::Null;
+                block
             };
             phase["validator_spawn_failure"] = if case["spawn_failure"] == true {
                 json!({"origin": "runner_host", "operation": "posix_spawn",
@@ -1439,9 +1569,72 @@ mod tests {
     }
 
     #[test]
+    fn validator_collection_ownership_rejects_transplants_and_ignores_pid_reuse() {
+        let envelope: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+        ))
+        .unwrap();
+        let baseline = &envelope["data"]["runner_result"];
+        assert_eq!(baseline["phases"].as_array().unwrap().len(), 3);
+        assert_eq!(diagnostics(baseline).disposition_integrity, Some("valid"));
+        let block =
+            |runner: &Value, index: usize| runner["phases"][index]["validator_subprocess"].clone();
+        let rejected = |runner: &Value, reason: &str| {
+            let diag = diagnostics(runner);
+            assert_eq!(diag.disposition_integrity, Some("invalid"), "{reason}");
+            assert_eq!(diag.process_disposition, "withheld", "{reason}");
+            assert!(
+                diag.disposition_issues
+                    .iter()
+                    .any(|i| i["kind"] == "phase_collection"
+                        && i["detail"].as_str().is_some_and(|d| d.contains(reason))),
+                "{reason}: {:?}",
+                diag.disposition_issues
+            );
+        };
+        let mut whole = baseline.clone();
+        whole["phases"][0]["validator_subprocess"] = block(baseline, 1);
+        rejected(&whole, "names another phase");
+        let mut identity = baseline.clone();
+        identity["phases"][1]["validator_subprocess"]["phase_id"] =
+            baseline["phases"][0]["phase_id"].clone();
+        rejected(&identity, "names another phase");
+        let mut ordinal = baseline.clone();
+        ordinal["phases"][1]["validator_subprocess"]["ordinal"] = json!(1);
+        rejected(&ordinal, "names another phase");
+        let mut expected = baseline.clone();
+        expected["phases"][1]["validator_subprocess"]["expected_step_ids"] =
+            block(baseline, 0)["expected_step_ids"].clone();
+        rejected(&expected, "eligible query plan");
+        let mut records = baseline.clone();
+        records["phases"][1]["validator_subprocess"]["records"] =
+            block(baseline, 0)["records"].clone();
+        rejected(&records, "association issues disagree");
+        let mut missing = baseline.clone();
+        missing["phases"][1]["validator_subprocess"]
+            .as_object_mut()
+            .unwrap()
+            .remove("phase_id");
+        rejected(&missing, "lacks phase ownership");
+        let mut plan = baseline.clone();
+        plan["phases"][1]["validator_subprocess"]
+            .as_object_mut()
+            .unwrap()
+            .remove("expected_step_ids");
+        rejected(&plan, "lacks its expected plan");
+        let mut erased = baseline.clone();
+        erased["phases"][1]["validator_subprocess"]["records"] = json!([]);
+        rejected(&erased, "association issues disagree");
+        // Sequential children may reuse a numeric PID; ownership never reads PIDs.
+        let mut reused = baseline.clone();
+        reused["phases"][1]["validator_subprocess"]["pid"] = block(baseline, 0)["pid"].clone();
+        assert_eq!(diagnostics(&reused).disposition_integrity, Some("valid"));
+    }
+
+    #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response20/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1507,7 +1700,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response20/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1529,7 +1722,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response20/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response21/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -1774,7 +1967,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response20/a1_expected.json"
+            "../../tests/fixtures/disposition/response21/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

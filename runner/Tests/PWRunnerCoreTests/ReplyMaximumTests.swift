@@ -260,12 +260,16 @@ func maximalReplyEncodedSize() throws -> Int {
         var phase = phases[0], collection = validator
         let ids = (index * perPhase..<(index + 1) * perPhase).map(identity)
         phase["phase_id"] = identity(index); phase["ordinal"] = index + 1; phase["action_ids"] = ids
-        collection["records"] = (0..<(ids.count * ValidatorReplyLimits.recordsPerProbe)).map { position -> [String: Any] in
-            let id = identity(index * ids.count * ValidatorReplyLimits.recordsPerProbe + position)
-            var copy = record; copy["step_id"] = id; return copy
+        // The largest consistent collection: every record names an action outside
+        // the plan, so each expected ID is missing and each record is unexpected.
+        let foreign = (0..<(ids.count * ValidatorReplyLimits.recordsPerProbe)).map {
+            identity(count + index * ids.count * ValidatorReplyLimits.recordsPerProbe + $0)
         }
+        collection["records"] = foreign.map { id -> [String: Any] in var copy = record; copy["step_id"] = id; return copy }
         collection["expected_step_ids"] = ids
-        collection["association_issues"] = (0..<(ids.count * (ValidatorReplyLimits.recordsPerProbe + 1))).map { identity(index * ids.count * ValidatorReplyLimits.recordsPerProbe + $0) }.map { ["origin": "runner_host", "kind": "query_mismatch", "step_id": $0, "count": 1] as [String: Any] }
+        collection["phase_id"] = identity(index); collection["ordinal"] = index + 1
+        collection["association_issues"] = ids.map { ["origin": "runner_host", "kind": "missing_id", "step_id": $0, "count": 0] as [String: Any] }
+            + foreign.map { ["origin": "runner_host", "kind": "unexpected_id", "step_id": $0, "count": 1] as [String: Any] }
         collection["probe_bytes_written"] = 2_147_483_647; collection["probe_bytes_expected"] = 2_147_483_647
         collection["stdout_bytes_received"] = 2_147_483_647
         phase["validator_subprocess"] = collection

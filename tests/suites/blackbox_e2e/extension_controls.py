@@ -7,7 +7,7 @@ from lifecycle_oracle import check_record
 
 
 def run_extension_controls(run):
-    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response20/extension_run.json'
+    fixture = Path(__file__).resolve().parents[2] / 'fixtures/blackbox_e2e/checker/response21/extension_run.json'
     baseline = json.loads(fixture.read_text())
     assert check_record(baseline) == [], check_record(baseline)
     run('extension_native_capture', baseline)
@@ -75,7 +75,11 @@ def run_extension_controls(run):
         if case['reaped'] is None:
             phase.pop('validator_subprocess', None)
         else:
-            phase['validator_subprocess'].update(reaped=case['reaped'], exit_code=None, term_signal=None)
+            # The carrier phase has no actions: its collection is its own, with an
+            # empty plan and no records.
+            phase['validator_subprocess'].update(phase_id=phase['phase_id'], ordinal=phase['ordinal'],
+                expected_step_ids=[], records=[], association_issues=[],
+                reaped=case['reaped'], exit_code=None, term_signal=None)
         phase.pop('validator_spawn_failure', None)
         if case['spawn_failure']:
             phase['validator_spawn_failure'] = dict(origin='runner_host', operation='posix_spawn',
@@ -121,6 +125,37 @@ def run_extension_controls(run):
 
     def event(document, index=0):
         return runner(document)['extension_events'][index]
+
+    # Validator collection ownership: every phase of this capture queries the same
+    # path under a different action ID, so a borrowed block differs only in its
+    # identity, plan and record IDs. Each reader must reject the transplant for the
+    # stated reason; the independent oracle must report it as a phase finding.
+    phases = runner(baseline)['phases']
+    assert len(phases) == 3 and len({s['sandbox_check']['filter_value'] for s in runner(baseline)['steps']}) == 1
+    def collection(document, index):
+        return runner(document)['phases'][index]['validator_subprocess']
+    transplants = [
+        ('whole_block', lambda d: runner(d)['phases'][0].__setitem__('validator_subprocess', deepcopy(collection(baseline, 1))), 'names another phase'),
+        ('identity_only', lambda d: collection(d, 1).update(phase_id=phases[0]['phase_id']), 'names another phase'),
+        ('ordinal_only', lambda d: collection(d, 1).update(ordinal=1), 'names another phase'),
+        ('expected_ids_only', lambda d: collection(d, 1).update(expected_step_ids=deepcopy(collection(baseline, 0)['expected_step_ids'])), 'eligible query plan'),
+        ('records_only', lambda d: collection(d, 1).update(records=deepcopy(collection(baseline, 0)['records'])), 'association issues disagree'),
+        ('missing_identity', lambda d: collection(d, 1).pop('phase_id'), 'lacks phase ownership'),
+        ('missing_plan', lambda d: collection(d, 1).pop('expected_step_ids'), 'lacks its expected plan'),
+        ('records_erased', lambda d: collection(d, 1).update(records=[]), 'association issues disagree'),
+        ('issues_erased_with_duplicate', lambda d: collection(d, 1)['records'].append(deepcopy(collection(d, 1)['records'][0])), 'association issues disagree'),
+    ]
+    for name, change, reason in transplants:
+        document = deepcopy(baseline)
+        change(document)
+        run('validator_ownership_' + name, document, rejected_by=reason)
+        findings = check_record(document)
+        assert any(f['kind'] == 'phase_collection' and reason in f.get('detail', '') for f in findings), (name, findings)
+    # Sequential children may reuse a numeric PID; ownership never reads PIDs.
+    reused = deepcopy(baseline)
+    collection(reused, 1)['pid'] = collection(reused, 0)['pid']
+    run('validator_ownership_reused_pid', reused)
+    assert check_record(reused) == []
 
     mutations = [
         ('no_call_boundary', lambda d: event(d).update(call_boundary_observed=False), 'lacks publication'),

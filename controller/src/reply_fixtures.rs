@@ -172,7 +172,9 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
             "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
                 "proceed_observed": true, "validator_disposition": "reaped",
                 "worker_lifetime_established": true, "protocol_violations": []},
-            "validator_subprocess": {"pid": 43, "reaped": true, "exit_code": 0, "records": records}}],
+            "validator_subprocess": {"phase_id": "main", "ordinal": 1, "pid": 43, "reaped": true, "exit_code": 0,
+                "expected_step_ids": steps.iter().map(|s| s["step_id"].clone()).collect::<Vec<_>>(),
+                "association_issues": [], "records": records}}],
         "steps": steps})
 }
 

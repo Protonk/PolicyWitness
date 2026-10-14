@@ -29,7 +29,7 @@ import lifecycle_contract
 from lifecycle_adapter import read_lifecycle, summaries
 from document_versions import is_envelope, version_errors, require_supported as _gate
 from extension_evidence import validate_extensions, validate_fresh_read
-from phase_evidence import collection_problem
+from phase_evidence import collection_problem, ownership_problem
 
 
 # The comparison record vocabulary (docs/PolicyWitness.md, "Reading a comparison record").
@@ -475,6 +475,9 @@ def _validate_phases(runner):
         if phase.get('collection_status') not in ('not_reached', 'not_needed', 'collected', 'budget_exhausted', 'clock_unavailable'):
             errors.append('invalid phase collection_status')
         problem = collection_problem(phase)
+        if problem:
+            errors.append(problem)
+        problem = ownership_problem(runner, phase)
         if problem:
             errors.append(problem)
         for key in ('arrival_observed', 'completion_observed'):

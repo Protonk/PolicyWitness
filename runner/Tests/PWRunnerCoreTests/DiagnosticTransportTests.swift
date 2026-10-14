@@ -88,7 +88,7 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 exitCode: 0, reaped: true, waitErrors: [], decodeFault: received.fault,
                 expectedProbes: (0..<2).map { ValidatorProbe(stepId: "s\($0)", operation: "file-read-data", filterType: "NONE") })
             let forwarded = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self,
-                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out)))
+                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)))
             try expectEqual(forwarded.pid, 321)
             try expectEqual(forwarded.decode_fault?.kind, "utf8")
             for (i, v) in (forwarded.records ?? []).enumerated() {

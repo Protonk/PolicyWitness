@@ -45,7 +45,7 @@ private func assertValidatorDisposition(_ out: ValidatorOutput, expected: String
     let summary = classify(workerResult: .success(worker), validatorResult: .success(out), expectedVerdictCount: 1)
     try expectEqual(summary.outcome, expected)
     try expectEqual(out.verdicts.count, 1, "actual verdict survives cleanup")
-    let bytes = try pwRunnerEncodeJSON(buildValidatorSubprocess(out))
+    let bytes = try pwRunnerEncodeJSON(buildValidatorSubprocess(out, phaseId: "main", ordinal: 1))
     let wire = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self, from: bytes)
     try expectEqual(wire.records?.first?.stepId, "s")
     try expectEqual(wire.reaped, out.reaped)
@@ -235,7 +235,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectEqual(out.termSignal, SIGKILL)
             try expectEqual(out.terminationRequest?.rc, 0)
             let wire = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self,
-                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out)))
+                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)))
             try expectEqual(wire.io_error, out.ioError)
             try expectEqual(wire.records?.count, 1)
         }
@@ -258,7 +258,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectTrue(out.rawStdoutBytes > 16384)
             try expectEqual(out.verdicts.first?.stepId, "s")
             let wire = try pwRunnerDecodeJSON(PWRunnerValidatorSubprocess.self,
-                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out)))
+                from: pwRunnerEncodeJSON(buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)))
             try expectEqual(wire.stdout_collection_stop, "deadline")
             try expectEqual(wire.read_error, out.readError)
             try expectEqual(wire.io_error, out.ioError)
@@ -272,7 +272,7 @@ func runValidatorEvidenceTests(_ tk: TestKit) {
             try expectEqual(out.decodeFault?.kind, "utf8")
             try expectEqual(out.verdicts.first?.stepId, "s")
             try expectTrue((out.probeBytesWritten ?? 0) < (out.probeBytesExpected ?? 0))
-            let wire = buildValidatorSubprocess(out)
+            let wire = buildValidatorSubprocess(out, phaseId: "main", ordinal: 1)
             try expectEqual(wire.io_error, out.ioError)
             try expectEqual(wire.stdout_collection_stop, "eof")
             try expectEqual(wire.decode_fault?.kind, "utf8")

@@ -183,7 +183,8 @@ enum CWorkerOrchestrator {
                 phaseResults.append(PWRunnerPhaseResult(phase_id: phase.phase_id, ordinal: index + 1,
                     action_ids: phase.actions.map { $0.stepID }, arrival_observed: observation?.arrived ?? false,
                     completion_observed: observation?.completed ?? false, collection_status: collectionStatuses[index],
-                    ordering: ordering, validator_subprocess: validatorOutput.map(buildValidatorSubprocess),
+                    ordering: ordering,
+                    validator_subprocess: validatorOutput.map { buildValidatorSubprocess($0, phaseId: phase.phase_id, ordinal: index + 1) },
                     validator_spawn_failure: spawnFailure))
                 // Worker failure has precedence; otherwise the first failed
                 // collection determines the summary. Every collection is retained.
@@ -620,24 +621,6 @@ private func pathFilterIsUnresolvable(_ kind: String, _ value: String?) -> Bool 
     guard kind == PWRunnerWire.sandboxFilterPath else { return false }
     guard let v = value, !v.isEmpty else { return false }
     return canonicalizePath(v).resolved == nil
-}
-
-private func mapFilterKindToValidator(_ wireKind: String) -> String {
-    switch wireKind {
-    case PWRunnerWire.sandboxFilterNone:                     return "NONE"
-    case PWRunnerWire.sandboxFilterPath:                     return "PATH"
-    case PWRunnerWire.sandboxFilterGlobalName:               return "GLOBAL_NAME"
-    case PWRunnerWire.sandboxFilterLocalName:                return "LOCAL_NAME"
-    case PWRunnerWire.sandboxFilterIokitRegistryEntryClass:  return "IOKIT_REGISTRY_ENTRY_CLASS"
-    case PWRunnerWire.sandboxFilterIokitUserClientClass:     return "IOKIT_USER_CLIENT_CLASS"
-    case PWRunnerWire.sandboxFilterSysctlName:               return "SYSCTL_NAME"
-    default:
-        // validateSandboxChecks already rejected unknown kinds; this
-        // branch shouldn't fire. Emit the literal so a future extension
-        // pre-validateSandboxChecks fails loudly via the validator's
-        // bad_filter response.
-        return wireKind.uppercased()
-    }
 }
 
 // MARK: - Driver-result unwrapping
@@ -1127,9 +1110,13 @@ func extensionDeliveryObservation(_ p: CWorkerExtensionDelivery) -> (status: Str
     return (status, failure)
 }
 
-func buildValidatorSubprocess(_ out: ValidatorOutput) -> PWRunnerValidatorSubprocess {
+func buildValidatorSubprocess(_ out: ValidatorOutput, phaseId: String, ordinal: Int) -> PWRunnerValidatorSubprocess {
     var result = PWRunnerValidatorSubprocess(pid: Int(out.validatorPid),
         term_signal: out.termSignal.map(Int.init), exit_code: out.exitCode.map(Int.init))
+    // The collection is bound to the phase whose plan it served; the record
+    // carries that identity rather than leaving readers to infer it from PIDs.
+    result.phase_id = phaseId
+    result.ordinal = ordinal
     result.reaped = out.reaped
     result.termination_request = out.terminationRequest
     result.wait_errors = out.waitErrors
