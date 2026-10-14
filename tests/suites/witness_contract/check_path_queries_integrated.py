@@ -73,12 +73,13 @@ def main():
             envelope = json.loads(result.stdout)
             reply = envelope['data']['runner_result']
             process = reply.get('runner_subprocess') or {}
+            receipts = [json.loads(p.read_text()) for p in receipt_dir.glob('*.json')]
             owner['children_confirmed'] = process.get('reaped') is True and all(
-                (p.get('validator_subprocess') or {}).get('reaped') is True for p in reply['phases'])
+                (p.get('validator_subprocess') or {}).get('reaped') is True for p in reply['phases']) and (
+                len(receipts) == len(phases) and all(r.get('native_validator_reaped') is True for r in receipts))
             assert owner['children_confirmed'], 'owned PW cleanup uncertain; preserve workspace'
             assert result.returncode == 0 and reply['normalized_outcome']=='ok', reply
             assert consumer.validate(envelope)==[], consumer.validate(envelope)
-            receipts = [json.loads(p.read_text()) for p in receipt_dir.glob('*.json')]
             assert len(receipts)==len(phases)
             assert {r['target_pid'] for r in receipts}=={process['pid']}
             assert {r['pid'] for r in receipts}=={p['validator_subprocess']['pid'] for p in reply['phases']}
