@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 import plistlib
-import re
 import select
 import shutil
 import stat
@@ -112,7 +111,11 @@ def policy_for(paths, operation, matcher, denied):
         predicate = '(subpath ' + json.dumps(branch) + ')'
     elif matcher == 'regex':
         branch = str(paths['anchor_denied'].parent / 'blocked')
-        pattern = '^' + re.escape(branch) + '(/|$)'
+        # Cover both submitted and Data-volume spellings. The first exploratory
+        # corpus used only /private/tmp and its existing-path regex control did
+        # not select the intended target. These generated paths need no escapes.
+        assert all(c.isalnum() or c in '/_-' for c in branch)
+        pattern = '^(/System/Volumes/Data)?' + branch + '(/|$)'
         predicate = '(regex #' + json.dumps(pattern) + ')'
     else: raise AssertionError(matcher)
     return policy + ' (deny ' + operation + ' ' + predicate + ') (deny ' + operation + ' (literal ' + json.dumps(str(paths['anchor_denied'])) + '))'
@@ -232,6 +235,13 @@ def main():
                             child.start()
                             row = boundary(validator, child, paths, action, case, 'boundary')
                             row.update(case=name, shape=shape, matcher=matcher, denied=denied)
+                            by_id = {q['step_id']: q for q in row['queries']}
+                            assert by_id['anchor_allowed']['rc'] == 0
+                            assert by_id['anchor_denied']['rc'] == int(denied)
+                            # Fixture calibration, not an oracle for missing paths.
+                            if shape == 'existing':
+                                assert by_id['blocked']['rc'] == int(denied), name
+                                assert by_id['sibling']['rc'] == 0, name
                             observations.append(row)
                             normal = True
                         finally: child.finish(normal)
