@@ -2204,3 +2204,51 @@ snapshots and the attributed review remain immutable in the run's review archive
 This follow-up changes only that row and its copy plus checkpoint/retention
 metadata; executable source, build recipe and test code remain `671d995`.
 Affected source-drift verification and the focused rendered recheck are pending.
+
+### Final A2 closure
+
+Closed by executing agent `/root` on 2026-10-13 after the authorized follow-up.
+F1 is repaired across all three guards/readers, F3's full issuance/delivery
+vocabulary is owned and generated, and F2 remains an explicit accepted phase
+metadata ownership limit. The original out-of-band auditor required no blocking
+correction; the lead's final disposition and preserved auditor text are in
+`records/SANDBOX-EXTENSIONS-AUDIT.md`. This is not another out-of-band audit.
+
+The signed runtime remains clean `671d9956b65dd6166d318ce11961d60372875116`, app
+0.2.8 build 597, stamp `v0.2.8-77-g671d995`, with worker identity
+`4e06930d17c9cc60ea6c7d87b68c7f5464180872c75071ec4b3029c7357a678e`.
+All 197 required cases passed freshly there, including 417 Swift checks; contracts
+remain 4/18/7, ABI geometry unchanged. Before/after inventories and all 21 current
+app file hashes agree. The final documentation source is clean
+`a89c9c953105512317e16dc47cd8eb0870fd5da2`: only the capability-status row and
+generated guide counterpart changed in permanent documentation after that run.
+No executable, test, generator logic, build or runtime fixture input changed.
+
+[Final documentation verification](../tests/out/runs/extensions-a2-doc-closure-20261013/)
+`20261014T005626Z_2b12400b` passes six of six source-drift cases, no skips/unrun.
+Its [197-case ledger](../tests/out/runs/extensions-a2-doc-closure-20261013/checkpoint/acceptance-credits.json)
+credits six fresh replacements and 191 reviewed reuses from the signed runtime
+run. It preserves both source identities and separates file/case/app comparisons
+from the bounded dependency-applicability judgment. Neither documentation
+baseline changed from `4688743`. The closure commit changes only plan, records
+and retention metadata; it is not a new build or executed test snapshot.
+
+The fresh Astra reviewer's [focused recheck](../tests/out/runs/extensions-a2-doc-closure-20261013/reviews/pw-a2-followup-rendered-recheck.md)
+closes R1 with no new finding. It visually checks the corrected row in the
+contract, source guide and staged guide and accepts the bounded evidence reuse.
+The [retained final render archive](../tests/out/runs/extensions-a2-doc-closure-20261013/reviews/a2-final/)
+contains six documents and 124 page images, with source/HTML/PDF/PNG hashes,
+recipes and the full document graph. All final document hashes and staged-guide
+equality are verified. Reports preserve exact visual scope and omissions; this
+does not claim exhaustive visual or dependency coverage. Evidence is local and
+gitignored, with some HTML links retaining preview paths.
+
+Cleanup observations from the full run establish absence of the 33 named
+channels/recovery directories, six regular BYOXPC sessions and seven recovery
+identities, and preserve independent cleanup of the combined-phase child.
+The older 25 unnamed M3 objects remain unverifiable. The historical M4 observer
+failure remains unexplained despite fresh passes. H1's deferred hooks and the
+recorded private-native, diagnostic-fixture, timing/buffer and build-control
+limitations remain unchanged. No build, test, renderer, reviewer or owned cleanup
+task remains active, and no plan work is pending. M0–M5.6, A1, H1 and A2 are
+complete; this does not publish or accept a notarized release.

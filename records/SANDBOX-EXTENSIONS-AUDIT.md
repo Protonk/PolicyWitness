@@ -1271,12 +1271,12 @@ A2 remains pending after M5.6.
 
 ## A2 Final audit — after M5.6
 
-Status: auditor answers returned on 2026-10-13 (Claude Fable 5.1, out of band);
-executing-agent review and authorized follow-up recorded below. M5.6 remains
-complete; follow-up signed acceptance passes 197/197. A2 remains open pending
-verification of the rendered review's documentation correction. This is separate from the fresh
-rendered-documentation assessments. Please attribute answers and any additional
-findings; retain the original A1 exchange above.
+Status: complete. Auditor answers returned on 2026-10-13 (Claude Fable 5.1, out
+of band); the executing agent closed A2 after verifying the user-authorized
+follow-up below. Signed acceptance passes 197/197, the final documentation
+correction passes six fresh checks, and the focused rendered recheck closes R1.
+Original attributed audit text is preserved. This closure is the lead's
+disposition, not another out-of-band audit; rendered assessments remain separate.
 
 ### A2 Handoff, questions and auditor answers
 
@@ -1877,3 +1877,74 @@ names issue, consume or release support, and the guide was regenerated/staged.
 No executable source, generator logic, build recipe or runtime fixture changed in
 this correction. The six affected source-drift cases and focused rendered
 recheck remain pending; original execution evidence is preserved unchanged.
+
+#### A2 follow-up verification and closure
+
+Executing agent `/root`, 2026-10-13. **A2 and the implementation plan are
+complete.** The original auditor concluded that no correction was required for
+closure and recommended the small F1/F3 follow-up. The user authorized that pass;
+its implementation, signed acceptance, documentation checks and rendered review
+are now complete. This is the lead's verified disposition of that returned audit,
+not an additional out-of-band review of the changed candidate.
+
+- **A2-F1 repaired:** the Swift encoding guard, Rust reader and independent
+  Python rules reject `issuer_result_missing` unless issuer publication is
+  explicitly false and native payload is absent. Controls retain valid missing
+  publication, pre-call markers, cleanup and published timeout/wait-error evidence.
+- **A2-F2 accepted and documented:** readers do not certify every validator
+  metadata association to its phase. The exact action/query join prevents the
+  demonstrated differently named action from borrowing a prediction. The guide
+  and failure contract state this limit; supported anomalous records remain
+  visible, and no universal numeric PID uniqueness requirement is imposed.
+- **A2-F3 completed:** the contract owns all 13 issuance and five delivery status
+  values, their publication/cleanup meanings and precedence. The generator copies
+  that account into the guide; agreement, stale-copy refusal and recovery controls
+  pass without changes to either documentation baseline.
+- **Rendered R1 closed:** the issuer capability status can mean unavailable
+  issue, consume or release support. The shared row and both rendered guide copies
+  now say so; the focused reviewer confirms the correction matches production.
+
+The runtime source is clean `671d9956b65dd6166d318ce11961d60372875116`, signed app
+0.2.8 build 597 (`v0.2.8-77-g671d995`). Its [full acceptance run](../tests/out/runs/extensions-a2-acceptance-20261013/run.json)
+`20261014T004238Z_c78f3a70` passed all 197 required cases freshly, including
+417/417 Swift checks, with no failures, skips or unrun cases. The worker identity
+is `4e06930d17c9cc60ea6c7d87b68c7f5464180872c75071ec4b3029c7357a678e`;
+contracts remain 4/18/7 and ABI geometry is unchanged. The 21 recorded app file
+hashes match both original inventories and the current bundle. Exact cleanup
+observations retain absence of 33 named channels/recovery directories, six
+regular BYOXPC sessions and seven registry-recovery identities, plus the
+independent combined-phase child cleanup receipt.
+
+Final documentation is clean `a89c9c953105512317e16dc47cd8eb0870fd5da2`.
+[Documentation verification](../tests/out/runs/extensions-a2-doc-closure-20261013/run.json)
+`20261014T005626Z_2b12400b` passes all six source-drift cases with no skips or
+unrun cases. The [final 197-case ledger](../tests/out/runs/extensions-a2-doc-closure-20261013/checkpoint/acceptance-credits.json)
+credits these six fresh replacements and 191 reviewed reuses from the runtime
+run. Comparison of the two 650-entry source snapshots establishes that only the
+shared capability row and its generated copy, plus plan/records/retention
+metadata, changed. Executable, test, generator logic, build and runtime fixture
+inputs remain unchanged. The ledger separates those mechanical comparisons from
+the bounded dependency-applicability judgment; neither hashes nor the review
+claim exhaustive dependency proof. Build 597 retains its earlier source identity.
+
+Fresh rendered reviewer `/root/a2_followup_rendered_review`, explicitly selected
+`gpt-6-astra` at high effort, reports R1 closed with no new finding in the
+[focused recheck](../tests/out/runs/extensions-a2-doc-closure-20261013/reviews/pw-a2-followup-rendered-recheck.md).
+The reviewer inspected the corrected table and surrounding paragraph in the
+contract and both guides, checked production's three-symbol condition, and
+reviewed the final credit mapping and bundle identity. The lead accepts that
+bounded result. The [lead disposition](../tests/out/runs/extensions-a2-doc-closure-20261013/reviews/lead-disposition.md)
+and [final archive](../tests/out/runs/extensions-a2-doc-closure-20261013/reviews/a2-final/)
+retain six documents, 124 page images and source/HTML/PDF/PNG hashes; the initial
+report preserves its broader scope and omissions. All final document hashes and
+staged-guide equality are verified. Evidence is gitignored and local to this
+checkout; some HTML links retain preview paths. The closure commit changes only
+the plan, these records and the retention index.
+
+H1's deferred hooks, private-native/diagnostic-fixture limits, the older 25
+unnamed M3 objects with unverified absence, the unexplained historical M4
+observer failure, and existing source-inspected limit/build-control gaps remain
+explicit. Fresh passes do not resolve those historical limitations. No build,
+test, renderer, reviewer or owned cleanup task remains active; no further plan
+work is pending. Release publication and notarized-release acceptance were not
+part of this closure.
