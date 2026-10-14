@@ -1,7 +1,11 @@
 # Evidence clarity implementation plan
 
-Status: proposed; implementation has not begun. Prepared 2026-10-14 against
-`93f82c86ab84247318618e5bb877a93624890f07`.
+Status: complete. Prepared 2026-10-14 against
+`93f82c86ab84247318618e5bb877a93624890f07`; executed 2026-10-14 in commits
+f9f110d through b8432e8 on `main`. All six gates passed; the deviations from the
+planned experiments and conditional outcomes are recorded under
+[Execution record](#execution-record). This file is deleted in the commit after
+the one that records this status; the parking lot remains.
 
 Six claims survived the documentation review because they describe real limits
 of current PW. This plan changes the behavior, interface or evidence that makes
@@ -17,12 +21,31 @@ implementation; creating it does not execute that work.
 
 | Item | Claim to retire or narrow | Status | Completion evidence |
 | --- | --- | --- | --- |
-| C1 | `not_run_worker_died` does not establish that the operation never started | Planned | None |
-| C2 | `malformed_transport` can mean a local setup failure | Planned | None |
-| C3 | Readers do not fully validate phase ownership of validator subprocess metadata | Planned | None |
-| C4 | Ready and sentinel time budgets count polling iterations | Planned | None |
-| C5 | Some build refusals lack behavioral controls | Planned | None |
-| C6 | The local-name filter ID lacks equivalent empirical verification | Planned | None |
+| C1 | `not_run_worker_died` does not establish that the operation never started | Done | f9f110d (`no_completed_result`, response 19, `worker_kill_before_publish_slot` seam, case `witness_contract/worker_killed_before_slot_publication`); 37aed14 (response 19 captures, run `20261014T170346Z_3f8822fc`); gate run c1-gate4 13/13 |
+| C2 | `malformed_transport` can mean a local setup failure | Done | 795c9f2 (`channel_rejected`, `local_setup_failed`, `delivery_failure` record, response 20, shm header 448); 845854b (captures, run `20261014T172901Z_5bfa80ad`); gates c2-gate3 55/56 with only stale captures, c2-gate4 13/13 |
+| C3 | Readers do not fully validate phase ownership of validator subprocess metadata | Done | c11aa06 (`validator_subprocess.phase_id`/`ordinal`, ownership rules in the Swift encoder, Python consumer/oracle and Rust reader, response 21); 7f2bfe4 (captures, run `20261014T175528Z_a8e516b8`, set-based plan rule); gate c3-gate9 23/23 |
+| C4 | Ready and sentinel time budgets count polling iterations | Done | 74863c1 (`HostWaitClock`, `ready_wait`/`sentinel_wait`/`exit_grace_wait` records with `clock_fault` fallback, no version change); gates c4-gate1 66/67 live, c4-gate3 430/430 unit, `order_barrier_mutations` run `20261014T182025Z_86a4a789` |
+| C5 | Some build refusals lack behavioral controls | Done | a0b2871 (`preflight/build_refusal_controls`: 27 refusals in their applicable variants, 50 controls, 5 two-stage bypass demonstrations; `build.json` cites one control per refusal; baseline empty); run `20261014T200204Z_f2d26e26`; build guards and source_drift run c5-guards-drift-20261014 |
+| C6 | The local-name filter ID lacks equivalent empirical verification | Done | 2b1338b (`(mach-lookup, local_name)` routed to `prediction_unavailable`; `VERIFICATIONS.md` entry 2026-10-14; `verify_local_name.sh`; suite `runner_filter_local_name`; validator `LOCAL_NAME` 3); runs `20261014T182636Z_d1f9ec4e`, `20261014T183246Z_244ec637`, `20261014T183456Z_52016cb9` |
+
+Source identity after b8432e8: response schema 21, controller envelope 7,
+request schema 4; worker identity
+`41334ffdd8bdc07947645841efd342d54484f03a34ea33a4a94658bb41e7544d`.
+
+Integrated acceptance, against the app built from a0b2871
+(`v0.2.8-96-ga0b2871`): the signed default battery, run
+`20261014T200840Z_a4d78014`, passed 176 of 177 cases; the one failure,
+`dispatcher/selection_controls`, found the new opt-in case absent from the
+catalog's `opt_in` group, fixed in 01c3705. The required opt-ins
+`witness_contract/order_barrier_mutations` and `preflight/build_guard_controls`
+passed in run `20261014T201757Z_a1032f4a`; `preflight/build_refusal_controls`
+passed in run `20261014T200204Z_f2d26e26` on the same tree as a0b2871. After
+01c3705 and b8432e8 (catalog group and one guide paragraph, neither an input
+of the app) the app was rebuilt and the dispatcher suite, source_drift and
+`preflight/codesign.preflight` passed in run `20261014T201949Z_8767424c`, 13 of
+13. The other battery results are retained as a reviewed exception: the delta
+between the two builds is the stamp and the signing timestamps, with identical
+compiled inputs.
 
 Implement C1 and C2 first, then C3 and C4. C5 and the C6 investigation are
 independent of that sequence. Coordinate contract changes across coherent
@@ -270,3 +293,62 @@ evidence. Keep uncertainty about unpublished results, hidden native state,
 effective access and unavailable logs wherever it remains true. Record unresolved
 findings and cleanup ownership before closing the plan; release publication is
 outside its scope.
+
+## Execution record
+
+Decisions taken where the plan left an experiment or a conditional outcome.
+
+- **C1.** The new case kills the worker after the native attempt returns and
+  before the result slot is published; the created file is observed
+  independently while the reply withholds the result as `no_completed_result`.
+  The query for the created path is `prediction_unavailable` with
+  `query_not_requested`, because the path is unresolved at planning; the case
+  asserts that documented behavior instead of avoiding it.
+- **C2.** The worker resolves the native extension API before the core-limit
+  call: a control that failed `setrlimit` first reported
+  `native_api_unavailable`, an absence that had not been observed. The first
+  failing stage names the status; a cleanup failure is recorded beside it and
+  never changes it. `channel_rejected` requires an issued token in every reader.
+- **C3.** The expected plan is the set of a phase's eligible steps, compared as
+  a set, so the menagerie reorder control adds only its order diagnostic. An
+  empty collection plan is accepted only when the phase's expected plan is
+  empty, which the action-less carrier controls require. The shared join lives
+  in `PWRunnerAPI.swift` because the client target compiles that file alone.
+- **C4.** Waits are measured on the monotonic clock behind `ChildProcessCalls`
+  seams; a clock fault or regression falls back to a bounded count of nominal
+  sleeps and is recorded as `clock_fault`. The live checker allows 250 ms of
+  scheduling tolerance over the sentinel budget. No wire version changed: the
+  wait records are additive diagnostics.
+- **C5.** The SDK refusal is reached through a disposable Xcode-shaped developer
+  directory whose `xcodebuild` is a compiled stand-in that resolves the shims'
+  tools and locates no SDK, because the `/usr/bin` shims consult that program
+  for both; no real developer directory without an SDK exists on this machine.
+  One exploratory stand-in that answered nothing made the shims request a
+  Command Line Tools installation on the development machine; the final
+  stand-in resolves every tool and the control fails if an installation request
+  ever appears. The Cargo-placement refusal uses `CARGO_BUILD_TARGET` with the
+  host triple so Cargo itself moves the outputs. The bypass demonstrations are
+  two-staged: a mutated script alone is refused by the build's own
+  documentation and identity checks, which the demonstration records, and with
+  those checks removed the control fails at the displaced guard.
+- **C6.** On macOS 26.7.1 (25G241, arm64) a `local-name` rule governs no Mach
+  lookup the worker can perform, for self-registered names and for an embedded
+  XPC service in the bundle's own domain, while the same rule as `global-name`
+  does; `bootstrap_subset` is refused. `sandbox_check` ID 3 is the only ID that
+  answers a local-name rule and so disagrees with every observable enforcement;
+  ID 17, which PW emitted, never discriminated. The pair is routed to
+  `prediction_unavailable` with the evidence in `VERIFICATIONS.md`; the result
+  describes this environment and does not generalize to other releases or to
+  namespaces PW cannot reach. The matrix row S21 and the new live suite expect
+  `target_relation: unresolved` by reading rule 10, which was the product's
+  existing behavior; an earlier expectation of `same_submitted` in the new
+  suite was the test's error.
+- **Capture fixtures.** Each response version bump took two commits because the
+  capture fixtures must come from a build of a committed tree with a clean
+  stamp: the implementation first, then the refreshed captures.
+- **Unresolved findings.** None open from the six items. The parking lot keeps
+  provenance, reproducibility and the broader interface ideas. Cleanup: the
+  disposable checkouts under `/private/tmp` are removed by their controls; the
+  test output directories `tests/out/runs/c1-*` through `final-*` and the
+  retained capture runs follow the ordinary retention rules.
+
