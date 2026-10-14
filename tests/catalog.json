@@ -1472,6 +1472,18 @@
             "clang",
             "identity"
           ]
+        },
+        {
+          "id": "path_query_integrated",
+          "default": false,
+          "description": "Observe extra native queries against actual PW workers while preserving host-planned replies and independent file effects",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/path_query_integrated.sh"
+          ],
+          "requires": [
+            "app"
+          ]
         }
       ],
       "include": [
@@ -1678,7 +1690,8 @@
         "runner_byoxpc/entitlement_transfer",
         "sandbox_extensions_native/feasibility",
         "witness_contract/extensions_byoxpc",
-        "witness_contract/path_query_observations"
+        "witness_contract/path_query_observations",
+        "witness_contract/path_query_integrated"
       ]
     },
     "failure_boundaries": {

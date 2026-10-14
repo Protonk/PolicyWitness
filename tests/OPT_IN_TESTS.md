@@ -63,6 +63,20 @@ selection, deduplication, configuration validation, and complete accounting.
   retains signed target/source, commands, policies, raw streams, per-boundary
   observations, equipment hashes and exact child/workspace cleanup.
 
+### Integrated extra path queries
+
+- **Case:** `witness_contract/path_query_integrated`
+- **Location:** `tests/suites/witness_contract/opt_in/path_query_integrated.sh`
+- **Purpose:** Observe extra native queries against actual PW workers through a
+  validator wrapper, preserving the current planner's reports and separately
+  retaining the extra transcript. Covers unlink/recreate, create and symlink unlink.
+- **Opt-in reason:** Exploratory OS-sensitive interpretation with extra query
+  instrumentation; no product behavior change or universal agreement assertion.
+- **Equipment:** Built app and live XPC outside the automation sandbox. Uses
+  owned `/private/tmp` targets, no service installation or signing.
+- **Artifacts:** `<run>/suites/witness_contract/path_query_integrated/artifacts/`
+  retains specimens, raw envelopes, native receipts, independent state and cleanup.
+
 ### signed artifact controls
 
 - **Case:** `preflight/signed_artifact_controls`

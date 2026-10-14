@@ -19,3 +19,13 @@ each policy; a dedicated transition case keeps one policy and PID through
 unlink/recreate. Core dumps are disabled. No sandbox extensions, tokens, services
 or privileged helpers are involved. Known owned children are reaped before the
 temporary directory is removed; uncertain cleanup retains its ownership record.
+
+`validator_observer.py` is a separate integration observer. It forwards each
+host-requested query to an unchanged copy of the shipped validator, appends
+independent extra queries, saves the full native transcript, and returns only
+the originally requested records to PW. The opt-in `path_query_integrated` case
+uses the normal validator-path override to observe actual PW workers while
+preserving the planner's excluded-query reports. Extra queries perturb collection
+duration; this is an instrumented observation, not an unchanged whole-system run.
+No query answer is synthesized. Receipts live in an owned temporary directory
+until confirmed worker/validator cleanup and archival.

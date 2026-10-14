@@ -46,6 +46,14 @@ or a universal API outcome. This is exploratory native evidence, not a product
 eligibility-rule change or acceptance gate. Targets stay under `/private/tmp`.
 See the [fixture](../../fixtures/path_query/README.md) and opt-in registry.
 
+The separate opt-in `path_query_integrated` case retains extra native query
+receipts against the actual PW worker through a validator wrapper. It forwards
+only requested verdicts to the host, so the planner's unavailable results remain
+unchanged. Three specimens cover same-worker unlink/recreate, absent-leaf create
+and dangling-symlink unlink; independent effects, production consumer validation
+and cleanup are checked. The validator's copied executable bytes are unchanged.
+This isolates integration relevance while explicitly changing collection timing.
+
 ## Native extension boundaries
 
 `extensions` executes the public guide's actual extension example as well as
