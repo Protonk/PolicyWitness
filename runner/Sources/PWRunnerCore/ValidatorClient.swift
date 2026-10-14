@@ -64,6 +64,7 @@ struct ValidatorOutput {
     var expectedStepIds: [String]? { expectedProbes?.map { $0.stepId } }
     var probeBytesWritten: Int?
     var probeBytesExpected: Int?
+    var exitGraceWait: PWHostWait?
 
     init(validatorPid: pid_t,
                 verdicts: [ValidatorVerdict],
@@ -396,13 +397,14 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
 
     // Status is usable only when the shared observer actually reaped this PID.
     var process = ChildProcessState(pid: pid, calls: processCalls)
-    let pollNs: UInt64 = 10_000_000
-    let iters = max(1, input.exitGraceMs * 1_000_000 / Int(pollNs))
-    for _ in 0..<iters {
+    var graceClock = HostWaitClock(milliseconds: input.exitGraceMs, pollNs: 10_000_000, calls: processCalls)
+    var graceStop = "exhausted"
+    while true {
         let observation = process.wait(options: WNOHANG, stage: "exit_grace")
-        if observation != .pending { break }
-        sleepNs(pollNs)
+        if observation != .pending { graceStop = observation == .reaped ? "reaped" : "wait_error"; break }
+        if graceClock.expiredAfterSleeping() { break }
     }
+    let graceWait = graceClock.record(stop: graceStop)
     process.terminate()
     var exitCode: Int32? = nil
     var termSignal: Int32? = nil
@@ -411,7 +413,7 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     } else if let status = process.status, (((status & 0x7f) + 1) >> 1 > 0) {
         termSignal = status & 0x7f
     }
-    let output = ValidatorOutput(
+    var output = ValidatorOutput(
         validatorPid: pid, verdicts: decoded.verdicts,
         exitCode: exitCode, termSignal: termSignal,
         sentSigkill: process.terminationRequest != nil, rawStdoutBytes: stdoutReceived,
@@ -421,6 +423,7 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
         readError: readError?.description, stdoutCollectionStop: collectionStop,
         probeBytesWritten: writeOffset, probeBytesExpected: payload.count
     )
+    output.exitGraceWait = graceWait
     // Preserve both independent faults; precedence only selects the summary.
     if let error = ioError ?? readError { return .failure(error: error, partial: output) }
     if let fault = decoded.fault { return .failure(error: .verdictDecodeFailed(fault), partial: output) }

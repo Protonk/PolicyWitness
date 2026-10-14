@@ -1462,6 +1462,25 @@ struct PWRunnerOrdering: Codable {
     }
 }
 
+/// One host wait measured on CLOCK_MONOTONIC: its allowance, the elapsed time
+/// when it stopped and why it stopped. `excluded_ms` is time the wait does not
+/// charge (synchronous phase collection inside the sentinel wait); the
+/// allowance consumed is `elapsed_ms - excluded_ms`. `clock_unavailable` means
+/// the clock failed or ran backwards and the wait fell back to a bounded number
+/// of fixed sleeps; `setup_failed` means the nonblocking prerequisite could not
+/// be established and no wait was attempted. Elapsed time is absent when the
+/// clock could not supply it, and `clock_fault` says the clock failed or ran
+/// backwards during the wait. A stop names when the host moved on, not when a
+/// child ended.
+struct PWHostWait: Codable, Equatable {
+    var budget_ms: Int
+    var elapsed_ms: UInt64?
+    var stop: String
+    var excluded_ms: UInt64?
+    var native_errno: Int32?
+    var clock_fault: Bool
+}
+
 struct PWRunnerSubprocess: Codable {
     var pid: Int
     /// JSON integers, meaningful only after waitpid returned this child's PID.
@@ -1498,6 +1517,11 @@ struct PWRunnerSubprocess: Codable {
     var cleanup_trigger: String? = nil
     var grace_end: String? = nil
     var collection_basis: String? = nil
+    /// Measured host waits: readiness hint, publication (sentinel) and exit grace.
+    /// Absent when the stage did not run.
+    var ready_wait: PWHostWait? = nil
+    var sentinel_wait: PWHostWait? = nil
+    var exit_grace_wait: PWHostWait? = nil
     /// The canonical lifecycle account, resolved once by the host. Mandatory
     /// whenever this object is present.
     var disposition: PWDispositionRecord? = nil
@@ -2029,6 +2053,8 @@ struct PWRunnerValidatorSubprocess: Codable {
     var records: [ValidatorVerdict]?
     var expected_step_ids: [String]?
     var association_issues: [PWValidatorAssociationIssue]?
+    /// The measured exit-grace wait after collection closed.
+    var exit_grace_wait: PWHostWait? = nil
 
     init(pid: Int, term_signal: Int? = nil, exit_code: Int? = nil) {
         self.pid = pid

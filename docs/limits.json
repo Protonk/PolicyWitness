@@ -753,7 +753,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker counts ready-byte polling iterations, then checks shared-memory publication even if the hint was not received. Normal readiness is tested; expiry without aborting is source-inspected."
+      "behavior": "runCWorker measures the readiness wait as elapsed monotonic time starting after policy transfer, after making the read end nonblocking; a failed prerequisite is recorded as setup_failed and no wait runs. CWorkerClockTests drive the clock and sleep; expiry leaves ready_byte_received false and the run continues. The ready_wait record carries the budget, elapsed time and stop reason."
     },
     {
       "id": "worker_sentinel_wait",
@@ -784,7 +784,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker counts polling iterations until done. Policy transfer precedes polling; synchronous validator work is outside the count, and scheduler delays add time. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee. Deadline and partial-publication paths use shortened test budgets; the production duration is source-inspected."
+      "behavior": "runCWorker measures the publication wait as elapsed monotonic time from the end of the readiness wait, with each synchronous phase collection interval measured and excluded; every sleep is bounded by the remaining allowance, and a failed or regressing clock falls back to a bounded count of nominal sleeps that sentinel_wait.clock_fault reports. CWorkerClockTests cover oversleep, irregular polling costs, zero allowance, interrupted waits, clock failure, regression and excluded intervals; the live deadline cases assert the measured allowance within a stated scheduling tolerance. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee."
     },
     {
       "id": "worker_exit_grace",
@@ -815,7 +815,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker counts polling iterations after storing exit_requested, then attempts SIGKILL and reaping. Deadline/cleanup paths use controlled children; the production duration is source-inspected."
+      "behavior": "runCWorker measures the exit grace as elapsed monotonic time after storing exit_requested, then attempts SIGKILL and reaping; exit_grace_wait records the budget, elapsed time and how the wait ended. Deadline/cleanup paths use controlled children and a controlled clock; the production duration is source-inspected."
     },
     {
       "id": "worker_proceed_wait",
@@ -970,7 +970,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runValidator closes the validator pipes and counts exit-grace polling iterations before attempting SIGKILL and reaping. Cleanup paths use controlled children; the production duration is source-inspected."
+      "behavior": "runValidator closes the validator pipes and measures the exit grace as elapsed monotonic time before attempting SIGKILL and reaping; the phase collection record carries exit_grace_wait. Cleanup paths use controlled children; the production duration is source-inspected."
     },
     {
       "id": "exec_child_wait",
@@ -1227,7 +1227,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52417107,
+      "value": 52419124,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",

@@ -50,6 +50,9 @@ CLI_ARGS = ['--no-log-capture', '--timeout-ms', '20000']
 HARNESS_WAIT_SECONDS = 60  # bounded, and longer than the CLI's own deadline
 FIFO_OVERRIDES = {'worker_timeout_ms': 2000}
 GRACE_OVERRIDES = {'worker_timeout_ms': 300, 'worker_post_apply_hang_ms': 800}
+# The sentinel allowance is elapsed monotonic time excluding collection; this
+# much scheduling slack is stated for the live assertion, not measured.
+SCHEDULING_TOLERANCE_MS = 250
 POLICY = {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'}
 
 
@@ -97,7 +100,19 @@ def witnesses(envelope):
         'done_observed': sub.get('done_observed'),
         'partial_steps': sub.get('partial_steps'),
         'progress': (sub.get('worker_evidence') or {}).get('progress'),
+        'ready_wait': sub.get('ready_wait'),
+        'sentinel_wait': sub.get('sentinel_wait'),
     }
+
+
+def check_sentinel_budget(name, seen, budget_ms):
+    """The deadline is the configured allowance in elapsed time, net of excluded collection."""
+    ready, wait = seen['ready_wait'], seen['sentinel_wait']
+    assert ready and ready['stop'] == 'received' and ready['clock_fault'] is False, (name, ready)
+    assert wait and wait['stop'] == 'sentinel_deadline' and wait['budget_ms'] == budget_ms, (name, wait)
+    assert wait['clock_fault'] is False and type(wait['elapsed_ms']) is int, (name, wait)
+    consumed = wait['elapsed_ms'] - (wait.get('excluded_ms') or 0)
+    assert budget_ms <= consumed <= budget_ms + SCHEDULING_TOLERANCE_MS, (name, wait, consumed)
 
 
 def compatibility_triples(envelope):
@@ -199,6 +214,7 @@ def check_kill_after_deadline(name, rc, seen, spec, progress):
         f'{name} setup: {seen}'
     assert seen['done_observed'] is False and seen['partial_steps'] is True, f'{name} setup: {seen}'
     assert seen['progress'] == progress, f'{name} setup: last progress is not {progress}: {seen}'
+    check_sentinel_budget(name, seen, spec['_test_overrides']['worker_timeout_ms'])
 
 
 def check_deadline_preserved(name, seen, diagnostics):
@@ -233,6 +249,7 @@ def check_grace_exit(rc, seen, spec, diagnostics, envelope):
     assert 'sentinel deadline' in error and 'no termination requested' in error, ('a4', seen)
     assert 'SIGKILL' not in error, ('a4', seen)
     assert seen['partial_steps'] is False and seen['progress'] == FINISHED_RETURNED, ('a4', seen)
+    check_sentinel_budget('a4', seen, spec['_test_overrides']['worker_timeout_ms'])
     check_completed('a4', step(envelope, 'hosts'))
     assert diagnostics['process_disposition'] == 'clean_exit', ('a4', diagnostics)
     assert diagnostics.get('termination_cause') is None, ('a4', diagnostics)

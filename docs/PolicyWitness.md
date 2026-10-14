@@ -833,7 +833,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,417,107 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,419,124 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -1005,7 +1005,14 @@ the host or client when no worker metadata exists.
 `ready_byte_received`, `done_observed`, `poll_stop_reason`, `exit_requested`,
 `termination_request`, `reaped`, and `wait_errors`. Polling reasons are `done`,
 `child_reaped`, `sentinel_deadline`, `wait_error`, `policy_write_error`, or
-`policy_transfer_deadline`. Termination requests record
+`policy_transfer_deadline`. The host's readiness, publication and exit-grace
+waits are elapsed monotonic allowances, each reported as `ready_wait`,
+`sentinel_wait` and `exit_grace_wait` with its budget, the elapsed time when it
+stopped, why it stopped, the collection time the sentinel allowance excludes
+and whether the clock failed; each phase's `validator_subprocess` reports its
+`exit_grace_wait` the same way. Expiry starts the documented stop and cleanup
+path; it promises neither an exact total response time nor instantaneous
+process termination. Termination requests record
 signal, syscall return and errno only on failure. Exit/signal values require a
 successful reap; both are absent/null when disposition is unconfirmed. Wait
 errors retain their stage and native return/errno, including recovered EINTR.

@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "1e6e7109d8f47871a747450f929a226abeda21bc6c41c2e4050e1c46d9027d40"
-    static let abiIdentity: [UInt8] = [0x1e, 0x6e, 0x71, 0x09, 0xd8, 0xf4, 0x78, 0x71, 0xa7, 0x47, 0x45, 0x0f, 0x92, 0x9a, 0x22, 0x6a, 0xbe, 0xda, 0x21, 0xbc, 0x6c, 0x41, 0xc2, 0xe4, 0x05, 0x0e, 0x1c, 0x46, 0xd9, 0x02, 0x7d, 0x40]
+    static let abiIdentityHex = "b5f3b8c929c2efdf801f8e4cbb45d5fe5123de47c1761809eb0acb4bc685f6e6"
+    static let abiIdentity: [UInt8] = [0xb5, 0xf3, 0xb8, 0xc9, 0x29, 0xc2, 0xef, 0xdf, 0x80, 0x1f, 0x8e, 0x4c, 0xbb, 0x45, 0xd5, 0xfe, 0x51, 0x23, 0xde, 0x47, 0xc1, 0x76, 0x18, 0x09, 0xeb, 0x0a, 0xcb, 0x4b, 0xc6, 0x85, 0xf6, 0xe6]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -435,6 +435,10 @@ struct CWorkerOutput {
     var collectionBasis: String? = nil
     /// The worker's delivery publication, read only after its release store.
     var extensionDelivery: CWorkerExtensionDelivery? = nil
+    /// Measured host waits; nil when the stage did not run.
+    var readyWait: PWHostWait? = nil
+    var sentinelWait: PWHostWait? = nil
+    var graceWait: PWHostWait? = nil
 }
 
 /// Raw delivery publication words. Codes are interpreted by the orchestrator;
@@ -719,6 +723,82 @@ struct ChildProcessCalls {
         Darwin.waitpid($0, $1, $2)
     }
     var kill: (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) }
+    /// The monotonic clock and the bounded sleep every host wait uses. Tests
+    /// may drive them; production reads CLOCK_MONOTONIC and nanosleeps.
+    var clock: () -> UInt64? = MonotonicDeadline.now
+    var sleep: (UInt64) -> Void = sleepNs
+}
+
+/// One host wait measured as elapsed monotonic time against an allowance.
+/// Progress, interrupted calls and sleep overruns never renew it; each sleep is
+/// bounded by the remaining allowance. Excluded intervals (synchronous phase
+/// collection) extend the allowance by exactly their measured length. When the
+/// clock fails or runs backwards the wait falls back to a bounded count of
+/// nominal sleeps from that point, so it still ends; the record says so.
+struct HostWaitClock {
+    let budgetNs: UInt64
+    let pollNs: UInt64
+    let calls: ChildProcessCalls
+    let started: UInt64?
+    private(set) var excludedNs: UInt64 = 0
+    private(set) var clockFault = false
+    private var fallbackPasses: Int
+
+    init(milliseconds: Int, pollNs: UInt64, calls: ChildProcessCalls) {
+        budgetNs = min(UInt64(max(0, milliseconds)), UInt64.max / 1_000_000) * 1_000_000
+        self.pollNs = pollNs
+        self.calls = calls
+        started = calls.clock()
+        clockFault = started == nil
+        fallbackPasses = Int(min(budgetNs / pollNs, UInt64(Int32.max)))
+    }
+
+    /// Elapsed nanoseconds since the wait started, or nil once the clock is unusable.
+    mutating func elapsedNs() -> UInt64? {
+        guard !clockFault, let start = started, let now = calls.clock(), now >= start else {
+            clockFault = true
+            return nil
+        }
+        return now - start
+    }
+
+    /// The remaining allowance: budget plus excluded time minus elapsed time.
+    mutating func remainingNs() -> UInt64? {
+        guard let elapsed = elapsedNs() else { return nil }
+        let allowance = budgetNs > UInt64.max - excludedNs ? UInt64.max : budgetNs + excludedNs
+        return elapsed >= allowance ? 0 : allowance - elapsed
+    }
+
+    /// Decide whether the allowance is exhausted; otherwise sleep for at most
+    /// the remaining allowance and report that the wait continues.
+    mutating func expiredAfterSleeping() -> Bool {
+        if let remaining = remainingNs() {
+            if remaining == 0 { return true }
+            calls.sleep(min(pollNs, remaining))
+            return false
+        }
+        if fallbackPasses <= 0 { return true }
+        fallbackPasses -= 1
+        calls.sleep(pollNs)
+        return false
+    }
+
+    /// Mark the start of an interval the wait does not charge.
+    func mark() -> UInt64? { clockFault ? nil : calls.clock() }
+
+    /// Exclude the interval since `mark()`; an unreadable interval is a clock fault.
+    mutating func excludeSince(_ mark: UInt64?) {
+        guard let start = mark, let end = calls.clock(), end >= start else { clockFault = true; return }
+        let interval = end - start
+        excludedNs = excludedNs > UInt64.max - interval ? UInt64.max : excludedNs + interval
+    }
+
+    mutating func record(stop: String, nativeErrno: Int32? = nil, excluded: Bool = false) -> PWHostWait {
+        let elapsed = elapsedNs()
+        return PWHostWait(budget_ms: Int(budgetNs / 1_000_000), elapsed_ms: elapsed.map { $0 / 1_000_000 },
+                          stop: stop, excluded_ms: excluded ? excludedNs / 1_000_000 : nil,
+                          native_errno: nativeErrno, clock_fault: clockFault)
+    }
 }
 
 enum ChildWaitObservation { case pending, reaped, failed }
@@ -1042,21 +1122,32 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         transferFailure = .policyWriteFailed(diagnostic + "; wrote \(transfer.written) of \(policyBytes.count) bytes")
     }
 
-    // ---- Read pre-apply ready byte.
+    // ---- Read pre-apply ready byte under its elapsed allowance. The wait
+    // starts after policy transfer completed. The read end must be
+    // nonblocking first: a blocking read would turn the allowance into an
+    // unbounded wait, so a failed prerequisite is recorded and no wait runs.
     var readyByte: UInt8 = 0
     var readyByteReceived = false
+    var readyWait: PWHostWait? = nil
     if transferFailure == nil {
-        let pollIntervalNs: UInt64 = 10_000_000   // 10 ms
-        let deadlineIters = max(1, input.readyByteTimeoutMs * 1_000_000 / Int(pollIntervalNs))
-        // Set the read end nonblocking so we don't pin the loop on a single read.
         let flags = fcntl(readyPipe[0], F_GETFL, 0)
-        if flags >= 0 { _ = fcntl(readyPipe[0], F_SETFL, flags | O_NONBLOCK) }
-        for _ in 0..<deadlineIters {
-            let n = Darwin.read(readyPipe[0], &readyByte, 1)
-            if n == 1 { readyByteReceived = true; break }
-            if n == 0 { break }     // EOF — worker exited without writing
-            if n < 0 && errno != EAGAIN && errno != EINTR { break }
-            sleepNs(pollIntervalNs)
+        if flags < 0 || fcntl(readyPipe[0], F_SETFL, flags | O_NONBLOCK) < 0 {
+            readyWait = PWHostWait(budget_ms: input.readyByteTimeoutMs, elapsed_ms: 0, stop: "setup_failed",
+                                   native_errno: errno, clock_fault: false)
+        } else {
+            var clock = HostWaitClock(milliseconds: input.readyByteTimeoutMs, pollNs: 10_000_000, calls: processCalls)
+            var stop = "deadline"
+            var readErrno: Int32? = nil
+            while true {
+                // The read precedes the clock: a byte that lands as the
+                // allowance runs out is received, not timed out.
+                let n = Darwin.read(readyPipe[0], &readyByte, 1)
+                if n == 1 { readyByteReceived = true; stop = "received"; break }
+                if n == 0 { stop = "eof"; break }     // EOF — worker exited without writing
+                if n < 0 && errno != EAGAIN && errno != EINTR { stop = "read_error"; readErrno = errno; break }
+                if clock.expiredAfterSleeping() { break }
+            }
+            readyWait = clock.record(stop: stop, nativeErrno: readErrno)
         }
     }
     close(readyPipe[0])
@@ -1099,17 +1190,20 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         }
     }
     var pollStopReason = transferFailure == nil ? "sentinel_deadline" : (transferTimeout == nil ? "policy_write_error" : "policy_transfer_deadline")
+    var sentinelWait: PWHostWait? = nil
     if transferFailure == nil {
-        let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
-        let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
-        // Probe for a dead worker only every ~50ms, not every 2ms: a
-        // waitpid syscall in the hot loop measurably inflates the
-        // effective sentinel deadline (syscall cost + short-sleep timer
-        // coalescing), so throttle it. 50ms detection latency is
-        // negligible against the seconds-scale sentinel and is far better
-        // than spinning the whole deadline over a corpse.
-        let exitCheckEvery = max(1, 50_000_000 / Int(pollIntervalNs))   // 25 iters
-        polling: for iter in 0..<deadlineIters {
+        // The sentinel allowance is elapsed monotonic time from the end of
+        // the readiness wait, excluding each synchronous phase collection
+        // interval measured around the hook. Each sleep is bounded by the
+        // remaining allowance; syscall and scheduling costs consume it.
+        var clock = HostWaitClock(milliseconds: input.sentinelTimeoutMs, pollNs: 2_000_000, calls: processCalls)
+        // Probe for a dead worker only every ~50 ms of elapsed time (every
+        // 25 passes once the clock is unusable): a waitpid in the hot loop
+        // costs more than the detection latency saves.
+        var nextExitCheckNs: UInt64 = 0
+        var passes = 0
+        polling: while true {
+            passes += 1
             if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1 {
                 sawApplied = true
             }
@@ -1141,8 +1235,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 case .failed: ownershipUnbroken = false; pollStopReason = "wait_error"; break polling
                 case .pending: break
                 }
+                let hookStarted = clock.mark()
                 if let hook = phaseBoundary { hook(pid, index) }
                 else if index == 0, let hook = postApplied { hook(pid) }
+                clock.excludeSince(hookStarted)
                 phaseOutputs[index].collectionClosed = true
                 checkPrematurePublication(index)
                 // Collection may outlast the worker wait or lose the child. A
@@ -1177,7 +1273,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // flipping done — there is nothing more to poll for; capture
             // its status and let the classifier read the signal/exit as
             // the source of truth.
-            if iter % exitCheckEvery == 0 {
+            let elapsed = clock.elapsedNs()
+            if elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1) {
+                nextExitCheckNs = (elapsed ?? 0) + 50_000_000
                 switch process.wait(options: WNOHANG, stage: "poll") {
                 case .reaped:
                     pollStopReason = "child_reaped"
@@ -1190,8 +1288,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                     break
                 }
             }
-            sleepNs(pollIntervalNs)
+            // done was read above: a publication observed as the allowance
+            // runs out is done, not a deadline.
+            if clock.expiredAfterSleeping() { break }
         }
+        sentinelWait = clock.record(stop: pollStopReason, excluded: true)
     }
 
     // ---- Request worker exit (a no-op if it already died on its own).
@@ -1206,11 +1307,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // ended is recorded directly: a reap, a wait error, or exhaustion (which
     // is followed by the termination request), never inferred later.
     var graceEnd = "not_entered"
+    var graceWait: PWHostWait? = nil
     if process.status == nil && !process.childUnavailable {
-        let pollIntervalNs: UInt64 = 10_000_000
-        let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
+        var clock = HostWaitClock(milliseconds: input.exitGraceMs, pollNs: 10_000_000, calls: processCalls)
         graceEnd = "exhausted"
-        grace: for _ in 0..<graceIters {
+        grace: while true {
             observeAcknowledgement()
             switch process.wait(options: WNOHANG, stage: "exit_grace") {
             case .reaped:
@@ -1221,9 +1322,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 ownershipUnbroken = false
                 break grace
             case .pending:
-                sleepNs(pollIntervalNs)
+                break
             }
+            if clock.expiredAfterSleeping() { break }
         }
+        graceWait = clock.record(stop: graceEnd)
         observeAcknowledgement()
         let errorsBeforeTermination = process.waitErrors.count
         process.terminate()
@@ -1357,7 +1460,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 errno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryErrnoOffset),
                 cleanupStage: UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupStageOffset)),
                 cleanupErrno: readI32(rawBase, offset: PWShmLayout.extensionDeliveryCleanupErrnoOffset))
-            : nil
+            : nil,
+        readyWait: readyWait,
+        sentinelWait: sentinelWait,
+        graceWait: graceWait
     )
     if let failure = transferFailure {
         return .failure(failure, output)

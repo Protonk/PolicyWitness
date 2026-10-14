@@ -1082,6 +1082,9 @@ func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecor
     result.cleanup_trigger = out.cleanupTrigger
     result.grace_end = out.graceEnd
     result.collection_basis = out.collectionBasis
+    result.ready_wait = out.readyWait
+    result.sentinel_wait = out.sentinelWait
+    result.exit_grace_wait = out.graceWait
     result.disposition = record
     return result
 }
@@ -1130,6 +1133,7 @@ func buildValidatorSubprocess(_ out: ValidatorOutput, phaseId: String, ordinal: 
     result.records = out.verdicts
     result.expected_step_ids = out.expectedStepIds
     result.association_issues = out.expectedProbes.map { associateValidatorVerdicts(out.verdicts, expected: $0).issues }
+    result.exit_grace_wait = out.exitGraceWait
     return result
 }
 

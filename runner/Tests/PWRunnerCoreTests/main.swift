@@ -57,6 +57,8 @@ runCWorkerTests(tk)
 // controlled kill/waitpid faults; host lifecycle observations only. The fixture
 // never applies a sandbox, so no policy cause can be claimed here.
 runCWorkerLifecycleTests(tk)
+// Host waits are elapsed monotonic allowances under a controlled clock and sleep.
+runCWorkerClockTests(tk)
 // Production C main with isolated native-call substitutions: worker progress and
 // failure publication, missing step evidence, policy-write partial results,
 // EPIPE partial output. Controlled call failures are not kernel attribution.

@@ -139,6 +139,9 @@ func replyFixture() throws -> PWRunnerRunResult {
         "cleanup_trigger": "completion",
         "grace_end": "exhausted",
         "collection_basis": "execution_may_continue",
+        "ready_wait": {"budget_ms": 1000, "elapsed_ms": 3, "stop": "received", "excluded_ms": 0, "native_errno": 0, "clock_fault": false},
+        "sentinel_wait": {"budget_ms": 120000, "elapsed_ms": 250, "stop": "done", "excluded_ms": 40, "native_errno": 0, "clock_fault": false},
+        "exit_grace_wait": {"budget_ms": 1000, "elapsed_ms": 1000, "stop": "exhausted", "excluded_ms": 0, "native_errno": 4, "clock_fault": true},
         "disposition": {
           "questions": {
             "final_status": {
@@ -297,6 +300,7 @@ func replyFixture() throws -> PWRunnerRunResult {
           "validator_subprocess": {
             "phase_id": "main",
             "ordinal": 1,
+            "exit_grace_wait": {"budget_ms": 1000, "elapsed_ms": 2, "stop": "reaped", "excluded_ms": 0, "native_errno": 0, "clock_fault": false},
             "pid": 43,
             "exit_code": 0,
             "reaped": true,

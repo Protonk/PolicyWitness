@@ -42,7 +42,7 @@ private let stringPolicy: [String: Int?] = [
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
     "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
-    "cleanup_stage": nil,
+    "cleanup_stage": nil, "stop": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
@@ -136,10 +136,14 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     subprocess["worker_evidence"] = evidence
     subprocess["policy_transfer_timeout"] = ["budget_ms": 5000, "elapsed_ms": UInt64.max,
         "bytes_written": 262143, "bytes_expected": 262143] as [String: Any]
+    let maximalWait: [String: Any] = ["budget_ms": Int32.max, "elapsed_ms": UInt64.max, "stop": "sentinel_deadline",
+                                      "excluded_ms": UInt64.max, "native_errno": Int32.max, "clock_fault": true]
+    for name in ["ready_wait", "sentinel_wait", "exit_grace_wait"] { subprocess[name] = maximalWait }
     reply["runner_subprocess"] = subprocess
 
     var phases = reply["phases"] as! [[String: Any]]
     var validator = phases[0]["validator_subprocess"] as! [String: Any]
+    validator["exit_grace_wait"] = maximalWait
     validator["read_error"] = maximal(1023)
     validator["io_error"] = maximal(1023)
     validator["decode_fault"] = ["origin": "runner_host", "kind": "structure", "message": maximal(1023),

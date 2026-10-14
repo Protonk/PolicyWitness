@@ -306,9 +306,11 @@ exec deadline and attempt budget, [`exec_child_wait`](LIMITS.md#execution-budget
 [`exec_attempt_budget`](LIMITS.md#execution-budgets), cover the worker's waits on exec
 children, per step and per plan, excluding every measured phase release wait; the log budget,
 [`log_collection_timeout`](LIMITS.md#evidence-capture), covers the observer.
-The ready and sentinel budgets are iteration counts over a sleep interval,
-not wall-clock guarantees in either direction. Their values and their
-checks are in [LIMITS.md](LIMITS.md).
+The ready and sentinel budgets are elapsed monotonic allowances: each sleep is
+bounded by what remains, polling costs consume it, the sentinel allowance
+excludes measured phase collection intervals, and expiry starts cleanup rather
+than promising a total response time. Their values and their checks are in
+[LIMITS.md](LIMITS.md).
 
 The host sends policy bytes through a nonblocking pipe under the delivery
 deadline ([`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift) and [`MonotonicDeadline`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift) in

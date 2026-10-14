@@ -175,6 +175,7 @@
       "association_issues" : "array",
       "decode_fault" : "object",
       "exit_code" : "number",
+      "exit_grace_wait" : "object",
       "expected_step_ids" : "array",
       "io_error" : "string",
       "ordinal" : "number",
@@ -206,6 +207,14 @@
       "message" : "string",
       "origin" : "string",
       "retained_bytes" : "number"
+    },
+    "reply.phases[].validator_subprocess.exit_grace_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "excluded_ms" : "number",
+      "native_errno" : "number",
+      "stop" : "string"
     },
     "reply.phases[].validator_subprocess.records[]" : {
       "errno" : "number",
@@ -248,6 +257,7 @@
       "disposition" : "object",
       "done_observed" : "boolean",
       "exit_code" : "number",
+      "exit_grace_wait" : "object",
       "exit_requested" : "boolean",
       "grace_end" : "string",
       "partial_steps" : "boolean",
@@ -256,7 +266,9 @@
       "policy_transfer_timeout" : "object",
       "poll_stop_reason" : "string",
       "ready_byte_received" : "boolean",
+      "ready_wait" : "object",
       "reaped" : "boolean",
+      "sentinel_wait" : "object",
       "term_signal" : "number",
       "termination_request" : "object",
       "wait_errors" : "array",
@@ -362,6 +374,14 @@
       "reason" : "string",
       "state" : "string"
     },
+    "reply.runner_subprocess.exit_grace_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "excluded_ms" : "number",
+      "native_errno" : "number",
+      "stop" : "string"
+    },
     "reply.runner_subprocess.policy_transfer_error" : {
       "bytes_expected" : "number",
       "bytes_written" : "number",
@@ -372,6 +392,22 @@
       "bytes_expected" : "number",
       "bytes_written" : "number",
       "elapsed_ms" : "number"
+    },
+    "reply.runner_subprocess.ready_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "excluded_ms" : "number",
+      "native_errno" : "number",
+      "stop" : "string"
+    },
+    "reply.runner_subprocess.sentinel_wait" : {
+      "budget_ms" : "number",
+      "clock_fault" : "boolean",
+      "elapsed_ms" : "number",
+      "excluded_ms" : "number",
+      "native_errno" : "number",
+      "stop" : "string"
     },
     "reply.runner_subprocess.termination_request" : {
       "errno" : "number",

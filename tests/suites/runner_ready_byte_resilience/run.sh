@@ -122,6 +122,11 @@ if sub.get("exit_code") != 0:
 # Worker observation is independent of the host read and later successful apply.
 import errno
 assert sub["ready_byte_received"] is False, sub
+# The readiness allowance is elapsed monotonic time: the 1000 ms budget expired
+# on the clock. 250 ms of scheduling tolerance is stated, not measured.
+wait = sub["ready_wait"]
+assert wait["stop"] == "deadline" and wait["budget_ms"] == 1000 and wait["clock_fault"] is False, wait
+assert 1000 <= wait["elapsed_ms"] <= 1250, wait
 assert sub["worker_evidence"]["readiness"] == {"rc": -1, "errno": errno.EPIPE}, sub
 assert sub["worker_evidence"]["failure_state"] == "absent", sub
 assert runner["sandboxed_after_apply"] is True, runner
