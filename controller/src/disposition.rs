@@ -1320,6 +1320,8 @@ fn validator_ownership_problem(
     if Some(owner) != phase["phase_id"].as_str() || Some(ordinal) != phase["ordinal"].as_i64() {
         return Some("validator collection names another phase");
     }
+    // Order is the step-order and partition checks' question; ownership asks
+    // whether the plan names exactly this phase's eligible queries.
     let empty = Vec::new();
     let eligible: Vec<&Value> = runner["steps"]
         .as_array()
@@ -1333,8 +1335,18 @@ fn validator_ownership_problem(
     let Some(expected) = block["expected_step_ids"].as_array() else {
         return Some("validator collection lacks its expected plan");
     };
-    let plan: Vec<&Value> = eligible.iter().map(|s| &s["step_id"]).collect();
-    if expected.iter().collect::<Vec<_>>() != plan {
+    let mut plan: Vec<String> = eligible
+        .iter()
+        .filter_map(|s| s["step_id"].as_str().map(str::to_string))
+        .collect();
+    plan.sort();
+    let mut named: Vec<String> = expected
+        .iter()
+        .map(|v| v.as_str().map(str::to_string).unwrap_or_default())
+        .collect();
+    named.sort();
+    let unique = named.windows(2).all(|w| w[0] != w[1]);
+    if !unique || named != plan {
         return Some("validator expected IDs disagree with the phase's eligible query plan");
     }
     let (Some(records), Some(issues)) = (

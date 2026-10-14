@@ -1,8 +1,8 @@
 {
   "build": {
-    "commit": "795c9f27b62a454b5e919edb0d1a68b1a167f1b7",
-    "describe": "v0.2.8-90-g795c9f2",
-    "number": "610",
+    "commit": "c11aa0613150cb0bcada5d5ae4d8a59b86ccce95",
+    "describe": "v0.2.8-92-gc11aa06",
+    "number": "612",
     "version": "0.2.8"
   },
   "data": {
@@ -18,19 +18,19 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1791998947806,
+      "ended_at_unix_ms": 1792000541402,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 932,
         "error": null
       },
-      "started_at_unix_ms": 1791998944057,
+      "started_at_unix_ms": 1792000537616,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 7322,
-      "stdout_bytes_retained": 7322,
+      "stdout_bytes_received": 7347,
+      "stdout_bytes_retained": 7347,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
@@ -66,7 +66,9 @@
               "fifo",
               "hosts"
             ],
-            "pid": 81505,
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 1382,
             "probe_bytes_expected": 238,
             "probe_bytes_written": 238,
             "reaped": true,
@@ -75,10 +77,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
+                "filter_value": "/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fifo"
               },
@@ -100,7 +102,7 @@
           }
         }
       ],
-      "pid": 81504,
+      "pid": 1381,
       "policy_format": "sbpl",
       "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
       "rc": 1,
@@ -243,7 +245,7 @@
         "exit_requested": true,
         "grace_end": "exhausted",
         "partial_steps": true,
-        "pid": 81504,
+        "pid": 1381,
         "poll_stop_reason": "sentinel_deadline",
         "ready_byte_received": true,
         "reaped": true,
@@ -254,7 +256,7 @@
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "4e3ea0cacee3b2aa00abe8caf0e4e818f4e401e521125325bdd3100f4e55113b",
+          "abi_identity": "6373b86912f601629be3c908965b87052bb29ce88b5f3a7060f8a0457ccb9a2b",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -273,7 +275,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 20,
+      "schema_version": 21,
       "specimen_id": "a1_fifo_then_file",
       "steps": [
         {
@@ -305,7 +307,7 @@
             "observed_path": null,
             "outcome": "no_completed_result",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -316,7 +318,7 @@
             "rc": -1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
+            "requested_path": "/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
             "result_source": "synthetic"
           },
           "comparison": {
@@ -335,20 +337,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
-              "input": "/private/tmp/pw-in-flight-ib7ll0se/blocker.fifo",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-2ix_6ccl/blocker.fifo",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 81504,
+            "pid": 1381,
             "rc": 0,
             "result_source": "validator"
           },
@@ -424,7 +426,7 @@
               "same_as_input": [],
               "stage": "after_orchestration"
             },
-            "pid": 81504,
+            "pid": 1381,
             "rc": 0,
             "result_source": "validator"
           },
@@ -479,7 +481,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c2-captures-20261014/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c3-captures-20261014/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -519,7 +521,7 @@
     },
     "timeout_ms": 20000
   },
-  "generated_at_unix_ms": 1791998947806,
+  "generated_at_unix_ms": 1792000541402,
   "kind": "run",
   "result": {
     "errno": null,

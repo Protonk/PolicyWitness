@@ -2108,9 +2108,13 @@ func validatorOwnershipProblem(phase: PWRunnerPhaseResult, steps: [PWRunnerStepR
     guard let block = phase.validator_subprocess else { return nil }
     guard let owner = block.phase_id, let ordinal = block.ordinal else { return "validator collection lacks phase ownership" }
     if owner != phase.phase_id || ordinal != phase.ordinal { return "validator collection names another phase" }
+    // Order is the step-order and partition checks' question; ownership asks
+    // whether the plan names exactly this phase's eligible queries.
     let eligible = steps.filter { $0.phase_id == phase.phase_id && $0.sandbox_check.missing_reason != "query_not_requested" }
     guard let expected = block.expected_step_ids else { return "validator collection lacks its expected plan" }
-    if expected != eligible.map({ $0.step_id }) { return "validator expected IDs disagree with the phase's eligible query plan" }
+    if Set(expected).count != expected.count || Set(expected) != Set(eligible.map { $0.step_id }) {
+        return "validator expected IDs disagree with the phase's eligible query plan"
+    }
     let probes = eligible.map { step in
         ValidatorQueryIdentity(stepId: step.step_id, operation: step.sandbox_check.operation,
                                filterType: mapFilterKindToValidator(step.sandbox_check.filter_kind),

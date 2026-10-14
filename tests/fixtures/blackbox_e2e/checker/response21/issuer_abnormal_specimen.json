@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+      "target": "/private/tmp/pw-extension-control-dm532fju/target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+              "value": "/private/tmp/pw-extension-control-dm532fju/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+            "target": "/private/tmp/pw-extension-control-dm532fju/target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+              "value": "/private/tmp/pw-extension-control-dm532fju/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+            "target": "/private/tmp/pw-extension-control-dm532fju/target"
           }
         },
         {
@@ -76,20 +76,20 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+              "value": "/private/tmp/pw-extension-control-dm532fju/target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-control-rbkrv9vx/target"
+            "target": "/private/tmp/pw-extension-control-dm532fju/target"
           }
         }
       ]
     }
   ],
   "_test_overrides": {
-    "issuer_executable_path": "/private/tmp/pw-extension-control-rbkrv9vx/issuer",
-    "worker_executable_path": "/private/tmp/pw-extension-control-rbkrv9vx/worker"
+    "issuer_executable_path": "/private/tmp/pw-extension-control-dm532fju/issuer",
+    "worker_executable_path": "/private/tmp/pw-extension-control-dm532fju/worker"
   }
 }

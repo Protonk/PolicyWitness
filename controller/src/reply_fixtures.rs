@@ -150,13 +150,42 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         "collection_basis": "after_confirmed_reap", "partial_steps": partial,
         "wait_errors": [], "ready_byte_received": true});
     sub["disposition"] = disposition_for(&sub, &steps);
-    let records: Vec<Value> = steps
+    let record = |s: &Value| {
+        let q = &s["sandbox_check"];
+        json!({"step_id": s["step_id"], "operation": q["operation"], "filter_type": "PATH",
+            "filter_type_id": 1, "filter_value": q["filter_value"], "outcome": q["outcome"],
+            "rc": q["rc"], "errno": q["errno"]})
+    };
+    // One owned phase per distinct step phase_id, in order of first appearance;
+    // steps without a phase belong to "main".
+    let mut phase_ids: Vec<String> = Vec::new();
+    for s in &steps {
+        let id = s["phase_id"].as_str().unwrap_or("main").to_string();
+        if !phase_ids.contains(&id) {
+            phase_ids.push(id);
+        }
+    }
+    if phase_ids.is_empty() {
+        phase_ids.push("main".to_string());
+    }
+    let phases: Vec<Value> = phase_ids
         .iter()
-        .map(|s| {
-            let q = &s["sandbox_check"];
-            json!({"step_id": s["step_id"], "operation": q["operation"], "filter_type": "PATH",
-                "filter_type_id": 1, "filter_value": q["filter_value"], "outcome": q["outcome"],
-                "rc": q["rc"], "errno": q["errno"]})
+        .enumerate()
+        .map(|(index, id)| {
+            let own: Vec<&Value> = steps
+                .iter()
+                .filter(|s| s["phase_id"].as_str().unwrap_or("main") == id)
+                .collect();
+            let ids: Vec<Value> = own.iter().map(|s| s["step_id"].clone()).collect();
+            json!({"phase_id": id, "ordinal": index + 1, "action_ids": ids,
+                "arrival_observed": true, "completion_observed": !partial && signal.is_none(),
+                "collection_status": "collected",
+                "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
+                    "proceed_observed": true, "validator_disposition": "reaped",
+                    "worker_lifetime_established": true, "protocol_violations": []},
+                "validator_subprocess": {"phase_id": id, "ordinal": index + 1, "pid": 43 + index,
+                    "reaped": true, "exit_code": 0, "expected_step_ids": ids,
+                    "association_issues": [], "records": own.iter().map(|s| record(s)).collect::<Vec<_>>()}})
         })
         .collect();
     let ok = outcome == "ok";
@@ -166,15 +195,7 @@ pub(crate) fn reply_with(outcome: &str, signal: Option<i32>, steps: Vec<Value>) 
         "pid": 9999, "bundle_id": "controlled.service", "policy_format": "sbpl",
         "policy_sha256": "0".repeat(64), "sandboxed_after_apply": true, "test_overrides": null,
         "runner_subprocess": sub,
-        "phases": [{"phase_id": "main", "ordinal": 1,
-            "action_ids": steps.iter().map(|s| s["step_id"].clone()).collect::<Vec<_>>(),
-            "arrival_observed": true, "completion_observed": !partial && signal.is_none(), "collection_status": "collected",
-            "ordering": {"collection_closed_before_proceed": true, "proceed_set": true,
-                "proceed_observed": true, "validator_disposition": "reaped",
-                "worker_lifetime_established": true, "protocol_violations": []},
-            "validator_subprocess": {"phase_id": "main", "ordinal": 1, "pid": 43, "reaped": true, "exit_code": 0,
-                "expected_step_ids": steps.iter().map(|s| s["step_id"].clone()).collect::<Vec<_>>(),
-                "association_issues": [], "records": records}}],
+        "phases": phases,
         "steps": steps})
 }
 

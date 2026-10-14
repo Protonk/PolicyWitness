@@ -531,10 +531,11 @@ wrong-type rejection, optional absence and unchanged degraded evidence.
 Every semantic reader checks ownership of a phase's validator subprocess the
 same way. The block carries `phase_id` and `ordinal`, stamped by the host from
 the collection it ran, and both must equal the containing phase's. Its
-`expected_step_ids` must be exactly the phase's eligible query plan in action
-order: the phase's ordinary steps whose retained query decision is not
+`expected_step_ids` must name exactly the phase's eligible query plan: the
+phase's ordinary steps whose retained query decision is not
 `query_not_requested`, read from the reply rather than by resolving paths again,
-so a block beside a phase without eligible queries carries an empty plan. Its
+so a block beside a phase without eligible queries carries an empty plan. Step
+order is the partition and step-order checks' question, not ownership's. Its
 `association_issues` must be the
 issues its retained `records` and that plan imply, recomputed by the reader. A
 block copied from another phase, or copied expected IDs, records or identity

@@ -1,8 +1,8 @@
 {
   "build": {
-    "commit": "795c9f27b62a454b5e919edb0d1a68b1a167f1b7",
-    "describe": "v0.2.8-90-g795c9f2",
-    "number": "610",
+    "commit": "c11aa0613150cb0bcada5d5ae4d8a59b86ccce95",
+    "describe": "v0.2.8-92-gc11aa06",
+    "number": "612",
     "version": "0.2.8"
   },
   "data": {
@@ -18,19 +18,19 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1791998952943,
+      "ended_at_unix_ms": 1792000546445,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 2353,
         "error": null
       },
-      "started_at_unix_ms": 1791998952877,
+      "started_at_unix_ms": 1792000546385,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 13485,
-      "stdout_bytes_retained": 13485,
+      "stdout_bytes_received": 13560,
+      "stdout_bytes_retained": 13560,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
@@ -112,7 +112,7 @@
           "identity": {
             "device": 16777233,
             "gid": 0,
-            "inode": 15174353,
+            "inode": 15290712,
             "mode": 33188,
             "uid": 501
           },
@@ -126,7 +126,7 @@
             "exit_code": 0,
             "gid": 20,
             "native_nonnull": true,
-            "pid": 81567,
+            "pid": 1449,
             "reaped": true,
             "result_published": true,
             "token_length": 230,
@@ -134,8 +134,8 @@
             "wait_errors": []
           },
           "preparation_status": "prepared",
-          "resolved_target": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
-          "submitted_target": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+          "resolved_target": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
+          "submitted_target": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
           "token_ref": "token"
         }
       ],
@@ -165,7 +165,9 @@
             "expected_step_ids": [
               "before"
             ],
-            "pid": 81569,
+            "ordinal": 1,
+            "phase_id": "p0",
+            "pid": 1451,
             "probe_bytes_expected": 152,
             "probe_bytes_written": 152,
             "reaped": true,
@@ -174,10 +176,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-51b0t__e/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-o23bs2wz/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "before"
               }
@@ -211,7 +213,9 @@
             "expected_step_ids": [
               "during"
             ],
-            "pid": 81570,
+            "ordinal": 2,
+            "phase_id": "p1",
+            "pid": 1452,
             "probe_bytes_expected": 152,
             "probe_bytes_written": 152,
             "reaped": true,
@@ -220,10 +224,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-51b0t__e/extension-target\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-o23bs2wz/extension-target\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "during"
               }
@@ -256,7 +260,9 @@
             "expected_step_ids": [
               "after"
             ],
-            "pid": 81571,
+            "ordinal": 3,
+            "phase_id": "p2",
+            "pid": 1453,
             "probe_bytes_expected": 151,
             "probe_bytes_written": 151,
             "reaped": true,
@@ -265,10 +271,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+                "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-51b0t__e/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-targets-o23bs2wz/extension-target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "after"
               }
@@ -279,7 +285,7 @@
           }
         }
       ],
-      "pid": 81568,
+      "pid": 1450,
       "policy_format": "sbpl",
       "policy_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
       "rc": 0,
@@ -512,13 +518,13 @@
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 81568,
+        "pid": 1450,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "4e3ea0cacee3b2aa00abe8caf0e4e818f4e401e521125325bdd3100f4e55113b",
+          "abi_identity": "6373b86912f601629be3c908965b87052bb29ce88b5f3a7060f8a0457ccb9a2b",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -536,7 +542,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 20,
+      "schema_version": 21,
       "specimen_id": "extensions",
       "steps": [
         {
@@ -569,7 +575,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -580,7 +586,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -597,20 +603,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-51b0t__e/extension-target",
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 81568,
+            "pid": 1450,
             "rc": 1,
             "result_source": "validator"
           },
@@ -625,7 +631,7 @@
               "identity": {
                 "device": 16777233,
                 "gid": 0,
-                "inode": 15174353,
+                "inode": 15290712,
                 "mode": 33188,
                 "uid": 501
               },
@@ -656,7 +662,7 @@
             "observed_path": null,
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -667,7 +673,7 @@
             "rc": 0,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -684,20 +690,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-51b0t__e/extension-target",
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 81568,
+            "pid": 1450,
             "rc": 0,
             "result_source": "validator"
           },
@@ -733,7 +739,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -744,7 +750,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "requested_path": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "result_source": "worker"
           },
           "comparison": {
@@ -761,20 +767,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+            "filter_value": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-51b0t__e/extension-target",
-              "input": "/private/tmp/pw-extension-targets-51b0t__e/extension-target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
+              "input": "/private/tmp/pw-extension-targets-o23bs2wz/extension-target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 81568,
+            "pid": 1450,
             "rc": 1,
             "result_source": "validator"
           },
@@ -826,7 +832,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c2-captures-20261014/suites/witness_contract/extensions/artifacts/lifecycle/specimen.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/c3-captures-20261014/suites/witness_contract/extensions/artifacts/lifecycle/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -866,7 +872,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791998952943,
+  "generated_at_unix_ms": 1792000546445,
   "kind": "run",
   "result": {
     "errno": null,

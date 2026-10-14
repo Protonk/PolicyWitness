@@ -84,7 +84,9 @@ def ownership_problem(runner, phase):
     expected = block.get('expected_step_ids')
     if not isinstance(expected, list):
         return 'validator collection lacks its expected plan'
-    if expected != [s.get('step_id') for s in eligible]:
+    # Order is the step-order and partition checks' question; ownership asks
+    # whether the plan names exactly this phase's eligible queries.
+    if len(set(map(str, expected))) != len(expected) or set(map(str, expected)) != {str(s.get('step_id')) for s in eligible}:
         return "validator expected IDs disagree with the phase's eligible query plan"
     records, issues = block.get('records'), block.get('association_issues')
     if not isinstance(records, list) or not isinstance(issues, list):
