@@ -1,5 +1,7 @@
 sentinel_harness
 discovery_target
 enforcement_probe
+local_name_probe
+local_name_probe.app/
 *.o
 *.dSYM/

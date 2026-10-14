@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""CLI adapter for the three runner_filter_* suites.
+"""CLI adapter for the four runner_filter_* suites.
 
 blackbox owns envelope/step/evidence validation. Callers supply step identity,
-operation, filter value and the attempt contract; an unavailable prediction
+operation, filter value and the attempt contract (supported file open, denied
+sysctl or allowed mach lookup); an unavailable prediction
 never skips the attempt checks. This adapter neither launches PW nor derives
 expectations from the returned envelope or production filter tables.
 """
@@ -19,6 +20,8 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
     expected = {"step_id": step_id, "sandbox_outcome": "prediction_unavailable"}
     if attempt_contract == "sysctl_denied":
         expected["attempt_ok"] = False
+    if attempt_contract == "mach_lookup_allowed":
+        expected["attempt_ok"] = True
     errors, matched = validate_run_shape(run, [expected], policy_format="sbpl")
     for step, exp in matched:
         errors.extend(validate_step(step, exp))
@@ -37,6 +40,13 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
             if attempt.get("outcome") not in ("ok", "open_failed"):
                 errors.append(f"{step_id}: expected supported file-open attempt "
                               f"(got {attempt.get('outcome')!r})")
+        elif attempt_contract == "mach_lookup_allowed":
+            # The rule the policy wrote governs no lookup the worker can reach.
+            if attempt.get("outcome") != "ok" or attempt.get("rc") != 0 or attempt.get("errno") is not None:
+                errors.append(f"{step_id}: expected a completed mach lookup with outcome=ok, rc=0 and null errno "
+                              f"(got {attempt.get('outcome')!r}, rc={attempt.get('rc')!r}, errno={attempt.get('errno')!r})")
+            if attempt.get("requested_kind") != "mach_lookup" or attempt.get("requested_path") != filter_value:
+                errors.append(f"{step_id}: mach lookup attempt must name the submitted service")
         else:
             if attempt.get("outcome") != "sysctl_failed":
                 errors.append(f"{step_id}: expected attempt.outcome=sysctl_failed "
@@ -60,6 +70,17 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
             errors.append(f"{step_id}: denied sysctl must be observed as a permission failure by errno")
         if "path_diagnostics" in step["sandbox_check"]:
             errors.append(f"{step_id}: non-path query acquired path provenance")
+    elif attempt_contract == "mach_lookup_allowed":
+        if (comparison["observation"], comparison["observation_basis"]) != ("succeeded", "completed_worker_status"):
+            errors.append(f"{step_id}: a completed lookup must be observed as succeeded by worker status")
+        # The attempt maps to global_name, so a local_name query's target
+        # relation is unresolved by reading rule 10; only the operation matches.
+        if comparison["target_relation"] != "unresolved" or comparison["operation_relation"] != "matched":
+            errors.append(f"{step_id}: a local_name query beside a mach lookup must report "
+                          f"operation_relation=matched and target_relation=unresolved "
+                          f"(got {comparison['operation_relation']!r}, {comparison['target_relation']!r})")
+        if "path_diagnostics" in step["sandbox_check"]:
+            errors.append(f"{step_id}: non-path query acquired path provenance")
     elif comparison["observation"] not in ("succeeded", "other_failure"):
         errors.append(f"{step_id}: file-open placeholder observation {comparison['observation']!r} is not a supported-file result")
     return errors
@@ -71,7 +92,7 @@ def main():
     parser.add_argument("--step-id", required=True)
     parser.add_argument("--operation", required=True)
     parser.add_argument("--filter-value", required=True)
-    parser.add_argument("--attempt", choices=("file_open", "sysctl_denied"), required=True)
+    parser.add_argument("--attempt", choices=("file_open", "sysctl_denied", "mach_lookup_allowed"), required=True)
     args = parser.parse_args()
     try:
         run = json.loads(args.run.read_text(encoding="utf-8"))

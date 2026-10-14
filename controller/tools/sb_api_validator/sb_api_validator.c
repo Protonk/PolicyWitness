@@ -19,9 +19,13 @@
  * unreliable for global-name" — that anomaly was at least partly
  * self-inflicted by querying with the wrong filter ID.
  *
- * LOCAL_NAME=17: NOT YET re-verified by the same methodology. May also
- * be incorrect by the same pattern. No in-tree test exercises
- * local-name today. */
+ * LOCAL_NAME=3: the only ID that answers a (deny mach-lookup (local-name X))
+ * rule (deny for X, allow for a sibling) in the 2026-10-14 scan recorded in
+ * tests/suites/witness_contract/harness/VERIFICATIONS.md. The earlier 17
+ * never discriminated. On the tested macOS no reachable lookup was governed
+ * by local-name rules (self-registered names and embedded XPC services follow
+ * global-name), so PW plans no local-name query; this constant serves the
+ * CLI's RAW/LOCAL_NAME scans only. */
 #ifndef SANDBOX_FILTER_PATH
 #define SANDBOX_FILTER_PATH 1
 #endif
@@ -29,7 +33,7 @@
 #define SANDBOX_FILTER_GLOBAL_NAME 2
 #endif
 #ifndef SANDBOX_FILTER_LOCAL_NAME
-#define SANDBOX_FILTER_LOCAL_NAME 17
+#define SANDBOX_FILTER_LOCAL_NAME 3
 #endif
 /* OR'd into the type argument. Without it the kernel reports every denied
  * query as a "Sandbox: <worker>(pid) deny(1) <op> <path>" line attributed to

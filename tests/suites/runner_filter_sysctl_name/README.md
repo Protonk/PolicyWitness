@@ -11,7 +11,7 @@ and EPERM or EACCES in `errno`.
 
 ## Shared filter contract
 
-The three `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
+The four `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
 with their expected step ID, operation, filter value and attempt contract. The
 adapter accepts only the current response and envelope versions. It uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
 policy format, exact step identity/count, and evidence fields with their documented types.
@@ -21,17 +21,17 @@ limitation with `order: unestablished`. Nullable evidence fields must
 remain present, including `sandbox_check.error` and the attempt path fields.
 
 The adapter checks the requested operation and the literal IOKit class or sysctl
-name in `filter_value`, and requires a populated integer
-`attempt.rc`. Each caller selects its attempt check:
+name in `filter_value`, or the Mach service name for the local-name suite, and
+requires a populated integer `attempt.rc`. Each caller selects its attempt check:
 this suite requires the sysctl denial described above; the IOKit suites require
-a supported file-open result. Prediction and attempt errors accumulate, so a
+a supported file-open result; the local-name suite requires a completed lookup. Prediction and attempt errors accumulate, so a
 broken prediction cannot hide a broken attempt. These checks concern the public
 response, not internal function names or proof that a particular API was called.
 
 ## Checker controls
 
 The `checker_controls` case runs before the app prerequisite check and exercises
-all three callers using hand-authored envelopes and fixed CLI arguments. It
+all four callers using hand-authored envelopes and fixed CLI arguments. It
 imports neither the checker nor production code. Valid nullable evidence,
 supported file failures, and both permitted denial errnos must pass. Missing
 fields, wrong sentinel values/types, a removed `drift` key, wrong/duplicate/
@@ -41,7 +41,7 @@ Combined faults must report both channels.
 
 Positive controls carry the comparison record and submitted-attempt evidence;
 removing those fields must fail. Another, absent, null or non-integer response
-or envelope version is reported as unsupported. Each of the three caller
+or envelope version is reported as unsupported. Each of the four caller
 contracts runs through the checker CLI.
 
 These controls need only Python 3 and run in the default battery through this

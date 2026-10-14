@@ -420,12 +420,27 @@
       "cases": [
         {
           "id": "checker_controls",
-          "description": "all three filter adapters accept valid evidence and reject broken channels",
+          "description": "all four filter adapters accept valid evidence and reject broken channels",
           "requires": []
         },
         {
           "id": "prediction_unavailable_attempt_observed",
           "description": "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed"
+        }
+      ]
+    },
+    "runner_filter_local_name": {
+      "command": [
+        "bash",
+        "tests/suites/runner_filter_local_name/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "prediction_unavailable_attempt_observed",
+          "description": "local_name: prediction_unavailable surfaced; the lookup the rule names still completed"
         }
       ]
     },

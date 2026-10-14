@@ -1405,13 +1405,17 @@ Notes:
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
   request unchanged for cross-referencing with the specimen.
-- `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
-  (mach-lookup local). The global-name ID was verified against kernel
-  enforcement (deny on the policy's denied value and allow on a sibling
-  un-denied value); ID `12` passes the same check, so `2` is the selected
-  working ID. The local-name ID has not been
-  verified by the same method. For filter kinds in the
-  prediction_unavailable set, no `filter_type_id` is emitted (see
+- `filter_type_id`: `1` (path) or `2` (mach-lookup global). The global-name
+  ID was verified against kernel enforcement (deny on the policy's denied
+  value and allow on a sibling un-denied value); ID `12` passes the same
+  check, so `2` is the selected working ID. No ID is emitted for
+  `local_name`: on the tested macOS, `sandbox_check` ID `3` is the only ID
+  that answers a `local-name` rule, and every Mach lookup the worker can
+  perform, including a name the process registered itself and an embedded
+  XPC service in its own bundle, is governed by `global-name` rules alone, so
+  no ID agrees with observed enforcement and the pair is in the
+  prediction_unavailable set. For filter kinds in that set, no
+  `filter_type_id` is emitted (see
   [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
 - `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
   `prediction_unavailable`.
@@ -1793,6 +1797,16 @@ Currently in this category:
 - `(sysctl-read, sysctl_name)` — verified 2026-05-29 unreliable
   across all candidate filter IDs in 1..200 against `kern.osrelease`.
   The same result outside the iokit family.
+- `(mach-lookup, local_name)` — verified 2026-10-14 on macOS 26.7.1
+  (25G241, arm64) with `verify_local_name.sh`: a
+  `(deny mach-lookup (local-name X))` rule changed no lookup the probe could
+  perform, for a name the process registered itself and for an embedded XPC
+  service looked up in its bundle's own domain, while the same rule written
+  with `global-name` denied them. `sandbox_check` ID `3` alone answers
+  `deny` for X and `allow` for a sibling under the local-name rule, so it
+  disagrees with observed enforcement; no other ID in 1..200 discriminates.
+  Attempts still run. The result describes this environment; it does not
+  generalize to other macOS releases or to namespaces PW cannot reach.
 
 ### Attempt kinds the runner implements
 

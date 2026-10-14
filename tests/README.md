@@ -290,6 +290,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_filter_iokit_registry_entry_class` | Baseline | Unavailable prediction with retained file-open attempt evidence; does not establish IOKit enforcement. | App and XPC. | [Suite](suites/runner_filter_iokit_registry_entry_class/README.md) |
 | `runner_filter_sysctl_name` | Baseline | Unavailable prediction beside a real denied sysctl attempt; independent checker controls cover all filter callers. | App/XPC for live case; Python for controls. | [Suite](suites/runner_filter_sysctl_name/README.md) |
 | `runner_filter_iokit_user_client_class` | Baseline | Unavailable prediction with a file-open placeholder; does not establish IOKit enforcement. | App and XPC. | [Suite](suites/runner_filter_iokit_user_client_class/README.md) |
+| `runner_filter_local_name` | Baseline | Unavailable prediction beside a real completed Mach lookup that a local-name rule names; the verified scope of that filter on this host. | App and XPC. | [Suite](suites/runner_filter_local_name/README.md) |
 | `sandbox_extensions_native` | Opt-in | Independent native extension lifecycle, file effects, issuer lifetime and allocation observations; no production integration claim. | clang, macOS SDK and Developer ID identity. | [Suite](suites/sandbox_extensions_native/README.md) |
 | `validator_bridge` | Baseline | Native query forwarding and acknowledged query/emission/closure gates, with independent native/process observations. | clang and macOS SDK. | [Suite](suites/validator_bridge/README.md) |
 | `validator_batch_mode` | Baseline | Batch framing, per-query outcomes and continued processing after errors; native calls retain the no-report flag. | App. | [Suite](suites/validator_batch_mode/README.md) |
@@ -360,8 +361,8 @@ Black-box and isolation controls also compare ordered/reordered response pairs:
 only the order diagnostic may change, preserving actual step failures without
 inventing others. Diagnostic order is unconstrained.
 The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
-step identity, operation, filter value and either a supported file-open or
-denied-sysctl attempt contract; the adapter accepts only the current response
+step identity, operation, filter value and a supported file-open, denied-sysctl
+or allowed-mach-lookup attempt contract; the adapter accepts only the current response
 and envelope versions. Their independent controls run through
 [runner_filter_sysctl_name](suites/runner_filter_sysctl_name/README.md) before
 its optional app check.

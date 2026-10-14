@@ -1719,21 +1719,21 @@
     },
     {
       "id": "S21",
-      "scenario": "local_name query, kr=1100",
+      "scenario": "local_name query excluded, kr=1100",
       "specimen": "S",
       "step_id": "s21",
-      "query": "allow",
+      "query": "unavailable",
       "unit": {
         "sandbox_check": {
-          "rc": 0,
-          "outcome": "allow",
+          "rc": -1,
+          "outcome": "prediction_unavailable",
           "operation": "mach-lookup",
           "filter_kind": "local_name",
           "filter_value": "com.apple.logd",
-          "result_source": "validator",
-          "native_rc": 0,
-          "missing_reason": null,
-          "error": null
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "query_not_requested",
+          "error": "prediction unavailable for this operation and filter"
         },
         "attempt": {
           "rc": 1,
@@ -1748,24 +1748,28 @@
           "child_pid": null,
           "child_exit_code": null
         },
-        "query_exclusion_reason": null,
-        "order": "query_first",
+        "query_exclusion_reason": "prediction_unavailable_pair",
+        "order": "unestablished",
         "lifecycle_summary": "completed"
       },
       "assert": {
         "sandbox_check.filter_kind": "local_name",
-        "sandbox_check.outcome": "allow",
+        "sandbox_check.outcome": "prediction_unavailable",
+        "sandbox_check.result_source": "synthetic",
+        "sandbox_check.missing_reason": "query_not_requested",
         "attempt.outcome": "lookup_failed",
         "attempt.error": "bootstrap_look_up: kr=1100"
       },
-      "control": "the global-name deny does not match a local-name query; the attempt maps to the global_name filter, so the target relation is unresolved (reading rule 10)",
+      "control": "(mach-lookup, local_name) is in the prediction-unavailable set, so the host plans no query and records the exclusion; the global-name deny still refuses the native lookup, and the attempt maps to the global_name filter, so the target relation is unresolved (reading rule 10)",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "bootstrap_permission_result",
         "operation_relation": "matched",
         "target_relation": "unresolved",
-        "order": "query_first",
-        "limitations": []
+        "order": "unestablished",
+        "limitations": [
+          "query_plan:prediction_unavailable_pair"
+        ]
       }
     },
     {

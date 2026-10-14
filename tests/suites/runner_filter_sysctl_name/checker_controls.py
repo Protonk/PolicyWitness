@@ -24,26 +24,28 @@ CALLERS = (
     ("iokit_registry_entry_class", "iosurface_open", "iokit-open-service", "IOSurfaceRoot", "file_open"),
     ("iokit_user_client_class", "iosurfaceroot_uc", "iokit-open-user-client", "IOSurfaceRootUserClient", "file_open"),
     ("sysctl_name", "kern_osrelease", "sysctl-read", "kern.osrelease", "sysctl_denied"),
+    ("local_name", "logd_local", "mach-lookup", "com.apple.logd", "mach_lookup_allowed"),
 )
 
 
-def current_reply(step_id, operation, value, sysctl):
+def current_reply(step_id, operation, value, sysctl, mach=False):
     """A reply with one planning-excluded query beside a completed attempt."""
     step = {
         "step_id": step_id, "phase_id": "main",
         "sandbox_check": {
-            "pid": 1234, "operation": operation, "filter_kind": "sysctl_name" if sysctl else operation.split("-")[-1],
+            "pid": 1234, "operation": operation,
+            "filter_kind": "sysctl_name" if sysctl else "local_name" if mach else operation.split("-")[-1],
             "filter_value": value, "filter_type_id": None,
             "outcome": "prediction_unavailable", "rc": -1, "native_rc": None, "errno": None, "error": None,
             "result_source": "synthetic", "missing_reason": "query_not_requested",
         },
         "attempt": {
-            "requested_kind": "sysctl" if sysctl else "file",
-            "requested_action": "read" if sysctl else "open_read",
+            "requested_kind": "sysctl" if sysctl else "mach_lookup" if mach else "file",
+            "requested_action": "read" if sysctl else "bootstrap_look_up" if mach else "open_read",
             "outcome": "sysctl_failed" if sysctl else "ok",
             "rc": 1 if sysctl else 0, "errno": 1 if sysctl else None, "error": None,
-            "requested_path": "kern.osrelease" if sysctl else "/etc/hosts",
-            "observed_path": None if sysctl else "/private/etc/hosts",
+            "requested_path": "kern.osrelease" if sysctl else value if mach else "/etc/hosts",
+            "observed_path": None if (sysctl or mach) else "/private/etc/hosts",
             "result_source": "worker",
             "lifecycle": {"boundary": {"state": "supported", "answer": "reached", "basis": ["slot", "attempt_support"]},
                           "result": {"state": "supported", "answer": "published", "basis": ["slot", "attempt_support"]},
@@ -51,16 +53,17 @@ def current_reply(step_id, operation, value, sysctl):
         },
         # The relations come from the submitted scopes even though the query was
         # never asked: the sysctl pair names the same operation and target, the
-        # IOKit placeholders name a different operation and a non-path target.
+        # IOKit placeholders name a different operation and a non-path target,
+        # and the local_name query differs from the lookup's global_name kind.
         "comparison": {
             "observation": "permission_failure" if sysctl else "succeeded",
             "observation_basis": "permission_errno" if sysctl else "completed_worker_status",
-            "operation_relation": "matched" if sysctl else "different",
+            "operation_relation": "matched" if (sysctl or mach) else "different",
             "target_relation": "same_submitted" if sysctl else "unresolved",
             "order": "unestablished", "limitations": ["query_plan:prediction_unavailable_pair"],
         },
     }
-    if not sysctl:
+    if not sysctl and not mach:
         step["attempt"]["path_diagnostics"] = {"input": "/etc/hosts", "observer": "runner_host",
                                               "stage": "after_orchestration", "same_as_input": [],
                                               "realpath_resolved": "/private/etc/hosts",
@@ -88,7 +91,8 @@ def main():
     count = 0
     for name, step_id, operation, value, attempt_contract in CALLERS:
         sysctl = name == "sysctl_name"
-        baseline = envelope_skeleton(current_reply(step_id, operation, value, sysctl))
+        mach = name == "local_name"
+        baseline = envelope_skeleton(current_reply(step_id, operation, value, sysctl, mach=mach))
 
         def check(label, envelope, diagnostics=(), status=1, raw=None):
             nonlocal count
@@ -153,6 +157,17 @@ def main():
         if sysctl:
             step["attempt"].update(errno=13)
             check("eacces_denial", changed, status=0)
+        elif mach:
+            # A refused lookup contradicts the verified scope of the rule, so
+            # it is a failure of this contract rather than a tolerated result.
+            step["attempt"].update(outcome="lookup_failed", rc=1, error="bootstrap_look_up: kr=1100")
+            step["comparison"].update(observation="permission_failure", observation_basis="bootstrap_permission_result")
+            check("refused_lookup", changed, ("expected a completed mach lookup with outcome=ok",))
+            # blackbox rederives the relation from the submitted scopes and
+            # rejects the claim before the adapter's own contract check runs.
+            changed, step = mutate()
+            step["comparison"]["target_relation"] = "same_submitted"
+            check("same_submitted_claim", changed, ("target_relation disagrees with the submitted targets",))
         else:
             # Supported file work can report an OS failure. These placeholders
             # check attempt reporting, not IOKit enforcement.
@@ -205,7 +220,9 @@ def main():
         step["attempt"]["rc"] = False
         check("boolean_attempt_rc", broken, ("invalid attempt.rc",))
 
-        attempt_diagnostic = "expected attempt.outcome=sysctl_failed" if sysctl else "expected supported file-open attempt"
+        attempt_diagnostic = ("expected attempt.outcome=sysctl_failed" if sysctl
+                              else "expected a completed mach lookup with outcome=ok" if mach
+                              else "expected supported file-open attempt")
         broken, step = mutate()
         step["attempt"]["outcome"] = "unsupported"
         check("unavailable_with_unsupported_attempt", broken, (attempt_diagnostic,))
@@ -233,6 +250,12 @@ def main():
         check("malformed_json", None, ("cannot read run JSON",), raw="{invalid")
         check("non_object_json", [], ("run is not an object",))
 
+        if mach:
+            broken, step = mutate()
+            step["sandbox_check"]["path_diagnostics"] = {"input": "com.apple.logd", "observer": "runner_host",
+                                                        "stage": "after_orchestration",
+                                                        "same_as_input": ["realpath_resolved", "firmlink_resolved"]}
+            check("non_path_query_with_path_provenance", broken, ("non-path query acquired path provenance",))
         if sysctl:
             for errno in (None, 2, True):
                 broken, step = mutate()

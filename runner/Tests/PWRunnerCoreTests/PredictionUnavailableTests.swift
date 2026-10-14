@@ -26,6 +26,8 @@ func runPredictionUnavailableTests(_ tk: TestKit) {
              "prediction unavailable for this operation and filter"),
             ("sysctl-read", "sysctl_name", "prediction_unavailable_pair",
              "prediction unavailable for this operation and filter"),
+            ("mach-lookup", "local_name", "prediction_unavailable_pair",
+             "prediction unavailable for this operation and filter"),
             ("file-read-data", "future_filter", "unrecognized_filter_kind",
              "prediction unavailable for unrecognized filter kind"),
         ]

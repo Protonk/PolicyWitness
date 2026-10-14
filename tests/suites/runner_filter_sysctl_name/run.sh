@@ -14,7 +14,7 @@ test_begin "${PW_TEST_SUITE}" checker_controls
 test_step checker "unavailable predictions must retain step identity and attempt checks"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter checker controls failed" \
   "${ROOT_DIR}/tests/suites/runner_filter_sysctl_name/checker_controls.py" "${PW_TEST_ARTIFACTS}"
-test_pass "all three filter adapters accept valid evidence and reject broken channels"
+test_pass "all four filter adapters accept valid evidence and reject broken channels"
 
 fi
 
