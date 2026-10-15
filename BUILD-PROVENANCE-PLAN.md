@@ -134,7 +134,8 @@ stderr on failure; neither behavior belongs in the shipped record.
   and is verified by B2; its facts go to the release record, not into the
   sealed file.
 
-A tool that cannot be read records a bounded failure entry for that field.
+If a metadata probe fails or returns unusable output, the provenance collector
+records a size-limited, sanitized failure reason for the affected field.
 Nonzero exits, empty or malformed successful output, output overflow and
 timeouts are distinct failures. Informational metadata failure does not stop
 the build; a required identity or compatibility observation does. In the
@@ -191,13 +192,12 @@ inspector, signed-artifact and release-archive suites:
   hash, or refuse a mismatch. Verify the staged copy and all recorded hashes
   against the accepted ZIP, including rejection of a swapped archive record.
 
-**Retirement.** The build document's known gap narrows from "relies on the
-tools' records to establish whether cached outputs are current" to "records
-what the selected tools reported and the directories' state; it still relies
-on the build tools for cache validity and does not establish source-to-binary
-reproducibility". The evidence inventory in [SIGNING.md](docs/SIGNING.md)
-lists the record and distinguishes sealed facts from final app facts held
-outside the seal.
+**Retirement.** The build document explains that the provenance record captures
+the selected tools' reports and the build directories' state. Its known-gap
+discussion retains the build's reliance on tool-managed cache validity and
+states that the record does not establish source-to-binary reproducibility.
+The evidence inventory in [SIGNING.md](docs/SIGNING.md) lists the record and
+distinguishes sealed facts from final app facts held outside the seal.
 
 ## B2 — Verify the signing guarantees on the final artifacts
 
