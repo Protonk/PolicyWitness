@@ -430,6 +430,7 @@
       "failure" : "object",
       "failure_publication" : "number",
       "failure_state" : "string",
+      "policy_read" : "object",
       "progress" : "object",
       "readiness" : "object"
     },
@@ -447,6 +448,10 @@
       "native_kind" : "number",
       "native_result" : "number",
       "operation" : "number"
+    },
+    "reply.runner_subprocess.worker_evidence.policy_read" : {
+      "bytes_expected" : "number",
+      "bytes_received" : "number"
     },
     "reply.runner_subprocess.worker_evidence.progress" : {
       "index" : "number",

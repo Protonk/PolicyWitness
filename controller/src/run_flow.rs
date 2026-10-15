@@ -1184,6 +1184,7 @@ mod tests {
         for (name, filename) in [
             ("timeout", "policy-transfer-timeout.json"),
             ("unconfirmed", "policy-transfer-unconfirmed.json"),
+            ("refused", "policy-transfer-refused.json"),
             ("combined", "combined-phases.json"),
         ] {
             let reply: Value = serde_json::from_slice(
@@ -1192,10 +1193,12 @@ mod tests {
             .unwrap();
             assert_eq!(
                 reply["normalized_outcome"],
-                if name == "combined" {
-                    "validator_no_reply"
-                } else {
-                    "runner_timeout"
+                match name {
+                    "combined" => "validator_no_reply",
+                    // The shipped worker's length refusal after the host's transfer
+                    // timeout takes the existing worker-failure precedence.
+                    "refused" => "runner_failed",
+                    _ => "runner_timeout",
                 }
             );
             let (result, data, code) = attach_sandbox_logs(
@@ -1227,6 +1230,26 @@ mod tests {
                     diagnostics["termination_cause"],
                     "host_cleanup_after_transfer_timeout"
                 );
+            } else if name == "refused" {
+                // Host timeout retained beside the worker's EOF receipt and refusal;
+                // the worker exited on its own code, so no cleanup cause is projected.
+                assert_eq!(diagnostics["stop_reason"], "policy_transfer_deadline");
+                let sub = &reply["runner_subprocess"];
+                assert_eq!(sub["policy_transfer_timeout"]["bytes_written"], 28);
+                assert_eq!(sub["policy_transfer_timeout"]["bytes_expected"], 43);
+                assert_eq!(
+                    sub["worker_evidence"]["policy_read"],
+                    json!({"bytes_expected": 43, "bytes_received": 28})
+                );
+                assert_eq!(sub["worker_evidence"]["failure"]["operation"], 2);
+                assert_eq!(sub["worker_evidence"]["failure"]["code"], 13);
+                assert_eq!(sub["worker_evidence"]["failure"]["detail"], 28);
+                assert!(sub["worker_evidence"]["readiness"].is_null());
+                assert_eq!(sub["exit_code"], 11);
+                assert!(sub["term_signal"].is_null() && sub["termination_request"].is_null());
+                assert_eq!(sub["grace_end"], "reaped_during_grace");
+                assert_eq!(sub["cleanup_trigger"], "policy_transfer_timeout");
+                assert_eq!(reply["sandboxed_after_apply"], false);
             } else {
                 assert!(
                     reply["runner_subprocess"]["exit_code"].is_null()
@@ -1248,6 +1271,19 @@ if e['data']['runner_result']['specimen_id']=='M08':
 else:
     assert sub.get('policy_transfer_error') is None and sub['policy_transfer_timeout']['bytes_written'] < sub['policy_transfer_timeout']['bytes_expected']
     assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
+if e['data']['runner_result']['specimen_id']=='refused':
+    import copy
+    read=sub['worker_evidence']['policy_read']
+    assert read=={'bytes_expected':43,'bytes_received':28} and sub['worker_evidence']['failure']['detail']==28, sub
+    # Rejected variants: a refusal detail that is not the received count, a host
+    # expectation that disagrees with the receipt, and a receipt member out of range.
+    def rejected(mutate):
+        bad=copy.deepcopy(e); mutate(bad['data']['runner_result']['runner_subprocess']); errors=validate(bad)
+        assert any('policy_read' in x for x in errors), errors
+    rejected(lambda s: s['worker_evidence']['failure'].update(detail=29))
+    rejected(lambda s: s['policy_transfer_timeout'].update(bytes_expected=44))
+    rejected(lambda s: s['worker_evidence']['policy_read'].update(bytes_received=-1))
+    rejected(lambda s: s['worker_evidence']['policy_read'].pop('bytes_received'))
 "#]).arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
                 .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
             child

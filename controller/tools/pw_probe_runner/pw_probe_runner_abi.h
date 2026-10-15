@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "00b9dadd112237a58453d0711a96c0cb6899133af3e67f803f1bcdc9d545693c"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x00, 0xb9, 0xda, 0xdd, 0x11, 0x22, 0x37, 0xa5, 0x84, 0x53, 0xd0, 0x71, 0x1a, 0x96, 0xc0, 0xcb, 0x68, 0x99, 0x13, 0x3a, 0xf3, 0xe6, 0x7f, 0x80, 0x3f, 0x1b, 0xcd, 0xc9, 0xd5, 0x45, 0x69, 0x3c};
+#define PW_WORKER_ABI_IDENTITY_HEX "ad6bd925c33aa26d17b3b26efd40ff6a428333de36d06f8ced40e8ee69e125a5"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xad, 0x6b, 0xd9, 0x25, 0xc3, 0x3a, 0xa2, 0x6d, 0x17, 0xb3, 0xb2, 0x6e, 0xfd, 0x40, 0xff, 0x6a, 0x42, 0x83, 0x33, 0xde, 0x36, 0xd0, 0x6f, 0x8c, 0xed, 0x40, 0xe8, 0xee, 0x69, 0xe1, 0x25, 0xa5};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -184,6 +184,23 @@ _Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift")
  *                    succeeded or was not called). Failure publication is done;
  *                    zero alone establishes neither success nor a call. The
  *                    parameter/compile failure paths do not write this field.
+ *   policy_bytes_expected — host writes pre-spawn: the UTF-8 byte count of
+ *                    the submission it writes to the policy pipe, immutable for
+ *                    the worker's lifetime. Zero is a valid expectation. The
+ *                    worker refuses a value above PW_SHM_POLICY_BYTES - 1 before
+ *                    reading any policy byte (operation 1, code 12), and after
+ *                    EOF refuses a delivered count that differs (operation 2,
+ *                    code 13, detail the received count) before the NUL scan
+ *                    and any libsandbox call. The pipe itself carries no
+ *                    framing; this input is what tells a prefix apart from a
+ *                    complete shorter submission.
+ *   policy_bytes_received, policy_read_published — worker → host. Once the
+ *                    read returns at EOF the worker stores the count it read
+ *                    and release-publishes the flag, before the length
+ *                    comparison. A header refusal, read error or overflow
+ *                    publishes nothing here. An acquire of 1 is the only gate
+ *                    for reading the count; it establishes the completed read,
+ *                    not acceptance, compilation or application.
  */
 typedef struct {
     uint32_t abi_magic;
@@ -216,7 +233,10 @@ typedef struct {
     int32_t extension_delivery_errno;
     uint32_t extension_delivery_cleanup_stage;
     int32_t extension_delivery_cleanup_errno;
-    uint8_t reserved[56];
+    uint32_t policy_bytes_expected;            /* host input; see ownership above */
+    uint32_t policy_bytes_received;            /* worker: count read at EOF */
+    _Atomic uint32_t policy_read_published;    /* worker: 1 publishes the count */
+    uint8_t reserved[44];
     pw_shm_phase_t phases[PW_SHM_MAX_PHASES];
 } pw_shm_header_t;
 
@@ -224,6 +244,10 @@ _Static_assert(offsetof(pw_shm_header_t, abi_magic) == 0,
                "bootstrap magic must stay at offset 0");
 _Static_assert(offsetof(pw_shm_header_t, abi_identity) == 64,
                "bootstrap identity must stay at offset 64");
+_Static_assert(offsetof(pw_shm_header_t, policy_bytes_expected) == 136
+               && offsetof(pw_shm_header_t, policy_read_published) == 144
+               && offsetof(pw_shm_header_t, phases) == 192,
+               "policy transfer fields are carved from the reserved bytes; no offset moves");
 
 /* Open numeric values: unknown operation/code values remain transportable. */
 enum {
@@ -242,7 +266,14 @@ enum {
      * refuses this at admission, and the reader refuses it again rather than
      * compile a prefix of the source the reply's policy_sha256 describes. */
     PW_FAILURE_SOURCE_NUL = 9, PW_FAILURE_PHASE_LAYOUT = 10,
-    PW_FAILURE_PHASE_RELEASE = 11
+    PW_FAILURE_PHASE_RELEASE = 11,
+    /* Host input policy_bytes_expected exceeds PW_SHM_POLICY_BYTES - 1; detail
+     * is the refused expectation. Refused before any policy byte is read. */
+    PW_FAILURE_LENGTH_EXPECTATION = 12,
+    /* The count read at EOF differs from policy_bytes_expected; detail is the
+     * received count. Like code 9, this refuses to compile a prefix (or an
+     * extension) of the source the reply's policy_sha256 describes. */
+    PW_FAILURE_SOURCE_LENGTH = 13
 };
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };

@@ -125,6 +125,10 @@ int main(void) {
     printf("offsetof.pw_shm_header_t.extension_delivery_errno=%zu\n", offsetof(pw_shm_header_t, extension_delivery_errno));
     printf("offsetof.pw_shm_header_t.extension_delivery_cleanup_stage=%zu\n", offsetof(pw_shm_header_t, extension_delivery_cleanup_stage));
     printf("offsetof.pw_shm_header_t.extension_delivery_cleanup_errno=%zu\n", offsetof(pw_shm_header_t, extension_delivery_cleanup_errno));
+    /* Policy delivery acknowledgement: host expectation, worker EOF receipt and its flag. */
+    printf("offsetof.pw_shm_header_t.policy_bytes_expected=%zu\n", offsetof(pw_shm_header_t, policy_bytes_expected));
+    printf("offsetof.pw_shm_header_t.policy_bytes_received=%zu\n", offsetof(pw_shm_header_t, policy_bytes_received));
+    printf("offsetof.pw_shm_header_t.policy_read_published=%zu\n", offsetof(pw_shm_header_t, policy_read_published));
     printf("offsetof.pw_shm_slot_t.call_boundary=%zu\n", offsetof(pw_shm_slot_t, call_boundary));
     printf("offsetof.pw_shm_slot_t.native_result_valid=%zu\n", offsetof(pw_shm_slot_t, native_result_valid));
     printf("offsetof.pw_shm_slot_t.native_result=%zu\n", offsetof(pw_shm_slot_t, native_result));

@@ -700,7 +700,7 @@
       "value": 5000,
       "unit": "milliseconds",
       "counting": "One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it.",
-      "effect": "Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented.",
+      "effect": "Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence.",
       "control": "Fixed; internal driver controls may shorten it.",
       "sources": [
         {
@@ -720,9 +720,15 @@
           "symbol": "runPolicyTransferTests",
           "kind": "boundary",
           "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "policy_truncated_prefix",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
-      "behavior": "Real stalled and draining pipes plus deterministic interrupted, partial and zero-progress writes. Readiness wait starts only after successful delivery. The production budget fits within the default client wait; a shorter client override is independent and does not cancel the host."
+      "behavior": "Real stalled and draining pipes plus deterministic interrupted, partial and zero-progress writes. Readiness wait starts only after successful delivery. The production budget fits within the default client wait; a shorter client override is independent and does not cancel the host. One driver control joins the host timeout to the shipped worker's refusal of a truncated delivery; the worker harness pins the receipt and both directions of the length comparison."
     },
     {
       "id": "worker_ready_wait",
@@ -1227,7 +1233,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52419124,
+      "value": 52419188,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",

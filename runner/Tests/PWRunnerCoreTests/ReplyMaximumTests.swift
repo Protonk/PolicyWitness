@@ -133,6 +133,9 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     var evidence = subprocess["worker_evidence"] as! [String: Any]
     evidence["diagnostic"] = ["state": 2, "status": "truncated", "length": PWShmLayout.diagnosticBytes - 1,
                               "text": maximal(PWShmLayout.diagnosticBytes - 1)]
+    // The EOF receipt's counts are bounded by the source capacity and agree with
+    // the transfer record's expectation below.
+    evidence["policy_read"] = ["bytes_expected": PWShmLayout.policyBytes - 1, "bytes_received": PWShmLayout.policyBytes - 1]
     subprocess["worker_evidence"] = evidence
     subprocess["policy_transfer_timeout"] = ["budget_ms": 5000, "elapsed_ms": UInt64.max,
         "bytes_written": 262143, "bytes_expected": 262143] as [String: Any]

@@ -116,8 +116,12 @@ forwarding; these unit inputs do not establish native failure attribution.
 `service_admission_controls` restores per-connection claims and refusal exits
 separately in a disposable source copy; each must restore its specific failure.
 `PolicyTransferTests` checks real stalled/draining pipes, partial and interrupted
-writes, zero progress, clock loss and failed cleanup. Its actual encoded replies
-are replayed through Rust assembly and the Python consumer by the wrapper.
+writes, zero progress, clock loss and failed cleanup, and joins the host's
+transfer timeout to the shipped worker's length refusal of a truncated delivery
+(the EOF receipt beside the write counts, `runner_failed` by precedence, reaped
+by its own exit), rejecting fabricated kill, exit and receipt variants. Its
+actual encoded replies are replayed through Rust assembly and the Python
+consumer by the wrapper.
 The exact Rust replay is ignored in standalone Cargo runs because it requires
 those fresh driver receipts; it is mandatory in the default `runner_unit` case.
 

@@ -1446,6 +1446,21 @@ struct PWWorkerDiagnostic: Codable {
     var length: UInt32?
     var text: String?
 }
+/// The worker's EOF receipt for the policy pipe: the host's expected byte count
+/// (its immutable header input) beside the count the worker read at EOF. Present
+/// only when the worker published it, which happens before the length comparison;
+/// a header refusal, read error or overflow publishes none. Equal counts establish
+/// length agreement with the submission, not content identity, compilation,
+/// application or kernel effect. Absence establishes nothing about delivery.
+struct PWWorkerPolicyRead: Codable, Equatable {
+    var bytes_expected: Int
+    var bytes_received: Int
+}
+/// The worker's fixed source buffer less its terminating NUL (PW_SHM_POLICY_BYTES - 1),
+/// the bound on both receipt counts. Stated here because the client target compiles
+/// this file without the layout mirror; `PolicyTransferTests` pins agreement with
+/// `PWShmLayout.policyBytes`.
+let policyReceiptCapacityBytes = 262_143
 struct PWWorkerEvidence: Codable {
     /// Host-selected source identity, not proof that a child reached ABI validation.
     var abi_identity: String
@@ -1455,6 +1470,32 @@ struct PWWorkerEvidence: Codable {
     var failure: PWWorkerFailure?
     var readiness: PWWorkerReadiness?
     var diagnostic: PWWorkerDiagnostic
+    var policy_read: PWWorkerPolicyRead? = nil
+}
+
+/// Reading rules for the EOF receipt (tests/FAILURE-PROPAGATION-CONTRACT.md,
+/// "Policy-transfer failure"): both counts lie within the source capacity, the
+/// host's own `bytes_expected` on any transfer record agrees with the receipt's,
+/// and a length refusal (operation 2, code 13) names the received count while the
+/// counts differ. Unequal counts without the refusal are preserved as they are:
+/// termination can interrupt the worker between the receipt and the refusal.
+func policyReadProblem(_ sub: PWRunnerSubprocess) -> String? {
+    guard let read = sub.worker_evidence?.policy_read else { return nil }
+    let capacity = policyReceiptCapacityBytes
+    guard (0...capacity).contains(read.bytes_expected), (0...capacity).contains(read.bytes_received) else {
+        return "policy_read counts must lie within the source capacity"
+    }
+    if let timeout = sub.policy_transfer_timeout, timeout.bytes_expected != read.bytes_expected {
+        return "policy_transfer_timeout.bytes_expected disagrees with policy_read.bytes_expected"
+    }
+    if let error = sub.policy_transfer_error, error.bytes_expected != read.bytes_expected {
+        return "policy_transfer_error.bytes_expected disagrees with policy_read.bytes_expected"
+    }
+    if let failure = sub.worker_evidence?.failure, failure.operation == 2, failure.code == 13,
+       read.bytes_received == read.bytes_expected || Int(failure.detail) != read.bytes_received {
+        return "a length refusal must name the received count while the counts differ"
+    }
+    return nil
 }
 
 /// Authoritative worker process metadata, produced by the unsandboxed host.
@@ -2357,6 +2398,10 @@ struct PWRunnerRunResult: Codable {
         phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
+        if reporting_failure == nil, let sub = runner_subprocess, let problem = policyReadProblem(sub) {
+            throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
+                debugDescription: "policy read receipt contradicts its basis: \(problem)")
+        }
         if reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
             throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
                 debugDescription: "a worker subprocess requires the worker disposition record")
@@ -2396,6 +2441,10 @@ struct PWRunnerRunResult: Codable {
                 if let first = problems.first {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "disposition record contradicts its basis: \(first)"))
+                }
+                if let problem = policyReadProblem(sub) {
+                    throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                        debugDescription: "policy read receipt contradicts its basis: \(problem)"))
                 }
             }
             let phaseIDs = phases.map { $0.phase_id }

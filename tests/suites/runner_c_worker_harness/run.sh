@@ -102,14 +102,51 @@ if r['scenario'] == 'abi_mismatch':
     assert old['exit_code'] == 4 and old['term_signal'] is None, old
     assert not any(old[k] for k in ('ready_byte_received', 'applied', 'done', 'sent_sigkill', 'failure_published')), old
     assert all(s['completed'] == 0 for s in old['slots']), old
+def failure(operation, code, detail):
+    assert r['failure_published'] == 1, r
+    assert r['failure'] == {'operation': operation, 'code': code, 'detail': detail,
+                            'native_kind': 0, 'errno_present': 0}, r
+def receipt(received):
+    # The worker's EOF receipt: published exactly when the read reached EOF,
+    # and the count is reported only behind the publication flag.
+    if received is None:
+        assert r['policy_read_published'] == 0 and 'policy_bytes_received' not in r, \
+            f"no EOF receipt may be published when the read did not reach EOF: {r}"
+    else:
+        assert r['policy_read_published'] == 1 and r['policy_bytes_received'] == received, \
+            f"EOF receipt must report the {received} bytes read: {r}"
 if r['scenario'] == 'policy_overflow':
-    assert r['failure_published'] == 1, r
-    assert r['failure'] == {'operation': 2, 'code': 2, 'detail': 262143,
-                            'native_kind': 0, 'errno_present': 0}, r
+    # Read overflow stops before EOF: capacity code 2 and no receipt, with the
+    # expectation pinned at the capacity so the header refusal does not preempt it.
+    failure(2, 2, 262143); receipt(None)
+    assert r['header_bytes_expected'] == 262143 and r['policy_bytes_written'] > 262143, r
+if r['scenario'] == 'policy_capacity_plus_one':
+    # One byte past the capacity with the expectation at the capacity: the same
+    # overflow refusal, before any length comparison.
+    failure(2, 2, 262143); receipt(None)
+    assert r['header_bytes_expected'] == 262143 and r['policy_bytes_written'] == 262144, r
 if r['scenario'] == 'policy_nul':
-    assert r['failure_published'] == 1, r
-    assert r['failure'] == {'operation': 2, 'code': 9, 'detail': 26,
-                            'native_kind': 0, 'errno_present': 0}, r
+    # Equal counts pass the length check; the NUL guard then refuses. The
+    # receipt records the completed read of all 41 bytes.
+    failure(2, 9, 26); receipt(41)
+    assert r['header_bytes_expected'] == 41 == r['policy_bytes_written'], r
+if r['scenario'] == 'policy_expectation_out_of_range':
+    # An expectation the buffer cannot hold is invalid host input, refused on
+    # the header operation before any policy byte is consumed: no receipt.
+    failure(1, 12, 262144); receipt(None)
+    assert r['header_bytes_expected'] == 262144, r
+if r['scenario'] == 'policy_overdelivered':
+    # The other direction of the comparison: more bytes than the submission.
+    failure(2, 13, 43); receipt(43)
+    assert r['header_bytes_expected'] == 28 == r['policy_bytes_expected'] and r['policy_bytes_written'] == 43, r
+if r['scenario'] == 'policy_empty_short':
+    # Empty EOF against a nonzero expectation: a length refusal naming zero.
+    failure(2, 13, 0); receipt(0)
+    assert r['header_bytes_expected'] == 43 and r['policy_bytes_written'] == 0, r
+if r['scenario'] == 'policy_zero_expected':
+    # Nonempty input against a zero expectation: zero is compared, not treated as unset.
+    failure(2, 13, 28); receipt(28)
+    assert r['header_bytes_expected'] == 0 and r['policy_bytes_written'] == 28, r
 print(f"ok: worker refused with exit_code={want}; no ready/applied/done")
 PY
   local arc=$?
@@ -143,6 +180,9 @@ assert s["completed"] == 1, f"slot not marked completed: {s}"
 assert s["rc"] == 0, f"file open_read /etc/hosts under (allow default) should succeed: {s}"
 assert s["observed_path"] == "/private/etc/hosts", \
     f"observed_path should be the F_GETPATH-canonical form: {s['observed_path']!r}"
+assert r["policy_read_published"] == 1 and \
+    r["policy_bytes_received"] == r["policy_bytes_expected"] == r["header_bytes_expected"] == r["policy_bytes_written"], \
+    f"a complete delivery must report equal expectation and receipt: {r}"
 
 print(f"ok: ready+applied+done+clean_exit; /etc/hosts opened (observed={s['observed_path']})")
 PY
@@ -454,15 +494,27 @@ run_refusal_case "policy_nul_refused"          "policy_nul"          9 \
   "policy carries an embedded NUL → exit 9, no prefix compiled"
 run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
+run_refusal_case "policy_expectation_out_of_range_refused" "policy_expectation_out_of_range" 10 \
+  "header policy_bytes_expected = PW_SHM_POLICY_BYTES cannot fit the buffer → exit 10 before any read"
+run_refusal_case "policy_capacity_plus_one_refused" "policy_capacity_plus_one" 7 \
+  "one byte past the source capacity with the expectation at the capacity → read overflow, exit 7, no receipt"
+run_refusal_case "policy_overdelivered_refused" "policy_overdelivered" 11 \
+  "pipe carries the submission plus a (deny default) tail → length refusal names 43 received, exit 11"
+run_refusal_case "policy_empty_short_refused" "policy_empty_short" 11 \
+  "empty EOF against an expectation of 43 → length refusal names 0 received, exit 11"
+run_refusal_case "policy_zero_expected_refused" "policy_zero_expected" 11 \
+  "28 bytes against an expectation of 0 → length refusal names 28 received, exit 11"
 
 # ---- test_id: policy_truncated_prefix (transport truncation) ----------------
 # The policy pipe carries no framing. A submission cut after a complete form
-# arrives as a shorter, valid policy followed by EOF, and the worker has no
-# expected length to compare against. The contract stated here is the one the
-# NUL refusal already states for a single byte: the worker must not compile and
-# apply a prefix of the source the reply's policy_sha256 describes. The slot
-# discriminates which policy the kernel enforced: /etc/hosts opens under the
-# delivered allow-default prefix and is denied under the submitted whole.
+# arrives as a shorter, valid policy followed by EOF; the header's expected
+# length is what lets the worker tell it apart from a complete 28-byte
+# submission. The contract is the one the NUL refusal states for a single
+# byte: the worker must not compile and apply a prefix of the source the
+# reply's policy_sha256 describes. It publishes the 28-byte EOF receipt, then
+# refuses with code 13 naming that count, before readiness, application or any
+# attempt. policy_whole_submission below delivers the same 43 bytes intact and
+# the kernel denies the /etc/hosts open, which discriminates the policies.
 
 run_policy_truncated_prefix() {
   run_harness_case "policy_truncated_prefix" "policy_truncated_prefix" \
@@ -484,12 +536,18 @@ print(account)
 # Contract: a short read is a policy-read refusal before compile, like NUL and overflow.
 assert r["failure_published"] == 1 and r["failure"]["operation"] == 2, \
     f"a truncated policy must publish a policy-read failure, not compile the prefix: {account}"
+assert r["failure"] == {"operation": 2, "code": 13, "detail": written, "native_kind": 0, "errno_present": 0}, \
+    f"the length refusal must name the {written} received bytes: {r['failure']}"
+assert r["header_bytes_expected"] == expected == 43 and written == 28, \
+    f"the header must carry the whole submission's count: {account}"
+assert r["policy_read_published"] == 1 and r["policy_bytes_received"] == written, \
+    f"the EOF receipt must report the {written} bytes read before the refusal: {r}"
 assert not r["ready_byte_received"] and not r["applied"] and not r["done"], \
     f"no readiness, application or completion may follow a truncated policy: {account}"
 assert s["completed"] == 0, f"no attempt may run under a prefix policy: {account}"
-assert r["exit_code"] not in (None, 0) and r["term_signal"] is None, \
-    f"the worker must self-exit with a refusal code: {account}"
-print(f"ok: worker refused a {written}-of-{expected}-byte policy prefix before compile")
+assert r["exit_code"] == 11 and r["term_signal"] is None, \
+    f"the worker must self-exit with the length refusal code: {account}"
+print(f"ok: worker refused a {written}-of-{expected}-byte policy prefix before compile (code 13, exit 11)")
 PY
   local arc=$?
   set -e
@@ -497,6 +555,72 @@ PY
 }
 
 run_policy_truncated_prefix
+
+# ---- policy delivery controls (accepted deliveries) --------------------------
+# Each delivers a complete submission whose count equals the header's
+# expectation and asserts the EOF receipt beside the ordinary outcome: the whole
+# 43-byte submission the truncated case cut (the kernel denies /etc/hosts), a
+# multibyte UTF-8 source counted in bytes, a source padded to exactly the buffer
+# capacity, and an admitted empty source whose zero expectation passes the
+# length check and reaches ordinary compilation handling.
+
+run_policy_delivery_control() {
+  local test_id="$1" scenario="$2" desc="$3"
+  run_harness_case "${test_id}" "${scenario}" "${desc}" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected, written, header = r["policy_bytes_expected"], r["policy_bytes_written"], r["header_bytes_expected"]
+assert expected == written == header, f"a complete delivery must carry its own count: {r}"
+assert r["policy_read_published"] == 1 and r["policy_bytes_received"] == expected, \
+    f"the EOF receipt must equal the submission's count on a complete delivery: {r}"
+assert r["exit_code"] == 0 and r["term_signal"] is None and not r["sent_sigkill"], \
+    f"the worker must clean-exit on the exit byte: {r}"
+assert not (r["failure_published"] == 1 and r["failure"]["operation"] == 2), \
+    f"no policy-read refusal may follow equal counts: {r}"
+s = r["slots"][0]
+if r["scenario"] == "policy_whole_submission":
+    assert expected == 43, r
+    assert r["ready_byte_received"] and r["applied"] and r["apply_rc"] == 0 and r["done"], r
+    assert s["completed"] == 1 and s["rc"] == 1 and s["errno"] in (1, 13), \
+        f"the submitted whole must deny the /etc/hosts open the prefix allowed: {s}"
+    note = f"whole 43-byte submission applied; /etc/hosts denied (errno={s['errno']})"
+elif r["scenario"] == "policy_utf8_bytes":
+    assert expected == 40, f"the receipt counts bytes, not characters: {r}"
+    assert r["applied"] and r["apply_rc"] == 0 and r["done"] and s["completed"] == 1 and s["rc"] == 0, r
+    note = "multibyte source counted in bytes (40 for 37 characters); applied and read allowed"
+elif r["scenario"] == "policy_at_capacity":
+    assert expected == 262143, r
+    assert r["applied"] and r["apply_rc"] == 0 and r["done"] and s["completed"] == 1 and s["rc"] == 0, r
+    note = "source filling the buffer exactly accepted after EOF; applied"
+elif r["scenario"] == "policy_empty_expected":
+    assert expected == 0, r
+    # Zero is compared, not treated as unset: the empty source passes the length
+    # check and reaches compilation, which libsandbox refuses on its own terms.
+    assert not r["ready_byte_received"] and not r["applied"] and r["done"] and r["apply_rc"] == -1, r
+    assert r["failure_published"] == 1 and r["failure"]["operation"] == 5, \
+        f"an empty source reaches compilation, not a length refusal: {r}"
+    assert s["completed"] == 0, s
+    note = "zero expectation with empty EOF passed the length check; compilation refused the empty source"
+else:
+    raise AssertionError(f"unknown delivery control {r['scenario']}")
+print(f"ok: receipt {r['policy_bytes_received']} of {expected} bytes; {note}")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+run_policy_delivery_control "policy_whole_submission" "policy_whole_submission" \
+  "the whole 43-byte submission the truncated case cut: applied, /etc/hosts denied, receipt 43 of 43"
+run_policy_delivery_control "policy_utf8_bytes" "policy_utf8_bytes" \
+  "a source with multibyte UTF-8: expectation and receipt count bytes (40), applied"
+run_policy_delivery_control "policy_at_capacity" "policy_at_capacity" \
+  "a source padded to exactly PW_SHM_POLICY_BYTES - 1 bytes is accepted after EOF and applied"
+run_policy_delivery_control "policy_empty_expected" "policy_empty_expected" \
+  "an empty source with a zero expectation passes the length check and reaches compilation"
 
 # ---- test_id: exec_pipes_per_attempt ---------------------------------------
 # Exec pipes and spawn handles exist only inside the attempt, after apply.

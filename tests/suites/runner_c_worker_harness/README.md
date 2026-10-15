@@ -133,24 +133,65 @@ sentinel and no ready byte (except compile_failure, which flips `done`).
     incompatible magic prefix must refuse before publishing shared evidence.
 12. **prepared_unset** — host never set `prepared=1` → exit 5.
 13. **step_count_overflow** — header `step_count > PW_SHM_MAX_STEPS` → exit 6.
-14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7.
+14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7,
+    failure code 2, and no EOF receipt: the read stops before EOF. The header's
+    expectation is pinned at the capacity so this refusal, not the header's
+    out-of-range refusal, is the one reached.
 15. **param_count_overflow** — header `param_count > PW_SHM_MAX_PARAMS` → exit 8.
 16. **policy_nul** — the policy bytes carry an embedded NUL after an
     allow-default prefix and before a deny-default tail → exit 9, failure
     record operation 2, code 9, detail 26 (the NUL's offset). A C-string reader
     would otherwise compile only the prefix while `policy_sha256` described the
-    whole source. The host refuses NUL at admission; this is the reader's own guard.
+    whole source. The host refuses NUL at admission; this is the reader's own
+    guard. The 41 equal bytes pass the length check first, so the EOF receipt
+    reports 41.
+
+### Policy delivery acknowledgement
+
+The policy pipe carries no framing. The header's `policy_bytes_expected` is the
+host's half of the acknowledgement (the submission's byte count, written before
+spawn) and the worker's `policy_bytes_received` behind `policy_read_published`
+is its half (the count read at EOF, published before the comparison). A header
+expectation the buffer cannot hold is refused before any byte is read; after
+EOF, any count that differs from the expectation is refused before the NUL scan
+and any libsandbox call. `result.json` carries `policy_bytes_expected` (the
+submission), `policy_bytes_written` (what the pipe carried),
+`header_bytes_expected` (the header input), `policy_read_published` and, behind
+a flag of 1, `policy_bytes_received`.
+
 17. **policy_truncated_prefix** — the submitted bytes are
     `(version 1)(allow default)(deny default)`, but the pipe closes after
-    `(allow default)`. The worker reads to EOF and has no expected length, so
-    nothing distinguishes the delivery from a complete 28-byte submission. The
-    case requires the contract the NUL guard states for one byte: a
-    policy-read refusal before compile, no ready byte, no application and no
-    attempt, rather than a prefix of the source `policy_sha256` describes. The
-    `/etc/hosts` slot discriminates the policy the kernel enforced: allowed
-    under the prefix, denied under the whole. `result.json` reports
-    `policy_bytes_expected` and `policy_bytes_written` so the account mirrors
-    a host `policy_transfer_timeout` whose `bytes_written` fell short.
+    `(allow default)`: 28 of 43 bytes. The contract is the one the NUL guard
+    states for one byte: no prefix of the source `policy_sha256` describes is
+    compiled. The worker publishes the receipt (28), refuses with operation 2,
+    code 13, detail 28 and exit 11, writes no ready byte, applies nothing and
+    runs no attempt. Before the expectation existed, this case observed the
+    worker apply the prefix and allow the `/etc/hosts` open.
+18. **policy_whole_submission** — the same 43 bytes delivered intact: receipt
+    43 of 43, applied, and the kernel denies the `/etc/hosts` open the prefix
+    allowed. This is the contrast that discriminates the two policies.
+19. **policy_utf8_bytes** — a valid source whose comment holds multibyte
+    UTF-8: expectation and receipt count 40 bytes for 37 characters; applied.
+20. **policy_at_capacity** — a valid source padded with spaces to exactly
+    `PW_SHM_POLICY_BYTES - 1` bytes is accepted after EOF and applied.
+21. **policy_empty_expected** — an empty source with a zero expectation: zero
+    is compared, not treated as unset. The receipt reports 0, the length check
+    passes, and compilation refuses the empty source on its own terms
+    (operation 5, `done` with `apply_rc` -1, clean exit).
+22. **policy_expectation_out_of_range** — a header expectation of
+    `PW_SHM_POLICY_BYTES` cannot fit the buffer, whose final byte is the NUL →
+    operation 1, code 12, detail the refused expectation, exit 10, before any
+    policy byte is read; no receipt.
+23. **policy_capacity_plus_one** — one byte past the capacity with the
+    expectation pinned at the capacity → the read overflow refusal (code 2,
+    exit 7), no receipt. Overflow stops before EOF and is not a length mismatch.
+24. **policy_overdelivered** — the pipe carries the 28-byte submission plus a
+    `(deny default)` tail: receipt 43 against an expectation of 28 → code 13,
+    detail 43, exit 11. The comparison refuses both directions.
+25. **policy_empty_short** — empty EOF against an expectation of 43 → code 13,
+    detail 0, exit 11, receipt 0.
+26. **policy_zero_expected** — 28 bytes against an expectation of 0 → code 13,
+    detail 28, exit 11, receipt 28.
 
 The host-side harness logic (shm setup, full-region pre-touch,
 posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated in
@@ -193,10 +234,12 @@ equipment-failure controls live in `shell_helpers/worker_setup`.
 Each test_id writes:
 - `result.json`: the JSON envelope `harness.c` emits, containing
   `{ ready_byte_received, applied, apply_rc, policy_bytes_expected,
-  policy_bytes_written, done, sent_sigkill, exit_code, term_signal,
+  policy_bytes_written, header_bytes_expected, policy_read_published,
+  policy_bytes_received, done, sent_sigkill, exit_code, term_signal,
   slots: [...], target_exists_after }` (`target_exists_after` is null except
-  for the file unlink/create scenarios; the two policy byte counts are the
-  submission and what the pipe was asked to carry).
+  for the file unlink/create scenarios; the policy byte counts are the
+  submission, what the pipe was asked to carry, the header's expectation and,
+  only behind `policy_read_published == 1`, the worker's EOF receipt).
 - `harness.stderr`: stderr from the harness (and the worker, since
   stderr is inherited).
 - `assert.log`: stdout/stderr of the Python assertion block.

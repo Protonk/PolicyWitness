@@ -44,6 +44,9 @@ LIFECYCLE_LIMITATIONS = ('attempt:lifecycle_unresolved', 'attempt:lifecycle_conf
                          'attempt:not_reached', 'attempt:started_without_result')
 LIMITATIONS = frozenset(['query_plan:' + code for code in QUERY_PLAN_CODES] + list(LIFECYCLE_LIMITATIONS))
 COMPARISON_KEYS = ('observation', 'observation_basis', 'operation_relation', 'target_relation', 'order', 'limitations')
+# The worker's fixed source buffer less its terminating NUL (PW_SHM_POLICY_BYTES - 1):
+# the bound on both members of the worker's EOF receipt, `worker_evidence.policy_read`.
+POLICY_SOURCE_BYTES = 262143
 
 # The shape goldens: per object path, every key the producers emit and its JSON
 # type. `envelope_shape.json` is rooted at `envelope` and treats the runner
@@ -448,6 +451,27 @@ def _validate_reply(runner):
             errors.append('invalid policy_transfer_timeout observation')
         if sub.get('policy_transfer_error') is not None or sub.get('poll_stop_reason') != 'policy_transfer_deadline':
             errors.append('policy_transfer_timeout conflicts with transfer stop/error')
+    evidence = sub.get('worker_evidence') if isinstance(sub, dict) else None
+    read = evidence.get('policy_read') if isinstance(evidence, dict) else None
+    if read is not None:
+        # The worker's EOF receipt. Both counts are required integers within the
+        # source capacity; the host's own expectation on any transfer record agrees
+        # with it; and a length refusal (operation 2, code 13) names the received
+        # count while the counts differ. Unequal counts without that refusal are a
+        # valid partial observation: termination can interrupt the worker between
+        # the receipt and the refusal. Equal counts establish length agreement only.
+        if not isinstance(read, dict) or set(read) != {'bytes_expected', 'bytes_received'} or \
+                any(type(read[k]) is not int or not 0 <= read[k] <= POLICY_SOURCE_BYTES for k in read):
+            errors.append('invalid worker_evidence.policy_read receipt')
+        else:
+            for key in ('policy_transfer_timeout', 'policy_transfer_error'):
+                record = sub.get(key)
+                if isinstance(record, dict) and record.get('bytes_expected') != read['bytes_expected']:
+                    errors.append(f'{key} expectation disagrees with worker_evidence.policy_read')
+            failure = evidence.get('failure')
+            if isinstance(failure, dict) and failure.get('operation') == 2 and failure.get('code') == 13 and \
+                    (failure.get('detail') != read['bytes_received'] or read['bytes_received'] == read['bytes_expected']):
+                errors.append('length refusal detail disagrees with worker_evidence.policy_read')
     if isinstance(sub, dict) and not failed_reporting and sub.get(lifecycle_contract.RECORD_KEY) is None:
         errors.append('worker subprocess without runner_subprocess.disposition')
     return errors

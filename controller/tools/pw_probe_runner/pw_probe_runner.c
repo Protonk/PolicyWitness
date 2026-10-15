@@ -9,7 +9,13 @@
  *      --shm-fd. Verify ABI identity and prepared sentinel.
  *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
  *      into a stack-fixed buffer. This is the LAST allocation
- *      attempt before sandbox_apply().
+ *      attempt before sandbox_apply(). The pipe carries no framing, so
+ *      the header's policy_bytes_expected (checked against the buffer
+ *      capacity in step 2) is what tells a prefix cut at EOF apart from
+ *      a complete shorter submission: the count read at EOF is
+ *      published to the header, then a count that differs from the
+ *      expectation is refused, then an embedded NUL is refused. Only a
+ *      source equal in length to the submission reaches libsandbox.
  *   4. sandbox_compile_string(). On failure: write apply_rc and
  *      done sentinel, then enter the spin loop (still report the
  *      failure cleanly).
@@ -1477,6 +1483,21 @@ int main(int argc, char **argv) {
         pw_diagnostic(evidence, "parameter count exceeds shared-memory capacity");
         return 8;
     }
+    /* Snapshot the host's expected policy length once; the comparison after
+     * EOF uses this copy even if shared input changes. The buffer's final byte
+     * is the terminating NUL, so an expectation of the whole buffer can never
+     * be met and is refused as invalid host input before any policy byte is
+     * consumed. Zero is a valid expectation (an admitted empty source). */
+    const uint32_t policy_bytes_expected = hdr->policy_bytes_expected;
+    if (policy_bytes_expected > PW_SHM_POLICY_BYTES - 1u) {
+        fprintf(stderr,
+                "pw-probe-runner: header policy_bytes_expected=%u exceeds the %u-byte source capacity\n",
+                policy_bytes_expected, PW_SHM_POLICY_BYTES - 1u);
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_LENGTH_EXPECTATION, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX,
+                   policy_bytes_expected);
+        pw_diagnostic(evidence, "expected policy length exceeds the source capacity (expectation in detail)");
+        return 10;
+    }
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_RETURNED, UINT32_MAX);
     uint32_t param_count = hdr->param_count;
     for (uint32_t i = 0; i < param_count; i++) {
@@ -1506,6 +1527,26 @@ int main(int argc, char **argv) {
             fprintf(stderr, "pw-probe-runner: failed reading policy: %s\n", strerror(errno));
         }
         return 7;
+    }
+    /* EOF receipt: publish the count actually read before judging it, so the
+     * host can set it beside its own write progress on every path that reached
+     * EOF, refusals included. The payload is immutable after the flag. Read
+     * errors and overflow returned above and publish nothing here. */
+    hdr->policy_bytes_received = (uint32_t)plen;
+    atomic_store_explicit(&hdr->policy_read_published, 1u, memory_order_release);
+    /* One rule for the two guards below: a prefix of the source the reply's
+     * policy_sha256 describes is never compiled. The pipe carries no framing,
+     * so a submission cut at EOF after a complete form would otherwise arrive
+     * as a shorter valid policy; the host's expected length is the only thing
+     * that distinguishes it. Any difference, short or long, is refused before
+     * the NUL scan and before any libsandbox call. */
+    if ((uint32_t)plen != policy_bytes_expected) {
+        pw_failure(evidence, PW_OP_POLICY_READ, PW_FAILURE_SOURCE_LENGTH, PW_NATIVE_NONE,
+                   0, 0, 0, UINT32_MAX, (uint32_t)plen);
+        pw_diagnostic(evidence, "policy length at EOF differs from the host's expectation (received count in detail)");
+        fprintf(stderr, "pw-probe-runner: policy delivered %zd bytes, host expected %u; refusing to compile\n",
+                plen, policy_bytes_expected);
+        return 11;
     }
     /* The reader's own guard for the one native string that arrives with an
      * explicit length. sandbox_compile_string takes a C string, so an embedded

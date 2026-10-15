@@ -250,6 +250,42 @@ def consumer_controls(artifacts, current):
         change(first(malformed)['attempt'])
         run('attempt_path_' + name, malformed, rejected_by=diagnostic)
 
+    # The worker's EOF receipt for the policy pipe is read by field: both members
+    # present and within the source capacity, agreement with the host's own
+    # expectation on a transfer record, and unequal counts without a length
+    # refusal preserved as a partial observation. The receipt is optional, so a
+    # retained envelope without it stays valid; a baseline that carries one
+    # must report equal counts for its complete delivery, and a baseline without
+    # one receives a constructed receipt. The refusal's detail rule is exercised
+    # by the retained driver reply in the controller's transfer replay test.
+    evidence = runner(current)['runner_subprocess']['worker_evidence']
+    if 'policy_read' in evidence:
+        receipt = evidence['policy_read']
+        require(receipt['bytes_expected'] == receipt['bytes_received'] > 0, 'a complete live delivery reports equal counts')
+        with_receipt = current
+    else:
+        receipt = {'bytes_expected': 64, 'bytes_received': 64}
+        with_receipt = copy.deepcopy(current)
+        runner(with_receipt)['runner_subprocess']['worker_evidence']['policy_read'] = dict(receipt)
+        run('policy_read_constructed_receipt', with_receipt)
+    partial = copy.deepcopy(with_receipt)
+    runner(partial)['runner_subprocess']['worker_evidence']['policy_read']['bytes_received'] = receipt['bytes_expected'] - 1
+    run('policy_read_partial_without_refusal', partial)
+    for name, change, diagnostic in [
+        ('missing_member', lambda s: s['worker_evidence']['policy_read'].pop('bytes_received'),
+         'invalid worker_evidence.policy_read'),
+        ('negative_count', lambda s: s['worker_evidence']['policy_read'].update(bytes_received=-1),
+         'invalid worker_evidence.policy_read'),
+        ('out_of_range', lambda s: s['worker_evidence']['policy_read'].update(bytes_expected=262144),
+         'invalid worker_evidence.policy_read'),
+        ('conflicting_expectation', lambda s: s.update(policy_transfer_error={'errno': 32, 'bytes_written': 1,
+            'bytes_expected': s['worker_evidence']['policy_read']['bytes_expected'] + 1}),
+         'disagrees with worker_evidence.policy_read'),
+    ]:
+        malformed = copy.deepcopy(with_receipt)
+        change(runner(malformed)['runner_subprocess'])
+        run('policy_read_' + name, malformed, rejected_by=diagnostic)
+
     # The shape goldens are the readers' allowlists: an unknown key at a recorded
     # path and a present key of another type are rejected, under the envelope
     # golden for the controller's own objects and under the reply golden for the

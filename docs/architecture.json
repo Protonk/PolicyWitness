@@ -733,7 +733,7 @@
           "kind": "spawn",
           "label": "posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe; optional fd 5 transient token channel",
           "short": "posix_spawn; fds 0, 3, 4; optional 5",
-          "note": "Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling.",
+          "note": "Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling. The pipe carries no framing: the host writes the submission's byte count into the shared header before spawn, and the worker at EOF publishes the count it read and refuses a different length before compiling.",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -750,6 +750,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
               "symbol": "PW_SHM_ABI_MAGIC"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "PW_FAILURE_SOURCE_LENGTH"
             }
           ],
           "checks": [
@@ -776,6 +780,11 @@
             {
               "path": "tests/suites/witness_contract/check_extension_combinations.py",
               "symbol": "check_row",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "policy_truncated_prefix",
               "form": "test"
             }
           ]
@@ -1680,7 +1689,7 @@
           "from": "run_spec",
           "to": "shm_region",
           "kind": "guard",
-          "label": "host writes identity, counts, phase partitions and slots; worker refuses mismatched identity or invalid partition",
+          "label": "host writes identity, counts, phase partitions, the expected policy length and slots; worker refuses mismatched identity, invalid partition or an expectation the source buffer cannot hold",
           "short": "identity; exit 4 on mismatch",
           "sources": [
             {
@@ -1698,6 +1707,10 @@
             {
               "path": "docs/generate_worker_identity.py",
               "symbol": "SOURCE_DIRS"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "PW_FAILURE_LENGTH_EXPECTATION"
             }
           ],
           "checks": [
@@ -1719,6 +1732,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "policy_expectation_out_of_range_refused",
               "form": "test"
             }
           ]

@@ -48,7 +48,10 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
 2. The service decodes and admits the request and validates meaning before
    creating children. `probe_plan` becomes one phase named `main`; explicit
    phases share one total action capacity. The worker receives policy bytes on
-   its input pipe and shares fixed-layout inputs/publications with the host.
+   its input pipe, whose expected byte count the host wrote into the shared
+   header before spawn, and shares fixed-layout inputs/publications with the
+   host; at EOF it publishes the count it read and refuses a different length
+   before compiling, so a delivery cut short is never applied as a shorter policy.
    An extension declaration requires explicit phases. Before worker creation,
    the host resolves its target and records metadata, then launches the issuer
    under ordinary authority. Only bounded issuance with a confirmed clean reap

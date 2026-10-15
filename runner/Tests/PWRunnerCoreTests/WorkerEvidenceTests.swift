@@ -223,6 +223,26 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectNil(got?.diagnostic.text)
                 try expectEqual(got?.failure?.code, 123)
             }
+            // The EOF receipt is gated by its own publication word in the region
+            // header: only an acquired 1 exposes the counts, both must lie within
+            // the source capacity, and a zero-byte EOF is a valid receipt.
+            word(PWShmLayout.policyBytesExpectedOffset, 43)
+            word(PWShmLayout.policyBytesReceivedOffset, 28)
+            for flag: UInt32 in [0, 2, 9] {
+                word(PWShmLayout.policyReadPublishedOffset, flag)
+                try expectNil(decodeWorkerEvidence(base)?.policy_read, "publication flag \(flag) exposes no receipt")
+            }
+            word(PWShmLayout.policyReadPublishedOffset, 1)
+            try expectEqual(decodeWorkerEvidence(base)?.policy_read, PWWorkerPolicyRead(bytes_expected: 43, bytes_received: 28))
+            word(PWShmLayout.policyBytesReceivedOffset, UInt32(PWShmLayout.policyBytes))
+            try expectNil(decodeWorkerEvidence(base)?.policy_read, "a count beyond the source capacity is not exposed")
+            word(PWShmLayout.policyBytesReceivedOffset, 0)
+            word(PWShmLayout.policyBytesExpectedOffset, UInt32(PWShmLayout.policyBytes))
+            try expectNil(decodeWorkerEvidence(base)?.policy_read, "an expectation beyond the source capacity is not exposed")
+            word(PWShmLayout.policyBytesExpectedOffset, 0)
+            try expectEqual(decodeWorkerEvidence(base)?.policy_read, PWWorkerPolicyRead(bytes_expected: 0, bytes_received: 0))
+            word(PWShmLayout.policyReadPublishedOffset, 0)
+            try expectNil(decodeWorkerEvidence(base)?.policy_read)
             base[PWShmLayout.abiIdentityOffset + PWShmLayout.abiIdentityBytes - 1] ^= 1
             try expectNil(decodeWorkerEvidence(base))
             base[PWShmLayout.abiIdentityOffset + PWShmLayout.abiIdentityBytes - 1] ^= 1

@@ -810,7 +810,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | --- | --- | --- | --- |
 | Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled by the terminal request owner after replying. The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim. | Fixed. |
 | Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default reply wait for the fixed runner verify specimen. An expired wait returns the client timeout outcome. Verification consumes the single-use host it reaches. | Flag `--timeout-ms` on `runner verify`. |
-| Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. | Fixed; internal driver controls may shorten it. |
+| Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
@@ -833,7 +833,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,419,124 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,419,188 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -1155,7 +1155,15 @@ spawned. Its `abi_identity` identifies the host-selected protocol sources.
 Its latest atomic `progress` records the child's published stage, beside an
 independently published `failure` (operation, diagnostic code, native result
 kind/value, meaningful errno and optional parameter index), the worker's
-readiness-write result, and a bounded `diagnostic`. Compilation returning NULL
+readiness-write result, a bounded `diagnostic` and, when the worker published
+it, `policy_read`: its EOF receipt for the policy pipe, with `bytes_expected`
+(the submitted byte count the host wrote into the shared header before spawn)
+and `bytes_received` (what the worker read at EOF). The worker refuses a
+delivery whose length differs from the expectation before compiling (operation
+2, code 13, detail the received count), so equal counts establish length
+agreement with the submission only, not content identity, compilation,
+application or kernel effect; absence establishes nothing about delivery.
+Compilation returning NULL
 is distinct from parameter setup or application returning an integer failure.
 Numeric operation/code values are open: unfamiliar values remain available.
 Missing/incomplete publication exposes no payload. Diagnostic text can be absent,
@@ -1168,13 +1176,17 @@ unpublished text are not recovered by this channel.
 cleanup. `poll_stop_reason` retains an earlier deadline even if the worker
 finishes during grace. On a failed policy write, `policy_transfer_error` records
 the host's errno and written/expected UTF-8 byte counts, while worker evidence
-and process status remain available. Written bytes do not prove child receipt.
+and process status remain available. Written bytes are host writes, not child
+receipt; `worker_evidence.policy_read` is the worker's own account of what it read.
 Policy delivery has an absolute monotonic deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starting after worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
 `elapsed_ms`, `bytes_written` and `bytes_expected`.
 The host closes input and enters cleanup without starting readiness/sentinel
-polling. A transfer timeout ordinarily yields `runner_timeout`; published
-worker failure retains precedence, and cleanup/status observations remain
-independent. The deadline does not bound final reap or cancel a client timeout.
+polling. Closing input delivers EOF to the worker, which refuses the short
+delivery for its length before compiling. A transfer timeout ordinarily yields
+`runner_timeout`; that refusal, when the host observes it, is a published
+worker failure and takes precedence as `runner_failed`, while the timeout
+record and the cleanup/status observations remain independent. The deadline
+does not bound final reap or cancel a client timeout.
 
 Both step channels carry `result_source` and, when no result exists,
 `missing_reason`; the query channel also carries `native_rc`. A missing

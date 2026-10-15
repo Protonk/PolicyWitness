@@ -754,9 +754,16 @@ or a nonzero result tagged as NULL rejects payload decoding.
 Code 1 is native failure, 2 source capacity rejection (detail is maximum source
 bytes, excluding NUL), 3 policy read error, 4 step capacity, 5 parameter capacity,
 6 defensive parameter encoding rejection, 7 unprepared header, 8 proceed-wait
-expiry, 9 embedded policy NUL, 10 invalid phase partition/publication input, and
-11 a future release ordinal. Code 9's detail is the NUL byte offset; code 10's
-is the phase capacity. For proceed operation 11, failure index names the zero-based
+expiry, 9 embedded policy NUL, 10 invalid phase partition/publication input,
+11 a future release ordinal, 12 an expected policy length the source buffer
+cannot hold (header operation 1; detail is the refused expectation; refused
+before any policy byte is read; exit 10), and 13 a policy whose length at EOF
+differs from the host's expectation (operation 2; detail is the received count;
+exit 11). Code 9's detail is the NUL byte offset; code 10's is the phase
+capacity. On the policy read the order is capacity (2, which stops before EOF
+and publishes no receipt), then the EOF receipt publication, then length (13),
+then NUL (9); codes 12 and 13 precede any libsandbox call, so no prefix or
+extension of the submission is compiled. For proceed operation 11, failure index names the zero-based
 phase: code 8 and native-clock failure code 1/kind 3 carry the wait budget in
 milliseconds, while code 11 carries the observed release ordinal. Human diagnostics
 interpret those units only for the known code/kind combination; unknown details
@@ -836,7 +843,8 @@ retains final acquired worker publications, slots, readiness, and cleanup/status
 `runner_subprocess.policy_transfer_error` is host-owned: Int32 `errno` captured
 immediately from failed write; nonnegative Swift Int/JSON integers `bytes_written`
 and `bytes_expected` count successful host writes and submitted UTF-8 bytes.
-Counts are not evidence of bytes consumed by the worker. Omission of this
+Counts are host writes, not bytes consumed by the worker; the worker's own
+account of what it read is `worker_evidence.policy_read` below. Omission of this
 object means no failed write was recorded; it does not establish successful
 delivery. No worker record is synthesized from it.
 
@@ -850,6 +858,27 @@ precedence. A confirmed cleanup signal can project
 `host_cleanup_after_transfer_timeout`; neither timeout nor a kill request alone
 establishes a successful reap or any sandbox cause.
 
+`runner_subprocess.worker_evidence.policy_read` is the worker's EOF receipt for
+the policy pipe. The host writes the submission's UTF-8 byte count into the
+region header (`policy_bytes_expected`) before spawn; the worker, once its read
+returned at EOF and before comparing, stores the count it read and
+release-publishes a flag. The JSON object carries `bytes_expected` (that
+immutable host input) and `bytes_received` (the worker's count), both
+nonnegative integers within the source capacity. It is present exactly when the
+host's final snapshot acquired the flag as 1 behind a validated identity; a
+header refusal, read error or overflow publishes none, and absence establishes
+nothing about delivery: termination can interrupt the worker before
+publication, a failed cleanup can leave publication after collection, and
+historical or fixture replies carry no receipt. When a transfer record is also
+present its `bytes_expected` agrees with the receipt's; a disagreement is a
+reader-detectable fault that neither side corrects. Equal counts establish
+length agreement with the submission, not content identity, compilation,
+application or kernel effect. A code 13 refusal names the received count while
+the counts differ; unequal counts without that refusal are retained as the
+completed read only, because termination can interrupt the worker between the
+receipt and the refusal. The Swift reply encoder and decoder and
+`tests/lib/consumer.py` enforce these rules; the shape golden only types them.
+
 The production deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starts immediately after spawn. The
 write endpoint is nonblocking and protected by F_SETNOSIGPIPE, with setup
 checked before spawning. Partial writes, EINTR and backpressure consume the
@@ -862,6 +891,15 @@ requests exit and uses the [host observation](#host-observations)
 grace/termination/reaping contract. Partial publications and independent
 cleanup observations reach the ordinary assembly path. Published worker
 failure retains summary precedence; the transfer observation stays available.
+Closing input delivers EOF to a worker that is still reading: it publishes the
+count it read and, because that count differs from the header's expectation,
+refuses with code 13 before compiling, then exits on its own code. When the
+host observes that refusal the summary is `runner_failed` by the precedence
+above, with `policy_transfer_timeout`, stop reason `policy_transfer_deadline`
+and cleanup trigger `policy_transfer_timeout` retained and the worker reaped
+during grace without a termination request. Without an observed refusal the
+timeout remains `runner_timeout`. Neither classification supplies publication,
+kill or exit evidence the account lacks.
 Successful transfer begins the separate readiness wait. The deadline does
 not bound final blocking reap, cancel an earlier client timeout, or contain
 all descendants. Readers must consider the timeout
@@ -890,10 +928,14 @@ refused format reads `unknown`, and a refused seam path is dropped from the
 mirrored `test_overrides`. Selection of the first violation does not exempt
 other metadata: the refusal builder independently sanitizes all echoed fields.
 The same gate and builder serve direct orchestration; decoder failures use bounded
-category/path text. The worker's reader independently refuses an embedded NUL in
-the policy (operation 2, code `PW_FAILURE_SOURCE_NUL` = 9, exit 9, detail the byte
-offset) instead of compiling a prefix; the shared-memory string slots carry no
-length, so for them the host rule is the only guard. `PW_SHM_POLICY_BYTES`
+category/path text. The worker's reader independently refuses a policy whose
+length at EOF differs from the header's `policy_bytes_expected` (operation 2,
+code `PW_FAILURE_SOURCE_LENGTH` = 13, exit 11, detail the received count) and an
+embedded NUL (operation 2, code `PW_FAILURE_SOURCE_NUL` = 9, exit 9, detail the
+byte offset) instead of compiling a prefix, and refuses an expectation the
+source buffer cannot hold before reading (operation 1, code
+`PW_FAILURE_LENGTH_EXPECTATION` = 12, exit 10). The shared-memory string slots
+carry no length, so for them the host rule is the only guard. `PW_SHM_POLICY_BYTES`
 and its Swift mirror include the source NUL. The C reader independently refuses
 oversized source when driven directly; normal CLI oversized source is a host
 `bad_request` with no subprocess. Policy-write interruption controls use admitted

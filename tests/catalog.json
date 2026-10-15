@@ -583,7 +583,43 @@
         },
         {
           "id": "policy_truncated_prefix",
-          "description": "A policy cut after a complete form and followed by EOF must be refused before compile: the worker has no expected length, and the /etc/hosts slot shows which policy the kernel enforced"
+          "description": "A policy cut after a complete form and followed by EOF is refused before compile: the header's expected length (43) tells the 28-byte prefix apart from a complete shorter submission, the EOF receipt reports 28, and the refusal (code 13, exit 11) names that count; no readiness, application or attempt"
+        },
+        {
+          "id": "policy_whole_submission",
+          "description": "The same 43-byte submission delivered intact applies and the kernel denies the /etc/hosts open the prefix allowed; the EOF receipt equals the expectation"
+        },
+        {
+          "id": "policy_utf8_bytes",
+          "description": "A valid source with multibyte UTF-8 is counted in bytes by the expectation and the receipt (40 for 37 characters) and applies normally"
+        },
+        {
+          "id": "policy_at_capacity",
+          "description": "A valid source padded to exactly PW_SHM_POLICY_BYTES - 1 bytes is accepted after EOF, acknowledged with that count and applied"
+        },
+        {
+          "id": "policy_empty_expected",
+          "description": "An empty source with a zero expectation passes the length check (zero is compared, not unset), publishes a zero receipt and reaches ordinary compilation handling"
+        },
+        {
+          "id": "policy_expectation_out_of_range_refused",
+          "description": "A header expectation of PW_SHM_POLICY_BYTES cannot fit the source buffer: refused on the header operation with code 12 and exit 10 before any policy byte is read; no EOF receipt"
+        },
+        {
+          "id": "policy_capacity_plus_one_refused",
+          "description": "One byte past the source capacity with the expectation pinned at the capacity still reaches the read overflow refusal (code 2, exit 7) and publishes no EOF receipt"
+        },
+        {
+          "id": "policy_overdelivered_refused",
+          "description": "A pipe carrying the submission plus a (deny default) tail is refused for length in the other direction: receipt 43 against an expectation of 28, code 13, exit 11"
+        },
+        {
+          "id": "policy_empty_short_refused",
+          "description": "Empty EOF against a nonzero expectation is a length refusal naming zero received bytes (code 13, exit 11) with a zero receipt"
+        },
+        {
+          "id": "policy_zero_expected_refused",
+          "description": "A 28-byte delivery against a zero expectation is a length refusal naming 28 received bytes (code 13, exit 11); zero is compared, not treated as unset"
         },
         {
           "id": "prepared_unset_refused",

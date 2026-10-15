@@ -30,6 +30,10 @@ else:
     result = {'ready_byte_received': config['mode'] != 'failed_observation',
               'applied': True, 'apply_rc': 0, 'done': True, 'sent_sigkill': False,
               'exit_code': 0, 'term_signal': None,
+              # A complete delivery: submission, pipe, header expectation and the
+              # worker's EOF receipt all report the same count.
+              'policy_bytes_expected': 28, 'policy_bytes_written': 28, 'header_bytes_expected': 28,
+              'policy_read_published': 1, 'policy_bytes_received': 28,
               'slots': [{'completed': 1, 'rc': 1 if deny else 0,
                          'errno': 1 if deny else 0, 'observed_path': '/private/etc/hosts'}]}
     print(json.dumps(result), flush=True)

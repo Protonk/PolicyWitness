@@ -237,6 +237,10 @@ func replyFixture() throws -> PWRunnerRunResult {
           "abi_identity": "\#(PWShmLayout.abiIdentityHex)",
           "failure_publication": 0,
           "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 1,
+            "bytes_received": 1
+          },
           "readiness": {
             "rc": 1,
             "errno": 0

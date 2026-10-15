@@ -1364,6 +1364,16 @@ func classify(
                     default: break // Unknown detail units remain uninterpreted.
                     }
                 }
+                // Policy delivery refusals name their byte counts: the host's
+                // expectation that exceeded the source capacity, or the count
+                // read at EOF that differed from the expectation. Neither says
+                // what the pipe carried beyond those counts.
+                if failure.operation == 1 && failure.code == 12 && failure.native_kind == 0 {
+                    detail += "; expected=\(failure.detail) bytes exceeds the source capacity; no policy byte read"
+                }
+                if failure.operation == 2 && failure.code == 13 && failure.native_kind == 0 {
+                    detail += "; received=\(failure.detail) bytes at EOF differs from the submission; source not compiled"
+                }
                 if let rc = failure.native_result { detail += "; native_kind=\(failure.native_kind), result=\(rc)" }
                 if let error = failure.errno { detail += "; errno=\(error)" }
                 if let text = evidence.diagnostic.text, !text.isEmpty { detail += ": " + text }

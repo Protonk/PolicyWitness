@@ -1,9 +1,13 @@
 # Policy transfer acknowledgement plan
 
-Status: proposed. Implementation baseline:
+Status: complete. Implementation baseline:
 `e097c06b008b3482378c27ec600a57e7778026bd`. The plan and its acceptance control
-were introduced in `9505f9fc79981d76dd33bcc0b9b46d3ffb23e1c8`. Nothing in this
-plan is implemented; the control fails by design until item A1 lands.
+were introduced in `9505f9fc79981d76dd33bcc0b9b46d3ffb23e1c8` and the plan was
+revised in `dc7d090fdecad8265ddbf2683cbb10696f17ac4a`. A1, A2 and A3 are
+implemented and accepted in the commit that carries this status; the plan is
+removed in the commit after it, which also closes the parking lot's P2 status.
+The execution record and the deviations from the written instructions are at
+the end of this document.
 
 The [parking lot](records/EVIDENCE-CLARITY-PARKING-LOT.md) entry P2 asks, among
 other things, that bytes accepted by a pipe be told apart from bytes acknowledged
@@ -56,9 +60,9 @@ context and test-seam receipts, remain parked.
 
 | Item | Claim to retire or narrow | Status | Completion evidence |
 | --- | --- | --- | --- |
-| A1 | The worker compiles and applies whatever the policy pipe delivered before EOF | Open | |
-| A2 | No general pre-compile EOF receipt joins worker reads to host write progress | Open | |
-| A3 | The integrated change still needs final acceptance and evidence review | Open | |
+| A1 | The worker compiles and applies whatever the policy pipe delivered before EOF | Done | Worker identity `ad6bd925c33aa26d17b3b26efd40ff6a428333de36d06f8ced40e8ee69e125a5`; response schema 21 unchanged. `runner_c_worker_harness` in run `p2-a12-targeted-20261015`: `policy_truncated_prefix` passes with code 13, detail 28, exit 11 and the 28-byte receipt; `policy_overflow_refused` keeps exit 7/code 2 and `policy_nul_refused` exit 9/code 9; the nine new delivery cases pass. Layout golden candidate reviewed (three rows added, none moved) and replaced. |
+| A2 | No general pre-compile EOF receipt joins worker reads to host write progress | Done | `runner_unit` run `p2-a12-unit2-20261015`: 436/436 Swift cases including the joined `PolicyTransferTests` control (host timeout 28 of 43 written, receipt 28 of 43, operation 2 code 13 detail 28, exit 11 reaped during grace, no termination request, `runner_failed`) with its rejected fabricated-kill, fabricated-exit and receipt variants; Rust replay of the retained `policy-transfer-refused.json` through assembly, the lifecycle oracle and the consumer with its rejected variants. Shape golden candidate reviewed (the `policy_read` object and its two members) and replaced. |
+| A3 | The integrated change still needs final acceptance and evidence review | Done | Signed build of the final increment (identity above). Default battery run `20261015T183151Z_bc3b36df` in `tests/out/runs/p2-a3-battery2-20261015`: 187 pass, 0 fail, 0 skip, artifact inspection clean. `source_drift` passes inside that battery; offline `check.py`, generator `--check`s, prose baseline and link checks pass. Opt-in `witness_contract/order_barrier_mutations`: run `p2-a3-order-barrier-20261015` (`20261015T184234Z_f9f09349`): baseline accepted, both bypasses rejected by the component gate and by independent CLI effects. `cargo test --manifest-path controller/Cargo.toml`: every binary passes (policy-witness 235 and 1, sandbox-log-observer 27, sbpl-check 56, cli_contract 15; the two ignored cases are the receipt-dependent replay, which `runner_unit` runs, and the observer's archive case, which its required archive case selects). |
 
 Implement A1 and A2 as one coherent increment, including the affected readers,
 fixtures, contracts, generated documentation and coverage. Regenerate the worker
@@ -363,3 +367,75 @@ A live reproduction of the stall that makes the host time out is not attempted.
 Framing, content hashing and partial-read counts without EOF are outside this
 change. Cleanup ownership after a transfer timeout is P4; retaining independent
 cleanup observations in the new controls does not resolve that ownership work.
+
+## Execution record
+
+Choices the plan left open, as implemented:
+
+- Failure codes 12 (`PW_FAILURE_LENGTH_EXPECTATION`, header operation 1,
+  detail the refused expectation) and 13 (`PW_FAILURE_SOURCE_LENGTH`, operation
+  2, detail the received count); exit codes 10 and 11. Header fields
+  `policy_bytes_expected` at offset 136, `policy_bytes_received` at 140 and
+  `policy_read_published` at 144; `reserved` shrinks from 56 to 44 bytes;
+  `phases` stays at 192 and the header at 448 bytes, pinned by a new static
+  assert.
+- The reply object is `runner_subprocess.worker_evidence.policy_read` with
+  `bytes_expected` and `bytes_received`, decoded behind the validated identity
+  and the acquired flag, and omitted for a count outside the source capacity.
+- The driver gained a `transferCalls` parameter beside `processCalls`; the
+  deadline and the writer share its clock. The joined control injects the
+  writer (native writes for the first 28 bytes, then EAGAIN) and the poll
+  (sleeping for its allowance), with a short transfer deadline and a generous
+  exit grace.
+- Nine harness controls beyond the truncated prefix: whole submission, UTF-8
+  byte counting, exactly at capacity, capacity plus one with the pinned
+  expectation, out-of-range expectation, overdelivery, empty source with a zero
+  expectation, empty EOF against a nonzero expectation, nonempty input against
+  a zero expectation. Compilation refuses the empty source ("no version
+  specified"), as the plan allowed.
+- The three qualifications about host write counts are retained and extended
+  with the receipt's reading rule in the failure evidence contract, the guide
+  and the architecture account; the architecture and limits manifests cite the
+  harness case as a check; coverage rows, the runner README, the harness and
+  unit suite READMEs, the catalog and the LIMITS premise are updated. The
+  prose baseline did not grow.
+
+Deviations from the written instructions, each material enough to record:
+
+- **Capacity bound in the Swift reply rules.** `PWRunnerAPI.swift` is also
+  compiled into the runner client without the layout mirror, so the rule cannot
+  name `PWShmLayout.policyBytes`. The bound is the mirrored constant
+  `policyReceiptCapacityBytes`, which `PolicyTransferTests` pins to
+  `PWShmLayout.policyBytes - 1`. The decoder enforces the receipt rules as well
+  as the encoder.
+- **Attempt kind in the joined control.** The retained reply is assembled with
+  the production step builder, which does not attach the host path diagnostics
+  that full orchestration adds to file attempts, so the independent consumer
+  rejects a file step built that way. The control uses a sysctl attempt; it
+  still establishes that no attempt ran and that the reply carries the step as
+  a synthetic, unreached result.
+- **Where the consumer's refusal-detail control lives.** The blackbox checker
+  controls run against a retained envelope that carries no receipt, so they
+  construct one for the member, range, partial and conflicting-expectation
+  controls. The inconsistent-refusal-detail control and the second
+  conflicting-expectation control replay the actual refused reply inside the
+  controller's transfer replay test instead.
+- **Harness envelope.** `result.json` gained `header_bytes_expected`,
+  `policy_read_published` and, behind the flag, `policy_bytes_received`, beyond
+  the two counts the plan named, and the controlled-equipment transcript in
+  `tests/fixtures/worker_harness/control.py` carries them too.
+- **Maximal reply size.** The receipt adds no string key, so no size policy was
+  needed; the synthesized maximum grew by 64 bytes and `runner_reply_maximum`
+  in `docs/limits.json` records 52,419,188. The client budget is unchanged by
+  its 4 MiB rounding.
+- **Acceptance equipment the plan did not list.** The first battery
+  (`p2-a3-battery-20261015`, 185 of 187) failed `shell_helpers/worker_setup`,
+  whose canned happy transcript lacked the new keys, and
+  `blackbox_e2e/checker_controls`, which assumed its retained baseline carried
+  a receipt. Both are test equipment; the fixes are recorded above and the
+  whole battery was rerun.
+- **Rust test flake.** In one full `cargo test` run,
+  `log_capture::tests::both_raw_streams_are_bounded_at_exact_edges` in the
+  `sandbox-log-observer` binary failed with a `pipe_open_after_exit` cutoff at
+  the exact 64-byte edge. `controller/src/log_capture.rs` is untouched by this
+  work and the test passes on rerun; recorded, not attributed to this change.

@@ -142,6 +142,10 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
     transferTimedOut.policyTransferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: 5000, elapsed_ms: 5001, bytes_written: 8192, bytes_expected: 200000)
     transferTimedOut.pollStopReason = "policy_transfer_deadline"
     transferTimedOut.cleanupTrigger = "policy_transfer_timeout"
+    // The worker's EOF receipt beside the host's write progress: a valid partial
+    // observation (unequal counts, no length refusal) that agrees with the host's
+    // own expectation on the timeout record.
+    transferTimedOut.workerEvidence?.policy_read = PWWorkerPolicyRead(bytes_expected: 200000, bytes_received: 8192)
     return [
         (transferTimedOut, [shapeProbe("first")]),
         (conflict, [shapeProbe("first"), shapeProbe("second")]),

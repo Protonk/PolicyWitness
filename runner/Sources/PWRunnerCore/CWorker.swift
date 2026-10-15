@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "00b9dadd112237a58453d0711a96c0cb6899133af3e67f803f1bcdc9d545693c"
-    static let abiIdentity: [UInt8] = [0x00, 0xb9, 0xda, 0xdd, 0x11, 0x22, 0x37, 0xa5, 0x84, 0x53, 0xd0, 0x71, 0x1a, 0x96, 0xc0, 0xcb, 0x68, 0x99, 0x13, 0x3a, 0xf3, 0xe6, 0x7f, 0x80, 0x3f, 0x1b, 0xcd, 0xc9, 0xd5, 0x45, 0x69, 0x3c]
+    static let abiIdentityHex = "ad6bd925c33aa26d17b3b26efd40ff6a428333de36d06f8ced40e8ee69e125a5"
+    static let abiIdentity: [UInt8] = [0xad, 0x6b, 0xd9, 0x25, 0xc3, 0x3a, 0xa2, 0x6d, 0x17, 0xb3, 0xb2, 0x6e, 0xfd, 0x40, 0xff, 0x6a, 0x42, 0x83, 0x33, 0xde, 0x36, 0xd0, 0x6f, 0x8c, 0xed, 0x40, 0xe8, 0xee, 0x69, 0xe1, 0x25, 0xa5]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -107,6 +107,11 @@ enum PWShmLayout {
     static let extensionDeliveryErrnoOffset: Int = 124
     static let extensionDeliveryCleanupStageOffset: Int = 128
     static let extensionDeliveryCleanupErrnoOffset: Int = 132
+    // Policy delivery acknowledgement: the host's expected byte count (input) and
+    // the worker's EOF receipt (count plus its publication flag).
+    static let policyBytesExpectedOffset: Int = 136
+    static let policyBytesReceivedOffset: Int = 140
+    static let policyReadPublishedOffset: Int = 144
     static let phaseCountOffset: Int = 96
     static let phaseRecordsOffset: Int = 192
     static let phaseFirstSlotOffset: Int = 0
@@ -503,9 +508,21 @@ func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
                 e.advanced(by: PWShmLayout.evidenceHeaderBytes), count: Int(length)), as: UTF8.self)
         } else { diagnostic.status = "invalid" }
     }
+    // The EOF receipt is gated by its own publication word in the region
+    // header. Zero or any other flag exposes no count; a count outside the
+    // source capacity cannot have been read into the fixed buffer, so it is
+    // not exposed either. Absence establishes nothing about delivery.
+    var policyRead: PWWorkerPolicyRead? = nil
+    if loadAcquire(base, offset: PWShmLayout.policyReadPublishedOffset) == 1 {
+        let expected = UInt32(bitPattern: readI32(base, offset: PWShmLayout.policyBytesExpectedOffset))
+        let received = UInt32(bitPattern: readI32(base, offset: PWShmLayout.policyBytesReceivedOffset))
+        if expected < PWShmLayout.policyBytes && received < PWShmLayout.policyBytes {
+            policyRead = PWWorkerPolicyRead(bytes_expected: Int(expected), bytes_received: Int(received))
+        }
+    }
     return PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: progress,
         failure_publication: published, failure_state: state, failure: failure,
-        readiness: readiness, diagnostic: diagnostic)
+        readiness: readiness, diagnostic: diagnostic, policy_read: policyRead)
 }
 
 
@@ -878,6 +895,7 @@ struct ChildProcessState {
 }
 
 func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
+                transferCalls: PolicyTransferCalls = PolicyTransferCalls(),
                 postApplied: CWorkerPostAppliedHook? = nil, phaseBoundary: CWorkerPhaseHook? = nil) -> CWorkerRunResult {
     if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
         return .failure(.captureNonceInvalid)
@@ -949,6 +967,13 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     writeU32(rawBase, offset: PWShmLayout.extensionRequestedOffset, input.extensionRequested ? 1 : 0)
     writeU32(rawBase, offset: PWShmLayout.stepCountOffset, UInt32(input.slots.count))
     writeU32(rawBase, offset: PWShmLayout.paramCountOffset, UInt32(input.params.count))
+    // The submission's byte array is built once. Its count is the header's
+    // expected policy length and every transfer record's bytes_expected, and
+    // the same bytes are what writePolicy delivers after spawn. The worker
+    // compares the count it reads at EOF against this input; admission bounds
+    // it below the source capacity.
+    let policyBytes = Array(input.policy.utf8)
+    writeU32(rawBase, offset: PWShmLayout.policyBytesExpectedOffset, UInt32(policyBytes.count))
     writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
     if input.captureAppliedProfile, let nonce = captureNonceBytes(input.captureNonce) {
         nonce.copyBytes(to: rawBase.advanced(by: PWShmLayout.captureNonceOffset), count: nonce.count)
@@ -1114,15 +1139,18 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         close(readyPipe[0]); close(readyPipe[1])
         return .failure(.spawnFailed("\(String(cString: strerror(spawnRC)))"))
     }
-    let transferDeadline = MonotonicDeadline(milliseconds: input.policyTransferTimeoutMs)
+    // The transfer calls (clock, write, poll) are one injection point: the
+    // deadline and the writer share the supplied clock, and production keeps
+    // the Darwin defaults.
+    let transferDeadline = MonotonicDeadline(milliseconds: input.policyTransferTimeoutMs, clock: transferCalls.clock)
     // Close parent-side ends that the child now owns.
     close(policyPipe[0])
     close(readyPipe[1])
     var process = ChildProcessState(pid: pid, calls: processCalls)
 
-    // ---- Deliver under one deadline established immediately after spawn.
-    let policyBytes = Array(input.policy.utf8)
-    let transfer = writePolicy(policyBytes, fd: policyPipe[1], deadline: transferDeadline)
+    // ---- Deliver under one deadline established immediately after spawn. The
+    // bytes are the array whose count the header already carries.
+    let transfer = writePolicy(policyBytes, fd: policyPipe[1], deadline: transferDeadline, calls: transferCalls)
     close(policyPipe[1])
     var transferError: PWWorkerPolicyTransferError? = nil
     var transferTimeout: PWWorkerPolicyTransferTimeout? = nil
