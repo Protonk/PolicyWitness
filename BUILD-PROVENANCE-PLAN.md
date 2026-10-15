@@ -33,9 +33,9 @@ worker identity after the final edits to its inputs. Every retained or new
 refusal must have its manifest row and control. B5 accepts the integrated
 result against the gates below.
 
-The record trusts the tools' reports about their inputs and outputs. It does
-not prove reproducibility, compiler correctness, execution of particular bytes
-or an exhaustive account of private runtime dependencies.
+The provenance record contains the tools' reports about build inputs and
+outputs. It does not prove reproducibility, compiler correctness, execution of
+particular bytes or an exhaustive account of private runtime dependencies.
 
 ## Shared implementation requirements
 
@@ -137,11 +137,12 @@ stderr on failure; neither behavior belongs in the shipped record.
 If a metadata probe fails or returns unusable output, the provenance collector
 records a size-limited, sanitized failure reason for the affected field.
 Nonzero exits, empty or malformed successful output, output overflow and
-timeouts are distinct failures. Informational metadata failure does not stop
-the build; a required identity or compatibility observation does. In the
-partial build Swift compilation is not applicable and must not become a new
-tool prerequisite. Define these field categories, size caps and deadlines
-before implementing the reader; unknown values never compare as compatible.
+timeouts are distinct failures. Failure to obtain optional metadata does not
+stop the build; failure to obtain required identity or compatibility
+information does. In the partial build Swift compilation is not applicable
+and must not become a new tool prerequisite. Define these field categories,
+size caps and deadlines before implementing the reader; unknown values never
+compare as compatible.
 
 The inspector ([artifact.py](tests/lib/artifact.py)) requires the file, checks
 its schema and validates the output inventory, paths and unique entries before
@@ -485,8 +486,8 @@ including its diagram, tables, captions and transitions. Preserve generated
 scalar spans for counts and values; resolve affected prose-baseline entries
 through the owning mechanisms rather than adding unverified restatements.
 Regenerate the worker identity into its owned copies after the final edits to
-its inputs. Mechanical agreement and a clean generation diff are necessary;
-B5 also requires the cross-document review below.
+its inputs. All generator checks must pass after regeneration; B5 also
+requires the cross-document review below.
 
 ## B5 — Verify the integrated change and close the plan
 
@@ -546,8 +547,9 @@ evidence in the report; product documentation describes the resulting behavior.
 
 **Retirement.** Close the plan when all five gates pass, or when the user
 explicitly accepts a documented change of scope. The acceptance report must
-account for each goal criterion and any remaining limitation. The record still
-trusts the tools, and nothing here claims reproducibility.
+account for each goal criterion and any remaining limitation. The provenance
+checks rely on tool-reported information and do not establish that rebuilding
+with the recorded inputs will produce identical bytes.
 
 ## Decisions recorded before editing
 
@@ -590,8 +592,8 @@ trusts the tools, and nothing here claims reproducibility.
 - **SDK comparison has a defined limit.** Every output must agree with the
   selected SDK's normalized numeric version. SDK build identifiers remain
   separately reported observations, not a fact inferred from load commands.
-- **Trust boundary.** The record is the tools' testimony with hashes beside
-  it. It distinguishes builds; it does not certify them.
+- **Trust boundary.** The record combines tool-reported build information with
+  artifact hashes; it does not establish that the tools operated correctly.
 
 ## Out of scope
 
