@@ -582,6 +582,10 @@
           "description": "worker refused an embedded NUL in the policy with exit_code=9 and published the byte offset; no prefix compiled"
         },
         {
+          "id": "policy_truncated_prefix",
+          "description": "A policy cut after a complete form and followed by EOF must be refused before compile: the worker has no expected length, and the /etc/hosts slot shows which policy the kernel enforced"
+        },
+        {
           "id": "prepared_unset_refused",
           "description": "worker refused with exit_code=5; no ready/applied/done"
         },

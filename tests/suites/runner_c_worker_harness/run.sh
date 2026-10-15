@@ -455,6 +455,49 @@ run_refusal_case "policy_nul_refused"          "policy_nul"          9 \
 run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
 
+# ---- test_id: policy_truncated_prefix (transport truncation) ----------------
+# The policy pipe carries no framing. A submission cut after a complete form
+# arrives as a shorter, valid policy followed by EOF, and the worker has no
+# expected length to compare against. The contract stated here is the one the
+# NUL refusal already states for a single byte: the worker must not compile and
+# apply a prefix of the source the reply's policy_sha256 describes. The slot
+# discriminates which policy the kernel enforced: /etc/hosts opens under the
+# delivered allow-default prefix and is denied under the submitted whole.
+
+run_policy_truncated_prefix() {
+  run_harness_case "policy_truncated_prefix" "policy_truncated_prefix" \
+    "policy cut after (allow default), before its (deny default) tail: the worker must refuse the prefix" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected, written = r["policy_bytes_expected"], r["policy_bytes_written"]
+assert 0 < written < expected, f"the scenario must deliver a strict prefix; wrote {written} of {expected}: {r}"
+s = r["slots"][0]
+# The worker's account of the prefix, printed before the contract so a failure names it.
+account = (f"delivered {written} of {expected} policy bytes; ready_byte_received={r['ready_byte_received']} "
+           f"applied={r['applied']} apply_rc={r['apply_rc']} done={r['done']} exit_code={r['exit_code']} "
+           f"term_signal={r['term_signal']} failure_published={r['failure_published']} "
+           f"slot completed={s['completed']} rc={s['rc']} errno={s['errno']}")
+print(account)
+# Contract: a short read is a policy-read refusal before compile, like NUL and overflow.
+assert r["failure_published"] == 1 and r["failure"]["operation"] == 2, \
+    f"a truncated policy must publish a policy-read failure, not compile the prefix: {account}"
+assert not r["ready_byte_received"] and not r["applied"] and not r["done"], \
+    f"no readiness, application or completion may follow a truncated policy: {account}"
+assert s["completed"] == 0, f"no attempt may run under a prefix policy: {account}"
+assert r["exit_code"] not in (None, 0) and r["term_signal"] is None, \
+    f"the worker must self-exit with a refusal code: {account}"
+print(f"ok: worker refused a {written}-of-{expected}-byte policy prefix before compile")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+run_policy_truncated_prefix
+
 # ---- test_id: exec_pipes_per_attempt ---------------------------------------
 # Exec pipes and spawn handles exist only inside the attempt, after apply.
 # A hard descriptor ceiling of 64 cannot hold 32 pre-opened pipe pairs, so

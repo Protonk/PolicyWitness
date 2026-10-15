@@ -65,6 +65,13 @@ Transport acceptance does not establish receiver processing; an acknowledgement
 establishes only the event its protocol defines. Do not acquire target resources
 before sandbox application merely to make later observations easier.
 
+**Status 2026-10-14.** The third distinction has its discriminating control and
+an associated plan, [POLICY-TRANSFER-ACKNOWLEDGEMENT-PLAN.md](../POLICY-TRANSFER-ACKNOWLEDGEMENT-PLAN.md).
+`runner_c_worker_harness/policy_truncated_prefix` shows the shipped worker
+compiling and applying a 28-byte prefix of a 43-byte submission with no published
+failure, indistinguishable from a complete 28-byte submission. The fallback
+compilation context and the test-seam receipts remain parked.
+
 ### P3 — Make build provenance a deliberate artifact
 
 **Current burden.** The [build account](../docs/BUILD.md) relies on build tools'

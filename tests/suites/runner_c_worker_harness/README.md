@@ -140,6 +140,17 @@ sentinel and no ready byte (except compile_failure, which flips `done`).
     record operation 2, code 9, detail 26 (the NUL's offset). A C-string reader
     would otherwise compile only the prefix while `policy_sha256` described the
     whole source. The host refuses NUL at admission; this is the reader's own guard.
+17. **policy_truncated_prefix** — the submitted bytes are
+    `(version 1)(allow default)(deny default)`, but the pipe closes after
+    `(allow default)`. The worker reads to EOF and has no expected length, so
+    nothing distinguishes the delivery from a complete 28-byte submission. The
+    case requires the contract the NUL guard states for one byte: a
+    policy-read refusal before compile, no ready byte, no application and no
+    attempt, rather than a prefix of the source `policy_sha256` describes. The
+    `/etc/hosts` slot discriminates the policy the kernel enforced: allowed
+    under the prefix, denied under the whole. `result.json` reports
+    `policy_bytes_expected` and `policy_bytes_written` so the account mirrors
+    a host `policy_transfer_timeout` whose `bytes_written` fell short.
 
 The host-side harness logic (shm setup, full-region pre-touch,
 posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated in
@@ -181,10 +192,11 @@ equipment-failure controls live in `shell_helpers/worker_setup`.
 
 Each test_id writes:
 - `result.json`: the JSON envelope `harness.c` emits, containing
-  `{ ready_byte_received, applied, apply_rc, done, sent_sigkill,
-  exit_code, term_signal, slots: [...], target_exists_after }`
-  (`target_exists_after` is null except for the file unlink/create
-  scenarios).
+  `{ ready_byte_received, applied, apply_rc, policy_bytes_expected,
+  policy_bytes_written, done, sent_sigkill, exit_code, term_signal,
+  slots: [...], target_exists_after }` (`target_exists_after` is null except
+  for the file unlink/create scenarios; the two policy byte counts are the
+  submission and what the pipe was asked to carry).
 - `harness.stderr`: stderr from the harness (and the worker, since
   stderr is inherited).
 - `assert.log`: stdout/stderr of the Python assertion block.
