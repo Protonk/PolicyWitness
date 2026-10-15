@@ -1,60 +1,41 @@
 # Build provenance plan
 
-Status: proposed. Implementation baseline:
-`7dfef7d` (main, 2026-10-15). Nothing in this plan is implemented.
+Make build provenance a bounded, inspectable part of every PolicyWitness
+build. A maintainer should be able to identify the selected tools, SDK,
+effective configuration and relevant inputs behind an artifact, connect that
+account to the signed bytes, and recover the same account from an accepted
+release. The build must detect incompatible reuse, provide an explicit fresh
+release-build mode and verify signing guarantees on the resulting artifacts.
 
-The [parking lot](records/EVIDENCE-CLARITY-PARKING-LOT.md) entry P3 asks that
-build provenance become a deliberate artifact: a bounded record of the actual
-tool identities, SDK selection, effective configuration and relevant inputs
-behind an artifact, connected to the hashes of what was produced; detection of
-a configured build directory reused under incompatible settings; a clean
-release-build mode; and verification of the signing guarantees on the final
-signed artifacts rather than on the requested identity's name. P3 sets the bar
-for returning to it: a provenance question expressible as a field and a check
-that would distinguish two materially different builds. The investigation
-behind this plan found several, and found that the raw material already exists:
-Meson writes compiler identities and every effective option under
-`builddir/meson-info`, every shipped Mach-O carries its SDK and linker version
-in `LC_BUILD_VERSION`, Cargo reports its artifacts, and
-[meson_receipts.py](tests/lib/meson_receipts.py) already records most of the
-rest as opt-in comparison equipment that the build never runs.
+Acceptance requires:
 
-The investigation also identifies candidates for simplifying refusal
-bookkeeping. The [build account](docs/BUILD.md) lists 65 refusals. The Meson
-policy rows can share a manifest entry while keeping parameterized controls
-for every option. Other removals require evidence that an earlier check or a
-tool failure preserves the actual predicate and the boundary it protects.
-Recording a fact does not enforce it, and eventual failure does not establish
-that an earlier refusal is redundant. B4 makes those comparisons before
-crediting any removal; reducing the row count is not an acceptance target.
+- Each claimed distinction between materially different builds has a recorded
+  field and an independent control that demonstrates the distinction. Cover
+  changed compilers, SDKs and configuration with retained caches, and missing
+  or inconsistent records; successful fresh builds alone are insufficient.
+- Recorded settings describe actual selection and observed state. Required
+  unknowns cannot establish compatibility, and fresh mode must safely replace
+  its owned cache areas before claiming freshness.
+- The embedded record, artifact checks and release archive agree about which
+  bytes they describe. Signing claims come from the signatures actually made,
+  with the outer seal's facts recorded outside the evidence it seals.
+- Recording rules, build guards, embedded evidence, operator documentation and
+  the signing/release procedure form one coherent account. Published fields
+  and probe failures are bounded and exclude unrelated credentials and machine
+  configuration.
+- Simplifying refusal bookkeeping preserves each enforced predicate, protected
+  boundary and behavioral control, including every Meson policy option. A
+  recorded fact does not enforce it; reducing the row count is not a target.
 
-The record trusts what the tools report. It is not proof of reproducibility,
-compiler correctness or execution of particular bytes, and repeated Swift
-builds of identical sources already differ in bytes.
+Implement B1 through B4 as one coherent increment, including the manifest,
+controls, fixtures, generated documentation and registries. Regenerate the
+worker identity after the final edits to its inputs. Every retained or new
+refusal must have its manifest row and control. B5 accepts the integrated
+result against the gates below.
 
-## Checkpoint and order
-
-| Item | Claim to retire or narrow | Status | Completion evidence |
-| --- | --- | --- | --- |
-| B1 | The build records which bytes it signed but not which tools, SDK, configuration and inputs produced them | Open | |
-| B2 | The signing guarantee rests on the requested identity's name, the leaf authority and the runtime flag | Open | |
-| B3 | A compiler or SDK change under a reused build directory is the operator's burden and is not detected | Open | |
-| B4 | Refusal bookkeeping can be simplified where controls establish equivalent predicates and protected boundaries | Open | |
-| B5 | The integrated change still needs final acceptance and evidence review | Open | |
-
-Implement B1 through B4 as one coherent increment, including the manifest, the
-controls, the fixtures, the generated documentation and the registries, because
-`build.sh`, `meson.build` and `meson.options` are worker identity inputs and the
-build document's generator refuses a manifest that disagrees with the script.
-Regenerate the worker identity after the last script edit. B5 verifies the
-result and closes the plan. Do not leave a refusal in the script without its
-manifest row and control, or a row without its refusal.
-
-During execution, update this checkpoint with implementation commits, the
-worker identity, the refusal count, test run identifiers, the reviewed
-goldens, remaining findings and the next action. The plan closes when all five
-gates pass or the user explicitly accepts a documented change of scope. The
-parking lot's P3 entry is updated when the plan closes.
+The record trusts the tools' reports about their inputs and outputs. It does
+not prove reproducibility, compiler correctness, execution of particular bytes
+or an exhaustive account of private runtime dependencies.
 
 ## Shared implementation requirements
 
@@ -392,7 +373,7 @@ Review these candidates independently:
 New rows include `meson_policy`, `missing_tree_input`,
 `worker_identity_mismatch`, B3's `builddir_toolchain_changed` and
 `sdk_disagreement`, and the stamp, probe and fresh-mode admission failures
-defined during implementation. Record the actual count in the checkpoint;
+defined during implementation. Record the actual count in the acceptance report;
 there is no target count. For every removed row, preserve or retarget its
 behavioral scenario in
 [build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py), compare
@@ -429,7 +410,6 @@ README for the dispatcher bundles; and the cache ownership, stamp migration,
 bounded-probe and failure/recovery contracts. Update descriptions of the
 retained pre-sign recheck and per-option controls without weakening their
 claims. The worker identity regenerates into its three copies.
-The parking lot's P3 status note changes on closure, after B5 passes.
 
 ## B5 — Verify the integrated change and close the plan
 
@@ -466,13 +446,16 @@ an individual Meson policy option. A run of only fresh successful builds or
 only substituted tool text does not satisfy these gates.
 
 `witness_contract/order_barrier_mutations` is not forced, since no wait,
-release store or eligibility rule changes. Record run identifiers, the
-refusal count, the worker identity, the reviewed inspector fixtures and the
-state-transition evidence in the checkpoint table.
+release store or eligibility rule changes. The acceptance report must identify
+implementation commits, run identifiers, the refusal count, the worker
+identity, reviewed fixtures and goldens, state-transition evidence and any
+remaining findings. Keep implementation history in commits and execution
+evidence in the report; product documentation describes the resulting behavior.
 
-**Retirement.** Update the parking lot's P3 status with the completed work and
-its evidence. The record still trusts the tools, and nothing here claims
-reproducibility.
+**Retirement.** Close the plan when all five gates pass, or when the user
+explicitly accepts a documented change of scope. The acceptance report must
+account for each goal criterion and any remaining limitation. The record still
+trusts the tools, and nothing here claims reproducibility.
 
 ## Decisions recorded before editing
 
