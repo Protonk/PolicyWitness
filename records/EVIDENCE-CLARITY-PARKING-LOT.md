@@ -105,6 +105,15 @@ inputs. It is not proof of reproducibility, compiler correctness, execution of
 particular bytes, or exhaustive knowledge of private runtime dependencies.
 Closing the six-item plan's build-refusal coverage does not settle these questions.
 
+**Status 2026-10-15.** Investigated; the bar is met. Several questions are now
+fields with checks that distinguish builds (the SDK and linker version every
+shipped Mach-O already carries, Meson's recorded compiler identities and
+effective options, the built worker's reported identity, the certificate chain
+and timestamp on the signed artifacts), and the record would let the build
+retire refusals whose conditions earlier checks or a fresh build already
+exclude. The associated plan is
+[BUILD-PROVENANCE-PLAN.md](../BUILD-PROVENANCE-PLAN.md).
+
 ## Larger improvements
 
 ### P4 — Give unfinished cleanup an explicit owner
