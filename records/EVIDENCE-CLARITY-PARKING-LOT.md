@@ -65,12 +65,18 @@ Transport acceptance does not establish receiver processing; an acknowledgement
 establishes only the event its protocol defines. Do not acquire target resources
 before sandbox application merely to make later observations easier.
 
-**Status 2026-10-14.** The third distinction has its discriminating control and
-an associated plan, [POLICY-TRANSFER-ACKNOWLEDGEMENT-PLAN.md](../POLICY-TRANSFER-ACKNOWLEDGEMENT-PLAN.md).
-`runner_c_worker_harness/policy_truncated_prefix` shows the shipped worker
-compiling and applying a 28-byte prefix of a 43-byte submission with no published
-failure, indistinguishable from a complete 28-byte submission. The fallback
-compilation context and the test-seam receipts remain parked.
+**Status 2026-10-15.** The third distinction is resolved for the policy pipe.
+`runner_c_worker_harness/policy_truncated_prefix` first showed the shipped
+worker compiling and applying a 28-byte prefix of a 43-byte submission with no
+published failure, indistinguishable from a complete 28-byte submission. Commit
+`7ad4c96` (its plan, since removed, recorded the acceptance evidence) gives the
+worker the submission's expected byte count through the shared header, has it
+publish the count it read at EOF before judging it, and has it refuse any
+length that differs before compiling; the reply carries the receipt as
+`runner_subprocess.worker_evidence.policy_read` beside the host's write counts.
+Host write counts still establish writes accepted by the pipe, and the receipt
+establishes only its defined event: the worker reached EOF with the reported
+count. The fallback compilation context and the test-seam receipts remain parked.
 
 ### P3 — Make build provenance a deliberate artifact
 
