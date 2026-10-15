@@ -398,18 +398,95 @@ boundaries established by behavioral controls.
 
 ## Documentation included with B1 to B4
 
-Update together, through the owning generators where a region is generated:
-[build.json](docs/build.json) steps, refusals, knobs, invocations and the
-evidence inventory, then `python3 docs/generate_build.py`; the authored
-sections of [BUILD.md](docs/BUILD.md) on inputs beyond the tree, the signing
-contract, the evidence the build embeds and the known gaps; the evidence
-inventory and release procedure in [SIGNING.md](docs/SIGNING.md); the
-[Makefile](Makefile) help card for the third knob; the preflight suite README,
-the [opt-in registry](tests/OPT_IN_TESTS.md) and the catalog; the fixture
-README for the dispatcher bundles; and the cache ownership, stamp migration,
-bounded-probe and failure/recovery contracts. Update descriptions of the
-retained pre-sign recheck and per-option controls without weakening their
-claims. The worker identity regenerates into its three copies.
+Rewrite the documentation as one account of the resulting build. Before
+editing, prepare a compact review map linking each changed behavior to its
+generated rows or figure path, authored explanation, operator commands and
+acceptance control. Identify the owning section for each contract and link to
+it from other documents. Keep the map and its completed review in B5's
+acceptance report; product documentation describes current behavior and git
+records implementation history.
+
+### Document ownership
+
+| Owner | Required account |
+| --- | --- |
+| [build.json](docs/build.json) and [generate_build.py](docs/generate_build.py) | The structured build account: figure, steps, refusals, signing calls, invocations, knobs and directory trust. Regenerate every affected region, scalar span and figure output. |
+| Authored [BUILD.md](docs/BUILD.md) | Build order and failure state; inputs and effective settings; script/Meson ownership; cache compatibility, replacement and recovery; signing guarantees, evidence timing and remaining trust. Explain the generated account and its limits. |
+| [SIGNING.md](docs/SIGNING.md) | The evidence inventory and record formats, field meanings and limitations; release commands and their fresh-build requirement; binding the archived record and final signature facts to the accepted ZIP. BUILD links here for the format contract. |
+| [README.md](README.md#build-and-bundle) and [dist/README.md](dist/README.md) | The shipped bundle and archive inventories, concise build/release summaries and links to the owning contracts. |
+| [tests/README.md](tests/README.md#comparing-native-builds), the [preflight README](tests/suites/preflight/README.md), [opt-in registry](tests/OPT_IN_TESTS.md), [catalog](tests/catalog.json) and [fixture catalog](tests/fixtures/README.md) | What each control establishes and requires, which selections run it, and how dispatcher fixtures carry the record. Explain how native comparison receipts relate to the bounded shipped provenance. |
+| [Makefile](Makefile) and build usage text | Public knob defaults and scope, supported entrypoints, and release enforcement through recursive Make calls. Keep help consistent with the commands in BUILD and SIGNING. |
+
+The build manifest currently has no evidence-inventory section. Keep that
+contract in SIGNING; recording the evidence-producing step and invocation in
+the manifest does not make it the record's format owner. Any extension to the
+manifest or generated regions must account for schema, parser and renderer
+support, with corresponding controls and the
+[generator contracts](tests/suites/source_drift/README.md#generator-contracts)
+and captions updated to describe what is actually checked. Do not insert
+hand-maintained content into generated regions.
+
+### Review the generated and authored seams together
+
+- **Order and failure state.** Reconcile BUILD's introduction, rationale,
+  entrypoint explanation and "One build in time" with the figure, step,
+  refusal and invocation tables. Include admission, cache ownership,
+  compatibility checks or replacement, compilation, assembly, evidence,
+  signatures and packaging. For each new failure boundary, state what has
+  changed, what survives, which operation was prevented and how to recover.
+  Review the manually maintained Reads/Writes descriptions against the actual
+  effects. The figure currently distinguishes full/partial builds; explicitly
+  model or explain fresh/reuse conditions without implying that mutually
+  exclusive actions always run in sequence.
+- **Cache lifetime and usable commands.** Reconcile the directory table with
+  the authored input, ownership, native-compilation and recovery sections.
+  Document stamp creation, validation, extension and migration, including
+  interruption and missing legacy stamps. Keep Meson's compatibility scope
+  distinct from independently retained Cargo state. Fresh mode replaces
+  `builddir/` and `controller/target/release/`; explain its scope beside any
+  broader manual cleanup advice. The existing direct Meson example creates
+  `builddir/` without a stamp: use a separate directory for that workflow and
+  explain explicit fresh recovery if unstamped state occupies the managed
+  path. Document serialization and nested ownership, updating build/test
+  working guidance when those rules change. Recovery instructions must
+  preserve the path, ownership and evidence protections.
+- **Knobs and effective settings.** Rewrite the prose introducing and following
+  the generated knob table, as well as help and release commands. `BUILD_XPC`
+  and `PW_INSPECTION` map to Meson options; `PW_FRESH_BUILD` governs cache
+  replacement in the script. Do not describe every public knob as a Meson
+  option. Explain ordinary defaults, enforced release settings and conflicting
+  caller values consistently. Update Cargo flag precedence and distinguish
+  requested settings, configured tool identities and current observations.
+  Partial builds must retain their documented equipment requirements.
+- **Signing and evidence lifecycle.** Read the generated signing table with
+  BUILD's pre-sign gates, signing contract and embedded-evidence explanation,
+  then SIGNING's inventory, release sequence and archive-acceptance account.
+  Distinguish requested signing flags from verified certificate and secure
+  timestamp facts. Identify each record's producer, observation source,
+  required or optional fields, bounded failure behavior and point of sealing.
+  Tool/configuration observations are not all derived from signed binaries.
+  Nested executable hashes precede the outer seal; the final controller hash
+  and outer-signature facts live outside it. Explain the separate release
+  attempt and archive records, and that archival provenance comes from the
+  accepted final ZIP even if the working app has since changed. No embedded
+  evidence is rewritten after sealing.
+- **Coverage and remaining trust.** Align generated captions and coverage
+  columns with authored verification prose and suite descriptions. Distinguish
+  textual agreement, helper controls and controls driving the actual build;
+  review what cited tests assert. A collapsed refusal row must still expose
+  the per-option coverage and mutation sensitivity. Retain the pre-sign source
+  recheck's distinct claim. Narrow known gaps where the new checks justify it:
+  matching configuration and source identity still do not independently prove
+  cached binaries' origin, reproducibility or compiler correctness.
+
+Edit generator inputs and the surrounding prose in the same increment, then
+run `python3 docs/generate_build.py` and review the complete rendered BUILD,
+including its diagram, tables, captions and transitions. Preserve generated
+scalar spans for counts and values; resolve affected prose-baseline entries
+through the owning mechanisms rather than adding unverified restatements.
+Regenerate the worker identity into its owned copies after the final edits to
+its inputs. Mechanical agreement and a clean generation diff are necessary;
+B5 also requires the cross-document review below.
 
 ## B5 — Verify the integrated change and close the plan
 
@@ -445,10 +522,25 @@ Mutation controls must fail if the matching protection is bypassed, including
 an individual Meson policy option. A run of only fresh successful builds or
 only substituted tool text does not satisfy these gates.
 
+Documentation acceptance requires the completed review map from
+[the documentation task](#documentation-included-with-b1-to-b4). Check the
+owning generators in `--check` mode, including the figure and scalar spans;
+source-drift checks must retain the generator contracts, citation/link checks
+and baseline protections. Then review the final rendered documents and diagram
+as an operator: walk through a fresh build, unchanged reuse, a permitted
+configuration change, incompatible or unstamped reuse and its recovery, an
+interrupted build, and accepted-release archival. Reconcile each walkthrough
+with the corresponding acceptance-control evidence, including refusal timing,
+surviving files and the artifact to which a record belongs. Check direct Meson
+instructions and recursive release commands against their supported workflows.
+Resolve contradictions at generated/authored boundaries and across documents
+before closure; passing the generator alone does not satisfy this review.
+
 `witness_contract/order_barrier_mutations` is not forced, since no wait,
 release store or eligibility rule changes. The acceptance report must identify
 implementation commits, run identifiers, the refusal count, the worker
-identity, reviewed fixtures and goldens, state-transition evidence and any
+identity, reviewed fixtures and goldens, state-transition evidence, the reviewed
+document sections and figure, documentation walkthrough results and any
 remaining findings. Keep implementation history in commits and execution
 evidence in the report; product documentation describes the resulting behavior.
 
