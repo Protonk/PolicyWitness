@@ -864,8 +864,9 @@ region header (`policy_bytes_expected`) before spawn; the worker, once its read
 returned at EOF and before comparing, stores the count it read and
 release-publishes a flag. The JSON object carries `bytes_expected` (that
 immutable host input) and `bytes_received` (the worker's count), both
-nonnegative integers within the source capacity. It is present exactly when the
-host's final snapshot acquired the flag as 1 behind a validated identity; a
+nonnegative integers within the source capacity. The host exposes only counts
+within that capacity after its final snapshot acquired the flag as 1 behind a
+validated identity; a
 header refusal, read error or overflow publishes none, and absence establishes
 nothing about delivery: termination can interrupt the worker before
 publication, a failed cleanup can leave publication after collection, and
@@ -874,10 +875,17 @@ present its `bytes_expected` agrees with the receipt's; a disagreement is a
 reader-detectable fault that neither side corrects. Equal counts establish
 length agreement with the submission, not content identity, compilation,
 application or kernel effect. A code 13 refusal names the received count while
-the counts differ; unequal counts without that refusal are retained as the
+the counts differ. Unequal counts without that refusal are retained as the
 completed read only, because termination can interrupt the worker between the
-receipt and the refusal. The Swift reply encoder and decoder and
-`tests/lib/consumer.py` enforce these rules; the shape golden only types them.
+receipt and the refusal. They cannot coexist in an ordinary reply with known
+progress or failure after the length check, readiness, application, completion,
+phase arrival/acknowledgement or a worker attempt result. Unknown operation
+numbers have no inferred temporal meaning. The Swift reply encoder and decoder
+and `tests/lib/consumer.py` enforce these rules; the shape golden only types them.
+An evidence-preserving reporting failure retains contradictory receipt values
+and withholds every comparison under the existing reply-failure contract. The
+receipt's object structure and integer members remain required; its conflicting
+values are diagnostics, not an accepted account of delivery.
 
 The production deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starts immediately after spawn. The
 write endpoint is nonblocking and protected by F_SETNOSIGPIPE, with setup
@@ -891,15 +899,14 @@ requests exit and uses the [host observation](#host-observations)
 grace/termination/reaping contract. Partial publications and independent
 cleanup observations reach the ordinary assembly path. Published worker
 failure retains summary precedence; the transfer observation stays available.
-Closing input delivers EOF to a worker that is still reading: it publishes the
-count it read and, because that count differs from the header's expectation,
-refuses with code 13 before compiling, then exits on its own code. When the
-host observes that refusal the summary is `runner_failed` by the precedence
-above, with `policy_transfer_timeout`, stop reason `policy_transfer_deadline`
-and cleanup trigger `policy_transfer_timeout` retained and the worker reaped
-during grace without a termination request. Without an observed refusal the
-timeout remains `runner_timeout`. Neither classification supplies publication,
-kill or exit evidence the account lacks.
+If the worker reaches EOF after input closes, it publishes the count it read
+and refuses a different length before compiling. The worker can be terminated
+before either publication or before its own exit; a refusal publication alone
+does not establish voluntary exit or reaping during grace. When the host
+observes a worker failure it takes `runner_failed` precedence, with the host's
+transfer observation, stop reason and cleanup trigger retained. Without an
+observed failure a transfer timeout remains `runner_timeout`. Neither
+classification supplies publication, kill or exit evidence the account lacks.
 Successful transfer begins the separate readiness wait. The deadline does
 not bound final blocking reap, cancel an earlier client timeout, or contain
 all descendants. Readers must consider the timeout

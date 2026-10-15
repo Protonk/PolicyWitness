@@ -82,6 +82,11 @@ Combined failures must report each independent problem, so changing a skip
 to an early failure is insufficient. These controls exercise the checker CLI
 without importing its implementation or any production code.
 
+Receipt controls reject unequal policy EOF counts alongside completed worker
+execution. A reporting failure may retain contradictory receipt values only
+with its failure diagnostics and every comparison omitted; receipt structure
+and member types remain required.
+
 The missing-file control also verifies the unavailable-result contract,
 rejects an invented prediction, and proves that an expected unavailable
 prediction cannot hide a later attempt failure.

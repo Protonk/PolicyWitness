@@ -121,7 +121,11 @@ transfer timeout to the shipped worker's length refusal of a truncated delivery
 (the EOF receipt beside the write counts, `runner_failed` by precedence, reaped
 by its own exit), rejecting fabricated kill, exit and receipt variants. Its
 actual encoded replies are replayed through Rust assembly and the Python
-consumer by the wrapper.
+consumer by the wrapper, including an evidence-preserving reporting failure
+with a contradictory receipt. Constructed controls accept a receipt interrupted
+before comparison and reject unequal counts beside later worker execution.
+`WorkerEvidenceTests` also drives the production read-error branch with a closed
+policy descriptor, requiring native failure evidence and no EOF receipt.
 The exact Rust replay is ignored in standalone Cargo runs because it requires
 those fresh driver receipts; it is mandatory in the default `runner_unit` case.
 

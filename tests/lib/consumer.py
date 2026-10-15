@@ -457,13 +457,15 @@ def _validate_reply(runner):
         # The worker's EOF receipt. Both counts are required integers within the
         # source capacity; the host's own expectation on any transfer record agrees
         # with it; and a length refusal (operation 2, code 13) names the received
-        # count while the counts differ. Unequal counts without that refusal are a
-        # valid partial observation: termination can interrupt the worker between
-        # the receipt and the refusal. Equal counts establish length agreement only.
+        # count while the counts differ. Unequal counts allow a pre-compile partial
+        # observation, never later worker execution. A reporting-failure reply
+        # retains contradictory values without comparisons; structure still applies.
         if not isinstance(read, dict) or set(read) != {'bytes_expected', 'bytes_received'} or \
-                any(type(read[k]) is not int or not 0 <= read[k] <= POLICY_SOURCE_BYTES for k in read):
+                any(type(read[k]) is not int for k in read):
             errors.append('invalid worker_evidence.policy_read receipt')
-        else:
+        elif not failed_reporting:
+            if any(not 0 <= read[k] <= POLICY_SOURCE_BYTES for k in read):
+                errors.append('invalid worker_evidence.policy_read receipt')
             for key in ('policy_transfer_timeout', 'policy_transfer_error'):
                 record = sub.get(key)
                 if isinstance(record, dict) and record.get('bytes_expected') != read['bytes_expected']:
@@ -472,6 +474,20 @@ def _validate_reply(runner):
             if isinstance(failure, dict) and failure.get('operation') == 2 and failure.get('code') == 13 and \
                     (failure.get('detail') != read['bytes_received'] or read['bytes_received'] == read['bytes_expected']):
                 errors.append('length refusal detail disagrees with worker_evidence.policy_read')
+            if read['bytes_received'] != read['bytes_expected']:
+                after_read = (3, 4, 5, 6, 7, 8, 9, 10, 11)
+                progress = evidence.get('progress')
+                phases = runner.get('phases')
+                if runner.get('sandboxed_after_apply') is True or sub.get('ready_byte_received') is True or \
+                        sub.get('done_observed') is True or evidence.get('readiness') is not None or \
+                        (isinstance(progress, dict) and progress.get('operation') in after_read) or \
+                        (isinstance(failure, dict) and failure.get('operation') in after_read) or \
+                        (isinstance(phases, list) and any(isinstance(p, dict) and
+                         (p.get('arrival_observed') is True or p.get('completion_observed') is True or
+                          (isinstance(p.get('ordering'), dict) and p['ordering'].get('proceed_observed') is True)) for p in phases)) or \
+                        any(isinstance(s, dict) and isinstance(s.get('attempt'), dict) and
+                            s['attempt'].get('result_source') == 'worker' for s in steps_value):
+                    errors.append('unequal worker_evidence.policy_read counts contradict observations after the policy length check')
     if isinstance(sub, dict) and not failed_reporting and sub.get(lifecycle_contract.RECORD_KEY) is None:
         errors.append('worker subprocess without runner_subprocess.disposition')
     return errors

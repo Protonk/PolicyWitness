@@ -1163,6 +1163,10 @@ delivery whose length differs from the expectation before compiling (operation
 2, code 13, detail the received count), so equal counts establish length
 agreement with the submission only, not content identity, compilation,
 application or kernel effect; absence establishes nothing about delivery.
+Unequal counts can survive termination before a refusal is published, but cannot
+accompany observations of compilation or later worker execution in an ordinary
+reply. An evidence-preserving reporting failure retains contradictions as
+diagnostics and omits every comparison.
 Compilation returning NULL
 is distinct from parameter setup or application returning an integer failure.
 Numeric operation/code values are open: unfamiliar values remain available.
@@ -1181,8 +1185,9 @@ receipt; `worker_evidence.policy_read` is the worker's own account of what it re
 Policy delivery has an absolute monotonic deadline of <!-- span limits.worker_policy_transfer.value_unit -->5,000 milliseconds<!-- /span --> starting after worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
 `elapsed_ms`, `bytes_written` and `bytes_expected`.
 The host closes input and enters cleanup without starting readiness/sentinel
-polling. Closing input delivers EOF to the worker, which refuses the short
-delivery for its length before compiling. A transfer timeout ordinarily yields
+polling. A worker that reaches EOF refuses a short delivery before compiling;
+termination can prevent it from publishing or exiting on its own. A transfer
+timeout ordinarily yields
 `runner_timeout`; that refusal, when the host observes it, is a published
 worker failure and takes precedence as `runner_failed`, while the timeout
 record and the cleanup/status observations remain independent. The deadline

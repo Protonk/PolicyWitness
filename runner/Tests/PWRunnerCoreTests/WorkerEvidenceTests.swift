@@ -12,7 +12,7 @@ private func evidenceFixture(_ mode: String, suffix: String = "", params: [CWork
         sentinelTimeoutMs: 100, exitGraceMs: 500))
     switch result {
     case .success(let out): return out
-    case .failure(.policyWriteFailed, let partial) where suffix == ".map-failure":
+    case .failure(.policyWriteFailed, let partial) where suffix == ".map-failure" || suffix == ".read-failure":
         if let partial { return partial }
         fallthrough
     default: throw TestFailure(message: "driver: \(result)")
@@ -21,6 +21,18 @@ private func evidenceFixture(_ mode: String, suffix: String = "", params: [CWork
 
 func runWorkerEvidenceTests(_ tk: TestKit) {
     tk.group("worker evidence publication") {
+        tk.run("production policy read error publishes failure without an EOF receipt") {
+            let out = try evidenceFixture("(version 1)(allow default)", suffix: ".read-failure")
+            try expectEqual(out.workerEvidence?.failure?.operation, 2)
+            try expectEqual(out.workerEvidence?.failure?.code, 3)
+            try expectEqual(out.workerEvidence?.failure?.native_result, -1)
+            try expectEqual(out.workerEvidence?.failure?.errno, EBADF)
+            try expectNil(out.workerEvidence?.policy_read)
+            try expectNil(out.workerEvidence?.readiness)
+            try expectFalse(out.applied); try expectFalse(out.done)
+            try expectTrue(out.slots.allSatisfy { !$0.completed })
+            try expectEqual(out.exitCode, 7); try expectNil(out.termSignal)
+        }
         tk.run("production C apply failure preserves actual return and errno") {
             let out = try evidenceFixture("(version 1)(allow default)", suffix: ".apply-failure")
             let f = out.workerEvidence?.failure

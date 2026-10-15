@@ -31,8 +31,10 @@ prefix then close stdin; the last has a test-only watchdog and independently
 owned host cleanup. They exercise transfer independently of source admission.
 
 The builder emits companion executables alongside its output: `.apply-failure`,
-`.params-CREATE`, `.params-SET`, and `.map-failure`. They compile production C main
-with one native boundary substituted (or close the mapping FD before entry).
+`.params-CREATE`, `.params-SET`, `.map-failure` and `.read-failure`. They compile
+production C main with one native boundary substituted or close a descriptor
+before entry. The read-failure companion closes stdin: the actual read reports
+EBADF, and the worker must retain that failure without publishing an EOF receipt.
 Assignment fails on the second call and sets a stale errno to prove it is not
 claimed. These are deterministic producer/driver controls, not policy results.
 

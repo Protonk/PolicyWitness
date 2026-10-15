@@ -252,8 +252,9 @@ def consumer_controls(artifacts, current):
 
     # The worker's EOF receipt for the policy pipe is read by field: both members
     # present and within the source capacity, agreement with the host's own
-    # expectation on a transfer record, and unequal counts without a length
-    # refusal preserved as a partial observation. The receipt is optional, so a
+    # expectation on a transfer record, and unequal counts incompatible with
+    # completed execution. A pre-compile partial observation is covered by the
+    # controller's transfer replay. The receipt is optional, so a
     # retained envelope without it stays valid; a baseline that carries one
     # must report equal counts for its complete delivery, and a baseline without
     # one receives a constructed receipt. The refusal's detail rule is exercised
@@ -270,7 +271,7 @@ def consumer_controls(artifacts, current):
         run('policy_read_constructed_receipt', with_receipt)
     partial = copy.deepcopy(with_receipt)
     runner(partial)['runner_subprocess']['worker_evidence']['policy_read']['bytes_received'] = receipt['bytes_expected'] - 1
-    run('policy_read_partial_without_refusal', partial)
+    run('policy_read_mismatch_after_execution', partial, rejected_by='contradict observations after the policy length check')
     for name, change, diagnostic in [
         ('missing_member', lambda s: s['worker_evidence']['policy_read'].pop('bytes_received'),
          'invalid worker_evidence.policy_read'),
@@ -376,6 +377,20 @@ def consumer_controls(artifacts, current):
     failed = copy.deepcopy(current)
     degraded(failed)
     run('reporting_failure_preserved', failed, preserved)
+    # Reporting failure retains the contradictory receipt that stopped ordinary
+    # encoding. Its values are diagnostics; object/member types remain required.
+    for name, receipt in [
+        ('execution', {'bytes_expected': 43, 'bytes_received': 28}),
+        ('range', {'bytes_expected': 43, 'bytes_received': -1}),
+    ]:
+        retained = copy.deepcopy(failed)
+        runner(retained)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
+        run('reporting_failure_policy_read_' + name, retained)
+    for name, receipt in [('missing', {'bytes_expected': 43}),
+                          ('type', {'bytes_expected': 43, 'bytes_received': '28'})]:
+        malformed = copy.deepcopy(failed)
+        runner(malformed)['runner_subprocess']['worker_evidence']['policy_read'] = receipt
+        run('reporting_failure_policy_read_' + name, malformed, rejected_by='policy_read')
     minimal = copy.deepcopy(current)
     degraded(minimal, retained=False)
     run('reporting_failure_minimal', minimal, lambda e: require(steps(e) == [], 'no steps without retention'))

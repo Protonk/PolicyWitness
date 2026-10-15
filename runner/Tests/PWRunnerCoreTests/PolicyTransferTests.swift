@@ -34,7 +34,32 @@ func runPolicyTransferTests(_ tk: TestKit) {
             // the account carries none. Absence establishes nothing about delivery.
             try expectNil(out.workerEvidence?.policy_read)
             try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.runnerTimeout)
-            _ = try retainTransferReply(out, result: result, name: "timeout", fixture: path)
+            let bytes = try retainTransferReply(out, result: result, name: "timeout", fixture: path)
+            // Construct a receipt observed before termination, with no later
+            // worker publication. This is reader coverage, not a fixture receipt.
+            var partialReply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+            partialReply.runner_subprocess?.worker_evidence?.policy_read = PWWorkerPolicyRead(
+                bytes_expected: input.policy.utf8.count, bytes_received: out.policyTransferTimeout!.bytes_written)
+            let partialBytes = try pwRunnerEncodeJSON(partialReply)
+            _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: partialBytes)
+            let later: [(String, (inout PWRunnerRunResult) -> Void)] = [
+                ("application", { $0.sandboxed_after_apply = true }),
+                ("ready byte", { $0.runner_subprocess?.ready_byte_received = true }),
+                ("completion", { $0.runner_subprocess?.done_observed = true }),
+                ("readiness publication", { $0.runner_subprocess?.worker_evidence?.readiness = PWWorkerReadiness(rc: -1, errno: EPIPE) }),
+                ("compile progress", { $0.runner_subprocess?.worker_evidence?.progress = PWWorkerProgress(raw: 0x05100000, operation: 5, stage: 1, index: nil) }),
+                ("compile failure", { $0.runner_subprocess?.worker_evidence?.failure = PWWorkerFailure(operation: 5, code: 1, native_kind: 2, native_result: 0, errno: nil, index: nil, detail: 0) }),
+                ("phase arrival", { $0.phases[0].arrival_observed = true }),
+                ("phase acknowledgement", { $0.phases[0].ordering?.proceed_observed = true }),
+            ]
+            for (name, change) in later {
+                var impossible = partialReply
+                change(&impossible)
+                try expectTrue(policyReadProblem(impossible)?.contains("after the policy length check") == true, name)
+            }
+            var unfamiliar = partialReply
+            unfamiliar.runner_subprocess?.worker_evidence?.progress = PWWorkerProgress(raw: 0xef100000, operation: 239, stage: 1, index: nil)
+            try expectNil(policyReadProblem(unfamiliar), "unknown operations have no inferred temporal meaning")
         }
         tk.run("draining fixture receives complete unmodified policy") {
             guard let path = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else { throw TestFailure(message: "fixture missing") }
@@ -162,6 +187,19 @@ func runPolicyTransferTests(_ tk: TestKit) {
             try rejected("policy read receipt") { sub in
                 sub.worker_evidence?.policy_read = PWWorkerPolicyRead(bytes_expected: PWShmLayout.policyBytes, bytes_received: 28)
             }
+            // The service preserves a contradictory receipt as diagnostic evidence
+            // after ordinary encoding refuses it. Retain that actual degraded reply
+            // for the Rust/Python replay, which must not reject or repair its values.
+            var contradictory = decoded
+            contradictory.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 29
+            let degradedBytes = pwRunnerReplyData(contradictory)
+            let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: degradedBytes)
+            try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
+            try expectEqual(degraded.reporting_failure?.evidence_retained, true)
+            try expectEqual(degraded.runner_subprocess?.worker_evidence?.policy_read?.bytes_received, 29)
+            try expectTrue(degraded.steps.allSatisfy { $0.comparison == nil })
+            try degradedBytes.write(to: URL(fileURLWithPath: fixture).deletingLastPathComponent()
+                .appendingPathComponent("policy-transfer-reporting.json"))
             var document = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
             var sub = document["runner_subprocess"] as! [String: Any]
             var evidence = sub["worker_evidence"] as! [String: Any]
@@ -170,6 +208,23 @@ func runPolicyTransferTests(_ tk: TestKit) {
             let mutated = try JSONSerialization.data(withJSONObject: document)
             try expectThrows({ _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: mutated) }, { error in
                 try expectContains("\(error)", "policy read receipt")
+            })
+        }
+        tk.run("ordinary replies reject unequal receipt counts beside completed execution") {
+            let complete = try replyFixture()
+            var impossible = complete
+            impossible.runner_subprocess?.worker_evidence?.policy_read?.bytes_received = 0
+            try expectThrows({ _ = try pwRunnerEncodeJSON(impossible) }, { error in
+                try expectContains("\(error)", "after the policy length check")
+            })
+            var document = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(complete)) as! [String: Any]
+            var sub = document["runner_subprocess"] as! [String: Any]
+            var evidence = sub["worker_evidence"] as! [String: Any]
+            evidence["policy_read"] = ["bytes_expected": 1, "bytes_received": 0]
+            sub["worker_evidence"] = evidence; document["runner_subprocess"] = sub
+            let bytes = try JSONSerialization.data(withJSONObject: document)
+            try expectThrows({ _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes) }, { error in
+                try expectContains("\(error)", "after the policy length check")
             })
         }
         tk.run("interruption backpressure and slow progress share one absolute deadline") {

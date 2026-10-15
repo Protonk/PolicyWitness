@@ -1477,10 +1477,11 @@ struct PWWorkerEvidence: Codable {
 /// "Policy-transfer failure"): both counts lie within the source capacity, the
 /// host's own `bytes_expected` on any transfer record agrees with the receipt's,
 /// and a length refusal (operation 2, code 13) names the received count while the
-/// counts differ. Unequal counts without the refusal are preserved as they are:
-/// termination can interrupt the worker between the receipt and the refusal.
-func policyReadProblem(_ sub: PWRunnerSubprocess) -> String? {
-    guard let read = sub.worker_evidence?.policy_read else { return nil }
+/// counts differ. Unequal counts can precede termination without a refusal, but
+/// cannot coexist with observations of compilation or later worker execution.
+func policyReadProblem(_ result: PWRunnerRunResult) -> String? {
+    guard let sub = result.runner_subprocess, let evidence = sub.worker_evidence,
+          let read = evidence.policy_read else { return nil }
     let capacity = policyReceiptCapacityBytes
     guard (0...capacity).contains(read.bytes_expected), (0...capacity).contains(read.bytes_received) else {
         return "policy_read counts must lie within the source capacity"
@@ -1494,6 +1495,19 @@ func policyReadProblem(_ sub: PWRunnerSubprocess) -> String? {
     if let failure = sub.worker_evidence?.failure, failure.operation == 2, failure.code == 13,
        read.bytes_received == read.bytes_expected || Int(failure.detail) != read.bytes_received {
         return "a length refusal must name the received count while the counts differ"
+    }
+    if read.bytes_received != read.bytes_expected {
+        // Only known operations imply passage beyond the length guard. Open
+        // numeric codes must not acquire a temporal meaning from their magnitude.
+        let afterPolicyRead: Set<UInt32> = [3, 4, 5, 6, 7, 8, 9, 10, 11]
+        if result.sandboxed_after_apply == true || sub.ready_byte_received == true || sub.done_observed == true
+            || evidence.readiness != nil
+            || evidence.progress.map({ afterPolicyRead.contains($0.operation) }) == true
+            || evidence.failure.map({ afterPolicyRead.contains($0.operation) }) == true
+            || result.phases.contains(where: { $0.arrival_observed || $0.completion_observed || $0.ordering?.proceed_observed == true })
+            || result.steps.contains(where: { $0.attempt.result_source == "worker" }) {
+            return "unequal policy_read counts contradict observations after the policy length check"
+        }
     }
     return nil
 }
@@ -2398,7 +2412,7 @@ struct PWRunnerRunResult: Codable {
         phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
-        if reporting_failure == nil, let sub = runner_subprocess, let problem = policyReadProblem(sub) {
+        if reporting_failure == nil, let problem = policyReadProblem(self) {
             throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
                 debugDescription: "policy read receipt contradicts its basis: \(problem)")
         }
@@ -2442,7 +2456,7 @@ struct PWRunnerRunResult: Codable {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "disposition record contradicts its basis: \(first)"))
                 }
-                if let problem = policyReadProblem(sub) {
+                if let problem = policyReadProblem(self) {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "policy read receipt contradicts its basis: \(problem)"))
                 }

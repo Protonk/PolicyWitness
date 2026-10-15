@@ -21,6 +21,9 @@ done
 /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Wno-deprecated-declarations -O2 \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
   "${ROOT_DIR}/tests/fixtures/worker_lifecycle/map_failure.c" -lsandbox -o "${OUTPUT}.map-failure"
+/usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Wno-deprecated-declarations -O2 \
+  -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
+  "${ROOT_DIR}/tests/fixtures/worker_lifecycle/policy_read_failure.c" -lsandbox -o "${OUTPUT}.read-failure"
 /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 \
   "${ROOT_DIR}/tests/fixtures/worker_lifecycle/validator.c" -o "${OUTPUT}.validator"
 

@@ -160,13 +160,12 @@ submission), `policy_bytes_written` (what the pipe carried),
 a flag of 1, `policy_bytes_received`.
 
 17. **policy_truncated_prefix** — the submitted bytes are
-    `(version 1)(allow default)(deny default)`, but the pipe closes after
-    `(allow default)`: 28 of 43 bytes. The contract is the one the NUL guard
+    `(version 1)\n(allow default)\n(deny default)\n` (each `\n` is one newline
+    byte), but the pipe closes after `(allow default)\n`: 28 of 43 bytes. The contract is the one the NUL guard
     states for one byte: no prefix of the source `policy_sha256` describes is
     compiled. The worker publishes the receipt (28), refuses with operation 2,
     code 13, detail 28 and exit 11, writes no ready byte, applies nothing and
-    runs no attempt. Before the expectation existed, this case observed the
-    worker apply the prefix and allow the `/etc/hosts` open.
+    runs no attempt.
 18. **policy_whole_submission** — the same 43 bytes delivered intact: receipt
     43 of 43, applied, and the kernel denies the `/etc/hosts` open the prefix
     allowed. This is the contrast that discriminates the two policies.

@@ -145,6 +145,14 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
     // The worker's EOF receipt beside the host's write progress: a valid partial
     // observation (unequal counts, no length refusal) that agrees with the host's
     // own expectation on the timeout record.
+    transferTimedOut.applied = false
+    transferTimedOut.readyByteReceived = false
+    transferTimedOut.slots = [shapeSlot("first", completed: false)]
+    transferTimedOut.workerEvidence?.readiness = nil
+    transferTimedOut.workerEvidence?.progress = shapeProgress(2, 2)
+    transferTimedOut.workerEvidence?.failure_publication = 0
+    transferTimedOut.workerEvidence?.failure_state = "absent"
+    transferTimedOut.workerEvidence?.failure = nil
     transferTimedOut.workerEvidence?.policy_read = PWWorkerPolicyRead(bytes_expected: 200000, bytes_received: 8192)
     return [
         (transferTimedOut, [shapeProbe("first")]),
@@ -183,7 +191,7 @@ func replyShapeDocuments() throws -> [[String: Any]] {
         let sub = buildWorkerSubprocess(out, disposition: record)
         let ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
         let reply = PWRunnerRunResult(specimen_id: "shape", rc: 0, normalized_outcome: NormalizedOutcome.ok,
-            pid: Int(out.workerPid), policy_format: "sbpl", sandboxed_after_apply: true,
+            pid: Int(out.workerPid), policy_format: "sbpl", sandboxed_after_apply: out.applied,
             steps: buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
                                     validatorOutput: nil, ordering: ordering, disposition: record),
             runner_subprocess: sub, phases: [constructedPhase(out, ids: plan.map { $0.step_id })])

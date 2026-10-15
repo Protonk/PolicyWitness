@@ -1185,6 +1185,7 @@ mod tests {
             ("timeout", "policy-transfer-timeout.json"),
             ("unconfirmed", "policy-transfer-unconfirmed.json"),
             ("refused", "policy-transfer-refused.json"),
+            ("reporting", "policy-transfer-reporting.json"),
             ("combined", "combined-phases.json"),
         ] {
             let reply: Value = serde_json::from_slice(
@@ -1198,6 +1199,7 @@ mod tests {
                     // The shipped worker's length refusal after the host's transfer
                     // timeout takes the existing worker-failure precedence.
                     "refused" => "runner_failed",
+                    "reporting" => "runner_reporting_failed",
                     _ => "runner_timeout",
                 }
             );
@@ -1250,6 +1252,18 @@ mod tests {
                 assert_eq!(sub["grace_end"], "reaped_during_grace");
                 assert_eq!(sub["cleanup_trigger"], "policy_transfer_timeout");
                 assert_eq!(reply["sandboxed_after_apply"], false);
+            } else if name == "reporting" {
+                let sub = &reply["runner_subprocess"];
+                assert_eq!(reply["reporting_failure"]["evidence_retained"], true);
+                assert_eq!(sub["worker_evidence"]["policy_read"]["bytes_received"], 29);
+                assert_eq!(sub["worker_evidence"]["failure"]["detail"], 28);
+                assert!(
+                    reply["steps"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .all(|s| s["comparison"].is_null())
+                );
             } else {
                 assert!(
                     reply["runner_subprocess"]["exit_code"].is_null()
@@ -1270,8 +1284,25 @@ if e['data']['runner_result']['specimen_id']=='M08':
     assert [r['step_id'] for r in phases[1]['validator_subprocess']['records']]==['later']
 else:
     assert sub.get('policy_transfer_error') is None and sub['policy_transfer_timeout']['bytes_written'] < sub['policy_transfer_timeout']['bytes_expected']
-    assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
-if e['data']['runner_result']['specimen_id']=='refused':
+    if e['data']['runner_result'].get('reporting_failure') is None:
+        assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
+if e['data']['runner_result']['specimen_id']=='timeout':
+    import copy
+    # Construct a partial EOF observation before a cleanup kill; no later worker
+    # evidence is present. The fixture itself does not publish this receipt.
+    partial=copy.deepcopy(e); s=partial['data']['runner_result']['runner_subprocess']
+    s['worker_evidence']['policy_read']={'bytes_expected':s['policy_transfer_timeout']['bytes_expected'],
+        'bytes_received':s['policy_transfer_timeout']['bytes_written']}
+    assert validate(partial)==[], validate(partial)
+if e['data']['runner_result'].get('reporting_failure') is not None:
+    import copy
+    assert sub['worker_evidence']['policy_read']['bytes_received']==29
+    assert sub['worker_evidence']['failure']['detail']==28
+    assert all(s.get('comparison') is None for s in e['data']['runner_result']['steps'])
+    malformed=copy.deepcopy(e)
+    malformed['data']['runner_result']['runner_subprocess']['worker_evidence']['policy_read'].pop('bytes_received')
+    assert any('policy_read' in x for x in validate(malformed))
+if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_result'].get('reporting_failure') is None:
     import copy
     read=sub['worker_evidence']['policy_read']
     assert read=={'bytes_expected':43,'bytes_received':28} and sub['worker_evidence']['failure']['detail']==28, sub
