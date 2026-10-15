@@ -134,11 +134,14 @@ stderr on failure; neither behavior belongs in the shipped record.
   or reused state; and a sanitized projection of the B3 configuration stamp
   with its scope identified.
   [Cargo honors compiler overrides and flag sources](https://doc.rust-lang.org/cargo/reference/config.html)
-  beyond `RUSTFLAGS`, including `CARGO_ENCODED_RUSTFLAGS` and Cargo
-  configuration. Resolve them without copying unrelated configuration or
-  secrets into the record. If an observation cannot establish effective
-  settings, record that limitation;
-  do not label requested settings as effective.
+  beyond `RUSTFLAGS`, including `CARGO_ENCODED_RUSTFLAGS`, `CARGO_BUILD_*`
+  settings, compiler and workspace wrappers, and configuration discovered
+  from the invocation directory, its ancestors and Cargo home. Account for
+  applicable configuration merging and target rules without copying unrelated
+  settings or secrets. Prefer observations from Cargo over a partial
+  reimplementation of its resolver. If an observation cannot establish
+  effective settings, record that limitation; do not label requested settings
+  as effective.
 - `outputs`: for each shipped Mach-O, its bundle-relative path, UUID, platform
   minimum, SDK and linker tool version from `LC_BUILD_VERSION`. Include final
   signed hashes for the nested executables already signed at this point and
@@ -146,11 +149,35 @@ stderr on failure; neither behavior belongs in the shipped record.
   explicitly excluded from this hash set: signing the outer app changes its
   signature, so its final hash cannot live inside the record that signature
   seals. The external release record carries its final signed hash instead.
+  For each shipped Cargo target, also retain the profile and reuse judgment
+  from its [artifact message](https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages),
+  bound to the reported executable. Cargo's `fresh: true` means it reused an
+  output; it is distinct from this plan's fresh-build mode.
 - `signing`: the identity string and, for each nested signature made before
   the record, the leaf authority, team identifier and whether a timestamp is
   present, read from `codesign -dvv`. The app seal is made after the record
   and is verified by B2; its facts go to the release record, not into the
   sealed file.
+
+Keep current requested settings, configured commands and compiler probes
+separate from Cargo's per-output reuse judgment, historical metadata
+attributable to that build unit, and facts observed in the output bytes.
+Neither a current compiler probe nor the shared `.rustc_info.json` probe cache
+establishes which compiler produced every reused executable. A historical
+compiler or wrapper identity that cannot be established remains unknown.
+Changing ordinary `RUSTC_WRAPPER` can leave outputs reusable; do not assume
+the wrapper's identity is recoverable from a fingerprint or that changing it
+forces compilation. Recorded `rustflags` are additional compiler arguments,
+not a complete account of Cargo's compiler command or profile effects.
+
+If collection uses `.fingerprint` files or other internal Cargo metadata,
+define the supported formats and Cargo-version compatibility policy before
+implementing the reader. Bind each observation unambiguously to the package,
+target, profile and executable reported for this invocation. Never select an
+arbitrary matching file or attribute a stale sibling fingerprint to the
+output. Cargo's [intermediate layout is internal](https://doc.rust-lang.org/cargo/reference/build-cache.html);
+unsupported, missing, malformed or ambiguous metadata follows the required
+versus optional field policy below, without guessing an effective value.
 
 If a metadata probe fails or returns unusable output, the provenance collector
 records a size-limited, sanitized failure reason for the affected field.
@@ -170,6 +197,14 @@ hashes. The dispatcher fixture bundles
 ([fixture_bundle.py](tests/fixtures/dispatcher/fixture_bundle.py),
 [selection.py](tests/fixtures/dispatcher/selection.py)) carry a record.
 No embedded evidence is rewritten after the outer seal.
+
+A newly calculated output hash identifies the bytes captured by the record;
+it does not authenticate their compilation history. A cached executable
+replaced before evidence capture can still be reported reusable by Cargo and
+can agree with newly generated hashes, SDK and minimum-version checks. Keep
+that limitation explicit alongside the checks for inconsistent records and
+changes after evidence capture or sealing. Independently trusted historical
+output hashes are outside this plan.
 
 [release_archive.py](tests/lib/release_archive.py) reads the record from the
 accepted final ZIP, copies those exact bytes into the archive's evidence and
@@ -200,11 +235,36 @@ inspector, signed-artifact and release-archive suites:
   expected settings come from independent invocation receipts. The core
   controls must run with one supported toolchain. A Rust forwarding wrapper
   must actually receive Cargo's compiler invocations and forward compilation;
-  its receipts establish command selection and the corresponding compatibility
+  distinguish compilation receipts from version and capability probes, and
+  force compilation when that is the behavior the control claims to observe.
+  Its receipts establish command selection and the corresponding compatibility
   behavior without requiring another rustup toolchain. They do not establish
   behavior across real Rust compiler versions. Substituted version text covers
   parsing and comparison decisions, not build attribution. B3 separately
   requires a real toolchain-switch case with explicit equipment requirements.
+- Cover compiler selection through `RUSTC`, `CARGO_BUILD_RUSTC` and Cargo
+  configuration; ordinary and workspace wrappers, including their nesting;
+  encoded flags versus `RUSTFLAGS`; and applicable `CARGO_BUILD_*` overrides.
+  Exercise configuration inherited from ancestor directories and Cargo home,
+  plus matching target triple and `cfg` rules and their combined flags.
+  Expected effective settings come from compilation receipts. Unsupported
+  resolution remains explicit and cannot satisfy a required comparison.
+- Exercise rebuilt and reused Cargo targets, changed flags with retained
+  caches, and a wrapper change that leaves an output reusable. Require the
+  record to distinguish current selection from historical observations and
+  to attribute the reuse judgment to Cargo. If internal metadata is read,
+  cover supported and unsupported formats, missing and malformed fields,
+  ambiguous artifact associations and stale sibling fingerprints from other
+  targets, profiles or configurations. Apply the required/optional policy
+  without inventing compiler identity or a complete command line.
+- Replace a cached Cargo executable before evidence capture with
+  distinguishable valid bytes preserving checked metadata and executable
+  permissions, in a case where Cargo reports reuse. Require the record to
+  describe those captured bytes and Cargo's judgment without claiming to
+  authenticate their compilation history. This control establishes the limit
+  of the evidence; generic rejection of such replacement is not a guarantee.
+  Separately require rejection of mismatched recorded hashes, wrong output
+  metadata and changes after capture or sealing at their protected boundaries.
 - Plant canaries in unrelated environment values, `PATH`, home-prefixed paths
   and tool stderr. Exercise nonzero, empty, malformed, excessive and hung
   probe output, including `worker --version`. Assert bounded completion,
@@ -219,7 +279,8 @@ inspector, signed-artifact and release-archive suites:
 **Retirement.** The build document explains that the provenance record captures
 the selected tools' reports and the build directories' state. Its known-gap
 discussion retains the build's reliance on tool-managed cache validity and
-states that the record does not establish source-to-binary reproducibility.
+states that the record does not establish source-to-binary reproducibility
+or detect every replacement of a cached output before evidence capture.
 The evidence inventory in [SIGNING.md](docs/SIGNING.md) lists the record and
 distinguishes sealed facts from final app facts held outside the seal.
 
@@ -301,20 +362,47 @@ read-only help and planning without lock acquisition.
 
 The nested build in `make release` owns its acquisition; do not add an outer
 release-wide acquisition merely for cache protection. Acceptance, the battery,
-archiving and rotation retain their existing lock lifetimes. A nested operation
-in an already locked checkout needs explicit, verified sharing of ownership,
-bound to that checkout and the actual held lock; an environment flag alone
-cannot grant it. Keep the lock held until protected child operations finish,
-including failure and cancellation paths. This is a managed-entrypoint
-guarantee, not protection against arbitrary direct tool invocations.
+archiving and rotation retain their existing acquisition and handoff
+boundaries. A nested operation in an already locked checkout needs explicit,
+verified sharing of ownership, bound to that checkout and the actual held
+lock; an environment flag alone cannot grant it. Matching the lock file's
+device and inode, copying its owner nonce and observing that a separate open
+cannot acquire the lock establishes only that someone holds it. Establish
+ownership through the descriptor that protects the nested operation. Keep
+the lock held until protected child operations finish, including failure and
+cancellation paths. This is a managed-entrypoint guarantee, not protection
+against arbitrary direct tool invocations.
+
+Before selecting the launcher mechanism, account for acquisition, descriptor
+propagation and release at each protected subprocess boundary in builds,
+managed tests and the standalone Cargo helper. An inheritable descriptor can
+still be closed by a subprocess launcher; Python's
+[default subprocess behavior](https://docs.python.org/3/library/subprocess.html#subprocess.Popen)
+does this unless the descriptor is explicitly passed. An explicit `LOCK_UN`
+[releases the shared lock](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/flock.2.html)
+even while inherited descriptors remain open. Review existing cleanup paths
+as well as normal exit, signals and parent death; the current
+[checkout-lock helper](tests/lib/retention.py) explicitly unlocks on exit.
+Choose an exec-based launcher or a supervising mechanism only after
+establishing the required lifetime through the actual launch paths. Retain
+this review with B5's evidence.
 
 Documented standalone Cargo tests against managed caches must use the same
-locking helper or an isolated target directory outside the managed cache
-areas. Direct Meson work uses a separate build directory. Cargo's own locking
-does not protect shell deletion before Cargo starts; a separate build lock
-that tests never acquire would not serialize the shared cache users. Implement
-and document the supported standalone test invocation alongside the build
-entrypoint change.
+locking helper or isolated output and intermediate directories outside the
+managed cache areas. Direct Meson work uses a separate build directory.
+Cargo's own locking does not protect shell deletion before Cargo starts; a
+separate build lock that tests never acquire would not serialize the shared
+cache users. Implement and document the supported standalone test invocation
+alongside the build entrypoint change.
+
+Admit Cargo's final release outputs and intermediate release state within
+`controller/target/release/`. The final `--target-dir` does not by itself
+constrain intermediates: Cargo's `build.build-dir` and
+`CARGO_BUILD_BUILD_DIR` can redirect them. Refuse conflicting redirection
+before mutation in incremental and fresh builds. Never extend deletion to an
+external directory merely because Cargo configuration names it. Observe the
+admitted locations and keep them consistent with B1's metadata collection;
+an isolated standalone test must isolate intermediates as well as outputs.
 
 Add `PW_FRESH_BUILD`, exactly 0 or 1 and 0 when unset. After read-only input,
 tool and identity admission, fresh mode removes only the checkout's
@@ -326,8 +414,12 @@ cache areas and prior distribution outputs until assembly. These are new
 refusals with manifest rows and controls, not reasons to continue cleaning.
 
 The record distinguishes requested fresh mode from observed replacement of
-each directory. Freshness means those cache areas were replaced; it does not
-claim a hermetic build or the absence of compiler-wrapper caches elsewhere.
+each directory and Cargo's per-target reuse judgment. After replacement,
+require each shipped Cargo target to report rebuilding (`fresh: false`);
+a reused output or unavailable judgment refuses before assembly. Freshness
+means the admitted cache areas were replaced, with Cargo reporting rebuilding
+of its shipped targets; it does not claim a hermetic build or the absence of
+compiler-wrapper caches elsewhere.
 `make notarize`, and therefore `make release`, enforce fresh mode through
 their recursive Make calls. Conflicting caller settings must not silently
 disable it: enforce the release setting or refuse explicitly. In successful
@@ -357,13 +449,30 @@ the existing build guards:
   refuse, no deletion outside the admitted roots and no false `fresh` record.
   Independently witness removed cache sentinels and new build invocations,
   not just new directory mtimes or the requested knob.
+- Redirect Cargo intermediates through environment and configuration settings
+  while retaining caches. Require conflicting locations to refuse before
+  mutation in incremental and fresh modes, with external sentinels intact.
+  With admitted locations, verify replacement of intermediate release state
+  and require each shipped Cargo target's `fresh: false` report. Inject a
+  reused or missing target report after replacement and require refusal.
+  Exercise the isolated standalone test path with redirected intermediates
+  so an isolated output directory cannot conceal managed-cache use.
 - Exercise competing incremental and fresh builds, a held battery lock and
   standalone Cargo tests through the supported helper. Require a busy-lock
-  refusal before mutation. Verify nested ownership without deadlock, rejection
-  of unverified ownership claims, unchanged lock file identity and correct lock
-  lifetime on failure/cancellation. After the holder and protected children
-  finish, a subsequent invocation can acquire the lock and proceed. Separate
-  worktrees remain independent.
+  refusal before mutation and unchanged lock file identity. Verify nested
+  ownership without deadlock. Reject a separately opened descriptor on the
+  same lock inode while the real holder is alive, even when copied owner
+  metadata and any nonce match. Also reject stale claims, wrong nonces where
+  used, another file and another checkout. Refused verification must leave
+  protected files and the real holder's lock unchanged.
+- Observe lock lifetime from outside the holder through actual build and test
+  launch paths, including protected grandchildren. Cover normal completion,
+  failure cleanup, cancellation and killing the parent while a protected
+  descendant remains active. A deliberately inheriting sleeper alone is
+  insufficient. Include descriptor-closing subprocess boundaries and explicit
+  unlock cleanup in the review and controls. Competing operations must refuse
+  until protected work finishes; afterward a subsequent invocation acquires
+  the lock and proceeds. Separate worktrees remain independent.
 - Exercise fresh, reused and changed-option builds, including full/partial and
   inspection variants, with explicit coverage of enabling/disabling Swift.
   The partial build neither invents Swift observations nor requires Swift.
@@ -521,13 +630,21 @@ hand-maintained content into generated regions.
   Document stamp creation, validation, extension and migration, including
   interruption and missing legacy stamps. Keep Meson's compatibility scope
   distinct from independently retained Cargo state. Fresh mode replaces
-  `builddir/` and `controller/target/release/`; explain its scope beside any
-  broader manual cleanup advice. The existing direct Meson example creates
-  `builddir/` without a stamp: use a separate directory for that workflow and
-  explain explicit fresh recovery if unstamped state occupies the managed
-  path. Document serialization and nested ownership, updating build/test
-  working guidance when those rules change. Recovery instructions must
-  preserve the path, ownership and evidence protections.
+  `builddir/` and `controller/target/release/`; reconcile the directory and
+  Reads/Writes tables with admission of Cargo's intermediate release state
+  inside that scope and refusal of conflicting redirection. Explain the
+  difference between cache replacement and Cargo's per-target reuse judgment
+  beside any broader manual cleanup advice. The existing direct Meson example
+  creates `builddir/` without a stamp: use a separate directory for that
+  workflow and explain explicit fresh recovery if unstamped state occupies
+  the managed path. Document serialization, verified descriptor ownership and
+  protection through descendant completion, including failure and parent
+  death. Preserve the release phases' acquisition and handoff boundaries.
+  Explain how the implementation maintains protection across subprocess launch
+  and cleanup.
+  Update build/test working guidance and isolate both output and intermediate
+  state in standalone commands. Recovery instructions must preserve the path,
+  ownership and evidence protections.
 - **Knobs and effective settings.** Rewrite the prose introducing and following
   the generated knob table, as well as help and release commands. `BUILD_XPC`
   and `PW_INSPECTION` map to Meson options; `PW_FRESH_BUILD` governs cache
@@ -535,7 +652,11 @@ hand-maintained content into generated regions.
   option. Explain ordinary defaults, enforced release settings and conflicting
   caller values consistently. Update Cargo flag precedence and distinguish
   requested settings, configured tool identities and current observations.
-  Partial builds must retain their documented equipment requirements.
+  Explain per-output reuse and historical metadata separately, including the
+  limits of compiler probes, wrapper identity and internal Cargo records.
+  Recorded additional Rust flags must not be presented as the complete
+  compiler command. Partial builds must retain their documented equipment
+  requirements.
 - **Signing and evidence lifecycle.** Read the generated signing table with
   BUILD's pre-sign gates, signing contract and embedded-evidence explanation,
   then SIGNING's inventory, release sequence and archive-acceptance account.
@@ -555,7 +676,11 @@ hand-maintained content into generated regions.
   the per-option coverage and mutation sensitivity. Retain the pre-sign source
   recheck's distinct claim. Narrow known gaps where the new checks justify it:
   matching configuration and source identity still do not independently prove
-  cached binaries' origin, reproducibility or compiler correctness.
+  cached binaries' origin, reproducibility or compiler correctness. A hash
+  calculated after a cached output was replaced can accurately describe that
+  replacement. Keep this limit consistent across BUILD, SIGNING and the
+  controls, alongside the separate guarantees against mismatched records,
+  wrong metadata and changes after evidence capture or sealing.
 
 Edit generator inputs and the surrounding prose in the same increment, then
 run `python3 docs/generate_build.py` and review the complete rendered BUILD,
@@ -586,9 +711,9 @@ the fresh knob, run the default battery in a fresh output directory, including
 `preflight/build_refusal_controls`, plus the new
 `preflight/build_toolchain_switch_controls`. None is selected by the default
 battery. Run `cargo test --manifest-path controller/Cargo.toml` through B3's
-supported locking helper or with an isolated target directory, and run
-`release_preflight.py --report`. Record the exact command and target-directory
-choice, along with the toolchain observations and distinct fields established
+supported locking helper or with isolated output and intermediate directories,
+and run `release_preflight.py --report`. Record the exact command and directory
+choices, along with the toolchain observations and distinct fields established
 by the real-switch case.
 
 Before closure, credit this sequence through the actual build entrypoints:
@@ -603,6 +728,13 @@ Mutation controls must fail if the matching protection is bypassed, including
 an individual Meson policy option. A run of only fresh successful builds or
 only substituted tool text does not satisfy these gates.
 
+Credit B1's per-output attribution and pre-capture replacement controls and
+B3's intermediate-directory admission, false ownership claim and descendant
+lifetime controls explicitly. Retain the subprocess ownership review with
+the independent lock observations, cache-location evidence, Cargo artifact
+messages and compilation receipts. The report must distinguish a control
+that establishes an evidence limitation from one that requires refusal.
+
 Documentation acceptance requires the completed review map from
 [the documentation task](#documentation-included-with-b1-to-b4). Check the
 owning generators in `--check` mode, including the figure and scalar spans;
@@ -613,9 +745,13 @@ configuration change, incompatible or unstamped reuse and its recovery, an
 interrupted build, and accepted-release archival. Reconcile each walkthrough
 with the corresponding acceptance-control evidence, including refusal timing,
 surviving files and the artifact to which a record belongs. Check direct Meson
-instructions and recursive release commands against their supported workflows.
-Resolve contradictions at generated/authored boundaries and across documents
-before closure; passing the generator alone does not satisfy this review.
+instructions, standalone Cargo cache isolation and recursive release commands
+against their supported workflows. Include the descendant-lifetime and
+redirected-intermediate cases, and verify that the explanation of a reused
+output does not attribute current probes or newly captured hashes backward
+to its compilation history. Resolve contradictions at generated/authored
+boundaries and across documents before closure; passing the generator alone
+does not satisfy this review.
 
 `witness_contract/order_barrier_mutations` is not forced, since no wait,
 release store or eligibility rule changes. The acceptance report must identify
@@ -660,14 +796,20 @@ with the recorded inputs will produce identical bytes.
   identity still describes the current tree. Preserve the existing source-edit
   control and the early executable-output checks.
 - **Fresh mode replaces both owned cache areas.** Replace `builddir/` and
-  `controller/target/release/` only after path and ownership admission. Record
-  observed state per directory, serialize with cache users, and stop on failed
-  removal. Other Cargo state and external compiler caches are outside this
+  `controller/target/release/` only after path and ownership admission. Cargo's
+  intermediate release state must lie within the latter; refuse conflicting
+  redirection without deleting external state. Record observed replacement
+  per directory and require Cargo to report rebuilding each shipped target.
+  Serialize with cache users and stop on failed removal. Other profiles,
+  registry downloads and external compiler caches remain outside this
   freshness claim. Release entrypoints enforce the knob.
 - **One checkout lock for managed builds and tests.** Incremental and fresh
   builds share the existing stable `tests/.checkout.lock` with test execution.
-  Nested ownership must be verified; standalone cache users participate through
-  the helper or use isolated directories. Separate worktrees permit concurrency.
+  Verify nested ownership through the protecting descriptor and hold the lock
+  until protected descendants finish. Preserve release-phase acquisition and
+  handoff boundaries. Standalone cache users participate through the helper or
+  isolate both output and intermediate state. Separate worktrees permit
+  concurrency.
 - **Portable controls and a real native-toolchain switch.** Forwarding controls
   require one toolchain and independent receipts. A separate explicit opt-in
   case establishes real compiler-selection changes; its observations determine
@@ -678,21 +820,26 @@ with the recorded inputs will produce identical bytes.
   stamps atomically and never compare failed tool observations as equal.
 - **Reported settings describe selection.** Record configured compiler
   commands and effective flag observations with their source, not convenient
-  rediscovery or environment values presented as effective settings. Bound
-  and sanitize probes and distinguish optional failure from a required
-  comparison failure. Partial builds do not acquire Swift prerequisites.
+  rediscovery or environment values presented as effective settings. Separate
+  current observations from Cargo's per-output reuse judgment, attributable
+  historical metadata and directly observed bytes. Internal metadata requires
+  an explicit compatibility and artifact-association policy. Bound and sanitize
+  probes and distinguish optional failure from a required comparison failure.
+  Partial builds do not acquire Swift prerequisites.
 - **SDK comparison has a defined limit.** Every output must agree with the
   selected SDK's normalized numeric version. SDK build identifiers remain
   separately reported observations, not a fact inferred from load commands.
 - **Trust boundary.** The record combines tool-reported build information with
-  artifact hashes; it does not establish that the tools operated correctly.
+  artifact hashes; it does not establish that the tools operated correctly or
+  authenticate the compilation history of an output replaced before capture.
 
 ## Out of scope
 
-Reproducible or hermetic builds; a vendored toolchain; changes to Apple's
-notarization/stapling protocol or the existing witness behavior exercised by
-release acceptance; BYOXPC installation provenance beyond reading the shipped
-record; a controller-visible `app_provenance` field for the record, which would
+Reproducible or hermetic builds; independently trusted historical output
+hashes; a vendored toolchain; changes to Apple's notarization/stapling
+protocol or the existing witness behavior exercised by release acceptance;
+BYOXPC installation provenance beyond reading the shipped record; a
+controller-visible `app_provenance` field for the record, which would
 be an additive response change for a later plan; and the order-barrier and
 policy-transfer controls, which this work does not touch. Provenance inspection
 and its binding to the accepted release artifact are in scope. Historical
