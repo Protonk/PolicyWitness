@@ -79,6 +79,24 @@ particular bytes or an exhaustive account of private runtime dependencies.
   helper being tested. Removing or bypassing a check must make its control
   fail, including an individual option in a collapsed Meson assertion row.
 
+### Acceptance record and evidence
+
+Write the acceptance report to `records/BUILD-PROVENANCE-ACCEPTANCE.md` and
+commit it before retiring this plan. It survives plan deletion as a historical
+acceptance record, with the conclusions, implementation commits, review map
+and precise references to the supporting runs required by B5. Keep raw inputs,
+receipts and test output in their managed run directories and protect the
+credited evidence through [tests/RETAINED.json](tests/RETAINED.json), following
+the [retention contract](tests/README.md#retention-ownership-and-execution-locking).
+Record the actual tested source snapshot and artifact identity; the commit
+adding the report or retention entry is not evidence of those identities.
+
+Follow [records guidance](records/AGENTS.md): identify linked run evidence as
+gitignored and available only in the local checkout. Permanent documentation
+describes the resulting behavior and does not link to this historical record.
+The report and protected run evidence must remain usable after plan retirement;
+do not leave the only acceptance account in this plan or a commit message.
+
 ## B1 — Produce the sealed provenance record
 
 **Current claim.** [build-evidence.py](tests/build-evidence.py) writes
@@ -179,9 +197,14 @@ inspector, signed-artifact and release-archive suites:
   under B3 rather than producing a misleading record. Name any observation
   that could not be established. Exercise Rust compiler overrides and
   conflicting flag sources, including encoded flags and configuration files;
-  expected settings come from independent invocation receipts. Substituted
-  version text alone tests
-  parsing, not build attribution.
+  expected settings come from independent invocation receipts. The core
+  controls must run with one supported toolchain. A Rust forwarding wrapper
+  must actually receive Cargo's compiler invocations and forward compilation;
+  its receipts establish command selection and the corresponding compatibility
+  behavior without requiring another rustup toolchain. They do not establish
+  behavior across real Rust compiler versions. Substituted version text covers
+  parsing and comparison decisions, not build attribution. B3 separately
+  requires a real toolchain-switch case with explicit equipment requirements.
 - Plant canaries in unrelated environment values, `PATH`, home-prefixed paths
   and tool stderr. Exercise nonzero, empty, malformed, excessive and hung
   probe output, including `worker --version`. Assert bounded completion,
@@ -268,13 +291,36 @@ Swift, validate the newly applicable compiler before atomically extending the
 stamp after successful configuration. An existing compiler binding is not
 silently replaced. Keep the source-directory checks on every reused directory.
 
+Use the existing stable `tests/.checkout.lock` for managed build and test
+entrypoints. Every `build.sh` invocation, incremental or fresh, acquires it
+before inspecting mutable cache state and holds it through packaging. A busy
+lock produces a clear refusal before cache or distribution mutation. Never
+unlink or replace the lock file. Builds and test executions in one checkout
+are mutually exclusive; use another worktree for concurrency. Preserve
+read-only help and planning without lock acquisition.
+
+The nested build in `make release` owns its acquisition; do not add an outer
+release-wide acquisition merely for cache protection. Acceptance, the battery,
+archiving and rotation retain their existing lock lifetimes. A nested operation
+in an already locked checkout needs explicit, verified sharing of ownership,
+bound to that checkout and the actual held lock; an environment flag alone
+cannot grant it. Keep the lock held until protected child operations finish,
+including failure and cancellation paths. This is a managed-entrypoint
+guarantee, not protection against arbitrary direct tool invocations.
+
+Documented standalone Cargo tests against managed caches must use the same
+locking helper or an isolated target directory outside the managed cache
+areas. Direct Meson work uses a separate build directory. Cargo's own locking
+does not protect shell deletion before Cargo starts; a separate build lock
+that tests never acquire would not serialize the shared cache users. Implement
+and document the supported standalone test invocation alongside the build
+entrypoint change.
+
 Add `PW_FRESH_BUILD`, exactly 0 or 1 and 0 when unset. After read-only input,
 tool and identity admission, fresh mode removes only the checkout's
 `builddir/` and `controller/target/release/`, then recreates their build state.
 Validate deletion roots and parents without following a redirect into an
-unowned location. Serialize with other users of those caches, including
-build/test invocations; define ownership for nested invocations without
-deadlocking or unlinking the existing test checkout lock. Refuse unsafe paths,
+unowned location while holding the checkout lock. Refuse unsafe paths,
 unavailable ownership or failed removal. Preserve unrelated files, other
 cache areas and prior distribution outputs until assembly. These are new
 refusals with manifest rows and controls, not reasons to continue cleaning.
@@ -307,10 +353,17 @@ the existing build guards:
   configuration or refuses with a remedy. It never silently stamps unknown
   state as compatible. Exercise Meson and Cargo caches surviving independently.
 - Plant sentinels outside the deletion roots and behind symlinked parents,
-  inject removal failure, and hold a concurrent build/test user. Require safe
-  serialization or refusal, no deletion outside the admitted roots and no
-  false `fresh` record. Independently witness removed cache sentinels and new
-  build invocations, not just new directory mtimes or the requested knob.
+  and inject removal failure. Require unsafe paths and failed removal to
+  refuse, no deletion outside the admitted roots and no false `fresh` record.
+  Independently witness removed cache sentinels and new build invocations,
+  not just new directory mtimes or the requested knob.
+- Exercise competing incremental and fresh builds, a held battery lock and
+  standalone Cargo tests through the supported helper. Require a busy-lock
+  refusal before mutation. Verify nested ownership without deadlock, rejection
+  of unverified ownership claims, unchanged lock file identity and correct lock
+  lifetime on failure/cancellation. After the holder and protected children
+  finish, a subsequent invocation can acquire the lock and proceed. Separate
+  worktrees remain independent.
 - Exercise fresh, reused and changed-option builds, including full/partial and
   inspection variants, with explicit coverage of enabling/disabling Swift.
   The partial build neither invents Swift observations nor requires Swift.
@@ -323,6 +376,24 @@ the existing build guards:
   Both refuse before assembly and preserve the previous distribution. Unit
   cases cover equivalent numeric representations, missing/malformed load
   commands and the distinction between SDK version and SDK build identifier.
+
+Keep the core forwarding controls runnable with one supported toolchain.
+Register `preflight/build_toolchain_switch_controls` as a separate non-default
+case requiring suitable distinct native toolchains, with an explicit equipment
+check and matching catalog, suite and opt-in documentation. Missing equipment
+is an equipment failure, never a silent skip or wrapper fallback. Select this
+case for B3 and final acceptance; no second rustup toolchain is required.
+
+Use Xcode and Command Line Tools through `DEVELOPER_DIR` for the real switch
+on the acceptance machine. Build with A, retain its caches, refuse incompatible
+reuse under B, then succeed with explicit fresh recovery under B. Record
+independent invocation receipts and the actual selected compiler and SDK facts.
+At execution time verify which fields differ: different compiler builds or
+SDK locations do not imply different SDK versions. Credit only the observed
+distinctions, keeping real selection changes separate from controlled metadata
+faults. A second SDK version is not required; SDK-version comparison controls
+still exercise malformed, unequal and numerically equivalent values and
+wrong-SDK outputs under the gates above.
 
 **Retirement.** The build document's inputs section replaces "a compiler or SDK
 change needs a fresh build directory because the toolchain is not
@@ -418,6 +489,12 @@ records implementation history.
 | [tests/README.md](tests/README.md#comparing-native-builds), the [preflight README](tests/suites/preflight/README.md), [opt-in registry](tests/OPT_IN_TESTS.md), [catalog](tests/catalog.json) and [fixture catalog](tests/fixtures/README.md) | What each control establishes and requires, which selections run it, and how dispatcher fixtures carry the record. Explain how native comparison receipts relate to the bounded shipped provenance. |
 | [Makefile](Makefile) and build usage text | Public knob defaults and scope, supported entrypoints, and release enforcement through recursive Make calls. Keep help consistent with the commands in BUILD and SIGNING. |
 
+Update the build/test working guidance and test locking reference for the
+shared checkout lock, supported standalone Cargo invocation and separate
+worktree workflow. The new real-toolchain case must appear in the equipment
+checks, catalog, suite coverage and opt-in registry with its exact prerequisites
+and the limits of the evidence it establishes.
+
 The build manifest currently has no evidence-inventory section. Keep that
 contract in SIGNING; recording the evidence-producing step and invocation in
 the manifest does not make it the record's format owner. Any extension to the
@@ -504,12 +581,15 @@ must not make them disappear from the selected acceptance work.
 
 **Acceptance gate.** Against a signed build of the final increment made with
 the fresh knob, run the default battery in a fresh output directory, including
-`source_drift/build_documentation`. Explicitly select all three opt-in cases:
+`source_drift/build_documentation`. Explicitly select the existing opt-in cases:
 `preflight/signed_artifact_controls`, `preflight/build_guard_controls` and
-`preflight/build_refusal_controls`; the default battery does not select
-`signed_artifact_controls`. Run
-`cargo test --manifest-path controller/Cargo.toml` and
-`release_preflight.py --report`.
+`preflight/build_refusal_controls`, plus the new
+`preflight/build_toolchain_switch_controls`. None is selected by the default
+battery. Run `cargo test --manifest-path controller/Cargo.toml` through B3's
+supported locking helper or with an isolated target directory, and run
+`release_preflight.py --report`. Record the exact command and target-directory
+choice, along with the toolchain observations and distinct fields established
+by the real-switch case.
 
 Before closure, credit this sequence through the actual build entrypoints:
 fresh build → unchanged reuse → permitted inspection/XPC configuration change
@@ -542,8 +622,11 @@ release store or eligibility rule changes. The acceptance report must identify
 implementation commits, run identifiers, the refusal count, the worker
 identity, reviewed fixtures and goldens, state-transition evidence, the reviewed
 document sections and figure, documentation walkthrough results and any
-remaining findings. Keep implementation history in commits and execution
-evidence in the report; product documentation describes the resulting behavior.
+remaining findings. Commit it at `records/BUILD-PROVENANCE-ACCEPTANCE.md` and
+retain its supporting runs as specified under
+[acceptance record and evidence](#acceptance-record-and-evidence). Keep
+implementation history in commits and execution evidence in the report;
+product documentation describes the resulting behavior.
 
 **Retirement.** Close the plan when all five gates pass, or when the user
 explicitly accepts a documented change of scope. The acceptance report must
@@ -581,6 +664,15 @@ with the recorded inputs will produce identical bytes.
   observed state per directory, serialize with cache users, and stop on failed
   removal. Other Cargo state and external compiler caches are outside this
   freshness claim. Release entrypoints enforce the knob.
+- **One checkout lock for managed builds and tests.** Incremental and fresh
+  builds share the existing stable `tests/.checkout.lock` with test execution.
+  Nested ownership must be verified; standalone cache users participate through
+  the helper or use isolated directories. Separate worktrees permit concurrency.
+- **Portable controls and a real native-toolchain switch.** Forwarding controls
+  require one toolchain and independent receipts. A separate explicit opt-in
+  case establishes real compiler-selection changes; its observations determine
+  whether SDK versions also differ. A forwarding Rust wrapper does not count
+  as a real Rust-version upgrade.
 - **Unknown stamps are not adopted.** Missing or invalid stamps beside
   existing configuration require explicit fresh mode. Publish valid setup
   stamps atomically and never compare failed tool observations as equal.
