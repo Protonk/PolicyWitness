@@ -27,59 +27,59 @@ can follow your reasoning.
 
 ## Planning a change
 
-The welcome above stands: an issue can be an open question, and a pull request
-can take shape in discussion. This section is for the other case, when you
-prepare a plan that someone else will execute. That reader knows the
-repository's code and documentation but not your conversation or earlier
-changes. Give them a first draft that is already your best executable proposal:
-enough to act on alone, and disposable once the work is done. Nothing below
-prescribes a shape or headings; the shape follows the change.
+Write the first draft as your best proposal for carrying out the change. It
+should be usable by someone who knows this repository but has none of your
+conversation history. Give that person enough to understand what needs to
+change, why you chose this approach, how to proceed, and how to tell when the
+work is complete. Choose the detail according to what they would otherwise
+have to rediscover or decide.
 
-A plan is a recommendation, not a menu. Choose one course and justify the
-decisions that matter; mention a rejected alternative only where an executor
-might otherwise take it, and leave routine implementation choices to the
-executor. Do the inspection or reproduction the recommendation needs before you
-hand off; what the implementation itself must find out stays in the plan as
-work. A plan to make the worker refuse a truncated policy could have started
-from design. Closing the policy pipe after 28 bytes of a 43-byte submission
-first showed the shipped worker compiling the prefix with no published failure,
-indistinguishable from a complete 28-byte policy. That observation chose the
-repair: the host states the expected length, the worker publishes the count it
-read before judging it, and a control distinguishes a truncated prefix from a
-short complete submission. Hand on conclusions and where to verify them, not
-reading notes; an inspection belongs in the plan where it chose a decision or
-the executor relies on it.
+Begin with the problem and the intended result. Inspect the relevant
+implementation, contracts and tests; reproduce a failure or try a small
+experiment when your recommendation depends on what actually happens. Settle
+questions you can answer during preparation. Carry the conclusions into the
+plan, with references to the evidence or code that supports them. Explain the
+decisions well enough that the executor can recognize when a proposed shortcut
+would undo something important.
 
-A successor needs the problem, the intended behavior, the decisions already made
-and their reasons, the scope and its edges, the actions in order, what each
-depends on, and the evidence that shows completion. Acceptance evidence is an
-observation, not a return code: name the check and what it must show, and prefer
-a check that would fail against the unrepaired code. Put anything lasting where
-it belongs as you go: contracts in their owning documents, operating rules in
-the relevant AGENTS file, assertions beside their suites. The plan is
-scaffolding; when the work is complete, deleting it should lose nothing.
+Choose an approach and explain why it fits the problem. State what the change
+covers and where it stops. Organize the work around dependencies: what must be
+established first, which pieces have to change together, and where the result
+can be checked. Include the documentation and test changes needed to complete
+each part. Name affected interfaces and files where that helps locate the
+work; leave room for routine implementation decisions that do not alter the
+proposal.
 
-Some questions cannot be settled before handoff. State each as the missing fact,
-why you cannot settle it now, the step that will settle it, and what changes
-with each answer. If a design depends on whether a platform tool reports a
-field, name the command that samples it. Design up to the point where the
-answer decides and say what each answer selects; detailing a branch not yet
-chosen is work for after the answer, not deferral. A question left for review
-or an answer invented to keep moving is deferral, and not executable.
+If a necessary fact cannot be established during preparation, make obtaining
+it an explicit part of the work. State the question, why it remains open, what
+observation will resolve it, and how the answer affects what follows. When the
+answer requires part of the implementation to exist, plan that part and the
+check it enables. Define what would justify proceeding and what a contrary
+result would require. Specify the work that can proceed independently and
+which decisions depend on the result.
 
-Before handing off, ask where the proposal could be wrong: where it rests on a
-premise that could fail, name it and say how you tested it, or that you did
-not. Then scale the document to the change. A settled repair with one check is
-a paragraph, even when preparation turns up a complication: add the
-complication and its consequence, not a report. A change that crosses a process
-boundary needs the reproduction, the boundary and the readers it affects; a
-capability behind an unsettled premise needs the experiment and its gate.
+Specify verification in terms of the result it must establish. Name the checks
+that exercise the changed behavior and say what their results should
+demonstrate. For a repair, look for a check that exposes the original defect
+and passes with the fix. Consider how the same check might pass despite an
+incorrect implementation, and add a control or a different observation when
+needed. Use existing coverage where it answers the question, and make any
+required additions part of the planned work.
 
-Present a proposal ready to act on within your authorization. When a decision
-belongs to someone else, say so, say why, and bring a recommendation rather than
-a list. Anticipated review is not a reason to leave ordinary design decisions
-open; a reviewer can correct a written decision far more easily than make a
-missing one.
+Read the draft as its executor before handing it over. Look for an unsupported
+premise, an omitted dependency, or a step that leaves the reader to choose the
+design. Check that the scope, steps and acceptance conditions describe the
+same change. Resolve these gaps yourself wherever you can; do not leave
+ordinary design decisions open in anticipation of review. Where a decision
+requires someone else's authority, explain what they need to decide and bring
+a recommendation with its consequences.
+
+During execution, keep the plan's decisions and remaining work current. Put
+lasting knowledge in the implementation, tests, contracts and working guidance
+where future contributors will look for it. Once the work is complete,
+deleting the plan should lose nothing needed to understand or operate the
+system. Keep research notes and the history of drafting out of the plan unless
+they supply something the executor needs to act on.
 
 ## Development environment
 
