@@ -74,13 +74,6 @@ ordinary design decisions open in anticipation of review. Where a decision
 requires someone else's authority, explain what they need to decide and bring
 a recommendation with its consequences.
 
-During execution, keep the plan's decisions and remaining work current. Put
-lasting knowledge in the implementation, tests, contracts and working guidance
-where future contributors will look for it. Once the work is complete,
-deleting the plan should lose nothing needed to understand or operate the
-system. Keep research notes and the history of drafting out of the plan unless
-they supply something the executor needs to act on.
-
 ## Development environment
 
 Building PolicyWitness requires macOS 26 and a **Developer ID Application**
