@@ -25,11 +25,6 @@ what you expect and why, then run it and inspect the effect. Change one
 condition and try again. Keep the inputs and observations so another person
 can follow your reasoning.
 
-You can help by bringing a concrete question, even if you do not know the
-answer. Open an issue describing what you want to understand, anything you
-have tried, and what remains unclear. If your investigation leads to a change,
-send a pull request—we welcome discussion while the work is still taking shape.
-
 ## Planning a change
 
 The welcome above stands: an issue can be an open question, and a pull request
