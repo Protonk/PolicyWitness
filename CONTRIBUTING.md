@@ -30,6 +30,62 @@ answer. Open an issue describing what you want to understand, anything you
 have tried, and what remains unclear. If your investigation leads to a change,
 send a pull request—we welcome discussion while the work is still taking shape.
 
+## Planning a change
+
+The welcome above stands: an issue can be an open question, and a pull request
+can take shape in discussion. This section is for the other case, when you
+prepare a plan that someone else will execute. That reader knows the
+repository's code and documentation but not your conversation or earlier
+changes. Give them a first draft that is already your best executable proposal:
+enough to act on alone, and disposable once the work is done. Nothing below
+prescribes a shape or headings; the shape follows the change.
+
+A plan is a recommendation, not a menu. Choose one course and justify the
+decisions that matter; mention a rejected alternative only where an executor
+might otherwise take it, and leave routine implementation choices to the
+executor. Do the inspection or reproduction the recommendation needs before you
+hand off; what the implementation itself must find out stays in the plan as
+work. A plan to make the worker refuse a truncated policy could have started
+from design. Closing the policy pipe after 28 bytes of a 43-byte submission
+first showed the shipped worker compiling the prefix with no published failure,
+indistinguishable from a complete 28-byte policy. That observation chose the
+repair: the host states the expected length, the worker publishes the count it
+read before judging it, and a control distinguishes a truncated prefix from a
+short complete submission. Hand on conclusions and where to verify them, not
+reading notes; an inspection belongs in the plan where it chose a decision or
+the executor relies on it.
+
+A successor needs the problem, the intended behavior, the decisions already made
+and their reasons, the scope and its edges, the actions in order, what each
+depends on, and the evidence that shows completion. Acceptance evidence is an
+observation, not a return code: name the check and what it must show, and prefer
+a check that would fail against the unrepaired code. Put anything lasting where
+it belongs as you go: contracts in their owning documents, operating rules in
+the relevant AGENTS file, assertions beside their suites. The plan is
+scaffolding; when the work is complete, deleting it should lose nothing.
+
+Some questions cannot be settled before handoff. State each as the missing fact,
+why you cannot settle it now, the step that will settle it, and what changes
+with each answer. If a design depends on whether a platform tool reports a
+field, name the command that samples it. Design up to the point where the
+answer decides and say what each answer selects; detailing a branch not yet
+chosen is work for after the answer, not deferral. A question left for review
+or an answer invented to keep moving is deferral, and not executable.
+
+Before handing off, ask where the proposal could be wrong: where it rests on a
+premise that could fail, name it and say how you tested it, or that you did
+not. Then scale the document to the change. A settled repair with one check is
+a paragraph, even when preparation turns up a complication: add the
+complication and its consequence, not a report. A change that crosses a process
+boundary needs the reproduction, the boundary and the readers it affects; a
+capability behind an unsettled premise needs the experiment and its gate.
+
+Present a proposal ready to act on within your authorization. When a decision
+belongs to someone else, say so, say why, and bring a recommendation rather than
+a list. Anticipated review is not a reason to leave ordinary design decisions
+open; a reviewer can correct a written decision far more easily than make a
+missing one.
+
 ## Development environment
 
 Building PolicyWitness requires macOS 26 and a **Developer ID Application**
