@@ -13,6 +13,8 @@ copy's file name:
                   identities; the compilation itself is unchanged
   fail_version    answer a version query with a nonzero status and no output
   hang_version    never answer a version query
+  flood_stderr    write this many bytes of the stderr canary (or of "x") to
+                  stderr on a version query, then answer it normally
   stderr_canary   text written to stderr on every version query; a record
                   that keeps stderr would carry it
   receipt         file that receives one JSON line per invocation, with the
@@ -71,6 +73,10 @@ def main():
     if kind == 'version':
         if config.get('stderr_canary'):
             sys.stderr.write(config['stderr_canary'] + '\n')
+            sys.stderr.flush()
+        if config.get('flood_stderr'):
+            unit = (config.get('stderr_canary') or 'x') + '\n'
+            sys.stderr.write((unit * (config['flood_stderr'] // len(unit) + 1))[:config['flood_stderr']])
             sys.stderr.flush()
         if config.get('hang_version'):
             time.sleep(600)

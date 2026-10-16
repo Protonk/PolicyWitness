@@ -8,10 +8,13 @@
 # the interpreter may coerce LC_CTYPE, so once Python runs the caller's own
 # state for these variables is lost. Before Python starts, shell builtins
 # record each one's set or unset state and exact value here and pass them to
-# checkout_lock.py as arguments; nothing is written. The owner binds them to
-# its acquisition, restores them for the command it launches and hands them
-# to every nested admission. A launcher nested inside an owned command uses
-# its owner's requests instead. See checkout_lock.py for the protocol.
+# checkout_lock.py as arguments; nothing is written. They are then removed
+# from Python's own environment: an SDKROOT that names no SDK makes the shim's
+# tool lookup fail and request a Command Line Tools installation. The owner
+# binds them to its acquisition, restores them for the command it launches and
+# hands them to every nested admission. A launcher nested inside an owned
+# command uses its owner's requests instead. See checkout_lock.py for the
+# protocol.
 set -euo pipefail
 LOCK_LIBRARY="${BASH_SOURCE[0]%/*}"
 if [[ "${LOCK_LIBRARY}" == "${BASH_SOURCE[0]}" ]]; then
@@ -25,4 +28,5 @@ for LOCK_REQUEST_NAME in SDKROOT CPATH LIBRARY_PATH MANPATH LC_CTYPE; do
     LOCK_REQUESTS+=(--request-unset "${LOCK_REQUEST_NAME}")
   fi
 done
+unset SDKROOT CPATH LIBRARY_PATH MANPATH LC_CTYPE
 exec /usr/bin/python3 -B "${LOCK_LIBRARY}/checkout_lock.py" "${LOCK_REQUESTS[@]}" "$@"

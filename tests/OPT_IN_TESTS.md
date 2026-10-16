@@ -123,8 +123,8 @@ selection, deduplication, configuration validation, and complete accounting.
   launched by a Python owner without the caller's requests, a developer
   directory without the SDK or without a numeric SDK version, a missing,
   malformed or foreign toolchain stamp, forwarding Rust and C compiler
-  wrappers relabelled after the stamp recorded them, a probe that fails or
-  hangs, redirected Cargo intermediates, a symlink at a cache path component
+  wrappers relabelled after the stamp recorded them, a probe that fails,
+  hangs or floods stderr past its cap, redirected Cargo intermediates, a symlink at a cache path component
   or the session destination, a path replaced after an earlier helper's
   admission, a failed removal, Cargo outputs that vanish, lose
   their executable bit or land under a target triple, a reused judgment in

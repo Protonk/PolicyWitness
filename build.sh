@@ -158,14 +158,20 @@ done
 # script or its owner is killed first. Under a claim, the owner's handoff is
 # verified below, never the environment alone, and the requests it hands over
 # are restored here, so a nested build sees the caller's values rather than
-# the interpreter's.
+# the interpreter's. The SDK request stays out of the environment until xcrun
+# has resolved it: a Python or git shim started with an SDKROOT that names no
+# SDK requests a Command Line Tools installation instead of failing.
 if [[ -z "${PW_CHECKOUT_LOCK_ROOT+set}${PW_CHECKOUT_LOCK_NONCE+set}${PW_CHECKOUT_LOCK_CHANNEL+set}${PW_CHECKOUT_LOCK_FD+set}" ]]; then
   exec /bin/bash "${ROOT_DIR}/tests/lib/checkout_lock.sh" --root "${ROOT_DIR}" -- /bin/bash "${BASH_SOURCE[0]}" "$@"
 fi
+unset SDKROOT
 # A request arrives hex-encoded, so any value survives exactly; the sentinel
 # keeps trailing newlines, and bash 3.2's printf -v mishandles an empty result.
 restore_request() {
   local name="$1" state="$2" hex="${3:-}" escapes="" value
+  if [[ "${name}" == "SDKROOT" ]]; then
+    SDK_REQUEST_STATE="${state}"
+  fi
   if [[ "${state}" == "unset" ]]; then
     unset "${name}"
     return
@@ -175,6 +181,10 @@ restore_request() {
     hex="${hex:2}"
   done
   value="$(printf '%b' "${escapes}"; printf x)"
+  if [[ "${name}" == "SDKROOT" ]]; then
+    SDK_REQUEST_VALUE="${value%x}"
+    return
+  fi
   export "${name}=${value%x}"
 }
 echo "==> Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
@@ -219,8 +229,7 @@ echo "==> Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
 # is created only beneath the admitted controller/.
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" session-start --root "${ROOT_DIR}" \
   --knob "BUILD_XPC=${BUILD_XPC}" --knob "PW_INSPECTION=${PW_INSPECTION}" --knob "PW_FRESH_BUILD=${PW_FRESH_BUILD}" \
-  --describe "${PW_BUILD_DESCRIBE}" --commit "${PW_BUILD_COMMIT}" --version "${PW_VERSION}" --build-number "${PW_BUILD_NUMBER}" \
-  --sdk-source "$([[ -n "${SDKROOT:-}" ]] && echo caller || echo default)"
+  --describe "${PW_BUILD_DESCRIBE}" --commit "${PW_BUILD_COMMIT}" --version "${PW_VERSION}" --build-number "${PW_BUILD_NUMBER}"
 
 stamp_info_plist() {
   local plist="$1"
@@ -265,9 +274,9 @@ check_minimum_macos() {
 # set -e would see export's status, not xcrun's. The SDK's numeric version is
 # what every shipped output must agree with; a version xcrun cannot report
 # numerically never compares equal.
-SDK_REQUEST="${SDKROOT:-macosx}"
+SDK_REQUEST="${SDK_REQUEST_VALUE:-macosx}"
 SDK_SOURCE="default"
-if [[ -n "${SDKROOT:-}" ]]; then
+if [[ -n "${SDK_REQUEST_VALUE:-}" ]]; then
   SDK_SOURCE="caller"
 fi
 echo "==> Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})"

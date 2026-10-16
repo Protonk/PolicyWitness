@@ -487,7 +487,7 @@ its policy assertions, so they need the unsandboxed shell.
 | builddir_stamp_missing | <builddir> is configured but has no pw-toolchain.json; its toolchain is unknown and is not adopted: set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/ | builddir | 2 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`is configured but has no`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_stamp_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
 | builddir_stamp_invalid | pw-toolchain.json is malformed, unsupported, describes another checkout or does not describe the directory's configured compilers; the toolchain is unknown and is not adopted | builddir, configure, native_check | 2 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`does not describe`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_stamp_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
 | builddir_toolchain_changed | builddir/ was configured with <field> = <stamped>, but the selected toolchain now has <current>; a changed toolchain cannot reuse this directory | builddir, native_check | 1 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`a changed toolchain cannot reuse this directory`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_toolchain_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
-| provenance_probe_failed | required toolchain observation failed: <field> (<kind>), or a session or report the helper needs is unreadable | stamp, builddir, cargo, configure, native_check, presign | 2 | propagated | both | a control produces it | [`build_provenance.py`](../build.sh); [`required toolchain observation failed`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_probes_are_bounded_and_failures_carry_no_output`](../tests/suites/preflight/check_build_provenance.py) |
+| provenance_probe_failed | required toolchain observation failed: <field> (<kind>), or a session or report the helper needs is unreadable | stamp, builddir, cargo, configure, native_check, presign | 2 | propagated | both | a control produces it | [`build_provenance.py`](../build.sh); [`required toolchain observation failed`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_probes_are_bounded_and_failures_carry_no_output`](../tests/suites/preflight/check_build_provenance.py); [`test_comparison_inputs_are_complete_within_their_bounds`](../tests/suites/preflight/check_build_provenance.py); [`test_failed_required_observations_refuse_compatibility_and_publication`](../tests/suites/preflight/check_build_provenance.py) |
 | cache_path_unsafe | <path> is a symlink, is not a directory, is owned by another user, is missing or was replaced after admission, or the session or stamp destination is not a regular file of this user with one link; the build admits only real directories of this user inside the checkout (nothing was written or removed) | stamp, builddir, cargo_admit, fresh, cargo, configure, native_check, presign, evidence | 2 | propagated | both | a control produces it | [`build_provenance.py`](../build.sh); [`the build admits only real directories`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cache_path_unsafe`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_cache_paths_are_admitted_before_any_write`](../tests/suites/preflight/check_build_provenance.py); [`test_fresh_removal_admits_only_owned_real_directories`](../tests/suites/preflight/check_build_provenance.py) |
 | identity_unset | IDENTITY is not set. | identity | 2 | script | both | a control produces it | [`IDENTITY is not set.`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py) |
 | identity_absent | codesigning identity not found in your keychain: | identity | 2 | script | both | a control produces it | [`codesigning identity not found in your keychain:`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_identity_of_another_class_as_absent_before_cargo`](../tests/suites/source_drift/contract.py) |
@@ -585,8 +585,8 @@ owner killed mid-build, a build launched by a Python owner without the
 caller's requests beside one whose owner supplies them, an environment in
 which xcrun selects no SDK or reports no numeric version, a missing,
 malformed or foreign stamp, a forwarding Rust or C compiler wrapper
-relabelled after the stamp recorded it, a probe that fails or hangs, Cargo
-intermediates redirected elsewhere, a symlink at any cache path component
+relabelled after the stamp recorded it, a probe that fails, hangs or floods
+stderr past its cap while exiting zero, Cargo intermediates redirected elsewhere, a symlink at any cache path component
 or at the session destination in either mode, a path replaced after an
 earlier helper admitted it, a missing `controller/target/`, a removal that
 fails, a Cargo output removed or made
@@ -833,9 +833,17 @@ report and fingerprint for that unit, bound through the uplifted executable.
 The recorded Rust flags are additional compiler arguments, not the complete
 command. Published paths under the home directory are redacted; the exact
 paths stay in the local stamp and session. Every probe is bounded by a
-deadline and an output cap, a failure entry carries only its kind and sizes,
-and a required observation that fails stops the build rather than leaving a
-field unknown.
+deadline over the whole run and by caps on stdout and stderr that apply while
+the tool runs: both streams are drained as they arrive, more than the cap on
+either is an overflow even when the tool exits zero, and a tool that overflows
+or outlives the deadline, including through a descendant that keeps a pipe
+open after its leader exited, has its process group terminated within a
+bound that the failure entry reports. A failure entry carries only its kind,
+stream, status and sizes. A value a comparison rests on, such as an identity,
+a configured compiler command or Cargo's effective flags, is complete within
+its declared bound or is an oversized failure; it is never truncated into a
+value that could equal another. A required observation that fails stops the
+build rather than leaving a field unknown.
 
 Known gap: the historical compiler behind a reused output is not established
 by a current probe, the hash fields in Cargo's fingerprint are opaque, and a

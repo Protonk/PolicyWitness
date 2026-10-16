@@ -486,7 +486,9 @@ class Scope:
 
 
 def group_finished(pgid, timeout):
-    """Whether every member of a process group has exited, observed for up to timeout seconds."""
+    """Whether every member of a process group has exited, observed for up to timeout seconds.
+
+    macOS answers EPERM while the only members left are zombies, so that answer means not yet."""
     deadline = time.monotonic() + timeout
     while True:
         try:
@@ -494,7 +496,7 @@ def group_finished(pgid, timeout):
         except ProcessLookupError:
             return True
         except PermissionError:
-            return False
+            pass
         if time.monotonic() >= deadline:
             return False
         time.sleep(0.05)

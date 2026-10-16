@@ -59,7 +59,14 @@ Offline release controls also exercise the release procedure's decision points.
   refused without writing or removing through it; stamps published, validated,
   extended and refused as missing, malformed, unsupported, foreign, changed
   or unobservable without ever rewriting one; bounded probes whose failure
-  entries carry no tool output; fresh-mode removal admitting only owned real
+  entries carry no tool output: stdout and stderr overflow while the tool would
+  exit zero, both streams active at once, the exact limit, a nonzero exit,
+  empty and malformed output, a timeout, a tool ignoring SIGTERM and an
+  orphaned pipe writer, each completing within its bound with the fixture's
+  processes observed gone; identities, commands and flag lists past their
+  bounds failing rather than comparing equal after truncation, and failed
+  required observations refusing compatibility, stamp publication and the
+  record; fresh-mode removal admitting only owned real
   directories and refusing symlinked parents and failed removals; Cargo
   judgments bound to fingerprints through the uplifted executable with
   ambiguous, malformed and unsupported cases explicit; SDK versions

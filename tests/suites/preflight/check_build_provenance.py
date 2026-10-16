@@ -469,36 +469,112 @@ class LockTests(unittest.TestCase):
 
 
 class ProbeTests(unittest.TestCase):
-    def test_probes_are_bounded_and_failures_carry_no_output(self):
-        canary = 'CANARY_' + os.urandom(6).hex()
+    def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-probe-', dir='/private/tmp')
         self.addCleanup(directory.cleanup)
-        planted = Path(directory.name) / 'canary'
+        self.work = Path(directory.name)
+
+    def timed(self, argv, **kwargs):
+        started = time.monotonic()
+        found = prov.probe(argv, **kwargs)
+        return found, time.monotonic() - started
+
+    def gone(self, pid_file):
+        """Whether the pid a fixture recorded has exited, observed from outside the probe."""
+        pid = int(pid_file.read_text().split()[0])
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return True
+            state = subprocess.run(['/bin/ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True).stdout.strip()
+            if not state or state.startswith('Z'):
+                return True
+            time.sleep(0.05)
+        return False
+
+    def test_probes_are_bounded_and_failures_carry_no_output(self):
+        canary = 'CANARY_' + os.urandom(6).hex()
+        planted = self.work / 'canary'
         planted.write_text(canary + '\n')
         failed = prov.probe(['/bin/sh', '-c', f'cat {planted} >&2; cat {planted}; exit 3'])
         self.assertEqual((failed['status'], failed['kind'], failed['returncode']), ('failed', 'nonzero_exit', 3))
         self.assertNotIn(canary, json.dumps(failed))
         empty = prov.probe(['/bin/sh', '-c', 'printf "  \\n"'])
         self.assertEqual(empty['kind'], 'empty_output')
-        overflow = prov.probe(['/bin/sh', '-c', 'yes | head -c 70000'], limit=65536)
-        self.assertEqual(overflow['kind'], 'output_overflow')
-        started = time.monotonic()
-        hung = prov.probe(['/bin/sh', '-c', 'sleep 30'], timeout=1)
-        self.assertEqual(hung['kind'], 'timeout')
-        self.assertLess(time.monotonic() - started, 5)
         missing = prov.probe(['/nonexistent/tool-' + os.urandom(4).hex()])
         self.assertEqual(missing['kind'], 'launch_failed')
         good = prov.probe(['/bin/sh', '-c', 'echo tool 1.2.3; echo more'])
         self.assertEqual((good['status'], good['line']), ('ok', 'tool 1.2.3'))
         self.assertEqual(prov.version_line(prov.probe(['/bin/sh', '-c', 'echo nodigits']))['kind'], 'malformed_output')
-        self.assertLessEqual(len(prov.bounded_line('x' * 1000)), prov.LINE_LIMIT)
+        # Overflow on either stream fails the observation while the tool runs, even when it would exit zero; an endless
+        # writer is stopped once past its cap, and the counts show how much was read.
+        overflow, elapsed = self.timed(['/usr/bin/yes'], limit=65536)
+        self.assertEqual((overflow['kind'], overflow['stream'], overflow['cleanup']), ('output_overflow', 'stdout', 'complete'))
+        self.assertGreater(overflow['stdout_bytes'], 65536)
+        self.assertLess(overflow['stdout_bytes'], 65536 + 65536 * 2)
+        self.assertLess(elapsed, 5)
+        flood = prov.probe(['/bin/sh', '-c', f'i=0; while [ $i -lt 200 ]; do cat {planted} >&2; i=$((i+1)); done; echo tool 1.0'],
+                           stderr_limit=64)
+        self.assertEqual((flood['status'], flood['kind'], flood['stream']), ('failed', 'output_overflow', 'stderr'))
+        self.assertNotIn(canary, json.dumps(flood))
+        # The review's counterexample: 8192 stderr bytes against a 64-byte cap with a zero exit.
+        review = prov.probe(['/bin/sh', '-c', 'head -c 8192 /dev/zero >&2; echo tool 1.0'], stderr_limit=64)
+        self.assertEqual((review['kind'], review['stream']), ('output_overflow', 'stderr'))
+        # Both streams active at once, each under its cap: no deadlock, and stdout is complete.
+        both = prov.probe([PYTHON, '-c', 'import sys\nfor i in range(15):\n    sys.stdout.write("o" * 4000); sys.stdout.flush()\n'
+                                         '    sys.stderr.write("e" * 4000); sys.stderr.flush()\n'], limit=65536, stderr_limit=65536)
+        self.assertEqual((both['status'], len(both['text']), both['stderr_bytes']), ('ok', 60000, 60000))
+        exact = prov.probe(['/bin/sh', '-c', 'head -c 65536 /dev/zero | tr "\\\\0" a'], limit=65536)
+        self.assertEqual((exact['status'], len(exact['text'])), ('ok', 65536))
+        over = prov.probe(['/bin/sh', '-c', 'head -c 65537 /dev/zero | tr "\\\\0" a'], limit=65536)
+        self.assertEqual(over['kind'], 'output_overflow')
+        # A deadline covers the whole run; a tool ignoring SIGTERM is killed, and an orphan keeping a pipe open after its
+        # leader exited cannot extend the run or survive it.
+        hung, elapsed = self.timed(['/bin/sh', '-c', 'sleep 30'], timeout=1)
+        self.assertEqual((hung['kind'], hung['cleanup']), ('timeout', 'complete'))
+        self.assertLess(elapsed, 1 + prov.TERM_GRACE + prov.CLEANUP_TIMEOUT + 2)
+        stubborn_pid = self.work / 'stubborn.pid'
+        stubborn, elapsed = self.timed(['/bin/sh', '-c', f'trap "" TERM; echo $$ > {stubborn_pid}; while :; do sleep 0.1; done'], timeout=1)
+        self.assertEqual((stubborn['kind'], stubborn['cleanup']), ('timeout', 'complete'))
+        self.assertLess(elapsed, 1 + prov.TERM_GRACE + prov.CLEANUP_TIMEOUT + 2)
+        self.assertTrue(self.gone(stubborn_pid), 'the tool that ignored SIGTERM survived the probe')
+        orphan_pid = self.work / 'orphan.pid'
+        orphan, elapsed = self.timed(['/bin/sh', '-c', f'(trap "" TERM; while :; do sleep 0.1; done) & echo $! > {orphan_pid}; echo tool 1.0; exit 0'],
+                                     timeout=1)
+        self.assertEqual((orphan['status'], orphan['kind'], orphan['cleanup']), ('failed', 'timeout', 'complete'))
+        self.assertLess(elapsed, 1 + prov.TERM_GRACE + prov.CLEANUP_TIMEOUT + 2)
+        self.assertTrue(self.gone(orphan_pid), 'the orphaned pipe writer survived the probe')
         with self.assertRaises(prov.Refusal) as required:
             prov.required(failed, 'compilers.c.identity')
         self.assertEqual(required.exception.status, 2)
         self.assertIn('nonzero_exit', str(required.exception))
 
+    def test_comparison_inputs_are_complete_within_their_bounds(self):
+        # Two identities that agree on the first LINE_LIMIT characters and differ after them: neither is an observation,
+        # and two failed observations never compare equal.
+        a, b = 'tool ' + 'x' * 250 + 'A', 'tool ' + 'x' * 250 + 'B'
+        self.assertEqual(a[:prov.LINE_LIMIT], b[:prov.LINE_LIMIT], 'the identities agree within the former truncation boundary')
+        seen = [prov.version_line(prov.probe(['/bin/echo', identity])) for identity in (a, b)]
+        self.assertEqual([s['kind'] for s in seen], ['oversized_output', 'oversized_output'])
+        stamped = dict(observation=seen[0])
+        self.assertEqual(prov.compare_fields({'rustc.identity': None}, {'rustc.identity': None}, ['rustc.identity'])[3], 'unavailable')
+        self.assertIsNotNone(stamped)
+        # A configured command longer than the bound is unknown, not a prefix; Cargo's oversized flag list is not recorded.
+        builddir = self.work / 'builddir'
+        (builddir / 'meson-info').mkdir(parents=True)
+        (builddir / 'meson-info/intro-compilers.json').write_text(json.dumps(dict(host={'c': dict(
+            id='clang', exelist=['cc'] + ['-flag'] * prov.COMMAND_LIMIT, version='21.0.0', full_version='x')})))
+        self.assertTrue(prov.read_compilers(builddir)['c']['oversized'])
+        self.assertEqual(prov.compiler_observation(None, builddir, os.environ)['kind'], 'oversized_output')
+        long_line = prov.probe(['/bin/echo', 'cc version ' + '9' * 300])
+        self.assertEqual(prov.version_line(long_line)['kind'], 'oversized_output')
 
-class StampTests(unittest.TestCase):
+
+class StampFixture(unittest.TestCase):
+    """A disposable checkout with an owned session and a substituted toolchain observation."""
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-stamp-', dir='/private/tmp')
         self.addCleanup(directory.cleanup)
@@ -529,6 +605,9 @@ class StampTests(unittest.TestCase):
     def extend(self, xpc):
         return run_main(['stamp-extend', '--root', str(self.root), '--xpc', xpc], self.env)
 
+
+
+class StampTests(StampFixture):
     def test_stamp_states_are_decided_without_adopting_unknowns(self):
         stamp = self.builddir / prov.STAMP_NAME
         status, out, _ = self.check()
@@ -621,6 +700,42 @@ class StampTests(unittest.TestCase):
         self.assertEqual(stamp.read_bytes(), published)
         session = json.loads(self.session.read_text())
         self.assertIn('toolchain', session)
+
+
+class FailedObservationTests(StampFixture):
+    def test_failed_required_observations_refuse_compatibility_and_publication(self):
+        stamp = self.builddir / prov.STAMP_NAME
+        self.configure()
+        for kind in ('output_overflow', 'oversized_output', 'timeout'):
+            with self.subTest(publication=kind):
+                self.observation = fake_observation(rustc=dict(status='failed', kind=kind, stream='stderr', stdout_bytes=0, stderr_bytes=70000))
+                status, _, err = self.publish()
+                self.assertEqual(status, 2, err)
+                self.assertIn('required toolchain observation failed: rustc.command', err)
+                self.assertFalse(stamp.exists(), 'a stamp recorded an unobserved field')
+        self.observation = fake_observation()
+        self.assertEqual(self.publish()[0], 0)
+        published = stamp.read_bytes()
+        failed_c = dict(configured=fake_observation()['compilers']['c']['configured'], observed=dict(status='failed', kind='output_overflow', stream='stdout'))
+        self.observation = fake_observation(compilers={'c': failed_c})
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn('compilers.c.identity (output_overflow)', err)
+        self.assertEqual(stamp.read_bytes(), published)
+        # A configured command beyond the bound is an unobserved field, never a prefix compared with the stamp.
+        (self.builddir / 'meson-info/intro-compilers.json').write_text(json.dumps(dict(host={'c': dict(
+            id='clang', exelist=['cc'] + ['-flag'] * prov.COMMAND_LIMIT, version='21.0.0', full_version='x')})))
+        self.observation = fake_observation()
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn('compilers.c.command (oversized_output)', err)
+        # The record refuses a failed required observation as well.
+        session = json.loads(self.session.read_text())
+        session['toolchain'] = fake_observation(rustc=dict(status='failed', kind='output_overflow', stream='stderr'))
+        with self.assertRaises(prov.Refusal) as refused:
+            prov.collect(session, self.root / 'absent.app', self.root, 'Developer ID Application: Control (TEAMID00AA)',
+                         manifest_entries=[], signature=None)
+        self.assertIn('rustc (output_overflow)', str(refused.exception))
 
 
 class FreshRemovalTests(unittest.TestCase):

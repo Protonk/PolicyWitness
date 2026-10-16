@@ -111,7 +111,12 @@ hash) that fails stops the build. An optional one (Xcode's version, a
 fingerprint for a reused unit, a wrapper's identity) is recorded as unknown
 with a bounded failure entry naming its kind, status and byte counts, never
 the tool's output, and never compares equal to anything. Every probe has a
-fixed deadline and output cap. Paths under the home directory are published
+fixed deadline and live caps on both output streams; overflow on either one
+is a failed observation even when the tool exits zero, and the probe's
+process group is terminated within a bound. An identity, a configured
+command, an effective flag list or an output's build tools longer than its
+declared bound is recorded as an oversized failure, never truncated. Paths
+under the home directory are published
 with a `<home>` marker; the exact paths stay in the local stamp
 (`builddir/pw-toolchain.json`) and session (`controller/target/pw-build-session.json`),
 which are not shipped. The record never carries `PATH`, other environment

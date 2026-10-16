@@ -748,7 +748,9 @@ def alive(pid):
 def battery(co, name):
     """A competing managed test execution in the disposable checkout: one offline case through the public dispatcher."""
     out = co.out / f'{co.prefix}battery-{name}'
-    env = dict(co.base_env, PW_TEST_OUT_DIR=f'tests/out/runs/{name}', PYTHONDONTWRITEBYTECODE='1')
+    # The dispatcher running this control passes its own settings; a battery started here must not inherit them.
+    env = {k: v for k, v in co.base_env.items() if not k.startswith('PW_TEST_') and k not in ('PW_APP_DIR', 'PW_BIN', 'PW_BIN_PATH')}
+    env.update(PW_TEST_OUT_DIR=f'tests/out/runs/{name}', PYTHONDONTWRITEBYTECODE='1')
     status, stdout, stderr = command(out, ['bash', co.root / 'tests/run.sh', '--case', 'dispatcher/accounting_controls'],
                                      cwd=co.root, env=env, timeout=600)
     return status, stdout + stderr
@@ -1092,6 +1094,14 @@ def control_provenance_probe_failed(co, variant):
     check(hung, 2, 'required toolchain observation failed: rustc.command (timeout)', absent=BEFORE_CARGO)
     assert time.monotonic() - started < prov.PROBE_TIMEOUT + 60, 'a hung probe was not bounded'
     preserved(hung)
+    # A version query that answers correctly and exits zero but floods stderr past the cap is a failed observation.
+    co.forwarding('rustc-probe', real, mode='direct', label='P', flood_stderr=prov.PROBE_LIMIT + 1, stderr_canary=co.canary)
+    flooded = co.build('probe_failed-stderr-overflow', variant, env=env)
+    check(flooded, 2, 'required toolchain observation failed: rustc.command (output_overflow)',
+          present=('Checking the native build directory',), absent=('Checking the signing identity', *BEFORE_CARGO))
+    assert co.canary not in (co.root / SESSION).read_text()
+    no_compiles(flooded)
+    preserved(flooded)
     restored = co.build('probe_failed-fresh-plain', variant, fresh='1')
     passing(co, restored, variant)
     return failed

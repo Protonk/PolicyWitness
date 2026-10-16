@@ -1910,6 +1910,18 @@
           "symbol": "test_probes_are_bounded_and_failures_carry_no_output",
           "form": "test",
           "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_comparison_inputs_are_complete_within_their_bounds",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_failed_required_observations_refuse_compatibility_and_publication",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },

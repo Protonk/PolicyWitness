@@ -33,12 +33,20 @@ and hash. A required observation that fails stops the build (exit 2 from the
 subcommand that needed it). An optional observation (Xcode's version, Cargo's
 fingerprint for a reused unit, a compiler wrapper's identity) that fails is
 recorded as unknown with a bounded failure entry and never compares equal to
-anything. Every probe has a deadline (PROBE_TIMEOUT seconds) and an output
-cap (PROBE_LIMIT bytes); a nonzero exit, empty output, malformed output,
-overflow and a timeout are distinct failure kinds. A failure entry carries the
-kind, the status and byte counts, never the tool's output. Published paths
-under the home directory start with the HOME_MARKER; the exact paths stay in
-the local stamp and session files.
+anything. Every probe has a deadline (PROBE_TIMEOUT seconds) for the whole
+run and live caps on stdout and stderr (PROBE_LIMIT bytes unless the caller
+names others), both drained while the tool runs; a nonzero exit, empty
+output, malformed output, overflow on either stream and a timeout are
+distinct failure kinds, and overflow fails even a zero exit. A failed probe's
+process group is terminated and must be gone within CLEANUP_TIMEOUT seconds,
+which the entry's `cleanup` reports. A failure entry carries the kind, the
+stream, the status and byte counts, never the tool's output. A value a
+comparison rests on is complete within its declared bound (LINE_LIMIT
+characters for an identity, COMMAND_LIMIT words for a configured command,
+FLAG_LIMIT flags for Cargo's effective flags, TOOLS_LIMIT build tools per
+output) or it is an oversized failure, never a truncated value that could
+equal another. Published paths under the home directory start with the
+HOME_MARKER; the exact paths stay in the local stamp and session files.
 
 Cargo metadata policy. The reader of Cargo's internal `.fingerprint` files
 supports the layout observed with Cargo 1.99: the uplifted executable is a
@@ -59,12 +67,12 @@ import os
 from pathlib import Path, PurePosixPath
 import plistlib
 import re
+import selectors
 import shutil
 import signal
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import uuid
 
@@ -81,7 +89,12 @@ MESSAGES_NAME = 'pw-build-messages.jsonl'
 RECORD_PATH = 'Contents/Resources/Evidence/provenance.json'
 PROBE_TIMEOUT = 20
 PROBE_LIMIT = 64 * 1024
+TERM_GRACE = 1
+CLEANUP_TIMEOUT = 5
 LINE_LIMIT = 200
+COMMAND_LIMIT = 8
+FLAG_LIMIT = 64
+TOOLS_LIMIT = 16
 HOME_MARKER = '<home>'
 FRESH_REMEDY = 'set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/'
 PATH_POLICY = 'the build admits only real directories of this user inside the checkout'
@@ -135,45 +148,129 @@ def redact(value, home=None):
     return value.replace(home + '/', HOME_MARKER + '/')
 
 
-def bounded_line(text, limit=LINE_LIMIT):
-    line = text.splitlines()[0].strip() if text.strip() else ''
-    return line[:limit]
+def first_line(text):
+    """The first nonblank line, stripped, or ''."""
+    return text.splitlines()[0].strip() if text.strip() else ''
 
 
-def probe(argv, *, cwd=None, env=None, timeout=PROBE_TIMEOUT, limit=PROBE_LIMIT):
-    """Run a tool with a deadline and an output cap; its first line, or a bounded failure."""
+def oversized(value, limit=LINE_LIMIT):
+    """Whether a string, or any string in a list, exceeds its declared bound; such a value is never truncated to fit."""
+    if isinstance(value, list):
+        return any(oversized(item, limit) for item in value)
+    return isinstance(value, str) and len(value) > limit
+
+
+def probe(argv, *, cwd=None, env=None, timeout=PROBE_TIMEOUT, limit=PROBE_LIMIT, stderr_limit=PROBE_LIMIT):
+    """Run a tool with a deadline and live caps on both streams; its output and first line, or a bounded failure.
+
+    Both pipes are drained concurrently as the tool runs, and only stdout is kept,
+    never beyond its cap. More than the cap on either stream is an overflow and a
+    failed observation even when the tool exits zero. The deadline covers the
+    whole run, including a descendant that keeps a pipe open after the leader
+    exits. On overflow or deadline the tool's process group is sent SIGTERM, then
+    SIGKILL after TERM_GRACE seconds, the leader is reaped, and the group must be
+    gone within CLEANUP_TIMEOUT seconds; `cleanup` says whether it was. A failure
+    entry carries the kind, the stream that overflowed, the status and the byte
+    counts, never the tool's output."""
     argv = [str(a) for a in argv]
     record = dict(status='failed', kind='launch_failed', argv=redact(argv), returncode=None, stdout_bytes=0, stderr_bytes=0)
-    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
-        try:
-            process = subprocess.Popen(argv, cwd=cwd, env=env, stdout=out, stderr=err,
-                                       stdin=subprocess.DEVNULL, start_new_session=True)
-        except OSError:
-            return record
-        try:
-            record['returncode'] = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
+    try:
+        process = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, start_new_session=True)
+    except OSError:
+        return record
+    deadline = time.monotonic() + timeout
+    streams = {process.stdout.fileno(): 'stdout', process.stderr.fileno(): 'stderr'}
+    caps = dict(stdout=limit, stderr=stderr_limit)
+    counts = dict(stdout=0, stderr=0)
+    kept = bytearray()
+    failure = None
+    selector = selectors.DefaultSelector()
+    try:
+        for fd in streams:
+            os.set_blocking(fd, False)
+            selector.register(fd, selectors.EVENT_READ)
+        while selector.get_map() and failure is None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                failure = ('timeout', None)
+                break
+            for key, _ in selector.select(min(remaining, 0.25)):
+                try:
+                    chunk = os.read(key.fd, 65536)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    selector.unregister(key.fd)
+                    continue
+                name = streams[key.fd]
+                counts[name] += len(chunk)
+                if name == 'stdout' and len(kept) <= limit:
+                    kept += chunk[:limit + 1 - len(kept)]
+                if counts[name] > caps[name]:
+                    failure = ('output_overflow', name)
+                    break
+        if failure is None:
             try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait()
-            record['kind'] = 'timeout'
-            return record
-        record['stdout_bytes'] = out.tell()
-        record['stderr_bytes'] = err.tell()
-        if record['returncode'] != 0:
-            record['kind'] = 'nonzero_exit'
-            return record
-        if record['stdout_bytes'] > limit:
-            record['kind'] = 'output_overflow'
-            return record
-        out.seek(0)
-        text = out.read(limit).decode('utf-8', errors='replace')
+                process.wait(timeout=max(0.0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                failure = ('timeout', None)
+    finally:
+        selector.close()
+        process.stdout.close()
+        process.stderr.close()
+    record.update(stdout_bytes=counts['stdout'], stderr_bytes=counts['stderr'])
+    if failure is not None:
+        record['cleanup'] = terminate_group(process)
+        record.update(kind=failure[0], returncode=process.returncode)
+        if failure[1]:
+            record['stream'] = failure[1]
+        return record
+    record['returncode'] = process.returncode
+    if process.returncode != 0:
+        record['kind'] = 'nonzero_exit'
+        return record
+    text = bytes(kept).decode('utf-8', errors='replace')
     if not text.strip():
         record['kind'] = 'empty_output'
         return record
-    return dict(status='ok', argv=redact(argv), text=text, line=bounded_line(text))
+    return dict(status='ok', argv=redact(argv), text=text, line=first_line(text), stdout_bytes=counts['stdout'],
+                stderr_bytes=counts['stderr'])
+
+
+def terminate_group(process):
+    """Stop a probe's process group within a bound: 'complete' when the leader is reaped and no member remains."""
+    pgid = process.pid
+    for signum, grace in ((signal.SIGTERM, TERM_GRACE), (signal.SIGKILL, CLEANUP_TIMEOUT)):
+        try:
+            os.killpg(pgid, signum)
+        except ProcessLookupError:
+            break
+        except PermissionError:
+            pass  # only zombies remain; group_gone reaps the leader
+        if group_gone(process, pgid, grace):
+            return 'complete'
+    return 'complete' if group_gone(process, pgid, CLEANUP_TIMEOUT) else 'failed'
+
+
+def group_gone(process, pgid, timeout):
+    """Reap the leader and wait for the group's other members to exit, for at most timeout seconds.
+
+    macOS answers EPERM, not ESRCH, while the only members left are zombies
+    awaiting their parent, so that answer means not yet, never gone."""
+    deadline = time.monotonic() + timeout
+    while True:
+        process.poll()
+        try:
+            os.killpg(pgid, 0)
+        except ProcessLookupError:
+            if process.poll() is not None:
+                return True
+        except PermissionError:
+            pass
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.02)
 
 
 def failed(record, kind='malformed_output'):
@@ -183,9 +280,11 @@ def failed(record, kind='malformed_output'):
 
 
 def version_line(record, pattern=r'\d'):
-    """A probe's first line as a version identity, or a malformed-output failure."""
+    """A probe's first line as a version identity, complete within LINE_LIMIT; otherwise a malformed or oversized failure."""
     if record['status'] != 'ok':
         return record
+    if oversized(record['line']):
+        return failed(record, 'oversized_output')
     if not re.search(pattern, record['line']):
         return failed(record)
     return dict(status='ok', line=record['line'])
@@ -450,7 +549,8 @@ def session_start(args):
                              started_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), root=str(state.root),
                              knobs=knobs, stamp=dict(describe=args.describe, commit=args.commit, version=args.version,
                                                      build_number=args.build_number, dirty=args.describe.endswith('-dirty')),
-                             sdk_source=args.sdk_source, requests=state.admission.requests.to_json(),
+                             sdk_source='caller' if state.admission.requests.values['SDKROOT'] else 'default',
+                             requests=state.admission.requests.to_json(),
                              admission=dict(created=state.paths.created),
                              environment={name: os.environ.get(name) for name in ALLOWED_ENV if name in os.environ})
         state.save()
@@ -483,11 +583,13 @@ def xcode_observation(env):
     found = probe(['/usr/bin/xcodebuild', '-version'], env=env)
     if found['status'] != 'ok':
         return dict(status='unknown', reason=found['kind'], returncode=found.get('returncode'))
-    lines = [bounded_line(line) for line in found['text'].splitlines() if line.strip()][:2]
+    lines = [line.strip() for line in found['text'].splitlines() if line.strip()][:2]
     version = next((line[len('Xcode '):] for line in lines if line.startswith('Xcode ')), None)
     build = next((line[len('Build version '):] for line in lines if line.startswith('Build version ')), None)
     if not version or not build:
         return dict(status='unknown', reason='malformed_output')
+    if oversized([version, build]):
+        return dict(status='unknown', reason='oversized_output')
     return dict(status='ok', version=version, build=build)
 
 
@@ -506,14 +608,21 @@ def read_compilers(builddir):
         entry = host.get(language)
         if not isinstance(entry, dict) or not isinstance(entry.get('exelist'), list) or not entry['exelist']:
             continue
-        out[language] = dict(command=[str(c) for c in entry['exelist']][:8], id=str(entry.get('id', ''))[:LINE_LIMIT],
-                             version=str(entry.get('version', ''))[:LINE_LIMIT],
-                             full_version=None if entry.get('full_version') is None else str(entry['full_version'])[:LINE_LIMIT])
+        command = [str(c) for c in entry['exelist']]
+        facts = dict(id=str(entry.get('id', '')), version=str(entry.get('version', '')),
+                     full_version=None if entry.get('full_version') is None else str(entry['full_version']))
+        if len(command) > COMMAND_LIMIT or oversized(command) or oversized([v for v in facts.values() if v is not None]):
+            # Never a prefix that could equal another configuration's: the command is unknown.
+            out[language] = dict(command=None, id=None, version=None, full_version=None, oversized=True)
+            continue
+        out[language] = dict(command=command, **facts)
     return out
 
 
 def compiler_observation(command, builddir, env):
     """The configured command probed for its identity in the build directory's context."""
+    if command is None:
+        return dict(status='failed', kind='oversized_output', command=None)
     found = version_line(probe([*command, '--version'], cwd=str(builddir) if Path(builddir).is_dir() else None, env=env))
     if found['status'] != 'ok':
         return dict(found, command=command)
@@ -593,9 +702,12 @@ def rustc_observation(manifest_dir, env):
     if 'release' not in fields or 'host' not in fields:
         out.update(failed(found), command=redact(command), source=source)
         return out
-    out.update(status='ok', command=redact(command), exact_command=command, source=source, identity=found['line'],
-               release=fields['release'][:LINE_LIMIT], commit_hash=fields.get('commit-hash', '')[:LINE_LIMIT],
-               host=fields['host'][:LINE_LIMIT], llvm_version=fields.get('LLVM version', '')[:LINE_LIMIT])
+    reported = dict(release=fields['release'], commit_hash=fields.get('commit-hash', ''), host=fields['host'],
+                    llvm_version=fields.get('LLVM version', ''))
+    if oversized([found['line'], *reported.values()]):
+        out.update(failed(found, 'oversized_output'), command=redact(command), source=source)
+        return out
+    out.update(status='ok', command=redact(command), exact_command=command, source=source, identity=found['line'], **reported)
     wrappers = {}
     for name, key in (('RUSTC_WRAPPER', 'wrapper'), ('CARGO_BUILD_RUSTC_WRAPPER', 'wrapper'),
                       ('RUSTC_WORKSPACE_WRAPPER', 'workspace_wrapper'), ('CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER', 'workspace_wrapper')):
@@ -723,6 +835,10 @@ def stamp_check_admitted(state, xpc):
     if Path(stamp['source_dir']).resolve() != root:
         raise Refusal(f'{STAMP_NAME} describes a build directory for {stamp["source_dir"]}, not this checkout: {FRESH_REMEDY}', 2)
     recorded = read_compilers(builddir) or {}
+    for language, entry in recorded.items():
+        if entry.get('oversized'):
+            raise Refusal(f'required toolchain observation failed: compilers.{language}.command (oversized_output); an unobserved field '
+                          f'cannot establish compatibility with {STAMP_NAME}: {FRESH_REMEDY}', 2)
     stamped_commands = {language: stamp['fields'].get(f'compilers.{language}.command') for language in ('c', 'swift')}
     if 'c' not in recorded or stamped_commands['c'] != recorded['c']['command']:
         raise Refusal(f"{STAMP_NAME} names C compiler {stamped_commands['c']} but the directory records {recorded.get('c', {}).get('command')}; "
@@ -1000,7 +1116,11 @@ def fingerprint_observation(message, target_dir):
     if not isinstance(data, dict) or not isinstance(data.get('rustflags'), list) or not all(isinstance(f, str) for f in data['rustflags']):
         out.update(status='unsupported', limitation='fingerprint has no rustflags list; the layout is not the supported one')
         return out
-    out.update(status='observed', rustflags=[f[:LINE_LIMIT] for f in data['rustflags'][:64]],
+    if len(data['rustflags']) > FLAG_LIMIT or oversized(data['rustflags']):
+        out.update(status='oversized', limitation=f"fingerprint lists {len(data['rustflags'])} flags or a flag beyond the record's "
+                                                  f'bounds ({FLAG_LIMIT} flags of {LINE_LIMIT} characters); none is recorded')
+        return out
+    out.update(status='observed', rustflags=list(data['rustflags']),
                rustc_fingerprint=str(data.get('rustc')) if isinstance(data.get('rustc'), int) else None,
                profile_fingerprint=str(data.get('profile')) if isinstance(data.get('profile'), int) else None,
                limitation='hash fields are opaque unit fingerprints; they do not identify a compiler or a wrapper')
@@ -1020,7 +1140,7 @@ def flag_source(effective, env, script_default):
         candidates.append((script_default, env['RUSTFLAGS'].split()))
     for kind, tokens in candidates:
         if tokens == effective:
-            return dict(kind=kind, tokens=tokens[:64])
+            return dict(kind=kind, tokens=tokens)
     if not effective:
         return dict(kind='none', detail='no additional flags')
     return dict(kind='cargo configuration or target rules', detail='no named environment source equals the effective flags; configuration files are not resolved by this record')
@@ -1051,7 +1171,10 @@ def cargo_judge_admitted(state, args):
                                rustflags_source=flag_source(fingerprint.get('rustflags'), env, script_default))
     session.setdefault('cargo', {})['judgments'] = judgments
     session['cargo']['flag_environment'] = {name: ('set' if name in env else 'unset') for name in CARGO_FLAG_ENV}
-    session['cargo']['requested_rustflags'] = dict(source=args.rustflags_source, tokens=env.get('RUSTFLAGS', '').split()[:64])
+    tokens = env.get('RUSTFLAGS', '').split()
+    session['cargo']['requested_rustflags'] = (dict(source=args.rustflags_source, tokens=tokens)
+                                               if len(tokens) <= FLAG_LIMIT and not oversized(tokens)
+                                               else dict(source=args.rustflags_source, tokens=None, oversized=True))
     state.save()
     reused = [name for name, j in judgments.items() if j['status'] != 'reported' or j['fresh']]
     if args.require_rebuilt == '1' and reused:
@@ -1277,8 +1400,10 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
         metadata = output_metadata(path)
         if metadata.get('status') != 'ok':
             raise Refusal(f"{relative}: load commands are not readable ({'; '.join(metadata.get('problems') or [metadata.get('kind', 'unknown')])})", 2)
+        if len(metadata['tools']) > TOOLS_LIMIT or oversized([v for tool in metadata['tools'] for v in tool.values()]):
+            raise Refusal(f"{relative}: {len(metadata['tools'])} build tools in LC_BUILD_VERSION exceed the record's bounds", 2)
         entry = dict(rel_path=relative, uuid=metadata['uuid'], platform=metadata['platform'], minos=metadata['minos'],
-                     sdk=metadata['sdk'], tools=metadata['tools'][:8])
+                     sdk=metadata['sdk'], tools=metadata['tools'])
         if relative != CONTROLLER:
             entry['sha256'] = sha256_file(path)
             if manifest_hashes.get(relative) != entry['sha256']:
@@ -1423,7 +1548,6 @@ def main(argv=None):
     sub.add_argument('--commit', required=True)
     sub.add_argument('--version', required=True)
     sub.add_argument('--build-number', required=True)
-    sub.add_argument('--sdk-source', default='default', choices=('default', 'caller'))
     for name, function in (('stamp-check', stamp_check), ('stamp-extend', stamp_extend)):
         owned_helper(name, function).add_argument('--xpc', required=True, choices=('0', '1'))
     owned_helper('stamp-publish', stamp_publish)

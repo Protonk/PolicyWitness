@@ -248,8 +248,10 @@ def substitution_record(baseline: Path, app: Path, identity: str, entries: list)
         metadata = build_provenance.output_metadata(path)
         if metadata.get("status") != "ok":
             raise build_provenance.Refusal(f"{relative}: load commands are not readable", 2)
+        if len(metadata["tools"]) > build_provenance.TOOLS_LIMIT:
+            raise build_provenance.Refusal(f"{relative}: {len(metadata['tools'])} build tools in LC_BUILD_VERSION exceed the record's bounds", 2)
         entry: Dict[str, Any] = dict(rel_path=relative, uuid=metadata["uuid"], platform=metadata["platform"],
-                                     minos=metadata["minos"], sdk=metadata["sdk"], tools=metadata["tools"][:8])
+                                     minos=metadata["minos"], sdk=metadata["sdk"], tools=metadata["tools"])
         before = baseline_outputs.get(relative, {})
         if relative != build_provenance.CONTROLLER:
             entry["sha256"] = sha256_file(path)
