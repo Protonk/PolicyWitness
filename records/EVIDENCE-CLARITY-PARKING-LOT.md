@@ -111,8 +111,10 @@ shipped Mach-O already carries, Meson's recorded compiler identities and
 effective options, the built worker's reported identity, the certificate chain
 and timestamp on the signed artifacts), and the record would let the build
 retire refusals whose conditions earlier checks or a fresh build already
-exclude. The associated plan is
-[BUILD-PROVENANCE-PLAN.md](../BUILD-PROVENANCE-PLAN.md).
+exclude. The associated plan was executed and retired on 2026-10-16; its
+acceptance is recorded in `records/BUILD-PROVENANCE-ACCEPTANCE.md`, and the
+resulting behavior is described by [the build document](../docs/BUILD.md) and
+[the signing guide](../docs/SIGNING.md#evidence-artifacts).
 
 ## Larger improvements
 
