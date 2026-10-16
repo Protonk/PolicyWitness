@@ -1235,9 +1235,10 @@ def control_fresh_sequence(co, variant):
     assert all(j['fresh'] is True for j in meson_only.judgments().values()) and meson_only.calls('meson', 'setup')
     assert meson_only.record['configuration']['build_directories']['builddir']['state'] == 'created'
     # CC matters at setup only: without it the configured directory keeps the compiler it was set up with, which the
-    # record names, and the stamp still describes it. A fresh build without CC configures the ordinary compiler again.
-    plain = co.build('sequence-18-plain-reuse', variant)
-    passing(co, plain, variant)
+    # record names, and the stamp is byte-for-byte intact under the same options. A fresh build without CC configures
+    # the ordinary compiler again.
+    plain = co.build('sequence-18-plain-reuse', 'partial')
+    passing(co, plain, 'partial')
     assert plain.record['toolchain']['compilers']['c']['configured']['command'] == [str(wrapper)], plain.record['toolchain']['compilers']['c']
     assert plain.stamp == meson_only.stamp
     restored = co.build('sequence-19-plain-fresh', variant, fresh='1')
@@ -1268,13 +1269,16 @@ def control_replaced_cached_output_is_recorded_not_detected(co, variant):
         assert output['sha256'] == shipped and shipped != original_hash
         assert output['cargo']['fresh'] is True and 'does not authenticate their compilation history' in output['cargo']['note']
         assert any('replaced before capture' in limit for limit in build.record['limits'])
-        # After capture and sealing, a changed helper is refused by the inspector on a copy; the shipped app is untouched.
+        # After capture and sealing, a helper swapped for the previous build's, validly signed by the same identity, passes
+        # every signature check on a copy and is refused by the manifest and the record; the shipped app is untouched.
         copied = co.work / f'replaced-after-capture-{variant}.app'
         subprocess.run(['/usr/bin/ditto', str(build.app), str(copied)], check=True)
         (copied / 'Contents/MacOS/sbpl-check').write_bytes(previous.app.joinpath('Contents/MacOS/sbpl-check').read_bytes())
         report = artifact.inspect(copied)
+        save(co.out / f'{co.prefix}{variant}-replaced_output' / 'replaced-after-capture.json', report)
         codes = {e['code'] for e in report['errors']}
-        assert not report['ok'] and 'provenance_hash' in codes and 'manifest_hash' in codes and 'signature' in codes, codes
+        assert all(s['returncode'] == 0 for s in report['signatures']), report['signatures']
+        assert not report['ok'] and {'provenance_hash', 'manifest_hash'} <= codes and 'signer' not in codes, codes
     finally:
         (co.target / 'sbpl-check').unlink(missing_ok=True)  # Cargo relinks the real output when it is missing
     return build
