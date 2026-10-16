@@ -36,10 +36,10 @@ inspection must be updated together after the captured observations are correct.
 Integrate the corresponding documentation with each increment, then run final
 acceptance against the final implementation and controls.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change), the root and
-[test guidance](tests/AGENTS.md), and the owning suite references before execution.
-Use disposable checkouts and fresh managed run directories. Never unlink the
-checkout lock or alter the accepted app to conceal a failed check.
+Read the root and [test guidance](tests/AGENTS.md), and the owning suite 
+references before execution. Use disposable checkouts and fresh managed 
+run directories. Never unlink the checkout lock or alter the accepted app 
+to conceal a failed check.
 
 ## 1. Establish ownership and preserve it through protected descendants
 
