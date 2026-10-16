@@ -78,6 +78,12 @@ Keep the owner channel private to the operation, bound its waits and cleanup,
 and refuse new nested mutations if its owner is gone. Already-running protected
 children must continue to hold the actual lock independently of that owner.
 
+Use the shell command entrypoint specified in section 4 to preserve caller
+requests before starting the Python owner. Acquisition and descriptor handoff
+still belong to `checkout_lock.py`; the shell front end captures requests and
+executes that implementation. Route documented nested-build commands through
+the front end along with the standalone Cargo examples.
+
 Pass the held descriptor explicitly across every managed subprocess boundary,
 including suite wrappers and test-equipment wrappers. Check the real
 Cargo/Meson/Ninja paths as well as the fixtures. An inheritable descriptor in
@@ -117,6 +123,10 @@ Establish the owner-handoff and lifetime controls before routing destructive
 helpers through the new API. If a supported tool drops the descriptor, repair
 that launch boundary or refuse that unsupported path; a supervisor's survival
 alone cannot satisfy the orphan gate.
+
+Small review probes through real Cargo and Meson/Ninja preserved an explicitly
+passed descriptor. This supports feasibility on the installed tools; those
+probes did not kill parents and do not establish the lifetime gate above.
 
 ## 2. Admit cache paths before the first write
 
@@ -159,6 +169,15 @@ although Cargo is invoked from the caller's working directory. `cargo_judge`
 coerces a missing or null `fresh` value to false, allowing an absent observation
 to count as a fresh-mode rebuild.
 
+Cargo 1.99 also follows recursive `include` files, which the collector ignores.
+A disposable review crate compiled successfully with `build.rustc` supplied
+by an included file while the collector reported PATH selection. A second
+successful build used `[env]` with `force = true` to select another compiler
+command through PATH and pass `MACOSX_DEPLOYMENT_TARGET=26.1` to it despite
+the invoking shell's `26.0`; the collector still reported the original compiler
+command. These compilation receipts establish selection counterexamples, not
+acceptance of a complete PolicyWitness build with the wrong minimum.
+
 **Repair.** Preserve the caller's working directory and make configuration
 discovery match that exact Cargo invocation, including ancestor and `CARGO_HOME`
 configuration and Cargo's choice when both configuration filenames exist. Parse
@@ -169,6 +188,16 @@ available without assuming `/usr/bin/python3` supplies `tomllib`, changing the
 interpreter-selection policy or installing a dependency during a build. Exercise
 the parser through that same interpreter in the controls.
 
+Follow the complete selected configuration graph, including recursive
+[`include` files](https://doc.rust-lang.org/cargo/reference/config.html#include).
+Apply Cargo's include order and merge precedence, with the including file's
+values overriding its included values, and preserve each value's origin for
+relative-path resolution. Bound individual and aggregate input bytes, file
+count and recursion depth, and detect cycles. Honor optional missing includes;
+required missing files, malformed files and unsupported or over-bound graphs
+must refuse explicitly. Never treat an unread or unvisited include as proof
+that no compiler, wrapper or relevant environment setting exists.
+
 Resolve compiler and wrapper selection through Cargo's precedence, including
 file settings, environment overrides, relative command paths and explicit empty
 wrapper resets. Keep configured commands distinct from their probe identities.
@@ -176,6 +205,20 @@ An unresolvable relevant setting must produce a specific required-unknown
 refusal, never silent PATH selection. A setting overridden by a known
 higher-precedence value must not cause that refusal. Keep raw configuration and
 unrelated environment values out of published records.
+
+Resolve Cargo's [`[env]` transformations](https://doc.rust-lang.org/cargo/reference/config.html#env)
+for relevant compiler inputs, including `force`, `relative`, and inherited
+values. Keep the invocation environment used for Cargo's own configuration
+discovery separate from the environment Cargo constructs for its children;
+do not feed every `[env]` value back into configuration discovery. Resolve
+compiler and wrapper commands and probe their identities in the effective
+child environment and working directory. In particular, PATH and Rust toolchain
+selection variables can change which compiler runs, while `SDKROOT` and
+`MACOSX_DEPLOYMENT_TARGET` can change its inputs. Resolve these effects or refuse
+with a required-unknown diagnostic; never silently use the shell's pre-Cargo
+values. Keep PATH and unrelated environment contents private. Effective SDK
+and deployment settings that conflict with build policy must refuse, with
+the independent output checks retained as a separate gate.
 
 Use Cargo's per-output fingerprint for effective flags and label it as Cargo's
 record. Determine requested sources by precedence, not just by equal flag
@@ -199,6 +242,17 @@ build flags. With retained caches, change compiler selection and effective flags
 and verify the observed refusal or rebuild and the resulting record. Keep
 version-text substitution controls labelled as parsing/identity controls.
 
+Add included compiler/wrapper selections, recursive includes, include/file
+precedence, relative commands from included files, optional missing includes,
+required missing or malformed includes, cycles and graph-bound refusals. Add
+`[env]` controls with inherited values both present and absent, `force` both
+ways and `relative` path values. Reproduce the successful PATH-based compiler
+selection counterexample with a forwarding wrapper; record its actual command,
+working directory and relevant environment. Exercise SDK and deployment
+overrides with valid neighbours and policy conflicts. Changing only an included
+file or an effective child-environment input with retained caches must establish
+the actual refusal or rebuild, without publishing a secret canary or PATH.
+
 For freshness, pair valid rebuilt/reused messages with missing, null, numeric,
 string and contradictory judgments. Verify fresh mode refuses every unknown
 case before assembly. Constructed messages test the reader; a real retained-cache
@@ -215,6 +269,9 @@ also found `configuration.deployment_target: null` in the accepted app despite
 the enforced minimum of 26.0: the session snapshots the environment before
 selection is finished. A caller's `SDKROOT` is captured only on the build path
 without an inherited lock claim.
+The system Python shim also inserts `SDKROOT` when the caller left it unset,
+as confirmed by a review probe. A Python owner cannot reconstruct that original
+absence from its environment, even if session capture is moved later.
 
 **Repair.** Define one typed validator for the documented record, used by
 production before sealing, artifact inspection and release-archive reading.
@@ -232,12 +289,39 @@ details and update every reader and fixture together. Do not quietly redefine
 a field to make an invalid old record pass. Unknown optional observations remain
 explicit and never establish compatibility.
 
+Migrate the independent fixture records with the validator:
+[dispatcher bundles](tests/fixtures/dispatcher/fixture_bundle.py) currently use
+nominal `source`, `toolchain` and `configuration` sections and a `fixture` Cargo
+status, while [release publish controls](tests/suites/preflight/check_release_publish.py)
+use empty sections and outputs. Give them independently authored valid record
+data and corresponding signature observations; do not add production exceptions
+for fixture records or generate expected validity with the producer under test.
+Update the disposable-repository copy lists, including
+[repository.py](tests/fixtures/dispatcher/repository.py), to carry the shared
+lock implementation, shell entrypoint, validator and vendored parser dependencies.
+
 Capture caller requests before launcher/interpreter environment changes, for
-both direct and nested entrypoints. Capture effective deployment target, SDK
-selection and compiler inputs after the build has resolved and exported them.
-Record requests separately from effects where both are needed. The effective
-deployment target must agree with build policy and the binaries' load commands;
-the selected SDK must agree with the toolchain observation and output checks.
+both direct and nested entrypoints. Add `tests/lib/checkout_lock.sh` as the
+supported command launcher: shell builtins capture the allowlisted requests,
+including SDKROOT's set/unset state and exact supplied value, before executing
+`/usr/bin/python3`. Direct `build.sh` entry delegates through this front end
+before starting Python. Carry that snapshot in memory/environment until the
+owner binds it to the acquisition; do not write a request file before lock and
+path admission. Nested builds consume the owner's saved requests through the verified
+handoff, rather than reclassifying the Python shim's environment as caller input.
+Python callers of the owned scope must supply an explicitly preserved request
+snapshot when launching a build. A build reached through a Python-only launcher
+without that snapshot refuses before session/cache writes and names the shell
+entrypoint as the remedy; ownership-only commands need no build-request snapshot.
+Update the public commands and working guidance with this entrypoint contract.
+
+Capture effective deployment target, SDK selection and compiler inputs after
+the script's selection and Cargo's relevant `[env]` transformations have been
+resolved. A post-export shell snapshot alone cannot establish Cargo's child
+environment. Record requests separately from effects where both are needed.
+The effective deployment target must agree with build policy and the binaries'
+load commands; the selected SDK must agree with the toolchain observation and
+output checks.
 
 **Acceptance.** Mutate each required section and representative nested fields
 to missing, null and wrong types, and change only a linker-tool version in an
@@ -247,12 +331,18 @@ for each permitted optional unknown. Signed-copy controls must refresh the
 manifest and signatures when necessary so the semantic validator, rather than
 an earlier stale-hash failure, is what rejects the bad record.
 
-Build with default settings and explicit `SDKROOT`, directly and through a
-valid nested lock entrypoint. Independently inspect selected tool commands,
-the final environment supplied to compilation and the resulting Mach-O metadata.
-The published effective settings must agree. Preserve manifest/output hash
-checks, A/B record-swap refusal and release ZIP binding without executing the
-inspected app.
+Build with default settings and explicit `SDKROOT`, directly and through the
+shell lock launcher into `build.sh`, including another nested owned command.
+Distinguish an absent request from an explicit request for the default SDK;
+retain an explicitly empty value in the request record, with effective selection
+following the documented SDK policy. An invalid explicit request must refuse
+without silently selecting the shim's default. A Python-only build launch
+without preserved requests must refuse, and a valid supplied snapshot must
+succeed. Include Cargo `[env]` overrides from section 3. Independently inspect
+selected tool commands, the final environment supplied to compilation and the
+resulting Mach-O metadata. The published effective settings must agree. Preserve
+manifest/output hash checks, A/B record-swap refusal and release ZIP binding
+without executing the inspected app.
 
 ## 5. Enforce probe bounds while the tool runs
 
@@ -301,9 +391,14 @@ equipment in the genuine switch case remains an equipment failure.
 
 The original record reports three withheld classifier responses but contains
 no raw decisions from which to diagnose their exact causes. Preserve that limit.
-Correct its fixture description from retained command receipts, including the
-actual SDK used in the historical run; do not rewrite history to describe the
-new fixture. New controls need no Mach-O header patching.
+Correct its fixture description to the established historical SDK:
+`/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk`, not 26.5. The retained
+receipt is `tests/out/runs/provenance-acceptance-optin-20261016-credited/suites/preflight/build_guard_controls/artifacts/compile-wrong-sdk/command.json`;
+its successful command names that SDK with `-isysroot` and minimum 26.0, and
+the same run's `artifacts/equipment.json` records other SDK version 15.4 versus
+selected SDK 27.0. Preserve those historical receipts and describe the new
+single-SDK metadata fixture separately. New controls need no Mach-O header
+patching.
 
 ## Documentation and final acceptance
 
@@ -312,7 +407,8 @@ within each increment; regenerate with `docs/generate_build.py`. Review the
 generated step order, reads/writes, invocations, refusals and figure together
 with the authored sections of [BUILD.md](docs/BUILD.md). In particular, early
 path admission must precede every session/cache write in both accounts, and
-nested ownership, Cargo discovery and probe bounds must mean the same thing
+nested ownership, caller-request capture, Cargo configuration includes and child
+environment resolution, and probe bounds must mean the same thing
 in generated tables and surrounding prose.
 
 [SIGNING.md](docs/SIGNING.md#the-provenance-record) owns the published record's
