@@ -119,11 +119,14 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Purpose:** Drive the unchanged build script through every refusal the
   build manifest lists, one disposable fault at a time, in each variant the
   refusal applies to: a tracked input gone, a held checkout lock, a claim
-  without a hold, a developer directory without the SDK or without a numeric
-  SDK version, a missing, malformed or foreign toolchain stamp, forwarding
-  Rust and C compiler wrappers relabelled after the stamp recorded them, a
-  probe that fails or hangs, redirected Cargo intermediates, a cache path a
-  symlink would redirect, a failed removal, Cargo outputs that vanish, lose
+  without a live owner's handoff or an owner killed mid-build, a build
+  launched by a Python owner without the caller's requests, a developer
+  directory without the SDK or without a numeric SDK version, a missing,
+  malformed or foreign toolchain stamp, forwarding Rust and C compiler
+  wrappers relabelled after the stamp recorded them, a probe that fails or
+  hangs, redirected Cargo intermediates, a symlink at a cache path component
+  or the session destination, a path replaced after an earlier helper's
+  admission, a failed removal, Cargo outputs that vanish, lose
   their executable bit or land under a target triple, a reused judgment in
   fresh mode, a missing or old Ninja, a Meson directory departing from the
   policy, sources that do not compile, a worker reporting another identity,
@@ -135,9 +138,17 @@ selection, deduplication, configuration validation, and complete accounting.
   surviving independently), plants environment and stderr canaries no record
   may carry, replaces a cached Cargo output before capture to show the stated
   limit of the record, and drives `make notarize` and `make release` with a
-  controlled build step to show fresh mode enforced or refused. Mutated
-  copies of the script with a guard removed or moved past its operation must
-  fail their control.
+  controlled build step to show fresh mode enforced or refused. A lock
+  lifetime sequence kills the owner, the script and a tool wrapper while a
+  protected holder runs beyond the wrapper and observes from outside that a
+  competing build, battery and standalone Cargo command are refused until it
+  exits, that a wrapper dropping the descriptor fails that control, that
+  SIGINT and SIGTERM stop the build's process group, that the compilers the
+  real Cargo and Meson run hold the descriptor, that a nested build and owned
+  command share one acquisition while an independent worktree is held, and
+  that the lock is held through packaging. Mutated copies of the script with
+  a guard removed or moved past its operation, and of the session helper
+  with path admission disabled, must fail their control.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
@@ -146,11 +157,14 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Opt-in reason:** Runs many builds, several of them fresh, and signs with
   keychain access. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
-  boundaries, the stamp, fresh mode, the lock or the generated refusal table.
+  boundaries, the stamp, fresh mode, path admission, the lock, its handoff or
+  launch boundaries, the request capture or the generated refusal table.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
   each build's raw output, status, tool and forwarding-wrapper receipts with
-  the hooks that fired, the session, stamp and record copies, the output
-  inventory, the make entrypoint receipts and the mutation results.
+  the hooks that fired and the lock descriptor each compiler held, the
+  session, stamp and record copies, the output inventory, the outside-tree
+  snapshots of the path controls, the lock lifetime observations, the make
+  entrypoint receipts and the mutation results.
 
 ### build toolchain switch controls
 

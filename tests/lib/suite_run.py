@@ -235,10 +235,12 @@ def account(item):
                                      'state': state, 'status': status, 'reason': reason})
 
 
-def run_standard_command(command, root, env):
+def run_standard_command(command, root, env, scope):
     # Own the ordinary case's process group so cancellation can reach helpers
-    # even after the immediate child has exited. Stream output as before.
-    with subprocess.Popen(command, cwd=root, env=env, start_new_session=True) as process:
+    # even after the immediate child has exited. Stream output as before. The
+    # case is a protected child: it holds the checkout lock descriptor, so the
+    # hold outlives a killed dispatcher until the case's last descendant exits.
+    with scope.popen(command, cwd=root, env=env, start_new_session=True) as process:
         try:
             return process.wait()
         except KeyboardInterrupt:
@@ -260,7 +262,7 @@ def run_standard_command(command, root, env):
             raise
 
 
-def execute(root, out, run_id, started, plan, config):
+def execute(root, out, run_id, started, plan, config, scope):
     # Most cases get their own process, so a failure cannot suppress a sibling.
     # BYOXPC shares installation and cleanup across its explicitly selected leaves.
     groups = []
@@ -333,9 +335,10 @@ def execute(root, out, run_id, started, plan, config):
                 command = group[0]['command']
                 try:
                     if group[0]['context'] == 'standard':
-                        returncode = run_standard_command(command, root, child_env)
+                        returncode = run_standard_command(command, root, child_env, scope)
                     else:
-                        returncode = subprocess.run(command, cwd=root, env=child_env).returncode
+                        returncode = subprocess.run(command, cwd=root, env=scope.child_env(child_env),
+                                                    pass_fds=scope.pass_fds()).returncode
                     item.update(state='exited', returncode=returncode)
                     if item['returncode'] != 0:
                         problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")

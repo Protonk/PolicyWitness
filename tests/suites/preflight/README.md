@@ -41,11 +41,22 @@ Offline release controls also exercise the release procedure's decision points.
   fail recursive installation checks and subsequently identify both the bundle
   and changed helper during validation. Other helper signatures remain valid;
   removal verifies registry and plist cleanup.
-- `build_provenance_controls` exercises the provenance helpers with
-  constructed inputs and disposable directories: lock claims verified through
-  the inherited descriptor and refused for a separate open, a stale nonce,
-  another checkout or a closed descriptor, with the hold outliving a killed
-  launcher command while a descendant runs; stamps published, validated,
+- `build_provenance_controls` exercises the provenance and lock helpers with
+  constructed inputs and disposable directories: claims admitted only by a
+  live owner's handoff and refused when stale, closed, malformed, a separate
+  open on the lock inode, a wrong nonce or another worktree's, with the real
+  holder unchanged and an unheld descriptor never turned into a hold; an
+  owner that exits or is killed during admission leaving no hold and no
+  session; a hold that outlives a killed owner and wrapper while a protected
+  grandchild runs, which a wrapper dropping the descriptor fails, and SIGINT,
+  SIGTERM and SIGKILL at the launcher; requests captured by the shell front
+  end, restored for the command, handed to nested owners and refused when
+  absent or malformed; session writes, fresh removal and stamp publication
+  refused without a claim or with a missing, malformed or stale session
+  nonce; symlinked, non-directory and foreign cache components and unsafe
+  session destinations refused before any write, an owned missing
+  `controller/target/` created, and a path replaced between admission and use
+  refused without writing or removing through it; stamps published, validated,
   extended and refused as missing, malformed, unsupported, foreign, changed
   or unobservable without ever rewriting one; bounded probes whose failure
   entries carry no tool output; fresh-mode removal admitting only owned real
@@ -75,11 +86,15 @@ Offline release controls also exercise the release procedure's decision points.
 - `build_refusal_controls` runs the unchanged build script in a disposable
   checkout once per refusal the build manifest lists, in each variant the
   refusal applies to. A fault is arranged beside one boundary: a tracked input
-  gone, a held lock or a claim without a hold, an environment that cannot
+  gone, a held lock, a claim without a live owner's handoff or an owner
+  killed mid-build, a build launched by a Python owner without the caller's
+  requests, an environment that cannot
   select the SDK or report its version, a stamp that is missing, malformed or
   foreign, a forwarding compiler wrapper relabelled after the stamp recorded
   it or failing its version probe, redirected or unobservable Cargo
-  intermediates, a cache path fresh mode cannot admit or remove, a Cargo
+  intermediates, a symlink at a cache path component or the session
+  destination, a path replaced after an earlier helper's admission, a cache
+  path fresh mode cannot remove, a Cargo
   output removed, made non-executable or moved under a target triple, a
   reused Cargo judgment in fresh mode, an old Ninja, a poisoned Meson
   directory, a source that does not compile, a worker reporting another
@@ -90,10 +105,11 @@ Offline release controls also exercise the release procedure's decision points.
   and after the refusal, the tool calls that did not happen and the output
   left behind; the forwarding wrappers' receipts establish that compilations
   were forwarded and which flags they carried. The same case runs the
-  fresh-mode state sequence with interruptions, the canary, replaced-output
-  and make-entrypoint controls described in the opt-in registry. Copies of
-  the script with a guard removed or moved past its operation must fail the
-  matching control. Opt-in, with the same toolchain and identity requirements
+  fresh-mode state sequence with interruptions, the canary, replaced-output,
+  lock-lifetime and make-entrypoint controls described in the opt-in
+  registry. Copies of the script with a guard removed or moved past its
+  operation, and of the session helper with path admission disabled, must
+  fail the matching control. Opt-in, with the same toolchain and identity requirements
   as the guard controls.
 - `build_toolchain_switch_controls` builds under the selected developer
   directory and under the Command Line Tools through `DEVELOPER_DIR`, refusing
@@ -169,12 +185,16 @@ Offline release controls also exercise the release procedure's decision points.
 - `tests/fixtures/build_guards/tools.py`: real-tool delegation with output
   replacements or a replaced codesign argument list at the selected boundary.
 - `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts
-  and a stderr canary; configured hooks remove, move, copy, truncate, rewrite
-  or change the mode of a file, edit Cargo's artifact report or kill the
-  build's shell beside one call, or answer a version query.
+  and a stderr canary, passing the claim's lock descriptors to the real tool;
+  configured hooks remove, move, copy, truncate, rewrite, replace with a
+  symlink or change the mode of a file, edit Cargo's artifact report, kill or
+  signal the build's shell, the lock owner or the wrapper itself, start a
+  protected holder beyond the wrapper or record whether the lock is free
+  beside one call, or answer a version query.
 - `tests/fixtures/build_refusals/forward.py`: a forwarding compiler wrapper
   that runs the real compiler unchanged, records every invocation classified
-  as compilation, probe or version query, and can label, fail or hang a
+  as compilation, probe or version query with the lock descriptor it holds,
+  and can label, fail or hang a
   version query; `wrong_worker.c` is a worker stand-in reporting a foreign
   identity.
 - The SDK refusal control gives real `xcrun` an unconfigured developer directory

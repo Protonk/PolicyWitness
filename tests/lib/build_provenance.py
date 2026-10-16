@@ -52,6 +52,7 @@ recorded as unavailable, unsupported or malformed, never guessed. Cargo's
 not this build's fresh mode.
 """
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -65,20 +66,28 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import checkout_lock  # noqa: E402
 
 SCHEMA_VERSION = 1
 STAMP_SCHEMA_VERSION = 1
-SESSION_SCHEMA_VERSION = 1
+SESSION_SCHEMA_VERSION = 2
 STAMP_NAME = 'pw-toolchain.json'
+SESSION_NAME = 'pw-build-session.json'
+MESSAGES_NAME = 'pw-build-messages.jsonl'
 RECORD_PATH = 'Contents/Resources/Evidence/provenance.json'
 PROBE_TIMEOUT = 20
 PROBE_LIMIT = 64 * 1024
 LINE_LIMIT = 200
 HOME_MARKER = '<home>'
 FRESH_REMEDY = 'set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/'
+PATH_POLICY = 'the build admits only real directories of this user inside the checkout'
+TARGET = 'controller/target'
+RELEASE = 'controller/target/release'
+BUILDDIR = 'builddir'
 SOURCE_INPUTS = ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
                  'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')
 FIXED_MESON_OPTIONS = ('buildtype', 'optimization', 'debug', 'warning_level', 'werror', 'strip', 'unity',
@@ -197,61 +206,255 @@ def sha256_file(path):
     return hasher.hexdigest()
 
 
-# ---- the session --------------------------------------------------------------------
+# ---- ownership, path admission and the session ------------------------------------------
 
-def atomic_json(path, value):
-    path = Path(path)
-    if path.is_symlink():
-        raise Refusal(f'refusing to write through a symlink: {path}', 2)
-    fd, name = tempfile.mkstemp(prefix='.' + path.name + '-', dir=path.parent)
-    temporary = Path(name)
-    try:
-        with os.fdopen(fd, 'w') as stream:
-            stream.write(json.dumps(value, indent=2, sort_keys=True) + '\n')
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        directory = os.open(path.parent, os.O_RDONLY)
+class BuildPaths:
+    """The build's cache paths, admitted under the verified hold before anything is written or inspected through them.
+
+    Every component of builddir/, controller/target/ and controller/target/release/
+    below the checkout root must be a real directory of this user, or absent, and
+    the session destination an absent path or a regular file of this user with one
+    link. Each admitted directory is held open; writes and removals are made
+    relative to those descriptors, and each first rechecks that the path from the
+    root still names the directory admitted, because the checkout lock excludes
+    cooperating builds but does not make a checked pathname immutable. A missing
+    controller/target/ is created only beneath the admitted controller/."""
+
+    def __init__(self, root, *, create_target=False):
+        self.root = Path(root).resolve()
+        self.fds, self.identity, self.created = {}, {}, []
+        self.root_fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         try:
-            os.fsync(directory)
+            self.admit('controller', required=True)
+            self.admit(TARGET, create=create_target)
+            if TARGET in self.fds:
+                self.admit(RELEASE)
+                self.admit_file(TARGET, SESSION_NAME)
+            self.admit(BUILDDIR)
+        except BaseException:
+            self.close()
+            raise
+
+    def parent(self, relative):
+        parent = str(PurePosixPath(relative).parent)
+        return (self.root_fd, '') if parent == '.' else (self.fds[parent], parent)
+
+    def unsafe(self, relative, why):
+        return Refusal(f'{self.root / relative} {why}; {PATH_POLICY} (nothing was written or removed)', 2)
+
+    def check(self, relative, info):
+        if stat.S_ISLNK(info.st_mode):
+            raise self.unsafe(relative, 'is a symlink')
+        if not stat.S_ISDIR(info.st_mode):
+            raise self.unsafe(relative, 'is not a directory')
+        if info.st_uid != os.getuid():
+            raise self.unsafe(relative, f'is owned by uid {info.st_uid}, not this user')
+
+    def admit(self, relative, *, required=False, create=False):
+        parent_fd, _ = self.parent(relative)
+        name = PurePosixPath(relative).name
+        try:
+            info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            if required:
+                raise self.unsafe(relative, 'is missing')
+            if not create:
+                return
+            os.mkdir(name, 0o755, dir_fd=parent_fd)
+            self.created.append(relative)
+            info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        self.check(relative, info)
+        fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent_fd)
+        held = os.fstat(fd)
+        if (held.st_dev, held.st_ino) != (info.st_dev, info.st_ino):
+            os.close(fd)
+            raise self.unsafe(relative, 'changed during admission')
+        self.fds[relative], self.identity[relative] = fd, (info.st_dev, info.st_ino)
+
+    def admit_file(self, directory, name):
+        """A destination this build replaces: absent, or a regular file of this user with one link."""
+        try:
+            info = os.stat(name, dir_fd=self.fds[directory], follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_nlink != 1:
+            raise Refusal(f'{self.root / directory / name} is not a regular file of this user with one link; '
+                          f'the destination is unsafe and {PATH_POLICY} (nothing was written or removed)', 2)
+
+    def present(self, relative):
+        return relative in self.fds
+
+    def recheck(self, relative):
+        """Every admitted component from the root down to relative still names the directory admitted."""
+        parts = PurePosixPath(relative).parts
+        for index in range(1, len(parts) + 1):
+            component = str(PurePosixPath(*parts[:index]))
+            parent_fd, _ = self.parent(component)
+            try:
+                info = os.stat(parts[index - 1], dir_fd=parent_fd, follow_symlinks=False)
+            except OSError:
+                info = None
+            if info is None or (info.st_dev, info.st_ino) != self.identity.get(component) or not stat.S_ISDIR(info.st_mode):
+                raise self.unsafe(component, 'was replaced after admission')
+
+    def write_json(self, directory, name, value):
+        """Replace directory/name atomically through the admitted directory's descriptor."""
+        self.recheck(directory)
+        self.admit_file(directory, name)
+        dir_fd = self.fds[directory]
+        temporary = f'.{name}-{uuid.uuid4().hex}'
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=dir_fd)
+        try:
+            with os.fdopen(fd, 'w') as stream:
+                stream.write(json.dumps(value, indent=2, sort_keys=True) + '\n')
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd)
+            temporary = None
+            os.fsync(dir_fd)
         finally:
-            os.close(directory)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+            if temporary is not None:
+                try:
+                    os.unlink(temporary, dir_fd=dir_fd)
+                except OSError:
+                    pass
+
+    def read_text(self, directory, name):
+        """A file's text read through the admitted directory, not following a link at the leaf."""
+        self.recheck(directory)
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=self.fds[directory])
+        with os.fdopen(fd) as stream:
+            return stream.read()
+
+    def remove(self, relative, failures):
+        """Remove an admitted directory and everything below it through descriptors; failures are collected, not raised."""
+        self.recheck(relative)
+        fd = self.fds.pop(relative)
+        try:
+            remove_contents(fd, self.root / relative, failures)
+        finally:
+            os.close(fd)
+        parent_fd, _ = self.parent(relative)
+        name = PurePosixPath(relative).name
+        info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if (info.st_dev, info.st_ino) != self.identity[relative]:
+            raise self.unsafe(relative, 'was replaced during removal')
+        if not failures:
+            try:
+                os.rmdir(name, dir_fd=parent_fd)
+            except OSError:
+                failures.append(str(self.root / relative))
+
+    def close(self):
+        for fd in self.fds.values():
+            os.close(fd)
+        self.fds = {}
+        if self.root_fd is not None:
+            os.close(self.root_fd)
+            self.root_fd = None
 
 
-def load_session(path):
-    try:
-        session = json.loads(Path(path).read_text())
-    except (OSError, ValueError) as exc:
-        raise Refusal(f'build session is not readable: {path}: {exc}', 2)
+def remove_contents(dir_fd, path, failures):
+    """Unlink every entry below an open directory without following a link; failed paths are appended."""
+    with os.scandir(dir_fd) as entries:
+        names = [entry.name for entry in entries]
+    for name in names:
+        try:
+            info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            try:
+                child = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=dir_fd)
+            except OSError:
+                failures.append(str(path / name))
+                continue
+            try:
+                held = os.fstat(child)
+                if (held.st_dev, held.st_ino) != (info.st_dev, info.st_ino):
+                    failures.append(str(path / name))
+                    continue
+                remove_contents(child, path / name, failures)
+            finally:
+                os.close(child)
+            try:
+                os.rmdir(name, dir_fd=dir_fd)
+            except OSError:
+                failures.append(str(path / name))
+        else:
+            try:
+                os.unlink(name, dir_fd=dir_fd)
+            except OSError:
+                failures.append(str(path / name))
+
+
+class BuildState:
+    """One helper invocation's verified hold, admitted paths and the session it reads and replaces."""
+
+    def __init__(self, root, admission, paths, session):
+        self.root, self.admission, self.paths, self.session = root, admission, paths, session
+
+    def save(self):
+        self.paths.write_json(TARGET, SESSION_NAME, self.session)
+
+
+def validate_session(session, nonce):
     if not isinstance(session, dict) or session.get('schema_version') != SESSION_SCHEMA_VERSION:
-        raise Refusal(f'build session has an unsupported shape: {path}', 2)
-    nonce = os.environ.get('PW_CHECKOUT_LOCK_NONCE')
-    if session.get('lock_nonce') != nonce:
+        raise Refusal('build session has an unsupported shape; it was not opened by this build', 2)
+    recorded = session.get('lock_nonce')
+    if not isinstance(recorded, str) or not checkout_lock.NONCE_RE.fullmatch(recorded) or recorded != nonce:
         raise Refusal('build session belongs to another checkout lock hold; the session is stale', 2)
     return session
 
 
-def save_session(path, session):
-    atomic_json(path, session)
+@contextmanager
+def build_scope(root, *, create_target=False, session=True):
+    """A helper's verified hold and admitted paths, with the current session unless it is about to be opened.
+
+    Without a live owner's handoff, a missing or malformed session nonce or a
+    session from another hold, nothing is written: every helper that creates or
+    updates a session, removes a cache or publishes or extends a stamp enters here."""
+    root = Path(root).resolve()
+    try:
+        admission = checkout_lock.admit(root)
+    except checkout_lock.Refusal as exc:
+        raise Refusal(f'checkout lock claim is not verified: {exc}; build helpers mutate only under an owned build', 2)
+    try:
+        paths = BuildPaths(root, create_target=create_target)
+        try:
+            current = None
+            if session:
+                if not paths.present(TARGET):
+                    raise Refusal(f'build session is not readable: {root / TARGET / SESSION_NAME} (no {TARGET}/)', 2)
+                try:
+                    current = json.loads(paths.read_text(TARGET, SESSION_NAME))
+                except (OSError, ValueError) as exc:
+                    raise Refusal(f'build session is not readable: {root / TARGET / SESSION_NAME}: {exc}', 2)
+                validate_session(current, admission.nonce)
+            yield BuildState(root, admission, paths, current)
+        finally:
+            paths.close()
+    finally:
+        admission.close()
 
 
 def session_start(args):
-    knobs = {}
-    for item in args.knob:
-        name, _, value = item.partition('=')
-        knobs[name] = value
-    session = dict(schema_version=SESSION_SCHEMA_VERSION, lock_nonce=os.environ.get('PW_CHECKOUT_LOCK_NONCE'),
-                   started_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), root=str(Path(args.root).resolve()),
-                   knobs=knobs, stamp=dict(describe=args.describe, commit=args.commit, version=args.version,
-                                           build_number=args.build_number, dirty=args.describe.endswith('-dirty')),
-                   sdk_source=args.sdk_source,
-                   environment={name: os.environ.get(name) for name in ALLOWED_ENV if name in os.environ})
-    Path(args.session).parent.mkdir(parents=True, exist_ok=True)
-    save_session(args.session, session)
-    print(f'ok: build session {args.session}')
+    with build_scope(args.root, create_target=True, session=False) as state:
+        if state.admission.requests is None:
+            raise Refusal(checkout_lock.NO_REQUESTS, 2)
+        knobs = {}
+        for item in args.knob:
+            name, _, value = item.partition('=')
+            knobs[name] = value
+        state.session = dict(schema_version=SESSION_SCHEMA_VERSION, lock_nonce=state.admission.nonce,
+                             started_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), root=str(state.root),
+                             knobs=knobs, stamp=dict(describe=args.describe, commit=args.commit, version=args.version,
+                                                     build_number=args.build_number, dirty=args.describe.endswith('-dirty')),
+                             sdk_source=args.sdk_source, requests=state.admission.requests.to_json(),
+                             admission=dict(created=state.paths.created),
+                             environment={name: os.environ.get(name) for name in ALLOWED_ENV if name in os.environ})
+        state.save()
+    print(f'ok: build session {state.root / TARGET / SESSION_NAME}')
     return 0
 
 
@@ -499,17 +702,21 @@ def compare_fields(stamped, current, names):
 
 def stamp_check(args):
     """A configured directory may be reused only under the toolchain its stamp records."""
-    session = load_session(args.session)
-    builddir, root = Path(args.builddir), Path(args.root).resolve()
+    with build_scope(args.root) as state:
+        return stamp_check_admitted(state, args.xpc == '1')
+
+
+def stamp_check_admitted(state, xpc):
+    session, root = state.session, state.root
+    builddir = root / BUILDDIR
     env = dict(os.environ)
-    xpc = args.xpc == '1'
-    configured = (builddir / 'build.ninja').is_file()
+    configured = state.paths.present(BUILDDIR) and (builddir / 'build.ninja').is_file()
     session['builddir'] = dict(configured_before=configured, stamp_state=None, fresh_replaced=False)
     if not configured:
-        if stamp_path(builddir).exists():
+        if state.paths.present(BUILDDIR) and os.path.lexists(stamp_path(builddir)):
             raise Refusal(f'{builddir.name}/ holds {STAMP_NAME} but no configuration; the directory is in an unknown state: {FRESH_REMEDY}', 2)
         session['builddir']['stamp_state'] = 'absent'
-        save_session(args.session, session)
+        state.save()
         print(f'ok: {builddir.name}/ is not configured; a fresh setup will publish its stamp')
         return 0
     stamp = read_stamp(builddir)
@@ -554,18 +761,23 @@ def stamp_check(args):
                       f'{redact(now)!r}; a changed toolchain cannot reuse this directory: {FRESH_REMEDY}', 1)
     session['builddir'].update(stamp_state='validated', stamp_scope=stamp['scope'], swift_newly_applicable=bool(xpc and not swift_applicable))
     session['toolchain'] = observation
-    save_session(args.session, session)
+    state.save()
     print(f'ok: {STAMP_NAME} agrees with the selected toolchain ({len(names)} fields)')
     return 0
 
 
 def stamp_publish(args):
     """After a fresh setup: publish the directory's stamp from the toolchain selected now."""
-    session = load_session(args.session)
-    builddir, root = Path(args.builddir), Path(args.root).resolve()
-    if not (builddir / 'build.ninja').is_file():
+    with build_scope(args.root) as state:
+        return stamp_publish_admitted(state)
+
+
+def stamp_publish_admitted(state):
+    session, root = state.session, state.root
+    builddir = root / BUILDDIR
+    if not state.paths.present(BUILDDIR) or not (builddir / 'build.ninja').is_file():
         raise Refusal(f'{builddir.name}/ has no configuration to stamp', 2)
-    if stamp_path(builddir).exists():
+    if os.path.lexists(stamp_path(builddir)):
         raise Refusal(f'{builddir.name}/ already holds {STAMP_NAME}; a fresh setup publishes into a directory without one', 2)
     compilers = read_compilers(builddir)
     if not compilers or 'c' not in compilers:
@@ -576,19 +788,25 @@ def stamp_publish(args):
     for name, value in fields.items():
         if value is None:
             raise Refusal(f'required toolchain observation failed: {name}; a stamp never records an unknown value', 2)
-    atomic_json(stamp_path(builddir), stamp_record(fields, xpc=xpc, source_dir=root))
+    state.paths.write_json(BUILDDIR, STAMP_NAME, stamp_record(fields, xpc=xpc, source_dir=root))
     session.setdefault('builddir', {}).update(stamp_state='published', stamp_scope=dict(xpc=xpc), swift_newly_applicable=False)
     session['toolchain'] = observation
-    save_session(args.session, session)
+    state.save()
     print(f'ok: published {STAMP_NAME} ({len(fields)} fields; Swift {"included" if xpc else "not configured"})')
     return 0
 
 
 def stamp_extend(args):
     """After compiling: the stamp still describes the directory; a Swift compiler discovered by this build extends it."""
-    session = load_session(args.session)
-    builddir, root = Path(args.builddir), Path(args.root).resolve()
-    xpc = args.xpc == '1'
+    with build_scope(args.root) as scope:
+        return stamp_extend_admitted(scope, args.xpc == '1')
+
+
+def stamp_extend_admitted(scope, xpc):
+    session, root = scope.session, scope.root
+    builddir = root / BUILDDIR
+    if not scope.paths.present(BUILDDIR):
+        raise Refusal(f'{builddir.name}/ is absent after compiling; there is no stamp to keep', 2)
     stamp = read_stamp(builddir)
     compilers = read_compilers(builddir) or {}
     if 'c' not in compilers or stamp['fields'].get('compilers.c.command') != compilers['c']['command']:
@@ -609,9 +827,9 @@ def stamp_extend(args):
             name, before, now, kind = difference
             raise Refusal(f'{STAMP_NAME} cannot be extended: {name} is {redact(before)!r} in the stamp but {redact(now)!r} now: {FRESH_REMEDY}', 1)
         retained.update({name: current[name] for name in ('compilers.swift.command', 'compilers.swift.identity')})
-        atomic_json(stamp_path(builddir), stamp_record(retained, xpc=True, source_dir=stamp['source_dir'],
-                                                       published_at=stamp.get('published_at'),
-                                                       extended_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
+        scope.paths.write_json(BUILDDIR, STAMP_NAME, stamp_record(retained, xpc=True, source_dir=stamp['source_dir'],
+                                                                  published_at=stamp.get('published_at'),
+                                                                  extended_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
         state = 'extended'
     elif xpc and stamp['fields'].get('compilers.swift.command') != compilers['swift']['command']:
         raise Refusal(f'{STAMP_NAME} no longer describes the Swift compiler the directory records: {FRESH_REMEDY}', 2)
@@ -620,7 +838,7 @@ def stamp_extend(args):
     session.setdefault('builddir', {})['stamp_after_compile'] = 'extended' if state == 'extended' else before
     session['toolchain'] = observation
     session['meson_options'] = meson_options(builddir)
-    save_session(args.session, session)
+    scope.save()
     print(f'ok: {STAMP_NAME} {state}')
     return 0
 
@@ -640,52 +858,37 @@ def meson_options(builddir):
 
 # ---- fresh mode ---------------------------------------------------------------------------
 
-def owned_components(root, relative):
-    """Every path component below the checkout root, each a real directory of this user or absent."""
-    root = Path(root).resolve()
-    path = root
-    for part in PurePosixPath(relative).parts:
-        path = path / part
-        try:
-            info = os.lstat(path)
-        except FileNotFoundError:
-            return path, False
-        if stat.S_ISLNK(info.st_mode):
-            raise Refusal(f'{path} is a symlink; fresh mode removes only real directories inside the checkout', 2)
-        if not stat.S_ISDIR(info.st_mode):
-            raise Refusal(f'{path} is not a directory; fresh mode cannot replace it', 2)
-        if info.st_uid != os.getuid():
-            raise Refusal(f'{path} is owned by uid {info.st_uid}, not this user; fresh mode does not remove it', 2)
-    if path.resolve() != path:
-        raise Refusal(f'{path} resolves elsewhere; fresh mode removes only real directories inside the checkout', 2)
-    return path, True
-
-
 def fresh_remove(args):
-    session = load_session(args.session)
-    root = Path(args.root).resolve()
-    targets = {'builddir': 'builddir', 'cargo_release': 'controller/target/release'}
-    admitted = {}
-    for name, relative in targets.items():
-        admitted[name] = owned_components(root, relative)
+    with build_scope(args.root) as state:
+        return fresh_remove_admitted(state)
+
+
+def fresh_remove_admitted(state):
+    """Remove the two owned cache areas, both admitted before either is touched, through their held descriptors."""
+    session, root = state.session, state.root
+    targets = {'builddir': BUILDDIR, 'cargo_release': RELEASE}
     replacement = {}
-    for name, (path, existed) in admitted.items():
-        entry = dict(path=str(path.relative_to(root)), existed=existed, removed=False)
-        if existed:
-            failures = []
-            shutil.rmtree(path, onerror=lambda function, failed_path, info: failures.append(str(failed_path)))
-            if failures or path.exists():
-                replacement[name] = entry
-                session['fresh'] = dict(requested=True, replacement=replacement, failed=name)
-                save_session(args.session, session)
-                raise Refusal(f'fresh mode could not remove {path} ({len(failures)} path(s) remain, first: {redact(failures[0]) if failures else path}); '
-                              f'remove it by hand before building again', 1)
-            entry['removed'] = True
+    for name, relative in targets.items():
+        existed = state.paths.present(relative)
+        entry = dict(path=relative, existed=existed, removed=False)
         replacement[name] = entry
+        if not existed:
+            continue
+        failures = []
+        try:
+            state.paths.remove(relative, failures)
+        except OSError as exc:
+            failures.append(f'{root / relative} ({exc.__class__.__name__})')
+        if failures or os.path.lexists(root / relative):
+            session['fresh'] = dict(requested=True, replacement=replacement, failed=name)
+            state.save()
+            raise Refusal(f'fresh mode could not remove {root / relative} ({len(failures)} path(s) remain, first: '
+                          f'{redact(failures[0]) if failures else root / relative}); remove it by hand before building again', 1)
+        entry['removed'] = True
     session['fresh'] = dict(requested=True, replacement=replacement)
     session['builddir'] = dict(configured_before=False, stamp_state='absent', fresh_replaced=replacement['builddir']['removed'])
     session['cargo_release'] = dict(existed_before=replacement['cargo_release']['existed'], fresh_replaced=replacement['cargo_release']['removed'])
-    save_session(args.session, session)
+    state.save()
     print('ok: fresh mode replaced ' + ', '.join(f"{v['path']} ({'removed' if v['removed'] else 'absent'})" for v in replacement.values()))
     return 0
 
@@ -694,13 +897,19 @@ def fresh_remove(args):
 
 def cargo_admit(args):
     """Cargo's effective intermediate directory must be the pinned target directory."""
-    session = load_session(args.session)
-    pinned = Path(args.target_dir).resolve()
+    with build_scope(args.root) as state:
+        return cargo_admit_admitted(state)
+
+
+def cargo_admit_admitted(state):
+    session = state.session
+    pinned = state.root / TARGET
+    manifest_path = state.root / 'controller/Cargo.toml'
     env = dict(os.environ, CARGO_TARGET_DIR=str(pinned))
     cargo = shutil.which('cargo', path=env.get('PATH'))
     if not cargo:
         raise Refusal('cargo is not on PATH; the intermediate directory cannot be established', 2)
-    found = probe([cargo, 'metadata', '--format-version', '1', '--no-deps', '--offline', '--manifest-path', args.manifest_path],
+    found = probe([cargo, 'metadata', '--format-version', '1', '--no-deps', '--offline', '--manifest-path', str(manifest_path)],
                   env=env, limit=4 * 1024 * 1024)
     if found['status'] != 'ok':
         raise Refusal(f"cargo metadata did not report the intermediate directory ({found['kind']}); it cannot be admitted", 2)
@@ -715,22 +924,21 @@ def cargo_admit(args):
                     layout_environment={name: redact(env[name]) for name in CARGO_LAYOUT_ENV if name in os.environ})
     session.setdefault('cargo', {})['admission'] = observed
     if build_directory.resolve() != pinned:
-        save_session(args.session, session)
+        state.save()
         raise Refusal(f'Cargo would keep intermediate release state under {redact(str(build_directory))}, outside the admitted '
                       f'{redact(str(pinned))}; unset CARGO_BUILD_BUILD_DIR or the build.build-dir setting (nothing was removed)', 1)
-    release = pinned / 'release'
-    session['cargo_release'] = dict(session.get('cargo_release', {}), existed_before=release.is_dir(),
+    session['cargo_release'] = dict(session.get('cargo_release', {}), existed_before=state.paths.present(RELEASE),
                                     fresh_replaced=session.get('cargo_release', {}).get('fresh_replaced', False))
-    save_session(args.session, session)
+    state.save()
     print(f'ok: Cargo intermediate and final release state admitted under {pinned}')
     return 0
 
 
-def artifact_messages(path, names):
+def artifact_messages(state, names):
     """The last compiler-artifact message per requested executable name, from Cargo's own report."""
     found = {}
     try:
-        lines = Path(path).read_text().splitlines()
+        lines = state.paths.read_text(TARGET, MESSAGES_NAME).splitlines()
     except OSError as exc:
         raise Refusal(f"Cargo's artifact messages are not readable: {exc}", 2)
     for number, line in enumerate(lines, 1):
@@ -819,10 +1027,15 @@ def flag_source(effective, env, script_default):
 
 
 def cargo_judge(args):
-    session = load_session(args.session)
-    target_dir = Path(args.target_dir).resolve()
+    with build_scope(args.root) as state:
+        return cargo_judge_admitted(state, args)
+
+
+def cargo_judge_admitted(state, args):
+    session = state.session
+    target_dir = state.root / TARGET
     env = dict(os.environ)
-    messages = artifact_messages(args.messages, set(args.bin))
+    messages = artifact_messages(state, set(args.bin))
     judgments = {}
     script_default = {'caller': 'RUSTFLAGS (caller)', 'script': 'RUSTFLAGS (script default)', 'none': 'RUSTFLAGS'}[args.rustflags_source]
     for name in args.bin:
@@ -839,7 +1052,7 @@ def cargo_judge(args):
     session.setdefault('cargo', {})['judgments'] = judgments
     session['cargo']['flag_environment'] = {name: ('set' if name in env else 'unset') for name in CARGO_FLAG_ENV}
     session['cargo']['requested_rustflags'] = dict(source=args.rustflags_source, tokens=env.get('RUSTFLAGS', '').split()[:64])
-    save_session(args.session, session)
+    state.save()
     reused = [name for name, j in judgments.items() if j['status'] != 'reported' or j['fresh']]
     if args.require_rebuilt == '1' and reused:
         raise Refusal('fresh mode requires Cargo to report rebuilding every shipped target, but ' + ', '.join(
@@ -897,7 +1110,12 @@ def output_metadata(path):
 
 
 def sdk_check(args):
-    session = load_session(args.session)
+    with build_scope(args.root) as state:
+        return sdk_check_admitted(state, args)
+
+
+def sdk_check_admitted(state, args):
+    session = state.session
     selected = normalize_version(args.sdk_version)
     if selected is None:
         raise Refusal(f'the selected SDK version {args.sdk_version!r} is not a numeric version; outputs cannot be compared with it', 1)
@@ -915,7 +1133,7 @@ def sdk_check(args):
         elif found != selected:
             problems.append(f"{path}: built against SDK {metadata['sdk']}; the selected SDK is {args.sdk_version}")
     session['sdk_check'] = dict(selected=args.sdk_version, outputs=results, problems=problems)
-    save_session(args.session, session)
+    state.save()
     if problems:
         raise Refusal('shipped outputs disagree with the selected SDK version:\n  ' + '\n  '.join(problems), 1)
     print(f'ok: {len(args.path)} outputs carry SDK {args.sdk_version}')
@@ -923,20 +1141,25 @@ def sdk_check(args):
 
 
 def worker_identity(args):
-    session = load_session(args.session)
+    with build_scope(args.root) as state:
+        return worker_identity_admitted(state, args)
+
+
+def worker_identity_admitted(state, args):
+    session = state.session
     found = probe([args.worker, '--version'])
     if found['status'] != 'ok':
         session['worker_identity'] = dict(status='failed', kind=found['kind'])
-        save_session(args.session, session)
+        state.save()
         raise Refusal(f"the built worker did not report its identity ({found['kind']})", 2)
     match = re.search(r'\babi_identity=([0-9a-f]{64})\b', found['line'])
     if not match:
         session['worker_identity'] = dict(status='failed', kind='malformed_output')
-        save_session(args.session, session)
+        state.save()
         raise Refusal('the built worker reported no abi_identity', 2)
     reported = match.group(1)
     session['worker_identity'] = dict(status='ok', reported=reported, expected=args.expected)
-    save_session(args.session, session)
+    state.save()
     if reported != args.expected:
         raise Refusal(f'the built worker reports identity {reported}, not the generated {args.expected}; '
                       f'the worker in builddir/ was compiled from other identity inputs: {FRESH_REMEDY}', 1)
@@ -1188,51 +1411,34 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, allow_abbrev=False)
     commands = parser.add_subparsers(dest='command', required=True)
 
-    def with_session(sub):
-        sub.add_argument('--session', required=True, type=Path)
+    def owned_helper(name, function):
+        sub = commands.add_parser(name)
+        sub.add_argument('--root', required=True, type=Path, help='the checkout; the session, caches and stamp live at fixed paths below it')
+        sub.set_defaults(run=function)
         return sub
 
-    sub = with_session(commands.add_parser('session-start'))
-    sub.add_argument('--root', required=True, type=Path)
+    sub = owned_helper('session-start', session_start)
     sub.add_argument('--knob', action='append', default=[], metavar='NAME=VALUE')
     sub.add_argument('--describe', required=True)
     sub.add_argument('--commit', required=True)
     sub.add_argument('--version', required=True)
     sub.add_argument('--build-number', required=True)
     sub.add_argument('--sdk-source', default='default', choices=('default', 'caller'))
-    sub.set_defaults(run=session_start)
     for name, function in (('stamp-check', stamp_check), ('stamp-extend', stamp_extend)):
-        sub = with_session(commands.add_parser(name))
-        sub.add_argument('--builddir', required=True, type=Path)
-        sub.add_argument('--root', required=True, type=Path)
-        sub.add_argument('--xpc', required=True, choices=('0', '1'))
-        sub.set_defaults(run=function)
-    sub = with_session(commands.add_parser('stamp-publish'))
-    sub.add_argument('--builddir', required=True, type=Path)
-    sub.add_argument('--root', required=True, type=Path)
-    sub.set_defaults(run=stamp_publish)
-    sub = with_session(commands.add_parser('fresh-remove'))
-    sub.add_argument('--root', required=True, type=Path)
-    sub.set_defaults(run=fresh_remove)
-    sub = with_session(commands.add_parser('cargo-admit'))
-    sub.add_argument('--manifest-path', required=True)
-    sub.add_argument('--target-dir', required=True, type=Path)
-    sub.set_defaults(run=cargo_admit)
-    sub = with_session(commands.add_parser('cargo-judge'))
-    sub.add_argument('--messages', required=True, type=Path)
-    sub.add_argument('--target-dir', required=True, type=Path)
+        owned_helper(name, function).add_argument('--xpc', required=True, choices=('0', '1'))
+    owned_helper('stamp-publish', stamp_publish)
+    owned_helper('fresh-remove', fresh_remove)
+    owned_helper('cargo-admit', cargo_admit)
+    sub = owned_helper('cargo-judge', cargo_judge)
     sub.add_argument('--bin', action='append', required=True)
     sub.add_argument('--require-rebuilt', required=True, choices=('0', '1'))
     sub.add_argument('--rustflags-source', required=True, choices=('caller', 'script', 'none'))
-    sub.set_defaults(run=cargo_judge)
-    sub = with_session(commands.add_parser('sdk-check'))
+    sub = owned_helper('sdk-check', sdk_check)
     sub.add_argument('--sdk-version', required=True)
     sub.add_argument('path', nargs='+')
-    sub.set_defaults(run=sdk_check)
-    sub = with_session(commands.add_parser('worker-identity'))
+    sub = owned_helper('worker-identity', worker_identity)
     sub.add_argument('--worker', required=True)
     sub.add_argument('--expected', required=True)
-    sub.set_defaults(run=worker_identity)
     sub = commands.add_parser('inspect')
     sub.add_argument('app', type=Path)
     sub.set_defaults(run=None)
@@ -1249,6 +1455,9 @@ def main(argv=None):
     except Refusal as exc:
         print(f'ERROR: {exc}', file=sys.stderr)
         return exc.status
+    except OSError as exc:
+        print(f'ERROR: build helper: {exc}', file=sys.stderr)
+        return 2
 
 
 if __name__ == '__main__':

@@ -131,8 +131,13 @@ read-only help/list/invalid requests. A case receipt observes that `owner.json`
 already exists when execution starts.
 
 Held executions prove competing operations fail even for another output path,
-independent checkouts can execute, and a killed dispatcher releases the OS lock
-without inventing run completion. Tests inspect the stable lock inode and retain
+independent checkouts can execute, and a killed dispatcher's case keeps the OS
+lock it was passed until the case is stopped, after which the lock is free and
+no run completion is invented. A second scenario kills the dispatcher and then
+the case process while the case's grandchild runs: the lock stays held until
+the grandchild exits, and the same scenario with a case that drops the
+descriptor (Python's default for its children) observes a free lock, which
+the control must reject. Tests inspect the stable lock inode and retain
 raw command output and receipts. The lock file must never be unlinked, including
 by cleanup: otherwise a second inode could admit a competing operation.
 

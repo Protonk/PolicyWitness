@@ -32,12 +32,14 @@ import signal
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import artifact
 import build_provenance as prov
+import checkout_lock
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
 FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
 WRONG_WORKER = ROOT / 'tests/fixtures/build_refusals/wrong_worker.c'
@@ -141,6 +143,28 @@ def kill_parent():
     return dict(op='kill_parent')
 
 
+def kill_self():
+    return dict(op='kill_self')
+
+
+def signal_owner(lock, name):
+    """Signal the lock's outermost owner, named by the pid its owner record carries."""
+    return dict(op='signal_owner', lock=str(lock), signal=name)
+
+
+def spawn_holder(report, release):
+    """A protected grandchild beyond the wrapper, holding the passed lock descriptors until release exists."""
+    return dict(op='spawn_holder', path=str(report), release=str(release))
+
+
+def probe_lock(lock, report):
+    return dict(op='probe_lock', lock=str(lock), path=str(report))
+
+
+def symlink(path, to):
+    return dict(op='symlink', path=str(path), to=str(to))
+
+
 class Build:
     def __init__(self, name, status, stdout, stderr, receipts, dist, before, root, forward_receipts=()):
         self.name, self.status, self.stdout, self.stderr = name, status, stdout, stderr
@@ -205,7 +229,8 @@ class Checkout:
                          if k not in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DIST_DIR', 'CARGO_TARGET_DIR', 'CARGO_BUILD_TARGET',
                                       'CARGO_BUILD_BUILD_DIR', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS', 'RUSTC',
                                       'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER', 'CC', 'BASH_ENV', 'ENV', 'PW_VERSION', 'PW_BUILD_NUMBER',
-                                      'DEVELOPER_DIR', 'SDKROOT', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE')}
+                                      'DEVELOPER_DIR', 'SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE', 'PW_CHECKOUT_LOCK_FD',
+                                      'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')}
         # Canaries: an unrelated environment value and every wrapped tool's stderr; no record may carry them.
         self.canary = 'PW_CANARY_' + os.urandom(8).hex()
         self.base_env['PW_UNRELATED_CANARY'] = self.canary
@@ -264,7 +289,7 @@ class Checkout:
         return self.dist(variant, name) / 'PolicyWitness.app'
 
     def build(self, name, variant, *, hooks=(), env=None, bin_dir=None, homebrew=True, previous=True, fresh='0',
-              pass_fds=(), claim=None, stderr_canary=True, holder_alive=False):
+              pass_fds=(), claim=None, stderr_canary=True, holder_alive=False, argv=None):
         case = self.out / f'{self.prefix}{variant}-{name}'
         case.mkdir(parents=True)
         dist = self.dist(variant, name)
@@ -290,7 +315,8 @@ class Checkout:
         if claim:
             environment.update(claim)
         forward_before = {name: len(self.forward_receipts(name)) for name in os.listdir(self.forward_dir) if not name.endswith('.jsonl')}
-        status, stdout, stderr = command(case / 'build', ['bash', self.root / 'build.sh'], cwd=self.root, env=environment, pass_fds=pass_fds)
+        status, stdout, stderr = command(case / 'build', argv or ['bash', self.root / 'build.sh'], cwd=self.root, env=environment,
+                                         pass_fds=pass_fds)
         receipts = [json.loads(line) for line in receipt.read_text().splitlines()] if receipt.exists() else []
         forwarded = [dict(r, wrapper=name) for name, count in forward_before.items() for r in self.forward_receipts(name)[count:]]
         build = Build(name, status, stdout, stderr, receipts, dist, before, self.root, forwarded)
@@ -487,44 +513,373 @@ def control_checkout_busy(co, variant):
     return build
 
 
+CLAIM_FD, CLAIM_ROOT, CLAIM_NONCE, CLAIM_CHANNEL = checkout_lock.ENV_FD, checkout_lock.ENV_ROOT, checkout_lock.ENV_NONCE, checkout_lock.ENV_CHANNEL
+
+
+def unclaimed_env():
+    """This process's environment without the claim the dispatcher passed for the real checkout."""
+    return {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+
+
+def wait_for(condition, timeout=120, message='condition'):
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, f'timed out waiting for {message}'
+        time.sleep(0.05)
+
+
+def reread(co, build, variant):
+    """An orphaned build keeps writing after its owner's death; read its output again once the lock is free."""
+    case = co.out / f'{co.prefix}{variant}-{build.name}' / 'build'
+    wait_for(lambda: lock_free(co.root), message=f'{build.name}: the orphaned build to exit')
+    build.stdout = (case / 'stdout').read_text(errors='replace')
+    build.stderr = (case / 'stderr').read_text(errors='replace')
+    return build
+
+
+def tree_snapshot(root):
+    """Every path below root with its kind and, for files, its hash and modification time: creation, change and removal show."""
+    out = {}
+    for path in sorted(root.rglob('*')):
+        info = path.lstat()
+        relative = str(path.relative_to(root))
+        if path.is_symlink():
+            out[relative] = ['symlink', os.readlink(path)]
+        elif path.is_dir():
+            out[relative] = ['dir']
+        else:
+            out[relative] = ['file', hashlib.sha256(path.read_bytes()).hexdigest(), info.st_mtime_ns]
+    return out
+
+
 def control_lock_claim_invalid(co, variant):
-    """A claim the environment makes without a real hold is refused at verification; a competing real holder is unchanged."""
-    builds = []
-    stale = {'PW_CHECKOUT_LOCK_FD': '3', 'PW_CHECKOUT_LOCK_ROOT': str(co.root), 'PW_CHECKOUT_LOCK_NONCE': 'f' * 32}
-    build = co.build('lock_claim_invalid-closed', variant, claim=stale)
-    check(build, 2, 'checkout lock claim is not verified', present=('Verifying the checkout lock',),
-          absent=('Checking limits documentation', 'Building Rust'))
-    assert 'is not open in this process' in build.stderr, build.stderr[-1000:]
-    assert not build.receipts and lock_free(co.root)
-    preserved(build)
-    builds.append(build)
-    # A separately opened descriptor on the real lock's inode, with the owner nonce copied, while the real holder lives.
+    """A claim without a live owner's handoff is refused at verification, before any check, write or tool; a real owner's
+    hold, record and inode are unchanged; and a build whose owner is killed admits no further helper."""
     lock = co.root / 'tests/.checkout.lock'
-    holder = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+    session = co.root / SESSION
+    kept = session.read_bytes() if session.exists() else None
+    nonce = 'f' * 32
+    builds = []
+
+    def refused(build, needle):
+        check(build, 2, 'checkout lock claim is not verified', present=('Verifying the checkout lock',),
+              absent=('Checking limits documentation', 'Build stamp', 'Building Rust'))
+        assert needle in build.stderr, (build.name, needle, build.stderr[-1500:])
+        assert not build.receipts, build.receipts
+        assert (session.read_bytes() if session.exists() else None) == kept, f'{build.name}: a refused claim wrote the session'
+        preserved(build)
+        builds.append(build)
+
+    # A claim left over from an earlier owner names descriptors that are not open here.
+    refused(co.build('lock_claim_invalid-stale', variant, claim={CLAIM_ROOT: str(co.root), CLAIM_NONCE: nonce, CLAIM_CHANNEL: '250',
+                                                                 CLAIM_FD: '251'}), 'is not open in this process')
+    # The pre-handoff form of a claim, a descriptor number without an owner channel, is malformed.
+    refused(co.build('lock_claim_invalid-descriptor-only', variant, claim={CLAIM_FD: '3', CLAIM_ROOT: str(co.root), CLAIM_NONCE: nonce}),
+            'not set')
+    # The review's counterexample: an unheld descriptor on the lock inode while the lock is free, with the nonce of the
+    # record a released owner left. Re-locking that descriptor would have taken the free lock and passed as a hold;
+    # admission refuses it and takes no hold.
+    released, record = checkout_lock.acquire(co.root)
+    os.close(released)
+    unheld = os.open(lock, os.O_RDWR)
+    os.set_inheritable(unheld, True)
     try:
-        fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.ftruncate(holder, 0)
-        os.write(holder, b'{"pid": 0, "started_at_unix_ms": 0, "nonce": "' + b'a' * 32 + b'"}\n')
+        build = co.build('lock_claim_invalid-unheld', variant, pass_fds=(unheld,),
+                         claim={CLAIM_ROOT: str(co.root), CLAIM_NONCE: record['nonce'], CLAIM_CHANNEL: str(unheld), CLAIM_FD: str(unheld)})
+    finally:
+        os.close(unheld)
+    refused(build, 'is not an owner channel')
+    # While a real owner holds the lock: another open on its inode, a wrong nonce over the owner's real channel and another
+    # worktree's claim over it.
+    with checkout_lock.owned(co.root, env=unclaimed_env()) as scope:
+        inode, record = lock.stat().st_ino, lock.read_bytes()
+        claim = scope.child_env({})
         separate = os.open(lock, os.O_RDWR)
+        os.set_inheritable(separate, True)
         try:
-            os.set_inheritable(separate, True)
-            claim = {'PW_CHECKOUT_LOCK_FD': str(separate), 'PW_CHECKOUT_LOCK_ROOT': str(co.root), 'PW_CHECKOUT_LOCK_NONCE': 'a' * 32}
-            build = co.build('lock_claim_invalid-separate', variant, claim=claim, pass_fds=(separate,), holder_alive=True)
+            build = co.build('lock_claim_invalid-separate', variant, holder_alive=True, pass_fds=(separate,),
+                             claim=dict(claim, **{CLAIM_CHANNEL: str(separate), CLAIM_FD: str(separate)}))
         finally:
             os.close(separate)
-        check(build, 2, 'does not hold the lock', present=('Verifying the checkout lock',), absent=('Checking limits documentation',))
-        assert not build.receipts
-        preserved(build)
-        assert not lock_free(co.root), 'the refused claim released the real holder'
-        assert json.loads(lock.read_text())['nonce'] == 'a' * 32, 'the refused claim rewrote the owner record'
-        # Another checkout's claim and another file are refused the same way.
-        other = {'PW_CHECKOUT_LOCK_FD': str(separate), 'PW_CHECKOUT_LOCK_ROOT': '/private/tmp', 'PW_CHECKOUT_LOCK_NONCE': 'a' * 32}
-        build = co.build('lock_claim_invalid-checkout', variant, claim=other, holder_alive=True)
-        check(build, 2, 'another checkout', present=('Verifying the checkout lock',))
-    finally:
-        os.close(holder)
-    builds.append(build)
+        refused(build, 'is not an owner channel')
+        refused(co.build('lock_claim_invalid-nonce', variant, holder_alive=True, pass_fds=scope.pass_fds(),
+                         claim=dict(claim, **{CLAIM_NONCE: nonce})), 'another acquisition')
+        refused(co.build('lock_claim_invalid-checkout', variant, holder_alive=True, pass_fds=scope.pass_fds(),
+                         claim=dict(claim, **{CLAIM_ROOT: '/private/tmp'})), 'another checkout')
+        assert not lock_free(co.root) and (lock.stat().st_ino, lock.read_bytes()) == (inode, record), 'a refused claim changed the real hold'
+    assert lock_free(co.root)
+    # The owner killed mid-build: the build's own processes keep the lock while they run, but the next helper's admission
+    # is refused, so fresh mode removes nothing; the lock is free once the orphaned build exits.
+    assert (co.builddir / 'build.ninja').exists() and co.target.is_dir()
+    gone = co.build('lock_claim_invalid-owner-gone', variant, fresh='1', holder_alive=True,
+                    hooks=[hook('kill-owner', 'cargo', [signal_owner(lock, 'SIGKILL')], first='metadata')])
+    fired_once(gone, 'kill-owner')
+    assert gone.status == -signal.SIGKILL, ('the owner was not the process killed', gone.status)
+    reread(co, gone, variant)
+    assert 'checkout lock claim is not verified: the owner of this claim is gone' in gone.stderr, gone.stderr[-1500:]
+    assert 'Replacing the build caches' in gone.stdout and 'Building Rust' not in gone.stdout, gone.stdout[-1500:]
+    assert (co.builddir / 'build.ninja').exists() and co.target.is_dir(), 'an unadmitted helper removed a cache'
+    assert not gone.calls('cargo', 'build')
+    preserved(gone)
+    builds.append(gone)
     return builds[0]
+
+
+def control_build_requests_missing(co, variant):
+    """A build launched by a Python-only owner, which cannot know the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH or
+    LC_CTYPE, refuses at the lock step before any write, naming the shell front end; a Python owner that supplies an
+    explicitly preserved snapshot builds, and the session records that snapshot."""
+    session = co.root / SESSION
+    kept = session.read_bytes() if session.exists() else None
+    python_only = ['/usr/bin/python3', '-B', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
+                   '/bin/bash', str(co.root / 'build.sh')]
+    build = co.build('build_requests_missing', variant, argv=python_only)
+    check(build, 2, 'holds no preserved build requests', present=('Verifying the checkout lock',),
+          absent=('Checking limits documentation', 'Build stamp'))
+    assert 'tests/lib/checkout_lock.sh' in build.stderr, build.stderr[-1000:]
+    assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
+    preserved(build)
+    snapshot = {name: None for name in checkout_lock.REQUEST_NAMES}
+    supplied = textwrap.dedent(f'''
+        import sys
+        sys.path.insert(0, {str(co.root / 'tests/lib')!r})
+        import checkout_lock
+        with checkout_lock.owned({str(co.root)!r}, requests=checkout_lock.Requests({snapshot!r})) as scope:
+            sys.exit(scope.supervise(['/bin/bash', {str(co.root / 'build.sh')!r}]))
+    ''')
+    neighbour = co.build('build_requests_missing-supplied', variant, argv=['/usr/bin/python3', '-B', '-c', supplied])
+    passing(co, neighbour, variant)
+    assert neighbour.session['requests'] == {name: dict(state='unset') for name in checkout_lock.REQUEST_NAMES}, neighbour.session['requests']
+    return build
+
+
+def control_cache_path_unsafe(co, variant):
+    """A symlink at any component of builddir/, controller/target/ or its release/, or at the session destination, refuses at
+    admission before the session or any cache is written and before any tool runs, in incremental and fresh mode, and
+    nothing outside the checkout is created, changed or removed. A path replaced after one helper admitted it is refused
+    by the next helper's admission. A missing controller/target/ is created beneath the admitted controller/."""
+    outside = co.work / 'outside-caches'
+    if outside.exists():
+        shutil.rmtree(outside)
+    for relative, text in (('target/pw-build-session.json', '{"outside": "session"}\n'), ('target/release/keep', 'outside release\n'),
+                           ('target/debug/keep', 'outside debug\n'), ('builddir/build.ninja', '# outside\n'),
+                           ('builddir/keep', 'outside builddir\n'), ('session.json', 'outside session file\n')):
+        (outside / relative).parent.mkdir(parents=True, exist_ok=True)
+        (outside / relative).write_text(text)
+    expected = tree_snapshot(outside)
+    components = (('controller/target', outside / 'target'), ('controller/target/release', outside / 'target/release'),
+                  ('builddir', outside / 'builddir'), (SESSION, outside / 'session.json'))
+    build = None
+    for relative, target in components:
+        for fresh in ('0', '1'):
+            name = f'cache_path_unsafe-{relative.replace("/", "_")}-{"fresh" if fresh == "1" else "incremental"}'
+            path = co.root / relative
+            parked = co.keep_aside(relative) if os.path.lexists(path) else None
+            path.symlink_to(target)
+            try:
+                build = co.build(name, variant, fresh=fresh)
+            finally:
+                path.unlink()
+                if parked is not None:
+                    co.restore_aside(relative)
+            # The outside tree first: with admission disabled, this is what the original defect overwrote.
+            observed = tree_snapshot(outside)
+            save(co.out / f'{co.prefix}{variant}-{name}' / 'outside.json', dict(expected=expected, observed=observed))
+            assert observed == expected, (name, 'a write, change or removal went through the symlink',
+                                          sorted(k for k in set(observed) | set(expected) if observed.get(k) != expected.get(k))[:5])
+            check(build, 2, '(nothing was written or removed)', present=('Build stamp',),
+                  absent=('Supported macOS', 'Checking the native build directory', 'Replacing the build caches', 'Building Rust'))
+            assert ('is a symlink' if relative != SESSION else 'the destination is unsafe') in build.stderr, build.stderr[-1000:]
+            assert not build.receipts, build.receipts
+            preserved(build)
+    # A path replaced between one helper's admission and the next helper: fresh mode's own admission refuses it.
+    parked_release = co.work / 'parked-release'
+    if parked_release.exists():
+        shutil.rmtree(parked_release)
+    replaced = co.build('cache_path_unsafe-replaced-after-admission', variant, fresh='1',
+                        hooks=[hook('replace-release', 'cargo', [move(co.target, parked_release), symlink(co.target, outside / 'target/release')],
+                                    first='metadata')])
+    try:
+        fired_once(replaced, 'replace-release')
+        check(replaced, 2, 'controller/target/release is a symlink', present=('Replacing the build caches',), absent=('Building Rust',))
+        assert tree_snapshot(outside) == expected, 'fresh mode removed through a replaced path'
+        assert (parked_release / 'policy-witness').exists(), 'the replaced directory was removed through its old name'
+        preserved(replaced)
+    finally:
+        if co.target.is_symlink():
+            co.target.unlink()
+        if parked_release.exists():
+            shutil.move(str(parked_release), str(co.target))
+    # An owned missing path: controller/target/ is created beneath the admitted controller/ and the build packages.
+    co.keep_aside('controller/target')
+    try:
+        created = co.build('cache_path_unsafe-missing-target', variant)
+        passing(co, created, variant)
+        assert created.session['admission']['created'] == ['controller/target'], created.session['admission']
+    finally:
+        shutil.rmtree(co.parked('controller/target'), ignore_errors=True)
+    assert tree_snapshot(outside) == expected
+    return build
+
+
+def lifetime_kill(co, variant, name, bin_dir=None):
+    """The owner, the build's shell and the meson wrapper killed in turn while a holder the wrapper started runs beyond it."""
+    lock = co.root / 'tests/.checkout.lock'
+    report, release = co.work / f'{name}-holder.json', co.work / f'{name}-holder.release'
+    for path in (report, release):
+        path.unlink(missing_ok=True)
+    killed = co.build(name, variant, holder_alive=True, bin_dir=bin_dir,
+                      hooks=[hook('kill-all', 'meson', [spawn_holder(report, release), signal_owner(lock, 'SIGKILL'), kill_parent(), kill_self()],
+                                  when='before', first='compile')])
+    wait_for(lambda: report.exists() and report.read_text().endswith('}'), message='the holder report')
+    holder = json.loads(report.read_text())
+    wait_for(lambda: not alive(holder['wrapper']), message='the wrapper to die')
+    return killed, holder, release
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def battery(co, name):
+    """A competing managed test execution in the disposable checkout: one offline case through the public dispatcher."""
+    out = co.out / f'{co.prefix}battery-{name}'
+    env = dict(co.base_env, PW_TEST_OUT_DIR=f'tests/out/runs/{name}', PYTHONDONTWRITEBYTECODE='1')
+    status, stdout, stderr = command(out, ['bash', co.root / 'tests/run.sh', '--case', 'dispatcher/accounting_controls'],
+                                     cwd=co.root, env=env, timeout=600)
+    return status, stdout + stderr
+
+
+def control_lock_lifetime(co, variant):
+    """How long the hold lasts, observed from outside every owner: a protected holder beyond a killed owner, shell and wrapper
+    keeps the lock, so a competing build, battery and standalone Cargo command refuse until it exits and succeed after; a
+    wrapper that drops the passed descriptor fails the same control; SIGINT and SIGTERM reach the build's process group
+    and the lock is free once it has stopped; the real Cargo, Meson and Ninja pass the descriptor to the compilers; a nested
+    build and a nested owned command succeed under one acquisition; the lock is held through packaging; and an independent
+    worktree is never excluded."""
+    lock = co.root / 'tests/.checkout.lock'
+    observations = {}
+    front_end = ['/bin/bash', str(co.root / 'tests/lib/checkout_lock.sh'), '--root', str(co.root), '--']
+    other = co.work / 'other-worktree'
+    if not other.exists():
+        (other / 'tests/lib').mkdir(parents=True)
+        for name in ('checkout_lock.py', 'checkout_lock.sh'):
+            shutil.copy2(co.root / 'tests/lib' / name, other / 'tests/lib' / name)
+    other_front_end = ['/bin/bash', str(other / 'tests/lib/checkout_lock.sh'), '--root', str(other), '--']
+    killed, holder, release = lifetime_kill(co, variant, 'lifetime-killed')
+    try:
+        assert killed.status == -signal.SIGKILL, ('the owner was not the process killed', killed.status)
+        observations['held_after_kill'] = not lock_free(co.root)
+        assert observations['held_after_kill'], 'the killed owner, shell and wrapper released the hold the holder needs'
+        busy = co.build('lifetime-competing-build', variant, holder_alive=True)
+        check(busy, 2, 'checkout busy', absent=('Verifying the checkout lock',))
+        assert not busy.receipts
+        status, text = battery(co, 'lifetime-competing')
+        observations['battery_refused'] = status == 2 and 'checkout busy' in text
+        assert observations['battery_refused'], (status, text[-1000:])
+        cargo = subprocess.run([*front_end, 'cargo', '--version'], env=co.base_env, capture_output=True, text=True, timeout=60)
+        observations['standalone_cargo_refused'] = cargo.returncode == 2 and 'checkout busy' in cargo.stderr
+        assert observations['standalone_cargo_refused'], (cargo.returncode, cargo.stderr)
+        independent = subprocess.run([*other_front_end, '/usr/bin/true'], env=co.base_env, capture_output=True, text=True, timeout=60)
+        observations['independent_worktree'] = independent.returncode
+        assert independent.returncode == 0, independent.stderr
+        assert alive(holder['holder'])
+    finally:
+        release.touch()
+    wait_for(lambda: not alive(holder['holder']), message='the holder exit')
+    observations['released_after_last_exit'] = lock_free(co.root)
+    assert observations['released_after_last_exit']
+    status, text = battery(co, 'lifetime-after')
+    observations['battery_after'] = status
+    assert status == 0, text[-2000:]
+    # The same control with a wrapper that drops the descriptor (Python's default) observes a free lock while the holder runs.
+    dropping = co.work / 'bin-dropping'
+    if not dropping.exists():
+        dropping.mkdir()
+        text = WRAPPER.read_text()
+        for old in ('pass_fds=lock_fds(), start_new_session=True', 'subprocess.run(executed, pass_fds=lock_fds())'):
+            assert text.count(old) == 1, old
+        text = text.replace('pass_fds=lock_fds(), start_new_session=True', 'start_new_session=True')
+        text = text.replace('subprocess.run(executed, pass_fds=lock_fds())', 'subprocess.run(executed)')
+        for name in WRAPPED:
+            (dropping / name).write_text(text)
+            (dropping / name).chmod(0o755)
+    dropped, dropped_holder, dropped_release = lifetime_kill(co, variant, 'lifetime-dropped', bin_dir=dropping)
+    try:
+        observations['dropped_held_after_kill'] = not lock_free(co.root)
+        assert not observations['dropped_held_after_kill'], 'a wrapper dropping the descriptor still passed the lifetime control'
+        assert alive(dropped_holder['holder'])
+    finally:
+        dropped_release.touch()
+    wait_for(lambda: not alive(dropped_holder['holder']), message='the dropped holder exit')
+    # Orderly cancellation at the owner: the signal reaches the build's process group, the owner returns its status after
+    # the group has stopped, nothing is assembled and the lock is free.
+    for name, code in (('SIGTERM', 128 + signal.SIGTERM), ('SIGINT', 128 + signal.SIGINT)):
+        cancelled = co.build(f'lifetime-{name}', variant, hooks=[hook(f'signal-{name}', 'cargo', [signal_owner(lock, name)], when='before', first='build')])
+        observations[f'{name}_status'] = cancelled.status
+        assert cancelled.status == code, (name, cancelled.status, cancelled.stderr[-1000:])
+        assert 'Assembling app bundle' not in cancelled.stdout
+        assert lock_free(co.root), f'{name}: the lock outlived the cancelled build'
+        preserved(cancelled)
+    # The real Cargo and Meson/Ninja pass the descriptor to the compilers they run, a nested build and a nested owned command
+    # succeed under the outer acquisition, the lock stays held through packaging, and a held independent worktree excludes
+    # nothing here.
+    real_cc = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '-f', 'clang'], text=True).strip()
+    real_rustc = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip() if shutil.which('rustup') else shutil.which('rustc')
+    cc = co.forwarding('cc-lifetime', real_cc, mode='direct')
+    rustc = co.forwarding('rustc-lifetime', real_rustc, mode='direct')
+    probe_report = co.work / 'packaging-probe'
+    probe_report.unlink(missing_ok=True)
+    other_release = co.work / 'other.release'
+    other_release.unlink(missing_ok=True)
+    other_holder = subprocess.Popen([*other_front_end, '/bin/sh', '-c', f'while [ ! -e {shlex.quote(str(other_release))} ]; do sleep 0.05; done'],
+                                    env=co.base_env)
+    try:
+        wait_for(lambda: not lock_free(other), message='the other worktree hold')
+        script = (f'/bin/bash {shlex.quote(str(co.root / "build.sh"))} && /bin/bash {shlex.quote(str(co.root / "tests/lib/checkout_lock.sh"))} '
+                  f'--root {shlex.quote(str(co.root))} -- /usr/bin/python3 -B {shlex.quote(str(co.root / "tests/lib/checkout_lock.py"))} '
+                  f'--verify --root {shlex.quote(str(co.root))} && echo nested-owned-command-admitted')
+        nested = co.build('lifetime-nested', variant, fresh='1', env=dict(CC=str(cc), RUSTC=str(rustc)),
+                          argv=[*front_end, '/bin/bash', '-c', script],
+                          hooks=[hook('probe-packaging', 'codesign', [probe_lock(lock, probe_report)], last=str(co.target / 'sandbox-log-observer'))])
+    finally:
+        other_release.touch()
+        other_holder.wait(timeout=60)
+    passing(co, nested, variant)
+    assert 'nested-owned-command-admitted' in nested.stdout
+    observations['held_through_packaging'] = probe_report.read_text().split()
+    assert observations['held_through_packaging'] == ['held'], observations['held_through_packaging']
+    assert nested.session['lock_nonce'] == json.loads(lock.read_text())['nonce'], 'the nested build did not use the outer acquisition'
+    inode = lock.stat().st_ino
+    compiled = [r for r in nested.forward if r['kind'] == 'compile']
+    for wrapper in ('cc-lifetime', 'rustc-lifetime'):
+        receipts = [r for r in compiled if r['wrapper'] == wrapper]
+        assert receipts, f'{wrapper} compiled nothing'
+        missing = [r['args'][:4] for r in receipts if not (r.get('lock') or {}).get('open') or r['lock'].get('inode') != inode]
+        assert not missing, (wrapper, 'a compiler ran without the lock descriptor', missing[:3])
+    observations['compilers_holding'] = {w: len([r for r in compiled if r['wrapper'] == w]) for w in ('cc-lifetime', 'rustc-lifetime')}
+    # A standalone Cargo command holding the lock excludes a build until it exits.
+    cargo_release = co.work / 'cargo.release'
+    cargo_release.unlink(missing_ok=True)
+    standalone = subprocess.Popen([*front_end, '/bin/sh', '-c', f'cargo --version >/dev/null && while [ ! -e {shlex.quote(str(cargo_release))} ]; do sleep 0.05; done'],
+                                  env=co.base_env)
+    try:
+        wait_for(lambda: not lock_free(co.root), message='the standalone Cargo hold')
+        excluded = co.build('lifetime-excluded-by-cargo', variant, holder_alive=True)
+        check(excluded, 2, 'checkout busy')
+        preserved(excluded)
+    finally:
+        cargo_release.touch()
+        standalone.wait(timeout=60)
+    assert lock_free(co.root)
+    restored = co.build('lifetime-restore', variant, fresh='1')
+    passing(co, restored, variant)
+    save(co.out / f'{co.prefix}{variant}-lock-lifetime.json', observations)
+    return restored
 
 
 def control_sdk_unavailable(co, variant):
@@ -775,27 +1130,6 @@ def control_cargo_build_dir_unknown(co, variant):
                       hooks=[hook('failed-metadata', 'cargo', first='metadata', respond=dict(stdout='', status=101))])
     check(failed, 2, 'did not report the intermediate directory (nonzero_exit)', absent=('Building Rust',))
     preserved(failed)
-    return build
-
-
-def control_fresh_removal_unsafe(co, variant):
-    """A cache path fresh mode cannot admit (a symlink to an external directory) refuses before anything is removed."""
-    elsewhere = co.work / 'external-release'
-    elsewhere.mkdir(exist_ok=True)
-    (elsewhere / 'sentinel').write_text('external\n')
-    parked = co.keep_aside('controller/target/release')
-    co.target.symlink_to(elsewhere)
-    try:
-        build = co.build('fresh_removal_unsafe', variant, fresh='1')
-    finally:
-        co.target.unlink()
-        shutil.move(str(parked), str(co.target))
-    check(build, 2, 'is a symlink; fresh mode removes only real directories', present=('Replacing the build caches',), absent=('Building Rust',))
-    assert (elsewhere / 'sentinel').read_text() == 'external\n'
-    assert (co.builddir / 'build.ninja').exists(), 'the refused admission removed the admitted sibling'
-    assert 'fresh' not in build.session, 'a refused admission must not record a replacement'
-    assert build.record is None
-    preserved(build)
     return build
 
 
@@ -1204,6 +1538,7 @@ def control_fresh_sequence(co, variant):
                            hooks=[hook('kill-before-compile', 'meson', [kill_parent()], when='before', first='compile')])
     assert interrupted.status != 0 and (co.root / STAMP).exists()
     held_after_kill = not lock_free(co.root)
+    assert held_after_kill, 'killing the shell released the hold the orphaned compile carries'
     deadline = time.monotonic() + 600
     while not lock_free(co.root) and time.monotonic() < deadline:
         time.sleep(0.2)
@@ -1343,13 +1678,13 @@ CONTROLS = [
     ('missing_tree_input', ('full', 'partial'), control_missing_tree_input),
     ('checkout_busy', ('full', 'partial'), control_checkout_busy),
     ('lock_claim_invalid', ('full', 'partial'), control_lock_claim_invalid),
+    ('build_requests_missing', ('full', 'partial'), control_build_requests_missing),
     ('sdk_unavailable', ('full', 'partial'), control_sdk_unavailable),
     ('sdk_version_unreadable', ('full', 'partial'), control_sdk_version_unreadable),
     ('builddir_stamp_missing', ('full', 'partial'), control_builddir_stamp_missing),
     ('builddir_stamp_invalid', ('full', 'partial'), control_builddir_stamp_invalid),
     ('cargo_build_dir_redirected', ('full', 'partial'), control_cargo_build_dir_redirected),
     ('cargo_build_dir_unknown', ('full', 'partial'), control_cargo_build_dir_unknown),
-    ('fresh_removal_unsafe', ('full', 'partial'), control_fresh_removal_unsafe),
     ('fresh_removal_failed', ('full', 'partial'), control_fresh_removal_failed),
     ('missing_cargo_output', ('full', 'partial'), control_missing_cargo_output),
     ('cargo_artifact_elsewhere', ('full', 'partial'), control_cargo_artifact_elsewhere),
@@ -1367,6 +1702,7 @@ CONTROLS = [
     ('codesign_failed', ('full', 'partial'), control_codesign_failed),
     ('evidence_failed', ('full', 'partial'), control_evidence_failed),
     ('provenance_required_unknown', ('full', 'partial'), control_provenance_required_unknown),
+    ('cache_path_unsafe', ('full', 'partial'), control_cache_path_unsafe),
     ('verify_failed', ('full', 'partial'), control_verify_failed),
 ]
 # Controls that drive sequences across variants or establish a limit rather than one refusal; run once each.
@@ -1376,6 +1712,7 @@ SEQUENCES = [
     ('fresh_sequence', control_fresh_sequence),
     ('replaced_cached_output', control_replaced_cached_output_is_recorded_not_detected),
     ('release_entrypoints', control_release_entrypoints_enforce_fresh_mode),
+    ('lock_lifetime', control_lock_lifetime),
 ]
 
 
@@ -1428,6 +1765,20 @@ STAMP_CHECK = ('  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py
 WORKER_IDENTITY = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --session "${BUILD_SESSION}" \\\n'
                    '  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"\n')
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
+PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
+
+
+def _admission_disabled(text):
+    """BuildPaths follows symlinks and checks nothing: the session is written wherever the path leads, as before the repair."""
+    for old, new in (('        self.check(relative, info)\n        fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=parent_fd)',
+                      '        fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC, dir_fd=parent_fd)\n        info = os.fstat(fd)'),
+                     ('        """Every admitted component from the root down to relative still names the directory admitted."""\n',
+                      '        """Every admitted component from the root down to relative still names the directory admitted."""\n        return\n'),
+                     ('        """A destination this build replaces: absent, or a regular file of this user with one link."""\n',
+                      '        """A destination this build replaces: absent, or a regular file of this user with one link."""\n        return\n')):
+        assert text.count(old) == 1, old[:80]
+        text = text.replace(old, new)
+    return text
 
 MUTATIONS = [
     ('missing_cargo_output', 'guard removed', lambda t: _remove_block(t, CARGO_OUTPUT_LOOP)),
@@ -1438,6 +1789,7 @@ MUTATIONS = [
     ('builddir_stamp_missing', 'stamp validation removed', lambda t: _remove_block(t, STAMP_CHECK)),
     ('worker_identity_mismatch', 'worker identity check removed', lambda t: _remove_block(t, WORKER_IDENTITY)),
     ('cargo_target_reused', 'rebuild requirement dropped', lambda t: t.replace(REQUIRE_REBUILT, '--require-rebuilt "0"', 1)),
+    ('cache_path_unsafe', 'path admission disabled in the session helper', _admission_disabled, PROVENANCE_HELPER),
 ]
 
 
@@ -1479,26 +1831,38 @@ def demonstrate_bypass(co):
     the build's documentation and identity checks refuse a script that disagrees
     with the manifest or the digest before the guard is reached, which the
     first stage records from the build's stderr; a guard displaced ahead of
-    those checks fails its control by the displacement itself. With the
-    self-checks removed the build runs to the displaced guard, and the second
-    stage shows the control failing there with no self-check involved. A fresh
-    build with the original script precedes the second stage and the repeat,
-    since a mutated run can leave the stamp missing or outputs torn down; the
-    original script then passes the same control again."""
+    those checks, or one in a helper the self-checks do not read, fails its
+    control by the displacement itself. With the self-checks removed the build
+    runs to the displaced guard, and the second stage shows the control failing
+    there with no self-check involved. A fresh build with the original script
+    and helper precedes the second stage and the repeat, since a mutated run can
+    leave the stamp missing or outputs torn down; the original then passes the
+    same control again."""
     results = []
     functions = {refusal: function for refusal, _, function in CONTROLS}
     script = co.root / 'build.sh'
     original = co.script
-    for refusal, label, mutate in MUTATIONS:
-        mutated = mutate(original.decode())
-        assert mutated.encode() != original
+    for refusal, label, mutate, *where in MUTATIONS:
+        target = co.root / (where[0] if where else 'build.sh')
+        kept = target.read_bytes()
+        mutated = mutate(kept.decode())
+        assert mutated.encode() != kept
         stages = {}
         try:
-            for stage, text in (('self_checks', mutated), ('guard', _without_self_checks(mutated))):
+            for stage in ('self_checks', 'guard'):
                 if stage == 'guard':
+                    target.write_bytes(kept)
                     _restore(co, script, original, f'restore-before-guard-{refusal}-')
-                script.write_bytes(text.encode())
-                co.script = text.encode()
+                if target == script:
+                    text = mutated if stage == 'self_checks' else _without_self_checks(mutated)
+                    script.write_bytes(text.encode())
+                    co.script = text.encode()
+                else:
+                    target.write_bytes(mutated.encode())
+                    if stage == 'guard':
+                        text = _without_self_checks(original.decode())
+                        script.write_bytes(text.encode())
+                        co.script = text.encode()
                 co.prefix = f'mutated-{stage}-{refusal}-'
                 co.last = None
                 failure = _control_failure(functions[refusal], co, 'full')
@@ -1507,6 +1871,7 @@ def demonstrate_bypass(co):
                 stages[stage] = dict(control=failure, build=co.last.name, status=co.last.status, stderr=co.last.stderr[-800:],
                                      self_check_refused=any(marker in co.last.stderr for marker in SELF_CHECK_MARKERS))
         finally:
+            target.write_bytes(kept)
             script.write_bytes(original)
             co.script = original
             (co.builddir / 'pw-probe-runner').unlink(missing_ok=True)
@@ -1515,7 +1880,8 @@ def demonstrate_bypass(co):
         co.prefix = f'repeat-{refusal}-'
         functions[refusal](co, 'full')
         co.prefix = ''
-        results.append(dict(refusal=refusal, mutation=label, self_checks=stages['self_checks'], guard=stages['guard']))
+        results.append(dict(refusal=refusal, mutation=label, file=str(target.relative_to(co.root)),
+                            self_checks=stages['self_checks'], guard=stages['guard']))
         print(f"mutation {refusal}: {label}; with the self-checks "
               f"{'refusing the script' if stages['self_checks']['self_check_refused'] else 'passed by the displaced guard'}, "
               f"then failed at the guard: {stages['guard']['control'][:140]}", flush=True)

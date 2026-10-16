@@ -171,27 +171,40 @@ Placement under `runs/` alone does not establish ownership. Planning refusals ex
 After read-only planning, execution takes an OS-held advisory lock on
 `tests/.checkout.lock`, rechecks retention and output eligibility, and holds the
 lock through finalization. The file stays in place between operations; the held
-lock belongs to its inode. PID, start time and nonce in the owner record are
-diagnostic; closing the last descriptor releases the lock, while run records
-determine completion. Nothing unlocks explicitly, because an explicit unlock
-by one holder would also end a hold shared with a child that inherited the
-descriptor.
+lock belongs to its inode. PID, start time and the acquisition nonce in the owner
+record identify the outermost owner; closing the last descriptor releases the
+lock, while run records determine completion. Nothing unlocks explicitly,
+because an explicit unlock by one holder would also end a hold shared with a
+child that holds the same descriptor.
+
+Acquisition, nested admission and protected launches belong to
+`tests/lib/checkout_lock.py`. An owner is a live process whose scope holds the
+lock: it took the lock without blocking, or the owner of an inherited claim on
+this checkout admitted it by handing over the held descriptor over a private
+channel created at launch. Environment values only locate a claim; a claim
+whose owner is gone, a stale, closed or foreign descriptor, a wrong nonce or
+another checkout's claim refuses, and admission never takes a free lock. The
+dispatcher holds its scope through execution and passes the descriptor to each
+case it launches, so a killed dispatcher's case keeps the lock until the case
+and its descendants exit; a Python wrapper between a case and a tool that
+mutates managed state must pass the claim's descriptors on, because Python
+closes them in its children by default.
 
 `build.sh` holds the same lock from its admission through packaging, so one
 checkout runs one build or one execution at a time: a competing build or
 execution gets a checkout-busy error before any cache or distribution
-mutation, even with a different output path. The build takes the lock through
-`tests/lib/checkout_lock.py`, which runs the script under an inherited
-descriptor; the script verifies that claim through the descriptor (open on
-the lock file's inode, already holding the lock, with the owner nonce the
-claim names), never from the environment alone, and the hold lasts until the
-last compiler or tool that inherited the descriptor exits, even when the
-script is killed first. A standalone Cargo invocation against the managed
-`controller/target/` goes through the same helper, which takes the lock or
-shares a verified inherited hold:
+mutation, even with a different output path. A direct build hands itself to
+`tests/lib/checkout_lock.sh`, the shell front end that records the caller's
+`SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE` before the Python
+shim can change them and then starts the owner; the build is admitted through
+the handoff, takes those requests from it and refuses without them. The hold
+lasts until the last compiler or tool that holds the descriptor exits, even
+when the owner and the script are killed first. A standalone Cargo
+invocation against the managed `controller/target/` goes through the same
+front end, which takes the lock or is admitted under an inherited claim:
 
 ```sh
-python3 -B tests/lib/checkout_lock.py -- cargo test --manifest-path controller/Cargo.toml
+tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml
 ```
 
 Alternatively isolate both outputs and intermediates (`CARGO_TARGET_DIR` and

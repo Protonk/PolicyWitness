@@ -80,18 +80,7 @@ class Controls:
                     env=self.env(repo, RETENTION_HOLD=str(release)), stdout=stdout, stderr=stderr)
                 child_pid = None
                 try:
-                    deadline = time.monotonic() + 10
-                    # The receipt exists before its first line is complete; wait for the line, not the file.
-                    first = None
-                    while first is None:
-                        require(process.poll() is None and time.monotonic() < deadline, 'held fixture did not reach execution')
-                        lines = receipt.read_text().splitlines() if receipt.exists() else []
-                        try:
-                            first = json.loads(lines[0]) if lines else None
-                        except ValueError:
-                            first = None
-                        if first is None:
-                            time.sleep(0.02)
+                    first = self.first_receipt(process, receipt)
                     child_pid = first['pid']
                     lock = repo / 'tests/.checkout.lock'
                     inode = lock.stat().st_ino
@@ -111,6 +100,9 @@ class Controls:
                     if crash:
                         process.kill()
                         require(process.wait(timeout=5) != 0, 'crashed owner succeeded')
+                        # The case still holds the descriptor the dispatcher passed: the lock outlives the dispatcher.
+                        busy = self.call(repo, output='tests/out/runs/while-orphaned', code=2, readonly=True)
+                        require(b'checkout busy' in busy.stderr, 'a killed dispatcher released the lock its case holds')
                         os.killpg(child_pid, signal.SIGTERM)
                         child_pid = None
                         require(not (repo / 'tests/out/runs/default/run.json').exists(), 'crash invented completion')
@@ -131,6 +123,90 @@ class Controls:
                         process.kill()
                     process.wait(timeout=5)
             self.completed.append('OS-held checkout lock; owner ' + ('crash' if crash else 'completion'))
+        observed = self.orphaned_grandchild('pass')
+        self.check_orphan(observed)
+        dropped = self.orphaned_grandchild('drop')
+        try:
+            self.check_orphan(dropped)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('a case wrapper that drops the descriptor passed the lifetime control')
+        require(dropped['held_after_kill'] is False, f'the dropping wrapper still held the lock: {dropped}')
+        self.completed.append('the lock outlives a killed dispatcher and case wrapper while a protected grandchild runs; '
+                              'a wrapper that drops the descriptor fails that control')
+
+    def first_receipt(self, process, receipt):
+        deadline = time.monotonic() + 10
+        # The receipt exists before its first line is complete; wait for the line, not the file.
+        while True:
+            require(process.poll() is None and time.monotonic() < deadline, 'held fixture did not reach execution')
+            lines = receipt.read_text().splitlines() if receipt.exists() else []
+            try:
+                if lines:
+                    return json.loads(lines[0])
+            except ValueError:
+                pass
+            time.sleep(0.02)
+
+    def orphaned_grandchild(self, mode):
+        """Kill the dispatcher, then the case process, while the case's grandchild runs; what an outside observer sees."""
+        repo = self.fixture(f'lock-orphan-{mode}')
+        receipt, release, grandchild_release = repo.parent / 'receipts.jsonl', repo.parent / 'release', repo.parent / 'grandchild.release'
+        observed = dict(mode=mode)
+        with (repo.parent / 'held.stdout').open('wb') as stdout, (repo.parent / 'held.stderr').open('wb') as stderr:
+            process = subprocess.Popen(['bash', repo / 'tests/run.sh'], cwd=repo, stdout=stdout, stderr=stderr,
+                                       env=self.env(repo, RETENTION_HOLD=str(release), RETENTION_GRANDCHILD=mode,
+                                                    RETENTION_GRANDCHILD_RELEASE=str(grandchild_release)))
+            first = None
+            try:
+                first = self.first_receipt(process, receipt)
+                process.kill()
+                process.wait(timeout=5)
+                os.killpg(first['pid'], signal.SIGKILL)
+                deadline = time.monotonic() + 10
+                while self.alive(first['pid']):
+                    require(time.monotonic() < deadline, 'the case process survived SIGKILL')
+                    time.sleep(0.02)
+                observed['grandchild_alive_after_kills'] = self.alive(first['grandchild'])
+                competing = subprocess.run(['bash', repo / 'tests/run.sh'], cwd=repo, capture_output=True, timeout=30,
+                                           env=self.env(repo, 'tests/out/runs/while-orphaned'))
+                observed['held_after_kill'] = competing.returncode == 2 and b'checkout busy' in competing.stderr
+                (repo.parent / 'competing.stderr').write_bytes(competing.stderr)
+                grandchild_release.touch()
+                deadline = time.monotonic() + 10
+                while self.alive(first['grandchild']):
+                    require(time.monotonic() < deadline, 'the grandchild did not exit after release')
+                    time.sleep(0.02)
+                after = subprocess.run(['bash', repo / 'tests/run.sh'], cwd=repo, capture_output=True, timeout=30,
+                                       env=self.env(repo, 'tests/out/runs/after-orphan'))
+                observed['after_returncode'] = after.returncode
+            finally:
+                release.touch()
+                grandchild_release.touch()
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+        (repo.parent / 'observed.json').write_text(json.dumps(observed, indent=2))
+        return observed
+
+    @staticmethod
+    def alive(pid):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        try:
+            state = subprocess.run(['/bin/ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True).stdout.strip()
+        except OSError:
+            return True
+        return bool(state) and not state.startswith('Z')
+
+    @staticmethod
+    def check_orphan(observed):
+        require(observed['grandchild_alive_after_kills'], f'the grandchild did not survive: {observed}')
+        require(observed['held_after_kill'], f'a killed dispatcher and wrapper released the lock the grandchild holds: {observed}')
+        require(observed['after_returncode'] == 0, f'the execution after the last exit failed: {observed}')
 
     def pruning(self):
         fresh = self.fixture('prune-without-lock')

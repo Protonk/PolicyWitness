@@ -15,7 +15,10 @@ copy's file name:
   hang_version    never answer a version query
   stderr_canary   text written to stderr on every version query; a record
                   that keeps stderr would carry it
-  receipt         file that receives one JSON line per invocation
+  receipt         file that receives one JSON line per invocation, with the
+                  checkout lock descriptor the claim names, open or not, and
+                  the inode it is open on, so a control can tell whether the
+                  real Cargo, Meson and Ninja passed it to the compiler
 
 A version query is `--version` or `-vV` alone. Every other invocation is
 forwarded unchanged and classified in its receipt: Cargo's capability probes
@@ -41,6 +44,18 @@ def classify(args):
     return 'other'
 
 
+def lock_descriptor():
+    try:
+        fd = int(os.environ.get('PW_CHECKOUT_LOCK_FD', ''))
+    except ValueError:
+        return None
+    try:
+        info = os.fstat(fd)
+    except OSError:
+        return dict(fd=fd, open=False)
+    return dict(fd=fd, open=True, device=info.st_dev, inode=info.st_ino)
+
+
 def main():
     tool = Path(sys.argv[0]).name
     config = json.loads(Path(os.environ['PW_FORWARD_CONFIG']).read_text())[tool]
@@ -52,7 +67,7 @@ def main():
     kind = classify(args)
     if config.get('receipt'):
         with Path(config['receipt']).open('a') as stream:
-            stream.write(json.dumps(dict(tool=tool, real=real, args=args, cwd=os.getcwd(), kind=kind)) + '\n')
+            stream.write(json.dumps(dict(tool=tool, real=real, args=args, cwd=os.getcwd(), kind=kind, lock=lock_descriptor())) + '\n')
     if kind == 'version':
         if config.get('stderr_canary'):
             sys.stderr.write(config['stderr_canary'] + '\n')

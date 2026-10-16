@@ -8,7 +8,7 @@ The build-driving controls in the opt-in preflight cases establish the same
 refusals through the unchanged script.
 """
 import copy
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, ExitStack, redirect_stderr, redirect_stdout
 import fcntl
 import io
 import json
@@ -33,6 +33,19 @@ import signer_check
 import fixture_bundle
 
 PYTHON = '/usr/bin/python3'
+
+
+@contextmanager
+def environment(env):
+    """os.environ replaced for the block, so an in-process helper reads the claim a control set up."""
+    saved = dict(os.environ)
+    os.environ.clear()
+    os.environ.update(env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
 
 
 def run_main(argv, env=None):
@@ -83,99 +96,376 @@ def write_compilers(builddir, swift=False):
     (builddir / 'meson-info/intro-buildoptions.json').write_text(json.dumps([dict(name='xpc', value=swift), dict(name='inspection', value=True)]))
 
 
+UNSET_REQUESTS = checkout_lock.Requests({name: None for name in checkout_lock.REQUEST_NAMES})
+LIB = str(ROOT / 'tests/lib')
+CLAIM = dict(fd=checkout_lock.ENV_FD, root=checkout_lock.ENV_ROOT, nonce=checkout_lock.ENV_NONCE, channel=checkout_lock.ENV_CHANNEL)
+
+
+def clean_env():
+    """This process's environment without the claim the dispatcher passed for the real checkout."""
+    return {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+
+
+def own(test, root, requests=UNSET_REQUESTS):
+    """An in-process owner of a disposable checkout's lock for the test's duration: its scope and a claimed environment."""
+    stack = ExitStack()
+    test.addCleanup(stack.close)
+    scope = stack.enter_context(checkout_lock.owned(root, requests=requests, env=clean_env()))
+    return scope, scope.child_env(clean_env())
+
+
+def lock_free(root):
+    """Whether the lock can be taken now, observed with a separate open from outside every owner."""
+    path = Path(root) / checkout_lock.LOCK
+    if not path.exists():
+        return True
+    fd = os.open(path, os.O_RDWR)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        return False
+    finally:
+        os.close(fd)
+
+
+def wait_for(condition, timeout=20, message='condition'):
+    deadline = time.monotonic() + timeout
+    while not condition():
+        if time.monotonic() > deadline:
+            raise AssertionError(f'timed out waiting for {message}')
+        time.sleep(0.05)
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+# A protected child's wrapper: it runs a grandchild that waits for a release file, passing the claim's descriptors on
+# ('pass') or relying on Python's default, which closes them ('drop').
+WRAPPER = textwrap.dedent('''
+    import json, os, subprocess, sys
+    sys.path.insert(0, sys.argv[1])
+    import checkout_lock
+    mode, release, report = sys.argv[2], sys.argv[3], sys.argv[4]
+    waiter = ('import os, sys, time\\n'
+              'deadline = time.monotonic() + 60\\n'
+              'while not os.path.exists(sys.argv[1]) and time.monotonic() < deadline:\\n'
+              '    time.sleep(0.05)\\n')
+    fds = checkout_lock.inherited_fds() if mode == 'pass' else ()
+    child = subprocess.Popen([sys.executable, '-B', '-c', waiter, release], pass_fds=fds)
+    with open(report, 'w') as stream:
+        json.dump(dict(wrapper=os.getpid(), grandchild=child.pid, passed=list(fds)), stream)
+    child.wait()
+''')
+
+FAKE_OWNER = textwrap.dedent('''
+    import json, os, socket, subprocess, sys, time
+    sys.path.insert(0, sys.argv[1])
+    import checkout_lock
+    root, mode, client, result, release = sys.argv[2:7]
+    fd, record = checkout_lock.acquire(root)
+    server, end = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+    env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+    env.update(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(end.fileno()))
+    subprocess.Popen([sys.executable, '-B', client, sys.argv[1], root, result, release], env=env, pass_fds=(end.fileno(),))
+    end.close()
+    message, fds, _, _ = socket.recv_fds(server, 65536, 4)
+    print('received', flush=True)
+    if mode == 'exit':
+        os._exit(0)   # the lock, the channel and the reply socket close without an answer
+    time.sleep(60)    # the control kills this owner while the client waits
+''')
+
+ADMISSION_CLIENT = textwrap.dedent('''
+    import fcntl, json, os, sys, time
+    sys.path.insert(0, sys.argv[1])
+    import build_provenance, checkout_lock
+    root, result, release = sys.argv[2:5]
+    out = {}
+    try:
+        checkout_lock.admit(root, timeout=20)
+        out['admission'] = 'admitted'
+    except checkout_lock.Refusal as exc:
+        out['admission'] = 'refused: ' + str(exc)
+    # A session helper under the same claim is refused as well and writes nothing.
+    out['session_start'] = build_provenance.main(['session-start', '--root', root, '--describe', 'x', '--commit', 'x',
+                                                  '--version', '0', '--build-number', '0'])
+    lock = os.open(os.path.join(root, 'tests/.checkout.lock'), os.O_RDWR)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        out['free_from_client'] = True
+    except BlockingIOError:
+        out['free_from_client'] = False
+    finally:
+        os.close(lock)
+    with open(result + '.part', 'w') as stream:
+        json.dump(out, stream)
+    os.rename(result + '.part', result)
+    deadline = time.monotonic() + 30
+    while not os.path.exists(release) and time.monotonic() < deadline:
+        time.sleep(0.05)
+''')
+
+
 class LockTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-lock-', dir='/private/tmp')
         self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name).resolve()
-        (self.root / 'tests').mkdir()
+        self.work = Path(directory.name).resolve()
+        self.root = self.work / 'checkout'
+        (self.root / 'tests').mkdir(parents=True)
         self.lock = self.root / checkout_lock.LOCK
+        self.launcher = [PYTHON, '-B', str(ROOT / 'tests/lib/checkout_lock.py'), '--root', str(self.root), '--']
+        self.front_end = ['/bin/bash', str(ROOT / 'tests/lib/checkout_lock.sh'), '--root', str(self.root), '--']
 
-    def probe_free(self):
-        fd = os.open(self.lock, os.O_RDWR)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
-        except BlockingIOError:
-            return False
-        finally:
-            os.close(fd)
+    def script(self, name, text):
+        path = self.work / name
+        path.write_text(text)
+        return path
 
-    def verify_in_child(self, fd, claim):
+    def admit(self, claim, pass_fds=(), root=None):
+        """checkout_lock.admit in a child given only this claim; its status and report. After a refusal the child also
+        reports whether it could take the lock through a separate open, which it cannot while anything holds it."""
         script = textwrap.dedent(f'''
-            import sys
-            sys.path.insert(0, {str(ROOT / "tests/lib")!r})
+            import fcntl, os, sys
+            sys.path.insert(0, {LIB!r})
             import checkout_lock
             try:
-                print("verified", checkout_lock.verify({str(self.root)!r}))
+                admission = checkout_lock.admit({str(root or self.root)!r}, timeout=10)
+                print('admitted', admission.nonce)
             except checkout_lock.Refusal as exc:
-                print("refused", exc)
+                lock = os.open({str(self.lock)!r}, os.O_RDWR)
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    free = 'free'
+                except BlockingIOError:
+                    free = 'held'
+                finally:
+                    os.close(lock)
+                print('refused', free, exc)
                 raise SystemExit(2)
         ''')
-        env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-        env.update(claim)
-        result = subprocess.run([PYTHON, '-c', script], pass_fds=[fd] if fd is not None else (), env=env,
-                                capture_output=True, text=True, timeout=30)
-        return result.returncode, result.stdout.strip()
+        env = dict(clean_env(), **claim)
+        result = subprocess.run([PYTHON, '-B', '-c', script], pass_fds=pass_fds, env=env, capture_output=True, text=True, timeout=60)
+        return result.returncode, result.stdout.strip() + result.stderr.strip()
 
-    def test_lock_claims_are_verified_through_the_descriptor(self):
-        fd, record = checkout_lock.acquire(self.root)
-        try:
-            claim = {checkout_lock.ENV_FD: str(fd), checkout_lock.ENV_ROOT: str(self.root), checkout_lock.ENV_NONCE: record['nonce']}
-            self.assertEqual(self.verify_in_child(fd, claim)[0], 0, 'the inherited descriptor shares the hold')
-            self.assertEqual(self.verify_in_child(fd, dict(claim, **{checkout_lock.ENV_ROOT: '/private/tmp'}))[0], 2, 'another checkout')
-            self.assertEqual(self.verify_in_child(fd, dict(claim, **{checkout_lock.ENV_NONCE: 'f' * 32}))[0], 2, 'a stale nonce')
-            self.assertEqual(self.verify_in_child(None, claim)[0], 2, 'a closed descriptor')
-            other = os.open(self.root / 'tests', os.O_RDONLY)
-            try:
-                os.set_inheritable(other, True)
-                self.assertEqual(self.verify_in_child(other, dict(claim, **{checkout_lock.ENV_FD: str(other)}))[0], 2, 'another file')
-            finally:
-                os.close(other)
-            # A separately opened descriptor on the lock inode, with the owner record copied, is not a hold.
+    def test_claims_are_admitted_only_by_a_live_owners_handoff(self):
+        other = self.work / 'other-worktree'
+        (other / 'tests').mkdir(parents=True)
+        with checkout_lock.owned(other, env=clean_env()):
+            pass  # the other worktree has a lock file of its own, never held below
+        with checkout_lock.owned(self.root, requests=UNSET_REQUESTS, env=clean_env()) as scope:
+            inode, record = self.lock.stat().st_ino, self.lock.read_bytes()
+            claim = {k: v for k, v in scope.child_env({}).items()}
+            status, text = self.admit(claim, scope.pass_fds())
+            self.assertEqual(status, 0, text)
+            self.assertIn('admitted ' + scope.nonce, text)
             separate = os.open(self.lock, os.O_RDWR)
+            os.set_inheritable(separate, True)
             try:
-                os.set_inheritable(separate, True)
-                status, text = self.verify_in_child(separate, dict(claim, **{checkout_lock.ENV_FD: str(separate)}))
-                self.assertEqual(status, 2)
-                self.assertIn('does not hold the lock', text)
+                cases = {
+                    'stale claim (never passed)': (claim, (), None, 'is not open in this process'),
+                    'closed descriptors': (dict(claim, **{CLAIM['channel']: '250', CLAIM['fd']: '251'}), (), None, 'is not open in this process'),
+                    'another open on the lock inode': (dict(claim, **{CLAIM['channel']: str(separate), CLAIM['fd']: str(separate)}), (separate,), None,
+                                                       'is not an owner channel'),
+                    'wrong nonce over the real channel': (dict(claim, **{CLAIM['nonce']: 'f' * 32}), scope.pass_fds(), None, 'another acquisition'),
+                    'another worktree': (dict(claim, **{CLAIM['root']: str(other)}), scope.pass_fds(), None, 'another checkout'),
+                    'another worktree asked of this owner': (dict(claim, **{CLAIM['root']: str(other)}), scope.pass_fds(), other, 'another checkout'),
+                    'malformed claim without a channel': ({CLAIM['fd']: str(scope.fd), CLAIM['root']: str(self.root), CLAIM['nonce']: scope.nonce},
+                                                          (scope.fd,), None, 'not set'),
+                }
+                for label, (case, fds, root, needle) in cases.items():
+                    with self.subTest(claim=label):
+                        status, text = self.admit(case, fds, root)
+                        self.assertEqual(status, 2, text)
+                        self.assertIn(needle, text)
+                        self.assertIn('refused held', text, 'the real owner still holds the lock')
             finally:
                 os.close(separate)
-            self.assertFalse(self.probe_free(), 'refused claims left the real hold in place')
-            self.assertEqual(json.loads(self.lock.read_text())['nonce'], record['nonce'], 'refused claims left the owner record')
+            self.assertFalse(lock_free(self.root), 'refused claims left the real hold in place')
+            self.assertEqual((self.lock.stat().st_ino, self.lock.read_bytes()), (inode, record), 'refused claims left the lock file')
             with self.assertRaises(checkout_lock.Refusal) as busy:
                 checkout_lock.acquire(self.root)
             self.assertIn('checkout busy', str(busy.exception))
-            launcher = [PYTHON, '-B', str(ROOT / 'tests/lib/checkout_lock.py'), '--root', str(self.root), '--']
-            env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-            result = subprocess.run([*launcher, '/usr/bin/true'], env=env, capture_output=True, text=True, timeout=30)
+            result = subprocess.run([*self.launcher, '/usr/bin/true'], env=clean_env(), capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 2)
             self.assertIn('checkout busy', result.stderr)
+        self.assertTrue(lock_free(self.root))
+        self.assertTrue(lock_free(other), 'the other worktree was never held')
+        # An unheld descriptor on the lock inode while the lock is free is no claim, and admission takes no hold:
+        # the child's own separate open can take the lock while it runs.
+        unheld = os.open(self.lock, os.O_RDWR)
+        os.set_inheritable(unheld, True)
+        try:
+            record = json.loads(self.lock.read_text())
+            status, text = self.admit({CLAIM['fd']: str(unheld), CLAIM['channel']: str(unheld), CLAIM['root']: str(self.root),
+                                       CLAIM['nonce']: record['nonce']}, (unheld,))
         finally:
-            os.close(fd)
-        self.assertTrue(self.probe_free())
-        # The launcher's command verifies its own claim, and a nested launcher shares it without deadlock.
-        nested = (f'{PYTHON} -B {ROOT / "tests/lib/checkout_lock.py"} --verify --root {self.root} && '
-                  f'{PYTHON} -B {ROOT / "tests/lib/checkout_lock.py"} --root {self.root} -- /bin/sh -c "echo nested $PW_CHECKOUT_LOCK_FD"')
-        result = subprocess.run([*launcher, '/bin/sh', '-c', nested], env=env, capture_output=True, text=True, timeout=30)
+            os.close(unheld)
+        self.assertEqual(status, 2, text)
+        self.assertIn('refused free', text, 'the refused claim created a hold')
+        self.assertTrue(lock_free(self.root))
+        # Nesting: a launched command's nested launcher is admitted by its owner and serves its own command.
+        nested = (f'{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} && '
+                  f'{PYTHON} -B {LIB}/checkout_lock.py --root {self.root} -- /bin/sh -c '
+                  f'"{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} && echo nested"')
+        result = subprocess.run([*self.launcher, '/bin/sh', '-c', nested], env=clean_env(), capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('ok: inherited descriptor', result.stdout)
+        self.assertEqual(result.stderr.count('ok: admitted by the owner'), 2, result.stderr)
         self.assertIn('nested', result.stdout)
-        self.assertTrue(self.probe_free())
-        # The hold outlives a killed launcher command while a descendant that inherited the descriptor runs.
-        holder = subprocess.Popen([*launcher, '/bin/sh', '-c', 'sleep 3 & wait'], env=env, start_new_session=True)
-        deadline = time.monotonic() + 10
-        while self.probe_free() and time.monotonic() < deadline:
-            time.sleep(0.05)
-        self.assertFalse(self.probe_free(), 'the launched command did not take the lock')
-        time.sleep(0.3)
-        holder.kill()
-        holder.wait(timeout=5)
-        self.assertFalse(self.probe_free(), 'killing the shell released a hold its child still carries')
-        deadline = time.monotonic() + 10
-        while not self.probe_free() and time.monotonic() < deadline:
-            time.sleep(0.1)
-        self.assertTrue(self.probe_free(), 'the hold did not end when the last descendant exited')
+        self.assertTrue(lock_free(self.root))
+
+    def test_owner_exit_during_admission_creates_no_hold(self):
+        owner, client = self.script('fake_owner.py', FAKE_OWNER), self.script('client.py', ADMISSION_CLIENT)
+        for mode in ('exit', 'killed'):
+            with self.subTest(owner=mode):
+                result, release = self.work / f'{mode}.json', self.work / f'{mode}.release'
+                process = subprocess.Popen([PYTHON, '-B', str(owner), LIB, str(self.root), mode, str(client), str(result), str(release)],
+                                           env=clean_env(), stdout=subprocess.PIPE, text=True)
+                try:
+                    self.assertEqual(process.stdout.readline().strip(), 'received', 'the owner never received the request')
+                    if mode == 'killed':
+                        process.kill()
+                    process.wait(timeout=10)
+                    wait_for(result.exists, message='the client result')
+                    out = json.loads(result.read_text())
+                    self.assertTrue(out['admission'].startswith('refused: the owner of this claim is gone'), out)
+                    self.assertEqual(out['session_start'], 2, out)
+                    self.assertTrue(out['free_from_client'], 'the client holds the lock under the old acquisition')
+                    self.assertTrue(lock_free(self.root), 'a hold outlived the owner without a protected child')
+                    self.assertFalse((self.root / 'controller/target/pw-build-session.json').exists())
+                finally:
+                    release.touch()
+                    if process.poll() is None:
+                        process.kill()
+                        process.wait()
+                    process.stdout.close()
+
+    def lifetime(self, mode):
+        """Kill the owner and the wrapper while a grandchild runs; what an outside observer sees."""
+        report, release = self.work / f'{mode}-pids.json', self.work / f'{mode}.release'
+        wrapper = self.script('wrapper.py', WRAPPER)
+        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', str(wrapper), LIB, mode, str(release), str(report)],
+                                 env=clean_env(), start_new_session=True)
+        observed = {}
+        try:
+            wait_for(report.exists, message='the wrapper')
+            wait_for(lambda: report.read_text().endswith('}'), message='the wrapper report')
+            pids = json.loads(report.read_text())
+            observed['held_while_running'] = not lock_free(self.root)
+            os.kill(owner.pid, signal.SIGKILL)
+            owner.wait(timeout=10)
+            os.kill(pids['wrapper'], signal.SIGKILL)
+            wait_for(lambda: not alive(pids['wrapper']), message='the wrapper exit')
+            observed['grandchild_alive_after_kills'] = alive(pids['grandchild'])
+            observed['held_after_kill'] = not lock_free(self.root)
+            competing = subprocess.run([*self.launcher, '/usr/bin/true'], env=clean_env(), capture_output=True, text=True, timeout=30)
+            observed['competitor_refused'] = competing.returncode == 2 and 'checkout busy' in competing.stderr
+            release.touch()
+            wait_for(lambda: not alive(pids['grandchild']), message='the grandchild exit')
+            observed['released_after_last_exit'] = lock_free(self.root)
+            after = subprocess.run([*self.launcher, '/usr/bin/true'], env=clean_env(), capture_output=True, text=True, timeout=30)
+            observed['competitor_after'] = after.returncode
+        finally:
+            release.touch()
+            if owner.poll() is None:
+                owner.kill()
+                owner.wait()
+        return observed
+
+    @staticmethod
+    def check_lifetime(observed):
+        assert observed['held_while_running'], observed
+        assert observed['grandchild_alive_after_kills'], observed
+        assert observed['held_after_kill'], ('the killed owner and wrapper released a hold the grandchild needs', observed)
+        assert observed['competitor_refused'], observed
+        assert observed['released_after_last_exit'] and observed['competitor_after'] == 0, observed
+
+    def test_protected_children_keep_the_hold_after_the_owner_dies(self):
+        passing = self.lifetime('pass')
+        self.check_lifetime(passing)
+        # A wrapper that drops the passed descriptor (Python's default) must fail the same control.
+        dropping = self.lifetime('drop')
+        with self.assertRaises(AssertionError):
+            self.check_lifetime(dropping)
+        self.assertFalse(dropping['held_after_kill'], dropping)
+        # Orderly cancellation: SIGINT and SIGTERM reach the command's process group, the launcher returns its status
+        # after it exits, and the lock is free; SIGKILL leaves the command holding the lock until it exits.
+        trap = ('trap "echo int > $0; exit 130" INT; trap "echo term > $0; exit 143" TERM; echo ready > $0.ready; '
+                'while :; do sleep 0.05; done')
+        for signum, word, code in ((signal.SIGINT, 'int', 130), (signal.SIGTERM, 'term', 143)):
+            with self.subTest(signal=word):
+                marker = self.work / f'{word}.marker'
+                process = subprocess.Popen([*self.launcher, '/bin/bash', '-c', trap, str(marker)], env=clean_env(), start_new_session=True)
+                wait_for(Path(str(marker) + '.ready').exists, message='the trapping command')
+                os.kill(process.pid, signum)
+                self.assertEqual(process.wait(timeout=20), code)
+                self.assertEqual(marker.read_text().strip(), word, 'the signal was not forwarded to the command')
+                self.assertTrue(lock_free(self.root))
+        marker = self.work / 'kill.marker'
+        process = subprocess.Popen([*self.launcher, '/bin/bash', '-c', trap, str(marker)], env=clean_env(), start_new_session=True)
+        wait_for(Path(str(marker) + '.ready').exists, message='the trapping command')
+        os.kill(process.pid, signal.SIGKILL)
+        process.wait(timeout=10)
+        self.assertFalse(lock_free(self.root), 'a killed launcher released the lock its command holds')
+        children = subprocess.run(['/usr/bin/pgrep', '-f', str(marker)], capture_output=True, text=True).stdout.split()
+        for pid in children:
+            try:
+                os.killpg(int(pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+        wait_for(lambda: lock_free(self.root), message='release after the orphaned command exits')
+
+    def test_requests_are_captured_before_python_and_handed_to_nested_owners(self):
+        caller = {k: v for k, v in clean_env().items() if k not in checkout_lock.REQUEST_NAMES}
+        caller.update(CPATH='', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man')  # SDKROOT and LC_CTYPE unset
+        expected = {name: caller.get(name) for name in checkout_lock.REQUEST_NAMES}
+        report = (f'for n in SDKROOT CPATH LIBRARY_PATH MANPATH LC_CTYPE; do '
+                  f'if [[ -n "${{!n+set}}" ]]; then printf "%s set %s\\n" "$n" "$(printf %s "${{!n}}" | xxd -p | tr -d "\\n")"; '
+                  f'else printf "%s unset\\n" "$n"; fi; done; '
+                  f'{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} --build-requests; '
+                  f'CPATH=/inner/include /bin/bash {LIB}/checkout_lock.sh --root {self.root} -- '
+                  f'{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} --build-requests')
+        result = subprocess.run([*self.front_end, '/bin/bash', '-c', report], env=caller, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = result.stdout.splitlines()
+        seen = {}
+        for line in lines[:5]:
+            name, state, *value = line.split(' ')
+            seen[name] = bytes.fromhex(value[0]).decode() if state == 'set' else None
+        self.assertEqual(seen, expected, 'the command did not see the caller\'s values restored')
+        handed = [line.split(' ') for line in lines[5:10]]
+        decoded = {words[1]: (bytes.fromhex(words[3]).decode() if words[2] == 'set' else None) for words in handed}
+        self.assertEqual(decoded, expected, 'the owner did not hand over the requests the front end recorded')
+        self.assertEqual(lines[10:15], lines[5:10], 'a nested launcher must hand over its owner\'s requests, not its own environment')
+        # Without the front end the owner holds no requests and a build is refused; ownership alone needs none.
+        bare = subprocess.run([*self.launcher, PYTHON, '-B', f'{LIB}/checkout_lock.py', '--verify', '--root', str(self.root), '--build-requests'],
+                              env=caller, capture_output=True, text=True, timeout=30)
+        self.assertEqual(bare.returncode, 2)
+        self.assertIn('holds no preserved build requests', bare.stderr)
+        plain = subprocess.run([*self.launcher, PYTHON, '-B', f'{LIB}/checkout_lock.py', '--verify', '--root', str(self.root)],
+                               env=caller, capture_output=True, text=True, timeout=30)
+        self.assertEqual(plain.returncode, 0, plain.stderr)
+        # Malformed or incomplete request options refuse before the lock is taken.
+        for options in (['--request', 'BOGUS=1'], ['--request', 'SDKROOT=/x', '--request', 'SDKROOT=/y'], ['--request', 'SDKROOT=/x']):
+            with self.subTest(options=options):
+                refused = subprocess.run([PYTHON, '-B', f'{LIB}/checkout_lock.py', '--root', str(self.root), *options, '--', '/usr/bin/true'],
+                                         env=caller, capture_output=True, text=True, timeout=30)
+                self.assertEqual(refused.returncode, 2)
+                self.assertIn('request', refused.stderr)
+        self.assertTrue(lock_free(self.root))
+        # A Python caller of the owned scope supplies its snapshot explicitly; a nested scope cannot supply its own.
+        snapshot = checkout_lock.Requests(dict(expected))
+        with checkout_lock.owned(self.root, requests=snapshot, env=clean_env()) as scope:
+            self.assertEqual(scope.child_env({'SDKROOT': '/shim'}).get('SDKROOT'), None)
+            with self.assertRaises(checkout_lock.Refusal):
+                with checkout_lock.owned(self.root, requests=snapshot, env=scope.child_env(clean_env())):
+                    pass
 
 
 class ProbeTests(unittest.TestCase):
@@ -216,8 +506,8 @@ class StampTests(unittest.TestCase):
         (self.root / 'controller').mkdir()
         self.builddir = self.root / 'builddir'
         self.session = self.root / 'controller/target/pw-build-session.json'
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-        status, _, err = run_main(['session-start', '--session', str(self.session), '--root', str(self.root), '--knob', 'BUILD_XPC=0',
+        self.scope, self.env = own(self, self.root)
+        status, _, err = run_main(['session-start', '--root', str(self.root), '--knob', 'BUILD_XPC=0',
                                    '--describe', 'v0.0.0-control', '--commit', 'c' * 40, '--version', '0.0.0', '--build-number', '1'], self.env)
         self.assertEqual(status, 0, err)
         self.observation = fake_observation()
@@ -231,13 +521,13 @@ class StampTests(unittest.TestCase):
         write_compilers(self.builddir, swift)
 
     def check(self, xpc='0'):
-        return run_main(['stamp-check', '--session', str(self.session), '--builddir', str(self.builddir), '--root', str(self.root), '--xpc', xpc], self.env)
+        return run_main(['stamp-check', '--root', str(self.root), '--xpc', xpc], self.env)
 
     def publish(self):
-        return run_main(['stamp-publish', '--session', str(self.session), '--builddir', str(self.builddir), '--root', str(self.root)], self.env)
+        return run_main(['stamp-publish', '--root', str(self.root)], self.env)
 
     def extend(self, xpc):
-        return run_main(['stamp-extend', '--session', str(self.session), '--builddir', str(self.builddir), '--root', str(self.root), '--xpc', xpc], self.env)
+        return run_main(['stamp-extend', '--root', str(self.root), '--xpc', xpc], self.env)
 
     def test_stamp_states_are_decided_without_adopting_unknowns(self):
         stamp = self.builddir / prov.STAMP_NAME
@@ -351,12 +641,12 @@ class FreshRemovalTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
         self.session = self.root / 'controller/target/pw-build-session.json'
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-        self.assertEqual(run_main(['session-start', '--session', str(self.session), '--root', str(self.root), '--describe', 'x', '--commit', 'x',
+        self.scope, self.env = own(self, self.root)
+        self.assertEqual(run_main(['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], self.env)[0], 0)
 
     def remove(self):
-        return run_main(['fresh-remove', '--session', str(self.session), '--root', str(self.root)], self.env)
+        return run_main(['fresh-remove', '--root', str(self.root)], self.env)
 
     def intact(self):
         for path, text in self.sentinels.items():
@@ -365,48 +655,37 @@ class FreshRemovalTests(unittest.TestCase):
     def test_fresh_removal_admits_only_owned_real_directories(self):
         (self.root / 'builddir/meson-info/keep').write_text('cache')
         (self.root / 'controller/target/release/deps/keep').write_text('cache')
+        (self.root / 'controller/target/release/deps/link').symlink_to(self.work / 'outside/keep')
         status, out, err = self.remove()
         self.assertEqual(status, 0, err)
         self.assertFalse((self.root / 'builddir').exists())
         self.assertFalse((self.root / 'controller/target/release').exists())
-        self.intact()
+        self.intact()  # a symlink inside a removed directory is unlinked, never followed
         session = json.loads(self.session.read_text())
         self.assertEqual({k: v['removed'] for k, v in session['fresh']['replacement'].items()}, {'builddir': True, 'cargo_release': True})
         status, _, _ = self.remove()
         self.assertEqual(status, 0, 'absent directories are not an error')
         self.assertEqual({k: v['existed'] for k, v in json.loads(self.session.read_text())['fresh']['replacement'].items()},
                          {'builddir': False, 'cargo_release': False})
-        # A symlinked parent redirecting outside the checkout refuses before anything is removed.
+        # A symlinked component redirecting outside the checkout refuses at admission, before anything is removed.
         (self.root / 'builddir').mkdir()
         (self.root / 'builddir/keep').write_text('rebuilt')
-        shutil.rmtree(self.root / 'controller/target/debug')
         (self.work / 'elsewhere/release').mkdir(parents=True)
         (self.work / 'elsewhere/release/keep').write_text('external')
-        shutil.rmtree(self.root / 'controller/target')
-        (self.root / 'controller/target').symlink_to(self.work / 'elsewhere')
-        session_elsewhere = self.work / 'elsewhere/pw-build-session.json'
-        self.assertEqual(run_main(['session-start', '--session', str(session_elsewhere), '--root', str(self.root), '--describe', 'x',
-                                   '--commit', 'x', '--version', '0', '--build-number', '0'], self.env)[0], 0)
-        status, _, err = run_main(['fresh-remove', '--session', str(session_elsewhere), '--root', str(self.root)], self.env)
-        self.assertEqual(status, 2)
-        self.assertIn('is a symlink', err)
+        (self.root / 'controller/target/release').symlink_to(self.work / 'elsewhere/release')
+        status, _, err = self.remove()
+        self.assertEqual(status, 2, err)
+        self.assertIn('is a symlink; the build admits only real directories', err)
         self.assertEqual((self.work / 'elsewhere/release/keep').read_text(), 'external')
         self.assertEqual((self.root / 'builddir/keep').read_text(), 'rebuilt', 'a refused admission removes nothing, not even the admitted sibling')
-        (self.root / 'controller/target').unlink()
-        (self.root / 'controller/target').mkdir()
-        (self.root / 'controller/target/release').symlink_to(self.work / 'elsewhere/release')
-        status, _, err = run_main(['fresh-remove', '--session', str(session_elsewhere), '--root', str(self.root)], self.env)
-        self.assertEqual(status, 2)
-        self.assertEqual((self.work / 'elsewhere/release/keep').read_text(), 'external')
         (self.root / 'controller/target/release').unlink()
         (self.root / 'controller/target/release').write_text('a file, not a directory')
-        status, _, err = run_main(['fresh-remove', '--session', str(session_elsewhere), '--root', str(self.root)], self.env)
+        status, _, err = self.remove()
         self.assertEqual(status, 2)
-        self.assertIn('not a directory', err)
+        self.assertIn('is not a directory', err)
         (self.root / 'controller/target/release').unlink()
         # A removal that fails stops the build with the path; the session records the failure.
         (self.root / 'controller/target/release').mkdir()
-        self.session.write_text(session_elsewhere.read_text())
         locked = self.root / 'builddir/immutable'
         locked.write_text('x')
         subprocess.run(['/usr/bin/chflags', 'uchg', str(locked)], check=True)
@@ -418,6 +697,159 @@ class FreshRemovalTests(unittest.TestCase):
         self.assertIn('could not remove', err)
         self.assertEqual(json.loads(self.session.read_text())['fresh'].get('failed'), 'builddir')
         self.assertTrue((self.root / 'controller/target/release').exists(), 'a failed removal stops before the next root')
+        self.intact()
+
+
+class OwnershipAndAdmissionTests(unittest.TestCase):
+    """Helpers refuse before any write without a live owner's handoff, a valid session or admitted paths."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-admit-', dir='/private/tmp')
+        self.addCleanup(directory.cleanup)
+        self.work = Path(directory.name).resolve()
+        self.root = self.work / 'checkout'
+        (self.root / 'controller').mkdir(parents=True)
+        self.outside = self.work / 'outside'
+        self.outside.mkdir()
+        (self.outside / 'pw-build-session.json').write_text('outside session\n')
+        (self.outside / 'release').mkdir()
+        (self.outside / 'release/keep').write_text('outside release\n')
+        (self.outside / 'builddir').mkdir()
+        (self.outside / 'builddir/keep').write_text('outside builddir\n')
+        self.session = self.root / 'controller/target/pw-build-session.json'
+
+    def outside_inventory(self):
+        return {str(p.relative_to(self.outside)): (p.is_symlink(), p.read_bytes() if p.is_file() and not p.is_symlink() else None)
+                for p in sorted(self.outside.rglob('*'))}
+
+    def start(self, env):
+        return run_main(['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x', '--version', '0',
+                         '--build-number', '0'], env)
+
+    def test_helpers_refuse_without_ownership(self):
+        bare = clean_env()
+        (self.root / 'builddir').mkdir()
+        (self.root / 'builddir/build.ninja').write_text('# control\n')
+        write_compilers(self.root / 'builddir')
+        (self.root / 'controller/target/release').mkdir(parents=True)
+        (self.root / 'controller/target/release/keep').write_text('cache')
+        # No claim at all: session writes, fresh removal and stamp publication refuse before writing.
+        for argv in (['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x', '--version', '0', '--build-number', '0'],
+                     ['fresh-remove', '--root', str(self.root)], ['stamp-publish', '--root', str(self.root)]):
+            with self.subTest(helper=argv[0], claim='none'):
+                status, _, err = run_main(argv, bare)
+                self.assertEqual(status, 2, err)
+                self.assertIn('build helpers mutate only under an owned build', err)
+        self.assertFalse(self.session.exists())
+        self.assertTrue((self.root / 'controller/target/release/keep').exists() and (self.root / 'builddir/build.ninja').exists())
+        self.assertFalse((self.root / 'builddir' / prov.STAMP_NAME).exists())
+        scope, env = own(self, self.root)
+        original = prov.observe_toolchain
+        prov.observe_toolchain = lambda *a, **k: fake_observation()
+        self.addCleanup(setattr, prov, 'observe_toolchain', original)
+        # A session without a nonce, with another acquisition's nonce or with a malformed one is stale.
+        self.assertEqual(self.start(env)[0], 0)
+        valid = json.loads(self.session.read_text())
+        self.assertEqual(valid['lock_nonce'], scope.nonce)
+        for label, nonce in (('missing', None), ('another hold', 'e' * 32), ('malformed', 'not-a-nonce')):
+            for argv in (['fresh-remove', '--root', str(self.root)], ['stamp-publish', '--root', str(self.root)]):
+                with self.subTest(session=label, helper=argv[0]):
+                    session = dict(valid)
+                    if nonce is None:
+                        session.pop('lock_nonce')
+                    else:
+                        session['lock_nonce'] = nonce
+                    self.session.write_text(json.dumps(session))
+                    status, _, err = run_main(argv, env)
+                    self.assertEqual(status, 2, err)
+                    self.assertIn('the session is stale', err)
+                    self.assertTrue((self.root / 'controller/target/release/keep').exists(), 'a stale session removed a cache')
+                    self.assertFalse((self.root / 'builddir' / prov.STAMP_NAME).exists(), 'a stale session published a stamp')
+        # The valid owned neighbours succeed.
+        self.assertEqual(self.start(env)[0], 0)
+        status, _, err = run_main(['stamp-publish', '--root', str(self.root)], env)
+        self.assertEqual(status, 0, err)
+        status, _, err = run_main(['fresh-remove', '--root', str(self.root)], env)
+        self.assertEqual(status, 0, err)
+        self.assertFalse((self.root / 'controller/target/release').exists())
+        # A claim whose owner is gone admits nothing new.
+        claimed = dict(env)
+        scope.server.close()
+        status, _, err = self.start(claimed)
+        self.assertEqual(status, 2, err)
+        self.assertIn('the owner of this claim is gone', err)
+
+    def test_cache_paths_are_admitted_before_any_write(self):
+        scope, env = own(self, self.root)
+        before = self.outside_inventory()
+        components = {
+            'controller/target': self.outside,
+            'controller/target/release': self.outside / 'release',
+            'builddir': self.outside / 'builddir',
+            'controller/target/pw-build-session.json': self.outside / 'pw-build-session.json',
+        }
+        for relative, target in components.items():
+            with self.subTest(symlink=relative):
+                path = self.root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.symlink_to(target)
+                try:
+                    status, _, err = self.start(env)
+                finally:
+                    path.unlink()
+                self.assertEqual(status, 2, err)
+                self.assertIn('(nothing was written or removed)', err)
+                self.assertEqual(self.outside_inventory(), before, 'admission let a write through the symlink')
+                self.assertFalse(self.session.exists())
+        # A component that is not a directory, a session destination that is a directory or hard-linked, and another
+        # user's directory are refused the same way.
+        (self.root / 'builddir').write_text('a file')
+        status, _, err = self.start(env)
+        self.assertEqual(status, 2)
+        self.assertIn('builddir is not a directory', err)
+        (self.root / 'builddir').unlink()
+        self.session.mkdir()
+        status, _, err = self.start(env)
+        self.assertEqual(status, 2)
+        self.assertIn('the destination is unsafe', err)
+        self.session.rmdir()
+        os.link(self.outside / 'pw-build-session.json', self.session)
+        status, _, err = self.start(env)
+        self.assertEqual(status, 2)
+        self.assertIn('with one link', err)
+        self.session.unlink()
+        from unittest import mock
+        with mock.patch.object(prov.os, 'getuid', return_value=os.getuid() + 1):
+            status, _, err = self.start(env)
+        self.assertEqual(status, 2)
+        self.assertIn('is owned by uid', err)
+        self.assertFalse(self.session.exists())
+        # An owned missing path is created only beneath the admitted controller/.
+        shutil.rmtree(self.root / 'controller/target')
+        status, out, err = self.start(env)
+        self.assertEqual(status, 0, err)
+        self.assertEqual(json.loads(self.session.read_text())['admission']['created'], ['controller/target'])
+        self.assertEqual(self.outside_inventory(), before)
+        # A path replaced between admission and use: the write is refused, never made through the replacement.
+        with environment(env), prov.build_scope(self.root) as state:
+            (self.root / 'controller/target').rename(self.work / 'moved-target')
+            (self.root / 'controller/target').symlink_to(self.outside)
+            with self.assertRaises(prov.Refusal) as replaced:
+                state.save()
+            self.assertIn('was replaced after admission', str(replaced.exception))
+        (self.root / 'controller/target').unlink()
+        (self.work / 'moved-target').rename(self.root / 'controller/target')
+        self.assertEqual(self.outside_inventory(), before)
+        (self.root / 'builddir').mkdir()
+        (self.root / 'builddir/keep').write_text('cache')
+        with environment(env), prov.build_scope(self.root) as state:
+            (self.root / 'builddir').rename(self.work / 'moved-builddir')
+            (self.root / 'builddir').symlink_to(self.outside / 'builddir')
+            with self.assertRaises(prov.Refusal) as replaced:
+                prov.fresh_remove_admitted(state)
+            self.assertIn('was replaced after admission', str(replaced.exception))
+        self.assertEqual(self.outside_inventory(), before, 'a removal followed a replaced path')
+        self.assertEqual((self.work / 'moved-builddir/keep').read_text(), 'cache', 'the moved directory was removed through its old descriptor')
 
 
 class CargoJudgmentTests(unittest.TestCase):
@@ -429,8 +861,9 @@ class CargoJudgmentTests(unittest.TestCase):
         self.release = self.target / 'release'
         (self.release / 'deps').mkdir(parents=True)
         self.session = self.target / 'pw-build-session.json'
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-        self.assertEqual(run_main(['session-start', '--session', str(self.session), '--root', str(self.root), '--describe', 'x', '--commit', 'x',
+        (self.root / 'controller').mkdir(exist_ok=True)
+        self.scope, self.env = own(self, self.root)
+        self.assertEqual(run_main(['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], self.env)[0], 0)
 
     def unit(self, name, meta, payload, fresh=False, rustflags=('-C', 'opt-level=1'), link=True, fingerprint=True):
@@ -460,7 +893,7 @@ class CargoJudgmentTests(unittest.TestCase):
     def judge(self, messages, require='0', bins=('policy-witness', 'sandbox-log-observer', 'sbpl-check')):
         path = self.target / 'pw-build-messages.jsonl'
         path.write_text(''.join(json.dumps(m) + '\n' for m in messages))
-        argv = ['cargo-judge', '--session', str(self.session), '--messages', str(path), '--target-dir', str(self.target),
+        argv = ['cargo-judge', '--root', str(self.root),
                 '--require-rebuilt', require, '--rustflags-source', 'script']
         for name in bins:
             argv += ['--bin', name]
@@ -507,8 +940,7 @@ class CargoJudgmentTests(unittest.TestCase):
         self.assertEqual(prov.flag_source(['-C', 'x'], {'CARGO_ENCODED_RUSTFLAGS': '-C\x1fx'}, 'RUSTFLAGS')['kind'], 'CARGO_ENCODED_RUSTFLAGS')
         self.assertEqual(prov.flag_source(['-C', 'y'], {'RUSTFLAGS': '-C x'}, 'RUSTFLAGS')['kind'], 'cargo configuration or target rules')
         (self.target / 'pw-build-messages.jsonl').write_text('{not json\n')
-        status, _, err, _ = self.judge([]) if False else run_main(['cargo-judge', '--session', str(self.session), '--messages',
-            str(self.target / 'pw-build-messages.jsonl'), '--target-dir', str(self.target), '--bin', 'policy-witness',
+        status, _, err, _ = self.judge([]) if False else run_main(['cargo-judge', '--root', str(self.root), '--bin', 'policy-witness',
             '--require-rebuilt', '0', '--rustflags-source', 'none'], self.env)[:3] + (None,)
         self.assertEqual(status, 2)
         self.assertIn('malformed', err)
@@ -558,22 +990,22 @@ class SdkTests(unittest.TestCase):
         binary = work / 'probe'
         subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', str(source), '-o', str(binary)], check=True, capture_output=True)
         sdk = subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], check=True, capture_output=True, text=True).stdout.strip()
-        session = work / 'session.json'
-        env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
-        self.assertEqual(run_main(['session-start', '--session', str(session), '--root', str(work), '--describe', 'x', '--commit', 'x',
+        (work / 'controller').mkdir()
+        _, env = own(self, work)
+        self.assertEqual(run_main(['session-start', '--root', str(work), '--describe', 'x', '--commit', 'x',
                                    '--version', '0', '--build-number', '0'], env)[0], 0)
         metadata = prov.output_metadata(binary)
         self.assertEqual(metadata['status'], 'ok')
         self.assertEqual(prov.normalize_version(metadata['sdk']), prov.normalize_version(sdk))
         equivalent = sdk + '.0' if '.' in sdk else sdk + '.0'
-        self.assertEqual(run_main(['sdk-check', '--session', str(session), '--sdk-version', equivalent, str(binary)], env)[0], 0)
-        status, _, err = run_main(['sdk-check', '--session', str(session), '--sdk-version', '1.2', str(binary)], env)
+        self.assertEqual(run_main(['sdk-check', '--root', str(work), '--sdk-version', equivalent, str(binary)], env)[0], 0)
+        status, _, err = run_main(['sdk-check', '--root', str(work), '--sdk-version', '1.2', str(binary)], env)
         self.assertEqual(status, 1)
         self.assertIn('built against SDK', err)
-        status, _, err = run_main(['sdk-check', '--session', str(session), '--sdk-version', 'n/a', str(binary)], env)
+        status, _, err = run_main(['sdk-check', '--root', str(work), '--sdk-version', 'n/a', str(binary)], env)
         self.assertEqual(status, 1)
         self.assertIn('not a numeric version', err)
-        status, _, err = run_main(['sdk-check', '--session', str(session), '--sdk-version', sdk, str(source)], env)
+        status, _, err = run_main(['sdk-check', '--root', str(work), '--sdk-version', sdk, str(source)], env)
         self.assertEqual(status, 1, 'a file without load commands never agrees')
 
 

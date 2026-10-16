@@ -210,7 +210,7 @@ def main():
     out = Path(config['out_dir'])
     try:
         retention.replacement_allowed(root, out, retention.load_index(root))
-        with retention.checkout_lock(root):
+        with retention.checkout_lock(root) as scope:
             # A planner may have raced an earlier holder; check again under lock.
             retention.replacement_allowed(root, out, retention.load_index(root))
             if out.exists():
@@ -221,7 +221,7 @@ def main():
             save(out / 'owner.json', {'schema_version': 1, 'run_id': run_id,
                                      'out_dir': str(out), 'started_at_unix_ms': started})
             save(out / 'plan.json', plan)
-            return execute(root, out, run_id, started, plan, config)
+            return execute(root, out, run_id, started, plan, config, scope)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
 

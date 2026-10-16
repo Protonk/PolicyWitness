@@ -91,7 +91,8 @@ def test_build_guards(out, identity):
     base_env = {k: v for k, v in os.environ.items()
                 if k not in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DIST_DIR', 'CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR',
                              'RUSTFLAGS', 'BASH_ENV', 'ENV', 'PW_VERSION', 'PW_BUILD_NUMBER', 'PW_CHECKOUT_LOCK_FD',
-                             'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE')}
+                             'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL', 'SDKROOT', 'CPATH',
+                             'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')}
     scenarios = []
     with tempfile.TemporaryDirectory(prefix='pw-build-guards-', dir='/private/tmp') as temporary:
         work = Path(temporary)

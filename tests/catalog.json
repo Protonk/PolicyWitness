@@ -17,7 +17,7 @@
         },
         {
           "id": "build_provenance_controls",
-          "description": "Lock claims verify through the inherited descriptor; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns",
+          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, requests survive the Python shim and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns",
           "requires": [
             "clang"
           ]
@@ -46,7 +46,7 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
           "default": false,
           "requires": [
             "app",

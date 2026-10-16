@@ -470,9 +470,13 @@ def main() -> int:
     # written before the manifest so the manifest's entry seals its hash too.
     try:
         if args.build_session:
-            session = build_provenance.load_session(Path(args.build_session))
-            record = build_provenance.collect(session, app_bundle, Path(args.root), args.identity,
-                                              manifest_entries=entries, signature=signature_facts)
+            # The session is read under the verified hold, through the admitted target directory.
+            expected = Path(args.root).absolute() / build_provenance.TARGET / build_provenance.SESSION_NAME
+            if Path(args.build_session).absolute() != expected:
+                raise build_provenance.Refusal(f"the build session lives at {expected}, not {args.build_session}", 2)
+            with build_provenance.build_scope(Path(args.root)) as state:
+                record = build_provenance.collect(state.session, app_bundle, state.root, args.identity,
+                                                  manifest_entries=entries, signature=signature_facts)
         else:
             record = substitution_record(Path(args.substitution_of).resolve(), app_bundle, args.identity, entries)
     except build_provenance.Refusal as exc:

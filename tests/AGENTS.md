@@ -139,7 +139,7 @@ Follow the [retention and locking contract](README.md#retention-ownership-and-ex
 Never unlink `tests/.checkout.lock`: replacing its inode bypasses an existing
 holder. Builds hold it too, so wait for the current build or execution or use
 a second worktree for concurrent runs; a standalone `cargo test` against the
-managed `controller/target/` runs through `tests/lib/checkout_lock.py` or with
+managed `controller/target/` runs through `tests/lib/checkout_lock.sh` or with
 isolated output and intermediate directories, as the
 [locking contract](README.md#retention-ownership-and-execution-locking) says.
 Inspect interrupted or ambiguous output before choosing a fresh directory

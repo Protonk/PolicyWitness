@@ -483,7 +483,7 @@ compiled Swift values/defaults and rejected-frame capture. Rust unit tests check
 controller and helper constants. Existing behavioral suites remain independent
 of the manifest, so changing a documented number cannot change their oracles.
 
-For a limit change, run `cargo test --manifest-path controller/Cargo.toml` and
+For a limit change, run `tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml` and
 `tests/run.sh --suite source_drift --suite runner_abi_layout --suite runner_unit
 --suite runner_c_worker_harness --suite failure_boundaries` against a normal
 signed build, plus the affected behavior owners named above. New entries need

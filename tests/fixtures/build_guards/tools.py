@@ -12,8 +12,9 @@ The configuration names the real tools, a receipt file and one fault:
                 signature is made without a secure timestamp or ad hoc; the
                 script's signing list stays intact
 
-Every call runs the real tool otherwise and records a receipt naming what was
-injected. The script's own checks make every refusal.
+Every call runs the real tool otherwise, with the checkout lock descriptors
+the claim names passed on as every protected launch must, and records a
+receipt naming what was injected. The script's own checks make every refusal.
 """
 import json
 import os
@@ -21,6 +22,19 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+
+
+def lock_fds():
+    """The claim's descriptors open in this process; Python would close them in the real tool by default."""
+    found = []
+    for name in ('PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_CHANNEL'):
+        try:
+            fd = int(os.environ.get(name, ''))
+            os.fstat(fd)
+        except (ValueError, OSError):
+            continue
+        found.append(fd)
+    return tuple(sorted(set(found)))
 
 
 def main():
@@ -34,7 +48,7 @@ def main():
     if tool == 'codesign' and override and '--force' in args and target == Path(override['target']):
         argv = ['/usr/bin/codesign', *override['argv'], str(target)]
         injected.append(dict(kind='codesign', target=str(target), argv=argv))
-    result = subprocess.run(argv)
+    result = subprocess.run(argv, pass_fds=lock_fds())
     if result.returncode == 0:
         for replacement in config.get('replacements', []):
             if replacement['tool'] != tool or not args or args[0] != replacement['first']:

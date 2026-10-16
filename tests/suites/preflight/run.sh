@@ -58,7 +58,7 @@ test_begin preflight build_provenance_controls
 test_step helpers "exercise the lock, stamp, fresh-mode, Cargo judgment, SDK, signature-display and record readers with constructed inputs"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build provenance controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/check_build_provenance.py"
-test_pass "lock claims verify through the descriptor; stamps, judgments, SDK versions, signature displays and records are decided without adopting unknowns"
+test_pass "lock claims are admitted only by a live owner; holds outlive killed owners; helpers write only owned, admitted paths; stamps, judgments, SDK versions, signature displays and records are decided without adopting unknowns"
 fi
 
 if test_selected signed_artifact_controls; then

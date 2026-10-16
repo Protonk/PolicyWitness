@@ -25,14 +25,14 @@ identity_spec.loader.exec_module(identity_generator)
 
 # build.sh admits its tracked inputs and takes the checkout lock before any check; a build
 # checkout needs those files and the lock launcher, then the limits documents it checks first.
-ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'Info.plist', 'PolicyWitness.entitlements',
+ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'Info.plist', 'PolicyWitness.entitlements',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
 LIMITS_FILES = ENTRY_FILES | {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
                 'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'docs/REQUEST-GRAMMAR.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
                 'tests/fixtures/comparison/matrix.json'}
 # The build's environment: the knobs and an inherited lock claim never leak into a control build.
-BUILD_ENV_EXCLUDED = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE')
+BUILD_ENV_EXCLUDED = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')
 
 
 def limits_references():

@@ -4,10 +4,14 @@
 The build script resolves cargo, meson, ninja, codesign and cp through PATH.
 Each wrapper runs the real tool with the same arguments and appends one
 receipt line. A hook names a tool and a matching call; its actions remove,
-move, truncate, append to or rewrite a file, edit Cargo's artifact report, or
-kill the build's shell before or after that call, so a missing or damaged
-input, a false report or an interruption appears at exactly one boundary of
-the unchanged script. A hook may also answer a call instead of running the
+move, truncate, append to, rewrite or replace with a symlink a file, edit
+Cargo's artifact report, kill or signal the build's shell, the lock owner or
+the wrapper itself, start a holder process beyond the wrapper, or record
+whether the checkout lock is free, before or after that call, so a missing or
+damaged input, a false report, a replaced path or an interruption appears at
+exactly one boundary of the unchanged script. The real tool and a holder
+receive the checkout lock descriptors the claim names, as every protected
+launch must; Python would close them by default. A hook may also answer a call instead of running the
 tool (an old ninja reporting its version). A configured stderr canary is
 written on every call so a record that kept tool output would carry it. The
 script's own checks make every refusal; the wrapper never prints a diagnostic
@@ -39,12 +43,57 @@ def matches(hook, tool, args):
     return True
 
 
+def lock_fds():
+    """The claim's descriptors open in this process, passed on to the real tool and to a holder."""
+    found = []
+    for name in ('PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_CHANNEL'):
+        try:
+            fd = int(os.environ.get(name, ''))
+            os.fstat(fd)
+        except (ValueError, OSError):
+            continue
+        found.append(fd)
+    return tuple(sorted(set(found)))
+
+
+def owner_pid(lock):
+    return json.loads(Path(lock).read_text())['pid']
+
+
 def act(action):
     op = action['op']
     if op == 'kill_parent':
         os.kill(os.getppid(), signal.SIGKILL)
         return
+    if op == 'kill_self':
+        os.kill(os.getpid(), signal.SIGKILL)
+        return
+    if op == 'signal_owner':
+        os.kill(owner_pid(action['lock']), getattr(signal, action['signal']))
+        return
     path = Path(action['path'])
+    if op == 'spawn_holder':
+        # A protected grandchild beyond this wrapper: it waits for a release file and records its pid.
+        waiter = ('import os, sys, time\n'
+                  'deadline = time.monotonic() + 600\n'
+                  'while not os.path.exists(sys.argv[1]) and time.monotonic() < deadline:\n'
+                  '    time.sleep(0.05)\n')
+        child = subprocess.Popen([sys.executable, '-B', '-c', waiter, action['release']], pass_fds=lock_fds(), start_new_session=True)
+        path.write_text(json.dumps(dict(holder=child.pid, wrapper=os.getpid(), passed=list(lock_fds()))))
+        return
+    if op == 'probe_lock':
+        import fcntl
+        fd = os.open(action['lock'], os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            state = 'free'
+        except BlockingIOError:
+            state = 'held'
+        finally:
+            os.close(fd)
+        with path.open('a') as stream:
+            stream.write(state + '\n')
+        return
     if op == 'delete':
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)
@@ -64,6 +113,8 @@ def act(action):
             stream.write(action['text'].encode())
     elif op == 'write':
         path.write_text(action['text'])
+    elif op == 'symlink':
+        path.symlink_to(action['to'])
     elif op == 'judge':
         # Edit Cargo's artifact report for one target: set fields or drop its line.
         lines = []
@@ -105,7 +156,7 @@ def main():
         executed = None
     else:
         executed = [config['tools'][tool], *args]
-        status = subprocess.run(executed).returncode
+        status = subprocess.run(executed, pass_fds=lock_fds()).returncode
     # The receipt names every hook that fires around this call and is written before the
     # after-actions run, so an action that kills the build's shell still leaves it.
     after = [hook for hook in hooks if hook.get('when', 'after') == 'after' and 'respond' not in hook]

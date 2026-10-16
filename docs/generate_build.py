@@ -26,8 +26,9 @@ The parser accepts the forms build.sh uses and refuses any other: a banner is
 `echo "==> ..."` outside a function; a refusal is `echo "ERROR: ..." 1>&2` or
 a stderr heredoc whose first ERROR line is the message, followed within three
 lines by `exit N`; a signature is a `sign_macho "..."` call and a seal a
-`codesign --force` command; helpers run as `"${ROOT_DIR}/<path>"`, bare or captured into a variable, with
-a bare-word subcommand and the first `--flag` recorded; branches are
+`codesign --force` command; helpers run under `/usr/bin/python3` as `"${ROOT_DIR}/<path>"`, bare or captured
+into a variable, or as the lock front end `exec /bin/bash "${ROOT_DIR}/<path>"`, with a bare-word subcommand
+and the first `--flag` recorded; branches are
 `if`/`else`/`fi`, loops `for`/`done`, and `case`/`esac` may hold refusals
 but no banners. A banner inside an `if` on `"${PW_FRESH_BUILD}"` belongs to
 that condition (`fresh` or `incremental`), which the manifest step names in
@@ -269,7 +270,8 @@ def parse_script(text):
             i += 1
             continue
         match = re.search(r'"\$\{ROOT_DIR\}/([^"]+)"(.*)$', line)
-        if match and re.match(r'^\s*(?:\w+="\$\()?/usr/bin/python3\b', line):  # a helper may run inside an assignment
+        # A helper may run inside an assignment; the lock front end is the one script the build execs.
+        if match and re.match(r'^\s*(?:(?:\w+="\$\()?/usr/bin/python3|exec /bin/bash)\b', line):
             rest = match.group(2).split()
             subcommand = [rest[0]] if rest and re.fullmatch(r"[a-z][a-z-]*", rest[0]) else []
             flags = [a for a in rest if a.startswith("--")]

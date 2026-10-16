@@ -9,9 +9,13 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import sys
 import tempfile
 import time
 import uuid
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import checkout_lock as ownership  # noqa: E402
 
 RUN_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
 RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
@@ -203,39 +207,21 @@ def replacement_allowed(root, out, retained):
 
 @contextmanager
 def checkout_lock(root, *, preview=False):
-    """Hold tests/.checkout.lock for the block; a preview only observes whether it is held.
+    """Own tests/.checkout.lock for the block; a preview only observes whether it is held.
 
-    The hold belongs to the open file description and ends when its last
-    descriptor closes. Nothing unlocks explicitly: an unlock would also end a
-    hold shared with a child that inherited the descriptor (builds pass it to
-    their protected children through tests/lib/checkout_lock.py), so the
-    descriptor is closed and the operating system releases the lock when no
-    sharer remains. The owner record is diagnostic: pid, start time and a
-    nonce that a launched command's claim must repeat.
+    Acquisition, nested admission under an inherited claim and the busy
+    refusal belong to tests/lib/checkout_lock.py; this yields that owner's
+    scope, so a caller that launches protected children passes the held
+    descriptor through it. Nothing unlocks explicitly: closing the last
+    descriptor releases the lock. A preview yields whether the lock is busy
+    and holds it for the block when it was free, without an owner record.
     """
-    path = root / 'tests/.checkout.lock'
-    # A preview must leave even a checkout without a lock file unchanged.
-    if preview and not os.path.lexists(path):
-        yield False
+    if preview:
+        with ownership.preview(root) as busy:
+            yield busy
         return
-    flags = os.O_RDWR | os.O_NOFOLLOW | (0 if preview else os.O_CREAT)
-    fd = os.open(path, flags, 0o600)
-    acquired = False
-    try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            acquired = True
-        except BlockingIOError:
-            if not preview:
-                raise ValueError('checkout busy: another execution or mutating operation holds tests/.checkout.lock')
-        if acquired and not preview:
-            metadata = json.dumps({'pid': os.getpid(), 'started_at_unix_ms': time.time_ns() // 1_000_000,
-                                   'nonce': uuid.uuid4().hex}) + '\n'
-            os.ftruncate(fd, 0)
-            os.write(fd, metadata.encode())
-        yield not acquired
-    finally:
-        os.close(fd)
+    with ownership.owned(root) as scope:
+        yield scope
 
 
 def valid_owner(path):
