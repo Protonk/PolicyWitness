@@ -113,12 +113,19 @@ make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 
 The build writes `dist/PolicyWitness.app`, a ZIP ready for notarization at
 `dist/PolicyWitness.zip`, and the standalone user guide at
-`dist/PolicyWitness.md`.
+`dist/PolicyWitness.md`. It reuses `builddir/` and `controller/target/`
+under the toolchain recorded when they were set up; `PW_FRESH_BUILD=1`
+replaces both before compiling, and a changed compiler or SDK is refused
+until then. A build holds the checkout's test lock, so a build and a test
+battery in one checkout run one at a time.
 
 `build.sh` compiles the Rust components with Cargo and the Swift and C
 components with Meson, assembles them into one app bundle, and signs it
-with the supplied identity. The app carries a version derived from git
-and generated evidence recording its binaries' hashes and entitlements.
+with the supplied identity, then verifies the Developer ID chain and secure
+timestamps on the signatures it made. The app carries a version derived
+from git and generated evidence recording its binaries' hashes and
+entitlements and a provenance record of the tools, configuration and build
+directories behind them.
 
 The app contains:
 
@@ -131,12 +138,14 @@ The app contains:
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched per eligible phase for sandbox_check verdicts)
     - `Contents/MacOS/pw-extension-issuer` (ordinary-authority file-extension issuer with a transient token channel)
-  - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
+  - `Contents/Resources/Evidence/*` (generated evidence: `manifest.json` with hashes and entitlements, `symbols.json`, and `provenance.json`, the build's record of its tools, configuration, directories and outputs)
 
-The [build tour](docs/BUILD.md) describes the toolchain, build settings and
-signing checks. Building produces a signed app; the
-[release procedure](docs/SIGNING.md#release-procedure) covers notarization,
-acceptance testing and publication. The
+The [build tour](docs/BUILD.md) describes the toolchain, build settings,
+cache compatibility, the lock and the signing checks;
+[the evidence inventory](docs/SIGNING.md#evidence-artifacts) owns the record
+formats. Building produces a signed app; the
+[release procedure](docs/SIGNING.md#release-procedure) covers the fresh
+release build, notarization, acceptance testing and publication. The
 [distribution directory](dist/README.md) describes the deliverables and
 preserved release archives.
 

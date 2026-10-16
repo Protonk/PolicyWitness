@@ -41,17 +41,105 @@ and entitlements.
 
 ## Evidence artifacts
 
-During the build, `tests/build-evidence.py` generates:
+During the build, `tests/build-evidence.py` generates, under
+`dist/PolicyWitness.app/Contents/Resources/Evidence/`:
 
-- `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json`
-- `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json`
+| File | Producer and source | Sealed by |
+| --- | --- | --- |
+| `manifest.json` | The evidence script, from the signed bytes on disk: each helper's and service executable's hash, load-command UUID and entitlements (extracted via `codesign -d --entitlements`), the augments' hashes, and entries for the other two files with their hashes. | The app seal |
+| `symbols.json` | The evidence script, from `nm` over the same executables: the exported `_pw_*` marker symbols. | The app seal, through the manifest's entry |
+| `provenance.json` | The evidence script, from the build session `build.sh` kept through its steps and from the assembled bundle: the provenance record described below. | The app seal, through the manifest's entry |
 
-These are derived from the **actual signed binaries on disk** (hashes and
-entitlements extracted via `codesign -d --entitlements`), and are intended to
-make “what shipped” auditable. They are generated after the helpers and the
-service are signed and before the outer seal, so the manifest describes
-signed bytes and is itself sealed by the app signature. The issuer has its own
-manifest entry and symbol inventory, identifying its signed bytes.
+All three are generated after the helpers and the service are signed and
+before the outer seal, so they describe signed bytes and are themselves
+sealed by the app signature; no embedded evidence is rewritten after the
+seal. The issuer has its own manifest entry and symbol inventory, identifying
+its signed bytes. The controller reads the manifest at run time to locate its
+runner; nothing reads the record at run time.
+
+### The provenance record
+
+`provenance.json` (`schema_version` 1) is the tools' report about one build:
+what was selected, what the tools said about themselves, what the build
+directories looked like and what bytes shipped. It does not establish
+reproducibility, compiler correctness, that particular bytes executed, or an
+exhaustive account of private runtime dependencies, and it says so in its
+`limits`. Its sections:
+
+- `source`: the git commit, describe string and dirty flag, the version and
+  build number the plists carry, the worker identity the built worker
+  reported, and the hashes of `meson.build`, `meson.options`,
+  `controller/Cargo.lock`, `Info.plist` and the two entitlement plists.
+- `toolchain`: the developer directory and how it was selected; the SDK's
+  path, version and build; Xcode's version and build when `xcodebuild` can
+  report them, otherwise `unknown` with the failure kind; for the C and, in a
+  full build, the Swift compiler, Meson's configured command, id, version and
+  full version beside the identity the command reported when probed in the
+  build directory's context (a partial build records the Swift compiler as
+  not applicable); the Rust compiler Cargo resolves from `RUSTC`,
+  `CARGO_BUILD_RUSTC` or `PATH`, probed, with its wrappers, the selection
+  variables that were set and the Cargo configuration files found in the
+  discovery chain with the build-relevant keys each names; and the selected
+  `cargo`, `meson` and `ninja` commands with their versions. Configuration
+  files are listed, not resolved: a file that selects the compiler or a
+  wrapper stops the build instead.
+- `configuration`: the three knobs; the fixed-policy subset of Meson's
+  effective options plus `inspection` and `xpc`; the requested Rust flags
+  with the source that set them and which flag variables were set; the
+  deployment target and `SDKROOT`; each build directory's state (`created`
+  or `reused`, whether fresh mode replaced it, and what happened to the
+  stamp), fresh mode's replacement report and Cargo's admitted directories;
+  and a projection of the toolchain stamp with its scope.
+- `outputs`: for every shipped Mach-O, its bundle-relative path, UUID,
+  platform, minimum and SDK from `LC_BUILD_VERSION` with the linker tool
+  versions; its hash as signed, except the controller, whose entry says why
+  the hash is absent; the nested signature's leaf, team, runtime flag,
+  Developer ID chain and timestamp presence; and, for the Cargo targets,
+  Cargo's own judgment (`fresh: true` means Cargo reused the output), the
+  profile, the fingerprint observation bound through the uplifted executable
+  (`observed`, or an explicit `unavailable`, `ambiguous`, `malformed` or
+  `unsupported`), the effective Rust flags from that fingerprint and the
+  requested source they equal, or an explicit unresolved kind.
+- `signing`: the identity string and, per nested signature, the leaf, team
+  and timestamp presence read from `codesign -dvv` before the record was
+  sealed. The app seal is made after the record; its facts live in the
+  release record, not here.
+
+Field policy. A required observation (the SDK, the developer directory, the
+compilers' identities, the Rust compiler, each output's load commands and
+hash) that fails stops the build. An optional one (Xcode's version, a
+fingerprint for a reused unit, a wrapper's identity) is recorded as unknown
+with a bounded failure entry naming its kind, status and byte counts, never
+the tool's output, and never compares equal to anything. Every probe has a
+fixed deadline and output cap. Paths under the home directory are published
+with a `<home>` marker; the exact paths stay in the local stamp
+(`builddir/pw-toolchain.json`) and session (`controller/target/pw-build-session.json`),
+which are not shipped. The record never carries `PATH`, other environment
+variables, keychain contents or raw tool output.
+
+What the hashes mean. A newly calculated output hash identifies the bytes the
+record captured; it does not authenticate their compilation history. A cached
+executable replaced before evidence capture can be reported reusable by Cargo
+and can agree with the record's hashes, SDK and minimum checks; the record
+states that limit, and the inspector refuses the separate faults it can see:
+a record that disagrees with the manifest or the bytes, wrong load-command
+metadata, an incomplete or duplicated output inventory, and any change after
+capture or sealing. The build document explains the [cache compatibility
+checks](BUILD.md#cache-compatibility-replacement-and-recovery) that precede
+the compiles and [what the record separates](BUILD.md#the-evidence-the-build-embeds).
+
+### The release record
+
+`dist/archive/v<version>/release.json` carries, beside the ZIP hash, a
+`provenance` object: the path and hash of `evidence/provenance.json`, which
+is the record copied byte for byte out of the accepted final ZIP; the final
+controller hash (`controller_sha256`), read from the same ZIP; and
+`app_signature`, the app seal's leaf, team, chain, runtime flag and timestamp
+presence as `codesign -dvv` displays them on an extraction of that ZIP. These
+are the facts the sealed record cannot hold about itself. Archive
+verification reads them back against the ZIP before the archive is exposed
+by rename and again before publication; a working app that has since been
+rebuilt never supplies them.
 
 ## Release procedure
 
@@ -73,21 +161,28 @@ git commit tests/RETAINED.json -m "Retain the 0.2.4 release evidence"
 make publish VERSION=0.2.4
 ```
 
-`make release` runs the preflight, then the `make notarize` chain below (build,
-sign, submit, wait, staple, validate, re-zip, accept), then the full default
-battery against the stapled app into `tests/out/runs/release-<version>-default`,
-then `tests/lib/release_archive.py`, which archives the accepted release under
-`dist/archive/v<version>/`. Archiving stages the ZIP, guide, checksums, original
-command receipts, notes and complete test evidence, verifies the copy, and
-exposes the completed archive by rename. The attempt's receipts end up under
+`make release` runs the preflight, then the `make notarize` chain below (a
+fresh build, sign, submit, wait, staple, validate, re-zip, accept), then the
+full default battery against the stapled app into
+`tests/out/runs/release-<version>-default`, then `tests/lib/release_archive.py`,
+which archives the accepted release under `dist/archive/v<version>/`. The
+release build is fresh: `notarize` passes `PW_FRESH_BUILD=1` to its recursive
+`make build`, so `builddir/` and `controller/target/release/` are replaced
+and Cargo rebuilds every shipped target, and a caller's conflicting
+`PW_FRESH_BUILD` value, in the environment or on the make command line, is
+refused before anything builds rather than overridden silently. Archiving
+stages the ZIP, guide, checksums, original command receipts, notes, the
+provenance record read out of the accepted ZIP and complete test evidence,
+verifies the copy including the record's binding to the ZIP, and exposes the
+completed archive by rename. The attempt's receipts end up under
 `evidence/`, with a `<attempt>.archived` pointer under `dist/evidence/`.
 The acceptance and battery working directories are added to `tests/RETAINED.json`.
 Finally, `tests/lib/release_rotate.py` removes eligible older working test output
 as described below. Commit the resulting retention index change.
-Archiving and rotation each hold the test checkout lock across their reads and
-mutations; acceptance and the battery also use that lock. Run no other battery
-while `make release` runs. The notarization submission is the only remote step
-in `make release`.
+The build, acceptance, the battery, archiving and rotation each hold the
+checkout lock for their own duration; `make release` holds no outer lock, so
+run no other build or battery in the checkout while it runs. The notarization
+submission is the only remote step in `make release`.
 
 ### Portable test evidence and release cleanup
 
@@ -173,11 +268,13 @@ the archived notes.
 
 ### Lower-level notarization
 
-`make notarize` is the lower-level chain. It **builds again**, even if you
-already built and tested the app. Its last step establishes release acceptance
-by testing the actual final ZIP. It reports preflight findings as warnings and
-continues, so a rehearsal still records what it
-stamps. For an already-built ZIP, use the individual steps below.
+`make notarize` is the lower-level chain. It **builds again, fresh**, even if
+you already built and tested the app: the caches are replaced and every
+shipped target is compiled, and a `PW_FRESH_BUILD` value other than `1`
+supplied by the caller refuses the chain before the build. Its last step
+establishes release acceptance by testing the actual final ZIP. It reports
+preflight findings as warnings and continues, so a rehearsal still records
+what it stamps. For an already-built ZIP, use the individual steps below.
 
 ```sh
 make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
@@ -196,7 +293,7 @@ directories hold raw receipts. Missing steps have no recorded result.
 
 | Step | Changes | Evidence of success |
 | --- | --- | --- |
-| Build and sign | App, embedded manifest, initial ZIP | Inside-out signatures verify |
+| Build and sign (fresh) | Replaced caches, app, embedded manifest and provenance record, initial ZIP | Inside-out signatures verify with the Developer ID chain and secure timestamps; Cargo reports rebuilding every target |
 | Submit once | Uploads a retained copy of the ZIP | Recognized submission ID saved locally |
 | Wait once | No local artifact change | Explicit `Accepted` for that submission |
 | Staple | Attaches Apple's ticket to the app | `stapler staple` succeeds |
@@ -204,7 +301,7 @@ directories hold raw receipts. Missing steps have no recorded result.
 | Re-zip | Replaces ZIP with the stapled app | ZIP creation succeeds |
 | Accept archive | Extracts a disposable copy and runs checks | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 |
 | Battery (`make release`) | Runs the default battery against the stapled app | `run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
-| Archive (`make release`) | Verifies staged assets, receipts and portable test evidence; retains working runs | `dist/archive/v<version>/release.json` with `origin: null` |
+| Archive (`make release`) | Verifies staged assets, receipts, the record copied from the accepted ZIP with the final controller hash and seal facts, and portable test evidence; retains working runs | `dist/archive/v<version>/release.json` with `origin: null` and a `provenance` object bound to the ZIP |
 | Cleanup (`make release`) | Keeps the release and newest local evidence; retires older owned output under the checkout lock | `evidence/rotation.json` records a completed transaction |
 | Publish (`make publish`) | Pushes the tag, creates the release, verifies uploads | `release.json` records `origin` and `evidence/github-release.json` exists |
 
@@ -346,8 +443,11 @@ to the local macOS environment and Gatekeeper state at acceptance time.
 ## Preserved release archives
 
 `dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
-`release.json` provenance record, and supporting `evidence/`, including the
-portable test bundle and rotation receipt when produced by these helpers. `make release`
+`release.json` release record, and supporting `evidence/`, including the
+embedded provenance record copied from the accepted ZIP, the portable test
+bundle and the rotation receipt when produced by these helpers. Archives made
+before the record existed keep their original evidence and are never
+backfilled. `make release`
 creates one per version through `tests/lib/release_archive.py`; the two earlier
 examples, `v2.3.0` and `v0.2.3`, were assembled by hand on either side of the
 version reset. The guide is included when it was distributed. Provenance records

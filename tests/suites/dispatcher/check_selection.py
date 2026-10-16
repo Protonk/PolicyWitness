@@ -135,8 +135,6 @@ def main():
         for app_path, marker in [('dist/PolicyWitness.app', 'default'), ('An app.app', 'alternate')]:
             bundle(repo / app_path, HOST)
             binary = repo / app_path / 'Contents/MacOS/policy-witness'
-            shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/controller.py', binary)
-            binary.chmod(0o755)
             binary.with_name('controller-marker.txt').write_text(marker)
 
     # Both choices can run. Assert the executable's own receipt, so a usable

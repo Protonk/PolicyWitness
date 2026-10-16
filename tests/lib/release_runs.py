@@ -13,6 +13,7 @@ import tarfile
 import zipfile
 
 import artifact
+import build_provenance
 import retention
 
 BUNDLE = 'evidence/test-runs'
@@ -149,6 +150,20 @@ def verify_release(archive):
     if (info.get('PWBuildCommit') != record['source_commit'] or info.get('PWBuildDescribe') != tag
             or info.get('CFBundleShortVersionString') != record['version']):
         raise ValueError('archived ZIP stamp differs from the release record')
+    provenance = record.get('provenance')
+    if provenance is not None:
+        if not isinstance(provenance, dict) or provenance.get('path') != 'evidence/provenance.json':
+            raise ValueError('invalid archived provenance reference')
+        archived_record = real_path(archive / provenance['path'])
+        if artifact.digest(archived_record) != provenance.get('sha256'):
+            raise ValueError('archived provenance record checksum mismatch')
+        member, controller = build_provenance.read_zip_record(archive / name)
+        if member != archived_record.read_bytes():
+            raise ValueError('archived provenance record differs from the record inside the ZIP')
+        if controller != provenance.get('controller_sha256'):
+            raise ValueError('archived controller hash differs from the ZIP')
+        if not isinstance(provenance.get('app_signature'), dict):
+            raise ValueError('archived release lacks its app seal facts')
     reference = record.get('test_evidence') or {}
     if (reference.get('path') != BUNDLE + '/manifest.json'
             or artifact.digest(real_path(archive / reference['path'])) != reference.get('sha256')):

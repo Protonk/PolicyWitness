@@ -23,10 +23,16 @@ identity_spec = importlib.util.spec_from_file_location('generate_worker_identity
 identity_generator = importlib.util.module_from_spec(identity_spec)
 identity_spec.loader.exec_module(identity_generator)
 
-# build.sh checks the limits documents first; a build checkout needs their inputs.
-LIMITS_FILES = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
-                'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'docs/REQUEST-GRAMMAR.md', 'build.sh', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
+# build.sh admits its tracked inputs and takes the checkout lock before any check; a build
+# checkout needs those files and the lock launcher, then the limits documents it checks first.
+ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'Info.plist', 'PolicyWitness.entitlements',
+               'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
+               *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
+LIMITS_FILES = ENTRY_FILES | {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
+                'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'docs/REQUEST-GRAMMAR.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
                 'tests/fixtures/comparison/matrix.json'}
+# The build's environment: the knobs and an inherited lock claim never leak into a control build.
+BUILD_ENV_EXCLUDED = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE')
 
 
 def limits_references():
@@ -39,7 +45,8 @@ def build_references():
     manifest = json.loads((ROOT / 'docs/build.json').read_text())
     paths = {'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
              'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
-             'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py'}
+             'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
+             'tests/lib/build_provenance.py', 'tests/lib/checkout_lock.py', 'tests/lib/signer_check.py'} | ENTRY_FILES
     for group in ('steps', 'refusals', 'signing', 'invocations', 'knobs', 'directories'):
         for item in manifest[group]:
             paths.update(ref['path'] for key in ('sources', 'checks') for ref in item[key])
@@ -241,22 +248,27 @@ class ContractVersionTests(unittest.TestCase):
     def build(self, root, env, timeout=120, args=()):
         """Run build.sh in a checkout with the knobs unset unless env sets them; return the result and the output path."""
         destination = root / 'dist'
-        base = {name: value for name, value in os.environ.items() if name not in ('BUILD_XPC', 'PW_INSPECTION')}
+        base = {name: value for name, value in os.environ.items() if name not in BUILD_ENV_EXCLUDED}
         result = subprocess.run(['bash', str(root / 'build.sh'), *args], cwd=root,
             env={**base, 'DIST_DIR': str(destination), **env}, capture_output=True, text=True, timeout=timeout)
         return result, destination
 
-    def test_build_refuses_a_non_developer_id_identity_before_cargo(self):
-        """Every check before the identity step passes in the checkout; the identity class stops the build."""
+    def test_build_refuses_an_identity_of_another_class_as_absent_before_cargo(self):
+        """Every check before the identity step passes in the checkout; an identity the keychain does not list stops the
+        build, whatever its class. The class itself is established on the signatures after the seal, not here."""
         root = self.build_checkout()
         for identity in ('Apple Development: Nobody (TEAMID00AA)', 'Mac Developer: Nobody (TEAMID00AA)', '-'):
             with self.subTest(identity=identity):
                 result, destination = self.build(root, {'IDENTITY': identity})
                 self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn('Verifying the checkout lock', result.stdout)
                 self.assertIn('Checking host/worker identity', result.stdout)
                 self.assertIn('Build stamp', result.stdout)
                 self.assertIn('Selecting the macOS SDK', result.stdout)
-                self.assertIn('must name a Developer ID Application identity', result.stderr)
+                self.assertIn('Checking the native build directory', result.stdout)
+                self.assertIn('codesigning identity not found in your keychain', result.stderr)
+                self.assertNotIn('must name a Developer ID Application identity', result.stderr)
+                self.assertNotIn('Admitting the Cargo', result.stdout)
                 self.assertNotIn('Building Rust', result.stdout)
                 self.assertFalse(destination.exists())
                 self.assertFalse((root / 'builddir').exists())
@@ -280,19 +292,22 @@ class ContractVersionTests(unittest.TestCase):
         self.assertFalse((root / 'builddir').exists())
 
     def test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check(self):
-        root = self.checkout(extra={'build.sh'})
-        for knob in ('BUILD_XPC', 'PW_INSPECTION'):
+        root = self.checkout(extra=ENTRY_FILES)
+        for knob in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD'):
             for value in ('', '2', ' 1', 'true'):
                 with self.subTest(knob=knob, value=value):
                     result, destination = self.build(root, {knob: value, 'IDENTITY': ''}, timeout=10)
                     self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
                     self.assertIn(f"{knob} must be 0 or 1 (got '{value}')", result.stderr)
+                    self.assertNotIn('Verifying the checkout lock', result.stdout)
                     self.assertNotIn('Checking limits documentation', result.stdout)
                     self.assertFalse(destination.exists())
-        # Unset, 0 and 1 pass the gate: the first documentation check runs next.
-        for env in ({}, {'BUILD_XPC': '0', 'PW_INSPECTION': '0'}, {'BUILD_XPC': '1', 'PW_INSPECTION': '1'}):
+                    self.assertFalse((root / 'tests/.checkout.lock').exists(), 'a refused knob must not take the lock')
+        # Unset, 0 and 1 pass the gate: the lock is taken and verified, then the first documentation check runs.
+        for env in ({}, {'BUILD_XPC': '0', 'PW_INSPECTION': '0', 'PW_FRESH_BUILD': '0'}, {'BUILD_XPC': '1', 'PW_INSPECTION': '1', 'PW_FRESH_BUILD': '1'}):
             with self.subTest(env=env):
                 result, _ = self.build(root, {**env, 'IDENTITY': ''}, timeout=10)
+                self.assertIn('Verifying the checkout lock', result.stdout)
                 self.assertIn('Checking limits documentation', result.stdout)
 
     def test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo(self):
@@ -312,11 +327,19 @@ class ContractVersionTests(unittest.TestCase):
         self.assertNotIn('IDENTITY is not set', result.stderr)
         self.assertNotIn('Building Rust', result.stdout)
         self.assertFalse(destination.exists())
-        # The same record naming this checkout passes the gate; the next refusal is the identity's.
+        # The same record naming this checkout passes the source gate; a configured directory
+        # without a toolchain stamp is then refused rather than adopted, still before the identity.
         info.write_text(json.dumps({'directories': {'source': str(root)}}))
         result, _ = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('has no pw-toolchain.json', result.stderr)
+        self.assertNotIn('IDENTITY is not set', result.stderr)
+        # Fresh mode replaces the directory instead of validating it: the next refusal is the identity's.
+        result, _ = self.build(root, {'IDENTITY': '', 'PW_FRESH_BUILD': '1'})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('fresh mode: the directory is replaced after admission', result.stdout)
         self.assertIn('IDENTITY is not set', result.stderr)
+        self.assertTrue((builddir / 'build.ninja').exists(), 'admission before the identity removes nothing')
         # A configured directory whose record cannot be read is refused too.
         info.unlink()
         result, _ = self.build(root, {'IDENTITY': ''})
@@ -418,37 +441,44 @@ class ContractVersionTests(unittest.TestCase):
                 self.assertEqual(result.stderr, '')
                 self.assertEqual({p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}, before)
 
-    def test_make_build_refuses_without_an_identity_and_never_runs_the_script(self):
-        """The Makefile's guard stops before build.sh; with an identity the recipe passes it and DIST_DIR through."""
+    def test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal(self):
+        """make build has no guard of its own: it runs build.sh with IDENTITY, DIST_DIR and, only when the caller set it,
+        PW_FRESH_BUILD. The script's identity refusal names the make invocation to use."""
         directory = tempfile.TemporaryDirectory(prefix='pw-make-build-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         shutil.copy2(ROOT / 'Makefile', root / 'Makefile')
         marker = root / 'ran.json'
         script = root / 'build.sh'
-        script.write_text('#!/usr/bin/env bash\nprintf \'{"IDENTITY": "%s", "DIST_DIR": "%s"}\' "${IDENTITY:-}" "${DIST_DIR:-}" > ran.json\n')
+        script.write_text('#!/usr/bin/env bash\nprintf \'{"IDENTITY": "%s", "DIST_DIR": "%s", "PW_FRESH_BUILD": "%s"}\' "${IDENTITY:-}" "${DIST_DIR:-}" "${PW_FRESH_BUILD-unset}" > ran.json\n')
         script.chmod(0o755)
         # make release exports command-line assignments through MAKEFLAGS as
         # well as individual variables; removing IDENTITY alone is insufficient.
         env = {name: value for name, value in os.environ.items()
-               if name not in ('IDENTITY', 'MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES', 'MAKELEVEL')}
+               if name not in ('IDENTITY', 'PW_FRESH_BUILD', 'MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES', 'MAKELEVEL')}
         result = subprocess.run(['make', 'build'], cwd=root, env=env, capture_output=True, text=True, timeout=30)
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn('ERROR: set IDENTITY to your Developer ID Application identity', result.stdout)
-        self.assertFalse(marker.exists(), 'the guard must stop before build.sh runs')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('==> [build] build, sign and embed evidence into dist/PolicyWitness.app', result.stdout)
+        self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': '', 'DIST_DIR': 'dist', 'PW_FRESH_BUILD': 'unset'})
         identity = 'Developer ID Application: Control (TEAMID00AA)'
-        result = subprocess.run(['make', 'build', f'IDENTITY={identity}', 'DIST_DIR=out'], cwd=root, env=env,
+        result = subprocess.run(['make', 'build', f'IDENTITY={identity}', 'DIST_DIR=out', 'PW_FRESH_BUILD=1'], cwd=root, env=env,
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('==> [build] build, sign and embed evidence into out/PolicyWitness.app', result.stdout)
-        self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': identity, 'DIST_DIR': 'out'})
+        self.assertEqual(json.loads(marker.read_text()), {'IDENTITY': identity, 'DIST_DIR': 'out', 'PW_FRESH_BUILD': '1'})
+        # The real script's refusal names the make invocation: no identity at all stops it before Cargo.
+        real = self.build_checkout()
+        result, destination = self.build(real, {'IDENTITY': ''})
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("make build IDENTITY='Developer ID Application:", result.stderr)
+        self.assertNotIn('Building Rust', result.stdout)
+        self.assertFalse(destination.exists())
 
     def test_build_refuses_stale_contract_copy_before_signing_or_creating_output(self):
         root = self.checkout(extra=LIMITS_FILES | limits_references())
         self.stale_copy(root, 'controller/src/json_contract.rs')
         destination = root / 'dist'
         result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-            env={**os.environ, 'IDENTITY': '', 'DIST_DIR': str(destination)},
+            env={**{k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
             capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('Checking limits documentation', result.stdout)

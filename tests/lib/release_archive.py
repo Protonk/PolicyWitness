@@ -11,6 +11,7 @@ working runs are retained and explicitly opt into release rotation.
 Publishing is the separate release_publish.py step, which fills `origin` afterwards.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import plistlib
@@ -22,9 +23,11 @@ import tempfile
 import zipfile
 
 from artifact import digest, inventory
+import build_provenance
 import retention
 import release_runs
 import release_cleanup
+import signer_check
 
 ROOT = Path(__file__).resolve().parents[2]
 STEPS = ('notarization', 'staple', 'staple-validation', 'gatekeeper', 're-zip')
@@ -62,6 +65,25 @@ def find_latest(dist):
     if len(matches) != 1:
         raise ValueError(f'expected exactly one accepted attempt for {final}; found {len(matches)}')
     return matches[0]
+
+
+def outer_seal_facts(final):
+    """The app seal's facts read from the accepted ZIP's own bytes, never from a working app."""
+    with tempfile.TemporaryDirectory(prefix='pw-archive-seal-', dir='/private/tmp') as temporary:
+        result = subprocess.run(['/usr/bin/ditto', '-x', '-k', str(final), temporary], capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            raise ValueError(f'the accepted ZIP could not be extracted for its seal facts: {result.stderr.strip()}')
+        app = Path(temporary) / 'PolicyWitness.app'
+        if not app.is_dir():
+            raise ValueError('the accepted ZIP holds no PolicyWitness.app')
+        try:
+            found = signer_check.signature(app)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return dict(status='unreadable', detail=str(exc)[:200])
+    chain = found['authorities'][1:]
+    return dict(status='ok', leaf=found['leaf'], team=found['team'], timestamp=bool(found['timestamp']),
+                runtime=bool(found['runtime']), authorities=found['authorities'][:4],
+                developer_id_chain=bool(chain) and chain[-1] == signer_check.APPLE_ROOT and signer_check.DEVELOPER_ID_CA in chain)
 
 
 def battery_record(root, dist, battery):
@@ -126,6 +148,14 @@ def archive_locked(attempt, *, dist, root, notes, battery):
     final_hash = digest(final)
     if acceptance.get('sha256') != final_hash:
         problems.append('final ZIP bytes differ from the accepted archive')
+    # The archived provenance and the final controller hash come from the accepted
+    # ZIP's own bytes, read here and verified again before the rename below.
+    record_bytes, controller_hash, seal_facts = None, None, None
+    try:
+        record_bytes, controller_hash = build_provenance.read_zip_record(final)
+        seal_facts = outer_seal_facts(final)
+    except (ValueError, KeyError, OSError, zipfile.BadZipFile) as exc:
+        problems.append(f'accepted ZIP provenance: {exc}')
     guide = final.parent / 'PolicyWitness.md'
     if not guide.is_file():
         problems.append(f'staged guide missing beside the archive: {guide}')
@@ -205,7 +235,10 @@ def archive_locked(attempt, *, dist, root, notes, battery):
                         original_path=acceptance_entry['path'] + '/acceptance.json', ok=True, sha256=final_hash),
         battery=None if battery_entry is None else dict(path=release_runs.BUNDLE + '/battery.json',
                         original_path=battery_entry['path'], run_id=battery_entry['run_id']),
-        receipts=receipts, notes=[])
+        receipts=receipts, notes=[],
+        provenance=dict(path='evidence/provenance.json', sha256=hashlib.sha256(record_bytes).hexdigest(),
+                        controller_sha256=controller_hash, app_signature=seal_facts,
+                        note='the embedded record as the accepted ZIP carries it; the controller hash and the seal facts are read from the same ZIP'))
     runs = {'acceptance': (acceptance_run, acceptance_entry)}
     if battery_entry:
         runs['battery'] = (root / 'tests/out' / battery_entry['path'], battery_entry)
@@ -229,6 +262,7 @@ def archive_locked(attempt, *, dist, root, notes, battery):
             raise ValueError('release receipts changed while archiving')
         if notes is not None:
             shutil.copy2(notes, evidence / 'release-notes.md')
+        (evidence / 'provenance.json').write_bytes(record_bytes)
         archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE,
                                                     tag=tag, source=commit, runs=runs)
         retention.atomic_json(staged / 'release.json', archived)

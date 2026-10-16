@@ -16,6 +16,13 @@
           "description": "Require complete bundle layout, valid signatures, and matching embedded evidence hashes"
         },
         {
+          "id": "build_provenance_controls",
+          "description": "Lock claims verify through the inherited descriptor; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns",
+          "requires": [
+            "clang"
+          ]
+        },
+        {
           "id": "signed_artifact_controls",
           "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence",
           "default": false,
@@ -26,7 +33,7 @@
         },
         {
           "id": "build_guard_controls",
-          "description": "Wrong Cargo and native minima stop before assembly; an ad hoc helper passes deep verification but stops before packaging, in both build variants",
+          "description": "Wrong Cargo and native minima and wrong-SDK outputs stop before assembly; an ad hoc helper and a helper, service or app seal without a secure timestamp pass deep verification but stop before packaging, in both build variants",
           "default": false,
           "requires": [
             "app",
@@ -39,7 +46,20 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every refusal the build baseline listed fires through the unchanged build script in its applicable variants, before the operation it protects; bypassed or displaced guards fail their control",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
+          "default": false,
+          "requires": [
+            "app",
+            "identity",
+            "cargo",
+            "meson",
+            "clang",
+            "swift"
+          ]
+        },
+        {
+          "id": "build_toolchain_switch_controls",
+          "description": "A real DEVELOPER_DIR switch between Xcode and the Command Line Tools: reuse under the stamped toolchain passes, reuse under the other refuses by the fields that differ, fresh mode recovers",
           "default": false,
           "requires": [
             "app",
@@ -1744,6 +1764,7 @@
         "preflight/signed_artifact_controls",
         "preflight/build_guard_controls",
         "preflight/build_refusal_controls",
+        "preflight/build_toolchain_switch_controls",
         "runner_exec_inheritance/mutation_controls",
         "smoke/runner_caller_auth",
         "runner_byoxpc/runner_auth_external",

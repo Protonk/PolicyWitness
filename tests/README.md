@@ -171,12 +171,34 @@ Placement under `runs/` alone does not establish ownership. Planning refusals ex
 After read-only planning, execution takes an OS-held advisory lock on
 `tests/.checkout.lock`, rechecks retention and output eligibility, and holds the
 lock through finalization. The file stays in place between operations; the held
-lock belongs to its inode. PID and start information is diagnostic; process exit
-releases the lock, while run records determine completion.
+lock belongs to its inode. PID, start time and nonce in the owner record are
+diagnostic; closing the last descriptor releases the lock, while run records
+determine completion. Nothing unlocks explicitly, because an explicit unlock
+by one holder would also end a hold shared with a child that inherited the
+descriptor.
 
-One checkout runs one execution at a time. Competing execution gets a
-checkout-busy error even with a different output path. Separate worktrees have
-independent locks. Help and `--list` remain available while execution holds the lock.
+`build.sh` holds the same lock from its admission through packaging, so one
+checkout runs one build or one execution at a time: a competing build or
+execution gets a checkout-busy error before any cache or distribution
+mutation, even with a different output path. The build takes the lock through
+`tests/lib/checkout_lock.py`, which runs the script under an inherited
+descriptor; the script verifies that claim through the descriptor (open on
+the lock file's inode, already holding the lock, with the owner nonce the
+claim names), never from the environment alone, and the hold lasts until the
+last compiler or tool that inherited the descriptor exits, even when the
+script is killed first. A standalone Cargo invocation against the managed
+`controller/target/` goes through the same helper, which takes the lock or
+shares a verified inherited hold:
+
+```sh
+python3 -B tests/lib/checkout_lock.py -- cargo test --manifest-path controller/Cargo.toml
+```
+
+Alternatively isolate both outputs and intermediates (`CARGO_TARGET_DIR` and
+`CARGO_BUILD_BUILD_DIR`) outside the managed areas. Release acceptance, the
+battery, archiving and rotation each take the lock in turn; `make release`
+holds no outer lock. Separate worktrees have independent locks. Help and
+`--list` remain available while a build or an execution holds the lock.
 
 Direct shell entrypoints default to `tests/out/runs/direct`; they do not replace
 output or provide dispatcher ownership/completion guarantees. Release acceptance
@@ -274,7 +296,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 
 | Suite | Tier | Coverage and limits | Equipment overview | Reference |
 | --- | --- | --- | --- | --- |
-| `preflight` | Baseline + opt-in | Bundle signatures, layout and evidence hashes; release acceptance, publication and cleanup controls. Inspection is read-only; mutations use copies. | App for inspection; signing identity/toolchains for opt-ins; offline release controls vary. | [Suite](suites/preflight/README.md) |
+| `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins; offline release controls vary. | [Suite](suites/preflight/README.md) |
 | `source_drift` | Baseline | Source manifests, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
@@ -464,6 +486,18 @@ predicate may differ only in its recorded worker PID. The offline
 
 Structural comparison does not establish behavioral equivalence. Repeated Swift
 builds of identical sources can differ in bytes.
+
+These receipts are test evidence about a native build directory, broader
+than the shipped record and not shipped: `meson_receipts.py` keeps every
+compile command, the environment's `PATH` and tool output on failure, none
+of which belongs in the bundle. The provenance record the build embeds
+(`Contents/Resources/Evidence/provenance.json`, described under
+[evidence artifacts](../docs/SIGNING.md#evidence-artifacts)) is the bounded
+counterpart: the selected tools' reports, the configuration, each build
+directory's state and the shipped outputs' load commands and hashes, with
+Cargo's reuse judgment per target. A receipt can explain a difference the
+record only names; the record can be recovered from an accepted release,
+which a receipt cannot.
 
 Two checks read `meson.build` and therefore need Meson on `PATH`, declared as
 equipment in the catalog: the `source_drift` suite compares every target's

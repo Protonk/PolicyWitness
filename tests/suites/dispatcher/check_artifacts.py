@@ -72,6 +72,30 @@ def exercise(out, name):
     elif name == 'host_imports_sandbox':
         # The bundle is intact and sealed; only the host's undefined symbols differ.
         expected_issue = 'host_invariance'
+    elif name == 'missing_record':
+        (app / 'Contents/Resources/Evidence/provenance.json').unlink()
+        seal(app)
+        expected_issue = 'required_component'
+    elif name == 'stale_record':
+        # The helper changed and the manifest followed, but the record kept the old bytes: the record's hash check names it.
+        helper.write_bytes(helper.read_bytes() + b'\0changed')
+        for entry in manifest['entries']:
+            if entry['rel_path'] == 'Contents/MacOS/pw-runner-client':
+                entry['sha256'] = fingerprint(helper)
+        manifest_path.write_text(json.dumps(manifest))
+        seal(app)
+        expected_issue = 'provenance_hash'
+    elif name == 'contradictory_record':
+        record_path = app / 'Contents/Resources/Evidence/provenance.json'
+        record = json.loads(record_path.read_text())
+        next(o for o in record['outputs'] if o['rel_path'] == 'Contents/MacOS/pw-runner-client')['uuid'] = 'FFFFFFFF-0000-0000-0000-000000000000'
+        record_path.write_text(json.dumps(record))
+        for entry in manifest['entries']:
+            if entry['rel_path'] == 'Contents/Resources/Evidence/provenance.json':
+                entry['sha256'] = fingerprint(record_path)
+        manifest_path.write_text(json.dumps(manifest))
+        seal(app)
+        expected_issue = 'provenance_metadata'
     before = fingerprint(app)
     receipts = work / 'receipts.jsonl'
     modes = {'probe/app': name} if name.startswith('mutate_') else {}
@@ -123,7 +147,7 @@ if __name__ == '__main__':
     out.mkdir(parents=True, exist_ok=True)
     cases = [exercise(out, name) for name in ('valid', 'missing_helper', 'damaged_signature',
         'resigned_stale_manifest', 'missing_manifest_entry', 'duplicate_manifest_entry',
-        'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'mutate_pass', 'mutate_fail',
-        'mutate_crash')]
+        'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'missing_record', 'stale_record',
+        'contradictory_record', 'mutate_pass', 'mutate_fail', 'mutate_crash')]
     (out / 'controls.json').write_text(json.dumps(cases, indent=2) + '\n')
     print(f'{len(cases)} artifact controls passed')

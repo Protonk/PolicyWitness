@@ -104,20 +104,21 @@ deterministic, and checked into the repo so tests are hermetic.
 
 The `dispatcher` fixtures include `repository.py` (copies the public runner and
 writes a caller-supplied catalog), `selection.sh`/`selection.py` (independent
-execution receipts and controlled evidence), `controller.py` (a runnable stub
-that records its own path, arguments, and bundle-local marker), and the
-reconciliation fault scripts. Two stub bundles distinguish an explicit app
+execution receipts and controlled evidence), `controller_stub.c` (a runnable
+Mach-O stub that records its own path, arguments, and bundle-local marker),
+and the reconciliation fault scripts. Two stub bundles distinguish an explicit app
 selection from a usable default. The setup fixture is also used by Python
 startup controls; it contains no expected selections or result-checking logic.
 `cancellation.sh`/`cancellation.py` supply standard cases and a helper that ignores
 SIGINT. They use the exec fixture's existing readiness/ping/release protocol;
 the cancellation checker reuses its kernel process-exit observer.
-`fixture_bundle.py` lays out fake signed bundles around a compiled XPC host stub
-(`host_clean.c`, `host_imports_sandbox.c`, built by `build.sh` once per suite
-run and named in `PW_DISPATCHER_HOST_FIXTURE`), and `seal_tool.py` is the
-independent file-seal command installed only inside fixture repositories; it
-imports nothing but the standard library. The real inspector still parses and
-checks their manifests and inventories. Real signing controls use disposable copies
+`fixture_bundle.py` lays out fake signed bundles around compiled Mach-O stubs
+(`host_clean.c`, `host_imports_sandbox.c` and `controller_stub.c`, built by
+`build.sh` once per suite run and named in `PW_DISPATCHER_HOST_FIXTURE`) and
+writes a provenance record describing the stand-ins' bytes and load commands;
+`seal_tool.py` is the independent file-seal command installed only inside
+fixture repositories; it imports nothing but the standard library. The real
+inspector still parses and checks their manifests, records and inventories. Real signing controls use disposable copies
 through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 

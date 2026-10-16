@@ -26,12 +26,17 @@ The parser accepts the forms build.sh uses and refuses any other: a banner is
 `echo "==> ..."` outside a function; a refusal is `echo "ERROR: ..." 1>&2` or
 a stderr heredoc whose first ERROR line is the message, followed within three
 lines by `exit N`; a signature is a `sign_macho "..."` call and a seal a
-`codesign --force` command; helpers run as `"${ROOT_DIR}/<path>"`, bare or captured into a variable; branches
-are `if`/`else`/`fi`, loops `for`/`done`, and `case`/`esac` may hold refusals
-but no banners. A refusal inside a function belongs to the steps that call
+`codesign --force` command; helpers run as `"${ROOT_DIR}/<path>"`, bare or captured into a variable, with
+a bare-word subcommand and the first `--flag` recorded; branches are
+`if`/`else`/`fi`, loops `for`/`done`, and `case`/`esac` may hold refusals
+but no banners. A banner inside an `if` on `"${PW_FRESH_BUILD}"` belongs to
+that condition (`fresh` or `incremental`), which the manifest step names in
+`when`. A refusal inside a function belongs to the steps that call
 the function. The script's first instruction must be `set -euo pipefail`,
 on which every propagated status depends; the signing commands' flags and
 the tool invocations' flags are recorded and compared, not only their names.
+Meson's policy assertions are one family: the manifest's one `meson` row
+carries their shared message template and lists every asserted option.
 
 Generator invariants: this generator holds G1 to G10 directly and G11 through
 the shared prose-link rule, as stated under Generator contracts in
@@ -61,6 +66,7 @@ REGION_END = "<!-- END GENERATED BUILD {region} -->"
 STAMP_RE = re.compile(r"<!-- build\.json figure (\S+); dot sha256 ([0-9a-f]{64}) -->")
 ID_RE = re.compile(r"[a-z][a-z0-9_]*")
 VARIANTS = ("full", "partial")
+CONDITIONS = ("fresh", "incremental")
 REFUSAL_KINDS = ("script", "meson", "propagated", "make")
 COVERAGE = ("behavioral", "helper", "textual")
 COVERED = {"behavioral", "helper"}
@@ -137,6 +143,17 @@ def parse_script(text):
 
     def loop():
         return next((f["name"] for f in reversed(stack) if f["kind"] == "loop"), None)
+
+    def condition():
+        found = None
+        for frame in stack:
+            if frame["kind"] != "if":
+                continue
+            if '"${PW_FRESH_BUILD}" == "1"' in frame["cond"]:
+                found = "incremental" if frame["else_branch"] else "fresh"
+            elif '"${PW_FRESH_BUILD}" == "0"' in frame["cond"]:
+                found = "fresh" if frame["else_branch"] else "incremental"
+        return found
 
     def context(number):
         return dict(line=number, step=step, variants=variants(), function=function(), loop=loop())
@@ -219,7 +236,7 @@ def parse_script(text):
         if match:
             if function() or any(f["kind"] == "case" for f in stack):
                 raise ParseError(f"line {number}: a banner inside a function or case is not a supported form")
-            model["banners"].append(dict(text=match.group(1), line=number, variants=variants()))
+            model["banners"].append(dict(text=match.group(1), line=number, variants=variants(), when=condition()))
             step = len(model["banners"]) - 1
             i += 1
             continue
@@ -253,8 +270,10 @@ def parse_script(text):
             continue
         match = re.search(r'"\$\{ROOT_DIR\}/([^"]+)"(.*)$', line)
         if match and re.match(r'^\s*(?:\w+="\$\()?/usr/bin/python3\b', line):  # a helper may run inside an assignment
-            flags = [a for a in match.group(2).split() if a.startswith("--")]
-            model["invocations"].append(dict(command=" ".join([match.group(1), *flags[:1]]), **context(number)))
+            rest = match.group(2).split()
+            subcommand = [rest[0]] if rest and re.fullmatch(r"[a-z][a-z-]*", rest[0]) else []
+            flags = [a for a in rest if a.startswith("--")]
+            model["invocations"].append(dict(command=" ".join([match.group(1), *subcommand, *flags[:1]]), **context(number)))
             i += 1
             continue
         match = re.match(r'^\s*(?:\w+="[^"]*"\s+)*(cargo build|meson setup|meson configure|meson compile|/usr/bin/ditto)\b', line)
@@ -364,7 +383,7 @@ def load_manifest(path: Path, root: Path = ROOT):
         raise ValueError("the manifest describes build.sh and the Makefile")
     forbidden = {MANIFEST_NAME, data["document"],
                  str(document.parent / (data["figure"] + ".dot")), str(document.parent / (data["figure"] + ".svg"))}
-    step_ids = _ids("steps", data["steps"], ("id", "banners", "variants", "reads", "writes", "refusals", "sources", "checks"), ("where",))
+    step_ids = _ids("steps", data["steps"], ("id", "banners", "variants", "reads", "writes", "refusals", "sources", "checks"), ("where", "when"))
     make_steps = [s for s in data["steps"] if s.get("where") == "Makefile"]
     if len(make_steps) > 1 or (make_steps and data["steps"][0] is not make_steps[0]):
         raise ValueError("at most one step is in the Makefile, and it is the first")
@@ -374,6 +393,8 @@ def load_manifest(path: Path, root: Path = ROOT):
             raise ValueError(f"{owner}: banners must be a list of nonempty strings")
         if "where" in step and step["where"] != "Makefile":
             raise ValueError(f"{owner}: where must be Makefile when present")
+        if "when" in step and (step["when"] not in CONDITIONS or not step["banners"]):
+            raise ValueError(f"{owner}: when must be one of {CONDITIONS} on a bannered step")
         _variants(owner, step["variants"])
         _text(owner, step, "reads"); _text(owner, step, "writes")
         if not isinstance(step["refusals"], list):
@@ -382,12 +403,18 @@ def load_manifest(path: Path, root: Path = ROOT):
     unbannered = [s for s in data["steps"] if not s["banners"] and s.get("where") != "Makefile"]
     if len(unbannered) > 1 or (unbannered and data["steps"].index(unbannered[0]) > 1):
         raise ValueError("only one step without a banner is allowed, before every bannered step of the script")
-    refusal_ids = _ids("refusals", data["refusals"], ("id", "message", "kind", "steps", "status", "variants", "sources", "checks"))
+    refusal_ids = _ids("refusals", data["refusals"], ("id", "message", "kind", "steps", "status", "variants", "sources", "checks"), ("asserts",))
     for refusal in data["refusals"]:
         owner = f"refusal {refusal['id']}"
         _text(owner, refusal, "message")
         if refusal["kind"] not in REFUSAL_KINDS:
             raise ValueError(f"{owner}: unknown kind {refusal['kind']!r}")
+        if (refusal["kind"] == "meson") != ("asserts" in refusal):
+            raise ValueError(f"{owner}: asserts belongs to a meson row and every meson row lists its asserted options")
+        if "asserts" in refusal and (not isinstance(refusal["asserts"], list) or not refusal["asserts"]
+                                     or any(not isinstance(a, str) or not re.fullmatch(r"[a-z_]+", a) for a in refusal["asserts"])
+                                     or len(set(refusal["asserts"])) != len(refusal["asserts"])):
+            raise ValueError(f"{owner}: asserts must be a nonempty list of distinct option names")
         if not isinstance(refusal["steps"], list) or not refusal["steps"] or set(refusal["steps"]) - step_ids:
             raise ValueError(f"{owner}: steps must name known steps")
         if not re.fullmatch(r"[0-9]+", str(refusal["status"])) or not isinstance(refusal["status"], str):
@@ -500,6 +527,8 @@ def banner_problems(manifest, model):
         step = next(s for s in manifest["steps"] if s["id"] == sid)
         if sorted(step["variants"]) != banner["variants"]:
             out.append(f"step {sid}: manifest variants {step['variants']}, script {banner['variants']} for '{text}'")
+        if step.get("when") != banner["when"]:
+            out.append(f"step {sid}: manifest condition {step.get('when')!r}, script {banner['when']!r} for '{text}'")
     return out
 
 
@@ -551,11 +580,30 @@ def meson_assertions(text):
     return [(name, value.strip()) for name, value in found]
 
 
+def meson_templates(text):
+    """The message templates meson.build's policy assertions format, with the placeholders the manifest uses."""
+    found = re.findall(r"assert\(get_option\(name\) == expected,\s*'([^']+)'\.format\(", text)
+    return sorted({t.replace("@0@", "${name}").replace("@1@", "${expected}").replace("@2@", "${got}") for t in found})
+
+
 def meson_problems(manifest, meson_text):
-    expected = {r["message"]: r for r in manifest["refusals"] if r["kind"] == "meson"}
-    actual = {f"fixed native policy: {name} must be {value}": name for name, value in meson_assertions(meson_text)}
-    out = [f"meson assertion '{m}' (manifest {expected[m]['id']}): not asserted by meson.build" for m in sorted(set(expected) - set(actual))]
-    out += [f"meson assertion '{m}': not in the manifest" for m in sorted(set(actual) - set(expected))]
+    """One manifest row models the assertion family: its message is the template and its asserts are the options, in order."""
+    rows = [r for r in manifest["refusals"] if r["kind"] == "meson"]
+    templates = meson_templates(meson_text)
+    names = [name for name, _ in meson_assertions(meson_text)]
+    out = []
+    if len(templates) != 1:
+        out.append(f"meson.build: expected one assertion message template, found {len(templates)}")
+    for row in rows:
+        if templates and row["message"] != templates[0]:
+            out.append(f"meson row {row['id']}: message is not the assertion template {templates[0]!r}")
+    asserted = [name for row in rows for name in row.get("asserts", [])]
+    if len(set(asserted)) != len(asserted):
+        out.append("meson rows: an option is asserted by more than one row")
+    out += [f"meson assertion '{name}': not in the manifest" for name in names if name not in asserted]
+    out += [f"meson assertion '{name}' (manifest): not asserted by meson.build" for name in asserted if name not in names]
+    if not out and asserted != names:
+        out.append(f"meson rows: asserted options {asserted} are not in meson.build's order {names}")
     return out
 
 
@@ -773,22 +821,38 @@ def render_dot(manifest):
             attrs["fillcolor"] = "white"
         if step.get("where") == "Makefile":
             attrs["fillcolor"] = "#fff4e0"
+        if step.get("when"):
+            attrs["label"] += f"\n({step['when']} mode only)"
+            attrs["style"] = "rounded,dotted"
+            attrs["fillcolor"] = "#fdf2f2"
         lines.append(f"    {step['id']} [{arch._attr_text(attrs)}];")
-    # One edge per variant path: a step follows the last step that runs in the same variant.
-    previous, drawn = {variant: None for variant in VARIANTS}, []
+    # One edge per variant path: a step follows the last step that runs in the same variant. A
+    # conditional step hangs off the last unconditional step and rejoins at the next one, which
+    # also keeps its direct edge from that unconditional step: the two paths are alternatives.
+    previous, unconditional, drawn = {v: None for v in VARIANTS}, {v: None for v in VARIANTS}, []
     for step in steps:
         for variant in step["variants"]:
-            if previous[variant] is not None:
-                drawn.append((previous[variant], step["id"], variant))
+            if step.get("when"):
+                if unconditional[variant] is not None:
+                    drawn.append((unconditional[variant], step["id"], variant, "dotted"))
+            else:
+                if previous[variant] is not None and previous[variant] != unconditional[variant]:
+                    drawn.append((previous[variant], step["id"], variant, "dotted"))
+                if unconditional[variant] is not None:
+                    drawn.append((unconditional[variant], step["id"], variant, None))
+                unconditional[variant] = step["id"]
             previous[variant] = step["id"]
-    for source, target in dict.fromkeys((s, t) for s, t, _ in drawn):
-        variants = sorted({v for s, t, v in drawn if (s, t) == (source, target)})
+    for source, target in dict.fromkeys((s, t) for s, t, _, _ in drawn):
+        variants = sorted({v for s, t, v, _ in drawn if (s, t) == (source, target)})
+        dotted = any(d for s, t, _, d in drawn if (s, t) == (source, target))
+        attrs = []
         if variants == ["full"]:
-            lines.append(f'    {source} -> {target} [color="#1f5fbf"];')
+            attrs.append('color="#1f5fbf"')
         elif variants == ["partial"]:
-            lines.append(f'    {source} -> {target} [style=dashed];')
-        else:
-            lines.append(f"    {source} -> {target};")
+            attrs.append("style=dashed")
+        if dotted:
+            attrs.append("style=dotted")
+        lines.append(f"    {source} -> {target}" + (f" [{', '.join(attrs)}]" if attrs else "") + ";")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -807,10 +871,11 @@ def svg_stamp_matches(svg_text, dot_text):
     return bool(match) and match.group(1) == "steps" and match.group(2) == arch.dot_hash(dot_text)
 
 
-VERIFIED = ("Symbol presence and test definition are verified, and the banner order, the refusal messages with the "
-            "script's own statuses and steps, knob values, signing calls with their flags, helper and tool invocations "
-            "with their listed flags, and the signing inventory are compared with the script by the build_documentation "
-            "case; whether a test asserts the row, or a refusal fires before the operation it protects, is not verified.")
+VERIFIED = ("Symbol presence and test definition are verified, and the banner order with each step's condition, the "
+            "refusal messages with the script's own statuses and steps, the Meson assertion family's template and asserted "
+            "options, knob values, signing calls with their flags, helper and tool invocations with their subcommands and "
+            "listed flags, and the signing inventory are compared with the script by the build_documentation case; whether "
+            "a test asserts the row, or a refusal fires before the operation it protects, is not verified.")
 
 
 def _cites(item):
@@ -828,7 +893,9 @@ def render_figure(manifest):
         f"*Figure: one build in time, step by step. Generated from [{manifest_name}]({manifest_name}) by "
         f"[{generator}]({generator}); dot source in [{figure}.dot]({figure}.dot). The ids in the figure are the "
         f"ids in the step table; a blue node and a blue edge belong only to a full build, a dashed node or edge only to a partial "
-        f"build, and the two paths rejoin where both variants run. {VERIFIED}*"])
+        f"build, and the two paths rejoin where both variants run. A dotted node runs only under the condition it names "
+        f"(fresh mode, PW_FRESH_BUILD=1) and is skipped otherwise: its dotted edges and the direct edge beside them are "
+        f"alternatives, not a sequence. {VERIFIED}*"])
 
 
 def render_steps(manifest):
@@ -837,8 +904,8 @@ def render_steps(manifest):
         banner = " / ".join(step["banners"]) if step["banners"] else "(none)"
         if step.get("where") == "Makefile":
             banner = f"Makefile: {banner}"
-        rows.append([step["id"], banner, _variant_cell(step["variants"]), step["reads"], step["writes"],
-                     ", ".join(step["refusals"]) or "none", *_cites(step)])
+        rows.append([step["id"], banner, _variant_cell(step["variants"]) + (f"; {step['when']} mode only" if step.get("when") else ""),
+                     step["reads"], step["writes"], ", ".join(step["refusals"]) or "none", *_cites(step)])
     summary = (f"<summary>{len(manifest['steps'])} steps in order, with symbol presence and test definition verified "
                f"and the banner order compared with the script; whether a test asserts the row is not verified</summary>")
     return "\n".join(["<details>", summary, "", arch._table(
@@ -851,14 +918,18 @@ def render_refusals(manifest):
         cover = coverage(refusal)
         cell = {"behavioral": "a control produces it", "helper": "a control produces it in the helper, not through the script",
                 "textual": "none; listed in the baseline"}[cover]
-        rows.append([refusal["id"], refusal["message"], ", ".join(refusal["steps"]), refusal["status"], refusal["kind"],
+        message = refusal["message"]
+        if "asserts" in refusal:
+            message += f" (the assertion family: {len(refusal['asserts'])} options, {', '.join(refusal['asserts'])})"
+        rows.append([refusal["id"], message, ", ".join(refusal["steps"]), refusal["status"], refusal["kind"],
                      _variant_cell(refusal["variants"]), cell, *_cites(refusal)])
     counts = {kind: sum(r["kind"] == kind for r in manifest["refusals"]) for kind in REFUSAL_KINDS}
     uncovered = sum(coverage(r) == "textual" for r in manifest["refusals"])
     baseline = (f"{uncovered} have no control that produces them and are listed in the baseline" if uncovered
                 else "every refusal has a control that produces it and the baseline is empty")
+    asserted = sum(len(r.get("asserts", [])) for r in manifest["refusals"])
     summary = (f"<summary>{len(manifest['refusals'])} refusals ({counts['script']} the script's own, {counts['meson']} Meson "
-               f"assertions, {counts['propagated']} propagated from a check or a tool, {counts['make']} in the Makefile), "
+               f"assertion family over {asserted} options, {counts['propagated']} propagated from a check or a tool, {counts['make']} in the Makefile), "
                f"with symbol presence and test definition verified and the messages, statuses and steps compared with the "
                f"script; {baseline}; whether a test asserts the row is not verified</summary>")
     return "\n".join(["<details>", summary, "", arch._table(
@@ -906,7 +977,9 @@ def span_values(manifest):
     values = {"steps": len(manifest["steps"]), "refusals": len(refusals), "signing": len(manifest["signing"]),
               "knobs": len(manifest["knobs"]), "invocations": len(manifest["invocations"]),
               "covered": sum(coverage(r) != "textual" for r in refusals),
-              "uncovered": sum(coverage(r) == "textual" for r in refusals)}
+              "uncovered": sum(coverage(r) == "textual" for r in refusals),
+              "meson_options": sum(len(r.get("asserts", [])) for r in refusals),
+              "conditional_steps": sum(1 for s in manifest["steps"] if s.get("when"))}
     for kind in REFUSAL_KINDS:
         values[f"refusals.{kind}"] = sum(r["kind"] == kind for r in refusals)
     return {name: format_value(value) for name, value in values.items()}

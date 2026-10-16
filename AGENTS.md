@@ -15,6 +15,8 @@ This file governs how contributors and agents work here.
   [harness reference](tests/README.md) describes commands and coverage.
 - Local artifacts: follow [scratch guidance](.tmp/AGENTS.md) or
   [distribution guidance](dist/AGENTS.md) before cleanup.
+- Preparing a plan for someone else to execute:
+  [planning guidance](CONTRIBUTING.md#planning-a-change).
 
 ## Documentation
 
@@ -43,10 +45,12 @@ Run from the repository root:
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 ```
 
-Use [the build guide](docs/BUILD.md) for prerequisites, settings and diagnostics;
-`make help` lists the operator commands. Adding or moving a native source requires
-updating its Meson target. Build and test checks diagnose source-list, bundle
-inventory and signing inconsistencies.
+Use [the build guide](docs/BUILD.md) for prerequisites, settings, cache
+compatibility and diagnostics; `make help` lists the operator commands.
+`PW_FRESH_BUILD=1` replaces the build caches, and a changed compiler or SDK
+needs it once. Adding or moving a native source requires updating its Meson
+target. Build and test checks diagnose source-list, bundle inventory, signing
+and provenance inconsistencies.
 
 ## External runner workflow (agents)
 
@@ -68,10 +72,11 @@ ownership and cleanup. The default battery is `tests/run.sh` or `make test`;
 `tests/run.sh --all --list` shows all cases and their requirements. Use a fresh
 `PW_TEST_OUT_DIR=tests/out/runs/<name>` for separate evidence.
 
-Never unlink `tests/.checkout.lock`; use a second worktree for concurrent runs.
-Do not bypass the helpers to remove protected evidence or resource-cleanup
-records. Preserve interrupted release rotation and follow the
-[test cleanup guidance](tests/AGENTS.md#preserve-and-clean-up-output).
+Never unlink `tests/.checkout.lock`; builds and test executions in one
+checkout share it and run one at a time, so use a second worktree for
+concurrent work. Do not bypass the helpers to remove protected evidence or
+resource-cleanup records. Preserve interrupted release rotation and follow
+the [test cleanup guidance](tests/AGENTS.md#preserve-and-clean-up-output).
 
 ## Sandboxed automation harnesses
 

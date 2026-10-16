@@ -53,6 +53,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "BYOXPC verification con
 test_pass "installation and validation verify the copied bundle recursively; a changed worker or issuer is refused and reported"
 fi
 
+if test_selected build_provenance_controls; then
+test_begin preflight build_provenance_controls
+test_step helpers "exercise the lock, stamp, fresh-mode, Cargo judgment, SDK, signature-display and record readers with constructed inputs"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build provenance controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_build_provenance.py"
+test_pass "lock claims verify through the descriptor; stamps, judgments, SDK versions, signature displays and records are decided without adopting unknowns"
+fi
+
 if test_selected signed_artifact_controls; then
 test_begin preflight signed_artifact_controls
 test_step signing "inspect intact, damaged, and re-signed disposable app copies"
@@ -77,6 +85,18 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build guard controls fa
 test_pass "wrong minima preserve previous outputs; an ad hoc helper passes deep verification but stops before packaging"
 fi
 
+if test_selected build_toolchain_switch_controls; then
+test_begin preflight build_toolchain_switch_controls
+test_step switch "build under the selected developer directory, refuse reuse under the Command Line Tools, recover fresh"
+test_require_pw
+SIGNING_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
+[[ -n "${SIGNING_IDENTITY}" ]] || test_fail "matching signing identity required"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build toolchain switch controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/opt_in/build_toolchain_switch.py" \
+  "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
+test_pass "a real toolchain switch refuses reuse by the fields that differ and recovers under fresh mode"
+fi
+
 if test_selected build_refusal_controls; then
 test_begin preflight build_refusal_controls
 test_step build "drive the unchanged build script through every baseline refusal and observe the operation each one protects"
@@ -86,5 +106,5 @@ SIGNING_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build refusal controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/opt_in/build_refusals.py" \
   "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
-test_pass "every listed refusal fires in its variants before the operation it protects; bypassed and displaced guards fail their control"
+test_pass "every manifest refusal fires in its variants before the operation it protects; the fresh-mode state sequence, lock and record limits hold; bypassed and displaced guards fail their control"
 fi

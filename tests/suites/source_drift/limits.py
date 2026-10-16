@@ -33,8 +33,11 @@ class LimitsDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        # build.sh admits its tracked inputs and takes the checkout lock before the limits check it makes first.
         paths = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
-                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh',
+                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh', 'tests/lib/checkout_lock.py', 'Info.plist',
+                 'PolicyWitness.entitlements', 'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
+                 *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb')),
                  generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS}
         for row in self.manifest['limits']:
             paths.update(ref['path'] for key in ['sources', 'checks'] for ref in row[key])
@@ -355,8 +358,9 @@ class LimitsDocumentationTests(unittest.TestCase):
         path = root / 'docs/PolicyWitness.md'
         path.write_text(path.read_text().replace('262,143', '262,144', 1))
         destination = root / 'dist'
+        excluded = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'PW_CHECKOUT_LOCK_FD', 'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE')
         result = subprocess.run(['bash', str(root / 'build.sh')], cwd=root,
-            env={**os.environ, 'IDENTITY': '', 'DIST_DIR': str(destination)},
+            env={**{k: v for k, v in os.environ.items() if k not in excluded}, 'IDENTITY': '', 'DIST_DIR': str(destination)},
             capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('stale PolicyWitness.md', result.stderr)

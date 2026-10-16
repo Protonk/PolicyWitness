@@ -203,6 +203,16 @@ def replacement_allowed(root, out, retained):
 
 @contextmanager
 def checkout_lock(root, *, preview=False):
+    """Hold tests/.checkout.lock for the block; a preview only observes whether it is held.
+
+    The hold belongs to the open file description and ends when its last
+    descriptor closes. Nothing unlocks explicitly: an unlock would also end a
+    hold shared with a child that inherited the descriptor (builds pass it to
+    their protected children through tests/lib/checkout_lock.py), so the
+    descriptor is closed and the operating system releases the lock when no
+    sharer remains. The owner record is diagnostic: pid, start time and a
+    nonce that a launched command's claim must repeat.
+    """
     path = root / 'tests/.checkout.lock'
     # A preview must leave even a checkout without a lock file unchanged.
     if preview and not os.path.lexists(path):
@@ -219,13 +229,12 @@ def checkout_lock(root, *, preview=False):
             if not preview:
                 raise ValueError('checkout busy: another execution or mutating operation holds tests/.checkout.lock')
         if acquired and not preview:
-            metadata = json.dumps({'pid': os.getpid(), 'started_at_unix_ms': time.time_ns() // 1_000_000}) + '\n'
+            metadata = json.dumps({'pid': os.getpid(), 'started_at_unix_ms': time.time_ns() // 1_000_000,
+                                   'nonce': uuid.uuid4().hex}) + '\n'
             os.ftruncate(fd, 0)
             os.write(fd, metadata.encode())
         yield not acquired
     finally:
-        if acquired:
-            fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
 
 

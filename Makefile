@@ -10,8 +10,8 @@
 #   test      Run the default battery against $(DIST_DIR)/PolicyWitness.app into
 #             tests/out/runs/default. Does not build.
 #   prune     Preview eligible test runs; APPLY=1 removes them. Nothing else.
-#   notarize  The rehearsable lower-level chain: preflight report, build, submit,
-#             staple, validate, Gatekeeper, re-zip, accept the final ZIP.
+#   notarize  The rehearsable lower-level chain: preflight report, fresh build,
+#             submit, staple, validate, Gatekeeper, re-zip, accept the final ZIP.
 #   release   The whole procedure: strict preflight, notarize, battery, archive,
 #             rotate older test output. Spends one notarization submission.
 #   publish   Push the tag and create the GitHub release from an archive.
@@ -20,7 +20,11 @@
 #   APPLY                    For prune: omit to preview, set exactly 1 to remove;
 #                            every other supplied value, including empty, refuses.
 #   IDENTITY                 Developer ID Application identity in your keychain;
-#                            build.sh refuses any other class and selects nothing.
+#                            build.sh selects nothing and verifies the signatures it
+#                            makes against the Developer ID chain after sealing.
+#   PW_FRESH_BUILD           Build knob, 0 when unset: 1 replaces builddir/ and
+#                            controller/target/release/ before compiling. notarize
+#                            and release enforce 1 and refuse any other value.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
 #   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land,
 #                            and where test looks for the app.
@@ -45,8 +49,9 @@
 #   last line ("Error N").
 #
 # Boundaries
-#   Acceptance, the battery, archiving and rotation each hold tests/.checkout.lock;
-#   run no other battery during make release.
+#   build.sh, acceptance, the battery, archiving and rotation each hold
+#   tests/.checkout.lock for their own duration; a build and a battery in one
+#   checkout are mutually exclusive, and release holds no outer lock of its own.
 #   Only notarize and publish send anything: notarize uploads the ZIP to Apple
 #   once; publish pushes the tag and creates the GitHub release. Signing requests
 #   Apple timestamps and release's preflight reads the remote tag.
@@ -67,16 +72,12 @@ help:
 
 # build: one path through build.sh, which compiles (Cargo for the Rust pieces,
 # Meson for the native executables), signs every embedded tool and embeds the
-# generated evidence. The guard mirrors build.sh's own identity
-# requirement so the message names the make invocation to use.
+# generated evidence. build.sh makes every refusal, including the missing
+# identity, whose message names this make invocation; PW_FRESH_BUILD reaches
+# it only when the caller set it, so an unset knob keeps the script's default.
 build:
-	@if [ -z "$(IDENTITY)" ]; then \
-		echo "ERROR: set IDENTITY to your Developer ID Application identity"; \
-		echo "example: make build IDENTITY='Developer ID Application: ...'"; \
-		exit 2; \
-	fi
 	@echo "==> [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
-	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" ./build.sh
+	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" $(if $(PW_FRESH_BUILD),PW_FRESH_BUILD="$(PW_FRESH_BUILD)",) ./build.sh
 
 # prune: preview by default. The pruner removes only completed,
 # owned, unretained direct children of tests/out/runs/ and keeps release
@@ -111,9 +112,10 @@ test:
 
 # notarize: the lower-level chain, usable on its own as a rehearsal. The preflight
 # runs in --report mode, so its findings are warnings and a rehearsal still
-# records the stamp it notarized. It builds again on purpose: what this chain
-# submits, staples and accepts must come from the tree the preflight just
-# inspected, not from an earlier build. release_evidence.py opens the attempt
+# records the stamp it notarized. It builds again on purpose, and fresh: what
+# this chain submits, staples and accepts must come from the tree the preflight
+# just inspected, compiled into replaced build caches, not from an earlier
+# build or retained outputs. release_evidence.py opens the attempt
 # directory; notarize.py bounds its own upload and wait, and staple, validation,
 # Gatekeeper and re-zip run through release_commands.py with a 60 s bound, each
 # leaving a receipt there. The pre-staple ZIP is removed before re-zip so
@@ -132,7 +134,12 @@ notarize:
 	fi
 	@echo "==> [notarize] preflight report for $(DIST_DIR)"
 	@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist "$(DIST_DIR)"
-	@$(MAKE) build
+# The release build is fresh: a caller's conflicting knob refuses here instead of being overridden silently.
+	@if [ -n "$${PW_FRESH_BUILD+x}" ] && [ "$${PW_FRESH_BUILD}" != "1" ]; then \
+		echo "ERROR: notarize builds with PW_FRESH_BUILD=1; the supplied PW_FRESH_BUILD='$${PW_FRESH_BUILD}' conflicts with it" >&2; \
+		exit 2; \
+	fi
+	@$(MAKE) build PW_FRESH_BUILD=1
 # One shell from here: the attempt directory path must reach every step.
 	@set -eu; \
 	  release_evidence="$$(/usr/bin/python3 -B tests/lib/release_evidence.py "$(DIST_DIR)/PolicyWitness.zip")"; \

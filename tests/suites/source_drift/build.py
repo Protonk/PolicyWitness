@@ -38,7 +38,8 @@ class BuildDocumentationTests(unittest.TestCase):
         paths = {'docs/generator_common.py', 'docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/limits.json',
                  'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, generator.BASELINE_NAME,
                  self.manifest['document'], 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
-                 'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py'}
+                 'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
+                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py'}
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         paths |= self.cited()
         for name in paths:
@@ -96,6 +97,12 @@ class BuildDocumentationTests(unittest.TestCase):
             'directory facts': lambda d: d['directories'][0]['facts'].pop('Refused when'),
             'unknown field': lambda d: d['steps'][2].__setitem__('colour', 'red'),
             'make step not first': lambda d: d['steps'].append(d['steps'].pop(0)),
+            'condition on an unbannered step': lambda d: d['steps'][1].__setitem__('when', 'fresh'),
+            'unknown condition': lambda d: next(s for s in d['steps'] if s.get('when')).__setitem__('when', 'sometimes'),
+            'asserts on a script row': lambda d: d['refusals'][0].__setitem__('asserts', ['optimization']),
+            'meson row without asserts': lambda d: next(r for r in d['refusals'] if r['kind'] == 'meson').pop('asserts'),
+            'duplicate asserted option': lambda d: next(r for r in d['refusals'] if r['kind'] == 'meson')['asserts'].append('optimization'),
+            'empty asserts': lambda d: next(r for r in d['refusals'] if r['kind'] == 'meson').__setitem__('asserts', []),
         }
         for name, mutate in mutations.items():
             data = copy.deepcopy(self.manifest)
@@ -161,6 +168,12 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertIn('skip_xpc -> presign [style=dashed]', dot_text)
         self.assertNotIn('embed_services -> skip_xpc', dot_text)
         self.assertIn('sign_tools -> evidence [style=dashed]', dot_text)
+        # The fresh-only step hangs off its predecessor and rejoins; the direct edge beside it is the incremental path.
+        self.assertIn('cargo_admit -> fresh [style=dotted]', dot_text)
+        self.assertIn('fresh -> cargo [style=dotted]', dot_text)
+        self.assertIn('cargo_admit -> cargo;', dot_text)
+        self.assertIn('(fresh mode only)', dot_text)
+        self.assertIn('fresh mode only', svg)
 
     def test_stale_copies_are_refused_then_regenerated_idempotently(self):
         root = self.checkout()
@@ -237,7 +250,7 @@ class BuildDocumentationTests(unittest.TestCase):
             ('reordered banner', generator.banner_problems,
              SCRIPT.replace('echo "==> Checking limits documentation"\n/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
                             'echo "==> Checking contract versions"\n/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1),
-             'banner order: position 1'),
+             'banner order: position 2'),
             ('removed banner', generator.banner_problems, self.mutated('echo "==> Compiling native executables"\n', ''), 'banner order'),
             ('banner variant moved', generator.banner_problems,
              self.mutated('  echo "==> Embedding PW runner client"\n', '').replace('if [[ "${BUILD_XPC}" == "1" ]]; then\n  echo "==> Embedding PW runner client"',
@@ -247,12 +260,18 @@ class BuildDocumentationTests(unittest.TestCase):
              self.mutated('echo "==> Compiling native executables"\n', 'echo "==> Compiling native executables"\necho "ERROR: control refusal" 1>&2\nexit 2\n'),
              "refusal 'control refusal' at line"),
             ('removed refusal', generator.refusal_problems,
-             self.mutated('  echo "ERROR: missing augments source dir at ${XPC_AUGMENTS_DIR}" 1>&2\n  exit 2\n', '  :\n'),
+             self.mutated('    echo "ERROR: expected Meson output at ${native_bin}" 1>&2\n    exit 2\n', '    :\n'),
              'not printed by the script'),
             ('refusal moved to another step', generator.refusal_problems,
-             self.mutated('if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then\n  echo "ERROR: missing entitlements plist: ${ENTITLEMENTS_PLIST}" 1>&2\n  exit 2\nfi\n', '')
-                 .replace('echo "==> Codesigning embedded MacOS tools"\n', 'echo "==> Codesigning embedded MacOS tools"\nif [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then\n  echo "ERROR: missing entitlements plist: ${ENTITLEMENTS_PLIST}" 1>&2\n  exit 2\nfi\n', 1),
-             'refusal missing_entitlements: manifest steps'),
+             self.mutated('    echo "ERROR: missing tracked build input: ${tree_input}" 1>&2\n    exit 2\n', '    :\n')
+                 .replace('echo "==> Checking limits documentation"\n', 'echo "==> Checking limits documentation"\nif [[ ! -e "${ROOT_DIR}/${tree_input}" ]]; then\n  echo "ERROR: missing tracked build input: ${tree_input}" 1>&2\n  exit 2\nfi\n', 1),
+             'refusal missing_tree_input: manifest steps'),
+            ('fresh condition removed from a step', generator.banner_problems,
+             self.mutated('if [[ "${PW_FRESH_BUILD}" == "1" ]]; then\n  echo "==> Replacing the build caches', 'if true; then\n  echo "==> Replacing the build caches'),
+             'step fresh: manifest condition'),
+            ('helper subcommand changed', generator.invocation_problems,
+             self.mutated('build_provenance.py" stamp-check --session', 'build_provenance.py" stamp-extend --session'),
+             "invocation 'tests/lib/build_provenance.py stamp-check --session' in step builddir"),
             ('changed exit status', generator.refusal_problems,
              self.mutated('      echo "ERROR: ${knob} must be 0 or 1 (got \'${!knob}\')" 1>&2\n      exit 2', '      echo "ERROR: ${knob} must be 0 or 1 (got \'${!knob}\')" 1>&2\n      exit 3'),
              'refusal knob_value: manifest status 2, script exit 3'),
@@ -309,12 +328,20 @@ class BuildDocumentationTests(unittest.TestCase):
         meson = (ROOT / 'meson.build').read_text()
         self.assertEqual(generator.meson_problems(manifest, meson), [])
         added = meson.replace("  'b_lto': false,\n", "  'b_lto': false,\n  'b_colorout': 'auto',\n", 1)
-        self.assertTrue(any("b_colorout must be 'auto'" in p and 'not in the manifest' in p for p in generator.meson_problems(manifest, added)))
+        self.assertTrue(any("'b_colorout'" in p and 'not in the manifest' in p for p in generator.meson_problems(manifest, added)))
         removed = meson.replace("  'b_lto': false,\n", '', 1)
         self.assertTrue(any('b_lto' in p and 'not asserted' in p for p in generator.meson_problems(manifest, removed)))
+        reordered = meson.replace("  'b_lto': false,\n  'b_coverage': false,\n", "  'b_coverage': false,\n  'b_lto': false,\n", 1)
+        self.assertTrue(any('order' in p for p in generator.meson_problems(manifest, reordered)))
+        retemplated = meson.replace('only inspection and xpc are configurable', 'only inspection is configurable', 1)
+        self.assertTrue(any('template' in p for p in generator.meson_problems(manifest, retemplated)))
+        split = copy.deepcopy(manifest)
+        family = next(r for r in split['refusals'] if r['kind'] == 'meson')
+        family['asserts'] = family['asserts'][:-1]
+        self.assertTrue(any('swift_link_args' in p and 'not in the manifest' in p for p in generator.meson_problems(split, meson)))
         makefile = (ROOT / 'Makefile').read_text()
         self.assertEqual(generator.makefile_problems(manifest, makefile), [])
-        guardless = makefile.replace('\t\techo "ERROR: set IDENTITY to your Developer ID Application identity"; \\\n', '', 1)
+        guardless = makefile.replace('\t@echo "==> [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"\n', '', 1)
         self.assertNotEqual(guardless, makefile)
         self.assertTrue(any('not printed' in p for p in generator.makefile_problems(manifest, guardless)))
         self.assertEqual(generator.inventory_problems(manifest, model, ROOT), [])
@@ -375,6 +402,8 @@ class BuildDocumentationTests(unittest.TestCase):
             self.assertNotEqual(compile_.returncode, 0, name)
             return compile_.stdout + compile_.stderr
 
+        family = next(r for r in self.manifest['refusals'] if r['kind'] == 'meson')
+        self.assertEqual(family['asserts'], list(assertions), 'the one manifest row lists every asserted option in order')
         for name, value in other.items():
             with self.subTest(option=name):
                 output = poisoned(name, value, 'true' if name.startswith('swift') else 'false')
@@ -385,6 +414,34 @@ class BuildDocumentationTests(unittest.TestCase):
             output = poisoned('buildtype', 'debug', 'false')
             self.assertRegex(output, r'fixed native policy: (optimization|debug) must be')
             self.assertNotIn('fixed native policy: buildtype must be', output)
+
+    def test_bypassing_one_meson_policy_assertion_fails_its_control(self):
+        """The collapsed row stands for every option: with one assertion removed from meson.build, that option's control
+        no longer refuses (the compile succeeds), and the grounding rule names the option the manifest still asserts."""
+        directory = tempfile.TemporaryDirectory(prefix='pw-meson-bypass-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT)
+        for name in set(names.decode().split('\0')) - {''}:
+            source, target = ROOT / name, root / name
+            if source.is_file() and (name.startswith(('controller/tools/', 'runner/Sources/', 'runner/Services/', 'runner/Clients/'))
+                                     or name in ('meson.build', 'meson.options')):
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+        meson = root / 'meson.build'
+        text = meson.read_text()
+        self.assertEqual(text.count("  'b_lto': false,\n"), 1)
+        meson.write_text(text.replace("  'b_lto': false,\n", '', 1))
+        builddir = root / 'builddir'
+        setup = subprocess.run(['meson', 'setup', str(builddir), str(root), '-Dxpc=false'], capture_output=True, text=True, timeout=300)
+        self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+        configure = subprocess.run(['meson', 'configure', str(builddir), '-Db_lto=true'], capture_output=True, text=True, timeout=300)
+        self.assertEqual(configure.returncode, 0, configure.stdout + configure.stderr)
+        compile_ = subprocess.run(['meson', 'compile', '-C', str(builddir)], capture_output=True, text=True, timeout=600)
+        self.assertEqual(compile_.returncode, 0, 'with the assertion removed the departing option is accepted: the control would fail here')
+        self.assertNotIn('fixed native policy: b_lto', compile_.stdout + compile_.stderr)
+        problems = generator.meson_problems(self.manifest, meson.read_text())
+        self.assertTrue(any('b_lto' in p and 'not asserted' in p for p in problems), problems)
 
     def test_release_preflight_refuses_a_grown_build_baseline(self):
         release_spec = importlib.util.spec_from_file_location('preflight_build_baseline', ROOT / 'tests/lib/release_preflight.py')

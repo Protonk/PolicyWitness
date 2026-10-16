@@ -99,7 +99,7 @@ def substitute(baseline, out, identity, replacements, work_parent='/private/tmp'
     sign(out / 'sign-client', identity, app / REPLACEMENTS['client'])
     sign(out / 'sign-service', identity, app / SERVICE, SERVICE_ENTITLEMENTS)
     command(out / 'evidence', ['/usr/bin/python3', ROOT / 'tests/build-evidence.py', '--app-bundle', app,
-                               '--app-entitlements', APP_ENTITLEMENTS])
+                               '--app-entitlements', APP_ENTITLEMENTS, '--substitution-of', baseline, '--identity', identity])
     sign(out / 'sign-app', identity, app, APP_ENTITLEMENTS)
     command(out / 'verify', ['/usr/bin/codesign', '--verify', '--deep', '--strict', '--verbose=2', app])
     report = artifact.inspect(app)

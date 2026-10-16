@@ -304,21 +304,29 @@ The `build_documentation` case checks [docs/build.json](../../../docs/build.json
 against the dot file, SVG stamp and generated table regions of
 [docs/BUILD.md](../../../docs/BUILD.md), and runs the grounding rules in
 [build_rules.py](build_rules.py), which parse `build.sh` and compare its
-banner order, refusal messages, statuses and steps, knob values, signing
-calls and helper invocations with the manifest, compare the Makefile's build
-entry, the Meson policy assertions and the signed inventory (against
-`EXECUTABLES`, the evidence generator and the README), and require the
-baseline in `tests/fixtures/docs/build_baseline.json` to list exactly the
-refusals without a behavioral or helper control. Controls mutate a disposable
-copy of the script (a reordered or removed banner, an added, removed or moved
-refusal, a changed status, a renamed knob, a removed or moved signing call, a
-moved helper), its neighbours (a Meson option, the Makefile guard, the three
-inventories, the baseline) and the forms the parser refuses (a banner in a
-function, a refusal without an exit, an elif, an unknown codesign form), and
-each must be named by its rule. Agreement is textual: it does not establish
-that a refusal fires or precedes the operation it protects; the manifest's
-behavioral and helper citations and the baseline carry that distinction, and
-release preflight refuses a grown baseline.
+banner order with each step's fresh-mode condition, refusal messages,
+statuses and steps, knob values, signing calls and helper invocations with
+their subcommands with the manifest, compare the Makefile's build entry, the
+Meson assertion family (one manifest row carrying the shared message
+template and every asserted option in `meson.build`'s order) and the signed
+inventory (against `EXECUTABLES`, the evidence generator and the README), and
+require the baseline in `tests/fixtures/docs/build_baseline.json` to list
+exactly the refusals without a behavioral or helper control. Controls mutate
+a disposable copy of the script (a reordered or removed banner, a banner
+moved out of its fresh-mode condition, an added, removed or moved refusal, a
+changed status, a renamed knob, a removed or moved signing call, a moved
+helper, a changed helper subcommand), its neighbours (a Meson option added,
+removed or reordered, the family's template, the Makefile's build banner, the
+three inventories, the baseline) and the forms the parser refuses (a banner
+in a function, a refusal without an exit, an elif, an unknown codesign form),
+and each must be named by its rule. The per-option Meson control poisons
+every asserted option in turn and requires the next regeneration to refuse it
+by name; a bypass control removes one assertion from a disposable copy of
+`meson.build` and shows that option's control failing while the rule names
+the option. Agreement is textual: it does not establish that a refusal fires
+or precedes the operation it protects; the manifest's behavioral and helper
+citations and the baseline carry that distinction, and release preflight
+refuses a grown baseline.
 
 The same case checks the generated host/worker source identity and exercises
 relocation, deterministic regeneration, stale generated values, malformed

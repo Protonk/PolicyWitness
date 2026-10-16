@@ -2,31 +2,47 @@
 """
 build-evidence.py
 
-Generates a build-time evidence BOM for a built PolicyWitness.app bundle, typically under:
+Generates the build-time evidence for a built PolicyWitness.app bundle, under:
   dist/PolicyWitness.app/Contents/Resources/Evidence/
 
-This repo is now specimen-first: sandbox policy variation is driven by the
+This repo is specimen-first: sandbox policy variation is driven by the
 `PWRunner` XPC service applying SBPL at runtime, not by proliferating different
 entitlement-signed XPC service families.
 
 Evidence artifacts:
   - manifest.json: hashes + metadata for embedded tools and services
   - symbols.json: exported `_pw_*` marker symbols (best-effort)
+  - provenance.json: the build's provenance record (tests/lib/build_provenance.py)
+
+The record comes from one of two sources. A build passes `--build-session`,
+the session file build.sh kept through its steps, with `--root` and
+`--identity`; the record then holds that build's observations. A test tool
+that replaces executables in a signed copy passes `--substitution-of` with the
+baseline app: the record keeps the baseline's source, toolchain and
+configuration, names the replaced executables, and describes the copy's
+bytes; it never claims the replaced bytes came from the recorded build.
+Without either, no record can be written and the script refuses.
 
 Intentionally not generated:
   - profiles.json (legacy entitlement-profile inventory)
 """
 
 import argparse
+import copy
 import hashlib
 import json
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+import build_provenance  # noqa: E402
+import signer_check  # noqa: E402
 
 
 def sha256_file(path: Path) -> str:
@@ -192,10 +208,96 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def signature_facts(path: Path) -> Dict[str, Any]:
+    """The bounded signature facts the record keeps for one nested signature, read from codesign's display."""
+    try:
+        found = signer_check.signature(path)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return dict(status="unreadable", kind=exc.__class__.__name__)
+    chain = found["authorities"][1:]
+    return dict(status="ok", leaf=found["leaf"], team=found["team"], timestamp=bool(found["timestamp"]),
+                runtime=bool(found["runtime"]), adhoc=bool(found["adhoc"]),
+                developer_id_chain=bool(chain) and chain[-1] == signer_check.APPLE_ROOT and signer_check.DEVELOPER_ID_CA in chain)
+
+
+def worker_reported_identity(app: Path) -> Optional[str]:
+    worker = app / build_provenance.SERVICE / "Contents/MacOS/pw-probe-runner"
+    if not worker.is_file():
+        return None
+    found = build_provenance.probe([worker, "--version"])
+    if found["status"] != "ok":
+        return None
+    match = re.search(r"\babi_identity=([0-9a-f]{64})\b", found["line"])
+    return match.group(1) if match else None
+
+
+def substitution_record(baseline: Path, app: Path, identity: str, entries: list) -> Dict[str, Any]:
+    """A record for a test copy whose executables were replaced after the baseline's recorded build."""
+    source_path = baseline / build_provenance.RECORD_PATH
+    try:
+        baseline_record = json.loads(source_path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise build_provenance.Refusal(f"the baseline app carries no readable record: {exc}", 2)
+    if not isinstance(baseline_record, dict) or baseline_record.get("schema_version") != build_provenance.SCHEMA_VERSION:
+        raise build_provenance.Refusal("the baseline record has an unsupported schema", 2)
+    baseline_outputs = {o.get("rel_path"): o for o in baseline_record.get("outputs", []) if isinstance(o, dict)}
+    manifest_hashes = {e["rel_path"]: e.get("sha256") for e in entries if isinstance(e, dict)}
+    outputs, replaced = [], []
+    for relative in build_provenance.shipped_outputs(app):
+        path = app / relative
+        metadata = build_provenance.output_metadata(path)
+        if metadata.get("status") != "ok":
+            raise build_provenance.Refusal(f"{relative}: load commands are not readable", 2)
+        entry: Dict[str, Any] = dict(rel_path=relative, uuid=metadata["uuid"], platform=metadata["platform"],
+                                     minos=metadata["minos"], sdk=metadata["sdk"], tools=metadata["tools"][:8])
+        before = baseline_outputs.get(relative, {})
+        if relative != build_provenance.CONTROLLER:
+            entry["sha256"] = sha256_file(path)
+            if manifest_hashes.get(relative) != entry["sha256"]:
+                raise build_provenance.Refusal(f"{relative}: the manifest records {manifest_hashes.get(relative)} but the bundle bytes hash to {entry['sha256']}", 2)
+            entry["signature"] = signature_facts(path)
+            same = before.get("sha256") == entry["sha256"]
+        else:
+            entry["sha256"] = None
+            entry["note"] = "the controller is sealed by the app signature after this record; its final hash is in the release record"
+            same = before.get("uuid") == entry["uuid"]
+        if not same:
+            replaced.append(relative)
+        if relative in build_provenance.CARGO_TARGETS:
+            entry["cargo"] = copy.deepcopy(before.get("cargo")) if same and before.get("cargo") else dict(
+                status="substituted", note="replaced in a test copy after the recorded build; Cargo made no judgment about these bytes")
+        outputs.append(entry)
+    record = dict(schema_version=build_provenance.SCHEMA_VERSION, generated_at=utc_now(),
+                  source=copy.deepcopy(baseline_record.get("source", {})),
+                  toolchain=copy.deepcopy(baseline_record.get("toolchain", {})),
+                  configuration=copy.deepcopy(baseline_record.get("configuration", {})),
+                  outputs=outputs,
+                  signing=dict(identity=identity,
+                               nested=[dict(rel_path=o["rel_path"], **{k: o["signature"].get(k) for k in ("leaf", "team", "timestamp")})
+                                       for o in outputs if "signature" in o],
+                               note="the app seal is made after this record and verified afterwards"),
+                  limits=list(baseline_record.get("limits", [])) + [
+                      "test copy: the executables listed under configuration.substitution were replaced after the recorded build; "
+                      "the baseline's toolchain and configuration do not describe them"])
+    reported = worker_reported_identity(app)
+    record["source"]["worker_identity"] = reported if reported else "unknown"
+    record["configuration"]["substitution"] = dict(
+        baseline_record_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(), replaced=replaced,
+        note="a signed test copy assembled from a baseline app with these executables replaced")
+    forbidden = build_provenance.forbidden_content(json.dumps(record, sort_keys=True), dict(__import__("os").environ))
+    if forbidden:
+        raise build_provenance.Refusal("the record would publish " + forbidden, 2)
+    return record
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build Evidence BOM for a PolicyWitness.app bundle")
     ap.add_argument("--app-bundle", required=True, help="Path to a PolicyWitness.app bundle")
     ap.add_argument("--app-entitlements", required=True, help="Path to main app entitlements plist")
+    ap.add_argument("--build-session", help="the build session file build.sh kept; the record comes from its observations")
+    ap.add_argument("--root", help="the checkout the build session belongs to (with --build-session)")
+    ap.add_argument("--identity", help="the signing identity the nested signatures name")
+    ap.add_argument("--substitution-of", help="baseline app of a test copy whose executables were replaced")
     args = ap.parse_args()
 
     app_bundle = Path(args.app_bundle).resolve()
@@ -205,6 +307,15 @@ def main() -> int:
 
     if not contents_dir.exists():
         print(f"ERROR: missing app bundle Contents: {contents_dir}", file=sys.stderr)
+        return 2
+    if bool(args.build_session) == bool(args.substitution_of):
+        print("ERROR: provenance requires exactly one of --build-session (with --root and --identity) or --substitution-of (with --identity)", file=sys.stderr)
+        return 2
+    if args.build_session and not (args.root and args.identity):
+        print("ERROR: --build-session requires --root and --identity", file=sys.stderr)
+        return 2
+    if args.substitution_of and not args.identity:
+        print("ERROR: --substitution-of requires --identity", file=sys.stderr)
         return 2
 
     if evidence_dir.exists():
@@ -352,6 +463,31 @@ def main() -> int:
             "kind": "evidence",
             "rel_path": rel_path(app_bundle, symbols_path),
             "sha256": sha256_file(symbols_path),
+        }
+    )
+
+    # The provenance record describes the signed bytes the manifest lists; it is
+    # written before the manifest so the manifest's entry seals its hash too.
+    try:
+        if args.build_session:
+            session = build_provenance.load_session(Path(args.build_session))
+            record = build_provenance.collect(session, app_bundle, Path(args.root), args.identity,
+                                              manifest_entries=entries, signature=signature_facts)
+        else:
+            record = substitution_record(Path(args.substitution_of).resolve(), app_bundle, args.identity, entries)
+    except build_provenance.Refusal as exc:
+        print(f"ERROR: provenance: {exc}", file=sys.stderr)
+        return 2
+    provenance_path = evidence_dir / "provenance.json"
+    with provenance_path.open("w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    entries.append(
+        {
+            "id": "evidence.provenance",
+            "kind": "evidence",
+            "rel_path": rel_path(app_bundle, provenance_path),
+            "sha256": sha256_file(provenance_path),
         }
     )
 

@@ -92,45 +92,93 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Case:** `preflight/build_guard_controls`
 - **Location:** `tests/suites/preflight/opt_in/build_guards.py`
 - **Purpose:** Drive the unchanged build script through Cargo and native minimum
-  mismatches and an ad hoc helper after successful deep verification. Assert the
-  diagnostics, statuses and preserved or absent outputs, alongside successful
-  full and partial builds.
+  mismatches, one or every shipped output built against another installed SDK,
+  an ad hoc helper after successful deep verification, and a helper, the
+  service seal or the app seal signed with `--timestamp=none` (omitting the
+  flag is not a reliable fault). Assert the diagnostics, statuses, the
+  signatures made (inspected independently) and preserved or absent outputs,
+  alongside successful full and partial builds.
 - **Resource dependency:** Built app for identity resolution, matching Developer
-  ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
-  Builds run offline in a disposable checkout under `/private/tmp`; signing
-  still needs the timestamp service and an unsandboxed shell. No app is launched.
+  ID, Cargo with cached dependencies, Meson, Ninja, the C/Swift toolchains and
+  a second installed macOS SDK of another version (the Command Line Tools
+  keep several). Builds run offline in a disposable checkout under
+  `/private/tmp`; signing still needs the timestamp service and an
+  unsandboxed shell. No app is launched.
 - **Opt-in reason:** Runs multiple builds and signs both variants with keychain
   access. The source checkout's caches and distribution are untouched.
-- **When to run:** After changing minimum-version checks, signing checks or their
+- **When to run:** After changing the minimum, SDK or signing checks or their
   placement relative to compilation, assembly and packaging.
 - **Artifacts:** `<run>/suites/preflight/build_guard_controls/artifacts/` holds
-  each build's raw output, status, tool and injection receipts, and output hashes.
+  each build's raw output, status, tool and injection receipts, the wrong-SDK
+  equipment, signature displays and output hashes.
 
 ### build refusal controls
 
 - **Case:** `preflight/build_refusal_controls`
 - **Location:** `tests/suites/preflight/opt_in/build_refusals.py`
 - **Purpose:** Drive the unchanged build script through every refusal the
-  build baseline used to list, one disposable fault at a time, in each variant
-  the refusal applies to: a developer directory without the SDK, Cargo outputs
-  that vanish or land under a target triple, a missing or old Ninja, a poisoned
-  Meson directory, sources that do not compile, outputs and inputs removed at
-  the boundary a tool wrapper hooks, damaged or tampered signatures. Assert the
-  diagnostic, the status, the banners that must and must not follow, the tool
-  calls that must not happen and the preserved or partial output. Mutated
+  build manifest lists, one disposable fault at a time, in each variant the
+  refusal applies to: a tracked input gone, a held checkout lock, a claim
+  without a hold, a developer directory without the SDK or without a numeric
+  SDK version, a missing, malformed or foreign toolchain stamp, forwarding
+  Rust and C compiler wrappers relabelled after the stamp recorded them, a
+  probe that fails or hangs, redirected Cargo intermediates, a cache path a
+  symlink would redirect, a failed removal, Cargo outputs that vanish, lose
+  their executable bit or land under a target triple, a reused judgment in
+  fresh mode, a missing or old Ninja, a Meson directory departing from the
+  policy, sources that do not compile, a worker reporting another identity,
+  outputs and inputs removed at the boundary a tool wrapper hooks, damaged or
+  tampered signatures, a session gone before evidence, and a record edited
+  after the seal. Also runs the fresh-mode state sequence (fresh build,
+  unchanged reuse, enabling the XPC pieces, refused incompatible reuse,
+  explicit fresh recovery, interruptions, a retried compile failure, caches
+  surviving independently), plants environment and stderr canaries no record
+  may carry, replaces a cached Cargo output before capture to show the stated
+  limit of the record, and drives `make notarize` and `make release` with a
+  controlled build step to show fresh mode enforced or refused. Mutated
   copies of the script with a guard removed or moved past its operation must
   fail their control.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
-  still needs the timestamp service and an unsandboxed shell. No app is launched.
-- **Opt-in reason:** Runs about forty builds, most of them short, and signs with
+  still needs the timestamp service and an unsandboxed shell. No app is
+  launched and nothing is submitted to Apple.
+- **Opt-in reason:** Runs many builds, several of them fresh, and signs with
   keychain access. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
-  boundaries or the generated refusal table.
+  boundaries, the stamp, fresh mode, the lock or the generated refusal table.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
-  each build's raw output, status, tool receipts with the hooks that fired, the
-  output inventory, and the mutation results.
+  each build's raw output, status, tool and forwarding-wrapper receipts with
+  the hooks that fired, the session, stamp and record copies, the output
+  inventory, the make entrypoint receipts and the mutation results.
+
+### build toolchain switch controls
+
+- **Case:** `preflight/build_toolchain_switch_controls`
+- **Location:** `tests/suites/preflight/opt_in/build_toolchain_switch.py`
+- **Purpose:** Make the toolchain switch real: build under the selected
+  developer directory with fresh mode, reuse under it, be refused reuse under
+  `/Library/Developer/CommandLineTools` by a field the control's own probes of
+  both directories show to differ, and recover under it with fresh mode. The
+  control records which stamped fields differed and credits only those;
+  different compiler builds do not imply different SDK versions. For each
+  developer directory it first checks that the SDK xcrun selects links a C
+  and a Swift program with that directory's own tools; when it does not, the
+  newest SDK of that directory that does link is named through `SDKROOT`,
+  which the build resolves and records as a caller's selection, and every
+  probe is kept in the equipment report.
+- **Resource dependency:** Everything the guard controls need, plus both Xcode
+  (or the selected developer directory) and the Command Line Tools installed
+  with distinct C compiler identities. Indistinct or missing equipment is a
+  failure, never a skip or a wrapper fallback. No second Rust toolchain is
+  needed.
+- **Opt-in reason:** Two fresh full builds under different toolchains with
+  keychain access.
+- **When to run:** After changing the stamp's fields or comparison, and for
+  acceptance of the build provenance work.
+- **Artifacts:** `<run>/suites/preflight/build_toolchain_switch_controls/artifacts/`
+  holds the equipment probes, the distinct and equal fields, each build's raw
+  output, receipts, stamp and record, and the switch summary.
 
 ### BYOXPC dossier witness
 

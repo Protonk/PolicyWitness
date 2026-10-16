@@ -1,4 +1,5 @@
 """Real codesign controls, mutating only a disposable, never-launched app copy."""
+import hashlib
 import json
 from pathlib import Path
 import plistlib
@@ -68,7 +69,7 @@ def main(source, out, identity):
                                  capture_output=True, text=True, timeout=120)
             save(out / 'signer-cli.json', dict(argv=cli.args, returncode=cli.returncode, stdout=cli.stdout, stderr=cli.stderr))
             scenarios.append('signer_cli_refuses')
-            assert cli.returncode == 1 and f'executables not signed by {leaf} with the hardened runtime' in cli.stderr and 'sbpl-check' in cli.stderr, cli.stderr
+            assert cli.returncode == 1 and f'executables or seals not signed by {leaf} with the hardened runtime' in cli.stderr and 'sbpl-check' in cli.stderr, cli.stderr
             shutil.copy2(source / top_helper.relative_to(app), top_helper)
             assert signer_check.problems(app, leaf) == [], 'restoration must recover the signer check'
             assert observe('adhoc_helper_restored')['ok']
@@ -86,9 +87,56 @@ def main(source, out, identity):
             command(out / 'verify-resigned', ['/usr/bin/codesign', '--verify', '--deep', '--strict', app])
             stale = observe('resigned_stale_manifest')
             assert all(s['returncode'] == 0 for s in stale['signatures']), stale
-            assert not stale['ok'] and {e['code'] for e in stale['errors']} == {'manifest_hash'}, stale
+            assert not stale['ok'] and {e['code'] for e in stale['errors']} == {'manifest_hash', 'provenance_hash'}, stale
             assert any(e['path'] == 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner'
                        for e in stale['errors']), stale
+
+            # Semantically faulty records, validly re-signed with their manifest entry refreshed, so only the
+            # record's own checks can reject them: every signature verifies and the inspector still refuses.
+            faulty_app = Path(temporary) / 'Record.app'
+            command(out / 'copy-record-faults', ['/usr/bin/ditto', source, faulty_app])
+            record_path = faulty_app / 'Contents/Resources/Evidence/provenance.json'
+            manifest_path = faulty_app / 'Contents/Resources/Evidence/manifest.json'
+            original_record, original_manifest = record_path.read_bytes(), manifest_path.read_bytes()
+            helper_rel = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
+
+            def observe_record(name):
+                result = inspect(faulty_app)
+                save(out / (name + '.json'), result)
+                scenarios.append(name)
+                return result
+
+            faults = {
+                'resigned_record_wrong_sdk': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == helper_rel).__setitem__('sdk', '1.0'), 'provenance_metadata'),
+                'resigned_record_wrong_hash': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == helper_rel).__setitem__('sha256', 'f' * 64), 'provenance_hash'),
+                'resigned_record_missing_output': (lambda r: r['outputs'].remove(next(o for o in r['outputs'] if o['rel_path'] == helper_rel)), 'provenance_output'),
+                'resigned_record_duplicate_output': (lambda r: r['outputs'].append(dict(next(o for o in r['outputs'] if o['rel_path'] == helper_rel))), 'provenance_output'),
+                'resigned_record_controller_hash': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == 'Contents/MacOS/policy-witness').__setitem__('sha256', 'a' * 64), 'provenance_hash'),
+                'resigned_record_unsupported': (lambda r: r.__setitem__('schema_version', 99), 'provenance'),
+            }
+            for name, (mutate, code) in faults.items():
+                record = json.loads(original_record)
+                mutate(record)
+                record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
+                manifest = json.loads(original_manifest)
+                for entry in manifest['entries']:
+                    if entry['rel_path'] == 'Contents/Resources/Evidence/provenance.json':
+                        entry['sha256'] = hashlib.sha256(record_path.read_bytes()).hexdigest()
+                manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+                sign(faulty_app, identity, app_id, out / ('sign-app-' + name))
+                command(out / ('verify-' + name), ['/usr/bin/codesign', '--verify', '--deep', '--strict', faulty_app])
+                faulty = observe_record(name)
+                assert all(s['returncode'] == 0 for s in faulty['signatures']), (name, faulty['signatures'])
+                assert not faulty['ok'] and {e['code'] for e in faulty['errors']} == {code}, (name, faulty['errors'])
+            record_path.write_bytes(original_record)
+            manifest_path.write_bytes(original_manifest)
+            sign(faulty_app, identity, app_id, out / 'sign-app-restored-record')
+            assert observe_record('resigned_record_restored')['ok'], 'the restored record and manifest pass again under the new seal'
+            # A record for other bytes with the same inventory: the helper's bytes change, the record keeps the old hash.
+            with (faulty_app / helper_rel).open('ab') as stream:
+                stream.write(b'\0other bytes')
+            swapped = observe_record('swapped_record_other_bytes')
+            assert not swapped['ok'] and 'provenance_hash' in {e['code'] for e in swapped['errors']}, swapped['errors']
     finally:
         after = inventory(source)
         save(out / 'source-after.json', after)

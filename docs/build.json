@@ -72,6 +72,52 @@
           "coverage": "behavioral"
         }
       ]
+    },
+    {
+      "id": "pw_fresh_build",
+      "name": "PW_FRESH_BUILD",
+      "default": "0",
+      "values": {
+        "0": "reuse builddir/ and controller/target/release/ under the toolchain the stamp records, validating the stamp before any compile or reconfiguration",
+        "1": "replace both directories after admission and require Cargo to report rebuilding every shipped target; the record names each directory's replacement"
+      },
+      "governs": "the fresh step, Cargo's rebuild requirement and the directory states the record carries; a script knob, not a Meson option; notarize and release enforce 1",
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "PW_FRESH_BUILD=\"${PW_FRESH_BUILD-0}\""
+        },
+        {
+          "path": "Makefile",
+          "symbol": "PW_FRESH_BUILD=1"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_knobs",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_release_entrypoints_enforce_fresh_mode",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
     }
   ],
   "steps": [
@@ -84,11 +130,9 @@
         "full",
         "partial"
       ],
-      "reads": "IDENTITY and DIST_DIR from the make command line",
+      "reads": "IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment",
       "writes": "nothing; runs build.sh with them",
-      "refusals": [
-        "make_identity_unset"
-      ],
+      "refusals": [],
       "sources": [
         {
           "path": "Makefile",
@@ -104,7 +148,7 @@
         },
         {
           "path": "tests/suites/source_drift/contract.py",
-          "symbol": "test_make_build_refuses_without_an_identity_and_never_runs_the_script",
+          "symbol": "test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -118,16 +162,22 @@
         "full",
         "partial"
       ],
-      "reads": "BUILD_XPC, PW_INSPECTION and the argument list; --help prints the usage and exits before any check, after the knobs are validated",
-      "writes": "nothing",
+      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; tests/.checkout.lock, which the launcher takes before running the script again under it",
+      "writes": "the owner record in tests/.checkout.lock for as long as the build and its protected children hold it; nothing else",
       "refusals": [
         "knob_value",
-        "unknown_argument"
+        "unknown_argument",
+        "missing_tree_input",
+        "checkout_busy"
       ],
       "sources": [
         {
           "path": "build.sh",
           "symbol": "must be 0 or 1"
+        },
+        {
+          "path": "build.sh",
+          "symbol": "checkout_lock.py"
         }
       ],
       "checks": [
@@ -146,6 +196,53 @@
         {
           "path": "tests/suites/source_drift/contract.py",
           "symbol": "test_build_refuses_an_unknown_argument_before_any_check",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_tree_input",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_checkout_busy",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "lock",
+      "banners": [
+        "Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "the inherited lock descriptor and the claim the launcher left in the environment, verified against this checkout's lock file",
+      "writes": "nothing",
+      "refusals": [
+        "lock_claim_invalid"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Verifying the checkout lock"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_lock_claim_invalid",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -278,8 +375,10 @@
         "partial"
       ],
       "reads": "git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment",
-      "writes": "the four stamp variables for Cargo and the plists",
-      "refusals": [],
+      "writes": "the four stamp variables for Cargo and the plists; controller/target/ and the build session file, opened with the stamp and the three knobs",
+      "refusals": [
+        "provenance_probe_failed"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -292,6 +391,12 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_provenance_probe_failed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -327,21 +432,22 @@
     {
       "id": "sdk",
       "banners": [
-        "Selecting the macOS SDK (xcrun --sdk macosx)"
+        "Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})"
       ],
       "variants": [
         "full",
         "partial"
       ],
-      "reads": "the SDK path xcrun reports under DEVELOPER_DIR",
-      "writes": "SDKROOT for Cargo and Meson",
+      "reads": "the SDK path and numeric version xcrun reports under DEVELOPER_DIR for the macosx default, or for the SDK a caller's SDKROOT names",
+      "writes": "SDKROOT for Cargo and Meson, resolved by xcrun, and the SDK version every shipped output must carry",
       "refusals": [
-        "sdk_unavailable"
+        "sdk_unavailable",
+        "sdk_version_unreadable"
       ],
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Selecting the macOS SDK (xcrun --sdk macosx)"
+          "symbol": "Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})"
         }
       ],
       "checks": [
@@ -350,6 +456,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sdk_unavailable",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sdk_version_unreadable",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -362,11 +480,15 @@
         "full",
         "partial"
       ],
-      "reads": "builddir/meson-info/meson-info.json when the directory is configured",
-      "writes": "nothing",
+      "reads": "in incremental mode: builddir/meson-info/meson-info.json and builddir/pw-toolchain.json when the directory is configured, and the stamped SDK, developer directory, compiler commands and Rust compiler probed now; in fresh mode nothing, since the directory is replaced",
+      "writes": "the toolchain observation into the build session",
       "refusals": [
         "builddir_unreadable",
-        "builddir_other_checkout"
+        "builddir_other_checkout",
+        "builddir_stamp_missing",
+        "builddir_stamp_invalid",
+        "builddir_toolchain_changed",
+        "provenance_probe_failed"
       ],
       "sources": [
         {
@@ -380,6 +502,30 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_stamp_missing",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_stamp_invalid",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_toolchain_changed",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -392,11 +538,10 @@
         "full",
         "partial"
       ],
-      "reads": "IDENTITY and the keychain listing; the two knobs, for Meson's options and RUSTFLAGS",
-      "writes": "RUSTFLAGS, when inspection is on and it was unset or empty",
+      "reads": "IDENTITY and the keychain listing; the knobs, for Meson's options and RUSTFLAGS",
+      "writes": "RUSTFLAGS, when inspection is on and it was unset or empty, and the record of who set it",
       "refusals": [
         "identity_unset",
-        "identity_class",
         "identity_absent"
       ],
       "sources": [
@@ -411,8 +556,111 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_an_identity_of_another_class_as_absent_before_cargo",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
+    },
+    {
+      "id": "cargo_admit",
+      "banners": [
+        "Admitting the Cargo output and intermediate directories: ${CARGO_TARGET_DIR_PINNED}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "cargo metadata's report of the target and build directories under the pinned target directory, with the caller's Cargo environment and configuration",
+      "writes": "the admission into the build session",
+      "refusals": [
+        "cargo_build_dir_redirected",
+        "cargo_build_dir_unknown"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Admitting the Cargo output and intermediate directories"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_build_dir_redirected",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_build_dir_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "fresh",
+      "banners": [
+        "Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "every path component of builddir/ and controller/target/release/ below the checkout: a real directory of this user, or absent",
+      "writes": "removes both directories; records each one's replacement in the build session; nothing else is removed",
+      "refusals": [
+        "fresh_removal_unsafe",
+        "fresh_removal_failed"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Replacing the build caches"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_removal_unsafe",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_removal_failed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ],
+      "when": "fresh"
     },
     {
       "id": "cargo",
@@ -423,15 +671,15 @@
         "full",
         "partial"
       ],
-      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths Cargo reports",
-      "writes": "controller/target/release/ under the pinned output directory, and the messages file Cargo reports its artifacts in",
+      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, and Cargo's fingerprint for each shipped target",
+      "writes": "controller/target/release/ under the pinned output directory, the messages file Cargo reports its artifacts in, and the judgments into the build session",
       "refusals": [
-        "missing_controller",
-        "missing_observer",
-        "missing_sbpl_check",
         "cargo_artifact_elsewhere",
+        "missing_cargo_output",
         "minimum_mismatch",
-        "cargo_failed"
+        "cargo_failed",
+        "cargo_target_reused",
+        "provenance_probe_failed"
       ],
       "sources": [
         {
@@ -445,6 +693,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_cargo_output",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_target_reused",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -488,31 +748,13 @@
         "full",
         "partial"
       ],
-      "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two knobs as Meson options; a fresh setup also reads CFLAGS and the other flag variables",
-      "writes": "builddir/ configuration; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers",
+      "reads": "whether builddir/build.ninja exists, meson.build, meson.options and the two Meson options; a fresh setup also reads CFLAGS and the other flag variables, and the compilers Meson selected",
+      "writes": "builddir/ configuration; a fresh setup publishes builddir/pw-toolchain.json atomically from the selected compilers, SDK and Rust compiler; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers",
       "refusals": [
-        "meson_optimization",
-        "meson_debug",
-        "meson_warning_level",
-        "meson_werror",
-        "meson_strip",
-        "meson_unity",
-        "meson_b_ndebug",
-        "meson_b_lto",
-        "meson_b_coverage",
-        "meson_b_pgo",
-        "meson_b_bitcode",
-        "meson_b_pie",
-        "meson_b_staticpic",
-        "meson_b_lundef",
-        "meson_b_sanitize",
-        "meson_c_std",
-        "meson_c_args",
-        "meson_c_link_args",
-        "meson_buildtype",
-        "meson_swift_args",
-        "meson_swift_link_args",
-        "meson_failed"
+        "meson_policy",
+        "meson_failed",
+        "builddir_stamp_invalid",
+        "provenance_probe_failed"
       ],
       "sources": [
         {
@@ -526,6 +768,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_policy",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -541,27 +795,7 @@
       "reads": "the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first",
       "writes": "builddir/ outputs and the Swift module cache under it",
       "refusals": [
-        "meson_optimization",
-        "meson_debug",
-        "meson_warning_level",
-        "meson_werror",
-        "meson_strip",
-        "meson_unity",
-        "meson_b_ndebug",
-        "meson_b_lto",
-        "meson_b_coverage",
-        "meson_b_pgo",
-        "meson_b_bitcode",
-        "meson_b_pie",
-        "meson_b_staticpic",
-        "meson_b_lundef",
-        "meson_b_sanitize",
-        "meson_c_std",
-        "meson_c_args",
-        "meson_c_link_args",
-        "meson_buildtype",
-        "meson_swift_args",
-        "meson_swift_link_args",
+        "meson_policy",
         "meson_failed"
       ],
       "sources": [
@@ -588,13 +822,17 @@
         "full",
         "partial"
       ],
-      "reads": "Meson's introspection of builddir/, Ninja's dependency log, the identity inputs and the Meson outputs' load commands",
-      "writes": "nothing",
+      "reads": "Meson's introspection of builddir/, Ninja's dependency log, the identity inputs, the stamp and the compilers the directory records, and every shipped output's load commands",
+      "writes": "builddir/pw-toolchain.json extended with the Swift compiler a reused directory discovered when this build enabled the XPC pieces, atomically and without changing another field; the toolchain, option and SDK observations into the build session",
       "refusals": [
         "minimum_mismatch",
         "missing_native_output",
         "native_sources_differ",
-        "native_sources_unreadable"
+        "native_sources_unreadable",
+        "builddir_stamp_invalid",
+        "builddir_toolchain_changed",
+        "sdk_disagreement",
+        "provenance_probe_failed"
       ],
       "sources": [
         {
@@ -608,6 +846,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -620,12 +870,9 @@
         "full",
         "partial"
       ],
-      "reads": "Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md",
+      "reads": "Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md, all admitted before the first check",
       "writes": "the two documents under DIST_DIR; removes the previous app, ZIP and guide; the stamped Info.plist, the three Rust executables and the augments under the new app",
-      "refusals": [
-        "missing_info_plist",
-        "missing_augments_dir"
-      ],
+      "refusals": [],
       "sources": [
         {
           "path": "build.sh",
@@ -651,9 +898,7 @@
       ],
       "reads": "builddir/pw-runner-client",
       "writes": "Contents/MacOS/pw-runner-client and its dSYM in inspection builds",
-      "refusals": [
-        "missing_client_output"
-      ],
+      "refusals": [],
       "sources": [
         {
           "path": "build.sh",
@@ -679,11 +924,7 @@
       ],
       "reads": "each service's Info.plist and builddir/ host, the worker, validator and issuer",
       "writes": "each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker, validator and issuer",
-      "refusals": [
-        "missing_service_dir",
-        "missing_service_plist",
-        "missing_host_output"
-      ],
+      "refusals": [],
       "sources": [
         {
           "path": "build.sh",
@@ -734,11 +975,12 @@
         "full",
         "partial"
       ],
-      "reads": "the identity inputs and copies, and whether PolicyWitness.entitlements exists",
+      "reads": "the identity inputs and copies, the generated identity in tests/lib/contract.py and the built worker's --version report",
       "writes": "nothing",
       "refusals": [
-        "missing_entitlements",
-        "stale_identity_presign"
+        "stale_identity_presign",
+        "worker_identity_mismatch",
+        "provenance_probe_failed"
       ],
       "sources": [
         {
@@ -752,6 +994,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_stale_identity_presign",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_worker_identity_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -767,7 +1021,6 @@
       "reads": "the copied top-level helpers",
       "writes": "signatures on the top-level helpers",
       "refusals": [
-        "sign_target_missing",
         "sign_target_not_macho",
         "codesign_failed"
       ],
@@ -794,13 +1047,10 @@
       "variants": [
         "full"
       ],
-      "reads": "each service's Entitlements.plist and bundle",
+      "reads": "each service's Entitlements.plist, admitted before the first check, and the assembled bundle",
       "writes": "signatures on the nested helpers, then each service seal",
       "refusals": [
-        "sign_target_missing",
         "sign_target_not_macho",
-        "missing_service_bundle",
-        "missing_service_entitlements",
         "codesign_failed"
       ],
       "sources": [
@@ -821,21 +1071,22 @@
     {
       "id": "evidence",
       "banners": [
-        "Writing evidence manifest (signed BOM)"
+        "Writing evidence manifest and provenance record"
       ],
       "variants": [
         "full",
         "partial"
       ],
-      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments",
-      "writes": "Contents/Resources/Evidence/manifest.json and symbols.json",
+      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands and signature display",
+      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two",
       "refusals": [
-        "evidence_failed"
+        "evidence_failed",
+        "provenance_required_unknown"
       ],
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Writing evidence manifest (signed BOM)"
+          "symbol": "Writing evidence manifest and provenance record"
         }
       ],
       "checks": [
@@ -844,6 +1095,18 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_evidence_failed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_provenance_required_unknown",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -914,7 +1177,7 @@
         "full",
         "partial"
       ],
-      "reads": "every regular file under the app's and each service's Contents/MacOS",
+      "reads": "every regular file under the app's and each service's Contents/MacOS, and the app and service seals, as codesign displays them",
       "writes": "nothing",
       "refusals": [
         "signer_mismatch"
@@ -946,7 +1209,6 @@
       "reads": "controller/target/release/sandbox-log-observer",
       "writes": "that executable's signature, in place",
       "refusals": [
-        "sign_target_missing",
         "sign_target_not_macho",
         "codesign_failed"
       ],
@@ -1090,6 +1352,125 @@
       ]
     },
     {
+      "id": "missing_tree_input",
+      "message": "missing tracked build input: ${tree_input}",
+      "kind": "script",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "missing tracked build input: ${tree_input}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_tree_input",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "checkout_busy",
+      "message": "checkout busy: another execution or mutating operation holds tests/.checkout.lock; wait for it to finish or use a second worktree",
+      "kind": "propagated",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "checkout_lock.py"
+        },
+        {
+          "path": "tests/lib/checkout_lock.py",
+          "symbol": "checkout busy"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_checkout_busy",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_lock_claims_are_verified_through_the_descriptor",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "lock_claim_invalid",
+      "message": "checkout lock claim is not verified: <reason>",
+      "kind": "propagated",
+      "steps": [
+        "lock"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "checkout_lock.py"
+        },
+        {
+          "path": "tests/lib/checkout_lock.py",
+          "symbol": "claim"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_lock_claim_invalid",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_lock_claims_are_verified_through_the_descriptor",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "plist_minimum_malformed",
       "message": "Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'",
       "kind": "script",
@@ -1124,7 +1505,7 @@
     },
     {
       "id": "sdk_unavailable",
-      "message": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})",
+      "message": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})",
       "kind": "script",
       "steps": [
         "sdk"
@@ -1137,7 +1518,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})"
+          "symbol": "xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})"
         }
       ],
       "checks": [
@@ -1150,6 +1531,39 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_sdk_unavailable",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "sdk_version_unreadable",
+      "message": "xcrun did not report a numeric macOS SDK version (got '${SDK_VERSION:-}')",
+      "kind": "script",
+      "steps": [
+        "sdk"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "xcrun did not report a numeric macOS SDK version"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sdk_version_unreadable",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -1222,6 +1636,186 @@
       ]
     },
     {
+      "id": "builddir_stamp_missing",
+      "message": "<builddir> is configured but has no pw-toolchain.json; its toolchain is unknown and is not adopted: set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/",
+      "kind": "propagated",
+      "steps": [
+        "builddir"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "is configured but has no"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_stamp_missing",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_stamp_states_are_decided_without_adopting_unknowns",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "builddir_stamp_invalid",
+      "message": "pw-toolchain.json is malformed, unsupported, describes another checkout or does not describe the directory's configured compilers; the toolchain is unknown and is not adopted",
+      "kind": "propagated",
+      "steps": [
+        "builddir",
+        "configure",
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "does not describe"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_stamp_invalid",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_stamp_states_are_decided_without_adopting_unknowns",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "builddir_toolchain_changed",
+      "message": "builddir/ was configured with <field> = <stamped>, but the selected toolchain now has <current>; a changed toolchain cannot reuse this directory",
+      "kind": "propagated",
+      "steps": [
+        "builddir",
+        "native_check"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "a changed toolchain cannot reuse this directory"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_toolchain_changed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_stamp_states_are_decided_without_adopting_unknowns",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "provenance_probe_failed",
+      "message": "required toolchain observation failed: <field> (<kind>), or a session or report the helper needs is unreadable",
+      "kind": "propagated",
+      "steps": [
+        "stamp",
+        "builddir",
+        "cargo",
+        "configure",
+        "native_check",
+        "presign"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build_provenance.py"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "required toolchain observation failed"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_provenance_probe_failed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_probes_are_bounded_and_failures_carry_no_output",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "identity_unset",
       "message": "IDENTITY is not set.",
       "kind": "script",
@@ -1251,37 +1845,10 @@
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "identity_class",
-      "message": "IDENTITY must name a Developer ID Application identity; got:",
-      "kind": "script",
-      "steps": [
-        "identity"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "IDENTITY must name a Developer ID Application identity; got:"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
         },
         {
           "path": "tests/suites/source_drift/contract.py",
-          "symbol": "test_build_refuses_a_non_developer_id_identity_before_cargo",
+          "symbol": "test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -1317,50 +1884,23 @@
           "symbol": "test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo",
           "form": "test",
           "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_controller",
-      "message": "expected policy-witness binary at ${RUNNER_BIN}",
-      "kind": "script",
-      "steps": [
-        "cargo"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "expected policy-witness binary at ${RUNNER_BIN}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
         },
         {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_controller",
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_an_identity_of_another_class_as_absent_before_cargo",
           "form": "test",
           "coverage": "behavioral"
         }
       ]
     },
     {
-      "id": "missing_observer",
-      "message": "expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}",
-      "kind": "script",
+      "id": "cargo_build_dir_redirected",
+      "message": "Cargo would keep intermediate release state under <directory>, outside the admitted controller/target; unset CARGO_BUILD_BUILD_DIR or the build.build-dir setting (nothing was removed)",
+      "kind": "propagated",
       "steps": [
-        "cargo"
+        "cargo_admit"
       ],
-      "status": "2",
+      "status": "1",
       "variants": [
         "full",
         "partial"
@@ -1368,27 +1908,148 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}"
+          "symbol": "cargo-admit"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "outside the admitted"
         }
       ],
       "checks": [
         {
           "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
+          "symbol": "check_propagated_refusals",
           "form": "rule",
           "coverage": "textual"
         },
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_observer",
+          "symbol": "control_cargo_build_dir_redirected",
           "form": "test",
           "coverage": "behavioral"
         }
       ]
     },
     {
-      "id": "missing_sbpl_check",
-      "message": "expected sbpl-check binary at ${SBPL_CHECK_BIN}",
+      "id": "cargo_build_dir_unknown",
+      "message": "cargo metadata did not report the intermediate directory; it cannot be admitted",
+      "kind": "propagated",
+      "steps": [
+        "cargo_admit"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo-admit"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "cannot be admitted"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_build_dir_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "fresh_removal_unsafe",
+      "message": "<path> is a symlink, not a directory, resolves elsewhere or is owned by another user; fresh mode removes only real directories inside the checkout",
+      "kind": "propagated",
+      "steps": [
+        "fresh"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "fresh-remove"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "fresh mode removes only real directories"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_removal_unsafe",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_fresh_removal_admits_only_owned_real_directories",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "fresh_removal_failed",
+      "message": "fresh mode could not remove <path>; remove it by hand before building again",
+      "kind": "propagated",
+      "steps": [
+        "fresh"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "fresh-remove"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "fresh mode could not remove"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_removal_failed",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "missing_cargo_output",
+      "message": "expected an executable Cargo output at ${rust_bin}",
       "kind": "script",
       "steps": [
         "cargo"
@@ -1401,7 +2062,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "expected sbpl-check binary at ${SBPL_CHECK_BIN}"
+          "symbol": "expected an executable Cargo output at ${rust_bin}"
         }
       ],
       "checks": [
@@ -1413,7 +2074,7 @@
         },
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_sbpl_check",
+          "symbol": "control_missing_cargo_output",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -1487,6 +2148,49 @@
       ]
     },
     {
+      "id": "cargo_target_reused",
+      "message": "fresh mode requires Cargo to report rebuilding every shipped target, but <target> (reused or no judgment)",
+      "kind": "propagated",
+      "steps": [
+        "cargo"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo-judge"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "fresh mode requires Cargo to report rebuilding"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_target_reused",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_cargo_judgments_bind_fingerprints_without_guessing",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "meson_ninja_missing",
       "message": "meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md",
       "kind": "script",
@@ -1553,1142 +2257,76 @@
       ]
     },
     {
-      "id": "missing_native_output",
-      "message": "expected Meson output at ${native_bin}",
-      "kind": "script",
+      "id": "meson_policy",
+      "message": "fixed native policy: ${name} must be ${expected} (got ${got}); only inspection and xpc are configurable",
+      "kind": "meson",
       "steps": [
-        "native_check"
+        "configure",
+        "compile"
       ],
-      "status": "2",
+      "status": "1",
       "variants": [
         "full",
         "partial"
       ],
       "sources": [
         {
-          "path": "build.sh",
-          "symbol": "expected Meson output at ${native_bin}"
+          "path": "meson.build",
+          "symbol": "fixed_options"
+        },
+        {
+          "path": "meson.build",
+          "symbol": "fixed native policy"
         }
       ],
       "checks": [
         {
           "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
+          "symbol": "check_meson_assertions",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_policy_assertions_refuse_each_option",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_bypassing_one_meson_policy_assertion_fails_its_control",
+          "form": "test",
+          "coverage": "helper"
         },
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_native_output",
+          "symbol": "control_meson_policy",
           "form": "test",
           "coverage": "behavioral"
         }
-      ]
-    },
-    {
-      "id": "missing_info_plist",
-      "message": "missing ${INFO_PLIST_TEMPLATE} at repo root",
-      "kind": "script",
-      "steps": [
-        "assemble"
       ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "missing ${INFO_PLIST_TEMPLATE} at repo root"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_info_plist",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_augments_dir",
-      "message": "missing augments source dir at ${XPC_AUGMENTS_DIR}",
-      "kind": "script",
-      "steps": [
-        "assemble"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "missing augments source dir at ${XPC_AUGMENTS_DIR}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_augments_dir",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_client_output",
-      "message": "expected Meson output at ${PW_RUNNER_CLIENT_BIN}",
-      "kind": "script",
-      "steps": [
-        "embed_client"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "expected Meson output at ${PW_RUNNER_CLIENT_BIN}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_client_output",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_service_dir",
-      "message": "missing ${svc_name} service dir at ${svc_dir}",
-      "kind": "script",
-      "steps": [
-        "embed_services"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "missing ${svc_name} service dir at ${svc_dir}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_service_dir",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_service_plist",
-      "message": "${svc_name} service is missing Info.plist",
-      "kind": "script",
-      "steps": [
-        "embed_services"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "${svc_name} service is missing Info.plist"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_service_plist",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_host_output",
-      "message": "expected Meson output at ${svc_host}",
-      "kind": "script",
-      "steps": [
-        "embed_services"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "expected Meson output at ${svc_host}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_host_output",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_entitlements",
-      "message": "missing entitlements plist: ${ENTITLEMENTS_PLIST}",
-      "kind": "script",
-      "steps": [
-        "presign"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "missing entitlements plist: ${ENTITLEMENTS_PLIST}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_entitlements",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "sign_target_missing",
-      "message": "expected a Mach-O to sign at ${target}",
-      "kind": "script",
-      "steps": [
-        "sign_tools",
-        "sign_services",
-        "sign_observer"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "expected a Mach-O to sign at ${target}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_sign_target_missing",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "sign_target_not_macho",
-      "message": "${target} is not a Mach-O; the signing list names only executables",
-      "kind": "script",
-      "steps": [
-        "sign_tools",
-        "sign_services",
-        "sign_observer"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "${target} is not a Mach-O; the signing list names only executables"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_sign_target_not_macho",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_service_bundle",
-      "message": "expected XPC service bundle at ${svc_bundle}",
-      "kind": "script",
-      "steps": [
-        "sign_services"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "expected XPC service bundle at ${svc_bundle}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_service_bundle",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "missing_service_entitlements",
-      "message": "${svc_name} service is missing Entitlements.plist at ${svc_entitlements}",
-      "kind": "script",
-      "steps": [
-        "sign_services"
-      ],
-      "status": "2",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "${svc_name} service is missing Entitlements.plist at ${svc_entitlements}"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_refusals",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_missing_service_entitlements",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "make_identity_unset",
-      "message": "set IDENTITY to your Developer ID Application identity",
-      "kind": "make",
-      "steps": [
-        "make_build"
-      ],
-      "status": "2",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "Makefile",
-          "symbol": "set IDENTITY to your Developer ID Application identity"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_makefile_entry",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/contract.py",
-          "symbol": "test_make_build_refuses_without_an_identity_and_never_runs_the_script",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "meson_optimization",
-      "message": "fixed native policy: optimization must be 'plain'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'optimization'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_debug",
-      "message": "fixed native policy: debug must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'debug'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_warning_level",
-      "message": "fixed native policy: warning_level must be '0'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'warning_level'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_werror",
-      "message": "fixed native policy: werror must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'werror'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_strip",
-      "message": "fixed native policy: strip must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'strip'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_unity",
-      "message": "fixed native policy: unity must be 'off'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'unity'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_ndebug",
-      "message": "fixed native policy: b_ndebug must be 'false'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_ndebug'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_lto",
-      "message": "fixed native policy: b_lto must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_lto'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_coverage",
-      "message": "fixed native policy: b_coverage must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_coverage'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_pgo",
-      "message": "fixed native policy: b_pgo must be 'off'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_pgo'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_bitcode",
-      "message": "fixed native policy: b_bitcode must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_bitcode'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_pie",
-      "message": "fixed native policy: b_pie must be false",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_pie'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_staticpic",
-      "message": "fixed native policy: b_staticpic must be true",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_staticpic'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_lundef",
-      "message": "fixed native policy: b_lundef must be true",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_lundef'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_b_sanitize",
-      "message": "fixed native policy: b_sanitize must be 'none'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'b_sanitize'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_c_std",
-      "message": "fixed native policy: c_std must be 'none'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'c_std'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_c_args",
-      "message": "fixed native policy: c_args must be []",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'c_args'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_c_link_args",
-      "message": "fixed native policy: c_link_args must be []",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'c_link_args'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_buildtype",
-      "message": "fixed native policy: buildtype must be 'plain'",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'buildtype'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_meson_buildtype",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
-      "id": "meson_swift_args",
-      "message": "fixed native policy: swift_args must be []",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'swift_args'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
-      "id": "meson_swift_link_args",
-      "message": "fixed native policy: swift_link_args must be []",
-      "kind": "meson",
-      "steps": [
-        "configure",
-        "compile"
-      ],
-      "status": "1",
-      "variants": [
-        "full"
-      ],
-      "sources": [
-        {
-          "path": "meson.build",
-          "symbol": "'swift_link_args'"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_meson_assertions",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build.py",
-          "symbol": "test_meson_policy_assertions_refuse_each_option",
-          "form": "test",
-          "coverage": "helper"
-        }
+      "asserts": [
+        "optimization",
+        "debug",
+        "warning_level",
+        "werror",
+        "strip",
+        "unity",
+        "b_ndebug",
+        "b_lto",
+        "b_coverage",
+        "b_pgo",
+        "b_bitcode",
+        "b_pie",
+        "b_staticpic",
+        "b_lundef",
+        "b_sanitize",
+        "c_std",
+        "c_args",
+        "c_link_args",
+        "buildtype",
+        "swift_args",
+        "swift_link_args"
       ]
     },
     {
@@ -2926,6 +2564,43 @@
       ]
     },
     {
+      "id": "worker_identity_mismatch",
+      "message": "the built worker reports identity <reported>, not the generated <expected>; the worker in builddir/ was compiled from other identity inputs",
+      "kind": "propagated",
+      "steps": [
+        "presign"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "worker-identity"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "reports identity"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_worker_identity_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
       "id": "cargo_failed",
       "message": "Cargo's own diagnostic",
       "kind": "propagated",
@@ -3071,6 +2746,117 @@
       ]
     },
     {
+      "id": "missing_native_output",
+      "message": "expected Meson output at ${native_bin}",
+      "kind": "script",
+      "steps": [
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "expected Meson output at ${native_bin}"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_missing_native_output",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "sdk_disagreement",
+      "message": "shipped outputs disagree with the selected SDK version: <path> built against SDK <found>, or its LC_BUILD_VERSION sdk is missing or not numeric",
+      "kind": "propagated",
+      "steps": [
+        "native_check"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "sdk-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "disagree with the selected SDK"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_sdk_versions_normalize_and_unknowns_never_agree",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "sign_target_not_macho",
+      "message": "${target} is missing or not a Mach-O; the signing list names only executables",
+      "kind": "script",
+      "steps": [
+        "sign_tools",
+        "sign_services",
+        "sign_observer"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "${target} is missing or not a Mach-O; the signing list names only executables"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sign_target_not_macho",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
       "id": "codesign_failed",
       "message": "codesign's own diagnostic",
       "kind": "propagated",
@@ -3144,6 +2930,49 @@
       ]
     },
     {
+      "id": "provenance_required_unknown",
+      "message": "provenance: a required observation, the build session or a shipped output's load commands or hash cannot be established, or the record would publish forbidden content",
+      "kind": "propagated",
+      "steps": [
+        "evidence"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build-evidence.py"
+        },
+        {
+          "path": "tests/build-evidence.py",
+          "symbol": "ERROR: provenance"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_provenance_required_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_records_are_bounded_redacted_and_complete",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "verify_failed",
       "message": "codesign's own diagnostic",
       "kind": "propagated",
@@ -3178,7 +3007,7 @@
     },
     {
       "id": "signer_mismatch",
-      "message": "executables not signed by <identity> with the hardened runtime",
+      "message": "executables or seals not signed by <identity> with the hardened runtime, the Developer ID chain, its team identifier and a secure timestamp",
       "kind": "propagated",
       "steps": [
         "signer"
@@ -3195,7 +3024,7 @@
         },
         {
           "path": "tests/lib/signer_check.py",
-          "symbol": "executables not signed by"
+          "symbol": "executables or seals not signed by"
         }
       ],
       "checks": [
@@ -3216,6 +3045,12 @@
           "symbol": "test_build_guards",
           "form": "test",
           "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_signature_displays_establish_class_team_and_timestamp",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -3598,6 +3433,52 @@
   ],
   "invocations": [
     {
+      "id": "inv_lock_launch",
+      "command": "tests/lib/checkout_lock.py --root",
+      "step": "admission",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "checkout_lock.py\" --root"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_lock_verify",
+      "command": "tests/lib/checkout_lock.py --verify",
+      "step": "lock",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "checkout_lock.py\" --verify"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        }
+      ]
+    },
+    {
       "id": "inv_limits_check",
       "command": "docs/generate_limits.py --check",
       "step": "check_limits",
@@ -3725,6 +3606,122 @@
       ]
     },
     {
+      "id": "inv_build_provenance_session_start",
+      "command": "tests/lib/build_provenance.py session-start --session",
+      "step": "stamp",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "session-start"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_stamp_check",
+      "command": "tests/lib/build_provenance.py stamp-check --session",
+      "step": "builddir",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_cargo_admit",
+      "command": "tests/lib/build_provenance.py cargo-admit --session",
+      "step": "cargo_admit",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo-admit"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_fresh_remove",
+      "command": "tests/lib/build_provenance.py fresh-remove --session",
+      "step": "fresh",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "fresh-remove"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "inv_cargo",
       "command": "cargo build",
       "step": "cargo",
@@ -3809,6 +3806,35 @@
       ]
     },
     {
+      "id": "inv_build_provenance_cargo_judge",
+      "command": "tests/lib/build_provenance.py cargo-judge --session",
+      "step": "cargo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo-judge"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "inv_meson_configure",
       "command": "meson configure",
       "step": "configure",
@@ -3851,6 +3877,35 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_stamp_publish",
+      "command": "tests/lib/build_provenance.py stamp-publish --session",
+      "step": "configure",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-publish"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -3932,6 +3987,64 @@
           "symbol": "test_build_guards",
           "form": "test",
           "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_stamp_extend",
+      "command": "tests/lib/build_provenance.py stamp-extend --session",
+      "step": "native_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-extend"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_sdk_check",
+      "command": "tests/lib/build_provenance.py sdk-check --session",
+      "step": "native_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "sdk-check"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -4044,6 +4157,35 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_worker_identity",
+      "command": "tests/lib/build_provenance.py worker-identity --session",
+      "step": "presign",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "worker-identity"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -4215,13 +4357,21 @@
       "id": "builddir",
       "path": "builddir/",
       "facts": {
-        "Trusted as": "Meson's configuration and incremental native outputs for this checkout",
-        "Refused when": "its recorded source directory is not this checkout, or its meson-info cannot be read"
+        "Trusted as": "Meson's configuration and incremental native outputs for this checkout, reused only under the toolchain its stamp (pw-toolchain.json) records: SDK path, version and build, developer directory, configured compiler commands and their probed identities, and the selected Rust compiler",
+        "Refused when": "its recorded source directory is not this checkout, its meson-info cannot be read, its stamp is missing, malformed, unsupported or does not describe the directory, a stamped field differs from the toolchain selected now, or a field needed for that comparison cannot be observed; fresh mode replaces the directory after admission instead of validating it"
       },
       "sources": [
         {
           "path": "build.sh",
           "symbol": "MESON_SOURCE_DIR"
+        },
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "stamp_check"
         }
       ],
       "checks": [
@@ -4236,6 +4386,18 @@
           "symbol": "test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo",
           "form": "test",
           "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_toolchain_changed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -4243,13 +4405,21 @@
       "id": "controller_target",
       "path": "controller/target/",
       "facts": {
-        "Trusted as": "Cargo's incremental outputs under the pinned --target-dir",
-        "Refused when": "Cargo reports an executable at another path than the pinned one; otherwise a stale output is caught only by the minimum-version check and Cargo's own fingerprints"
+        "Trusted as": "Cargo's incremental outputs and intermediate release state under the pinned --target-dir, with Cargo's own reuse judgment recorded per shipped target; fresh mode replaces only its release/ subdirectory",
+        "Refused when": "Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, or, in fresh mode, reports reusing a shipped target; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected"
       },
       "sources": [
         {
           "path": "build.sh",
           "symbol": "CARGO_TARGET_DIR_PINNED"
+        },
+        {
+          "path": "build.sh",
+          "symbol": "cargo-admit"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "cargo_admit"
         }
       ],
       "checks": [
@@ -4258,6 +4428,24 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_build_dir_redirected",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_target_reused",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_replaced_cached_output_is_recorded_not_detected",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -4265,7 +4453,7 @@
       "id": "dist",
       "path": "dist/ (DIST_DIR)",
       "facts": {
-        "Trusted as": "the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved",
+        "Trusted as": "the output directory; the previous app, ZIP and guide are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed one after another at assembly with nothing preserved",
         "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation"
       },
       "sources": [

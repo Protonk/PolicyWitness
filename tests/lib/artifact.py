@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_provenance
 import signer_check
 
 CODESIGN = '/usr/bin/codesign'
@@ -30,6 +31,7 @@ EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
       ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'))]
 MANIFEST = 'Contents/Resources/Evidence/manifest.json'
 SYMBOLS = 'Contents/Resources/Evidence/symbols.json'
+PROVENANCE = build_provenance.RECORD_PATH
 
 
 def sandbox_imports(nm_output):
@@ -96,7 +98,7 @@ def inspect(app):
             raise ValueError(f'path leaves selected app: {relative}')
         return path
 
-    for relative in [*EXECUTABLES, MANIFEST, SYMBOLS, 'Contents/Info.plist', SERVICE + '/Contents/Info.plist']:
+    for relative in [*EXECUTABLES, MANIFEST, SYMBOLS, PROVENANCE, 'Contents/Info.plist', SERVICE + '/Contents/Info.plist']:
         try:
             path = contained(relative)
             if not path.is_file():
@@ -168,6 +170,7 @@ def inspect(app):
         receipt['error'] = str(exc)
     report['host_invariance'] = receipt
 
+    manifest = None
     try:
         manifest = json.loads(contained(MANIFEST).read_bytes())
         if not isinstance(manifest, dict) or manifest.get('schema_version') != 1:
@@ -197,7 +200,7 @@ def inspect(app):
                     error('manifest_hash', relative, 'manifest hash differs from bundle bytes', expected=expected, actual=actual)
             except (OSError, ValueError) as exc:
                 error('manifest_entry', relative, str(exc))
-        required = set(EXECUTABLES[1:]) | {SYMBOLS}
+        required = set(EXECUTABLES[1:]) | {SYMBOLS, PROVENANCE}
         # Every shipped augment must be inventoried too; the fixed executable
         # list above remains mandatory even if the manifest omits a helper.
         required.update(str(p.relative_to(app)) for p in (app / 'Contents/Resources/Augments').glob('*.sb'))
@@ -205,6 +208,17 @@ def inspect(app):
             error('manifest_missing', relative, 'required component absent from manifest')
     except (OSError, ValueError, AttributeError, plistlib.InvalidFileException) as exc:
         error('manifest', MANIFEST, str(exc))
+
+    # The provenance record must describe this bundle: a complete, unique output
+    # inventory with valid paths, hashes equal to the manifest's and to the bytes,
+    # and load-command metadata equal to what the bytes carry. A matching record
+    # for another build, or a record with an incomplete list, is refused.
+    try:
+        contained(PROVENANCE)
+        for code, path, message in build_provenance.record_problems(app, manifest if isinstance(manifest, dict) else None):
+            error(code, path, message)
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        error('provenance', PROVENANCE, str(exc))
     report['ok'] = not report['errors']
     return report
 

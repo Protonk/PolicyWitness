@@ -5,29 +5,40 @@ set -euo pipefail
 #
 # Inputs (environment variables):
 #   IDENTITY   Developer ID Application identity string in your login keychain;
-#              any other identity class is refused and nothing is auto-selected.
+#              nothing is auto-selected, and the signatures made with it are
+#              verified against the Developer ID chain after the seal.
 #   BUILD_XPC  Set to 0 to skip building/embedding the XPC service and client;
 #              mapped to Meson's xpc option. The two C executables still build.
 #   PW_INSPECTION=1  Keep debug info and frame pointers (default); mapped to
 #              Meson's inspection option (Swift -Onone -g versus -O) and to RUSTFLAGS.
+#   PW_FRESH_BUILD=1  Replace builddir/ and controller/target/release/ after
+#              admission and require Cargo to rebuild every shipped target; 0
+#              (the default) reuses both directories under their recorded
+#              toolchain.
 #
 # Native compilation (the C worker and validator, the C shim, the Swift client
 # and host) runs through Meson into the ignored builddir/; meson.build owns the
 # fixed native flags and refuses any other configuration. Cargo builds the Rust
-# pieces. This script maps the two knobs above onto Meson's two options, selects
+# pieces. This script maps the knobs above onto Meson's two options, selects
 # the macOS SDK the way xcrun --sdk macosx does, and copies Meson's outputs into
-# the bundle. Changing the selected compiler or SDK needs a fresh build
-# directory (see docs/SIGNING.md).
+# the bundle. A reused build directory carries a stamp of the toolchain it was
+# configured with (builddir/pw-toolchain.json); the build compares the stamp
+# with the tools selected now and refuses a changed or unknown toolchain
+# until fresh mode replaces the directory (docs/BUILD.md).
 #
 # The build writes nothing into the tree: every generated copy is checked and
-# a stale one is refused with the command that regenerates it.
+# a stale one is refused with the command that regenerates it. It holds
+# tests/.checkout.lock from admission through packaging, so a build and a
+# managed test execution in one checkout are mutually exclusive.
 #
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
 #   dist/PolicyWitness.md (checked standalone user guide)
-#   builddir/ (Meson configuration and native outputs: trusted working state,
-#              like controller/target/; see docs/SIGNING.md)
+#   builddir/ (Meson configuration, its toolchain stamp and native outputs:
+#              trusted working state, like controller/target/; see docs/BUILD.md)
+#   controller/target/pw-build-session.json (this build's observations, read by
+#              the evidence step; replaced by the next build)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="PolicyWitness"
@@ -70,11 +81,25 @@ PW_EXTENSION_ISSUER_BIN="${MESON_BUILD_DIR}/pw-extension-issuer"
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
 
-# Build knobs: exactly 0 or 1, and an unset knob means 1. Any other value,
-# including an empty one, is refused rather than read as one of them.
+# Cargo's output directory is pinned on the command line, so a CARGO_TARGET_DIR
+# or a Cargo configuration value cannot send the outputs elsewhere while the
+# copies below read these fixed paths. Its intermediate release state is
+# admitted under the same directory before Cargo runs. This build's session
+# file lives beside Cargo's artifact messages.
+CARGO_TARGET_DIR_PINNED="${ROOT_DIR}/controller/target"
+CARGO_MESSAGES="${CARGO_TARGET_DIR_PINNED}/pw-build-messages.jsonl"
+BUILD_SESSION="${CARGO_TARGET_DIR_PINNED}/pw-build-session.json"
+RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
+SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
+SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
+
+# Build knobs: exactly 0 or 1. An unset BUILD_XPC or PW_INSPECTION means 1 and
+# an unset PW_FRESH_BUILD means 0. Any other value, including an empty one, is
+# refused rather than read as one of them.
 BUILD_XPC="${BUILD_XPC-1}"
 PW_INSPECTION="${PW_INSPECTION-1}"
-for knob in BUILD_XPC PW_INSPECTION; do
+PW_FRESH_BUILD="${PW_FRESH_BUILD-0}"
+for knob in BUILD_XPC PW_INSPECTION PW_FRESH_BUILD; do
   case "${!knob}" in
     0|1) ;;
     *)
@@ -84,7 +109,7 @@ for knob in BUILD_XPC PW_INSPECTION; do
   esac
 done
 
-# The Ninja minimum docs/SIGNING.md states; meson.build states Meson's own.
+# The Ninja minimum docs/BUILD.md states; meson.build states Meson's own.
 NINJA_MINIMUM="1.13.2"
 
 usage() {
@@ -92,6 +117,7 @@ usage() {
 usage:
   IDENTITY='Developer ID Application: ...' ./build.sh
   PW_INSPECTION=0 IDENTITY='Developer ID Application: ...' ./build.sh
+  PW_FRESH_BUILD=1 IDENTITY='Developer ID Application: ...' ./build.sh
 USAGE
 }
 
@@ -108,6 +134,36 @@ if [[ $# -gt 0 ]]; then
       ;;
   esac
 fi
+
+# Every tracked input the build copies or stamps must be present before any
+# check runs; the first absent one is named. The build otherwise assumes a
+# stable checkout and lets a copy that finds its input gone fail on its own.
+for tree_input in Info.plist PolicyWitness.entitlements runner/augments runner/Services/PWRunner runner/Services/PWRunner/Info.plist runner/Services/PWRunner/Entitlements.plist; do
+  if [[ ! -e "${ROOT_DIR}/${tree_input}" ]]; then
+    echo "ERROR: missing tracked build input: ${tree_input}" 1>&2
+    exit 2
+  fi
+done
+
+# ---- Checkout lock -----------------------------------------------------------
+# A build and a managed test execution in one checkout are mutually exclusive:
+# both hold tests/.checkout.lock. Without an inherited hold, the launcher takes
+# the lock (or refuses a busy one before any cache or distribution mutation)
+# and runs this script again under it; the open descriptor is inherited by
+# every compiler and tool the build runs, so the hold lasts until the last of
+# them exits, even if this script is killed first. The claim the launcher
+# leaves in the environment is verified below through that descriptor; the
+# variables alone grant nothing. The caller's SDK request is relayed from
+# here, the process that still has the caller's environment: the system
+# Python shim the launcher runs under sets SDKROOT of its own, which must not
+# pass for a caller's choice.
+if [[ -z "${PW_CHECKOUT_LOCK_FD:-}" ]]; then
+  export PW_SDK_REQUEST="${SDKROOT:-macosx}"
+  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/checkout_lock.py" --root "${ROOT_DIR}" -- /bin/bash "${BASH_SOURCE[0]}" "$@"
+  exit "$?"
+fi
+echo "==> Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/checkout_lock.py" --verify --root "${ROOT_DIR}"
 
 # Check the documentation and the identity copies before any build or signing
 # work; the identity is checked again before signing and the guide again when
@@ -128,6 +184,8 @@ echo "==> Checking host/worker identity"
 # CFBundleShortVersionString is the nearest v* tag, CFBundleVersion the commit
 # count, and PWBuildDescribe/PWBuildCommit the exact source. PW_VERSION and
 # PW_BUILD_NUMBER override the git-derived values (for builds outside a checkout).
+# The build session opens here with the stamp and the knobs; every later
+# observation lands in it, and the evidence step assembles the record from it.
 PW_BUILD_DESCRIBE="$(git -C "${ROOT_DIR}" describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || true)"
 PW_BUILD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
 PW_VERSION="${PW_VERSION:-$(printf '%s' "${PW_BUILD_DESCRIBE}" | /usr/bin/sed -nE 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')}"
@@ -137,6 +195,11 @@ PW_BUILD_NUMBER="${PW_BUILD_NUMBER:-$(git -C "${ROOT_DIR}" rev-list --count HEAD
 : "${PW_BUILD_DESCRIBE:=unknown}"
 : "${PW_BUILD_COMMIT:=unknown}"
 echo "==> Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
+mkdir -p "${CARGO_TARGET_DIR_PINNED}"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" session-start --session "${BUILD_SESSION}" --root "${ROOT_DIR}" \
+  --knob "BUILD_XPC=${BUILD_XPC}" --knob "PW_INSPECTION=${PW_INSPECTION}" --knob "PW_FRESH_BUILD=${PW_FRESH_BUILD}" \
+  --describe "${PW_BUILD_DESCRIBE}" --commit "${PW_BUILD_COMMIT}" --version "${PW_VERSION}" --build-number "${PW_BUILD_NUMBER}" \
+  --sdk-source "$([[ "${PW_SDK_REQUEST:-macosx}" != "macosx" ]] && echo caller || echo default)"
 
 stamp_info_plist() {
   local plist="$1"
@@ -160,7 +223,8 @@ export MACOSX_DEPLOYMENT_TARGET="${PW_MINIMUM_MACOS}"
 # Every Cargo and Meson output that can ship must carry that minimum, in both
 # variants and before assembly; a stale output, a toolchain default that moved
 # or a manifest pinned to another version than the plist refuses here rather
-# than shipping a disagreement.
+# than shipping a disagreement. The SDK each output was built against is
+# compared with the selected SDK separately, before assembly.
 check_minimum_macos() {
   local target="$1" minos
   minos="$(/usr/bin/otool -l "${target}" | /usr/bin/awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
@@ -173,37 +237,64 @@ check_minimum_macos() {
 # ---- Toolchain and build-directory admission --------------------------------
 
 # One SDK for Cargo and Meson, selected the way xcrun --sdk macosx does, before
-# any compile; DEVELOPER_DIR passes through for the toolchain choice. The
-# selection is checked here because set -e would see export's status, not
-# xcrun's.
-echo "==> Selecting the macOS SDK (xcrun --sdk macosx)"
-if ! SDKROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path 2>/dev/null)" || [[ ! -d "${SDKROOT}" ]]; then
-  echo "ERROR: xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})" 1>&2
+# any compile; DEVELOPER_DIR passes through for the toolchain choice, and a
+# caller's SDKROOT names the SDK xcrun resolves instead of the macosx default
+# (a developer directory whose newest SDK its own linker cannot consume is
+# usable with an older one this way). The selection is checked here because
+# set -e would see export's status, not xcrun's. The SDK's numeric version is
+# what every shipped output must agree with; a version xcrun cannot report
+# numerically never compares equal.
+SDK_REQUEST="${PW_SDK_REQUEST:-macosx}"
+SDK_SOURCE="default"
+if [[ "${SDK_REQUEST}" != "macosx" ]]; then
+  SDK_SOURCE="caller"
+fi
+echo "==> Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})"
+if ! SDKROOT="$(/usr/bin/xcrun --sdk "${SDK_REQUEST}" --show-sdk-path 2>/dev/null)" || [[ ! -d "${SDKROOT}" ]]; then
+  echo "ERROR: xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})" 1>&2
   exit 2
 fi
 export SDKROOT
-echo "    ${SDKROOT}"
+if ! SDK_VERSION="$(/usr/bin/xcrun --sdk "${SDKROOT}" --show-sdk-version 2>/dev/null)" || [[ ! "${SDK_VERSION}" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+  echo "ERROR: xcrun did not report a numeric macOS SDK version (got '${SDK_VERSION:-}')" 1>&2
+  exit 2
+fi
+echo "    ${SDKROOT} (SDK ${SDK_VERSION}, ${SDK_SOURCE} selection)"
 
 # A build directory is trusted incremental state for this checkout and no
 # other. Meson keeps compiling the source directory a build directory was set
 # up for, so one configured elsewhere (copied along with a checkout, say)
 # would compile that other tree and pass every later check against it. Refuse
 # it here, before Cargo; the configured source check repeats the comparison.
+# A configured directory is reused only under the toolchain its stamp
+# records: the stamped SDK, developer directory, compiler commands and Rust
+# compiler are compared with the ones selected now, and a changed, missing,
+# malformed or unobservable field refuses before any compile or
+# reconfiguration. Fresh mode replaces the directory instead of validating it.
 echo "==> Checking the native build directory: ${MESON_BUILD_DIR}"
-if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
-  if ! MESON_SOURCE_DIR="$(/usr/bin/python3 -c 'import json, os, sys; print(os.path.realpath(json.load(open(sys.argv[1]))["directories"]["source"]))' "${MESON_BUILD_DIR}/meson-info/meson-info.json" 2>/dev/null)"; then
-    echo "ERROR: ${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory" 1>&2
-    exit 2
+if [[ "${PW_FRESH_BUILD}" == "1" ]]; then
+  echo "    fresh mode: the directory is replaced after admission; its reuse is not validated"
+else
+  if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
+    if ! MESON_SOURCE_DIR="$(/usr/bin/python3 -c 'import json, os, sys; print(os.path.realpath(json.load(open(sys.argv[1]))["directories"]["source"]))' "${MESON_BUILD_DIR}/meson-info/meson-info.json" 2>/dev/null)"; then
+      echo "ERROR: ${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory" 1>&2
+      exit 2
+    fi
+    if [[ "${MESON_SOURCE_DIR}" != "$(cd "${ROOT_DIR}" && pwd -P)" ]]; then
+      echo "ERROR: ${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory" 1>&2
+      exit 2
+    fi
   fi
-  if [[ "${MESON_SOURCE_DIR}" != "$(cd "${ROOT_DIR}" && pwd -P)" ]]; then
-    echo "ERROR: ${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory" 1>&2
-    exit 2
-  fi
+  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --session "${BUILD_SESSION}" \
+    --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
 fi
 
-# Select and verify the signing identity: an explicit Developer ID Application
-# identity present in the login keychain. Nothing is auto-selected, and any
-# other identity class is refused here, before Cargo runs (docs/SIGNING.md).
+# Select and verify the signing identity: an explicit identity present in the
+# login keychain. Nothing is auto-selected. The identity's class, chain, team
+# and secure timestamp are verified on the signatures it makes, after the seal
+# (docs/BUILD.md); the keychain listing is checked here, before Cargo runs,
+# because an empty listing is also how a sandboxed harness shows a keychain
+# it cannot open.
 echo "==> Checking the signing identity"
 IDENTITY="${IDENTITY:-}"
 if [[ -z "${IDENTITY}" ]]; then
@@ -211,20 +302,10 @@ if [[ -z "${IDENTITY}" ]]; then
 ERROR: IDENTITY is not set.
 
 Set it to your Developer ID Application identity string, for example:
-  IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' ./build.sh
+  make build IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'
 
 You can find valid identities via:
   security find-identity -v -p codesigning
-EOM
-  exit 2
-fi
-if [[ "${IDENTITY}" != "Developer ID Application: "* ]]; then
-  cat <<EOM 1>&2
-ERROR: IDENTITY must name a Developer ID Application identity; got:
-  ${IDENTITY}
-
-Other identity classes (Apple Development, Mac Developer, ad hoc, self-signed)
-produce an app the tests and notarization reject; see docs/SIGNING.md.
 EOM
   exit 2
 fi
@@ -250,35 +331,54 @@ EOM
   exit 2
 fi
 
-# Map the two public knobs onto Meson's two options; meson.build fixes every
+# Map the public knobs onto Meson's two options; meson.build fixes every
 # other native setting. Both options are passed on every configuration so a
-# build directory never retains an earlier variant.
+# build directory never retains an earlier variant. RUSTFLAGS is remembered
+# with the source that set it: the caller, this script, or nobody.
 MESON_OPTIONS=("-Dinspection=false" "-Dxpc=false")
+RUSTFLAGS_SOURCE="none"
+if [[ -n "${RUSTFLAGS:-}" ]]; then
+  RUSTFLAGS_SOURCE="caller"
+fi
 if [[ "${PW_INSPECTION}" == "1" ]]; then
   MESON_OPTIONS[0]="-Dinspection=true"
   if [[ -z "${RUSTFLAGS:-}" ]]; then
     export RUSTFLAGS="-C debuginfo=2 -C force-frame-pointers=yes -C opt-level=1"
+    RUSTFLAGS_SOURCE="script"
   fi
 fi
 if [[ "${BUILD_XPC}" == "1" ]]; then
   MESON_OPTIONS[1]="-Dxpc=true"
 fi
 
+# Cargo keeps its intermediate release state under the pinned target directory
+# unless a build-dir setting redirects it. Cargo itself reports the effective
+# directory; one outside the admitted area refuses here, before any mutation,
+# in incremental and fresh builds alike. Nothing outside the checkout is ever
+# removed because a Cargo setting names it.
+echo "==> Admitting the Cargo output and intermediate directories: ${CARGO_TARGET_DIR_PINNED}"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-admit --session "${BUILD_SESSION}" \
+  --manifest-path "${RUNNER_MANIFEST}" --target-dir "${CARGO_TARGET_DIR_PINNED}"
+
+# Fresh mode replaces the two owned cache areas after read-only input, tool and
+# identity admission: builddir/ and controller/target/release/, each a real
+# directory of this user inside the checkout, with no symlink on its path.
+# Other profiles, registry downloads, compiler caches elsewhere and the
+# previous distribution outputs stay. A path that cannot be admitted or a
+# removal that fails stops the build here.
+if [[ "${PW_FRESH_BUILD}" == "1" ]]; then
+  echo "==> Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release"
+  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" fresh-remove --session "${BUILD_SESSION}" --root "${ROOT_DIR}"
+fi
+
 # ---- Build binaries --------------------------------------------------------
 
-# The output directory is pinned on the command line, so a CARGO_TARGET_DIR
-# or a Cargo configuration value cannot send the outputs elsewhere while the
-# copies below read these fixed paths. Cargo is asked to report what it
-# produced: a target triple or another setting that placed an executable
-# under a different directory refuses here, before a stale file at the pinned
-# path could be copied in its place.
-CARGO_TARGET_DIR_PINNED="${ROOT_DIR}/controller/target"
-CARGO_MESSAGES="${CARGO_TARGET_DIR_PINNED}/pw-build-messages.jsonl"
-RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
-SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
-SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
+# Cargo is asked to report what it produced: a target triple or another
+# setting that placed an executable under a different directory refuses
+# here, before a stale file at the pinned path could be copied in its place.
+# Cargo's per-target reuse judgment is recorded as well; in fresh mode every
+# shipped target must report rebuilding.
 echo "==> Building Rust controller + tools"
-mkdir -p "${CARGO_TARGET_DIR_PINNED}"
 rm -f "${CARGO_MESSAGES}"
 PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
@@ -303,25 +403,26 @@ while IFS=$'\t' read -r bin_name bin_path; do
   fi
 done <<< "${CARGO_BUILT}"
 
-if [[ ! -x "${RUNNER_BIN}" ]]; then
-  echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
-  exit 2
-fi
-if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
-  echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
-  exit 2
-fi
-if [[ ! -x "${SBPL_CHECK_BIN}" ]]; then
-  echo "ERROR: expected sbpl-check binary at ${SBPL_CHECK_BIN}" 1>&2
-  exit 2
-fi
+# Every shipped Cargo output must be an executable file at the pinned path:
+# Cargo's path report and a parsable Mach-O do not establish the permission
+# bit, and a later chmod must not repair an output this build refuses.
 for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
+  if [[ ! -x "${rust_bin}" ]]; then
+    echo "ERROR: expected an executable Cargo output at ${rust_bin}" 1>&2
+    exit 2
+  fi
   check_minimum_macos "${rust_bin}"
 done
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-judge --session "${BUILD_SESSION}" \
+  --messages "${CARGO_MESSAGES}" --target-dir "${CARGO_TARGET_DIR_PINNED}" \
+  --bin policy-witness --bin sandbox-log-observer --bin sbpl-check \
+  --require-rebuilt "${PW_FRESH_BUILD}" --rustflags-source "${RUSTFLAGS_SOURCE}"
+
 # ---- Native executables (Meson) ---------------------------------------------
 
 # The SDK was selected above. The first build
-# sets the directory up; later builds pass the current variants with meson
+# sets the directory up and publishes its toolchain stamp from the compilers
+# Meson actually selected; later builds pass the current variants with meson
 # configure, which regenerates only when a value changed, so an unchanged
 # tree compiles nothing. meson.build's policy assertions run on setup and on
 # every regeneration, so an unsupported or injected option refuses here,
@@ -348,6 +449,8 @@ if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
 else
   echo "==> Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
   meson setup "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
+  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-publish --session "${BUILD_SESSION}" \
+    --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
 fi
 echo "==> Compiling native executables"
 meson compile -C "${MESON_BUILD_DIR}"
@@ -359,7 +462,10 @@ meson compile -C "${MESON_BUILD_DIR}"
 # identity digest input, so an include reaching outside the digest's
 # directories refuses too. The check is told which checkout the directory
 # must be configured for. The source_drift suite applies the source-list
-# expectation to the manifest read without a build directory.
+# expectation to the manifest read without a build directory. The stamp is
+# then kept intact, or extended with the Swift compiler a reused directory
+# discovered when this build enabled the XPC pieces, and every shipped output
+# must carry the selected SDK.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
 NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}" "${PW_EXTENSION_ISSUER_BIN}")
@@ -376,6 +482,10 @@ for native_bin in "${NATIVE_OUTPUTS[@]}"; do
   fi
   check_minimum_macos "${native_bin}"
 done
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-extend --session "${BUILD_SESSION}" \
+  --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" sdk-check --session "${BUILD_SESSION}" --sdk-version "${SDK_VERSION}" \
+  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}" "${NATIVE_OUTPUTS[@]}"
 
 # ---- Assemble app bundle ---------------------------------------------------
 
@@ -393,10 +503,6 @@ rm -rf "${APP_BUNDLE}"
 rm -f "${ZIP_NAME}" "${GUIDE_NAME}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 
-if [[ ! -f "${INFO_PLIST_TEMPLATE}" ]]; then
-  echo "ERROR: missing ${INFO_PLIST_TEMPLATE} at repo root" 1>&2
-  exit 2
-fi
 cp "${INFO_PLIST_TEMPLATE}" "${APP_BUNDLE}/Contents/Info.plist"
 stamp_info_plist "${APP_BUNDLE}/Contents/Info.plist"
 
@@ -418,24 +524,20 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 # controller reads from this directory when resolving
 # request.policy.augments before sbpl-check. Augments are
 # resources, not executables; the outer codesign at the end of the
-# build seals them as part of the app bundle.
-if [[ -d "${XPC_AUGMENTS_DIR}" ]]; then
-  AUGMENTS_OUT_DIR="${APP_BUNDLE}/Contents/Resources/Augments"
-  mkdir -p "${AUGMENTS_OUT_DIR}"
-  augments_found=0
-  for augment_src in "${XPC_AUGMENTS_DIR}"/*.sb; do
-    if [[ ! -f "${augment_src}" ]]; then
-      continue
-    fi
-    augments_found=1
-    cp "${augment_src}" "${AUGMENTS_OUT_DIR}/"
-  done
-  if [[ "${augments_found}" == "0" ]]; then
-    echo "WARN: no augments found in ${XPC_AUGMENTS_DIR}; Contents/Resources/Augments will be empty" 1>&2
+# build seals them as part of the app bundle. The directory's presence
+# was admitted before the first check.
+AUGMENTS_OUT_DIR="${APP_BUNDLE}/Contents/Resources/Augments"
+mkdir -p "${AUGMENTS_OUT_DIR}"
+augments_found=0
+for augment_src in "${XPC_AUGMENTS_DIR}"/*.sb; do
+  if [[ ! -f "${augment_src}" ]]; then
+    continue
   fi
-else
-  echo "ERROR: missing augments source dir at ${XPC_AUGMENTS_DIR}" 1>&2
-  exit 2
+  augments_found=1
+  cp "${augment_src}" "${AUGMENTS_OUT_DIR}/"
+done
+if [[ "${augments_found}" == "0" ]]; then
+  echo "WARN: no augments found in ${XPC_AUGMENTS_DIR}; Contents/Resources/Augments will be empty" 1>&2
 fi
 
 # ---- Build embedded XPC components ----------------------------------------
@@ -451,12 +553,11 @@ embed_dsym() {
   fi
 }
 
+# The native output loop above checked every Meson output this variant ships;
+# the copies here read them without a second check, and a copy that finds its
+# input gone fails on its own.
 if [[ "${BUILD_XPC}" == "1" ]]; then
   echo "==> Embedding PW runner client"
-  if [[ ! -x "${PW_RUNNER_CLIENT_BIN}" ]]; then
-    echo "ERROR: expected Meson output at ${PW_RUNNER_CLIENT_BIN}" 1>&2
-    exit 2
-  fi
   cp "${PW_RUNNER_CLIENT_BIN}" "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
   embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
@@ -467,18 +568,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     svc_info="${svc_dir}/Info.plist"
     svc_host="${MESON_BUILD_DIR}/${svc_name}"
     svc_bundle="${APP_BUNDLE}/Contents/XPCServices/${svc_name}.xpc"
-    if [[ ! -d "${svc_dir}" ]]; then
-      echo "ERROR: missing ${svc_name} service dir at ${svc_dir}" 1>&2
-      exit 2
-    fi
-    if [[ ! -f "${svc_info}" ]]; then
-      echo "ERROR: ${svc_name} service is missing Info.plist" 1>&2
-      exit 2
-    fi
-    if [[ ! -x "${svc_host}" ]]; then
-      echo "ERROR: expected Meson output at ${svc_host}" 1>&2
-      exit 2
-    fi
     mkdir -p "${svc_bundle}/Contents/MacOS"
     cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
     stamp_info_plist "${svc_bundle}/Contents/Info.plist"
@@ -514,26 +603,23 @@ fi
 
 # Refuse an identity input edited during the build without regeneration,
 # instead of signing mixed components; the build otherwise trusts the checkout
-# not to change under it.
+# not to change under it. The built worker must also report the generated
+# identity: a worker compiled from other identity inputs and an unchanged
+# generated constant can agree with the tree, so the binary is asked as well.
 echo "==> Checking host/worker identity again, before signing"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
-
-if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then
-  echo "ERROR: missing entitlements plist: ${ENTITLEMENTS_PLIST}" 1>&2
-  exit 2
-fi
+GENERATED_WORKER_IDENTITY="$(/usr/bin/sed -nE 's/^WORKER_IDENTITY = "([0-9a-f]{64})"$/\1/p' "${ROOT_DIR}/tests/lib/contract.py")"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --session "${BUILD_SESSION}" \
+  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"
 
 # Sign one Mach-O named by the signing list. The list names exactly the
 # executables this build produced, so a missing or non-Mach-O target is a
-# refusal, never a skip.
+# refusal before codesign runs, never a skip and never a signature stored
+# beside a file that is not code.
 sign_macho() {
   local target="$1"
-  if [[ ! -f "${target}" ]]; then
-    echo "ERROR: expected a Mach-O to sign at ${target}" 1>&2
-    exit 2
-  fi
-  if ! /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
-    echo "ERROR: ${target} is not a Mach-O; the signing list names only executables" 1>&2
+  if ! /usr/bin/file -b "${target}" 2>/dev/null | /usr/bin/grep -q "Mach-O"; then
+    echo "ERROR: ${target} is missing or not a Mach-O; the signing list names only executables" 1>&2
     exit 2
   fi
   codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"
@@ -546,19 +632,11 @@ fi
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 
-if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
+if [[ "${BUILD_XPC}" == "1" ]]; then
   echo "==> Codesigning embedded XPC services"
   for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
     svc_entitlements="${XPC_SERVICES_DIR}/${svc_name}/Entitlements.plist"
     svc_bundle="${APP_BUNDLE}/Contents/XPCServices/${svc_name}.xpc"
-    if [[ ! -d "${svc_bundle}" ]]; then
-      echo "ERROR: expected XPC service bundle at ${svc_bundle}" 1>&2
-      exit 2
-    fi
-    if [[ ! -f "${svc_entitlements}" ]]; then
-      echo "ERROR: ${svc_name} service is missing Entitlements.plist at ${svc_entitlements}" 1>&2
-      exit 2
-    fi
 
     # Sign embedded helpers (e.g. pw-probe-runner, sb_api_validator)
     # BEFORE sealing the bundle, so the bundle codesign records their
@@ -575,11 +653,15 @@ if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
   done
 fi
 
-# Evidence generation must run after the binaries are in place and signed.
-echo "==> Writing evidence manifest (signed BOM)"
+# Evidence generation must run after the binaries are in place and signed: the
+# manifest and the provenance record describe signed bytes, and the app seal
+# below covers both. The controller's final hash cannot live inside the record
+# that seal covers; the release record carries it.
+echo "==> Writing evidence manifest and provenance record"
 /usr/bin/python3 "${ROOT_DIR}/tests/build-evidence.py" \
   --app-bundle "${APP_BUNDLE}" \
-  --app-entitlements "${ENTITLEMENTS_PLIST}"
+  --app-entitlements "${ENTITLEMENTS_PLIST}" \
+  --build-session "${BUILD_SESSION}" --root "${ROOT_DIR}" --identity "${IDENTITY}"
 
 # Sign the outer app last so the bundle is coherent.
 echo "==> Codesigning app bundle"
@@ -591,12 +673,15 @@ echo "==> Verifying signature + entitlements"
 codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}"
 codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 
-# Every executable under the app's and each service's Contents/MacOS must
-# carry the named identity with the hardened runtime, whether or not the
-# signing list named it. The linker leaves every compiler output ad hoc-signed,
-# and an ad hoc executable passes the seal and the verification above and
-# fails only at notarization. The dSYM bundles are sealed resources, not
-# executables, and are not checked.
+# Every executable under the app's and each service's Contents/MacOS, and both
+# seals, must carry the named identity with the hardened runtime, the Developer
+# ID chain, its team identifier and a secure timestamp, whether or not the
+# signing list named the file. The linker leaves every compiler output ad
+# hoc-signed, and an ad hoc executable passes the seal and the verification
+# above and fails only at notarization. This check refuses it before
+# packaging; the identity's class is established here, on the signatures
+# made, not on the identity string. The dSYM bundles are sealed resources,
+# not executables, and are not checked.
 echo "==> Checking every executable's signer"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
 
@@ -622,7 +707,7 @@ DONE:
   - ${GUIDE_NAME}
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
-Next (see docs/SIGNING.md; make notarize builds again):
+Next (see docs/SIGNING.md; make notarize builds again, fresh):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'
   # For this existing ZIP, follow the individual steps in docs/SIGNING.md.
   # Keep their receipts in one ${DIST_DIR}/evidence/<attempt>/ directory.

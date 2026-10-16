@@ -7,7 +7,12 @@ Offline release controls also exercise the release procedure's decision points.
 
 - Requires expected executables/resources, valid strict signatures for the app,
   service, and helpers, and matching hashes for every manifest entry. Required
-  helper entries cannot silently disappear from the manifest.
+  helper entries cannot silently disappear from the manifest. The provenance
+  record must be present and listed, name every shipped executable once with
+  a valid path, carry no controller hash, and agree with the manifest and the
+  bytes on every other hash and with each executable's load commands on its
+  UUID, platform, minimum and SDK; a record for another build with the same
+  inventory is refused.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
   `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
   symbol lookup. The [host-source check](../source_drift/README.md) covers
@@ -36,28 +41,69 @@ Offline release controls also exercise the release procedure's decision points.
   fail recursive installation checks and subsequently identify both the bundle
   and changed helper during validation. Other helper signatures remain valid;
   removal verifies registry and plist cleanup.
+- `build_provenance_controls` exercises the provenance helpers with
+  constructed inputs and disposable directories: lock claims verified through
+  the inherited descriptor and refused for a separate open, a stale nonce,
+  another checkout or a closed descriptor, with the hold outliving a killed
+  launcher command while a descendant runs; stamps published, validated,
+  extended and refused as missing, malformed, unsupported, foreign, changed
+  or unobservable without ever rewriting one; bounded probes whose failure
+  entries carry no tool output; fresh-mode removal admitting only owned real
+  directories and refusing symlinked parents and failed removals; Cargo
+  judgments bound to fingerprints through the uplifted executable with
+  ambiguous, malformed and unsupported cases explicit; SDK versions
+  normalized with unknowns never equal; signature displays establishing
+  class, team and timestamp; and records refused for a swapped bundle,
+  missing, duplicate or invalid outputs, a controller hash inside the seal,
+  wrong hashes or wrong load-command metadata. It needs clang for the Mach-O
+  stand-ins and is in the default battery.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS
-  minimum, or sign `sbpl-check` ad hoc. Both full and partial builds must refuse
-  wrong minima before assembly while preserving previous distribution bytes.
-  The ad hoc helper must pass deep verification and then fail the signer check
+  minimum, one or every shipped output with a Mach-O built against another
+  installed SDK, sign `sbpl-check` ad hoc, or sign that helper, the service
+  seal or the app seal with `--timestamp=none`. Both full and partial builds
+  must refuse wrong minima and wrong SDKs before assembly while preserving
+  previous distribution bytes. The ad hoc and timestamp-less signatures must
+  pass deep verification and then fail the signer check, naming the artifact,
   before the standalone observer is signed, the guide is staged or the ZIP is
-  created. Successful siblings must package both variants. Raw command and tool
-  receipts survive temporary-checkout cleanup. This case requires the full
-  toolchain and a Developer ID identity, and is opt-in.
+  created; the control inspects each such signature independently before
+  crediting the refusal. Successful siblings must package both variants. Raw
+  command and tool receipts survive temporary-checkout cleanup. This case
+  requires the full toolchain, a second installed SDK and a Developer ID
+  identity, and is opt-in.
 - `build_refusal_controls` runs the unchanged build script in a disposable
-  checkout once per refusal the build baseline used to list, in each variant the
-  refusal applies to. A fault is arranged beside one boundary: an environment
-  that cannot select the SDK or finds no Meson, a Cargo output removed or moved
-  under a target triple, an old Ninja, a poisoned Meson directory, a source that
-  does not compile, an input or output removed by a `cp`, `meson` or `codesign`
-  wrapper after a named call, a truncated Mach-O at signing or a tampered sealed
-  resource. Each control asserts the production diagnostic and status, the
-  banners before and after the refusal, the tool calls that did not happen and
-  the output left behind. Copies of the script with a guard removed or moved
-  past its operation must fail the matching control. Opt-in, with the same
-  toolchain and identity requirements as the guard controls.
+  checkout once per refusal the build manifest lists, in each variant the
+  refusal applies to. A fault is arranged beside one boundary: a tracked input
+  gone, a held lock or a claim without a hold, an environment that cannot
+  select the SDK or report its version, a stamp that is missing, malformed or
+  foreign, a forwarding compiler wrapper relabelled after the stamp recorded
+  it or failing its version probe, redirected or unobservable Cargo
+  intermediates, a cache path fresh mode cannot admit or remove, a Cargo
+  output removed, made non-executable or moved under a target triple, a
+  reused Cargo judgment in fresh mode, an old Ninja, a poisoned Meson
+  directory, a source that does not compile, a worker reporting another
+  identity, an input or output removed by a `cp`, `meson` or `codesign`
+  wrapper after a named call, a truncated Mach-O at signing, the session gone
+  before evidence, a tampered sealed resource or an edited record. Each
+  control asserts the production diagnostic and status, the banners before
+  and after the refusal, the tool calls that did not happen and the output
+  left behind; the forwarding wrappers' receipts establish that compilations
+  were forwarded and which flags they carried. The same case runs the
+  fresh-mode state sequence with interruptions, the canary, replaced-output
+  and make-entrypoint controls described in the opt-in registry. Copies of
+  the script with a guard removed or moved past its operation must fail the
+  matching control. Opt-in, with the same toolchain and identity requirements
+  as the guard controls.
+- `build_toolchain_switch_controls` builds under the selected developer
+  directory and under the Command Line Tools through `DEVELOPER_DIR`, refusing
+  reuse across the switch by a field its independent probes of both
+  directories show to differ, and recovering fresh. It links a C and a Swift
+  program under each directory first and names a linkable SDK through
+  `SDKROOT` when xcrun's default does not link with that directory's tools,
+  recording the probes. Opt-in; needs both developer directories with
+  distinct compilers and a linkable SDK each, which is an equipment failure
+  when absent.
 - `release_controls` accepts a recognized Apple acceptance with extra fields and
   stops on agreement errors, unknown responses, pending/rejected/unknown status,
   wrong submission IDs, ambiguous duplicate fields, simulated timeouts, and changed input archives. Independent
@@ -120,11 +166,17 @@ Offline release controls also exercise the release procedure's decision points.
 ## Fixtures
 
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
-- `tests/fixtures/build_guards/tools.py`: real-tool delegation with one output
-  replacement or ad hoc signature at the selected boundary.
-- `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts;
-  configured hooks remove, move, truncate or rewrite a file beside one call, or
-  answer a version query.
+- `tests/fixtures/build_guards/tools.py`: real-tool delegation with output
+  replacements or a replaced codesign argument list at the selected boundary.
+- `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts
+  and a stderr canary; configured hooks remove, move, copy, truncate, rewrite
+  or change the mode of a file, edit Cargo's artifact report or kill the
+  build's shell beside one call, or answer a version query.
+- `tests/fixtures/build_refusals/forward.py`: a forwarding compiler wrapper
+  that runs the real compiler unchanged, records every invocation classified
+  as compilation, probe or version query, and can label, fail or hang a
+  version query; `wrong_worker.c` is a worker stand-in reporting a foreign
+  identity.
 - The SDK refusal control gives real `xcrun` an unconfigured developer directory
   only for SDK selection. Its sandbox permits only that executable, denies Mach
   service lookups and limits writes to the fixture. A containment control runs
@@ -133,7 +185,8 @@ Offline release controls also exercise the release procedure's decision points.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles
-  around a compiled XPC host stub, shared with the release controls here.
+  around compiled Mach-O stubs with a provenance record describing them,
+  shared with the release controls here.
 - `tests/fixtures/release/tools.py`: controlled external-tool boundary and receipts.
 - `tests/fixtures/release/publish_tools.py`: GitHub stand-in for publication controls.
 - `tests/fixtures/release/hanging_command.py`: real command processes; reuses
@@ -151,9 +204,11 @@ Run:
 
 ```
 ./tests/run.sh --case preflight/codesign.preflight
+./tests/run.sh --case preflight/build_provenance_controls
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/build_guard_controls
 ./tests/run.sh --case preflight/build_refusal_controls
+./tests/run.sh --case preflight/build_toolchain_switch_controls
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls
 ./tests/run.sh --case preflight/release_publish_controls

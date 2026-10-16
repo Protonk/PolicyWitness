@@ -1,69 +1,99 @@
 # The build
 
 This document is the account of one build in time: what each step reads,
-writes and refuses; the two knobs and what each governs; what `meson.build`
-owns and what `build.sh` owns; the trust placed in the build directories; the
-signing contract; the evidence the build embeds; and how the build verifies
-itself. The release ships the [user guide](PolicyWitness.md), which states
-the supported macOS;
-[CONTRACT.md](CONTRACT.md#internal-hostworker-identity) keeps the identity's
-definition, and [SIGNING.md](SIGNING.md) keeps evidence, notarization,
-release and the archives.
+writes and refuses; the three knobs and what each governs; what `meson.build`
+owns and what `build.sh` owns; the trust placed in the build directories, the
+stamp that records the toolchain a directory was configured with, and the
+fresh mode that replaces them; the checkout lock a build holds; the signing
+contract and the guarantees verified on the signatures made; the evidence and
+the provenance record the build embeds; and how the build verifies itself.
+The release ships the [user guide](PolicyWitness.md), which states the
+supported macOS; [CONTRACT.md](CONTRACT.md#internal-hostworker-identity)
+keeps the identity's definition, and [SIGNING.md](SIGNING.md) keeps the
+evidence inventory and record formats, notarization, release and the
+archives.
 
 ## Why the build is shaped this way
 
 Three ideas shape the script. The app is a coherent signed specimen: one
 bundle, assembled from compilers the script drives itself, signed from the
 inside out with one explicitly named identity, and carrying a manifest of the
-bytes that were signed. The host and the worker share an exact source identity
-([`generate_worker_identity.py`](generate_worker_identity.py)), checked before
-compiling and again before signing, so the pair that ships carries the
-identity of the sources in the tree; that the binaries were compiled from
-those sources rests on the build directories' own records, as the last section
-says. And every refusal precedes the step it protects: the documentation and
-identity checks run before any compile, each compile is followed by its own
-checks before anything is copied, every bundle copy precedes every signature, and the
-signatures precede the ZIP. A refusal before assembly leaves the previous
-distribution outputs untouched, though the build directories change as the
-compiles run; a refusal between assembly and the seal leaves an unsealed
+bytes that were signed and a record of the tools, configuration and build
+directories behind them. The host and the worker share an exact source
+identity ([`generate_worker_identity.py`](generate_worker_identity.py)),
+checked before compiling and again before signing, when the built worker is
+also asked to report it, so the pair that ships carries the identity of the
+sources in the tree; that the binaries were compiled from those sources rests
+on the build directories' own records, as the last section says. And every
+refusal precedes the step it protects: the tracked inputs are admitted and the
+checkout lock is taken before the first check, the documentation and identity
+checks run before any compile, a reused build directory is validated against
+its stamp before any compile or reconfiguration, each compile is followed by
+its own checks before anything is copied, every bundle copy precedes every
+signature, and the signatures precede the ZIP.
+
+What a refusal leaves behind depends on where it fires. A refusal before
+assembly leaves the previous distribution outputs untouched; the build
+directories change as the compiles run, and in fresh mode they are replaced
+after admission, so a refusal after that point leaves fresh caches and the
+previous outputs. A refusal between assembly and the seal leaves an unsealed
 partial app and no ZIP; a refusal after the seal leaves a sealed app that
 failed verification, the signer check, the observer's signature or packaging,
 and no ZIP or a partial one. The test inspector checks the app's signatures,
 its inventory and evidence, including signer consistency for the listed
-executables ([`inspect`](../tests/lib/artifact.py)). A failure signing the
-standalone observer, staging the guide or writing the ZIP can leave an app
-that passes inspection.
+executables and the provenance record against the manifest and the bytes
+([`inspect`](../tests/lib/artifact.py)).
+
+Known gap: a failure signing the standalone observer, staging the guide or
+writing the ZIP can leave an app that passes inspection.
 
 The build preserves tracked files: a stale generated copy is refused with the
 command that regenerates it, so a clean checkout builds with a clean stamp.
 Its writes go to the two build directories, to the standalone observer's
-signature inside Cargo's, and to the
-output directory, which defaults to the ignored `dist/` but can be placed
-elsewhere with `DIST_DIR`. The build is a function of the checkout, its two
-build directories and the [inputs beyond the tree](#inputs-beyond-the-tree).
-It relies on the tools' records to decide whether cached outputs are current,
-and refuses a Meson build directory that belongs to another checkout.
+signature inside Cargo's, to the build session file beside Cargo's artifact
+messages, and to the output directory, which defaults to the ignored `dist/`
+but can be placed elsewhere with `DIST_DIR`. The build is a function of the
+checkout, its two build directories and the [inputs beyond the
+tree](#inputs-beyond-the-tree). It relies on the tools' records to decide
+whether cached outputs are current, refuses a Meson build directory that
+belongs to another checkout or another toolchain, and records what the tools
+reported rather than repairing anything.
 
 `make build` is the documented entry and the first row of the step table. It
-calls `build.sh`: the release targets reach the same row through
-`$(MAKE) build`, and a direct `./build.sh` skips the Makefile's guard and
-meets the script's own.
+calls `build.sh`, passing `PW_FRESH_BUILD` through only when the caller set
+it: the release targets reach the same row through `$(MAKE) build
+PW_FRESH_BUILD=1`, and a direct `./build.sh` meets the script's own checks,
+including the missing-identity refusal that names the make invocation.
 
 ## One build in time
 
-What the order establishes. The documentation and identity checks precede
-every compile, each compile's own checks follow it and precede any copy, the
-copies precede every signature, and the signatures precede the ZIP, as the
-table shows and the rule compares. The refusals table distinguishes this
-textual check from controls that drive the build and observe it stopping.
+What the order establishes. The admission, the lock and the documentation and
+identity checks precede every compile, the build directory's stamp is
+validated before any compile or reconfiguration, each compile's own checks
+follow it and precede any copy, the copies precede every signature, and the
+signatures precede the ZIP, as the table shows and the rule compares. The
+refusals table distinguishes this textual check from controls that drive the
+build and observe it stopping.
 
 The partial build. With `BUILD_XPC=0` the script still runs Cargo, builds and
 minimum-checks the C executables, checks the signing identity, and signs
 and packages a bundle without the client, the service or the embedded helpers;
 the `skip_xpc` row stands in for the embed and service-signing rows it skips.
-That bundle passes evidence generation and the seal, fails the full inspector,
-and cannot run a specimen, because its evidence manifest names no runner.
-Use it only for iteration; the script still writes its ZIP under the release name.
+No Swift compiler is discovered, probed or recorded: the record names the
+Swift compiler as not applicable, and a partial build needs no Swift
+toolchain. That bundle passes evidence generation and the seal, fails the
+full inspector, and cannot run a specimen, because its evidence manifest
+names no runner. Use it only for iteration; the script still writes its ZIP
+under the release name.
+
+Fresh mode. With `PW_FRESH_BUILD=1` the script admits its inputs, tools and
+identity as usual, then replaces `builddir/` and `controller/target/release/`
+in the `fresh` step and requires Cargo to report rebuilding every shipped
+target; the `fresh` row runs only then, which the figure draws as a dotted
+node beside the direct edge of the incremental path. In incremental mode
+(`PW_FRESH_BUILD` unset or `0`) the `builddir` step validates the
+directory's stamp instead, and the `fresh` step does not run. The two are
+alternatives at one point in the order, not a sequence.
 
 Packaging. After the signer check and the standalone observer, the script
 stages the checked user guide beside the app and writes the ZIP for
@@ -73,43 +103,46 @@ writes. A test compares the staged copy itself.
 <!-- BEGIN GENERATED BUILD FIGURE -->
 ![One build in time](build-steps.svg)
 
-*Figure: one build in time, step by step. Generated from [build.json](build.json) by [generate_build.py](generate_build.py); dot source in [build-steps.dot](build-steps.dot). The ids in the figure are the ids in the step table; a blue node and a blue edge belong only to a full build, a dashed node or edge only to a partial build, and the two paths rejoin where both variants run. Symbol presence and test definition are verified, and the banner order, the refusal messages with the script's own statuses and steps, knob values, signing calls with their flags, helper and tool invocations with their listed flags, and the signing inventory are compared with the script by the build_documentation case; whether a test asserts the row, or a refusal fires before the operation it protects, is not verified.*
+*Figure: one build in time, step by step. Generated from [build.json](build.json) by [generate_build.py](generate_build.py); dot source in [build-steps.dot](build-steps.dot). The ids in the figure are the ids in the step table; a blue node and a blue edge belong only to a full build, a dashed node or edge only to a partial build, and the two paths rejoin where both variants run. A dotted node runs only under the condition it names (fresh mode, PW_FRESH_BUILD=1) and is skipped otherwise: its dotted edges and the direct edge beside them are alternatives, not a sequence. Symbol presence and test definition are verified, and the banner order with each step's condition, the refusal messages with the script's own statuses and steps, the Meson assertion family's template and asserted options, knob values, signing calls with their flags, helper and tool invocations with their subcommands and listed flags, and the signing inventory are compared with the script by the build_documentation case; whether a test asserts the row, or a refusal fires before the operation it protects, is not verified.*
 <!-- END GENERATED BUILD FIGURE -->
 
 <!-- BEGIN GENERATED BUILD STEPS -->
 <details>
-<summary>30 steps in order, with symbol presence and test definition verified and the banner order compared with the script; whether a test asserts the row is not verified</summary>
+<summary>33 steps in order, with symbol presence and test definition verified and the banner order compared with the script; whether a test asserts the row is not verified</summary>
 
 | Id | Banner | Variants | Reads | Writes | Refusals | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY and DIST_DIR from the make command line | nothing; runs build.sh with them | make_identity_unset | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_refuses_without_an_identity_and_never_runs_the_script`](../tests/suites/source_drift/contract.py) |
-| admission | (none) | both | BUILD_XPC, PW_INSPECTION and the argument list; --help prints the usage and exits before any check, after the knobs are validated | nothing | knob_value, unknown_argument | [`must be 0 or 1`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py) |
+| make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment | nothing; runs build.sh with them | none | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py) |
+| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; tests/.checkout.lock, which the launcher takes before running the script again under it | the owner record in tests/.checkout.lock for as long as the build and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy | [`must be 0 or 1`](../build.sh); [`checkout_lock.py`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the inherited lock descriptor and the claim the launcher left in the environment, verified against this checkout's lock file | nothing | lock_claim_invalid | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | check_limits | Checking limits documentation | both | docs/limits.json and the documents it renders | nothing | stale_limits | [`Checking limits documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_contract | Checking contract versions | both | docs/contract.json, docs/architecture.json and their generated copies | nothing | stale_contract, stale_architecture | [`Checking contract versions`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_build_doc | Checking build documentation | both | docs/build.json, build.sh, meson.build, the Makefile, the inventories, the baseline and the generated copies | nothing | stale_build_doc | [`Checking build documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_identity | Checking host/worker identity | both | the identity inputs and the three generated copies | nothing | stale_identity | [`Checking host/worker identity`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| stamp | Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE} | both | git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment | the four stamp variables for Cargo and the plists | none | [`Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| stamp | Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE} | both | git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment | the four stamp variables for Cargo and the plists; controller/target/ and the build session file, opened with the stamp and the three knobs | provenance_probe_failed | [`Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | minimum | Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS} | both | LSMinimumSystemVersion in Info.plist | MACOSX_DEPLOYMENT_TARGET for Cargo | plist_minimum_malformed | [`Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| sdk | Selecting the macOS SDK (xcrun --sdk macosx) | both | the SDK path xcrun reports under DEVELOPER_DIR | SDKROOT for Cargo and Meson | sdk_unavailable | [`Selecting the macOS SDK (xcrun --sdk macosx)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| builddir | Checking the native build directory: ${MESON_BUILD_DIR} | both | builddir/meson-info/meson-info.json when the directory is configured | nothing | builddir_unreadable, builddir_other_checkout | [`Checking the native build directory: ${MESON_BUILD_DIR}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| identity | Checking the signing identity | both | IDENTITY and the keychain listing; the two knobs, for Meson's options and RUSTFLAGS | RUSTFLAGS, when inspection is on and it was unset or empty | identity_unset, identity_class, identity_absent | [`Checking the signing identity`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| cargo | Building Rust controller + tools | both | cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths Cargo reports | controller/target/release/ under the pinned output directory, and the messages file Cargo reports its artifacts in | missing_controller, missing_observer, missing_sbpl_check, cargo_artifact_elsewhere, minimum_mismatch, cargo_failed | [`Building Rust controller + tools`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| sdk | Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST}) | both | the SDK path and numeric version xcrun reports under DEVELOPER_DIR for the macosx default, or for the SDK a caller's SDKROOT names | SDKROOT for Cargo and Meson, resolved by xcrun, and the SDK version every shipped output must carry | sdk_unavailable, sdk_version_unreadable | [`Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_sdk_version_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| builddir | Checking the native build directory: ${MESON_BUILD_DIR} | both | in incremental mode: builddir/meson-info/meson-info.json and builddir/pw-toolchain.json when the directory is configured, and the stamped SDK, developer directory, compiler commands and Rust compiler probed now; in fresh mode nothing, since the directory is replaced | the toolchain observation into the build session | builddir_unreadable, builddir_other_checkout, builddir_stamp_missing, builddir_stamp_invalid, builddir_toolchain_changed, provenance_probe_failed | [`Checking the native build directory: ${MESON_BUILD_DIR}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py); [`control_builddir_stamp_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_builddir_stamp_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_builddir_toolchain_changed`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| identity | Checking the signing identity | both | IDENTITY and the keychain listing; the knobs, for Meson's options and RUSTFLAGS | RUSTFLAGS, when inspection is on and it was unset or empty, and the record of who set it | identity_unset, identity_absent | [`Checking the signing identity`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_identity_of_another_class_as_absent_before_cargo`](../tests/suites/source_drift/contract.py) |
+| cargo_admit | Admitting the Cargo output and intermediate directories: ${CARGO_TARGET_DIR_PINNED} | both | cargo metadata's report of the target and build directories under the pinned target directory, with the caller's Cargo environment and configuration | the admission into the build session | cargo_build_dir_redirected, cargo_build_dir_unknown | [`Admitting the Cargo output and intermediate directories`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_cargo_build_dir_redirected`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_cargo_build_dir_unknown`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| fresh | Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release | both; fresh mode only | every path component of builddir/ and controller/target/release/ below the checkout: a real directory of this user, or absent | removes both directories; records each one's replacement in the build session; nothing else is removed | fresh_removal_unsafe, fresh_removal_failed | [`Replacing the build caches`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_fresh_removal_unsafe`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_fresh_removal_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_fresh_sequence`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| cargo | Building Rust controller + tools | both | cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, and Cargo's fingerprint for each shipped target | controller/target/release/ under the pinned output directory, the messages file Cargo reports its artifacts in, and the judgments into the build session | cargo_artifact_elsewhere, missing_cargo_output, minimum_mismatch, cargo_failed, cargo_target_reused, provenance_probe_failed | [`Building Rust controller + tools`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_missing_cargo_output`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_cargo_target_reused`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | toolchain | Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer) | both | meson and ninja on PATH and ninja's version | nothing | meson_ninja_missing, ninja_old | [`Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| configure | Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]} / Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]} | both | whether builddir/build.ninja exists, meson.build, meson.options and the two knobs as Meson options; a fresh setup also reads CFLAGS and the other flag variables | builddir/ configuration; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers | meson_optimization, meson_debug, meson_warning_level, meson_werror, meson_strip, meson_unity, meson_b_ndebug, meson_b_lto, meson_b_coverage, meson_b_pgo, meson_b_bitcode, meson_b_pie, meson_b_staticpic, meson_b_lundef, meson_b_sanitize, meson_c_std, meson_c_args, meson_c_link_args, meson_buildtype, meson_swift_args, meson_swift_link_args, meson_failed | [`Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| compile | Compiling native executables | both | the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first | builddir/ outputs and the Swift module cache under it | meson_optimization, meson_debug, meson_warning_level, meson_werror, meson_strip, meson_unity, meson_b_ndebug, meson_b_lto, meson_b_coverage, meson_b_pgo, meson_b_bitcode, meson_b_pie, meson_b_staticpic, meson_b_lundef, meson_b_sanitize, meson_c_std, meson_c_args, meson_c_link_args, meson_buildtype, meson_swift_args, meson_swift_link_args, meson_failed | [`Compiling native executables`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| native_check | Checking the configured native source lists and the identity closure against the tree | both | Meson's introspection of builddir/, Ninja's dependency log, the identity inputs and the Meson outputs' load commands | nothing | minimum_mismatch, missing_native_output, native_sources_differ, native_sources_unreadable | [`Checking the configured native source lists and the identity closure against the tree`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| assemble | Assembling app bundle: ${APP_BUNDLE} | both | Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md | the two documents under DIST_DIR; removes the previous app, ZIP and guide; the stamped Info.plist, the three Rust executables and the augments under the new app | missing_info_plist, missing_augments_dir | [`Assembling app bundle: ${APP_BUNDLE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| embed_client | Embedding PW runner client | full | builddir/pw-runner-client | Contents/MacOS/pw-runner-client and its dSYM in inspection builds | missing_client_output | [`Embedding PW runner client`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| embed_services | Embedding PWRunner XPC services | full | each service's Info.plist and builddir/ host, the worker, validator and issuer | each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker, validator and issuer | missing_service_dir, missing_service_plist, missing_host_output | [`Embedding PWRunner XPC services`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| configure | Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]} / Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]} | both | whether builddir/build.ninja exists, meson.build, meson.options and the two Meson options; a fresh setup also reads CFLAGS and the other flag variables, and the compilers Meson selected | builddir/ configuration; a fresh setup publishes builddir/pw-toolchain.json atomically from the selected compilers, SDK and Rust compiler; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers | meson_policy, meson_failed, builddir_stamp_invalid, provenance_probe_failed | [`Configuring native build (meson configure, existing directory): ${MESON_OPTIONS[*]}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_meson_policy`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_fresh_sequence`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| compile | Compiling native executables | both | the native sources through builddir/; a changed option triggers regeneration, which runs the policy assertions first | builddir/ outputs and the Swift module cache under it | meson_policy, meson_failed | [`Compiling native executables`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| native_check | Checking the configured native source lists and the identity closure against the tree | both | Meson's introspection of builddir/, Ninja's dependency log, the identity inputs, the stamp and the compilers the directory records, and every shipped output's load commands | builddir/pw-toolchain.json extended with the Swift compiler a reused directory discovered when this build enabled the XPC pieces, atomically and without changing another field; the toolchain, option and SDK observations into the build session | minimum_mismatch, missing_native_output, native_sources_differ, native_sources_unreadable, builddir_stamp_invalid, builddir_toolchain_changed, sdk_disagreement, provenance_probe_failed | [`Checking the configured native source lists and the identity closure against the tree`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py); [`control_fresh_sequence`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| assemble | Assembling app bundle: ${APP_BUNDLE} | both | Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md, all admitted before the first check | the two documents under DIST_DIR; removes the previous app, ZIP and guide; the stamped Info.plist, the three Rust executables and the augments under the new app | none | [`Assembling app bundle: ${APP_BUNDLE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| embed_client | Embedding PW runner client | full | builddir/pw-runner-client | Contents/MacOS/pw-runner-client and its dSYM in inspection builds | none | [`Embedding PW runner client`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| embed_services | Embedding PWRunner XPC services | full | each service's Info.plist and builddir/ host, the worker, validator and issuer | each service bundle: its stamped Info.plist, the host with its dSYM in inspection builds, the worker, validator and issuer | none | [`Embedding PWRunner XPC services`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | skip_xpc | Skipping embedded XPC build (BUILD_XPC=0) | partial | nothing | nothing | none | [`Skipping embedded XPC build (BUILD_XPC=0)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| presign | Checking host/worker identity again, before signing | both | the identity inputs and copies, and whether PolicyWitness.entitlements exists | nothing | missing_entitlements, stale_identity_presign | [`Checking host/worker identity again, before signing`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| sign_tools | Codesigning embedded MacOS tools | both | the copied top-level helpers | signatures on the top-level helpers | sign_target_missing, sign_target_not_macho, codesign_failed | [`Codesigning embedded MacOS tools`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| sign_services | Codesigning embedded XPC services | full | each service's Entitlements.plist and bundle | signatures on the nested helpers, then each service seal | sign_target_missing, sign_target_not_macho, missing_service_bundle, missing_service_entitlements, codesign_failed | [`Codesigning embedded XPC services`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| evidence | Writing evidence manifest (signed BOM) | both | the signed bytes, entitlements and exported symbols of the helpers, services and augments | Contents/Resources/Evidence/manifest.json and symbols.json | evidence_failed | [`Writing evidence manifest (signed BOM)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| presign | Checking host/worker identity again, before signing | both | the identity inputs and copies, the generated identity in tests/lib/contract.py and the built worker's --version report | nothing | stale_identity_presign, worker_identity_mismatch, provenance_probe_failed | [`Checking host/worker identity again, before signing`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_stale_identity_presign`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_worker_identity_mismatch`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| sign_tools | Codesigning embedded MacOS tools | both | the copied top-level helpers | signatures on the top-level helpers | sign_target_not_macho, codesign_failed | [`Codesigning embedded MacOS tools`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| sign_services | Codesigning embedded XPC services | full | each service's Entitlements.plist, admitted before the first check, and the assembled bundle | signatures on the nested helpers, then each service seal | sign_target_not_macho, codesign_failed | [`Codesigning embedded XPC services`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| evidence | Writing evidence manifest and provenance record | both | the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands and signature display | Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two | evidence_failed, provenance_required_unknown | [`Writing evidence manifest and provenance record`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_evidence_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_provenance_required_unknown`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | seal | Codesigning app bundle | both | PolicyWitness.entitlements | the app seal over everything under Contents/ | codesign_failed | [`Codesigning app bundle`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | verify | Verifying signature + entitlements | both | the sealed app | nothing | verify_failed | [`Verifying signature + entitlements`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| signer | Checking every executable's signer | both | every regular file under the app's and each service's Contents/MacOS | nothing | signer_mismatch | [`Checking every executable's signer`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| sign_observer | Codesigning observer tool (not embedded) | both | controller/target/release/sandbox-log-observer | that executable's signature, in place | sign_target_missing, sign_target_not_macho, codesign_failed | [`Codesigning observer tool (not embedded)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| signer | Checking every executable's signer | both | every regular file under the app's and each service's Contents/MacOS, and the app and service seals, as codesign displays them | nothing | signer_mismatch | [`Checking every executable's signer`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| sign_observer | Codesigning observer tool (not embedded) | both | controller/target/release/sandbox-log-observer | that executable's signature, in place | sign_target_not_macho, codesign_failed | [`Codesigning observer tool (not embedded)`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | guide | Staging checked user guide | both | docs/PolicyWitness.md and its inputs | PolicyWitness.md under DIST_DIR | stale_guide | [`Staging checked user guide`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | zip | Creating zip (for notarization): ${ZIP_NAME} | both | the sealed app | PolicyWitness.zip under DIST_DIR | none | [`Creating zip (for notarization): ${ZIP_NAME}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 
@@ -118,31 +151,45 @@ writes. A test compares the staged copy itself.
 
 How to read the table. A step is a banner the script prints; the rows are in
 script order, and the generator refuses a manifest whose banners are not the
-script's, in that order, under the same `BUILD_XPC` branches
+script's, in that order, under the same `BUILD_XPC` branches and the same
+`PW_FRESH_BUILD` condition
 ([`check_banner_order`](../tests/suites/source_drift/build_rules.py)). The
 first row is the Makefile's `build` target; the second, `admission`, has no
-banner and holds the refusals that fire before any banner prints. A refusal
-belongs to the banner that precedes it in the script, and a refusal inside a
-function belongs to every step that calls the function; the script is arranged
-so that every refusal follows the banner of the step it protects, which is
-what makes that rule honest. Variants are `full` (`BUILD_XPC=1`) and `partial`
-(`BUILD_XPC=0`); a row marked `both` runs in either. `--help` prints the usage
-and exits before any check, once the knobs are validated. The script prints
-a warning and continues when the augments directory holds no augment.
-The tables cover refusals; their Reads and Writes columns are manually
-maintained descriptions of each step.
+banner and holds the refusals that fire before any banner prints, including
+the tracked-input check and the launcher's refusal of a busy checkout lock. A
+refusal belongs to the banner that precedes it in the script, and a refusal
+inside a function belongs to every step that calls the function; the script is
+arranged so that every refusal follows the banner of the step it protects,
+which is what makes that rule honest. Variants are `full` (`BUILD_XPC=1`) and
+`partial` (`BUILD_XPC=0`); a row marked `both` runs in either, and a row
+marked `fresh mode only` runs only when `PW_FRESH_BUILD=1`. `--help` prints
+the usage and exits before any check, once the knobs are validated. The
+script prints a warning and continues when the augments directory holds no
+augment. The tables cover refusals; their Reads and Writes columns are
+manually maintained descriptions of each step.
 
 ## Inputs beyond the tree
 
 The build depends on these inputs and working state, in the order it meets them.
 
+- **The tracked inputs.** `Info.plist`, the two entitlement plists, the
+  service's `Info.plist`, the service directory and the augments directory
+  must exist before the first check; the first absent one is named. A copy
+  that finds its input gone later fails on its own, since the build assumes a
+  stable checkout.
+- **The checkout lock.** Every invocation holds `tests/.checkout.lock` from
+  admission through packaging, as a managed test execution does, so a build
+  and a battery in one checkout are mutually exclusive. The launcher takes the
+  lock without blocking and refuses a busy one before any cache or
+  distribution mutation; [locking](#the-checkout-lock) explains how the hold
+  is verified and how long it lasts.
 - **The git stamp.** `git describe`, `rev-parse` and `rev-list` give the
   version, the commit count, the describe string and the commit
   ([`PW_BUILD_DESCRIBE`](../build.sh)). `PW_VERSION` and `PW_BUILD_NUMBER`
   override the first two for builds outside a checkout; the other two always
   come from git or read `unknown`. The same four values reach the controller
-  through Cargo ([build.rs](../controller/build.rs)) and both plists
-  ([`stamp_info_plist`](../build.sh)).
+  through Cargo ([build.rs](../controller/build.rs)), both plists
+  ([`stamp_info_plist`](../build.sh)) and the provenance record.
 - **The supported macOS.** [`LSMinimumSystemVersion`](../Info.plist) is the
   one declaration the script enforces: it becomes `MACOSX_DEPLOYMENT_TARGET`
   for Cargo, and every Cargo and Meson executable is checked against it
@@ -151,26 +198,51 @@ The build depends on these inputs and working state, in the order it meets them.
   ([`macos_minimum`](../meson.build)); the two agree because a build in which
   they disagree refuses.
 - **The SDK and the developer directory.** `xcrun --sdk macosx` selects the
-  SDK once, under whatever `DEVELOPER_DIR` names, and the script exports it
-  as `SDKROOT` for Cargo and Meson alike; a failed selection refuses before
-  the build directory and the signing identity are checked. Which toolchain
-  `xcrun` resolves is the operator's choice.
+  SDK once, under whatever `DEVELOPER_DIR` names, unless the caller's
+  `SDKROOT` names an SDK, which `xcrun` resolves instead; the script exports
+  the resolved path as `SDKROOT` for Cargo and Meson alike, keeps its numeric
+  version and records which of the two selected it. A failed selection or a
+  version that is not numeric refuses before the build directory and the
+  signing identity are checked. Which toolchain `xcrun` resolves is the
+  operator's choice; every shipped output must carry that
+  SDK's version in its load commands before assembly
+  ([`sdk_check`](../tests/lib/build_provenance.py)), compared numerically so
+  equivalent spellings agree and a missing or malformed value never does. The
+  SDK's build identifier is a separate observation in the record, not a fact
+  the load commands establish.
 - **The two build directories.** Meson's is checked: a directory whose
   recorded source is another checkout, or whose record cannot be read, is
-  refused before Cargo. Cargo's is pinned with `--target-dir`, and Cargo is
-  asked to report the executables it produced, so one placed under another
-  directory by a target triple or a Cargo setting is refused before any copy.
-- **The signing identity.** `IDENTITY` must name a Developer ID Application
-  identity that `security find-identity` lists; any other class is refused before
-  Cargo. The first signature checks whether the keychain is unlocked.
+  refused before Cargo; so is one whose toolchain stamp is missing, malformed
+  or describes other tools than the ones selected now, as
+  [cache compatibility](#cache-compatibility-replacement-and-recovery) says.
+  Cargo's is pinned with `--target-dir`, its intermediate release state must
+  lie under that directory, and Cargo is asked to report the executables it
+  produced and whether it reused each one, so an output placed elsewhere by a
+  target triple or a Cargo setting is refused before any copy.
+- **The signing identity.** `IDENTITY` must name an identity that `security
+  find-identity` lists; nothing is auto-selected, and the keychain listing is
+  checked before Cargo because an empty listing is also what a sandboxed
+  harness shows for a keychain it cannot open. The identity's class, chain,
+  team and secure timestamp are verified on the signatures it makes, after
+  the seal, as [the signing contract](#the-signing-contract) says.
 - **Cargo's environment.** `cargo` is resolved on `PATH` and brings its own
   configuration, caches and registries. The script adds the four stamp
   variables, `MACOSX_DEPLOYMENT_TARGET`, `SDKROOT`, and `RUSTFLAGS` with
   debug info, frame pointers and opt-level 1 when inspection is on and the
-  caller left it unset or empty; a caller's `RUSTFLAGS` wins silently. A
-  plain `cargo build` outside the script carries none of this; on the
-  toolchain this was observed with, it produced executables for an older
-  macOS than the plist declares, which the minimum check would refuse.
+  caller left it unset or empty; a caller's `RUSTFLAGS` wins silently, and
+  the record says which of the two set it. Cargo also honors compiler
+  overrides and flag sources the script does not set: `RUSTC`, the compiler
+  wrappers, `CARGO_ENCODED_RUSTFLAGS`, `CARGO_BUILD_*` settings and
+  configuration files discovered from the manifest's directory, its
+  ancestors and Cargo home. The build asks Cargo for its effective
+  intermediate directory and refuses one outside the pinned target directory
+  before any mutation; it records which selection variables are set and which
+  configuration files define build settings, and it refuses before Cargo when
+  a configuration file selects the compiler or a wrapper, because the
+  selection could not be observed. A plain `cargo build` outside the script
+  carries none of this; on the toolchain this was observed with, it produced
+  executables for an older macOS than the plist declares, which the minimum
+  check would refuse.
 - **The output directory.** `DIST_DIR`, `dist/` by default; a custom one
   also receives copies of the tracked `dist/` README and AGENTS files. Its
   trust and that of the build directories are in the table.
@@ -178,23 +250,133 @@ The build depends on these inputs and working state, in the order it meets them.
 <!-- BEGIN GENERATED BUILD DIRECTORIES -->
 | Directory | Trusted as | Refused when | Sources | Checks |
 | --- | --- | --- | --- | --- |
-| builddir/ | Meson's configuration and incremental native outputs for this checkout | its recorded source directory is not this checkout, or its meson-info cannot be read | [`MESON_SOURCE_DIR`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py) |
-| controller/target/ | Cargo's incremental outputs under the pinned --target-dir | Cargo reports an executable at another path than the pinned one; otherwise a stale output is caught only by the minimum-version check and Cargo's own fingerprints | [`CARGO_TARGET_DIR_PINNED`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
-| dist/ (DIST_DIR) | the output directory; the previous app, ZIP and guide are removed one after another at assembly and nothing is preserved | never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation | [`rm -f "${ZIP_NAME}" "${GUIDE_NAME}"`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
+| builddir/ | Meson's configuration and incremental native outputs for this checkout, reused only under the toolchain its stamp (pw-toolchain.json) records: SDK path, version and build, developer directory, configured compiler commands and their probed identities, and the selected Rust compiler | its recorded source directory is not this checkout, its meson-info cannot be read, its stamp is missing, malformed, unsupported or does not describe the directory, a stamped field differs from the toolchain selected now, or a field needed for that comparison cannot be observed; fresh mode replaces the directory after admission instead of validating it | [`MESON_SOURCE_DIR`](../build.sh); [`stamp-check`](../build.sh); [`stamp_check`](../tests/lib/build_provenance.py) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py); [`control_builddir_toolchain_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_fresh_sequence`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| controller/target/ | Cargo's incremental outputs and intermediate release state under the pinned --target-dir, with Cargo's own reuse judgment recorded per shipped target; fresh mode replaces only its release/ subdirectory | Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, or, in fresh mode, reports reusing a shipped target; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected | [`CARGO_TARGET_DIR_PINNED`](../build.sh); [`cargo-admit`](../build.sh); [`cargo_admit`](../tests/lib/build_provenance.py) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`control_cargo_build_dir_redirected`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_cargo_target_reused`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_replaced_cached_output_is_recorded_not_detected`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| dist/ (DIST_DIR) | the output directory; the previous app, ZIP and guide are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed one after another at assembly with nothing preserved | never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation | [`rm -f "${ZIP_NAME}" "${GUIDE_NAME}"`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 <!-- END GENERATED BUILD DIRECTORIES -->
 
-To discard incremental build state, remove `builddir/` and
-`controller/target/` from the repository root with
-`rm -rf builddir controller/target` while no build or test is running; the
-next `make build` recreates them. `make prune` manages test output only and
-does not remove either cache or the distribution directory.
+### Cache compatibility, replacement and recovery
+
+A configured `builddir/` carries `builddir/pw-toolchain.json`, its toolchain
+stamp, published atomically right after a successful `meson setup` from the
+compilers Meson actually selected: the developer directory, the SDK's path,
+version and build, each configured compiler command with the identity it
+reports when probed in the directory's context, and the selected Rust
+compiler with its wrappers. Its scope is the Meson configuration and the
+compatibility inputs observed at setup; it says nothing about how outputs
+Cargo retained were produced. A failed setup publishes nothing.
+
+On reuse, the `builddir` step reads the stamp, checks that it names this
+checkout and the compiler commands the directory records, probes those same
+commands now, together with `xcrun`, the developer directory and the Rust
+compiler, and compares every applicable field. A field that differs refuses
+as `builddir_toolchain_changed`, naming the field, both values and the
+remedy; a field that cannot be observed on either side refuses as well,
+because two failed observations never establish equality. A configured
+directory with a missing, malformed or unsupported stamp, a stamp beside an
+unconfigured directory, or a stamp that does not describe the directory, is
+refused rather than adopted: the build never writes today's values over
+unknown state. A directory configured before stamps existed therefore needs
+one explicit fresh build. Unchanged reuse leaves the stamp byte-for-byte
+intact. Enabling the XPC pieces on a directory configured without them is an
+ordinary configuration change: the compile's regeneration discovers the Swift
+compiler, and after a successful compile the stamp is extended with that
+compiler's command and identity, atomically and without changing another
+field; disabling them later leaves the binding in place. Changing the
+inspection option never touches the stamp.
+
+Interruption follows the same rule. A build killed after setup but before
+publication leaves a configured, unstamped directory, which the next
+incremental build refuses until fresh mode replaces it. A build killed after
+publication, or one whose compile failed, leaves a stamped directory that the
+next incremental build validates and compiles again. The two caches survive
+independently: removing `controller/target/release/` alone makes the next
+build rebuild every Cargo target under a validated stamp, and removing
+`builddir/` alone makes it set up and stamp the directory anew while Cargo
+reuses its outputs.
+
+Fresh mode replaces the caches explicitly. After the tracked inputs, the
+tools and the identity are admitted, the `fresh` step removes `builddir/` and
+`controller/target/release/` and nothing else: every path component below
+the checkout must be a real directory owned by the current user, or absent,
+so a symlinked parent that would redirect the removal outside the checkout
+refuses before anything is removed, as does a removal that fails part way.
+Cargo's other profiles, its registry downloads, compiler caches elsewhere,
+`CACHEDIR.TAG`, the session file and the previous distribution outputs stay.
+The record names each directory's replacement, and Cargo must then report
+rebuilding every shipped target; a reused output or a missing judgment
+refuses before Meson runs. Cargo's reuse judgment is a different thing from
+this mode: `fresh: true` in Cargo's report means Cargo reused an output it
+judged current, and the record keeps the two apart.
+
+Known gap: the stamp covers the Meson configuration and the compatibility
+inputs observed at setup, not how the outputs Cargo retained were produced,
+and freshness means only that the admitted cache areas were replaced and
+Cargo compiled the shipped targets. It is not a hermetic build, and a
+compiler wrapper's own cache elsewhere is outside its claim.
+
+To discard incremental build state by hand, remove `builddir/` and
+`controller/target/` from the repository root while no build or test is
+running; the next `make build` recreates them and publishes a new stamp.
+Prefer `PW_FRESH_BUILD=1`, which does the same for the two owned areas under
+the lock with path and ownership admission. `make prune` manages test output
+only and does not remove either cache or the distribution directory.
+
+### The checkout lock
+
+`build.sh`, the test dispatcher, release acceptance, archiving and rotation
+each hold `tests/.checkout.lock` for their own duration: an advisory lock on
+the file's inode, never on a replaced file, so the file is never unlinked.
+The build takes it in the admission step through
+[checkout_lock.py](../tests/lib/checkout_lock.py), which acquires the lock
+without blocking or refuses a busy one, then runs the script again under it
+with the open descriptor inherited. The script verifies that claim through
+the descriptor, not the environment: the descriptor must be open on this
+checkout's lock file, its open file description must already hold the lock,
+and the owner record must carry the claimed nonce. A separately opened
+descriptor on the same inode, a stale nonce, another checkout's claim or a
+closed descriptor is refused, and the real holder's lock is left unchanged.
+
+The hold belongs to the open file description, so every compiler and tool
+the build runs inherits it and the lock stays held until the last of them
+exits, including when the script itself is killed while a child compiles.
+Nothing unlocks explicitly, because an explicit unlock by one sharer would
+end the hold for all of them; descriptors are closed and the operating system
+releases the lock when none remains. The dispatcher's helper follows the
+same rule ([`checkout_lock`](../tests/lib/retention.py)).
+
+Known gap: this is a managed-entrypoint guarantee for builds, the battery,
+acceptance, archiving and rotation; it does not serialize arbitrary direct
+tool invocations, and Cargo's own locking does not protect a shell deletion
+made before Cargo starts.
+
+A standalone Cargo invocation against the managed cache goes through the same
+helper, which takes the lock or shares a verified inherited hold:
+
+```sh
+python3 -B tests/lib/checkout_lock.py -- cargo test --manifest-path controller/Cargo.toml
+```
+
+Alternatively isolate both the outputs and the intermediates outside the
+managed areas, since the final output directory alone does not constrain
+where Cargo keeps intermediate state:
+
+```sh
+CARGO_TARGET_DIR=/private/tmp/pw-cargo CARGO_BUILD_BUILD_DIR=/private/tmp/pw-cargo cargo test --manifest-path controller/Cargo.toml
+```
+
+Direct Meson work uses a separate build directory, as [native
+compilation](#native-compile-with-meson) shows. `make release` holds no outer
+lock of its own: its nested build, acceptance, battery, archive and rotation
+phases each acquire and release the lock in turn, and separate worktrees
+have independent locks.
 
 The build checks that Meson and Ninja are installed and checks Ninja's version.
-The operator selects their toolchain. A compiler or SDK change needs a fresh
-build directory because the toolchain is not fingerprinted. Signing needs an
+The operator selects their toolchain; a changed compiler or SDK is caught by
+the stamp comparison above and needs one fresh build. Signing needs an
 unsandboxed shell with the login keychain and network access for the
 timestamp service. A release needs a clean checkout at the release commit,
-enforced by release preflight.
+enforced by release preflight, and is built fresh.
 The harness constraints below apply to signing and compiler discovery.
 
 ### Sandboxed automation harnesses
@@ -229,90 +411,86 @@ its policy assertions, so they need the unsandboxed shell.
 
 <!-- BEGIN GENERATED BUILD REFUSALS -->
 <details>
-<summary>65 refusals (28 the script's own, 21 Meson assertions, 15 propagated from a check or a tool, 1 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
+<summary>47 refusals (17 the script's own, 1 Meson assertion family over 21 options, 29 propagated from a check or a tool, 0 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
 
 | Id | Message | Steps | Status | Kind | Variants | Coverage | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | knob_value | ${knob} must be 0 or 1 (got '${!knob}') | admission | 2 | script | both | a control produces it | [`${knob} must be 0 or 1 (got '${!knob}')`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
 | unknown_argument | unknown argument: $1 | admission | 2 | script | both | a control produces it | [`unknown argument: $1`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py) |
+| missing_tree_input | missing tracked build input: ${tree_input} | admission | 2 | script | both | a control produces it | [`missing tracked build input: ${tree_input}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| checkout_busy | checkout busy: another execution or mutating operation holds tests/.checkout.lock; wait for it to finish or use a second worktree | admission | 2 | propagated | both | a control produces it | [`checkout_lock.py`](../build.sh); [`checkout busy`](../tests/lib/checkout_lock.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_lock_claims_are_verified_through_the_descriptor`](../tests/suites/preflight/check_build_provenance.py) |
+| lock_claim_invalid | checkout lock claim is not verified: <reason> | lock | 2 | propagated | both | a control produces it | [`checkout_lock.py`](../build.sh); [`claim`](../tests/lib/checkout_lock.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_lock_claims_are_verified_through_the_descriptor`](../tests/suites/preflight/check_build_provenance.py) |
 | plist_minimum_malformed | Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}' | minimum | 2 | script | both | a control produces it | [`Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk`](../tests/suites/source_drift/contract.py) |
-| sdk_unavailable | xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}) | sdk | 2 | script | both | a control produces it | [`xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset})`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| sdk_unavailable | xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST}) | sdk | 2 | script | both | a control produces it | [`xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| sdk_version_unreadable | xcrun did not report a numeric macOS SDK version (got '${SDK_VERSION:-}') | sdk | 2 | script | both | a control produces it | [`xcrun did not report a numeric macOS SDK version`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_version_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | builddir_unreadable | ${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory | builddir | 2 | script | both | a control produces it | [`${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py) |
 | builddir_other_checkout | ${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory | builddir | 2 | script | both | a control produces it | [`${MESON_BUILD_DIR} is configured for ${MESON_SOURCE_DIR}, not this checkout (${ROOT_DIR}); remove it or use a fresh build directory`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py) |
-| identity_unset | IDENTITY is not set. | identity | 2 | script | both | a control produces it | [`IDENTITY is not set.`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py) |
-| identity_class | IDENTITY must name a Developer ID Application identity; got: | identity | 2 | script | both | a control produces it | [`IDENTITY must name a Developer ID Application identity; got:`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_non_developer_id_identity_before_cargo`](../tests/suites/source_drift/contract.py) |
-| identity_absent | codesigning identity not found in your keychain: | identity | 2 | script | both | a control produces it | [`codesigning identity not found in your keychain:`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo`](../tests/suites/source_drift/contract.py) |
-| missing_controller | expected policy-witness binary at ${RUNNER_BIN} | cargo | 2 | script | both | a control produces it | [`expected policy-witness binary at ${RUNNER_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_controller`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_observer | expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN} | cargo | 2 | script | both | a control produces it | [`expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_observer`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_sbpl_check | expected sbpl-check binary at ${SBPL_CHECK_BIN} | cargo | 2 | script | both | a control produces it | [`expected sbpl-check binary at ${SBPL_CHECK_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_sbpl_check`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| builddir_stamp_missing | <builddir> is configured but has no pw-toolchain.json; its toolchain is unknown and is not adopted: set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/ | builddir | 2 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`is configured but has no`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_stamp_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
+| builddir_stamp_invalid | pw-toolchain.json is malformed, unsupported, describes another checkout or does not describe the directory's configured compilers; the toolchain is unknown and is not adopted | builddir, configure, native_check | 2 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`does not describe`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_stamp_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
+| builddir_toolchain_changed | builddir/ was configured with <field> = <stamped>, but the selected toolchain now has <current>; a changed toolchain cannot reuse this directory | builddir, native_check | 1 | propagated | both | a control produces it | [`stamp-check`](../build.sh); [`a changed toolchain cannot reuse this directory`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_builddir_toolchain_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_stamp_states_are_decided_without_adopting_unknowns`](../tests/suites/preflight/check_build_provenance.py) |
+| provenance_probe_failed | required toolchain observation failed: <field> (<kind>), or a session or report the helper needs is unreadable | stamp, builddir, cargo, configure, native_check, presign | 2 | propagated | both | a control produces it | [`build_provenance.py`](../build.sh); [`required toolchain observation failed`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_probes_are_bounded_and_failures_carry_no_output`](../tests/suites/preflight/check_build_provenance.py) |
+| identity_unset | IDENTITY is not set. | identity | 2 | script | both | a control produces it | [`IDENTITY is not set.`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py) |
+| identity_absent | codesigning identity not found in your keychain: | identity | 2 | script | both | a control produces it | [`codesigning identity not found in your keychain:`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_developer_id_identity_the_keychain_lacks_before_cargo`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_identity_of_another_class_as_absent_before_cargo`](../tests/suites/source_drift/contract.py) |
+| cargo_build_dir_redirected | Cargo would keep intermediate release state under <directory>, outside the admitted controller/target; unset CARGO_BUILD_BUILD_DIR or the build.build-dir setting (nothing was removed) | cargo_admit | 1 | propagated | both | a control produces it | [`cargo-admit`](../build.sh); [`outside the admitted`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cargo_build_dir_redirected`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| cargo_build_dir_unknown | cargo metadata did not report the intermediate directory; it cannot be admitted | cargo_admit | 2 | propagated | both | a control produces it | [`cargo-admit`](../build.sh); [`cannot be admitted`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cargo_build_dir_unknown`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| fresh_removal_unsafe | <path> is a symlink, not a directory, resolves elsewhere or is owned by another user; fresh mode removes only real directories inside the checkout | fresh | 2 | propagated | both | a control produces it | [`fresh-remove`](../build.sh); [`fresh mode removes only real directories`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_fresh_removal_unsafe`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_fresh_removal_admits_only_owned_real_directories`](../tests/suites/preflight/check_build_provenance.py) |
+| fresh_removal_failed | fresh mode could not remove <path>; remove it by hand before building again | fresh | 1 | propagated | both | a control produces it | [`fresh-remove`](../build.sh); [`fresh mode could not remove`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_fresh_removal_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| missing_cargo_output | expected an executable Cargo output at ${rust_bin} | cargo | 2 | script | both | a control produces it | [`expected an executable Cargo output at ${rust_bin}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_cargo_output`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | cargo_artifact_elsewhere | cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it | cargo | 2 | script | both | a control produces it | [`cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cargo_artifact_elsewhere`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | minimum_mismatch | ${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS} | cargo, native_check | 2 | script | both | a control produces it | [`${target} is built for macOS ${minos:-?}; Info.plist declares ${PW_MINIMUM_MACOS}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
+| cargo_target_reused | fresh mode requires Cargo to report rebuilding every shipped target, but <target> (reused or no judgment) | cargo | 1 | propagated | both | a control produces it | [`cargo-judge`](../build.sh); [`fresh mode requires Cargo to report rebuilding`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cargo_target_reused`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_cargo_judgments_bind_fingerprints_without_guessing`](../tests/suites/preflight/check_build_provenance.py) |
 | meson_ninja_missing | meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md | toolchain | 2 | script | both | a control produces it | [`meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_meson_ninja_missing`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | ninja_old | ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md | toolchain | 2 | script | both | a control produces it | [`ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_ninja_old`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_native_output | expected Meson output at ${native_bin} | native_check | 2 | script | both | a control produces it | [`expected Meson output at ${native_bin}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_native_output`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_info_plist | missing ${INFO_PLIST_TEMPLATE} at repo root | assemble | 2 | script | both | a control produces it | [`missing ${INFO_PLIST_TEMPLATE} at repo root`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_info_plist`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_augments_dir | missing augments source dir at ${XPC_AUGMENTS_DIR} | assemble | 2 | script | both | a control produces it | [`missing augments source dir at ${XPC_AUGMENTS_DIR}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_augments_dir`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_client_output | expected Meson output at ${PW_RUNNER_CLIENT_BIN} | embed_client | 2 | script | full | a control produces it | [`expected Meson output at ${PW_RUNNER_CLIENT_BIN}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_client_output`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_service_dir | missing ${svc_name} service dir at ${svc_dir} | embed_services | 2 | script | full | a control produces it | [`missing ${svc_name} service dir at ${svc_dir}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_service_dir`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_service_plist | ${svc_name} service is missing Info.plist | embed_services | 2 | script | full | a control produces it | [`${svc_name} service is missing Info.plist`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_service_plist`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_host_output | expected Meson output at ${svc_host} | embed_services | 2 | script | full | a control produces it | [`expected Meson output at ${svc_host}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_host_output`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_entitlements | missing entitlements plist: ${ENTITLEMENTS_PLIST} | presign | 2 | script | both | a control produces it | [`missing entitlements plist: ${ENTITLEMENTS_PLIST}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_entitlements`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| sign_target_missing | expected a Mach-O to sign at ${target} | sign_tools, sign_services, sign_observer | 2 | script | both | a control produces it | [`expected a Mach-O to sign at ${target}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sign_target_missing`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| sign_target_not_macho | ${target} is not a Mach-O; the signing list names only executables | sign_tools, sign_services, sign_observer | 2 | script | both | a control produces it | [`${target} is not a Mach-O; the signing list names only executables`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sign_target_not_macho`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_service_bundle | expected XPC service bundle at ${svc_bundle} | sign_services | 2 | script | full | a control produces it | [`expected XPC service bundle at ${svc_bundle}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_service_bundle`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| missing_service_entitlements | ${svc_name} service is missing Entitlements.plist at ${svc_entitlements} | sign_services | 2 | script | full | a control produces it | [`${svc_name} service is missing Entitlements.plist at ${svc_entitlements}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_service_entitlements`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| make_identity_unset | set IDENTITY to your Developer ID Application identity | make_build | 2 | make | both | a control produces it | [`set IDENTITY to your Developer ID Application identity`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_refuses_without_an_identity_and_never_runs_the_script`](../tests/suites/source_drift/contract.py) |
-| meson_optimization | fixed native policy: optimization must be 'plain' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'optimization'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_debug | fixed native policy: debug must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'debug'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_warning_level | fixed native policy: warning_level must be '0' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'warning_level'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_werror | fixed native policy: werror must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'werror'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_strip | fixed native policy: strip must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'strip'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_unity | fixed native policy: unity must be 'off' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'unity'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_ndebug | fixed native policy: b_ndebug must be 'false' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_ndebug'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_lto | fixed native policy: b_lto must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_lto'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_coverage | fixed native policy: b_coverage must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_coverage'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_pgo | fixed native policy: b_pgo must be 'off' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_pgo'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_bitcode | fixed native policy: b_bitcode must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_bitcode'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_pie | fixed native policy: b_pie must be false | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_pie'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_staticpic | fixed native policy: b_staticpic must be true | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_staticpic'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_lundef | fixed native policy: b_lundef must be true | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_lundef'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_b_sanitize | fixed native policy: b_sanitize must be 'none' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'b_sanitize'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_c_std | fixed native policy: c_std must be 'none' | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'c_std'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_c_args | fixed native policy: c_args must be [] | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'c_args'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_c_link_args | fixed native policy: c_link_args must be [] | configure, compile | 1 | meson | both | a control produces it in the helper, not through the script | [`'c_link_args'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_buildtype | fixed native policy: buildtype must be 'plain' | configure, compile | 1 | meson | both | a control produces it | [`'buildtype'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`control_meson_buildtype`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| meson_swift_args | fixed native policy: swift_args must be [] | configure, compile | 1 | meson | full | a control produces it in the helper, not through the script | [`'swift_args'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
-| meson_swift_link_args | fixed native policy: swift_link_args must be [] | configure, compile | 1 | meson | full | a control produces it in the helper, not through the script | [`'swift_link_args'`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py) |
+| meson_policy | fixed native policy: ${name} must be ${expected} (got ${got}); only inspection and xpc are configurable (the assertion family: 21 options, optimization, debug, warning_level, werror, strip, unity, b_ndebug, b_lto, b_coverage, b_pgo, b_bitcode, b_pie, b_staticpic, b_lundef, b_sanitize, c_std, c_args, c_link_args, buildtype, swift_args, swift_link_args) | configure, compile | 1 | meson | both | a control produces it | [`fixed_options`](../meson.build); [`fixed native policy`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py); [`test_bypassing_one_meson_policy_assertion_fails_its_control`](../tests/suites/source_drift/build.py); [`control_meson_policy`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | stale_limits | stale <copy>; run python3 docs/generate_limits.py | check_limits | 1 | propagated | both | a control produces it | [`generate_limits.py`](../build.sh); [`stale`](../docs/generate_limits.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_stale_guide_before_signing_or_creating_output`](../tests/suites/source_drift/limits.py) |
 | stale_contract | stale <copy>; run python3 docs/generate_contract.py | check_contract | 1 | propagated | both | a control produces it | [`generate_contract.py`](../build.sh); [`stale`](../docs/generate_contract.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_stale_contract_copy_before_signing_or_creating_output`](../tests/suites/source_drift/contract.py) |
 | stale_architecture | architecture documentation is stale | check_contract | 1 | propagated | both | a control produces it | [`generate_architecture.py`](../build.sh); [`architecture documentation is stale`](../docs/generate_architecture.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py); [`test_build_refuses_a_stale_architecture_copy_before_compiling`](../tests/suites/source_drift/contract.py) |
 | stale_build_doc | build documentation is stale | check_build_doc | 1 | propagated | both | a control produces it | [`generate_build.py`](../build.sh); [`build documentation is stale`](../docs/generate_build.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py); [`test_build_refuses_a_stale_build_document_copy_before_compiling`](../tests/suites/source_drift/contract.py) |
 | stale_identity | stale <copy>; run python3 docs/generate_worker_identity.py | check_identity | 1 | propagated | both | a control produces it | [`generate_worker_identity.py`](../build.sh); [`stale`](../docs/generate_worker_identity.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_stale_identity_copy_before_compiling_and_writes_nothing`](../tests/suites/source_drift/contract.py) |
 | stale_identity_presign | stale <copy>; run python3 docs/generate_worker_identity.py | presign | 1 | propagated | both | a control produces it | [`generate_worker_identity.py`](../build.sh); [`stale`](../docs/generate_worker_identity.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_stale_identity_presign`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| worker_identity_mismatch | the built worker reports identity <reported>, not the generated <expected>; the worker in builddir/ was compiled from other identity inputs | presign | 1 | propagated | both | a control produces it | [`worker-identity`](../build.sh); [`reports identity`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_worker_identity_mismatch`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | cargo_failed | Cargo's own diagnostic | cargo | 101 | propagated | both | a control produces it | [`cargo build`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_cargo_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | meson_failed | Meson's or Ninja's own diagnostic | configure, compile | 1 | propagated | both | a control produces it | [`meson compile`](../build.sh); [`meson setup`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_meson_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | native_sources_differ | native source lists differ from the tree | native_check | 1 | propagated | both | a control produces it in the helper, not through the script | [`native_sources.py`](../build.sh); [`native source lists differ from the tree`](../tests/lib/native_sources.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`configured_controls`](../tests/suites/source_drift/check_planner.py) |
 | native_sources_unreadable | native sources: meson introspection failed | native_check | 2 | propagated | both | a control produces it | [`native_sources.py`](../build.sh); [`meson introspection failed`](../tests/lib/native_sources.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_native_sources_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| missing_native_output | expected Meson output at ${native_bin} | native_check | 2 | script | both | a control produces it | [`expected Meson output at ${native_bin}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_native_output`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| sdk_disagreement | shipped outputs disagree with the selected SDK version: <path> built against SDK <found>, or its LC_BUILD_VERSION sdk is missing or not numeric | native_check | 1 | propagated | both | a control produces it | [`sdk-check`](../build.sh); [`disagree with the selected SDK`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py); [`test_sdk_versions_normalize_and_unknowns_never_agree`](../tests/suites/preflight/check_build_provenance.py) |
+| sign_target_not_macho | ${target} is missing or not a Mach-O; the signing list names only executables | sign_tools, sign_services, sign_observer | 2 | script | both | a control produces it | [`${target} is missing or not a Mach-O; the signing list names only executables`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sign_target_not_macho`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | codesign_failed | codesign's own diagnostic | sign_tools, sign_services, seal, sign_observer | 1 | propagated | both | a control produces it | [`codesign --force`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_codesign_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | evidence_failed | missing app bundle Contents | evidence | 2 | propagated | both | a control produces it | [`build-evidence.py`](../build.sh); [`missing app bundle Contents`](../tests/build-evidence.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_evidence_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| provenance_required_unknown | provenance: a required observation, the build session or a shipped output's load commands or hash cannot be established, or the record would publish forbidden content | evidence | 2 | propagated | both | a control produces it | [`build-evidence.py`](../build.sh); [`ERROR: provenance`](../tests/build-evidence.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_provenance_required_unknown`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_records_are_bounded_redacted_and_complete`](../tests/suites/preflight/check_build_provenance.py) |
 | verify_failed | codesign's own diagnostic | verify | 1 | propagated | both | a control produces it | [`codesign --verify`](../build.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_verify_failed`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| signer_mismatch | executables not signed by <identity> with the hardened runtime | signer | 1 | propagated | both | a control produces it | [`signer_check.py`](../build.sh); [`executables not signed by`](../tests/lib/signer_check.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
+| signer_mismatch | executables or seals not signed by <identity> with the hardened runtime, the Developer ID chain, its team identifier and a secure timestamp | signer | 1 | propagated | both | a control produces it | [`signer_check.py`](../build.sh); [`executables or seals not signed by`](../tests/lib/signer_check.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py); [`test_signature_displays_establish_class_team_and_timestamp`](../tests/suites/preflight/check_build_provenance.py) |
 | stale_guide | stale PolicyWitness.md | guide | 1 | propagated | both | a control produces it in the helper, not through the script | [`--stage-guide`](../build.sh); [`stale`](../docs/generate_limits.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing`](../tests/suites/source_drift/limits.py) |
 
 </details>
 <!-- END GENERATED BUILD REFUSALS -->
 
 Statuses. The script's own refusals exit 2. A refusal that a check or a tool
-produces propagates that tool's status: 1 for a stale generated copy or a
-source list that differs from the tree, 2 when a check could not read what it
-needed, Cargo's 101, and 1 from Meson, Ninja or codesign. Under `set -e` the
-script exits with the failing command's status; the message identifies the
-step that refused. The propagated statuses in the table are the tools' documented
-ones, verified only where a control asserts them.
-The table lists the refusals the script declares, Meson's assertions and the
-checks and tools the script names; any other failing command also stops the
-build with its own status, a plist key PlistBuddy cannot read, a copy or
-removal that fails, `dsymutil`, `ditto`, and those stops have no row.
+produces propagates that tool's status: 1 for a stale generated copy, a
+source list that differs from the tree, a changed toolchain, a disagreeing
+SDK, a reused target in fresh mode, a redirected Cargo directory, a failed
+removal or a worker reporting another identity; 2 when a check could not
+read or observe what it needed, including a busy lock, an unverified lock
+claim, a missing or invalid stamp, an unobservable required field, an
+unsafe removal path and a missing session; Cargo's 101; and 1 from Meson,
+Ninja or codesign. Under `set -e` the script exits with the failing command's
+status; the message identifies the step that refused. The propagated statuses
+in the table are the tools' documented ones, verified only where a control
+asserts them. The table lists the refusals the script declares, Meson's
+assertion family and the checks and tools the script names; any other failing
+command also stops the build with its own status, a plist key PlistBuddy
+cannot read, a copy or removal that fails, `dsymutil`, `ditto`, and those
+stops have no row.
+
+The Meson assertion family is one row. `meson.build` asserts every fixed
+option in a loop with one message template, and the manifest models that
+family rather than one row per option: the row carries the template and
+lists the asserted options in `meson.build`'s order, the grounding rule
+compares both, and the per-option control still poisons each option in turn
+and requires the next regeneration to refuse it by name; a mutation control
+removes one assertion and shows that option's control failing. Fewer rows
+did not remove any assertion.
 
 Coverage. Each row's coverage column says what produces the refusal in a test:
 a control that drives the build and observes the message and the operation it
@@ -327,27 +505,49 @@ it does for the prose baseline.
 The opt-in [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py)
 control drives the unchanged build script with real compilers and signing
 tools in a disposable checkout. In both variants, a tool wrapper substitutes
-a wrong-minimum Cargo or native output; the build must name it and exit 2
-before assembly, leaving previous distribution bytes intact. Another wrapper
-signs a helper ad hoc: deep verification must succeed, then the signer check
-must name the helper and exit 1 before observer signing, guide staging or ZIP
-creation. Successful sibling builds package both variants.
+a wrong-minimum Cargo or native output, which the build must name and exit 2
+before assembly; one output or every shipped output built against another
+installed SDK, which the SDK comparison must name before assembly; a helper
+signed ad hoc; and a helper, the service seal or the app seal signed with
+`--timestamp=none`, which deep verification accepts and the signer check
+must name and refuse before observer signing, guide staging or ZIP creation,
+after the control has inspected the signature it actually made. Every
+refusal before assembly leaves previous distribution bytes intact.
+Successful sibling builds package both variants.
 
 The opt-in [`test_build_refusals`](../tests/suites/preflight/opt_in/build_refusals.py)
-control drives the same unchanged script through every refusal the baseline
-used to list, in each variant the refusal applies to. One fault at a time is
-arranged beside the guarded boundary: an environment in which xcrun selects no
-SDK or finds no Meson, a Cargo output removed or placed under a target triple,
-a Ninja reporting an old version, a Meson directory whose buildtype label
-departs, a source that does not compile, an input or output removed by a `cp`,
-`meson` or `codesign` wrapper right after one named call, a Mach-O truncated as
-codesign reaches it, a sealed resource changed after the seal. The wrapper runs
-the real tool and records a receipt; the script's own check refuses. Each
-control asserts the diagnostic and status, the banners before and after the
-refusal, the tool calls that did not happen and the output left behind. Copies
+control drives the same unchanged script through every refusal the manifest
+lists, in each variant the refusal applies to. One fault at a time is
+arranged beside the guarded boundary: a tracked input gone, a held lock, a
+claim without a hold, an environment in which xcrun selects no SDK or reports
+no numeric version, a missing, malformed or foreign stamp, a forwarding Rust
+or C compiler wrapper relabelled after the stamp recorded it, a probe that
+fails or hangs, Cargo intermediates redirected elsewhere, a cache path a
+symlink would redirect, a removal that fails, a Cargo output removed or made
+non-executable, a reused judgment in fresh mode, a Ninja reporting an old
+version, a Meson directory departing from the policy, a source that does not
+compile, a worker replaced by one reporting another identity, an input or
+output removed by a wrapper after one named call, a Mach-O truncated as
+codesign reaches it, the session gone before evidence, a sealed resource or
+the record changed after the seal. The forwarding wrappers run the real
+compilers and record every invocation, distinguishing compilations from
+version probes, and the effective flags the record reports per output are
+compared with the compilations the wrapper received. The same control runs
+the state sequence through the script, fresh build, unchanged reuse, enabling
+the XPC pieces, refused incompatible reuse and explicit fresh recovery, with
+interrupted setup, interrupted publication, a retried compile failure and
+the two caches surviving independently, plants canaries in an unrelated
+environment variable and every tool's stderr that no record may carry,
+replaces a cached Cargo output before capture to show the limit the record
+states, and drives `make notarize` and `make release` with a controlled
+build step to show fresh mode enforced or refused before building. Copies
 of the script with a guard removed or moved past its operation must fail the
-matching control, and a successful build in each variant is the neighbour that
-shows the checkout and wrappers build.
+matching control, and a successful build in each variant is the neighbour
+that shows the checkout and wrappers build. The opt-in
+[`test_toolchain_switch`](../tests/suites/preflight/opt_in/build_toolchain_switch.py)
+control makes the switch real: it builds under the selected developer
+directory, is refused reuse under the Command Line Tools by a field its own
+probes of both directories show to differ, and recovers fresh.
 
 ## What Meson owns and what the script owns
 
@@ -358,57 +558,69 @@ The C shim is linked into the host. Both
 `meson.build` and `meson.options` are host/worker identity inputs. The policy is
 an enumerated list of options asserted as effective values
 ([`fixed_options`](../meson.build)), with two more inside
-the Swift branch; every option it names is refused at any other value. These
-assertions cover the listed options. The two public knobs are the only
-configuration the script passes:
+the Swift branch; every option it names is refused at any other value, and
+the one manifest row lists them all. Two of the script's three knobs map
+onto Meson's options; the third governs the script's own cache replacement:
 
 <!-- BEGIN GENERATED BUILD KNOBS -->
 | Knob | Values | Unset means | Governs | Sources | Checks |
 | --- | --- | --- | --- | --- | --- |
 | BUILD_XPC | `1`: build and embed the Swift client, the XPC host and the C shim (Meson xpc=true); `0`: skip them; the C executables still build and nothing Meson-built ships (Meson xpc=false) | 1 | Meson's xpc option, the embed and service-signing steps, and which Meson outputs are minimum-checked and signed | [`BUILD_XPC="${BUILD_XPC-1}"`](../build.sh); [`option('xpc'`](../meson.options) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
 | PW_INSPECTION | `1`: Swift -Onone -g with a dSYM beside each Swift executable; RUSTFLAGS with debug info, frame pointers and opt-level 1 when RUSTFLAGS was unset or empty (Meson inspection=true); `0`: Swift -O and no dSYM; RUSTFLAGS untouched (Meson inspection=false) | 1 | Meson's inspection option, RUSTFLAGS and the dSYM step; the C executables are -O2 without debug info in both | [`PW_INSPECTION="${PW_INSPECTION-1}"`](../build.sh); [`option('inspection'`](../meson.options) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
+| PW_FRESH_BUILD | `0`: reuse builddir/ and controller/target/release/ under the toolchain the stamp records, validating the stamp before any compile or reconfiguration; `1`: replace both directories after admission and require Cargo to report rebuilding every shipped target; the record names each directory's replacement | 0 | the fresh step, Cargo's rebuild requirement and the directory states the record carries; a script knob, not a Meson option; notarize and release enforce 1 | [`PW_FRESH_BUILD="${PW_FRESH_BUILD-0}"`](../build.sh); [`PW_FRESH_BUILD=1`](../Makefile) | [`check_knobs`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`control_fresh_sequence`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_release_entrypoints_enforce_fresh_mode`](../tests/suites/preflight/opt_in/build_refusals.py) |
 <!-- END GENERATED BUILD KNOBS -->
 
-The script maps the knobs onto Meson's `inspection` and `xpc` options on
-every build: `meson setup` for a fresh directory and `meson configure`
-afterwards, which records the two values and regenerates only when one
-changed. A refused value is recorded too: `meson configure` with any other
-option exits 0, and the assertion fires at the next regeneration, which the
-compile step triggers before anything compiles, or at setup for a fresh
-directory. Meson reads `CFLAGS` and the other flag variables only at setup,
-so a fresh directory refuses them the same way. Executables are linked with
-`b_asneeded=false` declared per target; Meson's own additions to the compile
-and link lines (`-headerpad_max_install_names` and `-fdiagnostics-color`)
-are accepted and recorded by the comparison tools.
+The script maps `BUILD_XPC` and `PW_INSPECTION` onto Meson's `xpc` and
+`inspection` options on every build: `meson setup` for a fresh directory,
+followed by the stamp's publication, and `meson configure` afterwards, which
+records the two values and regenerates only when one changed. A refused value
+is recorded too: `meson configure` with any other option exits 0, and the
+assertion fires at the next regeneration, which the compile step triggers
+before anything compiles, or at setup for a fresh directory. Meson reads
+`CFLAGS` and the other flag variables only at setup, so a fresh directory
+refuses them the same way. `PW_FRESH_BUILD` is not a Meson option: it decides
+whether the `builddir` step validates the directory's stamp or the `fresh`
+step replaces the directory before the compiles. An unset knob keeps its
+default; `make notarize` and `make release` pass `PW_FRESH_BUILD=1` through
+their recursive Make calls and refuse a caller's conflicting value before
+building, so a release build is never silently incremental. Executables are
+linked with `b_asneeded=false` declared per target; Meson's own additions to
+the compile and link lines (`-headerpad_max_install_names` and
+`-fdiagnostics-color`) are accepted and recorded by the comparison tools.
 Compilation and linking are separate steps; the script runs `dsymutil` for
 inspection builds. Changing the supported macOS requires changing the plist
 and Meson's pinned minimum together. Building for an older macOS this way is
 possible but unsupported.
 
-The script owns everything around the compile: the plist's declaration and the
-per-output minimum check, the build-directory guard, the configured source and
-closure check, Cargo's environment, the dSYM step, assembly, signing, evidence
-and packaging. Two of its checks look inside the build directory. Before
-Cargo, it refuses a directory whose recorded source directory is not this
-checkout ([`MESON_SOURCE_DIR`](../build.sh)), because Meson keeps compiling
-the directory it was set up for and every later check would pass against that
-other tree. After compiling,
+The script owns everything around the compile: the admission of its tracked
+inputs and the lock, the plist's declaration and the per-output minimum and
+SDK checks, the build-directory and stamp guards, the configured source and
+closure check, Cargo's environment and directory admission, the dSYM step,
+assembly, the worker identity check, signing, evidence and packaging. Three
+of its checks look inside the build directory. Before Cargo, it refuses a
+directory whose recorded source directory is not this checkout
+([`MESON_SOURCE_DIR`](../build.sh)), because Meson keeps compiling the
+directory it was set up for and every later check would pass against that
+other tree, and it validates the stamp. After compiling,
 [`native_sources.py`](../tests/lib/native_sources.py) reads the targets Meson
 actually evaluated and refuses unless every target's sources are exactly the
 files the tree holds for it, reads Ninja's dependency log and refuses, for the
 worker and the shim, an include of a repository file outside the identity's
 inputs or of a file outside the checkout that is not under the selected SDK or
-the developer directory, and repeats the checkout comparison. Both are
+the developer directory, and repeats the checkout comparison. These are
 membership checks; binary provenance relies on the tools' records, as described
 under [Known gaps](#known-gaps).
 
 ### Native compile with Meson
 
-To compile the native targets alone, without assembly or signing:
+To compile the native targets alone, without assembly or signing, use a
+build directory of your own; `builddir/` belongs to `build.sh`, which stamps
+it, and a directory configured by hand there would be refused as unstamped
+until a fresh build replaces it:
 
 ```sh
-SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir -Dinspection=true -Dxpc=true
-meson compile -C builddir
+SDKROOT="$(xcrun --sdk macosx --show-sdk-path)" meson setup builddir-direct -Dinspection=true -Dxpc=true
+meson compile -C builddir-direct
 ```
 
 Use separate build directories for different toolchains, and a fresh directory
@@ -420,24 +632,32 @@ SDKROOT="$(DEVELOPER_DIR=/Library/Developer/CommandLineTools xcrun --sdk macosx 
 meson setup builddir-clt
 ```
 
-`build.sh` uses `builddir/`; a separately named directory is for direct Meson
-work. Swift discovery uses swiftc's default module cache, while the targets
-use `builddir/swift-module-cache`. The [comparison tools](../tests/README.md#comparing-native-builds)
-can record effective commands and output metadata after compilation.
+If unstamped state occupies `builddir/` after such work, the next
+`PW_FRESH_BUILD=1` build replaces it. Swift discovery uses swiftc's default
+module cache, while the targets use the build directory's own. The
+[comparison tools](../tests/README.md#comparing-native-builds) can record
+effective commands and output metadata after compilation.
 
 ## The signing contract
 
-Identity. `IDENTITY` must name a Developer ID Application identity that the
-keychain lists; the script requires it for every signature. The
-tests resolve their own identity separately: `PW_BYOXPC_IDENTITY`, then
+Identity. `IDENTITY` must name an identity that the keychain lists; the
+script requires it for every signature and verifies, after the seal, that
+every signature it made carries that leaf, the hardened runtime, the
+Developer ID chain to the Apple root, the team identifier the leaf names and a
+secure timestamp. A string of another class is therefore caught where the
+class is a fact, on the signed bytes, not by a prefix check on the string.
+The tests resolve their own identity separately: `PW_BYOXPC_IDENTITY`, then
 `IDENTITY`, then a keychain identity whose team matches the app's.
 
 Gates before any signature. The generated identity copies must be current,
 checked again after assembly so an identity input edited during the build
-without regeneration is refused before signing. The build assumes a stable
-checkout throughout execution. Every Cargo and Meson executable carried the
-plist's minimum, and the configured source lists and closure matched the tree,
-before assembly began.
+without regeneration is refused before signing, and the built worker must
+report the generated identity, since a worker compiled from other identity
+inputs and an unchanged generated constant can agree with the tree. The build
+assumes a stable checkout throughout execution. Every Cargo and Meson
+executable carried the plist's minimum and the selected SDK's version, and
+the configured source lists and closure matched the tree, before assembly
+began.
 
 <!-- BEGIN GENERATED BUILD SIGNING -->
 <details>
@@ -460,29 +680,37 @@ before assembly began.
 
 Order. Signing is inside-out, in the table's order, every signature and seal
 with `--force --options runtime --timestamp`, so the timestamp service must be
-reachable; the evidence manifest is written between the service seal and the
-app seal, so the app seal covers it. The dSYM bundles beside the Swift
-executables, including their DWARF files, are sealed as resources. The
-standalone observer under `controller/target/release` is signed in place for
-direct use outside the bundle.
+reachable; the evidence manifest and the provenance record are written between
+the service seal and the app seal, so the app seal covers them. The dSYM
+bundles beside the Swift executables, including their DWARF files, are sealed
+as resources. The standalone observer under `controller/target/release` is
+signed in place for direct use outside the bundle.
 
 The list and the inventory. [`sign_macho`](../build.sh) refuses a missing or
-non-Mach-O target: the list names exactly the executables this build
-produced. The grounding rule expands the list, through the service loop, into
-bundle paths and requires them, plus the bundle mains the seals sign, to
-equal [`EXECUTABLES`](../tests/lib/artifact.py), the helper list in
-[build-evidence.py](../tests/build-evidence.py) and the README's inventory
-([`check_inventory`](../tests/suites/source_drift/build_rules.py)). Do not
-add `--deep` to a signing step; it would sign nested code outside the explicit
-inventory.
+non-Mach-O target before codesign runs: the list names exactly the executables
+this build produced, and codesign would otherwise store a signature beside a
+file that is not code. The grounding rule expands the list, through the
+service loop, into bundle paths and requires them, plus the bundle mains the
+seals sign, to equal [`EXECUTABLES`](../tests/lib/artifact.py), the helper
+list in [build-evidence.py](../tests/build-evidence.py) and the README's
+inventory ([`check_inventory`](../tests/suites/source_drift/build_rules.py)).
+Do not add `--deep` to a signing step; it would sign nested code outside the
+explicit inventory.
 
 After the seal. `codesign --verify --deep --strict` checks the bundle seal.
 Then [signer_check.py](../tests/lib/signer_check.py) examines every regular
 file directly inside the app's `Contents/MacOS` directory and the corresponding
-directory in each XPC service, including files absent from the signing list.
-Each file must be a Mach-O signed by the named identity with the hardened
-runtime. The check reads the leaf authority and the runtime flag; it does not
-check the certificate's class or the timestamp.
+directory in each XPC service, including files absent from the signing list,
+and the app and service seals. Each file must be a Mach-O, and each signature,
+as `codesign -dvv` displays it, must name the identity as its leaf authority
+with the hardened runtime, chain through the Developer ID Certification
+Authority to the Apple Root CA, carry the team identifier the leaf names, and
+carry a secure timestamp: a `Timestamp=` line from a timestamp authority, not
+a `Signed Time=` line from the signer's own clock. A display the parser
+cannot read establishes nothing and is a finding. The check prints one
+bounded observation per signature; real signature verification runs beside it.
+The requested signing flags are the script's; these facts are read from the
+signatures made.
 
 The linker leaves every compiler output ad hoc-signed, and an ad hoc
 executable can pass the seal and deep verification. The build's signer check
@@ -498,16 +726,45 @@ compiles the validator beside its source and signs the result ad hoc with
 ## The evidence the build embeds
 
 After the nested signatures and before the app seal,
-[build-evidence.py](../tests/build-evidence.py) writes the manifest and symbols
-files in the [evidence inventory](SIGNING.md#evidence-artifacts): the hash of
-every helper and of each service's main executable as signed, with each one's
-load-command UUID, entitlements and exported marker symbols as far as the
-tools can read them (a tool's failure is recorded in the entry),
-the hashes of the shipped augments, and the time of writing. The manifest is
-then sealed by the app signature, so it describes signed bytes and is itself
-signed. It omits the main executable's hash, which the seal records. The
-controller reads it at run time to locate its runner, which is why a partial
-bundle refuses to run a specimen.
+[build-evidence.py](../tests/build-evidence.py) writes the three files in the
+[evidence inventory](SIGNING.md#evidence-artifacts): the manifest, with the
+hash of every helper and of each service's main executable as signed, each
+one's load-command UUID, entitlements and exported marker symbols as far as
+the tools can read them (a tool's failure is recorded in the entry), the
+hashes of the shipped augments and of the other two files, and the time of
+writing; the symbols file; and the provenance record, assembled from the build
+session the script kept through its steps. The record holds the source stamp
+and the hashes of the build's input files, the selected tools with what they
+reported about themselves, the configuration and the state of each build
+directory, every shipped Mach-O's load commands with its hash as signed and
+Cargo's reuse judgment and fingerprint observation for the Cargo targets, and
+the facts of each nested signature. The controller's hash is deliberately
+absent: the app seal that follows changes its signature, so its final hash
+cannot live inside the record that seal covers; the release record carries it,
+read from the accepted ZIP, together with the seal's own facts. The manifest
+lists the record like the symbols file, and the seal covers all three, so
+each describes signed bytes and is itself signed. No embedded evidence is
+rewritten after the seal; the inspector refuses an edit.
+[SIGNING.md](SIGNING.md#evidence-artifacts) owns the record's format, field
+meanings and limits. The controller reads only the manifest at run time, to
+locate its runner, which is why a partial bundle refuses to run a specimen.
+
+The record describes selection and observation, kept apart. The compiler
+commands come from Meson's configuration; their identities from probing those
+commands now; Cargo's reuse judgment and the effective flags from Cargo's own
+report and fingerprint for that unit, bound through the uplifted executable.
+The recorded Rust flags are additional compiler arguments, not the complete
+command. Published paths under the home directory are redacted; the exact
+paths stay in the local stamp and session. Every probe is bounded by a
+deadline and an output cap, a failure entry carries only its kind and sizes,
+and a required observation that fails stops the build rather than leaving a
+field unknown.
+
+Known gap: the historical compiler behind a reused output is not established
+by a current probe, the hash fields in Cargo's fingerprint are opaque, and a
+compiler wrapper's identity is recorded as selected now, not recovered from
+the output; the record does not attribute a reused output's history to
+either.
 
 To record a native build receipt or compare native builds, use the test
 equipment described under
@@ -520,11 +777,14 @@ The figure and the tables are generated from [build.json](build.json) by
 a manifest that disagrees with it. Every row cites the source symbol that
 implements it and the test or rule named by the manifest. Review that test or
 rule to assess coverage of the row. The build has
-<!-- span build.steps -->30<!-- /span --> steps,
-<!-- span build.refusals -->65<!-- /span --> refusals, of which
-<!-- span build.covered -->65<!-- /span --> have a control that produces
-them, <!-- span build.signing -->9<!-- /span --> signing calls and
-<!-- span build.knobs -->2<!-- /span --> knobs.
+<!-- span build.steps -->33<!-- /span --> steps, of which
+<!-- span build.conditional_steps -->1<!-- /span --> runs only in fresh mode,
+<!-- span build.refusals -->47<!-- /span --> refusals, of which
+<!-- span build.covered -->47<!-- /span --> have a control that produces
+them and one is the Meson assertion family over
+<!-- span build.meson_options -->21<!-- /span --> options,
+<!-- span build.signing -->9<!-- /span --> signing calls and
+<!-- span build.knobs -->3<!-- /span --> knobs.
 
 Before compiling, the script runs every generator's check: limits, contract,
 architecture, this document, and the identity
@@ -532,38 +792,50 @@ architecture, this document, and the identity
 order, [`build_checks`](../tests/suites/source_drift/generators.py) for the
 set). Each writes nothing and exits 1 on a stale copy. This document's check
 also parses the script and refuses a manifest that disagrees with it in what
-the parser compares: the banner order, the refusal messages with their steps
-and the script's own statuses, the knob values, the signing calls with their
-flags, the helper and tool invocations with their listed flags, the signing
-inventory, and the `set -euo pipefail` opening. Other conditions and arguments
-fall outside this comparison.
+the parser compares: the banner order with each step's condition, the refusal
+messages with their steps and the script's own statuses, the Meson assertion
+family's template and asserted options, the knob values, the signing calls
+with their flags, the helper and tool invocations with their subcommands and
+listed flags, the signing inventory, and the `set -euo pipefail` opening.
+Other conditions and arguments fall outside this comparison.
 
 The helpers and tools the build invokes, with the step each runs in:
 
 <!-- BEGIN GENERATED BUILD INVOCATIONS -->
 <details>
-<summary>24 helper and tool invocations, with symbol presence and test definition verified and each command's name, step and listed flags compared with the script; whether a test asserts the row is not verified</summary>
+<summary>35 helper and tool invocations, with symbol presence and test definition verified and each command's name, step and listed flags compared with the script; whether a test asserts the row is not verified</summary>
 
 | Id | Command | Flags compared | Step | Variants | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- |
+| inv_lock_launch | tests/lib/checkout_lock.py --root | (not compared) | admission | both | [`checkout_lock.py" --root`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_lock_verify | tests/lib/checkout_lock.py --verify | (not compared) | lock | both | [`checkout_lock.py" --verify`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_limits_check | docs/generate_limits.py --check | (not compared) | check_limits | both | [`docs/generate_limits.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_contract_check | docs/generate_contract.py --check | (not compared) | check_contract | both | [`docs/generate_contract.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_architecture_check | docs/generate_architecture.py --check | (not compared) | check_contract | both | [`docs/generate_architecture.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py) |
 | inv_build_check | docs/generate_build.py --check | (not compared) | check_build_doc | both | [`docs/generate_build.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py) |
 | inv_identity_check | docs/generate_worker_identity.py --check | (not compared) | check_identity | both | [`docs/generate_worker_identity.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_build_provenance_session_start | tests/lib/build_provenance.py session-start --session | (not compared) | stamp | both | [`session-start`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
+| inv_build_provenance_stamp_check | tests/lib/build_provenance.py stamp-check --session | (not compared) | builddir | both | [`stamp-check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
+| inv_build_provenance_cargo_admit | tests/lib/build_provenance.py cargo-admit --session | (not compared) | cargo_admit | both | [`cargo-admit`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
+| inv_build_provenance_fresh_remove | tests/lib/build_provenance.py fresh-remove --session | (not compared) | fresh | both | [`fresh-remove`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
 | inv_cargo | cargo build | --manifest-path --release --target-dir --message-format --bin --bin --bin | cargo | both | [`cargo build`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_cargo_artifacts | tests/lib/cargo_artifacts.py | (not compared) | cargo | both | [`cargo_artifacts.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_minimum_cargo | check_minimum_macos | (not compared) | cargo | both | [`check_minimum_macos "${rust_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
+| inv_build_provenance_cargo_judge | tests/lib/build_provenance.py cargo-judge --session | (not compared) | cargo | both | [`cargo-judge`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
 | inv_meson_configure | meson configure | (not compared) | configure | both | [`meson configure`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_meson_setup | meson setup | (not compared) | configure | both | [`meson setup`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_build_provenance_stamp_publish | tests/lib/build_provenance.py stamp-publish --session | (not compared) | configure | both | [`stamp-publish`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
 | inv_meson_compile | meson compile | (not compared) | compile | both | [`meson compile`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_native_sources | tests/lib/native_sources.py --builddir | (not compared) | native_check | both | [`native_sources.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`configured_controls`](../tests/suites/source_drift/check_planner.py) |
 | inv_minimum_native | check_minimum_macos | (not compared) | native_check | both | [`check_minimum_macos "${native_bin}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.py) |
+| inv_build_provenance_stamp_extend | tests/lib/build_provenance.py stamp-extend --session | (not compared) | native_check | both | [`stamp-extend`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
+| inv_build_provenance_sdk_check | tests/lib/build_provenance.py sdk-check --session | (not compared) | native_check | both | [`sdk-check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
 | inv_stamp_app | stamp_info_plist | (not compared) | assemble | both | [`stamp_info_plist "${APP_BUNDLE}/Contents/Info.plist"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_dsym_client | embed_dsym | (not compared) | embed_client | full | [`embed_dsym "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_stamp_service | stamp_info_plist | (not compared) | embed_services | full | [`stamp_info_plist "${svc_bundle}/Contents/Info.plist"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_dsym_host | embed_dsym | (not compared) | embed_services | full | [`embed_dsym "${svc_bundle}/Contents/MacOS/${svc_name}"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_identity_presign | docs/generate_worker_identity.py --check | (not compared) | presign | both | [`docs/generate_worker_identity.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
+| inv_build_provenance_worker_identity | tests/lib/build_provenance.py worker-identity --session | (not compared) | presign | both | [`worker-identity`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`test_helper_subcommands_are_the_ones_the_script_invokes`](../tests/suites/preflight/check_build_provenance.py) |
 | inv_evidence | tests/build-evidence.py --app-bundle | (not compared) | evidence | both | [`build-evidence.py`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py); [`signed_artifact_controls`](../tests/suites/preflight/run.sh) |
 | inv_verify | codesign --verify | (not compared) | verify | both | [`codesign --verify --deep --strict`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_display | codesign --display | (not compared) | verify | both | [`codesign --display --entitlements`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
@@ -575,10 +847,10 @@ The helpers and tools the build invokes, with the step each runs in:
 <!-- END GENERATED BUILD INVOCATIONS -->
 
 The `build_documentation` case in the `source_drift` suite grounds the tables:
-ten rules compare the manifest with the script's banner order, refusal
-messages, statuses and steps, knob values, signing calls and helper
-invocations, with the Makefile's entry, with Meson's assertions, with the
-three inventories and with the baseline, and mutation controls over a
+ten rules compare the manifest with the script's banner order and conditions,
+refusal messages, statuses and steps, knob values, signing calls and helper
+invocations, with the Makefile's entry, with Meson's assertion family, with
+the three inventories and with the baseline, and mutation controls over a
 disposable copy of the script show each rule naming its mutation. The parser
 accepts the forms the script uses and refuses the rest, which the generator's
 docstring lists.
@@ -586,19 +858,44 @@ docstring lists.
 The behavioral controls the refusals table cites drive the build itself in
 disposable checkouts and observe the targeted refusal and the operation it
 prevents. Early refusals stop before compilation; the opt-in build guard and
-build refusal controls compile and sign to reach later refusals. The helper controls drive
-Meson, the configured source check and the signer check directly.
+build refusal controls compile and sign to reach later refusals, and the
+toolchain switch control changes the developer directory for real. The helper
+controls drive Meson, the configured source check, the signer check and the
+provenance helpers directly, with constructed stamps, judgments, displays and
+records.
 
 Known gap: the build relies on Cargo, Meson and Ninja to determine whether
 cached outputs match the current sources. It does not independently verify
 that binaries in `builddir/` or `controller/target/` were produced from those
-sources. A clean checkout and a matching source identity do not establish
-binary provenance or reproducibility.
+sources: a matching stamp, a matching source identity and a worker that
+reports it establish which toolchain the directory was configured with and
+which sources the tree holds, not that every cached binary came from them.
+A hash calculated after a cached output was replaced accurately describes
+the replacement, and Cargo can still report that output as reused; the
+record states this limit beside its hashes, and separate checks refuse a
+record that disagrees with the manifest or the bytes, wrong load-command
+metadata and any change after evidence capture or sealing. Reproducibility
+and compiler correctness are outside what the record establishes.
 
 ## Known gaps
 
 Each gap is stated in full where the promise it limits is stated; this list
 only points there, in document order.
 
+- [Why the build is shaped this way](#why-the-build-is-shaped-this-way): a
+  failure after the seal can leave an app that passes inspection.
+- [Inputs beyond the tree](#inputs-beyond-the-tree), under cache
+  compatibility: the stamp covers the Meson configuration and the
+  compatibility inputs observed at setup, not how retained Cargo outputs were
+  produced; freshness is cache replacement and Cargo's rebuild report, not a
+  hermetic build.
+- [Inputs beyond the tree](#inputs-beyond-the-tree), under the checkout
+  lock: the lock serializes managed entrypoints, not arbitrary direct tool
+  invocations.
+- [The evidence the build embeds](#the-evidence-the-build-embeds): the record
+  separates current probes from Cargo's judgment and does not attribute a
+  reused output's history to either.
 - [How the build verifies itself](#how-the-build-verifies-itself): the build
-  relies on the tools' records to establish whether cached outputs are current.
+  relies on the tools' records to establish whether cached outputs are
+  current, and a cached output replaced before capture is described, not
+  detected.

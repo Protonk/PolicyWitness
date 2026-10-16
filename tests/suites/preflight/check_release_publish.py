@@ -124,7 +124,10 @@ def check_preflight(out):
     return repo
 
 
-def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True):
+FIXTURE_RECORD = dict(schema_version=1, source=dict(kind='fixture', build='A'), toolchain={}, configuration={}, outputs=[], signing={})
+
+
+def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True):
     commit = commit or git(repo, 'rev-parse', 'HEAD')
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
@@ -134,8 +137,15 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
     with zipfile.ZipFile(archive, 'w') as zipped:
         zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
         zipped.writestr('PolicyWitness.app/Contents/MacOS/policy-witness', b'#!/bin/sh\n')
+        if record:
+            zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(FIXTURE_RECORD))
     (dist / 'PolicyWitness.md').write_text(f'# guide {version}\n')
-    (dist / 'PolicyWitness.app').mkdir(exist_ok=True)
+    # The working app is build B by now: a later build whose record must never reach the archive of A's accepted ZIP.
+    working = dist / 'PolicyWitness.app/Contents/Resources/Evidence'
+    working.mkdir(parents=True, exist_ok=True)
+    (working / 'provenance.json').write_text(json.dumps(dict(FIXTURE_RECORD, source=dict(kind='fixture', build='B'))))
+    (dist / 'PolicyWitness.app/Contents/MacOS').mkdir(parents=True, exist_ok=True)
+    (dist / 'PolicyWitness.app/Contents/MacOS/policy-witness').write_bytes(b'#!/bin/sh\n# build B\n')
     if not attempt:
         return dist, None
     session = release_evidence.create(archive)
@@ -232,6 +242,34 @@ def check_archive(out):
     retained = retention.load_index(repo)
     assert retained == [repo / 'tests/out/release-acceptance/run-0-9-0', repo / 'tests/out/runs/release-0.9.0-default']
     release_runs.verify_release(dest)
+    # The archived record and the final controller hash are A's, read from the accepted ZIP; the working app is B.
+    with zipfile.ZipFile(dest / 'PolicyWitness-0.9.0.zip') as zipped:
+        member = zipped.read('PolicyWitness.app/Contents/Resources/Evidence/provenance.json')
+        controller = hashlib.sha256(zipped.read('PolicyWitness.app/Contents/MacOS/policy-witness')).hexdigest()
+    archived_record = dest / 'evidence/provenance.json'
+    assert archived_record.read_bytes() == member and json.loads(member)['source']['build'] == 'A'
+    assert json.loads((dist / 'PolicyWitness.app/Contents/Resources/Evidence/provenance.json').read_text())['source']['build'] == 'B'
+    provenance = record['provenance']
+    assert provenance['path'] == 'evidence/provenance.json' and provenance['sha256'] == hashlib.sha256(member).hexdigest()
+    assert provenance['controller_sha256'] == controller != hashlib.sha256(b'#!/bin/sh\n# build B\n').hexdigest()
+    assert isinstance(provenance['app_signature'], dict) and 'status' in provenance['app_signature']
+    # A swapped archived record, a record that differs from the ZIP's, and a changed controller hash are refused on verification.
+    original_record, original_release = archived_record.read_bytes(), (dest / 'release.json').read_bytes()
+    for name, mutate, needle in (
+            ('swapped record', lambda: archived_record.write_bytes(json.dumps(dict(FIXTURE_RECORD, source=dict(kind='other'))).encode()), 'checksum mismatch'),
+            ('controller hash', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, controller_sha256='0' * 64)))), 'controller hash differs'),
+            ('record hash', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, sha256='0' * 64)))), 'checksum mismatch'),
+            ('missing seal facts', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, app_signature=None)))), 'seal facts')):
+        mutate()
+        try:
+            release_runs.verify_release(dest)
+        except ValueError as exc:
+            assert needle in str(exc), (name, exc)
+        else:
+            raise AssertionError(f'{name}: verification passed')
+        archived_record.write_bytes(original_record)
+        (dest / 'release.json').write_bytes(original_release)
+    release_runs.verify_release(dest)
     # Archiving the same version again is refused before anything is written.
     try:
         release_archive.archive(decoy, dist=dist, root=repo)
@@ -300,6 +338,21 @@ def check_archive(out):
         else:
             raise AssertionError(f'battery {name} was accepted')
         assert not (dist3 / 'archive').exists() and session3.is_dir()
+
+    # An accepted ZIP without a record is refused before anything is staged.
+    scenario = out / 'archive' / 'missing_record'
+    scenario.mkdir()
+    repo5 = make_repo(scenario)
+    git(repo5, 'tag', '-a', 'v0.9.0', '-m', 'PolicyWitness 0.9.0')
+    dist5, session5 = make_dist(repo5, record=False)
+    before = sorted(str(p.relative_to(dist5)) for p in dist5.rglob('*'))
+    try:
+        release_archive.archive(session5, dist=dist5, root=repo5, battery=make_battery(repo5, dist5))
+    except ValueError as exc:
+        assert 'carries no provenance record' in str(exc), exc
+    else:
+        raise AssertionError('a ZIP without a record was archived')
+    assert sorted(str(p.relative_to(dist5)) for p in dist5.rglob('*')) == before
 
     # --latest requires exactly one accepted attempt for the current final ZIP.
     scenario = out / 'archive' / 'latest'

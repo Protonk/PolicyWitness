@@ -137,8 +137,12 @@ failure into a passing historical run.
 
 Follow the [retention and locking contract](README.md#retention-ownership-and-execution-locking).
 Never unlink `tests/.checkout.lock`: replacing its inode bypasses an existing
-holder. Wait for the current execution or use a second worktree for concurrent
-runs. Inspect interrupted or ambiguous output before choosing a fresh directory
+holder. Builds hold it too, so wait for the current build or execution or use
+a second worktree for concurrent runs; a standalone `cargo test` against the
+managed `controller/target/` runs through `tests/lib/checkout_lock.py` or with
+isolated output and intermediate directories, as the
+[locking contract](README.md#retention-ownership-and-execution-locking) says.
+Inspect interrupted or ambiguous output before choosing a fresh directory
 or explicitly removing an owned unfinished run through the pruner.
 
 For a console transcript, capture to a temporary file outside `tests/out/runs/`

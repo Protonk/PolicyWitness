@@ -138,7 +138,7 @@ def signed_copy(source, work, out, identity, worker, host=None):
     command(out / 'sign-service', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'runner/Services/PWRunner/Entitlements.plist', '-s', identity, app / SERVICE], timeout=90)
     command(out / 'evidence', ['/usr/bin/python3', ROOT / 'tests/build-evidence.py', '--app-bundle', app,
-        '--app-entitlements', ROOT / 'PolicyWitness.entitlements'], timeout=120)
+        '--app-entitlements', ROOT / 'PolicyWitness.entitlements', '--substitution-of', source, '--identity', identity], timeout=120)
     command(out / 'sign-app', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)
     report = inspect(app); save(out / 'artifact.json', report)
