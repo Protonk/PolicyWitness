@@ -9,6 +9,8 @@ def install_runner(source, destination, suites, *, signed_fixtures=False):
                      'tests/lib/testlib.sh', 'tests/lib/case.sh', 'tests/lib/artifact.py',
                      'tests/lib/signer_check.py', 'tests/lib/build_provenance.py', 'tests/lib/retention.py',
                      'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh',
+                     'tests/lib/cargo_config.py', 'tests/lib/vendor/tomli/__init__.py', 'tests/lib/vendor/tomli/_parser.py',
+                     'tests/lib/vendor/tomli/_re.py', 'tests/lib/vendor/tomli/_types.py', 'tests/lib/vendor/tomli/LICENSE',
                      'tests/RETAINED.json'):
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)

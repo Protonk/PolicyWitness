@@ -76,13 +76,20 @@ exhaustive account of private runtime dependencies, and it says so in its
   full build, the Swift compiler, Meson's configured command, id, version and
   full version beside the identity the command reported when probed in the
   build directory's context (a partial build records the Swift compiler as
-  not applicable); the Rust compiler Cargo resolves from `RUSTC`,
-  `CARGO_BUILD_RUSTC` or `PATH`, probed, with its wrappers, the selection
-  variables that were set and the Cargo configuration files found in the
-  discovery chain with the build-relevant keys each names; and the selected
-  `cargo`, `meson` and `ninja` commands with their versions. Configuration
-  files are listed, not resolved: a file that selects the compiler or a
-  wrapper stops the build instead.
+  not applicable); the Rust compiler Cargo would run and its `selection`,
+  resolved as one Cargo invocation from the build's directory resolves it:
+  the configuration files read there, in its ancestors and in Cargo home
+  (redacted) with their includes, the source of the compiler and of each
+  wrapper and the lower sources each overrides, the `[env]` names with whether
+  each applied (never their values), the launcher (a rustup proxy with its
+  toolchain, or Cargo itself), and the compiler's inputs in Cargo's child
+  environment (`SDKROOT`, `MACOSX_DEPLOYMENT_TARGET`, `DEVELOPER_DIR`,
+  `RUSTUP_TOOLCHAIN`, and whether `[env]` replaced `PATH` or `RUSTUP_HOME`);
+  the command, probed without its wrappers in that environment and in the
+  workspace root, with each wrapper's command and hash; and the selected
+  `cargo`, `meson` and `ninja` commands with their versions. A configuration
+  that cannot be resolved, or an effective input that differs from the
+  build's selection, stops the build instead.
 - `configuration`: the three knobs; the fixed-policy subset of Meson's
   effective options plus `inspection` and `xpc`; the requested Rust flags
   with the source that set them and which flag variables were set; the
@@ -95,11 +102,15 @@ exhaustive account of private runtime dependencies, and it says so in its
   versions; its hash as signed, except the controller, whose entry says why
   the hash is absent; the nested signature's leaf, team, runtime flag,
   Developer ID chain and timestamp presence; and, for the Cargo targets,
-  Cargo's own judgment (`fresh: true` means Cargo reused the output), the
-  profile, the fingerprint observation bound through the uplifted executable
-  (`observed`, or an explicit `unavailable`, `ambiguous`, `malformed` or
-  `unsupported`), the effective Rust flags from that fingerprint and the
-  requested source they equal, or an explicit unresolved kind.
+  Cargo's own judgment, a literal boolean (`fresh: true` means Cargo reused
+  the output), the profile, the fingerprint observation bound through the
+  uplifted executable (`observed`, or an explicit `unavailable`, `ambiguous`,
+  `malformed`, `unsupported` or `oversized`), the effective Rust flags from
+  that fingerprint, labelled as Cargo's record, and the requested source by
+  Cargo's precedence (`CARGO_ENCODED_RUSTFLAGS`, `RUSTFLAGS`, target rules,
+  `build.rustflags`) with the sources it overrides and whether its tokens
+  agree with the effective flags; target rules with `cfg()` keys stay
+  unresolved and their agreement unknown.
 - `signing`: the identity string and, per nested signature, the leaf, team
   and timestamp presence read from `codesign -dvv` before the record was
   sealed. The app seal is made after the record; its facts live in the

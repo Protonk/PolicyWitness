@@ -70,7 +70,16 @@ Offline release controls also exercise the release procedure's decision points.
   directories and refusing symlinked parents and failed removals; Cargo
   judgments bound to fingerprints through the uplifted executable with
   ambiguous, malformed and unsupported cases explicit; SDK versions
-  normalized with unknowns never equal; signature displays establishing
+  normalized with unknowns never equal; Cargo configuration graphs read the
+  way Cargo reads them (inline, dotted and table forms, invocation-directory
+  discovery with ancestors and Cargo home, the extensionless name, includes in
+  order with relative paths and the including file on top, bounds, cycles,
+  missing or malformed files and type conflicts refused), the compiler and
+  wrapper precedence with empty resets, `[env]` forced or not, inherited or
+  not, relative and field-merged, conflicts with the build's inputs, and a
+  summary carrying no PATH or unrelated values; Cargo judgments that are not
+  literal booleans bound to the admitted executable refused in both modes, and
+  requested flags attributed by precedence; signature displays establishing
   class, team and timestamp; and records refused for a swapped bundle,
   missing, duplicate or invalid outputs, a controller hash inside the seal,
   wrong hashes or wrong load-command metadata. It needs clang for the Mach-O
@@ -99,9 +108,11 @@ Offline release controls also exercise the release procedure's decision points.
   select the SDK or report its version, a stamp that is missing, malformed or
   foreign, a forwarding compiler wrapper relabelled after the stamp recorded
   it or failing its version probe, redirected or unobservable Cargo
-  intermediates, a symlink at a cache path component or the session
-  destination, a path replaced after an earlier helper's admission, a cache
-  path fresh mode cannot remove, a Cargo
+  intermediates, a Cargo configuration that cannot be resolved or whose
+  `[env]` forces another deployment target or SDK, a Cargo report whose
+  judgment is not a literal boolean, a symlink at a cache path component or
+  the session destination, a path replaced after an earlier helper's
+  admission, a cache path fresh mode cannot remove, a Cargo
   output removed, made non-executable or moved under a target triple, a
   reused Cargo judgment in fresh mode, an old Ninja, a poisoned Meson
   directory, a source that does not compile, a worker reporting another
@@ -113,8 +124,8 @@ Offline release controls also exercise the release procedure's decision points.
   left behind; the forwarding wrappers' receipts establish that compilations
   were forwarded and which flags they carried. The same case runs the
   fresh-mode state sequence with interruptions, the canary, replaced-output,
-  lock-lifetime and make-entrypoint controls described in the opt-in
-  registry. Copies of the script with a guard removed or moved past its
+  lock-lifetime, Cargo oracle, Cargo selection and make-entrypoint controls
+  described in the opt-in registry. Copies of the script with a guard removed or moved past its
   operation, and of the session helper with path admission disabled, must
   fail the matching control. Opt-in, with the same toolchain and identity requirements
   as the guard controls.

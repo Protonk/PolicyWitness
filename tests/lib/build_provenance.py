@@ -16,7 +16,7 @@ Subcommands, in the order build.sh uses them:
   session-start   open the session with the knobs and the git stamp
   stamp-check     validate builddir/pw-toolchain.json against the tools selected now
   fresh-remove    replace the two owned cache areas after path and ownership admission
-  cargo-admit     refuse Cargo intermediate state redirected outside the pinned target directory
+  cargo-admit     resolve Cargo's selection and child environment; refuse redirected intermediate state
   cargo-judge     record Cargo's per-target reuse judgment and fingerprint observations
   stamp-publish   publish the stamp after a successful fresh setup
   stamp-extend    after compiling: keep the stamp intact, or extend it with a newly discovered Swift compiler
@@ -48,6 +48,14 @@ output) or it is an oversized failure, never a truncated value that could
 equal another. Published paths under the home directory start with the
 HOME_MARKER; the exact paths stay in the local stamp and session files.
 
+Cargo selection. The compiler, its wrappers and the environment Cargo gives
+them are resolved by cargo_config.py, as one Cargo invocation from this
+directory resolves them; an unresolvable setting or an effective SDKROOT,
+MACOSX_DEPLOYMENT_TARGET or DEVELOPER_DIR that differs from the build's refuses
+before Cargo runs. Cargo's judgment for a shipped target is its literal boolean
+`fresh` on the one artifact message bound to the binary target, a profile and
+the admitted executable; anything else refuses in either mode.
+
 Cargo metadata policy. The reader of Cargo's internal `.fingerprint` files
 supports the layout observed with Cargo 1.99: the uplifted executable is a
 hard link of (or byte-identical to) exactly one `deps/<name>-<meta>` file, and
@@ -78,6 +86,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cargo_config  # noqa: E402
 import checkout_lock  # noqa: E402
 
 SCHEMA_VERSION = 1
@@ -109,10 +118,9 @@ FIXED_MESON_OPTIONS = ('buildtype', 'optimization', 'debug', 'warning_level', 'w
                        'swift_link_args', 'inspection', 'xpc')
 CARGO_SELECTION_ENV = ('RUSTC', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER', 'CARGO_BUILD_RUSTC',
                        'CARGO_BUILD_RUSTC_WRAPPER', 'CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER')
+UNRESOLVED_REMEDY = 'the compiler Cargo would select, or the environment it would give it, is unknown'
 CARGO_FLAG_ENV = ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS')
 CARGO_LAYOUT_ENV = ('CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'CARGO_HOME')
-CONFIG_SELECTION_KEYS = ('rustc', 'rustc-wrapper', 'rustc-workspace-wrapper')
-CONFIG_BUILD_KEYS = CONFIG_SELECTION_KEYS + ('rustflags', 'target', 'target-dir', 'build-dir')
 ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 'SDKROOT',
                'MACOSX_DEPLOYMENT_TARGET', 'RUSTFLAGS', 'PW_VERSION', 'PW_BUILD_NUMBER')
 SUBCOMMANDS = ('session-start', 'stamp-check', 'fresh-remove', 'cargo-admit', 'cargo-judge', 'stamp-publish',
@@ -629,72 +637,49 @@ def compiler_observation(command, builddir, env):
     return dict(status='ok', command=command, identity=found['line'])
 
 
-def cargo_configuration_files(manifest_dir, env):
-    """Cargo configuration files in the discovery chain, with the build-relevant keys each names (never values)."""
-    candidates = []
-    directory = Path(manifest_dir).resolve()
-    while True:
-        for name in ('config.toml', 'config'):
-            candidates.append(directory / '.cargo' / name)
-        if directory.parent == directory:
-            break
-        directory = directory.parent
-    home = Path(env.get('CARGO_HOME') or (Path(env.get('HOME', '/')) / '.cargo'))
-    for name in ('config.toml', 'config'):
-        candidates.append(home / name)
-    files = []
-    for path in candidates:
-        if not path.is_file():
+def invocation_environment(session):
+    """The environment build.sh gives Cargo: this helper's, with the variables the interpreter shim inserts restored.
+
+    The Python shim adds CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE to this
+    process; build.sh restored the caller's state for them from the owner's
+    requests, and Cargo inherits that state, not this process's. SDKROOT is the
+    path build.sh selected and exported, which the shim leaves alone."""
+    env = dict(os.environ)
+    requests = (session or {}).get('requests') or {}
+    for name in ('CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE'):
+        entry = requests.get(name)
+        if not isinstance(entry, dict):
             continue
-        keys = set()
-        section = ''
-        try:
-            lines = path.read_text(errors='replace').splitlines()[:2000]
-        except OSError:
-            files.append(dict(path=redact(str(path)), readable=False))
-            continue
-        for line in lines:
-            text = line.split('#', 1)[0].strip()
-            header = re.match(r'^\[\s*([^\]]+?)\s*\]$', text)
-            if header:
-                section = header.group(1).strip().strip('"').strip("'")
-                continue
-            key = re.match(r'^([A-Za-z0-9_.\-"\']+)\s*=', text)
-            if not key:
-                continue
-            name = key.group(1).strip('"').strip("'")
-            full = f'{section}.{name}' if section else name
-            if full.startswith('build.') and full[len('build.'):] in CONFIG_BUILD_KEYS:
-                keys.add(full)
-            elif full.startswith('target.') and (full.endswith('.rustflags') or full.endswith('.linker')):
-                keys.add('target.<rule>.' + full.rsplit('.', 1)[1])
-        files.append(dict(path=redact(str(path)), readable=True, keys=sorted(keys)))
-    return files
+        if entry.get('state') == 'set':
+            env[name] = entry.get('value', '')
+        else:
+            env.pop(name, None)
+    return env
 
 
-def rustc_observation(manifest_dir, env):
-    """The Rust compiler Cargo will select from the environment and PATH, probed; configuration files are named, not resolved."""
-    files = cargo_configuration_files(manifest_dir, env)
-    unresolved = sorted({key for f in files for key in f.get('keys', []) if key[len('build.'):] in CONFIG_SELECTION_KEYS})
-    selection = {}
-    for name in CARGO_SELECTION_ENV:
-        if name in env:
-            selection[name] = redact(env[name])
-    if env.get('RUSTC'):
-        command, source = env['RUSTC'], 'RUSTC'
-    elif env.get('CARGO_BUILD_RUSTC'):
-        command, source = env['CARGO_BUILD_RUSTC'], 'CARGO_BUILD_RUSTC'
-    else:
-        command, source = shutil.which('rustc', path=env.get('PATH')), 'PATH'
-    out = dict(selection_environment=selection, configuration_files=files, unresolved_configuration=unresolved)
-    if unresolved:
-        out.update(status='failed', kind='unresolved_configuration', source=source,
-                   detail='a Cargo configuration file defines ' + ', '.join(unresolved) + '; set RUSTC or CARGO_BUILD_RUSTC explicitly')
-        return out
-    if not command:
-        out.update(status='failed', kind='launch_failed', source=source, detail='no rustc on PATH')
-        return out
-    found = probe([command, '-vV'], env=env)
+def cargo_resolution(env, cwd=None):
+    """Cargo's configuration and launcher for this invocation, resolved, with the build's policy for the compiler's inputs."""
+    cwd = cwd or os.getcwd()
+    try:
+        resolution = cargo_config.resolve(cwd, env, probe=probe)
+    except cargo_config.Unresolved as exc:
+        raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
+    for name, effective, selected in cargo_config.conflicts(resolution, env):
+        raise Refusal(f"Cargo's [env] gives the compiler {name}={redact(effective)!r}, but the build selected {redact(selected)!r}; "
+                      f'the effective setting conflicts with build policy', 1)
+    return resolution
+
+
+def rustc_observation(manifest_dir, env, cwd=None, resolution=None):
+    """The compiler Cargo will run, resolved through Cargo's configuration and launcher, probed in Cargo's child environment
+    and working directory (the workspace root), without its wrappers."""
+    resolution = resolution or cargo_resolution(env, cwd)
+    home = env.get('HOME', '')
+    rustc = resolution['programs']['rustc']
+    command, source = rustc['command'], rustc['source']
+    selection = cargo_config.summary(resolution, home)
+    out = dict(selection_environment={name: redact(env[name]) for name in CARGO_SELECTION_ENV if name in env}, selection=selection)
+    found = probe([command, '-vV'], cwd=str(manifest_dir), env=resolution['child'])
     if found['status'] != 'ok':
         out.update(found, command=redact(command), source=source)
         return out
@@ -709,14 +694,13 @@ def rustc_observation(manifest_dir, env):
         return out
     out.update(status='ok', command=redact(command), exact_command=command, source=source, identity=found['line'], **reported)
     wrappers = {}
-    for name, key in (('RUSTC_WRAPPER', 'wrapper'), ('CARGO_BUILD_RUSTC_WRAPPER', 'wrapper'),
-                      ('RUSTC_WORKSPACE_WRAPPER', 'workspace_wrapper'), ('CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER', 'workspace_wrapper')):
-        if env.get(name) and key not in wrappers:
-            path = Path(env[name])
-            entry = dict(source=name, command=redact(env[name]))
-            if path.is_file():
-                entry['sha256'] = sha256_file(path)
-            wrappers[key] = entry
+    for role in ('wrapper', 'workspace_wrapper'):
+        entry = resolution['programs'][role]
+        if entry.get('command'):
+            wrapper = dict(source=entry['source'], command=redact(entry['command']))
+            if Path(entry['command']).is_file():
+                wrapper['sha256'] = sha256_file(entry['command'])
+            wrappers[role] = wrapper
     out['wrappers'] = wrappers
     return out
 
@@ -732,6 +716,7 @@ def tool_observation(name, env, pattern=r'\d'):
 
 
 def observe_toolchain(builddir, manifest_dir, env, *, xpc, compilers=None):
+    """env is the environment build.sh gives Cargo and the compilers (invocation_environment)."""
     """Every toolchain observation the stamp and the record use; compilers come from the directory or the stamp."""
     if compilers is None:
         compilers = read_compilers(builddir) or {}
@@ -851,7 +836,7 @@ def stamp_check_admitted(state, xpc):
             raise Refusal(f"{STAMP_NAME} names Swift compiler {stamped_commands['swift']} but the directory records "
                           f"{recorded.get('swift', {}).get('command')}; the stamp does not describe this directory: {FRESH_REMEDY}", 2)
         compilers['swift'] = recorded['swift']
-    observation = observe_toolchain(builddir, root / 'controller', env, xpc=swift_applicable, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=swift_applicable, compilers=compilers)
     current = compatibility_fields(observation, xpc=swift_applicable)
     names = ['developer_dir', 'sdk.path', 'sdk.version', 'sdk.build', 'compilers.c.command', 'compilers.c.identity',
              'rustc.command', 'rustc.identity', 'rustc.wrappers']
@@ -899,7 +884,7 @@ def stamp_publish_admitted(state):
     if not compilers or 'c' not in compilers:
         raise Refusal(f'{builddir.name}/ records no C compiler after setup', 2)
     xpc = 'swift' in compilers
-    observation = observe_toolchain(builddir, root / 'controller', os.environ, xpc=xpc, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=xpc, compilers=compilers)
     fields = compatibility_fields(observation, xpc=xpc)
     for name, value in fields.items():
         if value is None:
@@ -929,7 +914,7 @@ def stamp_extend_admitted(scope, xpc):
         raise Refusal(f'{STAMP_NAME} no longer describes the C compiler the directory records: {FRESH_REMEDY}', 2)
     if xpc and 'swift' not in compilers:
         raise Refusal(f'{builddir.name}/ records no Swift compiler although the XPC pieces were compiled', 2)
-    observation = observe_toolchain(builddir, root / 'controller', os.environ, xpc=xpc, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=xpc, compilers=compilers)
     state = 'intact'
     if xpc and not stamp['scope'].get('xpc'):
         # Swift is newly applicable: validate the discovered compiler, then extend without touching other fields.
@@ -1021,7 +1006,18 @@ def cargo_admit_admitted(state):
     session = state.session
     pinned = state.root / TARGET
     manifest_path = state.root / 'controller/Cargo.toml'
-    env = dict(os.environ, CARGO_TARGET_DIR=str(pinned))
+    invocation = invocation_environment(session)
+    # Cargo's compiler selection, its child environment and the requested flags, resolved before Cargo runs in either
+    # mode: an unresolvable setting or an effective input that conflicts with build policy refuses here.
+    resolution = cargo_resolution(invocation)
+    observation = rustc_observation(state.root / 'controller', invocation, resolution=resolution)
+    required(observation, 'rustc.command')
+    try:
+        requested = cargo_config.requested_flags(resolution['merged'], invocation, observation.get('host'))
+    except cargo_config.Unresolved as exc:
+        raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
+    session.setdefault('cargo', {}).update(selection=observation['selection'], host=observation.get('host'), requested_flags=requested)
+    env = dict(invocation, CARGO_TARGET_DIR=str(pinned))
     cargo = shutil.which('cargo', path=env.get('PATH'))
     if not cargo:
         raise Refusal('cargo is not on PATH; the intermediate directory cannot be established', 2)
@@ -1032,7 +1028,8 @@ def cargo_admit_admitted(state):
     try:
         metadata = json.loads(found['text'])
         target_directory = Path(metadata['target_directory'])
-        build_directory = Path(metadata.get('build_directory', metadata['target_directory']))
+        # Without Cargo's own report of the build directory nothing establishes where intermediates go.
+        build_directory = Path(metadata['build_directory'])
     except (ValueError, KeyError, TypeError):
         raise Refusal('cargo metadata output does not name the target and build directories; they cannot be admitted', 2)
     observed = dict(target_directory=redact(str(target_directory)), build_directory=redact(str(build_directory)),
@@ -1051,8 +1048,8 @@ def cargo_admit_admitted(state):
 
 
 def artifact_messages(state, names):
-    """The last compiler-artifact message per requested executable name, from Cargo's own report."""
-    found = {}
+    """Every compiler-artifact message for each requested target name, from Cargo's own report."""
+    found = {name: [] for name in names}
     try:
         lines = state.paths.read_text(TARGET, MESSAGES_NAME).splitlines()
     except OSError as exc:
@@ -1066,10 +1063,35 @@ def artifact_messages(state, names):
             raise Refusal(f"Cargo's artifact messages are malformed at line {number}", 2)
         if not isinstance(message, dict) or message.get('reason') != 'compiler-artifact':
             continue
-        name = (message.get('target') or {}).get('name')
-        if name in names and message.get('executable'):
-            found[name] = message
+        target = message.get('target')
+        name = target.get('name') if isinstance(target, dict) else None
+        if name in names:
+            found[name].append(message)
     return found
+
+
+def judgment_problem(name, messages, admitted):
+    """Why Cargo's report establishes no judgment for a shipped target, or None: exactly one message, bound to the binary
+    target, a profile and the admitted executable, with a literal boolean `fresh`."""
+    if not messages:
+        return 'no artifact message'
+    if len(messages) > 1:
+        return f'{len(messages)} artifact messages (ambiguous or contradictory)'
+    message = messages[0]
+    target = message['target']
+    if not isinstance(target.get('kind'), list) or 'bin' not in target['kind']:
+        return 'the message is not for a binary target'
+    if message.get('executable') != str(admitted):
+        return 'the message names another executable than the admitted one'
+    if not isinstance(message.get('profile'), dict):
+        return 'the message carries no profile'
+    if 'fresh' not in message:
+        return 'fresh is missing'
+    if type(message['fresh']) is not bool:
+        return f"fresh is {json.dumps(message['fresh'])[:40]}, not a boolean"
+    if not isinstance(message.get('package_id'), str):
+        return 'the message carries no package id'
+    return None
 
 
 def fingerprint_observation(message, target_dir):
@@ -1127,23 +1149,22 @@ def fingerprint_observation(message, target_dir):
     return out
 
 
-def flag_source(effective, env, script_default):
-    """Which requested source the effective flags equal, when one does; otherwise an explicit unresolved kind."""
-    if effective is None:
-        return dict(kind='unknown', detail='effective flags were not observed')
-    candidates = []
-    if 'CARGO_ENCODED_RUSTFLAGS' in env:
-        candidates.append(('CARGO_ENCODED_RUSTFLAGS', [t for t in env['CARGO_ENCODED_RUSTFLAGS'].split('\x1f') if t]))
-    if 'CARGO_BUILD_RUSTFLAGS' in env:
-        candidates.append(('CARGO_BUILD_RUSTFLAGS', env['CARGO_BUILD_RUSTFLAGS'].split()))
-    if 'RUSTFLAGS' in env:
-        candidates.append((script_default, env['RUSTFLAGS'].split()))
-    for kind, tokens in candidates:
-        if tokens == effective:
-            return dict(kind=kind, tokens=tokens)
-    if not effective:
-        return dict(kind='none', detail='no additional flags')
-    return dict(kind='cargo configuration or target rules', detail='no named environment source equals the effective flags; configuration files are not resolved by this record')
+def flag_attribution(effective, requested, rustflags_source):
+    """The requested source by Cargo's precedence and whether its tokens equal Cargo's record of the effective flags.
+
+    Equality alone never names a source: the source is the first one present in
+    Cargo's order, and a source whose tokens cannot be established (target rules
+    with cfg() keys, an environment rule) stays unresolved."""
+    labels = {'caller': 'RUSTFLAGS (caller)', 'script': 'RUSTFLAGS (script default)', 'none': 'RUSTFLAGS'}
+    kind = requested['source']
+    if kind == 'RUSTFLAGS':
+        kind = labels[rustflags_source]
+    agrees = None
+    if effective is not None and requested.get('resolved') and requested.get('tokens') is not None:
+        agrees = requested['tokens'] == effective
+    return dict(kind=kind, resolved=bool(requested.get('resolved')), tokens=requested.get('tokens'),
+                overrides=requested.get('overrides', []), rules=requested.get('rules'), agrees=agrees,
+                effective_source="Cargo's fingerprint for the unit")
 
 
 def cargo_judge(args):
@@ -1154,21 +1175,28 @@ def cargo_judge(args):
 def cargo_judge_admitted(state, args):
     session = state.session
     target_dir = state.root / TARGET
-    env = dict(os.environ)
+    env = invocation_environment(session)
     messages = artifact_messages(state, set(args.bin))
-    judgments = {}
-    script_default = {'caller': 'RUSTFLAGS (caller)', 'script': 'RUSTFLAGS (script default)', 'none': 'RUSTFLAGS'}[args.rustflags_source]
+    requested = (session.get('cargo') or {}).get('requested_flags')
+    if not isinstance(requested, dict):
+        try:
+            requested = cargo_config.requested_flags({}, env, None)
+        except cargo_config.Unresolved as exc:
+            raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
+    judgments, problems = {}, []
     for name in args.bin:
-        message = messages.get(name)
-        if message is None:
-            judgments[name] = dict(status='unavailable', fresh=None)
+        problem = judgment_problem(name, messages[name], target_dir / 'release' / name)
+        if problem is not None:
+            judgments[name] = dict(status='unknown', fresh=None, problem=problem)
+            problems.append(f'{name} ({problem})')
             continue
+        message = messages[name][0]
         fingerprint = fingerprint_observation(message, target_dir)
-        judgments[name] = dict(status='reported', fresh=bool(message.get('fresh')), profile=message.get('profile'),
+        judgments[name] = dict(status='reported', fresh=message['fresh'], profile=message['profile'],
                                package_id=redact(message['package_id']), executable=redact(message['executable']),
                                exact_executable=message['executable'], fingerprint=fingerprint,
                                effective_rustflags=fingerprint.get('rustflags'),
-                               rustflags_source=flag_source(fingerprint.get('rustflags'), env, script_default))
+                               rustflags_source=flag_attribution(fingerprint.get('rustflags'), requested, args.rustflags_source))
     session.setdefault('cargo', {})['judgments'] = judgments
     session['cargo']['flag_environment'] = {name: ('set' if name in env else 'unset') for name in CARGO_FLAG_ENV}
     tokens = env.get('RUSTFLAGS', '').split()
@@ -1176,11 +1204,14 @@ def cargo_judge_admitted(state, args):
                                                if len(tokens) <= FLAG_LIMIT and not oversized(tokens)
                                                else dict(source=args.rustflags_source, tokens=None, oversized=True))
     state.save()
-    reused = [name for name, j in judgments.items() if j['status'] != 'reported' or j['fresh']]
+    if problems:
+        raise Refusal("Cargo's report establishes no literal boolean fresh judgment for the admitted executable of "
+                      + ', '.join(problems) + '; reuse cannot be recorded', 2)
+    reused = [name for name, j in judgments.items() if j['fresh'] is not False]
     if args.require_rebuilt == '1' and reused:
-        raise Refusal('fresh mode requires Cargo to report rebuilding every shipped target, but ' + ', '.join(
-            f"{name} ({'reused' if judgments[name].get('fresh') else 'no judgment'})" for name in reused), 1)
-    summary = ', '.join(f"{name}: {'reused' if j.get('fresh') else 'rebuilt' if j['status'] == 'reported' else 'no judgment'}" for name, j in judgments.items())
+        raise Refusal('fresh mode requires Cargo to report rebuilding every shipped target, but '
+                      + ', '.join(f'{name} (reused)' for name in reused), 1)
+    summary = ', '.join(f"{name}: {'reused' if j['fresh'] else 'rebuilt'}" for name, j in judgments.items())
     print(f'ok: Cargo judgments recorded ({summary})')
     return 0
 
@@ -1361,8 +1392,10 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
                             xcode=toolchain['xcode'], compilers=compilers, rustc=published(toolchain['rustc']),
                             cargo=toolchain['cargo'], meson=toolchain['meson'], ninja=toolchain['ninja'])
     toolchain_record['sdk']['path'] = redact(toolchain_record['sdk']['path'])
-    toolchain_record['rustc']['selection_note'] = ('the command Cargo resolves from the environment and PATH, probed now; '
-                                                   'configuration files are listed, not resolved')
+    toolchain_record['rustc']['selection_note'] = ('the command Cargo would run, resolved through its configuration files and '
+                                                   'includes, environment overrides and launcher, and probed now without its '
+                                                   'wrappers in the environment and directory Cargo gives it; a probe today does '
+                                                   'not identify the compiler that produced a reused output')
     builddir_state = session.get('builddir', {})
     cargo_state = session.get('cargo_release', {})
     fresh = session.get('fresh', {})

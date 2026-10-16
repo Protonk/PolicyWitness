@@ -5,7 +5,7 @@ The build script resolves cargo, meson, ninja, codesign and cp through PATH.
 Each wrapper runs the real tool with the same arguments and appends one
 receipt line. A hook names a tool and a matching call; its actions remove,
 move, truncate, append to, rewrite or replace with a symlink a file, edit
-Cargo's artifact report, kill or signal the build's shell, the lock owner or
+Cargo's artifact report (set or remove fields, drop or duplicate a message), kill or signal the build's shell, the lock owner or
 the wrapper itself, start a holder process beyond the wrapper, or record
 whether the checkout lock is free, before or after that call, so a missing or
 damaged input, a false report, a replaced path or an interruption appears at
@@ -116,7 +116,8 @@ def act(action):
     elif op == 'symlink':
         path.symlink_to(action['to'])
     elif op == 'judge':
-        # Edit Cargo's artifact report for one target: set fields or drop its line.
+        # Edit Cargo's artifact report for one target: set or remove fields, drop its line, or add a second message for
+        # it with the set fields changed.
         lines = []
         for line in path.read_text().splitlines():
             if line.strip():
@@ -124,7 +125,11 @@ def act(action):
                 if message.get('reason') == 'compiler-artifact' and (message.get('target') or {}).get('name') == action['target']:
                     if action.get('drop'):
                         continue
+                    if action.get('duplicate'):
+                        lines.append(line)
                     message.update(action.get('set', {}))
+                    for key in action.get('unset', ()):
+                        message.pop(key, None)
                     line = json.dumps(message)
             lines.append(line)
         path.write_text('\n'.join(lines) + '\n')

@@ -124,7 +124,9 @@ selection, deduplication, configuration validation, and complete accounting.
   directory without the SDK or without a numeric SDK version, a missing,
   malformed or foreign toolchain stamp, forwarding Rust and C compiler
   wrappers relabelled after the stamp recorded them, a probe that fails,
-  hangs or floods stderr past its cap, redirected Cargo intermediates, a symlink at a cache path component
+  hangs or floods stderr past its cap, a Cargo configuration that cannot be
+  resolved or whose `[env]` forces another deployment target or SDK, a Cargo
+  judgment that is not a literal boolean, redirected Cargo intermediates, a symlink at a cache path component
   or the session destination, a path replaced after an earlier helper's
   admission, a failed removal, Cargo outputs that vanish, lose
   their executable bit or land under a target triple, a reused judgment in
@@ -146,7 +148,13 @@ selection, deduplication, configuration validation, and complete accounting.
   SIGINT and SIGTERM stop the build's process group, that the compilers the
   real Cargo and Meson run hold the descriptor, that a nested build and owned
   command share one acquisition while an independent worktree is held, and
-  that the lock is held through packaging. Mutated copies of the script with
+  that the lock is held through packaging. A Cargo oracle builds a scratch
+  crate with real Cargo through recording forwarders for every configuration
+  form the resolver reads and requires the compilers, wrapper chain, working
+  directory and child environment Cargo used to be the predicted ones; a
+  selection sequence drives the script with retained caches through an
+  included compiler selection, a change to only that file, a forced `[env]`
+  `PATH`, and flag precedence. Mutated copies of the script with
   a guard removed or moved past its operation, and of the session helper
   with path admission disabled, must fail their control.
 - **Resource dependency:** Built app for identity resolution, matching Developer

@@ -505,7 +505,9 @@
         "builddir_toolchain_changed",
         "provenance_probe_failed",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "cargo_configuration_unresolved",
+        "cargo_environment_conflict"
       ],
       "sources": [
         {
@@ -597,13 +599,15 @@
         "full",
         "partial"
       ],
-      "reads": "cargo metadata's report of the target and build directories under the pinned target directory, with the caller's Cargo environment and configuration",
-      "writes": "the admission into the build session",
+      "reads": "Cargo's configuration as one invocation from this directory reads it: `.cargo/config` or `config.toml` here, in each ancestor and in Cargo home, with their includes, merged by Cargo's precedence; the environment overrides; the launcher (a rustup proxy and the toolchain it resolves); and cargo metadata's report of the target and build directories under the pinned target directory",
+      "writes": "the compiler and wrapper selection with its sources, the `[env]` entries and whether each applied, the compiler's inputs in Cargo's child environment, the requested Rust flags by precedence and the admission, into the build session",
       "refusals": [
         "cargo_build_dir_redirected",
         "cargo_build_dir_unknown",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "cargo_configuration_unresolved",
+        "cargo_environment_conflict"
       ],
       "sources": [
         {
@@ -627,6 +631,24 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_cargo_build_dir_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_configuration_unresolved",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_environment_conflict",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_selection_sequence",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -691,7 +713,7 @@
         "full",
         "partial"
       ],
-      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, and Cargo's fingerprint for each shipped target",
+      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, each a literal boolean bound to the shipped target, a profile and the admitted executable, and Cargo's fingerprint for each shipped target",
       "writes": "controller/target/release/ under the pinned output directory, the messages file Cargo reports its artifacts in, and the judgments into the build session",
       "refusals": [
         "cargo_artifact_elsewhere",
@@ -701,7 +723,8 @@
         "cargo_target_reused",
         "provenance_probe_failed",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "cargo_judgment_unknown"
       ],
       "sources": [
         {
@@ -725,6 +748,12 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_cargo_target_reused",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_judgment_unknown",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -778,7 +807,9 @@
         "builddir_stamp_invalid",
         "provenance_probe_failed",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "cargo_configuration_unresolved",
+        "cargo_environment_conflict"
       ],
       "sources": [
         {
@@ -858,7 +889,9 @@
         "sdk_disagreement",
         "provenance_probe_failed",
         "lock_claim_invalid",
-        "cache_path_unsafe"
+        "cache_path_unsafe",
+        "cargo_configuration_unresolved",
+        "cargo_environment_conflict"
       ],
       "sources": [
         {
@@ -2135,6 +2168,116 @@
       ]
     },
     {
+      "id": "cargo_configuration_unresolved",
+      "message": "Cargo configuration cannot be resolved: <reason>; the compiler Cargo would select, or the environment it would give it, is unknown",
+      "kind": "propagated",
+      "steps": [
+        "builddir",
+        "cargo_admit",
+        "configure",
+        "native_check"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build_provenance.py"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "Cargo configuration cannot be resolved"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_configuration_unresolved",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_configuration_oracle",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_includes_follow_cargo_order_and_refuse_what_cannot_be_read",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_program_paths_resolve_as_cargo_resolves_them",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "cargo_environment_conflict",
+      "message": "Cargo's [env] gives the compiler <name>=<value>, but the build selected <value>; the effective setting conflicts with build policy",
+      "kind": "propagated",
+      "steps": [
+        "builddir",
+        "cargo_admit",
+        "configure",
+        "native_check"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "build_provenance.py"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "the effective setting conflicts with build policy"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_environment_conflict",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_configuration_oracle",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_env_entries_apply_as_cargo_applies_them",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "fresh_removal_failed",
       "message": "fresh mode could not remove <path>; remove it by hand before building again",
       "kind": "propagated",
@@ -2273,7 +2416,7 @@
     },
     {
       "id": "cargo_target_reused",
-      "message": "fresh mode requires Cargo to report rebuilding every shipped target, but <target> (reused or no judgment)",
+      "message": "fresh mode requires Cargo to report rebuilding every shipped target, but <target> (reused)",
       "kind": "propagated",
       "steps": [
         "cargo"
@@ -2309,6 +2452,49 @@
         {
           "path": "tests/suites/preflight/check_build_provenance.py",
           "symbol": "test_cargo_judgments_bind_fingerprints_without_guessing",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "cargo_judgment_unknown",
+      "message": "Cargo's report establishes no literal boolean fresh judgment for the admitted executable of <target> (<problem>); reuse cannot be recorded",
+      "kind": "propagated",
+      "steps": [
+        "cargo"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "cargo-judge"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "establishes no literal boolean fresh judgment"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_cargo_judgment_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable",
           "form": "test",
           "coverage": "helper"
         }
@@ -4530,7 +4716,7 @@
       "path": "controller/target/",
       "facts": {
         "Trusted as": "Cargo's incremental outputs and intermediate release state under the pinned --target-dir, with Cargo's own reuse judgment recorded per shipped target; fresh mode replaces only its release/ subdirectory",
-        "Refused when": "a component of its path or of release/ is a symlink, not a directory or another user's, or the session destination is not a regular file of this user, refused at admission before any session or cache write; Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, or, in fresh mode, reports reusing a shipped target; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected"
+        "Refused when": "a component of its path or of release/ is a symlink, not a directory or another user's, or the session destination is not a regular file of this user, refused at admission before any session or cache write; Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, reports no literal boolean judgment for a shipped target, or, in fresh mode, reports reusing one; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected"
       },
       "sources": [
         {

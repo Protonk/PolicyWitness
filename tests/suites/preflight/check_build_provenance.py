@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 import build_provenance as prov
+import cargo_config
 import checkout_lock
 import signer_check
 import fixture_bundle
@@ -1028,20 +1029,17 @@ class CargoJudgmentTests(unittest.TestCase):
         bound = judgments['policy-witness']
         self.assertEqual((bound['fresh'], bound['fingerprint']['status'], bound['fingerprint']['binding']['how']), (False, 'observed', 'hard link'))
         self.assertEqual(bound['effective_rustflags'], ['-C', 'opt-level=1'])
-        self.assertEqual(bound['rustflags_source']['kind'], 'RUSTFLAGS (script default)')
+        self.assertEqual((bound['rustflags_source']['kind'], bound['rustflags_source']['agrees']), ('RUSTFLAGS (script default)', True))
         self.assertEqual(bound['fingerprint']['binding']['metadata_hash'], 'a' * 16)
         self.assertEqual(judgments['sandbox-log-observer']['fingerprint']['binding']['how'], 'identical bytes')
-        self.assertTrue(judgments['sandbox-log-observer']['fresh'])
+        self.assertIs(judgments['sandbox-log-observer']['fresh'], True)
         self.assertEqual(judgments['sbpl-check']['fingerprint']['status'], 'unavailable')
         self.assertNotIn(str(self.root), json.dumps(judgments).replace(prov.redact(str(self.root)), ''), 'exact paths are kept apart from published ones')
-        # Fresh mode refuses a reused target and a missing judgment, naming them.
+        # Fresh mode refuses a reused target, naming it.
         status, _, err, _ = self.judge(messages, require='1')
         self.assertEqual(status, 1)
         self.assertIn('sandbox-log-observer (reused)', err)
-        status, _, err, _ = self.judge(messages[:2], require='1')
-        self.assertEqual(status, 1)
-        self.assertIn('sbpl-check (no judgment)', err)
-        # Ambiguous, malformed and unsupported fingerprints are explicit limitations, never guesses.
+        # Ambiguous, malformed, unsupported and oversized fingerprints are explicit limitations, never guesses.
         (self.release / 'deps' / ('sandbox_log_observer-' + 'e' * 16)).write_bytes(b'observer bytes')
         malformed = self.unit('policy-witness', 'f' * 16, b'controller bytes 2', fingerprint='malformed')
         unsupported = self.unit('sbpl-check', '0' * 16, b'check bytes 2', fingerprint='unsupported')
@@ -1051,14 +1049,259 @@ class CargoJudgmentTests(unittest.TestCase):
         self.assertEqual(judgments['policy-witness']['fingerprint']['status'], 'malformed')
         self.assertEqual(judgments['sbpl-check']['fingerprint']['status'], 'unsupported')
         self.assertIsNone(judgments['sbpl-check']['effective_rustflags'])
-        self.assertEqual(judgments['sbpl-check']['rustflags_source']['kind'], 'unknown')
-        self.assertEqual(prov.flag_source(['-C', 'x'], {'CARGO_ENCODED_RUSTFLAGS': '-C\x1fx'}, 'RUSTFLAGS')['kind'], 'CARGO_ENCODED_RUSTFLAGS')
-        self.assertEqual(prov.flag_source(['-C', 'y'], {'RUSTFLAGS': '-C x'}, 'RUSTFLAGS')['kind'], 'cargo configuration or target rules')
+        self.assertIsNone(judgments['sbpl-check']['rustflags_source']['agrees'])
+        many = self.unit('sbpl-check', '1' * 16, b'check bytes 3', rustflags=['-C', 'x'] * (prov.FLAG_LIMIT // 2 + 1))
+        status, _, err, judgments = self.judge([messages[0], messages[1], many])
+        self.assertEqual(status, 0, err)
+        self.assertEqual((judgments['sbpl-check']['fingerprint']['status'], judgments['sbpl-check']['effective_rustflags']), ('oversized', None))
         (self.target / 'pw-build-messages.jsonl').write_text('{not json\n')
-        status, _, err, _ = self.judge([]) if False else run_main(['cargo-judge', '--root', str(self.root), '--bin', 'policy-witness',
-            '--require-rebuilt', '0', '--rustflags-source', 'none'], self.env)[:3] + (None,)
+        status, _, err = run_main(['cargo-judge', '--root', str(self.root), '--bin', 'policy-witness',
+                                   '--require-rebuilt', '0', '--rustflags-source', 'none'], self.env)
         self.assertEqual(status, 2)
         self.assertIn('malformed', err)
+
+    def test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable(self):
+        valid = {name: self.unit(name, meta * 16, name.encode()) for name, meta in
+                 (('policy-witness', 'a'), ('sandbox-log-observer', 'b'), ('sbpl-check', 'c'))}
+
+        def without(message, key):
+            return {k: v for k, v in message.items() if k != key}
+        faults = {
+            'missing': lambda m: without(m, 'fresh'),
+            'null': lambda m: dict(m, fresh=None),
+            'numeric zero': lambda m: dict(m, fresh=0),
+            'numeric one': lambda m: dict(m, fresh=1),
+            'string false': lambda m: dict(m, fresh='false'),
+            'string true': lambda m: dict(m, fresh='true'),
+            'another executable': lambda m: dict(m, executable=str(self.release / 'elsewhere')),
+            'no profile': lambda m: without(m, 'profile'),
+            'not a binary': lambda m: dict(m, target=dict(m['target'], kind=['lib'])),
+        }
+        for require in ('0', '1'):
+            status, _, err, judgments = self.judge(list(valid.values()), require=require)
+            self.assertEqual(status, 0, err)
+            self.assertEqual({k: j['fresh'] for k, j in judgments.items()}, dict.fromkeys(valid, False))
+            for label, fault in faults.items():
+                with self.subTest(fault=label, fresh_mode=require):
+                    messages = [fault(m) if name == 'sbpl-check' else m for name, m in valid.items()]
+                    status, _, err, judgments = self.judge(messages, require=require)
+                    self.assertEqual(status, 2, err)
+                    self.assertIn("establishes no literal boolean fresh judgment", err)
+                    self.assertIn('sbpl-check (', err)
+                    self.assertEqual(judgments['sbpl-check']['status'], 'unknown')
+            # A missing message and contradictory duplicates are unknown, never a default.
+            for label, messages in (('absent', [valid['policy-witness'], valid['sandbox-log-observer']]),
+                                    ('contradictory', [*valid.values(), dict(valid['sbpl-check'], fresh=True)]),
+                                    ('duplicated', [*valid.values(), valid['sbpl-check']])):
+                with self.subTest(fault=label, fresh_mode=require):
+                    status, _, err, _ = self.judge(messages, require=require)
+                    self.assertEqual(status, 2, err)
+                    self.assertIn('sbpl-check (', err)
+
+    def test_requested_flags_are_attributed_by_precedence(self):
+        resolve = cargo_config.requested_flags
+        host = 'aarch64-apple-darwin'
+        both = resolve({}, {'CARGO_ENCODED_RUSTFLAGS': '-C\x1fx', 'RUSTFLAGS': '-C x'}, host)
+        self.assertEqual((both['source'], both['tokens'], both['overrides']), ('CARGO_ENCODED_RUSTFLAGS', ['-C', 'x'], ['RUSTFLAGS']))
+        # Equal tokens do not name a source: Cargo takes the encoded variable, and agreement is judged against it alone.
+        attribution = prov.flag_attribution(['-C', 'y'], resolve({}, {'CARGO_ENCODED_RUSTFLAGS': '-C\x1fx', 'RUSTFLAGS': '-C y'}, host), 'caller')
+        self.assertEqual((attribution['kind'], attribution['agrees']), ('CARGO_ENCODED_RUSTFLAGS', False))
+        empty = resolve({}, {'CARGO_ENCODED_RUSTFLAGS': ''}, host)
+        self.assertEqual((empty['source'], empty['tokens']), ('CARGO_ENCODED_RUSTFLAGS', []))
+        config = cargo_config.wrap(dict(build=dict(rustflags=['-C', 'b']), target={host: dict(rustflags='-C t'), 'cfg(unix)': dict(rustflags=['-C', 'u'])}), '/x/.cargo/config.toml')
+        rules = resolve(config, {}, host)
+        self.assertEqual((rules['source'], rules['resolved'], rules['tokens'], rules['overrides']), ('target rules', False, None, ['build.rustflags']))
+        self.assertIsNone(prov.flag_attribution(['-C', 't'], rules, 'none')['agrees'], 'cfg() rules are not evaluated, so agreement is unknown')
+        only_triple = cargo_config.wrap(dict(build=dict(rustflags=['-C', 'b']), target={host: dict(rustflags='-C t'), 'x86_64-unknown-linux-gnu': dict(rustflags='-C o')}), '/x/.cargo/config.toml')
+        triple = resolve(only_triple, {}, host)
+        self.assertEqual((triple['source'], triple['resolved'], triple['tokens']), ('target rules', True, ['-C', 't']))
+        build = resolve(cargo_config.wrap(dict(build=dict(rustflags='-C b')), '/x/.cargo/config.toml'), {}, host)
+        self.assertEqual((build['source'], build['tokens']), ('build.rustflags', ['-C', 'b']))
+        mixed = resolve(cargo_config.wrap(dict(build=dict(rustflags='-C b')), '/x/.cargo/config.toml'), {'CARGO_BUILD_RUSTFLAGS': '-C e'}, host)
+        self.assertEqual((mixed['source'], mixed['resolved'], mixed['tokens']), ('build.rustflags', False, None))
+        self.assertEqual(resolve({}, {}, host)['source'], 'none')
+
+
+class CargoConfigurationTests(unittest.TestCase):
+    """The resolver's reading of constructed configuration graphs; real Cargo is the oracle in the opt-in refusal controls."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-cargo-config-', dir='/private/tmp')
+        self.addCleanup(directory.cleanup)
+        self.work = Path(directory.name).resolve()
+        self.home = self.work / 'cargo-home'
+        self.home.mkdir()
+        self.cwd = self.work / 'a/b/c'
+        self.cwd.mkdir(parents=True)
+        self.bin = self.work / 'bin'
+        self.bin.mkdir()
+        for name in ('rustc', 'other-rustc'):
+            (self.bin / name).write_text('#!/bin/sh\n')
+            (self.bin / name).chmod(0o755)
+        self.env = dict(HOME=str(self.work), CARGO_HOME=str(self.home), PATH=str(self.bin))
+
+    def write(self, path, text):
+        path = self.work / path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(textwrap.dedent(text))
+        return path
+
+    def selected(self, env=None, cwd=None):
+        merged, _ = cargo_config.load(cwd or self.cwd, env or self.env)
+        return cargo_config.selection(merged, env or self.env, cwd or self.cwd, (env or self.env)['PATH'])
+
+    def unresolved(self, needle, env=None):
+        with self.assertRaises(cargo_config.Unresolved) as refused:
+            self.selected(env)
+        self.assertIn(needle, str(refused.exception))
+
+    def test_toml_forms_discovery_and_precedence(self):
+        for label, text in (('inline', 'build = { rustc = "/inline/rustc" }\n'), ('dotted', 'build.rustc = "/inline/rustc"\n'),
+                            ('table', '[build]\nrustc = "/inline/rustc"\n')):
+            with self.subTest(form=label):
+                path = self.write('a/b/c/.cargo/config.toml', text)
+                self.assertEqual(self.selected()['rustc']['command'], '/inline/rustc')
+                path.unlink()
+        # Discovery starts at the invocation directory: an ancestor's file applies, a deeper one wins, Cargo home is lowest.
+        self.write('a/.cargo/config.toml', '[build]\nrustc = "/ancestor/rustc"\nrustc-wrapper = "/ancestor/wrap"\n')
+        self.write('cargo-home/config.toml', '[build]\nrustc = "/home/rustc"\nrustc-workspace-wrapper = "/home/ws"\n')
+        chosen = self.selected()
+        self.assertEqual((chosen['rustc']['command'], chosen['wrapper']['command'], chosen['workspace_wrapper']['command']),
+                         ('/ancestor/rustc', '/ancestor/wrap', '/home/ws'))
+        self.assertEqual(self.selected(cwd=self.work)['rustc']['command'], '/home/rustc', 'a sibling invocation directory reads only Cargo home')
+        self.write('a/b/.cargo/config.toml', '[build]\nrustc = "/deeper/rustc"\n')
+        self.assertEqual(self.selected()['rustc']['command'], '/deeper/rustc')
+        # Where both names exist Cargo reads `config`; Cargo home inside the walk is read once, at its walk position.
+        self.write('a/b/.cargo/config', '[build]\nrustc = "/extensionless/rustc"\n')
+        self.assertEqual(self.selected()['rustc']['command'], '/extensionless/rustc')
+        files = cargo_config.discover(self.cwd, dict(self.env, CARGO_HOME=str(self.work / 'a/.cargo')))
+        self.assertEqual([str(p.relative_to(self.work)) for p in files], ['a/b/.cargo/config', 'a/.cargo/config.toml'])
+        # The environment overrides files: RUSTC over CARGO_BUILD_RUSTC over build.rustc, each lower source recorded as overridden.
+        env = dict(self.env, CARGO_BUILD_RUSTC='/env/build-rustc')
+        self.assertEqual((self.selected(env)['rustc']['source'], self.selected(env)['rustc']['overrides']), ('CARGO_BUILD_RUSTC', ['build.rustc']))
+        env = dict(env, RUSTC='relative/rustc')
+        rustc = self.selected(env)['rustc']
+        self.assertEqual((rustc['source'], rustc['command'], rustc['overrides']),
+                         ('RUSTC', str(self.cwd / 'relative/rustc'), ['CARGO_BUILD_RUSTC', 'build.rustc']))
+        # An empty wrapper at a higher level disables the one a file configures.
+        env = dict(self.env, RUSTC_WRAPPER='')
+        wrapper = self.selected(env)['wrapper']
+        self.assertEqual((wrapper['source'], wrapper['command'], wrapper.get('disabled')), ('RUSTC_WRAPPER', None, True))
+
+    def test_program_paths_resolve_as_cargo_resolves_them(self):
+        self.write('a/b/c/.cargo/config.toml', '[build]\nrustc = "tools/rustc"\nrustc-wrapper = "other-rustc"\n')
+        chosen = self.selected()
+        self.assertEqual(chosen['rustc']['command'], str(self.cwd / 'tools/rustc'), 'a config-relative path resolves from the parent of .cargo')
+        self.assertEqual(chosen['wrapper']['command'], str(self.bin / 'other-rustc'), 'a bare name is searched on the child PATH')
+        self.write('a/b/c/.cargo/config.toml', '[build]\nrustc-wrapper = "absent-tool"\n')
+        self.unresolved('not on the PATH Cargo gives the compiler')
+        self.write('a/b/c/.cargo/config.toml', '[build]\nrustc = ["/an", "array"]\n')
+        self.unresolved('not a string program path')
+        # The default compiler is found on the child PATH; with none, the selection is unknown, never assumed.
+        self.write('a/b/c/.cargo/config.toml', '')
+        self.unresolved('not a program path', dict(self.env, RUSTC=''))
+        self.assertEqual(self.selected()['rustc']['command'], str(self.bin / 'rustc'))
+        self.unresolved('not on the PATH', dict(self.env, PATH=str(self.work)))
+
+    def test_includes_follow_cargo_order_and_refuse_what_cannot_be_read(self):
+        self.write('a/b/c/.cargo/config.toml', 'include = ["one.toml", { path = "two.toml" }, { path = "absent.toml", optional = true }]\n'
+                                              '[build]\nrustc-wrapper = "/own/wrap"\n')
+        self.write('a/b/c/.cargo/one.toml', 'include = ["nested/three.toml"]\n[build]\nrustc = "/one/rustc"\nrustc-wrapper = "/one/wrap"\n')
+        self.write('a/b/c/.cargo/two.toml', '[build]\nrustc = "/two/rustc"\n')
+        self.write('a/b/c/.cargo/nested/three.toml', '[build]\nrustc-workspace-wrapper = "relative/ws"\n')
+        merged, graph = cargo_config.load(self.cwd, self.env)
+        chosen = cargo_config.selection(merged, self.env, self.cwd, self.env['PATH'])
+        self.assertEqual(chosen['rustc']['command'], '/two/rustc', 'a later include wins over an earlier one')
+        self.assertEqual(chosen['wrapper']['command'], '/own/wrap', 'the including file wins over its includes')
+        self.assertEqual(chosen['workspace_wrapper']['command'], str(self.cwd / '.cargo/relative/ws'),
+                         "an included file's relative path resolves from the parent of its own directory")
+        self.assertEqual([Path(n['path']).name for n in graph], ['config.toml', 'one.toml', 'three.toml', 'two.toml'])
+        self.assertEqual(graph[0]['includes'][2], dict(path=str(self.cwd / '.cargo/absent.toml'), optional=True, loaded=False))
+        for label, text, needle in (
+                ('required missing', 'include = ["gone.toml"]\n', 'required include'),
+                ('not toml', 'include = ["settings.conf"]\n', 'does not end in .toml'),
+                ('malformed entry', 'include = [{ file = "x.toml" }]\n', 'neither a path'),
+                ('malformed file', 'build = { rustc = \n', 'not valid TOML'),
+                ('cycle', 'include = ["loop.toml"]\n', 'include cycle'),
+                ('type conflict', 'include = ["typed.toml"]\n[build]\nrustflags = "-C x"\n', 'is a array in one file and a str in another')):
+            with self.subTest(include=label):
+                self.write('a/b/c/.cargo/loop.toml', 'include = ["config.toml"]\n')
+                self.write('a/b/c/.cargo/typed.toml', '[build]\nrustflags = ["-C", "y"]\n')
+                self.write('a/b/c/.cargo/config.toml', text)
+                self.unresolved(needle)
+        chain = 'a/b/c/.cargo/config.toml'
+        for depth in range(cargo_config.INCLUDE_DEPTH + 2):
+            self.write(chain, f'include = ["d{depth}.toml"]\n')
+            chain = f'a/b/c/.cargo/d{depth}.toml'
+        self.write(chain, '')
+        self.unresolved('nest deeper than')
+        self.write('a/b/c/.cargo/config.toml', 'include = [' + ', '.join(f'"w{i}.toml"' for i in range(cargo_config.FILE_COUNT)) + ']\n')
+        for i in range(cargo_config.FILE_COUNT):
+            self.write(f'a/b/c/.cargo/w{i}.toml', '')
+        self.unresolved('configuration files')
+        self.write('a/b/c/.cargo/config.toml', '# ' + 'x' * cargo_config.FILE_BYTES + '\n')
+        self.unresolved('larger than')
+        self.write('a/b/c/.cargo/config.toml', 'include = [' + ', '.join(f'"big{i}.toml"' for i in range(5)) + ']\n')
+        for i in range(5):
+            self.write(f'a/b/c/.cargo/big{i}.toml', '# ' + 'x' * (cargo_config.FILE_BYTES - 100) + '\n')
+        self.unresolved('in all')
+
+    def test_env_entries_apply_as_cargo_applies_them(self):
+        self.write('a/.cargo/config.toml', '[env]\nFORCED = { value = "lower", force = true }\nMERGED = { value = "lower", force = true }\n')
+        self.write('a/b/c/.cargo/config.toml', textwrap.dedent('''\
+            [env]
+            PLAIN = "config"
+            FORCED = { value = "higher", force = true }
+            UNFORCED = { value = "config", force = false }
+            MERGED = { value = "higher" }
+            RELATIVE = { value = "vendor/lib", relative = true }
+            '''))
+        merged, _ = cargo_config.load(self.cwd, self.env)
+        for inherited in (False, True):
+            with self.subTest(inherited=inherited):
+                base = dict(self.env, PLAIN='caller', FORCED='caller', UNFORCED='caller', MERGED='caller') if inherited else dict(self.env)
+                child, entries = cargo_config.child_environment(merged, base, self.cwd)
+                self.assertEqual(child['PLAIN'], 'caller' if inherited else 'config')
+                self.assertEqual(child['UNFORCED'], 'caller' if inherited else 'config')
+                self.assertEqual(child['FORCED'], 'higher')
+                self.assertEqual(child['MERGED'], 'higher', 'tables merge field by field: the lower file\'s force stays')
+                self.assertTrue(entries['MERGED']['force'] and entries['MERGED']['applied'])
+                self.assertEqual(child['RELATIVE'], str(self.cwd / 'vendor/lib'))
+                self.assertEqual(entries['PLAIN']['applied'], not inherited)
+        for label, text, needle in (('mixed forms', '[env]\nFORCED = "a string"\n', 'is a table in one file and a str in another'),
+                                    ('not a boolean', '[env]\nX = { value = "v", force = "yes" }\n', 'not a boolean'),
+                                    ('no value', '[env]\nX = { force = true }\n', 'neither a string'),
+                                    ('not a string', '[env]\nX = { value = 3 }\n', 'does not hold a string')):
+            with self.subTest(env=label):
+                self.write('a/b/c/.cargo/config.toml', text)
+                with self.assertRaises(cargo_config.Unresolved) as refused:
+                    merged, _ = cargo_config.load(self.cwd, self.env)
+                    cargo_config.child_environment(merged, dict(self.env), self.cwd)
+                self.assertIn(needle, str(refused.exception))
+        # A forced PATH selects the compiler Cargo starts; forced inputs that differ from the build's are conflicts.
+        alternate = self.work / 'alternate'
+        alternate.mkdir()
+        (alternate / 'rustc').write_text('#!/bin/sh\n')
+        (alternate / 'rustc').chmod(0o755)
+        canary = 'PW_CANARY_' + os.urandom(6).hex()
+        self.write('a/b/c/.cargo/config.toml', f'[env]\nPATH = {{ value = "{alternate}", force = true }}\n'
+                                              'MACOSX_DEPLOYMENT_TARGET = { value = "26.1", force = true }\n'
+                                              f'UNRELATED = "{canary}"\n')
+        merged, graph = cargo_config.load(self.cwd, self.env)
+        base = dict(self.env, MACOSX_DEPLOYMENT_TARGET='26.0', SDKROOT='/sdk')
+        child, entries = cargo_config.child_environment(merged, base, self.cwd)
+        programs = cargo_config.selection(merged, base, self.cwd, child['PATH'])
+        self.assertEqual(programs['rustc']['command'], str(alternate / 'rustc'))
+        resolution = dict(graph=graph, launcher=dict(kind='cargo'), env_entries=entries, programs=programs, child=child, merged=merged)
+        self.assertEqual(cargo_config.conflicts(resolution, base), [('MACOSX_DEPLOYMENT_TARGET', '26.1', '26.0')])
+        published = json.dumps(cargo_config.summary(resolution, str(self.work)))
+        self.assertNotIn(canary, published, 'an unrelated [env] value reached the summary')
+        self.assertNotIn(str(alternate), published.replace(str(alternate / 'rustc'), ''), 'the replaced PATH value reached the summary')
+        self.assertIn('"path_replaced_by_env": true', published)
+        self.write('a/b/c/.cargo/config.toml', '[env]\nMACOSX_DEPLOYMENT_TARGET = { value = "26.0", force = true }\n')
+        merged, graph = cargo_config.load(self.cwd, self.env)
+        child, entries = cargo_config.child_environment(merged, base, self.cwd)
+        self.assertEqual(cargo_config.conflicts(dict(child=child), base), [], 'a forced value equal to the build\'s is the valid neighbour')
 
 
 class SdkTests(unittest.TestCase):

@@ -39,6 +39,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import artifact
 import build_provenance as prov
+import cargo_config
 import checkout_lock
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
 FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
@@ -1683,6 +1684,357 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     return None
 
 
+def cargo_configuration(co, files):
+    """Write Cargo configuration files below the disposable checkout (the build's invocation directory); returns a remover."""
+    written = []
+    for relative, text in files.items():
+        path = co.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        written.append(path)
+
+    def remove():
+        for path in written:
+            path.unlink(missing_ok=True)
+        for directory in sorted({p.parent for p in written}, key=lambda d: -len(d.parts)):
+            if directory != co.root and directory.exists() and not any(directory.iterdir()):
+                directory.rmdir()
+    return remove
+
+
+def control_cargo_configuration_unresolved(co, variant):
+    """A Cargo configuration the build cannot resolve (a missing required include, invalid TOML, an unsupported value type, a
+    program not on Cargo's PATH) refuses before Cargo runs: at the stamp check in incremental mode, at Cargo admission in
+    fresh mode, before either cache is removed."""
+    build = None
+    for label, files, needle in (
+            ('required-include', {'.cargo/config.toml': 'include = ["absent.toml"]\n'}, 'required include'),
+            ('malformed', {'.cargo/config.toml': '[build\n'}, 'not valid TOML'),
+            ('value-type', {'.cargo/config.toml': '[build]\nrustc = ["/an", "array"]\n'}, 'not a string program path'),
+            ('not-on-path', {'.cargo/config.toml': 'include = ["selection.toml"]\n', '.cargo/selection.toml': '[build]\nrustc-wrapper = "pw-absent-wrapper"\n'},
+             'not on the PATH Cargo gives the compiler')):
+        for fresh in ('0', '1'):
+            remove = cargo_configuration(co, files)
+            try:
+                build = co.build(f'cargo_configuration_unresolved-{label}-{"fresh" if fresh == "1" else "incremental"}', variant, fresh=fresh)
+            finally:
+                remove()
+            step = 'Admitting the Cargo output' if fresh == '1' else 'Checking the native build directory'
+            check(build, 2, 'Cargo configuration cannot be resolved', present=(step,), absent=('Replacing the build caches', 'Building Rust'))
+            assert needle in build.stderr, (label, build.stderr[-1000:])
+            assert (co.builddir / 'build.ninja').exists() and co.target.is_dir(), 'a refusal removed a cache'
+            no_compiles(build)
+            preserved(build)
+    return build
+
+
+def control_cargo_environment_conflict(co, variant):
+    """Cargo's [env] forcing a compiler input that differs from the build's selection (the deployment target or the SDK path)
+    refuses before Cargo runs; forcing the build's own value is the valid neighbour and packages."""
+    sdkroot = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+    respelled = str(Path(sdkroot).parent / 'MacOSX.sdk') if Path(sdkroot).name != 'MacOSX.sdk' else sdkroot + '/'
+    build = None
+    for label, entry, name in (('deployment', 'MACOSX_DEPLOYMENT_TARGET = { value = "26.1", force = true }', 'MACOSX_DEPLOYMENT_TARGET'),
+                               ('sdk', f'SDKROOT = {{ value = "{respelled}", force = true }}', 'SDKROOT')):
+        for fresh in ('0', '1'):
+            remove = cargo_configuration(co, {'.cargo/config.toml': f'[env]\n{entry}\n'})
+            try:
+                build = co.build(f'cargo_environment_conflict-{label}-{"fresh" if fresh == "1" else "incremental"}', variant, fresh=fresh)
+            finally:
+                remove()
+            check(build, 1, f"Cargo's [env] gives the compiler {name}=", absent=('Replacing the build caches', 'Building Rust'))
+            assert 'conflicts with build policy' in build.stderr
+            assert (co.builddir / 'build.ninja').exists() and co.target.is_dir()
+            no_compiles(build)
+            preserved(build)
+    remove = cargo_configuration(co, {'.cargo/config.toml': f'[env]\nMACOSX_DEPLOYMENT_TARGET = {{ value = "{co.minimum}", force = true }}\n'})
+    try:
+        neighbour = co.build('cargo_environment_conflict-equal', variant)
+    finally:
+        remove()
+    passing(co, neighbour, variant)
+    assert neighbour.record['toolchain']['rustc']['selection']['env_entries']['MACOSX_DEPLOYMENT_TARGET']['applied'] is True
+    return build
+
+
+def control_cargo_judgment_unknown(co, variant):
+    """Cargo's report for a shipped target with no literal boolean fresh judgment (null, missing, a string, a number, or a
+    contradictory second message) refuses before Meson in both modes, naming the target."""
+    messages = co.root / 'controller/target/pw-build-messages.jsonl'
+    build = None
+    for label, change in (('null', dict(set=dict(fresh=None))), ('missing', dict(unset=['fresh'])), ('string', dict(set=dict(fresh='false'))),
+                          ('number', dict(set=dict(fresh=0))), ('contradictory', dict(duplicate=True, set=dict(fresh=True)))):
+        for fresh in ('0', '1'):
+            build = co.build(f'cargo_judgment_unknown-{label}-{"fresh" if fresh == "1" else "incremental"}', variant, fresh=fresh,
+                             hooks=[hook(f'judge-{label}', 'cargo', [judge(messages, 'sbpl-check', **change)], first='build')])
+            check(build, 2, "Cargo's report establishes no literal boolean fresh judgment for the admitted executable of sbpl-check (",
+                  present=('Building Rust controller + tools',), absent=BEFORE_TOOLCHAIN)
+            fired_once(build, f'judge-{label}')
+            assert build.judgments()['sbpl-check']['status'] == 'unknown'
+            no_calls(build, 'meson', 'ninja', 'codesign', 'cp')
+            preserved(build)
+    return build
+
+
+def control_cargo_selection_sequence(co, variant):
+    """Compiler selection and flags through the real script with retained caches, Cargo's compilations as the oracle: an
+    included file selecting a forwarding compiler by a relative path, a change to only that file refused reuse, a forced
+    [env] PATH selecting another compiler (the review's counterexample), the encoded flags over RUSTFLAGS and target rules
+    over build.rustflags each rebuilding with the winner recorded, and recovery without configuration."""
+    real = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip() if shutil.which('rustup') else shutil.which('rustc')
+    tools = co.root / 'pw-selection-tools'
+    first = co.forwarding('rustc-included-a', real, mode='direct', label='A', record_env=['MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN'])
+    second = co.forwarding('rustc-included-b', real, mode='direct', label='B', record_env=['MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN'])
+    tools.mkdir(exist_ok=True)
+    for forwarder in (first, second):
+        shutil.copy2(forwarder, tools / forwarder.name)
+    include = {'.cargo/config.toml': 'include = ["pw-selection.toml"]\n'}
+    remove = cargo_configuration(co, dict(include, **{'.cargo/pw-selection.toml': '[build]\nrustc = "pw-selection-tools/rustc-included-a"\n'}))
+    try:
+        selected = co.build('selection-1-included-fresh', variant, fresh='1')
+        passing(co, selected, variant)
+        rustc = selected.record['toolchain']['rustc']
+        assert (rustc['source'], rustc['command']) == ('build.rustc', str(tools / 'rustc-included-a')), rustc
+        assert rustc['selection']['programs']['rustc']['file'].endswith('.cargo/pw-selection.toml'), rustc['selection']
+        compiled = {r['path'] for r in selected.forward if r['kind'] == 'compile' and '--crate-name' in r['args']}
+        assert compiled == {str(tools / 'rustc-included-a')}, ('Cargo compiled with another compiler than the record names', compiled)
+        assert json.loads(selected.stamp)['fields']['rustc.command'] == str(tools / 'rustc-included-a')
+        # Only the included file changes: reuse is refused by the field that changed, and fresh mode recovers under B.
+        (co.root / '.cargo/pw-selection.toml').write_text('[build]\nrustc = "pw-selection-tools/rustc-included-b"\n')
+        refused = co.build('selection-2-included-changed', variant)
+        check(refused, 1, 'rustc.command', present=('Checking the native build directory',), absent=BEFORE_CARGO)
+        assert refused.stamp == selected.stamp
+        recovered = co.build('selection-3-included-fresh-b', variant, fresh='1')
+        passing(co, recovered, variant)
+        assert {r['path'] for r in recovered.forward if r['kind'] == 'compile' and '--crate-name' in r['args']} == {str(tools / 'rustc-included-b')}
+    finally:
+        remove()
+    # A forced [env] PATH puts another rustc first for every process Cargo starts.
+    alternate = co.work / 'selection-alternate'
+    alternate.mkdir(exist_ok=True)
+    shutil.copy2(co.forwarding('rustc', real, mode='direct', label='PATH', record_env=['MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN']),
+                 alternate / 'rustc')
+    remove = cargo_configuration(co, {'.cargo/config.toml': f'[env]\nPATH = {{ value = "{alternate}:{co.base_env["PATH"]}", force = true }}\n'})
+    try:
+        refused = co.build('selection-4-env-path-reuse', variant)
+        check(refused, 1, 'rustc.command', absent=BEFORE_CARGO)
+        forced = co.build('selection-5-env-path-fresh', variant, fresh='1')
+        passing(co, forced, variant)
+        rustc = forced.record['toolchain']['rustc']
+        assert rustc['command'] == str(alternate / 'rustc') and rustc['selection']['child_environment']['path_replaced_by_env'] is True, rustc
+        receipts = [r for r in forced.forward if r['kind'] == 'compile' and '--crate-name' in r['args']]
+        assert receipts and {r['path'] for r in receipts} == {str(alternate / 'rustc')}, {r['path'] for r in receipts}
+        for receipt in receipts:
+            assert receipt['environment']['MACOSX_DEPLOYMENT_TARGET'] == rustc['selection']['child_environment']['MACOSX_DEPLOYMENT_TARGET']
+            assert receipt['environment']['RUSTUP_TOOLCHAIN'] == rustc['selection']['child_environment']['RUSTUP_TOOLCHAIN']
+    finally:
+        remove()
+    restored = co.build('selection-6-plain-fresh', variant, fresh='1')
+    passing(co, restored, variant)
+    # Flags with retained caches: the encoded variable wins over the script's RUSTFLAGS and Cargo rebuilds with it.
+    encoded = co.build('selection-7-encoded-flags', variant, env=dict(CARGO_ENCODED_RUSTFLAGS='-C\x1fdebuginfo=1'))
+    passing(co, encoded, variant)
+    for name, judgment in encoded.judgments().items():
+        assert judgment['fresh'] is False, (name, 'changed flags did not rebuild')
+        assert judgment['effective_rustflags'] == ['-C', 'debuginfo=1'], judgment['effective_rustflags']
+        source = judgment['rustflags_source']
+        assert (source['kind'], source['agrees'], source['overrides']) == ('CARGO_ENCODED_RUSTFLAGS', True, ['RUSTFLAGS']), source
+    # Without RUSTFLAGS (inspection off), target rules win over build.rustflags.
+    host = co.host_triple
+    remove = cargo_configuration(co, {'.cargo/config.toml': f'[build]\nrustflags = ["-C", "opt-level=2"]\n[target.{host}]\nrustflags = ["-C", "debuginfo=1"]\n'})
+    try:
+        rules = co.build('selection-8-target-rules', variant, env=dict(PW_INSPECTION='0'))
+    finally:
+        remove()
+    passing(co, rules, variant)
+    for name, judgment in rules.judgments().items():
+        assert judgment['effective_rustflags'] == ['-C', 'debuginfo=1'], judgment['effective_rustflags']
+        source = judgment['rustflags_source']
+        assert (source['kind'], source['resolved'], source['agrees'], source['overrides']) == ('target rules', True, True, ['build.rustflags']), source
+    # Back to the script's flags, which an earlier build compiled: Cargo keeps units for different flags side by side and
+    # reuses that one, and the record binds the reused unit's own fingerprint through the uplifted executable.
+    plain = co.build('selection-9-plain', variant)
+    passing(co, plain, variant)
+    for name, judgment in plain.judgments().items():
+        source = judgment['rustflags_source']
+        assert (source['kind'], source['agrees']) == ('RUSTFLAGS (script default)', True), (name, source, judgment['fresh'])
+        assert judgment['effective_rustflags'] == ['-C', 'debuginfo=2', '-C', 'force-frame-pointers=yes', '-C', 'opt-level=1'], judgment
+    return plain
+
+
+# The recording forwarders are Python started through the system shim, which inserts SDKROOT, CPATH, LIBRARY_PATH, MANPATH
+# and LC_CTYPE into its own environment, so only variables the shim leaves alone are compared; [env] applies one rule to
+# every name, which MACOSX_DEPLOYMENT_TARGET exercises.
+ORACLE_ENV = ('PATH', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN', 'PW_ORACLE_PLAIN', 'PW_ORACLE_RELATIVE')
+
+
+class Oracle:
+    """Real Cargo building a scratch crate through recording forwarders, beside the resolver's prediction for the same
+    invocation directory and environment. Cargo's compilations, not the resolver, establish what ran."""
+
+    def __init__(self, co):
+        self.co = co
+        self.base = co.work / 'cargo-oracle'
+        if self.base.exists():
+            shutil.rmtree(self.base)
+        self.base.mkdir()
+        self.real = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip() if shutil.which('rustup') else shutil.which('rustc')
+        self.host = re.search(r'^host: (\S+)$', subprocess.check_output([self.real, '-vV'], text=True), re.M).group(1)
+        self.config = self.base / 'forward.json'
+        self.results = []
+
+    def place(self, path, mode='direct'):
+        """A recording forwarder at path; Cargo passes the compiler to a wrapper, so mode names which slot it fills."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(FORWARD, path)
+        path.chmod(0o755)
+        table = json.loads(self.config.read_text()) if self.config.exists() else {}
+        table[path.name] = dict(real=self.real, mode=mode, receipt=str(self.base / f'{path.name}.receipts.jsonl'), record_env=list(ORACLE_ENV))
+        save(self.config, table)
+        return path
+
+    def case(self, label, files, *, env=(), cwd='crate'):
+        root = self.base / label
+        crate = root / 'crate'
+        (crate / 'src').mkdir(parents=True)
+        (crate / 'Cargo.toml').write_text('[package]\nname = "oracle"\nversion = "0.1.0"\nedition = "2021"\n\n[workspace]\n')
+        (crate / 'src/main.rs').write_text('fn main() {}\n')
+        (root / 'home').mkdir()
+        for relative, text in files.items():
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(text)
+        environment = {k: v for k, v in self.co.base_env.items() if k not in prov.CARGO_SELECTION_ENV + prov.CARGO_FLAG_ENV
+                       and not k.startswith('PW_ORACLE_')}
+        environment.update(CARGO_HOME=str(root / 'home'), CARGO_TARGET_DIR=str(root / 'target'), MACOSX_DEPLOYMENT_TARGET='26.0',
+                           PW_FORWARD_CONFIG=str(self.config), CARGO_NET_OFFLINE='true')
+        environment.update(dict(env))
+        directory = root / cwd
+        directory.mkdir(parents=True, exist_ok=True)
+        try:
+            resolution, unresolved = cargo_config.resolve(str(directory), environment, probe=prov.probe), None
+        except cargo_config.Unresolved as exc:
+            resolution, unresolved = None, str(exc)
+        before = {p.name: len(p.read_text().splitlines()) for p in self.base.glob('*.receipts.jsonl')}
+        status, stdout, stderr = command(self.co.out / f'{self.co.prefix}oracle-{label}',
+                                         ['cargo', 'build', '--offline', '--manifest-path', str(crate / 'Cargo.toml')],
+                                         cwd=directory, env=environment, timeout=300)
+        receipts = []
+        for path in sorted(self.base.glob('*.receipts.jsonl')):
+            receipts += [json.loads(line) for line in path.read_text().splitlines()[before.get(path.name, 0):]]
+        compiled = [r for r in receipts if r['kind'] == 'compile']
+        summary = cargo_config.summary(resolution, os.environ.get('HOME', '')) if resolution else None
+        save(self.co.out / f'{self.co.prefix}oracle-{label}' / 'oracle.json',
+             dict(label=label, cargo_status=status, unresolved=unresolved, prediction=summary, compiled=compiled[:20]))
+        self.results.append(dict(label=label, cargo_status=status, unresolved=unresolved))
+        return dict(resolution=resolution, unresolved=unresolved, status=status, stderr=stderr, compiled=compiled, crate=crate, root=root,
+                    environment=environment, merged=resolution['merged'] if resolution else None)
+
+
+def expect_compiled_by(result, rustc, *, wrappers=()):
+    """Cargo's compilations ran the predicted chain: the outer wrapper first, each passing the next, ending at rustc."""
+    assert result['status'] == 0, (result['stderr'][-2000:])
+    assert result['unresolved'] is None, result['unresolved']
+    programs = result['resolution']['programs']
+    chain = [programs[role]['command'] for role in ('wrapper', 'workspace_wrapper') if programs[role].get('command')]
+    assert chain == [str(w) for w in wrappers], (chain, wrappers)
+    assert programs['rustc']['command'] == str(rustc), (programs['rustc'], rustc)
+    compiled = [r for r in result['compiled'] if '--crate-name' in r['args'] and 'oracle' in r['args']]
+    paths = {r['path'] for r in compiled}
+    assert str(rustc) in paths, ('the predicted compiler did not compile the crate', sorted(paths))
+    for outer, inner in zip([str(w) for w in wrappers], [str(w) for w in wrappers[1:]] + [str(rustc)]):
+        assert any(r['path'] == outer and r['real'] == inner for r in compiled), (outer, inner, compiled[:3])
+    for r in compiled:
+        assert r['cwd'] == str(result['crate']), ('Cargo compiled from another directory than the predicted probe directory', r['cwd'])
+        child = result['resolution']['child']
+        for name in ORACLE_ENV:
+            want = child.get(name)
+            if name == 'PATH' and want is not None:
+                want = hashlib.sha256(want.encode()).hexdigest()
+            assert r['environment'].get(name) == want, (name, r['environment'].get(name), want)
+
+
+def control_cargo_configuration_oracle(co, variant):
+    """The resolver's prediction against real Cargo for every configuration form the build reads: TOML forms, invocation
+    directory discovery, ancestors and Cargo home, environment overrides, both wrappers and an empty reset, includes
+    (relative, recursive, precedence, optional), [env] (forced and not, inherited or not, relative, a forced PATH
+    selecting another compiler), and flag precedence. Unreadable graphs are refused by the resolver; Cargo's own status
+    for them is kept beside the refusal."""
+    o = Oracle(co)
+    f1 = o.place(o.base / 'tools/f1/rustc-one')
+    f2 = o.place(o.base / 'tools/f2/rustc-two')
+    w1 = o.place(o.base / 'tools/w1/wrap-one', mode='rustc_wrapper')
+    w2 = o.place(o.base / 'tools/w2/wrap-two', mode='rustc_wrapper')
+    select = lambda path: f'[build]\nrustc = "{path}"\n'
+    for label, text in (('inline', f'build = {{ rustc = "{f1}" }}\n'), ('dotted', f'build.rustc = "{f1}"\n'), ('table', select(f1))):
+        expect_compiled_by(o.case(label, {'crate/.cargo/config.toml': text}), f1)
+    # Discovery follows the invocation directory, not the manifest's.
+    expect_compiled_by(o.case('invocation-directory', {'outer/.cargo/config.toml': select(f1)}, cwd='outer'), f1)
+    # The manifest directory's file is not read from another invocation directory: the default compiler runs, not f1.
+    default = o.case('manifest-directory-only', {'crate/.cargo/config.toml': select(f1)}, cwd='outer')
+    assert default['status'] == 0 and default['resolution']['programs']['rustc']['source'] == 'default', default['stderr'][-1000:]
+    assert not [r for r in default['compiled'] if r['path'] == str(f1)], 'Cargo read the manifest directory\'s configuration'
+    expect_compiled_by(o.case('ancestor', {'.cargo/config.toml': select(f1)}), f1)
+    expect_compiled_by(o.case('cargo-home', {'home/config.toml': select(f1)}), f1)
+    overridden = o.case('overridden', {'crate/.cargo/config.toml': select(f1)}, env={'RUSTC': str(f2)})
+    expect_compiled_by(overridden, f2)
+    assert overridden['resolution']['programs']['rustc']['overrides'] == ['build.rustc']
+    both = f'[build]\nrustc = "{f1}"\nrustc-wrapper = "{w1}"\nrustc-workspace-wrapper = "{w2}"\n'
+    expect_compiled_by(o.case('wrappers', {'crate/.cargo/config.toml': both}), f1, wrappers=(w1, w2))
+    expect_compiled_by(o.case('wrapper-reset', {'crate/.cargo/config.toml': both}, env={'RUSTC_WRAPPER': ''}), f1, wrappers=(w2,))
+    # Includes: a relative command from an included file, recursion, precedence and an optional absent file.
+    relative = o.place(o.base / 'include-relative/crate/tools/rustc-included')
+    expect_compiled_by(o.case('include-relative', {'crate/.cargo/config.toml': 'include = ["inc.toml"]\n',
+                                                    'crate/.cargo/inc.toml': '[build]\nrustc = "tools/rustc-included"\n'}), relative)
+    expect_compiled_by(o.case('include-recursive', {'crate/.cargo/config.toml': 'include = ["a.toml"]\n',
+                                                     'crate/.cargo/a.toml': 'include = ["deeper/b.toml"]\n',
+                                                     'crate/.cargo/deeper/b.toml': select(f1)}), f1)
+    expect_compiled_by(o.case('include-precedence', {'crate/.cargo/config.toml': 'include = ["inc.toml"]\n' + select(f2),
+                                                      'crate/.cargo/inc.toml': select(f1)}), f2)
+    expect_compiled_by(o.case('include-optional', {'crate/.cargo/config.toml': 'include = [{ path = "absent.toml", optional = true }]\n' + select(f1)}), f1)
+    for label, files, needle in (('include-required-missing', {'crate/.cargo/config.toml': 'include = ["absent.toml"]\n'}, 'required include'),
+                                 ('include-malformed', {'crate/.cargo/config.toml': 'include = ["bad.toml"]\n', 'crate/.cargo/bad.toml': 'build = {\n'},
+                                  'not valid TOML'),
+                                 ('include-cycle', {'crate/.cargo/config.toml': 'include = ["a.toml"]\n', 'crate/.cargo/a.toml': 'include = ["config.toml"]\n'},
+                                  'include cycle'),
+                                 ('malformed', {'crate/.cargo/config.toml': '[build\n'}, 'not valid TOML')):
+        result = o.case(label, files)
+        assert result['unresolved'] and needle in result['unresolved'], (label, result['unresolved'])
+    # [env]: a forced PATH selects another compiler (the review's counterexample), forced and unforced inputs, inherited
+    # or not, and a relative value.
+    alternate = o.place(o.base / 'env-path/alternate/rustc')
+    forced_path = o.case('env-path', {'crate/.cargo/config.toml': '[env]\nPATH = { value = "' + str(alternate.parent) + ':' + co.base_env['PATH']
+                                      + '", force = true }\n'})
+    expect_compiled_by(forced_path, alternate)
+    forced = o.case('env-deployment-forced', {'crate/.cargo/config.toml': select(f1) + '[env]\nMACOSX_DEPLOYMENT_TARGET = { value = "26.1", force = true }\n'})
+    expect_compiled_by(forced, f1)
+    assert cargo_config.conflicts(forced['resolution'], forced['environment']) == [('MACOSX_DEPLOYMENT_TARGET', '26.1', '26.0')]
+    unforced = o.case('env-unforced', {'crate/.cargo/config.toml': select(f1) + '[env]\nMACOSX_DEPLOYMENT_TARGET = "26.1"\n'
+                                       'PW_ORACLE_PLAIN = "from config"\nPW_ORACLE_RELATIVE = { value = "vendor/lib", relative = true }\n'})
+    expect_compiled_by(unforced, f1)
+    assert unforced['resolution']['child']['PW_ORACLE_RELATIVE'] == str(unforced['crate'] / 'vendor/lib')
+    inherited = o.case('env-inherited', {'crate/.cargo/config.toml': select(f1) + '[env]\nPW_ORACLE_PLAIN = "from config"\n'},
+                       env={'PW_ORACLE_PLAIN': 'from caller'})
+    expect_compiled_by(inherited, f1)
+    assert inherited['resolution']['child']['PW_ORACLE_PLAIN'] == 'from caller'
+    # Flags: the encoded variable over RUSTFLAGS, target rules over build.rustflags; Cargo's compilations carry the winner.
+    encoded = o.case('flags-encoded', {'crate/.cargo/config.toml': select(f1)},
+                     env={'CARGO_ENCODED_RUSTFLAGS': '-C\x1fdebug-assertions=off', 'RUSTFLAGS': '-C overflow-checks=off'})
+    expect_compiled_by(encoded, f1)
+    requested = cargo_config.requested_flags(encoded['merged'], encoded['environment'], o.host)
+    assert requested['source'] == 'CARGO_ENCODED_RUSTFLAGS' and requested['overrides'] == ['RUSTFLAGS']
+    args = [r['args'] for r in encoded['compiled'] if 'oracle' in r['args'] and r['path'] == str(f1)][-1]
+    assert 'debug-assertions=off' in args and 'overflow-checks=off' not in args, args
+    rules = o.case('flags-target', {'crate/.cargo/config.toml': f'[build]\nrustc = "{f1}"\nrustflags = ["-C", "overflow-checks=off"]\n'
+                                    f'[target.{o.host}]\nrustflags = ["-C", "debug-assertions=off"]\n'})
+    expect_compiled_by(rules, f1)
+    requested = cargo_config.requested_flags(rules['merged'], rules['environment'], o.host)
+    assert (requested['source'], requested['tokens'], requested['overrides']) == ('target rules', ['-C', 'debug-assertions=off'], ['build.rustflags'])
+    args = [r['args'] for r in rules['compiled'] if 'oracle' in r['args'] and r['path'] == str(f1)][-1]
+    assert 'debug-assertions=off' in args and 'overflow-checks=off' not in args, args
+    save(co.out / f'{co.prefix}cargo-oracle.json', o.results)
+    return None
+
+
 # The manifest's refusals in script order, with the variants each applies to.
 CONTROLS = [
     ('missing_tree_input', ('full', 'partial'), control_missing_tree_input),
@@ -1695,11 +2047,14 @@ CONTROLS = [
     ('builddir_stamp_invalid', ('full', 'partial'), control_builddir_stamp_invalid),
     ('cargo_build_dir_redirected', ('full', 'partial'), control_cargo_build_dir_redirected),
     ('cargo_build_dir_unknown', ('full', 'partial'), control_cargo_build_dir_unknown),
+    ('cargo_configuration_unresolved', ('full', 'partial'), control_cargo_configuration_unresolved),
+    ('cargo_environment_conflict', ('full', 'partial'), control_cargo_environment_conflict),
     ('fresh_removal_failed', ('full', 'partial'), control_fresh_removal_failed),
     ('missing_cargo_output', ('full', 'partial'), control_missing_cargo_output),
     ('cargo_artifact_elsewhere', ('full', 'partial'), control_cargo_artifact_elsewhere),
     ('cargo_failed', ('full', 'partial'), control_cargo_failed),
     ('cargo_target_reused', ('full', 'partial'), control_cargo_target_reused),
+    ('cargo_judgment_unknown', ('full', 'partial'), control_cargo_judgment_unknown),
     ('meson_ninja_missing', ('full', 'partial'), control_meson_ninja_missing),
     ('ninja_old', ('full', 'partial'), control_ninja_old),
     ('meson_policy', ('full', 'partial'), control_meson_policy),
@@ -1723,6 +2078,8 @@ SEQUENCES = [
     ('replaced_cached_output', control_replaced_cached_output_is_recorded_not_detected),
     ('release_entrypoints', control_release_entrypoints_enforce_fresh_mode),
     ('lock_lifetime', control_lock_lifetime),
+    ('cargo_configuration_oracle', control_cargo_configuration_oracle),
+    ('cargo_selection_sequence', control_cargo_selection_sequence),
 ]
 
 

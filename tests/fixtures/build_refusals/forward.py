@@ -15,6 +15,8 @@ copy's file name:
   hang_version    never answer a version query
   flood_stderr    write this many bytes of the stderr canary (or of "x") to
                   stderr on a version query, then answer it normally
+  record_env      environment variable names whose values each receipt
+                  keeps; PATH is kept only as its SHA-256
   stderr_canary   text written to stderr on every version query; a record
                   that keeps stderr would carry it
   receipt         file that receives one JSON line per invocation, with the
@@ -28,6 +30,7 @@ name the crate `___`, a compilation names a real crate or a C source. The
 wrapper never prints a diagnostic of its own; substituted version text covers
 parsing and comparison decisions, not which compiler produced an output.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -69,7 +72,12 @@ def main():
     kind = classify(args)
     if config.get('receipt'):
         with Path(config['receipt']).open('a') as stream:
-            stream.write(json.dumps(dict(tool=tool, real=real, args=args, cwd=os.getcwd(), kind=kind, lock=lock_descriptor())) + '\n')
+            environment = {}
+            for name in config.get('record_env', ()):
+                value = os.environ.get(name)
+                environment[name] = (hashlib.sha256(value.encode()).hexdigest() if name == 'PATH' and value is not None else value)
+            stream.write(json.dumps(dict(tool=tool, path=str(Path(__file__).absolute()), real=real, args=args, cwd=os.getcwd(),
+                                         kind=kind, lock=lock_descriptor(), environment=environment)) + '\n')
     if kind == 'version':
         if config.get('stderr_canary'):
             sys.stderr.write(config['stderr_canary'] + '\n')
