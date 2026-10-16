@@ -294,6 +294,7 @@ class Checkout:
         receipts = [json.loads(line) for line in receipt.read_text().splitlines()] if receipt.exists() else []
         forwarded = [dict(r, wrapper=name) for name, count in forward_before.items() for r in self.forward_receipts(name)[count:]]
         build = Build(name, status, stdout, stderr, receipts, dist, before, self.root, forwarded)
+        self.last = build
         save(case / 'result.json', dict(status=status, fired=[f for r in receipts for f in r['fired']],
                                         signed=build.signed(), tools=[r['tool'] for r in receipts],
                                         before=before, after=build.after, lock_free=lock_free(self.root),
@@ -916,8 +917,10 @@ def control_ninja_old(co, variant):
     check(build, 2, f'ninja 1.0.0 is older than the {co.ninja_minimum} minimum; see docs/SIGNING.md',
           present=('Checking the native toolchain',),
           absent=('Configuring native build', 'Compiling native executables', 'Assembling app bundle'))
-    fired_once(build, 'old-ninja')
-    assert not build.calls('ninja') and build.probes('ninja'), build.receipts
+    # The stamp check observes ninja's version when the directory is configured; the toolchain step's probe refuses.
+    probes = build.probes('ninja')
+    assert 1 <= len(probes) <= 2 and build.fired('old-ninja') == len(probes), build.receipts
+    assert not build.calls('ninja'), build.receipts
     no_calls(build, 'meson', 'codesign', 'cp')
     preserved(build)
     return build
@@ -1460,14 +1463,28 @@ def _control_failure(function, co, variant):
     return None
 
 
+def _restore(co, script, original, prefix):
+    """The original script, and a fresh build with it: the valid neighbour every stage and repeat starts from."""
+    script.write_bytes(original)
+    co.script = original
+    co.prefix = prefix
+    build = co.build('restore', 'full', fresh='1')
+    passing(co, build, 'full')
+
+
 def demonstrate_bypass(co):
     """A guard removed or moved past its operation must fail its control, in two stages.
 
-    The mutated script alone never reaches the guard: the build's documentation
-    and identity checks refuse a script that disagrees with the manifest or the
-    digest, which the first stage records. With those self-checks removed the
-    build runs to the displaced guard, and the second stage shows the control
-    failing there. The original script then passes the same control again."""
+    With the script's self-checks present, the control fails: usually because
+    the build's documentation and identity checks refuse a script that disagrees
+    with the manifest or the digest before the guard is reached, which the
+    first stage records from the build's stderr; a guard displaced ahead of
+    those checks fails its control by the displacement itself. With the
+    self-checks removed the build runs to the displaced guard, and the second
+    stage shows the control failing there with no self-check involved. A fresh
+    build with the original script precedes the second stage and the repeat,
+    since a mutated run can leave the stamp missing or outputs torn down; the
+    original script then passes the same control again."""
     results = []
     functions = {refusal: function for refusal, _, function in CONTROLS}
     script = co.root / 'build.sh'
@@ -1478,25 +1495,30 @@ def demonstrate_bypass(co):
         stages = {}
         try:
             for stage, text in (('self_checks', mutated), ('guard', _without_self_checks(mutated))):
+                if stage == 'guard':
+                    _restore(co, script, original, f'restore-before-guard-{refusal}-')
                 script.write_bytes(text.encode())
                 co.script = text.encode()
                 co.prefix = f'mutated-{stage}-{refusal}-'
+                co.last = None
                 failure = _control_failure(functions[refusal], co, 'full')
                 assert failure is not None, f'{refusal}: the control passed with the {label} ({stage} stage)'
-                stages[stage] = failure
+                assert co.last is not None, f'{refusal}: the control raised before building ({stage} stage): {failure}'
+                stages[stage] = dict(control=failure, build=co.last.name, status=co.last.status, stderr=co.last.stderr[-800:],
+                                     self_check_refused=any(marker in co.last.stderr for marker in SELF_CHECK_MARKERS))
         finally:
             script.write_bytes(original)
             co.script = original
             (co.builddir / 'pw-probe-runner').unlink(missing_ok=True)
-        assert any(marker in stages['self_checks'] for marker in SELF_CHECK_MARKERS), stages['self_checks']
-        assert not any(marker in stages['guard'] for marker in SELF_CHECK_MARKERS), stages['guard']
-        # The mutated runs may have torn down outputs the next control expects; the
-        # original script rebuilds them, and the same control passes again.
+        assert not stages['guard']['self_check_refused'], stages['guard']
+        _restore(co, script, original, f'restore-before-repeat-{refusal}-')
         co.prefix = f'repeat-{refusal}-'
         functions[refusal](co, 'full')
         co.prefix = ''
-        results.append(dict(refusal=refusal, mutation=label, self_check_refusal=stages['self_checks'], guard_failure=stages['guard']))
-        print(f"mutation {refusal}: {label}; refused by the self-checks, then failed at the guard: {stages['guard'][:140]}", flush=True)
+        results.append(dict(refusal=refusal, mutation=label, self_checks=stages['self_checks'], guard=stages['guard']))
+        print(f"mutation {refusal}: {label}; with the self-checks "
+              f"{'refusing the script' if stages['self_checks']['self_check_refused'] else 'passed by the displaced guard'}, "
+              f"then failed at the guard: {stages['guard']['control'][:140]}", flush=True)
     return results
 
 
@@ -1535,9 +1557,11 @@ def test_build_refusals(out, identity):
 
 
 def run_selected(out, identity, names):
-    """Development entry: the valid neighbour, then only the named controls and sequences, in the full variant."""
+    """Development entry: the valid neighbour, then only the named controls, sequences or the mutation phase
+    (`mutations`), in the full variant."""
     functions = {refusal: function for refusal, _, function in CONTROLS}
     functions.update(dict(SEQUENCES))
+    functions['mutations'] = lambda co, variant: save(out / 'mutations.json', demonstrate_bypass(co))
     unknown = [name for name in names if name not in functions]
     assert not unknown, f'unknown controls: {unknown}'
     with tempfile.TemporaryDirectory(prefix='pw-build-refusals-', dir='/private/tmp') as temporary:
