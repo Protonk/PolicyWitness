@@ -800,6 +800,9 @@ def control_lock_lifetime(co, variant):
     status, text = battery(co, 'lifetime-after')
     observations['battery_after'] = status
     assert status == 0, text[-2000:]
+    cargo = subprocess.run([*front_end, 'cargo', '--version'], env=co.base_env, capture_output=True, text=True, timeout=60)
+    observations['standalone_cargo_after'] = cargo.returncode
+    assert cargo.returncode == 0, (cargo.returncode, cargo.stderr)
     # The same control with a wrapper that drops the descriptor (Python's default) observes a free lock while the holder runs.
     dropping = co.work / 'bin-dropping'
     if not dropping.exists():
@@ -879,6 +882,7 @@ def control_lock_lifetime(co, variant):
     finally:
         cargo_release.touch()
         standalone.wait(timeout=60)
+    assert standalone.returncode == 0, standalone.returncode
     assert lock_free(co.root)
     restored = co.build('lifetime-restore', variant, fresh='1')
     passing(co, restored, variant)
@@ -2086,6 +2090,7 @@ def control_cargo_configuration_oracle(co, variant):
                                  ('malformed', {'crate/.cargo/config.toml': '[build\n'}, 'not valid TOML')):
         result = o.case(label, files)
         assert result['unresolved'] and needle in result['unresolved'], (label, result['unresolved'])
+        assert result['status'] != 0, (label, 'Cargo accepted a configuration the resolver refuses', result['stderr'][-1000:])
     # [env]: a forced PATH selects another compiler (the review's counterexample), forced and unforced inputs, inherited
     # or not, and a relative value.
     alternate = o.place(o.base / 'env-path/alternate/rustc')
@@ -2215,9 +2220,8 @@ MACHO_GUARD = ('  if ! /usr/bin/file -b "${target}" 2>/dev/null | /usr/bin/grep 
                '    exit 2\n'
                '  fi\n')
 SIGN_ANCHOR = '  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"\n'
-STAMP_CHECK = ('  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --session "${BUILD_SESSION}" \\\n'
-               '    --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n')
-WORKER_IDENTITY = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --session "${BUILD_SESSION}" \\\n'
+STAMP_CHECK = '  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n'
+WORKER_IDENTITY = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \\\n'
                    '  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"\n')
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
 PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
