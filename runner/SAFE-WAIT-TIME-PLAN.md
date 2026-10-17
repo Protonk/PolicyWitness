@@ -24,11 +24,12 @@ investigation found no candidate failures on its native arm64 machine, but did
 not test an integrated replacement, actual sleep/wake, or native Intel. Its
 passing baseline suites are not acceptance evidence for this repair.
 
-PolicyWitness's support target is Apple Silicon on macOS 26 or later. Intel
-clock behavior is outside this plan and adds no implementation or acceptance
-gate. The deliverable is a signed candidate validated on the available native
-arm64 machine, with actual sleep/wake validation recorded as pending. Equipment
-and permission for that observation have not been established; it does not gate
+PolicyWitness's support target is native arm64 execution on Apple Silicon,
+on macOS 26 or later. Intel and translated x86_64 clock behavior are outside
+this plan and add no implementation or acceptance gate. The deliverable is a
+signed candidate validated on the available native arm64 machine, with actual
+sleep/wake validation recorded as pending. Equipment and permission for that
+observation have not been established; it does not gate
 the local deliverable. The plan does not authorize power-state changes on the
 machine running the development session.
 
@@ -74,11 +75,14 @@ The associated plan is the inbound link to the investigation, following
 Implement a small worker-local clock context and helpers in the existing C
 worker. Do not introduce a general clock framework. The context owns the
 timebase numerator/denominator, a raw origin, the last accepted raw sample and
-an immutable first-fault record. That record holds the local reason, semantic
-clock stage, zero-based specimen phase and action slot when applicable; absence
-of a phase or slot is explicit for setup. Use `<mach/mach_time.h>` and fixed
-storage. Pass this context through the wait and exec helpers so the first
-fault's origin is captured where it occurs, not reconstructed by a later caller.
+an immutable first rejected-sample record (the sticky clock fault). Only raw
+sample validation may populate that record, when a sample is below the origin
+or the last accepted sample. It holds the rejection reason, semantic clock
+stage, zero-based specimen phase and action slot when applicable; absent scope
+is explicit. Setup and arithmetic refusals never populate or overwrite it.
+Use `<mach/mach_time.h>` and fixed storage. Pass this context through the wait
+and exec helpers so a sample fault's origin is captured where it occurs, not
+reconstructed by a later caller.
 
 Capture the origin at the existing `WORKER_START` position, after argument
 parsing and before mapping/setup. A raw read does not require conversion.
@@ -100,12 +104,22 @@ the origin and the last accepted raw value; equality and raw zero are valid.
 Subtract only after those checks. A regression, including observed wrap, marks
 the clock unusable for subsequent timed work. Do not fall back to another clock
 or recover by clearing the fault on the next successful-looking sample. A later
-caller refuses because of that recorded fault without taking another sample;
-it must not report a fresh backwards counter at its own stage. Arithmetic
-failures identify their own stage and scope as well. A deadline-addition failure
-refuses the affected operation without poisoning an otherwise usable raw clock;
-it is not evidence that the counter regressed. The sticky prior-fault refusal
-applies to the unusable clock state.
+caller refuses because of that recorded sample fault without taking another
+sample; it must not report a fresh backwards counter at its own stage.
+
+Arithmetic refusals are separate, operation-local results: invalid duration,
+unrepresentable delta conversion, and deadline/exclusion overflow. Here
+"unrepresentable delta" means that converting a valid tick delta cannot fit the
+required destination type; it is not a rejected raw sample. Ordered `uint64_t`
+samples have a representable tick difference after the ordering checks. Report
+an arithmetic refusal where it occurs, with its own stage and scope, leaving
+the sticky record unchanged (empty if no sample has been rejected). Keep the
+last accepted sample even when subsequent arithmetic fails. Later timed work
+can proceed with valid samples and representable arithmetic; if it encounters
+a real regression, that rejection
+becomes the first sticky fault with its own origin. A terminal proceed arithmetic
+refusal still publishes failure/done as specified below; it does not need to
+invalidate the clock to stop that phase permanently.
 
 For a positive budget in nanoseconds, compute its tick allowance as:
 
@@ -166,8 +180,10 @@ Define code 14's reason values alongside the ABI enums: invalid timebase,
 invalid/unrepresentable duration, backwards counter, unrepresentable delta,
 deadline/exclusion overflow and prior clock fault. Do not interpret these
 details as milliseconds. Only an actual rejected sample gets the backwards
-counter reason. Subsequent exec refusals also retain the first-fault origin
-and identify themselves as refusals due to that earlier fault.
+counter reason. `prior_clock_fault` requires an existing rejected-sample record;
+it must never be emitted merely because an earlier arithmetic operation failed.
+Subsequent exec refusals caused by a sticky sample fault retain that origin
+and identify themselves as refusals due to the earlier rejected sample.
 For exec, retain separate local-fault state and native-error variables internally;
 zero errno must no longer mean that an observation loop has no failure. If a
 local fault and native cleanup fault coexist, preserve both in the bounded
@@ -211,6 +227,15 @@ setup milestone and its disposition interpretation under the
 
 ## Implementation sequence
 
+Before the **step-1 signed checkpoint build**, capture the existing baseline
+worker's raw `nm -u` receipt and status, hash, embedded source identity and
+bundle provenance into retained baseline evidence outside `dist/`. Verify that
+the receipt records `_clock_gettime` and that its hash identifies the inspected
+worker. This precedes every build in this plan, not just the final candidate:
+`build.sh` defaults `DIST_DIR` to `dist/`, so the step-1 build can already replace
+the baseline bundle. Do not infer the old worker's identity from a regenerated
+checkout or collect a checkpoint worker as though it were the pre-repair baseline.
+
 Before **each** checkpoint build, including steps 1 and 2, regenerate with
 `python3 docs/generate_worker_identity.py` after editing any covered input and
 run its `--check`. The generator hashes all worker/runner `.c`, `.h` and `.swift`
@@ -251,9 +276,10 @@ the smaller of the remaining plan deadline and the post-spawn child deadline,
 and use the same source for the reap allowance.
 
 For each phase, publish progress and arrival once, then inspect the clock state.
-If it already carries a fault, publish the prior-fault refusal without a new
-sample. Otherwise take its start sample and reject an unusable start before
-entering the polling loop. Each polling decision must have this order:
+If its rejected-sample record is populated, publish the prior-fault refusal
+without a new sample. Earlier arithmetic refusals do not satisfy this condition.
+Otherwise take its start sample and reject an unusable start before entering
+the polling loop. Each polling decision must have this order:
 
 1. Obtain and validate the next observation sample. Reject unusable time before
    consulting release; do not restart the phase's allowance on another poll.
@@ -305,6 +331,7 @@ Use fixtures outside the signed app. The following are required observations:
 | Scheduled races | Add test-only gates immediately after the time decision and after the cancellation load. Hold the first beyond the allowance: the pre-expiry decision can still acknowledge. Store cancellation behind the second: it can be too late. Complement both with before-decision controls; do not require a winner in an unscheduled race. |
 | Phase/evidence integration | Gate real host collection; acknowledgement and action start stay absent before release. Fail phase 2 time after phase 1 completes; retain phase 1 publications, native results and any supported `query_first`. Retain partial phase-2 validator records on expiry, while its attempts remain unavailable and its order unestablished. Validate serialized replies through independent readers. |
 | Sticky fault provenance | Inject a backwards sample in phase 1's exec observation or reap stage, then offer valid raw values for phase 2. Preserve the first stage/phase/slot in the completed exec diagnostic; phase 2 must refuse with `prior_clock_fault`, without taking a new sample or attributing a regression to phase 2. Check the serialized summary and diagnostic, missing phase-2 acknowledgement/actions, retained phase-1 publications, and independent child cleanup. Contrast a fault first encountered by phase 2's own read. |
+| Arithmetic refusal stays local | With valid raw samples, control phase 1's exec arithmetic operands to cause deadline overflow or an unrepresentable delta conversion. Retain that attempt's local refusal and any child cleanup; assert that the sticky record stays empty and the last accepted sample stays current. Keep phase 2's allowance/exclusion representable and require its normal release, acknowledgement and action. In a companion case, introduce a later genuine regression and require its own stage/phase/slot as the first sticky origin, never the earlier arithmetic refusal's origin. |
 | Exec accounting and cleanup | Vary spawn latency, intervening non-exec time, multiple exclusions, exact plan exhaustion, child-deadline clamping and every timing stage. Check no spawn on refusal, captured output/status survival after spawn, and combined local clock plus native kill/wait failures. Keep pending/EINTR reaps bounded and independently clean up real children whose driver cannot confirm cleanup. |
 
 Use the existing `runner_c_worker_harness/exec_control_states`, remainder and
@@ -318,10 +345,9 @@ with preflight checker controls and documentation. Inspect only the worker for
 this prohibition; host and validator clocks remain out of scope. The check
 sees direct linked imports, not dynamic lookups or arbitrary library-internal
 behavior, so retain source review and native observations. This is the maintained
-regression guard. The retained original clock failure and a pre-repair artifact
-inspection supply the one-time baseline. Before the first candidate build
-replaces the baseline bundle, retain its import receipt, worker hash and source
-identity with the baseline evidence. Do not preserve an old production clock
+regression guard. The retained original clock failure and the artifact receipt
+captured **before the step-1 build**, as required at the start of the implementation
+sequence, supply the one-time baseline. Do not preserve an old production clock
 branch, compile historical source on every test run, or depend on
 `records/` to make a maintained test fail. There is no new old-clock mutation
 in `mutations.py`; its existing ordering mutations keep their separate purpose.
@@ -371,13 +397,16 @@ a silent fallback to `CLOCK_MONOTONIC`.
 
 The existing [build target](../meson.build) derives architecture from the host
 CPU and declares a macOS 26 minimum; that expression is not a support matrix.
-The support decision for this plan is Apple Silicon only. Update the platform
-requirements in [README.md](../README.md), [BUILD.md](../docs/BUILD.md) and the
-[user guide](../docs/PolicyWitness.md) to say so, while documenting the particular
-arm64 configuration actually tested. Do not require native Intel equipment,
-Rosetta tests, x86_64 clock-path research or an Intel fallback to complete this
-repair. Apple Silicon configurations may themselves select different clock
-paths; keep native observations scoped to the recorded machine and implementation.
+The support decision is native arm64 on Apple Silicon, not translated x86_64
+execution on the same hardware. Record native execution and the candidate
+worker's Mach-O architecture when establishing timing-test applicability.
+[APPLE-SILICON-PLAN.md](../APPLE-SILICON-PLAN.md) separately owns investigating
+and documenting how to enforce that restriction. It adds no build modification
+or prerequisite to this clock repair. Do not require Intel equipment, Rosetta
+clock tests or an Intel fallback here. Apple Silicon configurations may themselves
+select different clock paths; keep observations scoped to the recorded machine
+and implementation, and do not claim that a support statement enforces build
+architecture.
 
 **Actual system sleep/wake is a follow-up outside the local delivery gate.**
 No dedicated test machine, wake arrangement or authorization to interrupt this
@@ -477,14 +506,16 @@ lock or protected evidence to obtain a clean run.
 
 The local implementation deliverable is complete when the common tick domain
 is implemented without the unsafe worker import, setup refusals preserve the
-pre-apply publication convention, first-fault origins survive later refusals,
-arithmetic and race controls reject the unsafe behaviors, integrated phase and
-exec evidence survives correctly, both ordering mutations are caught, and the
-signed arm64 candidate passes the required local selections and default battery.
+pre-apply publication convention, rejected-sample origins survive later refusals,
+arithmetic refusals remain local, race controls reject the unsafe behaviors,
+integrated phase and exec evidence survives correctly, both ordering mutations
+are caught, and the signed arm64 candidate passes the required local selections
+and default battery.
 The handoff must identify the accepted source/build, equipment and run IDs and
 distinguish deterministic, native and source-path evidence. Its status is
 "validated on the recorded Apple Silicon configuration; actual sleep/wake
-validation pending" until that follow-up has its own result. The platform
-requirements must state Apple Silicon only; there is no pending Intel gate.
+validation pending" until that follow-up has its own result. State native arm64
+applicability; architecture enforcement belongs to the separate Apple Silicon
+investigation and there is no pending Intel clock gate.
 Future native validation extends or revises the evidence using new observations;
 it does not rewrite the local run's original result.
