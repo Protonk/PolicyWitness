@@ -38,6 +38,57 @@ decision, separate from the response change.
 object, a successful apply call and subsequent access observations remain
 different evidence.
 
+**Status 2026-10-16.** Complete in `b6e6c3`, with acceptance on fresh signed
+build 0.3.0 (665) at clean source
+`399de801047d4b0633ac26a8e037346651cd891d`. The request uses
+`policy.capture_compiled_profile`; the reply uses `compiled_profile`. Request
+schema 5, response schema 22 and nested receipt schema 2 carry the migration;
+controller envelope 7 is unchanged. The retired request spelling is refused
+without an alias. Captured receipts require `producer: "worker"` and
+`capture_stage: "before_apply"`; unavailable receipts publish neither context
+field. Swift, Rust and the independent Python reader check this context after
+the outer version gate.
+
+The worker still copies the same compiler object before applying it. Nonce,
+identity, checksum and length checks, successful application and normal worker
+completion still gate byte publication. Application remains separately reported
+by `sandboxed_after_apply` and the worker failure evidence. The live request
+control also kills a worker after application and requires an unavailable
+capture without bytecode or capture context, while retaining successful
+application evidence. The [guide](../docs/PolicyWitness.md#compiled-object-receipt-opt-in)
+describes the resulting contract. Capture capacity is unchanged; the renamed
+receipt and context fields add 52 bytes to the synthesized maximum reply
+(52,419,240 bytes), without changing the controller's existing output budget.
+
+Acceptance is retained in [the retention index](../tests/RETAINED.json). The
+linked run output is gitignored and available only in this local checkout.
+
+| Evidence | Result |
+| --- | --- |
+| [Default battery](../tests/out/runs/compiled-profile-default-20261017-credited/run.json), `20261017T045156Z_49c100f7` | 188/188 passed; no skips, unrun cases or harness errors; inspected app valid and unchanged. Includes 439/439 Swift tests, Rust tests, CLI/direct-XPC request controls, native worker controls and independent response readers. |
+| [Build and review receipts](../tests/out/runs/compiled-profile-default-20261017-credited/compiled-profile-acceptance/receipt.json) | Fresh signed build 665 records clean `399de80`, Xcode 27.1 and SDK 27.0. Retained build log, embedded provenance and archive/controller hashes identify the tested artifact. |
+| [Live fixture refresh](../tests/out/runs/compiled-profile-live-fixtures-20261017/run.json), `20261017T043738Z_ef312436` | Six cases passed on development build 663. Current response-22 fixtures are exact copies of live outputs with their original producer stamps; historical fixtures remain intact. Final behavior acceptance comes from the clean-build battery above. |
+
+Acceptance exposed a repeated race in unchanged controller log collection:
+after observing child exit, the collector treated one temporarily unavailable
+or interrupted nonblocking read as a terminal open pipe. The first full battery
+at `b6e6c3` stopped with 98 passed, one failed and 89 unrun. Commit `399de80`
+repairs that blocker by continuing until EOF or the original collection
+deadline, retaining process ownership and bounded cleanup. A deterministic
+delayed-read control failed against the original loop and passed after the fix;
+it also checks permanent unavailability reaches the deadline and is reaped.
+The replacement battery above credits the repaired implementation. The failed
+battery, preliminary shape/bound/reader failures, focused replacement checks
+and deterministic failing transcript are retained without rewriting their
+outcomes.
+
+**Reviewed evidence-reuse exception.** The closing changes update this record
+and `tests/RETAINED.json`, and remove `COMPILED-PROFILE-CAPTURE-PLAN.md`. Review
+found no change to executed code, generators, fixtures, test commands or app
+bytes. Acceptance therefore remains attached to clean `399de80`; the closing
+commit is not represented as the source of build 665. The temporary plan is
+retired with this acceptance record and the current owning documentation.
+
 ### P2 — Make independent diagnostics identify their context
 
 **Current burden.** Readers must repeatedly distinguish controller fallback

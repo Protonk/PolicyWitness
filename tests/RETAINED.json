@@ -863,6 +863,55 @@
       "reason": "Closing provenance review documentation checks: limits_documentation and generator_contract passed after retiring the plan and recording acceptance. Checked reporting edits after c23dd42; not a clean source snapshot.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/compiled-profile-shape-20261017",
+      "run_id": "20261017T043635Z_780288a9",
+      "reason": "Initial compiled-profile migration check: response shape, old current-reader fixtures and maximum-reply classifications required updates. One case passed and one failed; preserved, not credited.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-live-fixtures-20261017",
+      "run_id": "20261017T043738Z_ef312436",
+      "reason": "Compiled-profile live fixture refresh and request acceptance on signed development build 663: all six cases passed. Current response22 fixtures are exact copies of these live outputs; producer stamps remain intact.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-readers-20261017",
+      "run_id": "20261017T043831Z_6dfb200d",
+      "reason": "Intermediate reader checks: six passed and two failed. Swift exposed the required 52-byte maximum-reply update; Rust exposed a transient pipe-read/exit race in unchanged log collection. Preserved, not final acceptance.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-focused-final-20261017",
+      "run_id": "20261017T043956Z_f3c4df04",
+      "reason": "Focused compiled-profile checks after fixture and bound corrections: all six cases passed, including 439 Swift tests, Rust units, independent consumer replay and generator/contract/limits checks. Development source snapshot; superseded for final acceptance by the clean-build default battery.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-default-20261017",
+      "run_id": "20261017T044211Z_4addd0dc",
+      "reason": "First compiled-profile default battery on clean signed build 664: 98 passed, one Rust unit case failed on the recurring log collection race, and 89 were unrun after interruption. Not credited; repaired in 399de80 and replaced by the retained complete battery.",
+      "source": "b6e6c3139e4ccde2041ecd0712f1186d434b9c91",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-log-repair-20261017",
+      "run_id": "20261017T045007Z_ba2d0547",
+      "reason": "Focused log collection repair verification: Rust unit tests, rustfmt and independent checker controls all passed. The deterministic delayed-read test failed before the repair; that red transcript is retained with final acceptance.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/compiled-profile-default-20261017-credited",
+      "run_id": "20261017T045156Z_49c100f7",
+      "reason": "Compiled-profile acceptance on fresh signed build 665 at clean 399de80: all 188 default cases passed, no skips, unrun cases or harness errors, app unchanged. Includes 439 Swift tests, request migration and receipt context/publication controls, Rust and independent consumers. compiled-profile-acceptance contains build, provenance, console and deterministic red-test receipts.",
+      "source": "399de801047d4b0633ac26a8e037346651cd891d",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
