@@ -31,6 +31,12 @@ Supplied-text and window controls in
 output through the independent Python consumer; their
 [fixture reference](../../fixtures/deny_capture/README.md) describes the inputs.
 
+`exit_observation_does_not_replace_pipe_eof` in
+[log_capture.rs](../../../controller/src/log_capture.rs) defers real pipe reads
+until native exit observation, injects temporary unavailable/interrupted reads,
+then requires the original bytes and EOF. A permanently unavailable read must
+exhaust the original collection deadline and still establish child cleanup.
+
 ## Success criteria
 
 - All unit tests pass (exit code 0) and the crate is rustfmt-clean.

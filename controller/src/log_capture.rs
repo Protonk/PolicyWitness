@@ -569,7 +569,13 @@ fn capture_with_ops(
     }
     while report.cutoff.is_none() {
         if Instant::now() >= deadline {
-            report.cutoff = Some(Cutoff::reason("deadline", None));
+            let reason =
+                if report.process.exit_observed && !(report.stdout.eof && report.stderr.eof) {
+                    "pipe_open_after_exit"
+                } else {
+                    "deadline"
+                };
+            report.cutoff = Some(Cutoff::reason(reason, None));
             break;
         }
         if !report.process.exit_observed {
@@ -623,10 +629,10 @@ fn capture_with_ops(
             if report.stdout.eof && report.stderr.eof {
                 break;
             }
-            if !progressed {
-                report.cutoff = Some(Cutoff::reason("pipe_open_after_exit", None));
-                break;
-            }
+            // A nonblocking read can be temporarily unavailable or interrupted
+            // even after exit is observed. Only EOF closes a stream. Retain the
+            // unreaped leader and retry under the original collection deadline;
+            // an inherited open writer still reaches bounded group cleanup.
         }
         if !progressed {
             std::thread::sleep(
@@ -841,6 +847,89 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn exit_observation_does_not_replace_pipe_eof() {
+        // Hold reads until the real child exits, then supply transient native
+        // read outcomes before allowing its actual pipe bytes and EOF through.
+        // This pins the scheduling edge independently of how often it happens
+        // under concurrent native spawns on this machine.
+        struct DelayedRead {
+            exited: bool,
+            remaining: usize,
+            kind: io::ErrorKind,
+        }
+        struct UnavailableRead(io::ErrorKind);
+        impl Read for UnavailableRead {
+            fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+                Err(io::Error::from(self.0))
+            }
+        }
+        impl ProcessOps for DelayedRead {
+            fn observe(&mut self, pid: i32) -> io::Result<bool> {
+                self.exited = observe_exit(pid)?;
+                Ok(self.exited)
+            }
+            fn read(
+                &mut self,
+                mut pipe: &mut dyn Read,
+                bytes: &mut Vec<u8>,
+                observation: &mut StreamObservation,
+            ) -> io::Result<bool> {
+                if !self.exited || self.remaining > 0 {
+                    if self.exited {
+                        self.remaining -= 1;
+                    }
+                    read_once(&mut UnavailableRead(self.kind), bytes, observation)
+                } else {
+                    read_once(&mut pipe, bytes, observation)
+                }
+            }
+        }
+        for boundary in [Boundary::Observer, Boundary::LogShow] {
+            for kind in [io::ErrorKind::WouldBlock, io::ErrorKind::Interrupted] {
+                let mut ops = DelayedRead {
+                    exited: false,
+                    remaining: 6,
+                    kind,
+                };
+                let out = capture_with_ops(
+                    &mut python("import os; os.write(1,b'out'); os.write(2,b'err')"),
+                    budget(500),
+                    boundary,
+                    (64, 64),
+                    0,
+                    &mut ops,
+                );
+                assert!(out.supervision.complete(), "{:?}", out.supervision);
+                assert_eq!(out.stdout, b"out");
+                assert_eq!(out.stderr, b"err");
+                assert_eq!(ops.remaining, 0);
+                absent(out.supervision.process.pid.unwrap());
+            }
+            let mut ops = DelayedRead {
+                exited: false,
+                remaining: usize::MAX,
+                kind: io::ErrorKind::WouldBlock,
+            };
+            let out = capture_with_ops(
+                &mut python("pass"),
+                budget(100),
+                boundary,
+                (64, 64),
+                0,
+                &mut ops,
+            );
+            assert_eq!(
+                out.supervision.cutoff.as_ref().unwrap().reason,
+                "pipe_open_after_exit"
+            );
+            assert!(!out.supervision.complete());
+            assert!(out.supervision.elapsed_ms >= 100 && out.supervision.elapsed_ms < 1500);
+            assert!(out.supervision.process.reaped);
+            absent(out.supervision.process.pid.unwrap());
         }
     }
 

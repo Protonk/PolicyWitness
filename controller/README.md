@@ -269,8 +269,12 @@ without fragment repair; intact failed replies retain diagnostic events but
 withhold all correlations.
 
 The observer starts in a dedicated group with PGID equal to its PID; the log
-child inherits it. The controller observes leader exit without reaping, signals
-the owned group, then performs bounded reaping and group probes. It sends no
+child inherits it. Observing leader exit does not end pipe collection: transient
+unavailable or interrupted reads are retried until EOF under the original
+collection deadline. Exhausting that deadline with observed exit and missing
+EOF reports `pipe_open_after_exit`. The controller retains the unreaped leader
+through collection, signals the owned group, then performs bounded reaping and
+group probes. It sends no
 group signal after releasing leader ownership. Only an `ESRCH` probe establishes
 `group_absent`; signal delivery, EOF and leader exit do not. Lost ownership
 withholds signalling and leaves cleanup unconfirmed. The observer separately

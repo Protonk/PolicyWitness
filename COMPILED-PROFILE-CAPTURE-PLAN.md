@@ -23,3 +23,10 @@ Build a signed app and run capture/request/reader/native controls, then the
 default battery. Retain the applicable evidence, record any failures and
 replacement results, and commit the implementation. Retire this plan when the
 owning documentation and passing evidence establish the completed change.
+
+Acceptance exposed a repeated log-collection race in unchanged code: an idle
+nonblocking read after observed exit was treated as a terminal open pipe. A
+deterministic delayed-read control reproduces the failure. Repair this required
+verification blocker by retaining collection until EOF or its original deadline,
+preserving bounded cleanup and process ownership, then rebuild and rerun the
+battery. Keep the failed and interrupted acceptance evidence.
