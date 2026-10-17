@@ -432,6 +432,25 @@ PTY), move the test into the smoke suite and remove it from this registry.
 - **Artifacts:** Replies, specimens, file effects, PID receipts and cleanup
   records under the case artifact directory.
 
+### BYOXPC occupied-claim attribution
+
+- **Case:** `runner_byoxpc/bad_neighbor_claims`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh`
+- **Purpose:** Attribute each `already_ran` to a host generation and the request
+  holding its claim: local retirement lag, a foreign authorized client holding a
+  host, and clients queued together during launchd's respawn throttle. Also
+  observes registry lock contention on a fixture registry.
+- **Opt-in reason:** Live launchd service, timing-sensitive schedules and a
+  same-UID foreign client.
+- **When to run:** After changing host admission or exit, client connection or
+  re-acquisition, the generated plist's throttle, or the session helper's
+  registry handling.
+- **Equipment:** Signed app, matching Developer ID and GUI launchd session.
+- **Ownership:** Shared session helper; exact removal before staging deletion.
+- **Artifacts:** `claims/` holds per-request specimens, replies and effects,
+  `processes.json` (sampled generations), `unified-log.ndjson`,
+  `checker-controls.json` and `summary.json`.
+
 ### Native sandbox extensions
 
 - **Case:** `sandbox_extensions_native/feasibility`

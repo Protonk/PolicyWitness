@@ -49,3 +49,11 @@ pending cleanup, and interrupted staging deletion. It creates no real service.
 launchd behavior with fixture-child `HOME` and `PW_RUNNER_REGISTRY`, unique owned
 services and verified final cleanup. Production entrypoints have no switch for
 fake tools.
+
+`neighbor_lab.py` observes process generations for coexistence controls. A
+generation is a PID plus its kernel start time from `proc_pidinfo`; only ESRCH
+is absence, and any other failed query is an observation failure.
+`ProcessWatch` sweeps all PIDs about once a millisecond and records each process
+whose executable path is watched, with first and last sweep times. A generation
+missing from a later sweep is reported as unseen, not as exited. Processes
+shorter than a sweep can be missed; sweep timing is retained with the samples.

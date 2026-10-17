@@ -24,6 +24,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
+- `tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh`
 
 ## Artifacts
 
@@ -92,3 +93,14 @@ The second client must receive `already_ran` from the same host PID without
 creating its own file; the owner must finish. After observed host retirement
 and the launchd respawn allowance, a fresh host must serve a normal request.
 This case verifies removal before deleting its staging and recovery record.
+
+`bad_neighbor_claims` is investigation equipment for the
+[coexistence findings](../../BYOXPC-BAD-NEIGHBOR-INVESTIGATION.md). Against one
+owned service it runs spaced, back-to-back, after-reply, foreign-held and
+throttle-queued requests, plus registry lock contention on a fixture registry.
+Each `already_ran` is attributed to the host generation that issued it, and to
+the request holding that host's claim, from a process sampler and the host's
+XPC log lines, never from the outcome string. Constructed checker controls reject
+PID reuse and unknown holders first. Only the spaced positive control, the
+foreign-held schedule and lock contention are asserted. Outcomes of the unheld
+schedules are recorded, not asserted.

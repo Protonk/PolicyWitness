@@ -1620,6 +1620,12 @@
       ],
       "cases": [
         {
+          "id": "bad_neighbor_claims",
+          "description": "Investigation: attribute occupied host claims to retirement lag or a foreign authorized client",
+          "requires": ["app", "gui", "identity"],
+          "command": ["bash", "tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh"]
+        },
+        {
           "id": "single_use",
           "description": "Two authorized clients share one host claim; owner-only retirement and fresh host",
           "requires": [
@@ -1804,6 +1810,7 @@
         "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/single_use",
+        "runner_byoxpc/bad_neighbor_claims",
         "runner_byoxpc/entitlement_readback",
         "runner_byoxpc/entitlement_transfer",
         "sandbox_extensions_native/feasibility",
