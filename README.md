@@ -70,7 +70,7 @@ PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 
 cat > /tmp/file_read_deny.json <<'JSON'
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",

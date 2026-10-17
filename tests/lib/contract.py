@@ -4,11 +4,11 @@ Semantic response and envelope readers accept exactly these versions. Request
 admission and the worker ABI have separate contracts.
 """
 # BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-REQUEST_SCHEMA = 4
-RESPONSE_SCHEMA = 21
+REQUEST_SCHEMA = 5
+RESPONSE_SCHEMA = 22
 CONTROLLER_ENVELOPE = 7
 # END GENERATED CONTRACT VERSIONS
 
 # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-WORKER_IDENTITY = "b3b5f50a1f90e5cf11f864dfaa85b752961b115d773abf49ce00e28dba19f5be"
+WORKER_IDENTITY = "fffe4dffeb2815f4c079953f816b73ccd27ef9784b294179ec8ef7f88f734ba7"
 # END GENERATED WORKER IDENTITY

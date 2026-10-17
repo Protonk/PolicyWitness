@@ -55,20 +55,25 @@ and does not skip the case.
 ## Fixtures
 
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
-- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response21/valid_run.json`
-  and `response21/missing_path_run.json`
-- `response21/extension_run.json` and `extension_specimen.json`: the unmodified
+- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response22/valid_run.json`
+  and `response22/missing_path_run.json`
+- `response22/extension_run.json` and `extension_specimen.json`: the unmodified
   public CLI extension capture and its exact request, from `witness_contract/extensions`.
-- `response21/issuer_abnormal_run.json` and its specimen: unmodified combined-fault
+- `response22/issuer_abnormal_run.json` and its specimen: unmodified combined-fault
   capture with independently observed issuer publication followed by abnormal exit.
 
-The `response21/` envelopes are unmodified captures from the corresponding
+The `response22/` envelopes are unmodified captures from the corresponding
 current-producer cases; each carries its own build stamp, binary hashes and
 worker source identity. Their sibling `valid_specimen.json` and
 `missing_path_specimen.json` files are the exact submitted requests. Refresh
 each envelope and specimen together from a passing live case. Superseded
 acceptance captures remain available in Git; previous-envelope rejection uses
 constructed controls.
+
+The shared `contract/compiled_profile.json` corpus checks the nested receipt
+version, worker producer and before-apply stage. Missing or contradictory
+context is refused; unavailable receipts cannot claim capture context.
+Swift and Rust controls read the same independently authored cases.
 
 `checker_controls` runs without the app, before the live cases. Its checked-in
 live envelope passes BBX-001's expectations. Controlled changes must fail:
@@ -104,7 +109,7 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
-The expected-fixture controls accept `tests/fixtures/disposition/response21/a1_expected.json`
+The expected-fixture controls accept `tests/fixtures/disposition/response22/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), refuse the
 captured `a1_known_loss.json` as the unsupported version it is before any
 claim is read, and reject named mutations of the accepted baseline (missing

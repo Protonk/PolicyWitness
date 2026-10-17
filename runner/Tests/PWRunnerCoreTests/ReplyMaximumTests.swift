@@ -38,6 +38,7 @@ private let stringPolicy: [String: Int?] = [
     "failure_state": nil, "origin": nil, "field": nil, "unit": nil, "kind": nil,
     "filter_type": 63, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
+    "producer": nil, "capture_stage": nil,
     "abi_identity": nil, "code": nil, "collection_status": nil,
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
@@ -156,7 +157,7 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     phases[0]["validator_subprocess"] = validator
     reply["phases"] = phases
 
-    reply["applied_profile"] = ["schema_version": 1, "status": "captured", "worker_pid": 4_294_967_295,
+    reply["compiled_profile"] = ["schema_version": 2, "status": "captured", "producer": "worker", "capture_stage": "before_apply", "worker_pid": 4_294_967_295,
         "request_nonce": String(repeating: "f", count: 32), "profile_type": 0,
         "bytecode_length": PWShmLayout.captureBytes, "bytecode_sha256": String(repeating: "f", count: 64),
         "bytecode_b64": Data(repeating: 0xff, count: PWShmLayout.captureBytes).base64EncodedString(),

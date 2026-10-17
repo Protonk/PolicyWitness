@@ -113,7 +113,10 @@ pub fn reply_version(reply: &Value) -> ReplyVersion {
         None => ReplyVersion::Malformed("runner reply carries no schema_version".to_string()),
         Some(Value::Number(n)) if n.is_i64() || n.is_u64() => {
             if n.as_u64() == Some(u64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION)) {
-                ReplyVersion::Supported
+                match compiled_profile_problem(reply) {
+                    Some(problem) => ReplyVersion::Malformed(problem.to_owned()),
+                    None => ReplyVersion::Supported,
+                }
             } else {
                 ReplyVersion::Unsupported(n.clone())
             }
@@ -122,6 +125,37 @@ pub fn reply_version(reply: &Value) -> ReplyVersion {
             "runner reply schema_version is not an integer: {other}"
         )),
     }
+}
+
+/// The optional compiler receipt has its own version and context. Check it
+/// only after the outer version is admitted, without inferring application.
+fn compiled_profile_problem(reply: &Value) -> Option<&'static str> {
+    if reply.get("applied_profile").is_some() {
+        return Some("retired applied_profile field in current runner reply");
+    }
+    let capture = match reply.get("compiled_profile") {
+        None | Some(Value::Null) => return None,
+        Some(value) => value,
+    };
+    if !capture.is_object() || capture["schema_version"].as_u64() != Some(2) {
+        return Some("unsupported or malformed compiled_profile schema_version");
+    }
+    match capture["status"].as_str() {
+        Some("captured") => {
+            if capture["producer"].as_str() != Some("worker")
+                || capture["capture_stage"].as_str() != Some("before_apply")
+            {
+                return Some("compiled_profile requires worker/before_apply context");
+            }
+        }
+        Some("unavailable") => {
+            if !capture["producer"].is_null() || !capture["capture_stage"].is_null() {
+                return Some("unavailable compiled_profile cannot claim capture context");
+            }
+        }
+        _ => return Some("invalid compiled_profile status"),
+    }
+    None
 }
 
 /// `data` for an envelope written without log collection: the dossier and
@@ -1384,7 +1418,7 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response21/a1_expected.json"
+            "../../tests/fixtures/disposition/response22/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1578,7 +1612,7 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response21/a1_expected.json"
+            "../../tests/fixtures/disposition/response22/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();
@@ -2286,6 +2320,45 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     }
 
     // ---- D5: the reply version gate ----------------------------------------
+
+    #[test]
+    fn compiled_profile_context_is_gated_after_the_response_version() {
+        let cases: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/compiled_profile.json"
+        ))
+        .unwrap();
+        for case in cases.as_array().unwrap() {
+            let reply = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "compiled_profile": case["receipt"]});
+            assert_eq!(
+                matches!(reply_version(&reply), ReplyVersion::Supported),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+            let mut old = reply.clone();
+            old["schema_version"] = json!(json_contract::RESPONSE_SCHEMA_VERSION - 1);
+            assert!(matches!(reply_version(&old), ReplyVersion::Unsupported(_)));
+        }
+        let retired = json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+            "applied_profile": null});
+        assert!(matches!(
+            reply_version(&retired),
+            ReplyVersion::Malformed(_)
+        ));
+        for receipt in [
+            Value::Null,
+            json!({"schema_version":2,"status":"unavailable","worker_pid":4}),
+        ] {
+            assert!(matches!(
+                reply_version(
+                    &json!({"schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "compiled_profile": receipt})
+                ),
+                ReplyVersion::Supported
+            ));
+        }
+    }
 
     #[test]
     fn reply_versions_are_gated_exactly() {

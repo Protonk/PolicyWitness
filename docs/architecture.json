@@ -1341,11 +1341,11 @@
         },
         {
           "id": "profile_capture",
-          "label": "compiled-object receipt (applied_profile)",
+          "label": "compiled-object receipt (compiled_profile)",
           "kind": "record",
           "facts": {
             "Owner": "the worker, before apply; admitted by the host",
-            "Form": "opt-in copy of the compiled object with a nonce; its own schema_version on AppliedProfileCapture"
+            "Form": "opt-in copy of the compiled object with a nonce; CompiledProfileCapture names the worker producer and before_apply stage under its own schema_version"
           },
           "sources": [
             {
@@ -1354,13 +1354,13 @@
             },
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
-              "symbol": "AppliedProfileCapture"
+              "symbol": "CompiledProfileCapture"
             }
           ],
           "checks": [
             {
-              "path": "runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift",
-              "symbol": "runAppliedProfileCaptureTests",
+              "path": "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+              "symbol": "runCompiledProfileCaptureTests",
               "form": "test"
             }
           ]
@@ -2075,8 +2075,8 @@
           ],
           "checks": [
             {
-              "path": "runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift",
-              "symbol": "runAppliedProfileCaptureTests",
+              "path": "runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift",
+              "symbol": "runCompiledProfileCaptureTests",
               "form": "test"
             }
           ]

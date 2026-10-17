@@ -21,9 +21,11 @@ func replyFixture() throws -> PWRunnerRunResult {
       "bundle_id": "test.bundle",
       "policy_format": "sbpl",
       "policy_sha256": "hash",
-      "applied_profile": {
-        "schema_version": 1,
+      "compiled_profile": {
+        "schema_version": 2,
         "status": "captured",
+        "producer": "worker",
+        "capture_stage": "before_apply",
         "reason": "constructed",
         "worker_pid": 42,
         "request_nonce": "ffffffffffffffffffffffffffffffff",
@@ -394,7 +396,7 @@ func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
         tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
             let key = String(repeating: "é", count: 32_768)
-            let malformed: [String: Any] = ["schema_version": 4, "specimen_id": "decode",
+            let malformed: [String: Any] = ["schema_version": 5, "specimen_id": "decode",
                 "policy": ["format": "sbpl", "sbpl_source": "(version 1)", "params": [key: [1, 2]]],
                 "probe_plan": []]
             let data = try JSONSerialization.data(withJSONObject: malformed)
@@ -413,7 +415,8 @@ func runReplyFailureTests(_ tk: TestKit) {
             // Constructed bytes test serialization only, not a compiler result.
             // Base64 of 0xff maximizes '/' escaping in Foundation JSON.
             let bytes = Data(repeating: 0xff, count: PWShmLayout.captureBytes)
-            let receipt = AppliedProfileCapture(status: "captured", worker_pid: 42,
+            let receipt = CompiledProfileCapture(status: "captured", worker_pid: 42,
+                producer: "worker", capture_stage: "before_apply",
                 request_nonce: String(repeating: "f", count: 32), profile_type: 0,
                 bytecode_length: bytes.count, bytecode_sha256: String(repeating: "f", count: 64),
                 bytecode_b64: bytes.base64EncodedString(), source_sha256: String(repeating: "f", count: 64),
@@ -421,11 +424,11 @@ func runReplyFailureTests(_ tk: TestKit) {
             let allowance = 2 * 4 * ((bytes.count + 2) / 3) + 4096
             let encoded = try pwRunnerEncodeJSON(receipt)
             try expectTrue(encoded.count <= allowance)
-            let decoded = try pwRunnerDecodeJSON(AppliedProfileCapture.self, from: encoded)
+            let decoded = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: encoded)
             try expectEqual(Data(base64Encoded: decoded.bytecode_b64!), bytes)
             var result = try replyFixture()
             let baseline = try pwRunnerEncodeJSON(result).count
-            result.applied_profile = receipt
+            result.compiled_profile = receipt
             try expectTrue(try pwRunnerEncodeJSON(result).count <= baseline + allowance)
         }
         tk.run("a valid current reply uses the normal encoder unchanged") {

@@ -21,7 +21,7 @@ def action(identity, path, operation='file-read-data', attempt='access'):
 
 
 def run(pw, out, name, actions, overrides=None, expected_rc=0, session_state=None):
-    spec = {'schema_version': 4, 'specimen_id': name,
+    spec = {'schema_version': 5, 'specimen_id': name,
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'phases': [{'phase_id': f'p{i}', 'actions': a if isinstance(a, list) else [a]} for i, a in enumerate(actions)]}
     if overrides is not None:

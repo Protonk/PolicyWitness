@@ -191,7 +191,7 @@ def check_effects(specimen_rows, before, root, failures):
 
 def run_specimen(pw, out, name, root):
     spec = FIXTURE['specimens'][name]
-    request = {'schema_version': 4, 'specimen_id': spec['specimen_id'],
+    request = {'schema_version': 5, 'specimen_id': spec['specimen_id'],
                'policy': {'format': 'sbpl', 'sbpl_source': expand(spec['policy'], root)},
                'probe_plan': expand(spec['probe_plan'], root)}
     if spec.get('test_overrides'):

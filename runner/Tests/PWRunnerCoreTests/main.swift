@@ -81,7 +81,7 @@ runAugmentTests(tk)
 runListenerConfigTests(tk)
 // Compiled-object receipt wire bytes: selected-byte changes versus ignored
 // padding/order changes have different effects.
-runAppliedProfileCaptureTests(tk)
+runCompiledProfileCaptureTests(tk)
 // Worker disposition record: the resolver against fixture publications (C2, C5),
 // constructed interpretation cases (B2 to B6, C3, C4, D1), encoder integrity, and
 // the mirror of tests/lib/lifecycle_contract.py's spellings and example rows.

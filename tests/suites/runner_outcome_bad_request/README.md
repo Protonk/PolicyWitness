@@ -23,6 +23,10 @@ produce the independent file effect used by the accepted-input controls.
   unknown attempt/filter names, duplicate IDs and capacity excess refuse the
   whole specimen. Exec arguments and enabled capture have positive controls;
   known unavailable predictions preserve the independent attempt.
+  Capture controls require the worker/before-apply context and matching nonce
+  through both entrypoints, reject the retired capture spelling and previous
+  request version, and preserve successful application beside unavailable
+  capture when the worker dies before normal completion.
 
 The first two specimens are constructed in `run.sh`; the contract controls
 are in `contract.py`. Every runner refusal asserts an absent subprocess and

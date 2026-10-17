@@ -117,7 +117,7 @@ enum CWorkerOrchestrator {
             postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
             preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms,
             killBeforePublishSlot: parsed._test_overrides?.worker_kill_before_publish_slot,
-            captureAppliedProfile: parsed.policy.capture_applied_profile == true,
+            captureCompiledProfile: parsed.policy.capture_compiled_profile == true,
             captureNonce: parsed.policy.capture_nonce
         )
 
@@ -251,7 +251,7 @@ enum CWorkerOrchestrator {
             extensions: session.map { [$0.record] },
             extension_events: session == nil ? nil : events,
             test_overrides: parsed._test_overrides,
-            applied_profile: workerOutput?.profileCapture,
+            compiled_profile: workerOutput?.profileCapture,
             admission_failure: admissionFailure
         )
     }

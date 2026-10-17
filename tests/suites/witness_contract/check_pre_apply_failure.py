@@ -205,7 +205,7 @@ def main():
         paths = [Path(work) / secrets.token_hex(12) for _ in range(2)]
         seeds = [secrets.token_bytes(64) for _ in paths]
         specimen = {
-            'schema_version': 4, 'specimen_id': secrets.token_hex(12),
+            'schema_version': 5, 'specimen_id': secrets.token_hex(12),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "BLOCKED")))',
                        'params': {'BLOCKED': str(paths[1])}},

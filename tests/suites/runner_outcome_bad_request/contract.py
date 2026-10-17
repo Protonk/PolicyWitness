@@ -56,8 +56,12 @@ def main():
                 assert runner['steps'][0]['attempt']['outcome'] == 'ok', runner
                 if prediction:
                     assert runner['steps'][0]['sandbox_check']['outcome'] == prediction, runner
-                if specimen['policy'].get('capture_applied_profile'):
-                    assert runner['applied_profile']['request_nonce'] == specimen['policy']['capture_nonce'], runner
+                if specimen['policy'].get('capture_compiled_profile'):
+                    assert runner['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], runner
+                    assert runner['compiled_profile']['producer'] == 'worker' and runner['compiled_profile']['capture_stage'] == 'before_apply', runner
+                    assert runner['compiled_profile']['schema_version'] == 2 and runner['sandboxed_after_apply'] is True, runner
+                else:
+                    assert runner.get('compiled_profile') is None, runner
                 effect.unlink()
             else:
                 assert rc == 1 and env['result']['normalized_outcome'] == 'bad_request' and env['result']['ok'] is False, env
@@ -98,13 +102,33 @@ def main():
                 assert reply['normalized_outcome'] == 'ok' and observed, (example['id'], reply)
                 if example.get('prediction'):
                     assert reply['steps'][0]['sandbox_check']['outcome'] == example['prediction'], reply
-                if specimen['policy'].get('capture_applied_profile'):
-                    assert reply['applied_profile']['request_nonce'] == specimen['policy']['capture_nonce'], reply
+                if specimen['policy'].get('capture_compiled_profile'):
+                    assert reply['compiled_profile']['request_nonce'] == specimen['policy']['capture_nonce'], reply
+                    assert reply['compiled_profile']['producer'] == 'worker' and reply['compiled_profile']['capture_stage'] == 'before_apply', reply
+                    assert reply['compiled_profile']['schema_version'] == 2 and reply['sandboxed_after_apply'] is True, reply
+                else:
+                    assert reply.get('compiled_profile') is None, reply
                 effect.unlink()
             else:
                 assert reply['normalized_outcome'] == 'bad_request' and reply['request_failure'] == expected['xpc'], (example['id'], reply)
                 assert not observed and reply['steps'] == [], reply
                 assert reply.get('runner_subprocess') is None and (reply.get('phases') or [{}])[0].get('validator_subprocess') is None, reply
+
+        # A completed application survives as its own observation when abnormal
+        # worker completion makes the earlier compiler capture unavailable.
+        interrupted = copy.deepcopy(base)
+        interrupted['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
+        interrupted['_test_overrides'] = {'worker_post_apply_kill_signal': 9}
+        with RunCapture(pw, out / 'capture_worker_death', interrupted, cli_args=['--no-log-capture']) as run:
+            assert run.wait(timeout=30) != 0
+            reply = run.load_json()['data']['runner_result']
+        assert reply['sandboxed_after_apply'] is True, reply
+        assert reply['runner_subprocess']['term_signal'] == 9, reply
+        receipt = reply['compiled_profile']
+        assert receipt['status'] == 'unavailable' and receipt['reason'] == 'worker_not_complete', receipt
+        assert all(receipt.get(key) is None for key in ('producer', 'capture_stage', 'bytecode_b64')), receipt
+        assert effect.is_file(), reply
+        effect.unlink()
 
         cli('selector_alias', dict(base, runner_mode='standard', required_entitlements=[]), accepted=True)
         cli('selector_nested', dict(base, runner=dict(mode='standard', required_entitlements=[])), accepted=True)
@@ -118,7 +142,7 @@ def main():
                  ['probe_plan', 0, 'sandbox_check', 'filter'], ['probe_plan', 0, 'attempt']]
         for i, path in enumerate(paths):
             cli(f'unknown-{i}', changed(base, path + ['misspelled_intent'], True), error='misspelled_intent')
-        cli('capture_typo', changed(base, ['policy', 'capture_applied_profiel'], True), error='capture_applied_profiel')
+        cli('capture_typo', changed(base, ['policy', 'capture_compiled_profiel'], True), error='capture_compiled_profiel')
         cli('override_typo', dict(base, _test_overrides=dict(worker_timeuot_ms=1)), error='worker_timeuot_ms')
         cli('bad_parameter_type', changed(base, ['policy', 'params'], {'TARGET': 42}), error='policy.params.TARGET')
         cli('bad_optional_type', changed(base, ['probe_plan', 0, 'attempt', 'args'], 'argument'), error='attempt.args')
@@ -133,7 +157,7 @@ def main():
         for name, specimen, error in [
             ('direct_current', base, None),
             ('direct_version', changed(base, ['schema_version'], 1), 'unsupported request schema'),
-            ('direct_unknown', changed(base, ['policy', 'capture_applied_profiel'], True), 'capture_applied_profiel'),
+            ('direct_unknown', changed(base, ['policy', 'capture_compiled_profiel'], True), 'capture_compiled_profiel'),
             ('direct_selector', dict(base, runner=dict(mode='standard')), 'runner'),
             ('direct_augment', changed(base, ['policy', 'augments'], ['exec_baseline']), 'policy.augments'),
         ]:

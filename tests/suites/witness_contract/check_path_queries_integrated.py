@@ -59,7 +59,7 @@ def main():
             config = dict(validator=str(validator), receipts=str(receipt_dir), queries=queries)
             save(wrapper.with_suffix('.json'), config); save(case/'observer-config.json', config)
             before = {n:path_state(p) for n,p in [('blocked',blocked),('sibling',sibling)]}
-            spec = dict(schema_version=4, specimen_id='path_query_' + kind,
+            spec = dict(schema_version=5, specimen_id='path_query_' + kind,
                         policy=dict(format='sbpl',sbpl_source='(version 1) (allow default) (deny ' + denied_op + ' (literal ' + json.dumps(str(blocked)) + '))'),
                         phases=[dict(phase_id='p'+str(i),actions=actions) for i,actions in enumerate(phases)],
                         _test_overrides=dict(validator_executable_path=str(wrapper)))

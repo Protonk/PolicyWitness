@@ -155,8 +155,8 @@ enum SandboxCheckOutcome {
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
-    static let requestSchema: Int = 4
-    static let responseSchema: Int = 21
+    static let requestSchema: Int = 5
+    static let responseSchema: Int = 22
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -210,7 +210,7 @@ struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
             "inapplicable_field": "field has no effect in this request",
             "unsupported_policy_format": "policy.format must be sbpl",
             "missing_policy_source": "policy.sbpl_source is required",
-            "invalid_capture_nonce": "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce",
+            "invalid_capture_nonce": "capture_compiled_profile requires a fresh 32-character lowercase hex capture_nonce",
             "relative_exec_target": "exec target must be absolute",
         ]
         let detail = expected_schema.map { " (expected \($0))" }
@@ -656,11 +656,13 @@ struct PWRunnerTestOverrides: Codable {
 /// Versioned optional receipt for the exact compiler result supplied to apply.
 /// `captured` requires a complete, checksum-verified worker capture and successful
 /// application/process completion. This is not a readback of kernel state.
-struct AppliedProfileCapture: Codable {
-    var schema_version: Int = 1
+struct CompiledProfileCapture: Codable {
+    var schema_version: Int = 2
     var status: String
     var reason: String?
     var worker_pid: Int
+    var producer: String? = nil
+    var capture_stage: String? = nil
     var request_nonce: String?
     var profile_type: Int?
     var bytecode_length: Int?
@@ -672,13 +674,79 @@ struct AppliedProfileCapture: Codable {
     var parameter_count: Int?
 }
 
+
+// Keep context validation at the receipt boundary, including direct decoding
+// and evidence-preserving reply encoding. No absent context implies a stage.
+extension CompiledProfileCapture {
+    var contextProblem: String? {
+        guard schema_version == 2 else { return "unsupported compiled_profile schema_version" }
+        switch status {
+        case "captured":
+            guard producer == "worker", capture_stage == "before_apply" else {
+                return "compiled_profile requires worker/before_apply context"
+            }
+        case "unavailable":
+            guard producer == nil, capture_stage == nil else {
+                return "unavailable compiled_profile cannot claim capture context"
+            }
+        default: return "invalid compiled_profile status"
+        }
+        return nil
+    }
+    enum CodingKeys: String, CodingKey {
+        case schema_version, status, reason, worker_pid, producer, capture_stage, request_nonce, profile_type, bytecode_length, bytecode_sha256, bytecode_b64, source_sha256, source_length, params_sha256, parameter_count
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schema_version = try c.decode(Int.self, forKey: .schema_version)
+        status = try c.decode(String.self, forKey: .status)
+        reason = try c.decodeIfPresent(String.self, forKey: .reason)
+        worker_pid = try c.decode(Int.self, forKey: .worker_pid)
+        producer = try c.decodeIfPresent(String.self, forKey: .producer)
+        capture_stage = try c.decodeIfPresent(String.self, forKey: .capture_stage)
+        request_nonce = try c.decodeIfPresent(String.self, forKey: .request_nonce)
+        profile_type = try c.decodeIfPresent(Int.self, forKey: .profile_type)
+        bytecode_length = try c.decodeIfPresent(Int.self, forKey: .bytecode_length)
+        bytecode_sha256 = try c.decodeIfPresent(String.self, forKey: .bytecode_sha256)
+        bytecode_b64 = try c.decodeIfPresent(String.self, forKey: .bytecode_b64)
+        source_sha256 = try c.decodeIfPresent(String.self, forKey: .source_sha256)
+        source_length = try c.decodeIfPresent(Int.self, forKey: .source_length)
+        params_sha256 = try c.decodeIfPresent(String.self, forKey: .params_sha256)
+        parameter_count = try c.decodeIfPresent(Int.self, forKey: .parameter_count)
+        if let problem = contextProblem {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: problem))
+        }
+    }
+    func encode(to encoder: Encoder) throws {
+        if let problem = contextProblem {
+            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: problem))
+        }
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schema_version, forKey: .schema_version)
+        try c.encode(status, forKey: .status)
+        try c.encodeIfPresent(reason, forKey: .reason)
+        try c.encode(worker_pid, forKey: .worker_pid)
+        try c.encodeIfPresent(producer, forKey: .producer)
+        try c.encodeIfPresent(capture_stage, forKey: .capture_stage)
+        try c.encodeIfPresent(request_nonce, forKey: .request_nonce)
+        try c.encodeIfPresent(profile_type, forKey: .profile_type)
+        try c.encodeIfPresent(bytecode_length, forKey: .bytecode_length)
+        try c.encodeIfPresent(bytecode_sha256, forKey: .bytecode_sha256)
+        try c.encodeIfPresent(bytecode_b64, forKey: .bytecode_b64)
+        try c.encodeIfPresent(source_sha256, forKey: .source_sha256)
+        try c.encodeIfPresent(source_length, forKey: .source_length)
+        try c.encodeIfPresent(params_sha256, forKey: .params_sha256)
+        try c.encodeIfPresent(parameter_count, forKey: .parameter_count)
+    }
+}
+
 struct PWRunnerPolicySpec: Codable {
     // Policy format, e.g. PWRunnerWire.policyFormatSbpl.
     var format: String
     var sbpl_source: String?
     var params: [String: String]?
     /// Opt into sensitive worker-side bytecode/input identity capture.
-    var capture_applied_profile: Bool?
+    var capture_compiled_profile: Bool?
     /// Fresh 128-bit lowercase hex identity, echoed by the worker capture.
     var capture_nonce: String?
     // Named augments the caller opts into (e.g. "exec_baseline"). The
@@ -695,19 +763,19 @@ struct PWRunnerPolicySpec: Codable {
         sbpl_source: String? = nil,
         params: [String: String]? = nil,
         augments: [String]? = nil,
-        capture_applied_profile: Bool? = nil,
+        capture_compiled_profile: Bool? = nil,
         capture_nonce: String? = nil
     ) {
         self.format = format
         self.sbpl_source = sbpl_source
         self.params = params
         self.augments = augments
-        self.capture_applied_profile = capture_applied_profile
+        self.capture_compiled_profile = capture_compiled_profile
         self.capture_nonce = capture_nonce
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case format, sbpl_source, params, capture_applied_profile, capture_nonce, augments
+        case format, sbpl_source, params, capture_compiled_profile, capture_nonce, augments
     }
 
     init(from decoder: Decoder) throws {
@@ -716,7 +784,7 @@ struct PWRunnerPolicySpec: Codable {
         format = try c.decode(String.self, forKey: .format)
         sbpl_source = try c.decodeIfPresent(String.self, forKey: .sbpl_source)
         params = try c.decodeIfPresent([String: String].self, forKey: .params)
-        capture_applied_profile = try c.decodeIfPresent(Bool.self, forKey: .capture_applied_profile)
+        capture_compiled_profile = try c.decodeIfPresent(Bool.self, forKey: .capture_compiled_profile)
         capture_nonce = try c.decodeIfPresent(String.self, forKey: .capture_nonce)
         augments = try c.decodeIfPresent([String].self, forKey: .augments)
         // Only the controller resolves named augments. Direct XPC must not
@@ -2309,6 +2377,8 @@ struct PWRunnerPhaseResult: Codable {
     }
 }
 
+private enum RetiredProfileKey: String, CodingKey { case applied_profile }
+
 struct PWRunnerRunResult: Codable {
     // Response wire version. Semantic decoding and encoding accept exactly
     // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
@@ -2322,7 +2392,7 @@ struct PWRunnerRunResult: Codable {
     var bundle_id: String?
     var policy_format: String
     var policy_sha256: String?
-    var applied_profile: AppliedProfileCapture?
+    var compiled_profile: CompiledProfileCapture?
     var sandboxed_after_apply: Bool?
     var steps: [PWRunnerStepResult]
     var runner_subprocess: PWRunnerSubprocess?
@@ -2352,7 +2422,7 @@ struct PWRunnerRunResult: Codable {
         extensions: [PWRunnerExtensionRecord]? = nil,
         extension_events: [PWRunnerExtensionEvent]? = nil,
         test_overrides: PWRunnerTestOverrides? = nil,
-        applied_profile: AppliedProfileCapture? = nil,
+        compiled_profile: CompiledProfileCapture? = nil,
         admission_failure: PWRunnerAdmissionFailure? = nil,
         reporting_failure: PWRunnerReportingFailure? = nil,
         request_failure: PWRunnerRequestFailure? = nil
@@ -2367,7 +2437,7 @@ struct PWRunnerRunResult: Codable {
         self.bundle_id = bundle_id
         self.policy_format = policy_format
         self.policy_sha256 = policy_sha256
-        self.applied_profile = applied_profile
+        self.compiled_profile = compiled_profile
         self.admission_failure = admission_failure
         self.request_failure = request_failure
         self.sandboxed_after_apply = sandboxed_after_apply
@@ -2381,7 +2451,7 @@ struct PWRunnerRunResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extensions, extension_events, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, compiled_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, phases, extensions, extension_events, test_overrides, reporting_failure
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -2392,6 +2462,11 @@ struct PWRunnerRunResult: Codable {
             throw DecodingError.dataCorruptedError(forKey: .schema_version, in: c,
                 debugDescription: "unsupported response schema \(schema_version) (this reader accepts \(PWContract.responseSchema))")
         }
+        let retired = try decoder.container(keyedBy: RetiredProfileKey.self)
+        if retired.contains(.applied_profile) {
+            throw DecodingError.dataCorruptedError(forKey: .applied_profile, in: retired,
+                debugDescription: "retired applied_profile field in current runner reply")
+        }
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
         rc = try c.decode(Int.self, forKey: .rc)
@@ -2401,7 +2476,7 @@ struct PWRunnerRunResult: Codable {
         bundle_id = try c.decodeIfPresent(String.self, forKey: .bundle_id)
         policy_format = try c.decode(String.self, forKey: .policy_format)
         policy_sha256 = try c.decodeIfPresent(String.self, forKey: .policy_sha256)
-        applied_profile = try c.decodeIfPresent(AppliedProfileCapture.self, forKey: .applied_profile)
+        compiled_profile = try c.decodeIfPresent(CompiledProfileCapture.self, forKey: .compiled_profile)
         sandboxed_after_apply = try c.decodeIfPresent(Bool.self, forKey: .sandboxed_after_apply)
         steps = try c.decode([PWRunnerStepResult].self, forKey: .steps)
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
@@ -2534,7 +2609,7 @@ struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(bundle_id, forKey: .bundle_id)
         try c.encode(policy_format, forKey: .policy_format)
         try c.encodeIfPresent(policy_sha256, forKey: .policy_sha256)
-        try c.encodeIfPresent(applied_profile, forKey: .applied_profile)
+        try c.encodeIfPresent(compiled_profile, forKey: .compiled_profile)
         try c.encodeIfPresent(sandboxed_after_apply, forKey: .sandboxed_after_apply)
         try c.encode(steps, forKey: .steps)
         try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)

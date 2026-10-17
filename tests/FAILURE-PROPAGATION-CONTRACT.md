@@ -1040,7 +1040,7 @@ attempt reaping is nonblocking and bounded by exec_reap_grace; the host's
 worker/validator final reap after successful termination remains blocking. No early
 stderr capture is added: pre-mapping, direct dependency output and crashes in the
 reporting path may leave no diagnostic text. Optional compiled-object capture
-(<!-- span limits.applied_profile.binary -->1 MiB<!-- /span -->) and exec stream text (<!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> each, with truncation marker) keep their
+(<!-- span limits.compiled_profile.binary -->1 MiB<!-- /span -->) and exec stream text (<!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> each, with truncation marker) keep their
 existing refusal/truncation semantics. Neither optional capture failure nor an
 incomplete post-apply attempt proves a policy cause or instrumentation defect.
 

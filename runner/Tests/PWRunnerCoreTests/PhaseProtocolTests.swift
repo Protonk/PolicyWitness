@@ -29,7 +29,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
-                "blackbox_e2e/checker/response21/issuer_abnormal_run.json"))) as! [String: Any]
+                "blackbox_e2e/checker/response22/issuer_abnormal_run.json"))) as! [String: Any]
             let baseline = (envelope["data"] as! [String: Any])["runner_result"]!
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf: fixtures.appendingPathComponent(
                 "contract/evidence_types.json"))) as! [[String: Any]]
@@ -63,7 +63,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 .deletingLastPathComponent().deletingLastPathComponent()
             let fixtures = root.appendingPathComponent("tests/fixtures")
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf:
-                fixtures.appendingPathComponent("blackbox_e2e/checker/response21/extension_run.json"))) as! [String: Any]
+                fixtures.appendingPathComponent("blackbox_e2e/checker/response22/extension_run.json"))) as! [String: Any]
             let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             let cases = try JSONSerialization.jsonObject(with: Data(contentsOf:
@@ -103,7 +103,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent()
             let envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent(
-                "tests/fixtures/blackbox_e2e/checker/response21/extension_run.json"))) as! [String: Any]
+                "tests/fixtures/blackbox_e2e/checker/response22/extension_run.json"))) as! [String: Any]
             let raw = (envelope["data"] as! [String: Any])["runner_result"] as! [String: Any]
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
             try expectEqual(baseline.phases.count, 3)

@@ -1,10 +1,10 @@
 {
-  "response_schema" : 21,
+  "response_schema" : 22,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
-      "applied_profile" : "object",
       "bundle_id" : "string",
+      "compiled_profile" : "object",
       "error" : "string",
       "extension_events" : "array",
       "extensions" : "array",
@@ -35,12 +35,14 @@
       "step_index" : "number",
       "unit" : "string"
     },
-    "reply.applied_profile" : {
+    "reply.compiled_profile" : {
       "bytecode_b64" : "string",
       "bytecode_length" : "number",
       "bytecode_sha256" : "string",
+      "capture_stage" : "string",
       "parameter_count" : "number",
       "params_sha256" : "string",
+      "producer" : "string",
       "profile_type" : "number",
       "reason" : "string",
       "request_nonce" : "string",

@@ -4,8 +4,8 @@ import CryptoKit
 
 // Construct wire bytes independently of the reader: changes to what is selected
 // and changes outside that selection must have different effects.
-func runAppliedProfileCaptureTests(_ tk: TestKit) {
-    tk.group("Applied-profile capture: bounded worker receipt") {
+func runCompiledProfileCaptureTests(_ tk: TestKit) {
+    tk.group("Compiled-profile capture: bounded worker receipt") {
         let source = "(version 1)(allow default)"
         let params = [CWorkerParam(key: "TARGET", value: "/a")]
         let nonce = "00112233445566778899aabbccddeeff"
@@ -28,11 +28,36 @@ func runAppliedProfileCaptureTests(_ tk: TestKit) {
             return b
         }
         func read(_ b: [UInt8], applied: Bool = true, rc: Int32 = 0, done: Bool = true,
-                  exit: Int32? = 0, signal: Int32? = nil) -> AppliedProfileCapture {
+                  exit: Int32? = 0, signal: Int32? = nil) -> CompiledProfileCapture {
             b.withUnsafeBufferPointer {
                 decodeProfileCapture($0.baseAddress!, workerPid: 4321, applied: applied, applyRC: rc,
                     done: done, exitCode: exit, termSignal: signal, source: source, params: params, nonce: nonce)
             }
+        }
+        tk.run("context contract is checked independently on decoding and encoding") {
+            let url = repositoryRoot().appendingPathComponent("tests/fixtures/contract/compiled_profile.json")
+            let rows = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
+            for row in rows {
+                let bytes = try JSONSerialization.data(withJSONObject: row["receipt"]!)
+                if row["valid"] as! Bool {
+                    let decoded = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: bytes)
+                    _ = try pwRunnerEncodeJSON(decoded)
+                } else {
+                    try expectThrows { _ = try pwRunnerDecodeJSON(CompiledProfileCapture.self, from: bytes) }
+                }
+            }
+            var captured = read(fixture())
+            try expectEqual(captured.schema_version, 2)
+            try expectEqual(captured.producer, "worker")
+            try expectEqual(captured.capture_stage, "before_apply")
+            captured.capture_stage = "after_apply"
+            try expectThrows { _ = try pwRunnerEncodeJSON(captured) }
+            captured = read(fixture()); captured.producer = nil
+            try expectThrows { _ = try pwRunnerEncodeJSON(captured) }
+            var unavailable = read(fixture(), done: false)
+            try expectNil(unavailable.producer); try expectNil(unavailable.capture_stage)
+            unavailable.capture_stage = "before_apply"
+            try expectThrows { _ = try pwRunnerEncodeJSON(unavailable) }
         }
         tk.run("capture preserves selected bytes; padding and unselected bytes are ignored") {
             var b = fixture()
@@ -79,19 +104,19 @@ func runAppliedProfileCaptureTests(_ tk: TestKit) {
         }
         tk.run("capture is opt-in and round-trips with a nonce") {
             let plain = PWRunnerPolicySpec(format: "sbpl", sbpl_source: source)
-            try expectNil(plain.capture_applied_profile)
+            try expectNil(plain.capture_compiled_profile)
             let requested = PWRunnerPolicySpec(format: "sbpl", sbpl_source: source,
-                capture_applied_profile: true, capture_nonce: nonce)
+                capture_compiled_profile: true, capture_nonce: nonce)
             let decoded = try JSONDecoder().decode(PWRunnerPolicySpec.self, from: JSONEncoder().encode(requested))
             try expectEqual(decoded.capture_nonce, nonce)
-            let receipt = try JSONDecoder().decode(AppliedProfileCapture.self, from: JSONEncoder().encode(read(fixture())))
+            let receipt = try JSONDecoder().decode(CompiledProfileCapture.self, from: JSONEncoder().encode(read(fixture())))
             try expectEqual(receipt.bytecode_b64, Data([10,20,30]).base64EncodedString())
             try expectEqual(receipt.request_nonce, nonce)
         }
         tk.run("capture nonce is required and validated before spawn") {
             for n: String? in [nil, "", String(repeating: "A", count: 32), String(repeating: "0", count: 31)] {
                 let input = CWorkerInput(workerExecutablePath: "/nonexistent", policy: source, slots: [],
-                    captureAppliedProfile: true, captureNonce: n)
+                    captureCompiledProfile: true, captureNonce: n)
                 guard case .failure(.captureNonceInvalid, _) = runCWorker(input) else {
                     throw TestFailure(message: "invalid nonce reached worker spawn")
                 }

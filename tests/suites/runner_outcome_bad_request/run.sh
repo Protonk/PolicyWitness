@@ -39,7 +39,7 @@ from pathlib import Path
 # controller forwards untouched. Missing the required specimen_id field so
 # the Swift PWRunnerRunSpec decoder rejects it.
 spec = {
-    "schema_version": 4,
+    "schema_version": 5,
     "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
@@ -120,7 +120,7 @@ import sys
 from pathlib import Path
 
 spec = {
-    "schema_version": 4,
+    "schema_version": 5,
     "specimen_id": "missing_required_filter_value_probe",
     "policy": {
         "format": "sbpl",

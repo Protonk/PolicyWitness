@@ -67,7 +67,7 @@ def create_step(step_id, target):
 
 
 def specimen(target):
-    return {'schema_version': 4, 'specimen_id': 'killed_before_publication', 'policy': dict(POLICY),
+    return {'schema_version': 5, 'specimen_id': 'killed_before_publication', 'policy': dict(POLICY),
             'probe_plan': [read_step('prefix', '/etc/hosts'), create_step('created', target),
                            read_step('after', '/etc/hosts')],
             '_test_overrides': dict(OVERRIDES)}

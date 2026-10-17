@@ -21,7 +21,7 @@ ABI_LIMITS = {
     'parameter_value': ('PW_SHM_PARAM_VALUE_MAX', 1),
     'exec_stream': ('PW_SHM_CHILD_OUTPUT_BYTES', 1),
     'worker_diagnostic': ('PW_SHM_DIAGNOSTIC_BYTES', 1),
-    'applied_profile': ('PW_SHM_CAPTURE_BYTES', 0),
+    'compiled_profile': ('PW_SHM_CAPTURE_BYTES', 0),
     'observed_path': ('PW_SHM_OBSERVED_PATH_MAX', 1),
     'attempt_error': ('PW_SHM_ERROR_MAX', 1),
     'fresh_read_bytes': ('PW_SHM_FRESH_READ_BYTES', 0),

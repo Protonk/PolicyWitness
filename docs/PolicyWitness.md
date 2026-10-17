@@ -42,7 +42,7 @@ Create a specimen:
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -156,7 +156,7 @@ Minimal skeleton (copy/paste):
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "skeleton",
   "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
@@ -185,7 +185,7 @@ the phase array itself must be nonempty.
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "two_reads",
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
   "phases": [
@@ -262,7 +262,7 @@ PW_EXTENSION_DIR=$(mktemp -d /private/tmp/pw-extension.XXXXXX)
 printf 'extension witness\n' > "$PW_EXTENSION_DIR/target"
 cat > "$PW_EXTENSION_DIR/request.json" <<JSON
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "extension_lifecycle",
   "policy": {
     "format": "sbpl",
@@ -336,7 +336,7 @@ PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-input.XXXXXX)
 cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "request-grammar",
   "policy": {
     "format": "sbpl",
@@ -364,12 +364,12 @@ can report
 `prediction_unavailable` while the creation attempt succeeds.
 
 Now make a copy with a new target and the deliberately misspelled field
-`capture_applied_profiel`. The new target lets you check that refusal prevents
+`capture_compiled_profiel`. The new target lets you check that refusal prevents
 an otherwise valid create from running:
 
 ```sh
 sed -e 's|/created"|/refused"|g' \
-    -e 's|"format": "sbpl",|"format": "sbpl", "capture_applied_profiel": true,|' \
+    -e 's|"format": "sbpl",|"format": "sbpl", "capture_compiled_profiel": true,|' \
     "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/typo.json"
 PW_REFUSAL_RC=0
 "$PW" run "$PW_EXAMPLE_DIR/typo.json" --no-log-capture > "$PW_EXAMPLE_DIR/refusal.json" || PW_REFUSAL_RC=$?
@@ -384,7 +384,7 @@ In `refusal.json`, `result.normalized_outcome` is `bad_request`, and
 ```json
 {
   "code": "unknown_field",
-  "path": ["policy", "capture_applied_profiel"]
+  "path": ["policy", "capture_compiled_profiel"]
 }
 ```
 
@@ -428,7 +428,7 @@ Three field relationships commonly matter:
 | --- | --- |
 | `attempt.args` | A non-null array, including `[]`, is accepted only for `exec/spawn`. |
 | `sandbox_check.filter.value` | `none` accepts only absence or null. Other recognized kinds require a nonempty string. |
-| `policy.capture_nonce` | Requires `capture_applied_profile: true`; enabled capture requires a fresh nonce of 32 lowercase hexadecimal characters. |
+| `policy.capture_nonce` | Requires `capture_compiled_profile: true`; enabled capture requires a fresh nonce of 32 lowercase hexadecimal characters. |
 
 A refusal identifies one problem. Correct it and rerun; another problem may
 then be reported. `bad_request` exits 1 and executes no probe steps. Missing or
@@ -465,10 +465,11 @@ references is supported by the compiler.
 
 ### Compiled-object receipt (opt-in)
 
-An SBPL policy may set `capture_applied_profile: true` and a fresh per-application
+An SBPL policy may set `capture_compiled_profile: true` and a fresh per-application
 `capture_nonce` (32 lowercase hexadecimal characters). The runner adds
-`data.runner_result.applied_profile`, with its own `schema_version: 1`. A
-`status: "captured"` receipt contains `worker_pid`, `request_nonce`, `profile_type`,
+`data.runner_result.compiled_profile`, with its own `schema_version: 2`. A
+`status: "captured"` receipt requires `producer: "worker"` and
+`capture_stage: "before_apply"`. It contains `worker_pid`, `request_nonce`, `profile_type`,
 `bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
 `source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
 the caller must arrange restricted receipt storage before opting in.
@@ -479,9 +480,16 @@ to `sandbox_apply`, before applying. The host requires successful apply,
 complete worker exit, matching PID/nonce, lengths, input identities and payload
 checksum before publication. Missing capture, failed apply, worker death or
 capture corruption is unavailable.
-An unavailable nested receipt has a reason and no bytecode, or is absent if no
-worker result was obtained. Capture identifies the supplied compiled object, not
-kernel readback.
+An unavailable nested receipt has a reason and no bytecode, producer or capture
+stage, or is absent if no worker result was obtained. An opt-in request alone
+does not establish that capture ran. Readers require the nested receipt version
+and the exact producer/stage values for a captured receipt.
+
+Application is reported separately by `sandboxed_after_apply` and any published
+`runner_subprocess.worker_evidence.failure`. An unavailable capture does not
+establish application failure. The receipt identifies compiler output; successful
+application and subsequent access observations supply different evidence. None
+is a readback of the kernel's effective policy.
 
 Source identity hashes the UTF-8 C string consumed by compilation. Parameter
 identity is SHA-256 of the little-endian 32-bit pair count followed by sorted
@@ -833,7 +841,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,419,188 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,419,240 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -870,7 +878,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Steps admitted to correlation (`log_correlation_steps`) | 256 items | Each of the submitted plan and returned step arrays. Excess withholds log correlation; execution evidence is unchanged. | Fixed. |
 | Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance. Excess output is not retained. | Fixed. |
 | Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
-| Optional compiled-object capture (`applied_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
+| Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
 | Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
 | Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
 | Phase publication storage (`phase_publications`) | 256 bytes | Eight fixed 32-byte phase records within the shared header. The phase cap prevents excess publication storage. | Fixed. |
@@ -979,7 +987,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 21, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 22, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -2233,7 +2241,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "specimen_id": "byoxpc_smoke",
   "policy": {
     "format": "sbpl",

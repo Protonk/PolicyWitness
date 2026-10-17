@@ -16,6 +16,8 @@ deterministic, and checked into the repo so tests are hermetic.
   against. A failing comparison writes a candidate into the case artifacts;
   replace the golden after review, and bump the number in `docs/contract.json`
   first when the failure says so. See `docs/CONTRACT.md`.
+  `compiled_profile.json` supplies independent valid and invalid nested receipt
+  contexts to Swift decoding, Rust reply admission and Python consumer controls.
   `phase_collection.json` supplies hand-reviewed compatible and contradictory
   collection/disposition observations to the Swift encoder, Rust disposition
   reader and Python consumer/oracle controls. Accepted failures include driver

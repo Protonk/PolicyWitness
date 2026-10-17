@@ -50,7 +50,9 @@ Use these corpus IDs with the same renderer:
 | Example | Lesson | Expected behavior |
 | --- | --- | --- |
 | `malformed_json` | JSON syntax | `invalid_json` at the root. |
-| `capture_typo` | Closed field names | `unknown_field` at `policy.capture_applied_profiel`. |
+| `retired_capture_spelling` | Retired field names | `unknown_field` at `policy.capture_applied_profile`. |
+| `previous_request_version` | Previous contract | `unsupported_schema` before execution. |
+| `capture_typo` | Closed field names | `unknown_field` at `policy.capture_compiled_profiel`. |
 | `wrong_args_type` | Field types | `type_mismatch` at the attempt's `args`. |
 | `parameter_value` | Open dictionaries | Parameter names are caller data, but their values must be strings. |
 | `optional_nulls` | Defaults | Optional nulls have the same meaning as absence; creation succeeds. |
@@ -81,7 +83,7 @@ Inspect `data.request_failure` in that envelope:
 ```json
 {
   "code": "unknown_field",
-  "path": ["policy", "capture_applied_profiel"]
+  "path": ["policy", "capture_compiled_profiel"]
 }
 ```
 

@@ -1637,7 +1637,7 @@ mod tests {
     #[test]
     fn validator_collection_ownership_rejects_transplants_and_ignores_pid_reuse() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1700,7 +1700,7 @@ mod tests {
     #[test]
     fn shared_evidence_type_corpus() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
         ))
         .unwrap();
         let rows: Vec<Value> = serde_json::from_str(include_str!(
@@ -1735,7 +1735,7 @@ mod tests {
     #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1801,7 +1801,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response21/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1823,7 +1823,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response21/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response22/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -2068,7 +2068,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response21/a1_expected.json"
+            "../../tests/fixtures/disposition/response22/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

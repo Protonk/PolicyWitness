@@ -4,7 +4,7 @@
     "phase": "execution",
     "lesson": "Acceptance is witnessed by a newly created file.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -38,7 +38,7 @@
     "phase": "structure",
     "lesson": "An integer-valued JSON number can be written with a decimal point.",
     "request": {
-      "schema_version": 4.0,
+      "schema_version": 5.0,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -72,7 +72,7 @@
     "phase": "structure",
     "lesson": "Optional null means absent.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -110,12 +110,12 @@
     "phase": "structure",
     "lesson": "Unknown field names cannot silently remove a requested observation.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
-        "capture_applied_profiel": true
+        "capture_compiled_profiel": true
       },
       "probe_plan": [
         {
@@ -140,14 +140,61 @@
         "code": "unknown_field",
         "path": [
           "policy",
-          "capture_applied_profiel"
+          "capture_compiled_profiel"
         ]
       },
       "xpc": {
         "code": "unknown_field",
         "path": [
           "policy",
-          "capture_applied_profiel"
+          "capture_compiled_profiel"
+        ]
+      }
+    }
+  },
+  {
+    "id": "retired_capture_spelling",
+    "phase": "structure",
+    "lesson": "Retired capture vocabulary is refused before execution.",
+    "request": {
+      "schema_version": 5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "capture_applied_profile": true
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "policy",
+          "capture_applied_profile"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "policy",
+          "capture_applied_profile"
         ]
       }
     }
@@ -157,7 +204,7 @@
     "phase": "structure",
     "lesson": "Recognized optional fields still have types.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -208,7 +255,7 @@
     "phase": "structure",
     "lesson": "Parameter names are open data; their values must be strings.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -259,7 +306,7 @@
     "phase": "meaning",
     "lesson": "Arguments have meaning only for exec/spawn.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -310,7 +357,7 @@
     "phase": "meaning",
     "lesson": "A capture nonce requires capture to be enabled.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -357,7 +404,7 @@
     "phase": "meaning",
     "lesson": "The none filter takes no value, including an empty string.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -409,7 +456,7 @@
     "phase": "meaning",
     "lesson": "An unknown filter name refuses the whole specimen.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -461,7 +508,7 @@
     "phase": "meaning",
     "lesson": "A bad later attempt prevents the earlier valid create from executing.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -524,7 +571,7 @@
     "phase": "meaning",
     "lesson": "Joining evidence requires distinct step IDs.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -587,7 +634,7 @@
     "phase": "capacity",
     "lesson": "The grammar admits an array that this worker cannot accommodate.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -662,14 +709,14 @@
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       },
       "xpc": {
         "code": "unsupported_schema",
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       }
     }
   },
@@ -678,7 +725,7 @@
     "phase": "syntax",
     "lesson": "JSON syntax is checked before request structure.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -719,7 +766,7 @@
     "phase": "boundary",
     "lesson": "The controller consumes runner selection; direct XPC refuses it.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -761,7 +808,7 @@
     "phase": "boundary",
     "lesson": "Malformed controller input has the same refusal record shape.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -813,7 +860,7 @@
     "phase": "boundary",
     "lesson": "The controller resolves fragments; direct XPC refuses unresolved intent.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -856,7 +903,7 @@
     "phase": "execution",
     "lesson": "An exec argument is consumed: touch creates the named file.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -893,12 +940,12 @@
     "phase": "execution",
     "lesson": "Enabled capture returns the submitted nonce with its receipt.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
-        "capture_applied_profile": true,
+        "capture_compiled_profile": true,
         "capture_nonce": "$NONCE"
       },
       "probe_plan": [
@@ -929,7 +976,7 @@
     "phase": "execution",
     "lesson": "A known excluded query preserves its unavailable observation and the independent attempt.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -964,7 +1011,7 @@
     "phase": "structure",
     "lesson": "The version field must be an integer-valued number.",
     "request": {
-      "schema_version": 4.5,
+      "schema_version": 5.5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -994,14 +1041,14 @@
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       },
       "xpc": {
         "code": "type_mismatch",
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       }
     }
   },
@@ -1040,14 +1087,14 @@
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       },
       "xpc": {
         "code": "missing_value",
         "path": [
           "schema_version"
         ],
-        "expected_schema": 4
+        "expected_schema": 5
       }
     }
   },
@@ -1056,7 +1103,7 @@
     "phase": "meaning",
     "lesson": "Conflicting selection instructions are request errors before registry lookup.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1102,7 +1149,7 @@
     "phase": "syntax",
     "lesson": "A malformed root cannot become a default request.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1143,7 +1190,7 @@
     "phase": "structure",
     "lesson": "A malformed root cannot become a default request.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1184,7 +1231,7 @@
     "phase": "structure",
     "lesson": "Fractional integers are field type errors, including test-seam inputs.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1233,7 +1280,7 @@
     "phase": "meaning",
     "lesson": "An ordinary paired action can be authored in an explicit phase.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1272,7 +1319,7 @@
     "phase": "structure",
     "lesson": "Choose exactly one plan form.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1338,7 +1385,7 @@
     "phase": "meaning",
     "lesson": "An explicit phase sequence is nonempty.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1366,7 +1413,7 @@
     "phase": "meaning",
     "lesson": "Phase identities must be nonempty.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1419,7 +1466,7 @@
     "phase": "meaning",
     "lesson": "Phase identities are unique even for empty phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1476,7 +1523,7 @@
     "phase": "meaning",
     "lesson": "Action identities are unique across the complete sequence.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1553,7 +1600,7 @@
     "phase": "structure",
     "lesson": "Every ordinary action retains the required query/attempt pair.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1603,7 +1650,7 @@
     "phase": "structure",
     "lesson": "Every ordinary action retains the required query/attempt pair.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1655,7 +1702,7 @@
     "phase": "structure",
     "lesson": "Phase object fields are closed.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1709,7 +1756,7 @@
     "phase": "capacity",
     "lesson": "The ninth phase exceeds bounded publication storage.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1790,7 +1837,7 @@
     "phase": "capacity",
     "lesson": "Phase identities occupy at most 63 UTF-8 bytes.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1843,7 +1890,7 @@
     "phase": "capacity",
     "lesson": "Phase identities cannot contain NUL.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1896,7 +1943,7 @@
     "phase": "meaning",
     "lesson": "An unsupported action refuses the entire phase sequence before any effects.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1953,7 +2000,7 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -1992,7 +2039,7 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2031,7 +2078,7 @@
     "phase": "capacity",
     "lesson": "Phase identity bounds count UTF-8 bytes without truncation.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2084,7 +2131,7 @@
     "phase": "capacity",
     "lesson": "Eight ordered phases fit the fixed publication capacity.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2151,7 +2198,7 @@
     "phase": "capacity",
     "lesson": "The total action cap applies across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2191,7 +2238,7 @@
     "phase": "capacity",
     "lesson": "The total action cap applies across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2241,7 +2288,7 @@
     "phase": "execution",
     "lesson": "Preparation precedes actions: unavailable issuance does not suppress an ordinary create or fabricate lifecycle calls.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2301,7 +2348,7 @@
     "phase": "meaning",
     "lesson": "The declaration cap applies even if each declaration would be sequential.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2375,7 +2422,7 @@
     "phase": "meaning",
     "lesson": "Declarations require explicit phase placement.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2425,7 +2472,7 @@
     "phase": "meaning",
     "lesson": "References are nonempty.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2499,7 +2546,7 @@
     "phase": "meaning",
     "lesson": "Consume must name its local handle reference.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2579,7 +2626,7 @@
     "phase": "meaning",
     "lesson": "Consume resolves only the declaration in this specimen.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2659,7 +2706,7 @@
     "phase": "meaning",
     "lesson": "Token and handle references identify different observations.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2739,7 +2786,7 @@
     "phase": "meaning",
     "lesson": "A declared release needs an earlier consume even if runtime consumption might fail.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2817,7 +2864,7 @@
     "phase": "meaning",
     "lesson": "Release names the handle reference from an earlier consume.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2897,7 +2944,7 @@
     "phase": "meaning",
     "lesson": "Release accepts a handle reference only.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -2978,7 +3025,7 @@
     "phase": "meaning",
     "lesson": "The consume cap holds across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3069,7 +3116,7 @@
     "phase": "meaning",
     "lesson": "The release cap holds across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3159,7 +3206,7 @@
     "phase": "meaning",
     "lesson": "Lifecycle operations are a closed vocabulary.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3239,7 +3286,7 @@
     "phase": "meaning",
     "lesson": "Extension specimens cannot spawn an exec child.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3312,7 +3359,7 @@
     "phase": "meaning",
     "lesson": "Raw tokens are not an input field.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3387,7 +3434,7 @@
     "phase": "meaning",
     "lesson": "The declaration does not accept arbitrary extension classes.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3462,7 +3509,7 @@
     "phase": "meaning",
     "lesson": "An intervention cannot hide an ordinary pair on the same action.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3545,7 +3592,7 @@
     "phase": "meaning",
     "lesson": "Intervention field names are closed.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3626,7 +3673,7 @@
     "phase": "meaning",
     "lesson": "Ordinary and lifecycle IDs share one uniqueness rule.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3704,7 +3751,7 @@
     "phase": "meaning",
     "lesson": "Admission can succeed while the selected issuer capability is absent.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3778,7 +3825,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3838,7 +3885,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3912,7 +3959,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -3972,7 +4019,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4046,7 +4093,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4106,7 +4153,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4186,7 +4233,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4246,7 +4293,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4326,7 +4373,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4386,7 +4433,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4460,7 +4507,7 @@
     "phase": "execution",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4520,7 +4567,7 @@
     "phase": "meaning",
     "lesson": "UTF-8 capacity is measured independently of scalar count.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4594,7 +4641,7 @@
     "phase": "meaning",
     "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4668,7 +4715,7 @@
     "phase": "meaning",
     "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4746,7 +4793,7 @@
     "phase": "meaning",
     "lesson": "Invalid lifecycle intent refuses before any ordinary effect.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4826,7 +4873,7 @@
     "phase": "capacity",
     "lesson": "Ordinary and lifecycle actions share the aggregate action cap across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4887,7 +4934,7 @@
     "phase": "capacity",
     "lesson": "Ordinary and lifecycle actions share the aggregate action cap across phases.",
     "request": {
-      "schema_version": 4,
+      "schema_version": 5,
       "specimen_id": "request-grammar",
       "policy": {
         "format": "sbpl",
@@ -4952,5 +4999,51 @@
       }
     },
     "repeat_phase_actions": 255
+  },
+  {
+    "id": "previous_request_version",
+    "phase": "version",
+    "lesson": "The previous request contract is unsupported.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_schema",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 5
+      },
+      "xpc": {
+        "code": "unsupported_schema",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 5
+      }
+    }
   }
 ]

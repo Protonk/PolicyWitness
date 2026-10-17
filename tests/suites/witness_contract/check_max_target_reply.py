@@ -63,7 +63,7 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
         steps.append(dict(step_id=sid, sandbox_check=dict(
             operation='sysctl-read' if large_filter else 'file-read-data',
             filter=dict(kind='sysctl_name' if large_filter else 'path', value=query)), attempt=attempt))
-    return dict(schema_version=4, specimen_id=secrets.token_hex(12),
+    return dict(schema_version=5, specimen_id=secrets.token_hex(12),
                 policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)' +
                             ('(deny file-read-data)' if denied else '')),
                 probe_plan=steps)
@@ -185,9 +185,9 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measu
             # Live capture must be present in the maximal-metadata workload; the
             # conservative receipt allowance (base64 with every slash escaped plus
             # metadata) is recorded beside it. The capture size is the manifest's.
-            capture_bytes = documented_limit('applied_profile')
+            capture_bytes = documented_limit('compiled_profile')
             profile_allowance = 2 * 4 * ((capture_bytes + 2) // 3) + 4096
-            capture = data['runner_result']['applied_profile']
+            capture = data['runner_result']['compiled_profile']
             assert capture['status'] == 'captured' and capture['bytecode_length'] > 0, capture
             assert client['stdout_bytes_received'] + profile_allowance <= maximum, 'reply plus a maximal receipt exceeds the synthesized maximum'
             observation.update(profile_allowance_bytes=profile_allowance,
@@ -274,7 +274,7 @@ def main():
         request = specimen([str(stream_helper)] * STEPS, control, exec_args=stream_args)
         request['specimen_id'] = '\x01' * 255
         request['run_kind'] = '\x01' * 63
-        request['policy'].update(capture_applied_profile=True, capture_nonce=secrets.token_hex(16))
+        request['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
         for index, step in enumerate(request['probe_plan']):
             step['step_id'] = '\x01' * 59 + f'{index:04d}'
         observation = run_case(pw, out, 'control_character_exec', request, measure_margin=True,

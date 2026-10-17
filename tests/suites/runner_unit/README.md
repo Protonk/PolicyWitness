@@ -129,8 +129,10 @@ policy descriptor, requiring native failure evidence and no EOF receipt.
 The exact Rust replay is ignored in standalone Cargo runs because it requires
 those fresh driver receipts; it is mandatory in the default `runner_unit` case.
 
-`AppliedProfileCaptureTests` constructs receipt bytes independently of the
-reader. Changed selected bytes or consumed inputs must change their digests;
+`CompiledProfileCaptureTests` constructs receipt bytes independently of the
+reader. The shared `contract/compiled_profile.json` cases check schema and
+producer/stage admission in Swift, Rust and Python; encoding also refuses
+context on unavailable receipts. Changed selected bytes or consumed inputs must change their digests;
 padding, unselected bytes and parameter-pair order must not. Corrupt identity,
 extent or integrity fields, failed application and incomplete/abnormal worker
 completion withhold the bytecode. The

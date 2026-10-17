@@ -412,6 +412,18 @@ def _validate_step(runner, step, failed_reporting):
 
 def _validate_reply(runner):
     errors = []
+    capture = runner.get('compiled_profile')
+    if capture is not None:
+        if not isinstance(capture, dict) or type(capture.get('schema_version')) is not int or capture['schema_version'] != 2:
+            errors.append('unsupported or malformed compiled_profile schema_version')
+        elif capture.get('status') == 'captured':
+            if capture.get('producer') != 'worker' or capture.get('capture_stage') != 'before_apply':
+                errors.append('compiled_profile requires worker/before_apply context')
+        elif capture.get('status') == 'unavailable':
+            if capture.get('producer') is not None or capture.get('capture_stage') is not None:
+                errors.append('unavailable compiled_profile cannot claim capture context')
+        else:
+            errors.append('invalid compiled_profile status')
     failure = runner.get('reporting_failure')
     failed_reporting = failure is not None
     if failed_reporting or runner.get('normalized_outcome') == 'runner_reporting_failed':

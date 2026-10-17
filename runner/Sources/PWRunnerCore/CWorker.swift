@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "b3b5f50a1f90e5cf11f864dfaa85b752961b115d773abf49ce00e28dba19f5be"
-    static let abiIdentity: [UInt8] = [0xb3, 0xb5, 0xf5, 0x0a, 0x1f, 0x90, 0xe5, 0xcf, 0x11, 0xf8, 0x64, 0xdf, 0xaa, 0x85, 0xb7, 0x52, 0x96, 0x1b, 0x11, 0x5d, 0x77, 0x3a, 0xbf, 0x49, 0xce, 0x00, 0xe2, 0x8d, 0xba, 0x19, 0xf5, 0xbe]
+    static let abiIdentityHex = "fffe4dffeb2815f4c079953f816b73ccd27ef9784b294179ec8ef7f88f734ba7"
+    static let abiIdentity: [UInt8] = [0xff, 0xfe, 0x4d, 0xff, 0xeb, 0x28, 0x15, 0xf4, 0xc0, 0x79, 0x95, 0x3f, 0x81, 0x6b, 0x73, 0xcc, 0xd2, 0x7e, 0xf9, 0x78, 0x4b, 0x29, 0x41, 0x79, 0xec, 0x8e, 0xf7, 0xf8, 0x8f, 0x73, 0x4b, 0xa7]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -294,7 +294,7 @@ struct CWorkerInput {
     var policy: String
     var params: [CWorkerParam]
     /// Explicit opt-in: captured bytecode and input hashes are sensitive output.
-    var captureAppliedProfile: Bool
+    var captureCompiledProfile: Bool
     var captureNonce: String?
     var slots: [CWorkerSlotInput]
     var phases: [CWorkerPhaseInput]
@@ -352,7 +352,7 @@ struct CWorkerInput {
                 killBeforePublishSlot: Int? = nil,
                 execChildDeadlineMs: Int? = nil,
                 execAttemptBudgetMs: Int? = nil,
-                captureAppliedProfile: Bool = false,
+                captureCompiledProfile: Bool = false,
                 captureNonce: String? = nil) {
         self.workerExecutablePath = workerExecutablePath
         self.policy = policy
@@ -368,7 +368,7 @@ struct CWorkerInput {
         self.killBeforePublishSlot = killBeforePublishSlot
         self.execChildDeadlineMs = execChildDeadlineMs
         self.execAttemptBudgetMs = execAttemptBudgetMs
-        self.captureAppliedProfile = captureAppliedProfile
+        self.captureCompiledProfile = captureCompiledProfile
         self.captureNonce = captureNonce
     }
 }
@@ -413,7 +413,7 @@ struct CWorkerOutput {
     var exitCode: Int32?     // nil unless successfully reaped with exit
     var termSignal: Int32?   // nil unless successfully reaped with signal
     var slots: [CWorkerSlotResult]
-    var profileCapture: AppliedProfileCapture? = nil
+    var profileCapture: CompiledProfileCapture? = nil
     /// Host-only fields, forwarded to runner_subprocess without reinterpretation.
     /// Defaults support constructed test inputs, not live observations.
     /// See PWRunnerSubprocess for JSON paths, types and absence semantics.
@@ -555,9 +555,9 @@ func captureNonceBytes(_ nonce: String?) -> Data? {
 
 func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
     applied: Bool, applyRC: Int32, done: Bool, exitCode: Int32?, termSignal: Int32?,
-    source: String, params: [CWorkerParam], nonce: String?) -> AppliedProfileCapture {
-    func unavailable(_ reason: String) -> AppliedProfileCapture {
-        AppliedProfileCapture(status: "unavailable", reason: reason, worker_pid: Int(workerPid))
+    source: String, params: [CWorkerParam], nonce: String?) -> CompiledProfileCapture {
+    func unavailable(_ reason: String) -> CompiledProfileCapture {
+        CompiledProfileCapture(status: "unavailable", reason: reason, worker_pid: Int(workerPid))
     }
     guard applied && applyRC == 0 else { return unavailable("successful_application_unconfirmed") }
     guard done && exitCode == 0 && termSignal == nil else { return unavailable("worker_not_complete") }
@@ -588,7 +588,8 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
         && digest(PWShmLayout.captureParamsSha256Offset) == consumedParamsDigest(params) else {
         return unavailable("capture_consumed_input_mismatch")
     }
-    return AppliedProfileCapture(status: "captured", worker_pid: Int(workerPid), request_nonce: nonce, profile_type: 0,
+    return CompiledProfileCapture(status: "captured", worker_pid: Int(workerPid),
+        producer: "worker", capture_stage: "before_apply", request_nonce: nonce, profile_type: 0,
         bytecode_length: length, bytecode_sha256: sha256Hex(bytes), bytecode_b64: bytes.base64EncodedString(),
         source_sha256: digest(PWShmLayout.captureSourceSha256Offset), source_length: source.utf8.count,
         params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
@@ -619,7 +620,7 @@ enum CWorkerRunError: Error, CustomStringConvertible {
     var description: String {
         switch self {
         case .captureNonceInvalid:
-            return "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce"
+            return "capture_compiled_profile requires a fresh 32-character lowercase hex capture_nonce"
         case .admissionFailed(let record):
             return "\(record.field) has \(record.actual) \(record.unit); maximum \(record.maximum)"
         case .execTargetNotAbsolute(let stepId, let target):
@@ -897,7 +898,7 @@ struct ChildProcessState {
 func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 transferCalls: PolicyTransferCalls = PolicyTransferCalls(),
                 postApplied: CWorkerPostAppliedHook? = nil, phaseBoundary: CWorkerPhaseHook? = nil) -> CWorkerRunResult {
-    if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
+    if input.captureCompiledProfile && captureNonceBytes(input.captureNonce) == nil {
         return .failure(.captureNonceInvalid)
     }
     // All capacity refusals use the same host-owned record, before shm/spawn.
@@ -974,8 +975,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // it below the source capacity.
     let policyBytes = Array(input.policy.utf8)
     writeU32(rawBase, offset: PWShmLayout.policyBytesExpectedOffset, UInt32(policyBytes.count))
-    writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
-    if input.captureAppliedProfile, let nonce = captureNonceBytes(input.captureNonce) {
+    writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureCompiledProfile ? 1 : 0)
+    if input.captureCompiledProfile, let nonce = captureNonceBytes(input.captureNonce) {
         nonce.copyBytes(to: rawBase.advanced(by: PWShmLayout.captureNonceOffset), count: nonce.count)
     }
 
@@ -1476,7 +1477,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         exitCode: exitCode,
         termSignal: termSignal,
         slots: slotResults,
-        profileCapture: input.captureAppliedProfile ? decodeProfileCapture(
+        profileCapture: input.captureCompiledProfile ? decodeProfileCapture(
             rawBase.advanced(by: PWShmLayout.captureOffset), workerPid: pid,
             applied: sawApplied, applyRC: applyRC, done: sawDone,
             exitCode: exitCode, termSignal: termSignal, source: input.policy, params: input.params,

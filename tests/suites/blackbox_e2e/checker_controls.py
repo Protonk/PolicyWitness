@@ -218,6 +218,17 @@ def consumer_controls(artifacts, current):
     errors = validate(previous)
     assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
     run('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
+    # Context facts have independent readers; the fixture is authored separately
+    # from the producer and keeps application observations outside the receipt.
+    context_cases = json.loads((ROOT / 'tests/fixtures/contract/compiled_profile.json').read_text())
+    for case in context_cases:
+        document = copy.deepcopy(current)
+        runner(document)['compiled_profile'] = case['receipt']
+        run('compiled_profile_' + case['name'], document,
+            rejected_by=None if case['valid'] else 'compiled_profile')
+    retired = copy.deepcopy(current)
+    runner(retired)['applied_profile'] = None
+    run('retired_profile_field', retired, rejected_by='unknown key reply.applied_profile')
     policy_check_controls(run)
     observer_controls(run)
     from extension_controls import run_extension_controls
@@ -540,7 +551,7 @@ def client_output_control(artifacts):
     client = app / 'Contents/MacOS/pw-runner-client'
     assert client.is_file(), f'shipped client missing: {client}'
     request = artifacts / 'client-request.json'
-    request.write_text(json.dumps({'schema_version': 4, 'specimen_id': 'client-control',
+    request.write_text(json.dumps({'schema_version': 5, 'specimen_id': 'client-control',
                                    'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                                    'probe_plan': []}) + '\n')
     result = subprocess.run([str(client), 'run', '--timeout-ms', '2000', '--request', '-',
@@ -635,7 +646,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response21/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response22/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -711,7 +722,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response21/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response22/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

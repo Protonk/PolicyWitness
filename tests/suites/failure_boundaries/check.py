@@ -14,7 +14,7 @@ from run_capture import RunCapture
 
 
 def specimen():
-    return {'schema_version': 4, 'specimen_id': 'failure-boundaries',
+    return {'schema_version': 5, 'specimen_id': 'failure-boundaries',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-read-data',
                 'filter': {'kind': 'path', 'value': '/etc/hosts'}},

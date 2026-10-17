@@ -59,7 +59,7 @@ func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
     if spec.policy.sbpl_source == nil {
         return PWRunnerRequestFailure(code: "missing_policy_source", path: ["policy", "sbpl_source"])
     }
-    if spec.policy.capture_applied_profile == true {
+    if spec.policy.capture_compiled_profile == true {
         if captureNonceBytes(spec.policy.capture_nonce) == nil {
             return PWRunnerRequestFailure(code: "invalid_capture_nonce", path: ["policy", "capture_nonce"])
         }

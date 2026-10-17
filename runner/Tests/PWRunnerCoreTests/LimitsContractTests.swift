@@ -93,7 +93,7 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "validator_fault_context": fault.retained_bytes,
                 "exec_stream": PWShmLayout.childOutputBytes - 1,
                 "worker_diagnostic": PWShmLayout.diagnosticBytes - 1,
-                "applied_profile": PWShmLayout.captureBytes,
+                "compiled_profile": PWShmLayout.captureBytes,
                 "observed_path": PWShmLayout.observedPathMax - 1,
                 "attempt_error": PWShmLayout.errorMax - 1,
                 "runner_reply_maximum": try maximalReplyEncodedSize(),

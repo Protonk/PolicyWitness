@@ -96,7 +96,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 21, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 22, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL
@@ -122,8 +122,9 @@ and [accepted input contract](../docs/CONTRACT.md#accepted-input-contract)
 own the full rules; [augments/](augments/README.md) describes the shipped policy
 fragment.
 
-An optional compiled-object receipt captures the worker's compiler output before
-application. The host exposes it only after checking successful application,
+The optional `compiled_profile` receipt captures the worker's compiler output
+before application and explicitly names its worker producer and `before_apply`
+capture stage. The host exposes it only after checking successful application,
 completion and the receipt's identity/integrity evidence. The
 [receipt contract](../docs/PolicyWitness.md#compiled-object-receipt-opt-in)
 defines its contents, sensitive-output handling and unavailable cases.

@@ -4,7 +4,7 @@ import Foundation
 private func requestFixture() -> [String: Any] {
     ["schema_version": PWContract.requestSchema, "specimen_id": "request-contract", "run_kind": "experiment",
      "policy": ["format": "sbpl", "sbpl_source": "(version 1) (allow default)",
-                "params": ["arbitrary_parameter": "value"], "capture_applied_profile": true,
+                "params": ["arbitrary_parameter": "value"], "capture_compiled_profile": true,
                 "capture_nonce": "0123456789abcdef0123456789abcdef"],
      "probe_plan": [["step_id": "s", "sandbox_check": ["operation": "process-exec",
                        "filter": ["kind": "path", "value": "/bin/echo"]],

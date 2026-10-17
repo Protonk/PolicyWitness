@@ -1233,7 +1233,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 52419188,
+      "value": 52419240,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
@@ -1914,7 +1914,7 @@
       "behavior": "The diagnostic buffer reserves its terminating NUL outside the payload limit. Bounded diagnostic/truncation controls in the Swift worker evidence tests."
     },
     {
-      "id": "applied_profile",
+      "id": "compiled_profile",
       "section": "evidence",
       "title": "Optional compiled-object capture",
       "value": 1048576,
