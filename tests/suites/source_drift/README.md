@@ -183,7 +183,13 @@ regions are opaque to the span pass. A backticked link label into a non-Markdown
 file denotes a symbol; use a plain filename label for an ordinary file link.
 Local links must resolve, and reference-style links are refused.
 
-Architecture and limits manifests use schema version 2. Check citations carry
+The architecture manifest uses schema version 3; limits uses schema version 2.
+Each architecture graph may select a registered document, defaulting to the
+manifest destination. ARCHITECTURE.md and WORKER.md are registered; unknown or
+escaping destinations, duplicate output ownership and misplaced markers refuse
+generation. All destinations validate and all figures render before any write.
+A cluster may position its label at the top or bottom to keep crossing edge
+labels legible; omitted positions preserve the existing top placement. Check citations carry
 `form` (`test`, `rule`, `control`); the limits `kind` (`value`, `boundary`,
 `path`) is independent. Python definitions and drift-rule calls are checked
 through the AST; Rust, Swift and shell definitions use the documented source
@@ -203,7 +209,8 @@ be used, and every used key declared. Architecture durations and sizes use
 `{limit:<id>}` placeholders, resolved through the limits loader and formatter.
 The same values reach table cells and dot tooltips, and therefore SVG stamps.
 Architecture exposes `graphs`, `nodes`, `edges`, `unpinned`, and per-graph
-`<graph>.nodes`, `<graph>.edges` and `<graph>.kinds.<kind>` spans. Limits exposes `<id>.value`,
+`<graph>.nodes`, `<graph>.edges`, `<graph>.kinds.<kind>` and
+`documents.<lowercase-document-stem>.graphs` spans. Limits exposes `<id>.value`,
 `<id>.value_unit` and, for a byte limit that is a whole number of MiB or KiB,
 `<id>.binary`. Author a span outside generated/copied regions; a document may author the
 same name in more than one sentence:
@@ -292,12 +299,17 @@ See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
 The `architecture_documentation` case checks
 [docs/architecture.json](../../../docs/architecture.json) against the dot
 files, SVG stamps and generated table regions of
-[docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md). The generator refuses
+[docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) and
+[docs/WORKER.md](../../../docs/WORKER.md). The generator refuses
 a node or edge whose cited source file or symbol does not exist, or whose
 check lacks an allowed definition and form; controls exercise broken
 citations, unknown references, duplicate ids, stale dot text, a stale table, a
 stale SVG stamp, regeneration without Graphviz, idempotence and refusal before
-any write. An SVG is checked by the stamp naming the hash of its dot text, so
+any write. Routing controls move a graph between documents, test stale copies
+in both destinations and reject misplaced or broken second-document markers.
+The ownership control fails rendering on the last graph after earlier renders
+have completed with controlled SVG text (no Graphviz prerequisite), and requires both documents and every figure to remain unchanged.
+An SVG is checked by the stamp naming the hash of its dot text, so
 the check needs no Graphviz; rendering does.
 
 The `build_documentation` case checks [docs/build.json](../../../docs/build.json)

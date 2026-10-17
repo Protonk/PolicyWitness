@@ -38,6 +38,7 @@ digraph documents {
         tests_agents;
         coverage_md;
         build_md;
+        worker_md;
     }
     subgraph cluster_sources {
         label="sources with generated or checked regions"; style=dashed; color="#888888"; fontsize=10;
@@ -107,6 +108,7 @@ digraph documents {
     build_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/BUILD.md\nbuild_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build_md: docs/BUILD.md | the build figure and tables "];
     build_baseline [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/fixtures/docs/build_baseline.json\nbuild_baseline", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build_baseline: tests/fixtures/docs/build_baseline.json | every build refusal that no behavioral or helper control produces, with the control that would "];
     drift_build [shape="octagon", style="dashed", color="#8e24aa", label="source_drift build.py\ndrift_build", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_build: source_drift build.py | the build manifest against build.sh, meson.build, the Makefile, the inventories and the baseline, and its copies "];
+    worker_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/WORKER.md\nworker_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="worker_md: docs/WORKER.md | resource inventory, capability figure and tables "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
     gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract |  "];
@@ -169,4 +171,5 @@ digraph documents {
     drift_generators -> gen_build [style="dashed", color="#8e24aa", label="D60 ownership", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D60: nothing changes outside its regions; --check before signing; one span owner |  "];
     drift_check -> build_md [style="dashed", color="#8e24aa", label="D61 known gaps", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D61: Known gap paragraphs equal the index, as in the architecture document |  "];
     agents_md -> build_md [style="dotted", color="#444444", label="D62 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D62: manually repeated warning; first paragraph agrees after whitespace normalization |  "];
+    gen_architecture -> worker_md [style="bold", color="#2e7d32", label="D65 regions, dot, svg", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D65: per-graph destination; capability figure and inventory beside WORKER.md |  "];
 }

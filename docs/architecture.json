@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "document": "docs/ARCHITECTURE.md",
   "styles": {
     "node_kinds": {
@@ -63,6 +63,36 @@
         "style": "rounded,filled",
         "fillcolor": "#e6f4ea",
         "color": "#2e7d32"
+      },
+      "reporting": {
+        "shape": "box",
+        "style": "rounded,filled",
+        "fillcolor": "#e8f0fe",
+        "color": "#555555"
+      },
+      "authority": {
+        "shape": "box",
+        "style": "rounded,filled",
+        "fillcolor": "#fff0cd",
+        "color": "#555555"
+      },
+      "operation": {
+        "shape": "box",
+        "style": "rounded,filled",
+        "fillcolor": "#e5f3e8",
+        "color": "#555555"
+      },
+      "external": {
+        "shape": "box",
+        "style": "rounded,filled",
+        "fillcolor": "#eee5f5",
+        "color": "#555555"
+      },
+      "mixed": {
+        "shape": "box",
+        "style": "rounded,filled",
+        "fillcolor": "#ffffff",
+        "color": "#555555"
       }
     },
     "edge_kinds": {
@@ -102,6 +132,30 @@
       "checks": {
         "style": "dashed",
         "color": "#8e24aa"
+      },
+      "prepares": {
+        "color": "#2f5597",
+        "style": "solid"
+      },
+      "supplies_authority": {
+        "color": "#986600",
+        "style": "bold"
+      },
+      "exercises": {
+        "color": "#287244",
+        "style": "solid"
+      },
+      "publishes": {
+        "color": "#2f5597",
+        "style": "bold"
+      },
+      "observes": {
+        "color": "#70428c",
+        "style": "dotted"
+      },
+      "joins": {
+        "color": "#70428c",
+        "style": "dashed"
       }
     }
   },
@@ -2311,7 +2365,8 @@
             "tests_readme",
             "tests_agents",
             "coverage_md",
-            "build_md"
+            "build_md",
+            "worker_md"
           ]
         },
         {
@@ -3438,6 +3493,27 @@
             {
               "path": "tests/suites/source_drift/run.sh",
               "symbol": "build_documentation",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "worker_md",
+          "label": "docs/WORKER.md",
+          "kind": "document",
+          "facts": {
+            "Carries": "resource inventory, capability figure and tables"
+          },
+          "sources": [
+            {
+              "path": "docs/generate_architecture.py",
+              "symbol": "SPAN_DOCUMENTS"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/architecture.py",
+              "symbol": "test_routing_and_second_document_refusals",
               "form": "test"
             }
           ]
@@ -4789,6 +4865,27 @@
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_harness_note_agreement",
               "form": "rule"
+            }
+          ]
+        },
+        {
+          "id": "D65",
+          "from": "gen_architecture",
+          "to": "worker_md",
+          "kind": "writes",
+          "label": "per-graph destination; capability figure and inventory beside WORKER.md",
+          "short": "regions, dot, svg",
+          "sources": [
+            {
+              "path": "docs/generate_architecture.py",
+              "symbol": "graph_document"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/architecture.py",
+              "symbol": "test_routing_and_second_document_refusals",
+              "form": "test"
             }
           ]
         }
@@ -6243,6 +6340,3736 @@
             {
               "path": "tests/suites/witness_contract/opt_in/extensions_byoxpc.sh",
               "symbol": "extensions_byoxpc",
+              "form": "test"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "worker_capabilities",
+      "title": "Worker capabilities",
+      "file": "worker-capabilities",
+      "document": "docs/WORKER.md",
+      "rankdir": "LR",
+      "node_facts": [
+        "Inventory ID",
+        "Acquired by",
+        "When",
+        "Held across",
+        "Released",
+        "Authority",
+        "Sandbox-gated",
+        "Reaches exec children",
+        "Role"
+      ],
+      "edge_facts": [],
+      "clusters": [
+        {
+          "id": "reporting",
+          "label": "Reporting apparatus: prepared and attempt-time",
+          "nodes": [
+            "s1a",
+            "s1b",
+            "s2",
+            "s3a",
+            "s3b",
+            "s4a",
+            "s4b",
+            "s6",
+            "s10a",
+            "s13a",
+            "s13b",
+            "s13c",
+            "s14c",
+            "s18",
+            "s23",
+            "s24",
+            "s26b",
+            "s27",
+            "s34a",
+            "s34b",
+            "s35a",
+            "s35b",
+            "s36b",
+            "n2",
+            "n3",
+            "n4",
+            "n5",
+            "n6",
+            "n8",
+            "n9a",
+            "n9b",
+            "n11",
+            "n12",
+            "n13"
+          ]
+        },
+        {
+          "id": "authority",
+          "label": "Deliberately supplied authority / restriction",
+          "nodes": [
+            "s5",
+            "s8b",
+            "s9",
+            "s10c",
+            "s11a",
+            "s11b",
+            "s12a",
+            "s12b",
+            "s13d",
+            "s19",
+            "s22",
+            "s25",
+            "s26a",
+            "s28",
+            "n1"
+          ]
+        },
+        {
+          "id": "operation",
+          "label": "Acquisitions by attempted operations",
+          "nodes": [
+            "s29",
+            "s30",
+            "s31a",
+            "s31b",
+            "s32",
+            "s33a",
+            "s33b",
+            "s36a"
+          ],
+          "label_position": "bottom"
+        },
+        {
+          "id": "external",
+          "label": "External evidence",
+          "nodes": [
+            "x1",
+            "x2",
+            "x3",
+            "x4",
+            "x5"
+          ]
+        }
+      ],
+      "nodes": [
+        {
+          "id": "s1a",
+          "label": "Evidence shared-memory object",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S1a",
+            "Acquired by": "H: pw_cworker_shm_open_create, ftruncate",
+            "When": "Before compilation",
+            "Held across": "Later phases; last mapping/reference may outlive worker",
+            "Released": "H requests immediate shm_unlink; object survives references",
+            "Authority": "Shared writable input/publication storage",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "No explicit child reference; see S13b",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s1b",
+          "label": "Host shmFD",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S1b",
+            "Acquired by": "H: pw_cworker_shm_open_create; clears FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Through driver result collection",
+            "Released": "H setup-failure close or final defer",
+            "Authority": "Can map/resize the evidence object",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "Worker receives it; exec child excludes it",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "label": "Host evidence base mapping",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S2",
+            "Acquired by": "H: mmap, zero/populate/page-touch",
+            "When": "Before compilation",
+            "Held across": "Through collection, even if worker cleanup unconfirmed",
+            "Released": "H defer munmap",
+            "Authority": "Read worker publications; write input/release/exit request",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "No: exec replaces address space",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s3a",
+          "label": "Host ready-pipe read end",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S3a",
+            "Acquired by": "H: pipe; FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Readiness wait only",
+            "Released": "H after readiness wait or setup/spawn failure",
+            "Authority": "Observe ready byte",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "No: close-on-exec",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s3b",
+          "label": "Host ready-pipe write end",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S3b",
+            "Acquired by": "H: pipe; FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Through worker spawn",
+            "Released": "H immediately after spawn or failure",
+            "Authority": "Supply worker readiness endpoint",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "Worker fd 4; child excludes it",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s4a",
+          "label": "Host policy-pipe read end",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S4a",
+            "Acquired by": "H: pipe; FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Through worker spawn",
+            "Released": "H immediately after spawn or failure",
+            "Authority": "Receive policy bytes",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "Worker fd 0 replaced in exec child",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s4b",
+          "label": "Host policy-pipe write end",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S4b",
+            "Acquired by": "H: pipe; F_SETNOSIGPIPE, O_NONBLOCK, FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Through bounded policy transfer",
+            "Released": "H after transfer or setup/spawn failure",
+            "Authority": "Deliver source and EOF",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "No: close-on-exec",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s5",
+          "label": "Host token-delivery duplicate\ntokenFD",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S5",
+            "Acquired by": "H: fcntl(F_DUPFD_CLOEXEC, 64)",
+            "When": "Before compilation",
+            "Held across": "Through driver return",
+            "Released": "H defer close",
+            "Authority": "Duplicate authority-bearing channel",
+            "Sandbox-gated": "Source-only, host before apply",
+            "Reaches exec children": "Worker fd 5; exec/extension combination refused",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s6",
+          "label": "Worker-spawn file-action\nhandle",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S6",
+            "Acquired by": "H: posix_spawn_file_actions_init, adddup2",
+            "When": "Before compilation",
+            "Held across": "Through driver return",
+            "Released": "H defer destroy",
+            "Authority": "Prescribes worker descriptor table",
+            "Sandbox-gated": "Source-only; Apple malloc implementation",
+            "Reaches exec children": "Handle no; actions determine worker state",
+            "Role": "P; setup caveat"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s7",
+          "label": "Fresh worker process",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S7",
+            "Acquired by": "H: posix_spawn, nil attributes/envp",
+            "When": "Before compilation",
+            "Held across": "Until exit; unconfirmed cleanup may outlive driver",
+            "Released": "W return/_exit, fatal signal or H termination; H waitpid observes reap",
+            "Authority": "Executes specimen with inherited context and signed identity",
+            "Sandbox-gated": "Source-only spawn; L observed two lifetimes",
+            "Reaches exec children": "It parents exec children; not itself inherited",
+            "Role": "none (ambient execution substrate)"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s8a",
+          "label": "Extension channel object",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S8a",
+            "Acquired by": "E: pw_cworker_shm_open_create, ftruncate",
+            "When": "Before compilation",
+            "Held across": "Issuer then worker; through session",
+            "Released": "E requests shm_unlink; last reference controls destruction",
+            "Authority": "Holds transferable token and issuer metadata",
+            "Sandbox-gated": "Source-only, outside worker sandbox",
+            "Reaches exec children": "No admitted exec+extension plan",
+            "Role": "A + E"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s8b",
+          "label": "Session descriptor",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S8b",
+            "Acquired by": "E: pw_cworker_shm_open_create, FD_CLOEXEC",
+            "When": "Before compilation",
+            "Held across": "Through session",
+            "Released": "E deinit close, including setup-failure returns",
+            "Authority": "Map/duplicate token channel",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: close-on-exec except explicit delivery dup",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s8c",
+          "label": "Host token-channel mapping",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S8c",
+            "Acquired by": "E: mmap, zero/header/path writes",
+            "When": "Before compilation",
+            "Held across": "Through reply preparation",
+            "Released": "E erase before reply; deinit erases, unmaps",
+            "Authority": "Read issuance evidence; supply/erase token",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: address space replaced",
+            "Role": "A + E"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s9",
+          "label": "Fresh issuer process",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S9",
+            "Acquired by": "E: posix_spawn with CLOEXEC_DEFAULT, nil envp",
+            "When": "Before compilation",
+            "Held across": "Until issuer exit; delivery requires confirmed clean reap",
+            "Released": "I return; E wait/terminate",
+            "Authority": "Ordinary signed issuer authority for file token issuance",
+            "Sandbox-gated": "Source-only; no live issuer case rerun in pass 1",
+            "Reaches exec children": "No: sibling, reaped before worker delivery",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s10a",
+          "label": "Issuer zero soft/hard core\nlimit",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S10a",
+            "Acquired by": "I: setrlimit(RLIMIT_CORE)",
+            "When": "Before compilation",
+            "Held across": "Until issuer exit",
+            "Released": "Exit; failure returns before mapping",
+            "Authority": "Restricts core-dump production",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: issuer creates no exec child",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s10b",
+          "label": "Issuer channel mapping",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S10b",
+            "Acquired by": "I: mmap from fd 3",
+            "When": "Before compilation",
+            "Held across": "Until publication/exit",
+            "Released": "Normal munmap; malformed header exits without explicit unmap",
+            "Authority": "Write token and issuance metadata",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child",
+            "Role": "A + E"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s10c",
+          "label": "Issuer channel fd 3",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S10c",
+            "Acquired by": "E adddup2, received by I",
+            "When": "Before compilation",
+            "Held across": "Through I mapping attempt",
+            "Released": "I close(3) after mmap; earlier errors leave to exit",
+            "Authority": "Map channel",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s11a",
+          "label": "Issuer libsandbox dynamic-\nlibrary handle",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S11a",
+            "Acquired by": "I: dlopen(RTLD_NOW | RTLD_LOCAL)",
+            "When": "Before compilation",
+            "Held across": "Until exit; no explicit dlclose",
+            "Released": "Loader/process teardown; internals unobserved",
+            "Authority": "Makes private issuance API callable, not an entitlement grant",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s11b",
+          "label": "Issuer issue/consume/release\nsymbol addresses",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S11b",
+            "Acquired by": "I: three dlsym calls",
+            "When": "Before compilation",
+            "Held across": "Issuance check/call; loader image remains",
+            "Released": "Automatic values end with I; no independent handle release",
+            "Authority": "API entry points; consume/release are checked, not invoked",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s12a",
+          "label": "Native returned token\nallocation",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S12a",
+            "Acquired by": "I: sandbox_extension_issue_file",
+            "When": "Before compilation",
+            "Held across": "Copy/reject decision only",
+            "Released": "I bounded erase then free; oversized tail caveat",
+            "Authority": "Bearer bytes for native extension consumption",
+            "Sandbox-gated": "Source-only; private internals unobserved",
+            "Reaches exec children": "No: issuer storage not inherited",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s12b",
+          "label": "Token bytes in shared channel",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S12b",
+            "Acquired by": "I: memcpy on bounded accepted token",
+            "When": "Before compilation",
+            "Held across": "Through worker consume decision or host erase; failure branches differ",
+            "Released": "Worker/host erasure; see S22 and",
+            "Authority": "Transferable extension token",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No admitted exec+extension plan",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s13a",
+          "label": "Worker policy fd 0",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S13a",
+            "Acquired by": "H adddup2(policyPipe[0], 0); W default policy fd",
+            "When": "Before compilation",
+            "Held across": "Later attempts and phases, until exit",
+            "Released": "No W close; exit",
+            "Authority": "Read remaining policy stream; normally EOF after source receipt",
+            "Sandbox-gated": "L observed pre/post presence; gating unknown",
+            "Reaches exec children": "No: child addopen replaces stdin",
+            "Role": "P, retained after use"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s13b",
+          "label": "Worker evidence fd 3",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S13b",
+            "Acquired by": "H adddup2(shmFD, 3); W parse_args",
+            "When": "Before compilation",
+            "Held across": "Later attempts and phases, until exit",
+            "Released": "No W close; exit",
+            "Authority": "Map backing object separately from existing mapping",
+            "Sandbox-gated": "L observed pre/post presence; gating unknown",
+            "Reaches exec children": "No: child CLOEXEC_DEFAULT",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s13c",
+          "label": "Worker ready fd 4",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S13c",
+            "Acquired by": "H adddup2(readyPipe[1], 4); W parse_args",
+            "When": "Before compilation",
+            "Held across": "Later attempts and phases, until exit",
+            "Released": "No W close; exit",
+            "Authority": "Write readiness pipe; host later closes reader",
+            "Sandbox-gated": "L observed pre/post presence; gating unknown",
+            "Reaches exec children": "No: child CLOEXEC_DEFAULT",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s13d",
+          "label": "Worker token fd 5, if\nsupplied",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S13d",
+            "Acquired by": "H adddup2(tokenFD, 5); W parse_args",
+            "When": "Before compilation",
+            "Held across": "Through extension preparation",
+            "Released": "prepare_extension closes once; early main refusals leave to exit",
+            "Authority": "Map token channel",
+            "Sandbox-gated": "Source-only; close failure published on prepared path",
+            "Reaches exec children": "No admitted exec+extension plan; child flags would exclude it",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s14a",
+          "label": "Worker inherited\nstdout/stderr",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S14a",
+            "Acquired by": "H spawn, without replacement file actions",
+            "When": "Before compilation",
+            "Held across": "Until exit",
+            "Released": "Exit; no explicit W close",
+            "Authority": "Whatever underlying endpoints allow; L saw read/write /dev/null",
+            "Sandbox-gated": "L presence only; no universal stdio rule",
+            "Reaches exec children": "No: exec-child capture pipes replace 1/2",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s14b",
+          "label": "Other inheritable ambient\nhost descriptors",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S14b",
+            "Acquired by": "H spawn without CLOEXEC_DEFAULT",
+            "When": "Before compilation",
+            "Held across": "Until exit unless a file action overwrites number",
+            "Released": "No generic W sweep; exit",
+            "Authority": "Depends on inherited objects",
+            "Sandbox-gated": "IC demonstrates inheritance; L saw no extra numeric fd",
+            "Reaches exec children": "No: exec-child CLOEXEC_DEFAULT; IC/CLI observed isolation",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s14c",
+          "label": "Possible original-number\nalias of evidence shmFD",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S14c",
+            "Acquired by": "H clears FD_CLOEXEC and duplicates to 3 without closing source",
+            "When": "Before compilation",
+            "Held across": "Until exit if original number survives file actions",
+            "Released": "No generic W sweep; exit",
+            "Authority": "Same evidence object as S13b, not a second object",
+            "Sandbox-gated": "Source-only possibility; L saw no extra alias",
+            "Reaches exec children": "No: exec-child CLOEXEC_DEFAULT",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s15",
+          "label": "Worker environment vector",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S15",
+            "Acquired by": "H posix_spawn(..., nil)",
+            "When": "Before compilation",
+            "Held across": "Until exit",
+            "Released": "Process teardown",
+            "Authority": "No entries observed; potential environment-dependent behavior is source-scoped",
+            "Sandbox-gated": "L plain/-E ps identical; Apple nil-env path corroborates",
+            "Reaches exec children": "No: explicit {NULL} child env; IC/CLI",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16a",
+          "label": "Credentials and signed worker\nentitlements, ambient policy\ncontext",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16a",
+            "Acquired by": "Kernel/loader at H spawn; controller checks required keys",
+            "When": "Before compilation",
+            "Held across": "Until exit; SBPL/extension interventions alter effective access",
+            "Released": "Exit, not a PW reset",
+            "Authority": "Starting access and restrictions; built-in manifest has empty entitlements",
+            "Sandbox-gated": "Source + signed manifest; effective authority not fully measured",
+            "Reaches exec children": "Credentials/policy inherit subject to exec semantics; child signature supplies own entitlements",
+            "Role": "Supplied entitlements plus ambient authority/restrictions; mixed starting substrate"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            },
+            {
+              "path": "controller/src/runner_select.rs",
+              "symbol": "enforce_required_entitlements"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16g",
+          "label": "Working directory",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16g",
+            "Acquired by": "Received at H spawn; no PW reset",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "Exit",
+            "Authority": "Relative file-target resolution",
+            "Sandbox-gated": "L cwd /; gating unknown",
+            "Reaches exec children": "Yes, no chdir action",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16h",
+          "label": "File-mode creation mask",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16h",
+            "Acquired by": "Received at H spawn; no PW reset",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "Exit",
+            "Authority": "Reduces requested creation mode",
+            "Sandbox-gated": "Source-only inheritance; live value unknown",
+            "Reaches exec children": "Yes, no umask action",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16c",
+          "label": "Inherited resource limits",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16c",
+            "Acquired by": "Received at H spawn",
+            "When": "Before compilation",
+            "Held across": "Until exit, except extension core-limit intervention",
+            "Released": "Exit; S20 changes core limit",
+            "Authority": "Caps allocation, files, core, processes etc.",
+            "Sandbox-gated": "Unknown live values",
+            "Reaches exec children": "Yes by spawn inheritance; public extension/exec exclusion applies",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16i",
+          "label": "Inherited signal dispositions",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16i",
+            "Acquired by": "Received at H spawn, nil attributes",
+            "When": "Before compilation",
+            "Held across": "Until exit except S17",
+            "Released": "W changes SIGPIPE only",
+            "Authority": "Affects fatal delivery and ignored signals",
+            "Sandbox-gated": "Source-only; no signal census",
+            "Reaches exec children": "Ignored dispositions persist, caught handlers reset by exec",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16j",
+          "label": "Inherited signal mask",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16j",
+            "Acquired by": "Received at H spawn, nil attributes",
+            "When": "Before compilation",
+            "Held across": "Until exit",
+            "Released": "No PW reset",
+            "Authority": "Controls blocked signal delivery",
+            "Sandbox-gated": "Source-only; live mask unknown",
+            "Reaches exec children": "Yes, no SETSIGMASK",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16e",
+          "label": "Task-self, bootstrap and\nother initial Mach rights",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16e",
+            "Acquired by": "Kernel/runtime initialization at spawn",
+            "When": "Before compilation",
+            "Held across": "Until exit or library changes",
+            "Released": "No PW general release; full live right census unavailable",
+            "Authority": "Task/IPC authority, bootstrap namespace access",
+            "Sandbox-gated": "L lsmp refused; exact set unknown",
+            "Reaches exec children": "Special-port inheritance/native exec rules; exact set unknown",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s16f",
+          "label": "Executable/library mappings,\nruntime heaps and threads",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S16f",
+            "Acquired by": "Loader/runtime creates new image at H spawn; later library calls",
+            "When": "Before compilation initially; later internal changes unknown",
+            "Held across": "Until exit or library release",
+            "Released": "Native runtime; no PW census/teardown",
+            "Authority": "Executable code, storage and runtime service access",
+            "Sandbox-gated": "L vmmap inventory; per-allocation origin and gating unknown",
+            "Reaches exec children": "Not the same mappings/threads: exec loads a new image",
+            "Role": "none"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s17",
+          "label": "Worker ignored SIGPIPE\ndisposition",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S17",
+            "Acquired by": "W: signal(SIGPIPE, SIG_IGN)",
+            "When": "Before compilation",
+            "Held across": "All attempts/phases, until exit",
+            "Released": "No reset",
+            "Authority": "Survive broken ready-pipe write; also changes exec-child behavior",
+            "Sandbox-gated": "Source-only; L pre-ready final EPIPE survived",
+            "Reaches exec children": "Yes: no SETSIGDEF; no dedicated live signal control",
+            "Role": "P + effect on O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s18",
+          "label": "Worker evidence base mapping",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S18",
+            "Acquired by": "map_region: fstat, mmap(MAP_SHARED)",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "No explicit W unmap; exit",
+            "Authority": "Read requests, publish results, observe release/exit",
+            "Sandbox-gated": "L shared mappings observed; no mapping-identity attribution from size alone",
+            "Reaches exec children": "No: exec replaces mappings and excludes fd 3",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "map_region"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s19",
+          "label": "Static extension function\npointers",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S19",
+            "Acquired by": "prepare_extension: dlsym(RTLD_DEFAULT)",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "Static storage at exit; no dynamic handle acquired here",
+            "Authority": "Callable native consume/release, no pre-apply consumption",
+            "Sandbox-gated": "Source-only; library internals unobserved",
+            "Reaches exec children": "No admitted combination; pointer storage not inherited across exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s20",
+          "label": "Worker zero soft/hard core\nlimit",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S20",
+            "Acquired by": "prepare_extension: setrlimit(RLIMIT_CORE) after symbols resolve",
+            "When": "Before compilation",
+            "Held across": "All later attempts/phases, until exit if call succeeds",
+            "Released": "No reset; exit",
+            "Authority": "Restricts core dumping; missing symbols/setup failure qualify it",
+            "Sandbox-gated": "Source-only, request-dependent",
+            "Reaches exec children": "No admitted exec with extension; hypothetical ABI child would inherit",
+            "Role": "P + process context"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s21",
+          "label": "Worker extension-channel\nmapping",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S21",
+            "Acquired by": "prepare_extension: mmap(MAP_SHARED)",
+            "When": "Before compilation",
+            "Held across": "Accepted mapping until exit, including after erase",
+            "Released": "Rejected mapping: erase/munmap; accepted: no explicit unmap",
+            "Authority": "Read/erase token and inspect channel admission metadata",
+            "Sandbox-gated": "Source-only; rejection unmap failure recorded",
+            "Reaches exec children": "No admitted combination; address space replaced on exec",
+            "Role": "A + P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s22",
+          "label": "Accepted token view in S21\n(alias of S12b, no copy)",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S22",
+            "Acquired by": "prepare_extension: length/NUL/header inspection",
+            "When": "Before compilation",
+            "Held across": "Until consumption decision or normal loop completion; early exits differ",
+            "Released": "attempt_extension or post-loop erase; host erase remains",
+            "Authority": "Consumable bearer token; validation does not consume it",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No admitted combination",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s23",
+          "label": "Static policy_buf",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S23",
+            "Acquired by": "W static storage; read_all_from_fd fills it",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "No wipe or explicit release",
+            "Authority": "Policy input, not a target-file descriptor",
+            "Sandbox-gated": "Source-only; read receipt observed in L",
+            "Reaches exec children": "No: new exec image",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s24",
+          "label": "Static consumed_params\nsnapshot",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S24",
+            "Acquired by": "W: memcpy from bounded shared parameters",
+            "When": "Before compilation",
+            "Held across": "Later attempts/phases, until exit",
+            "Released": "No wipe; static storage teardown",
+            "Authority": "Exact compile/capture inputs; no additional access",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: new exec image",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s25",
+          "label": "params_obj and parameter\nentries",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S25",
+            "Acquired by": "W: sandbox_create_params, sandbox_set_param",
+            "When": "Before compilation",
+            "Held across": "Until compile return, or parameter refusal",
+            "Released": "sandbox_free_params on success/failure paths after creation",
+            "Authority": "Supplies named compiler inputs",
+            "Sandbox-gated": "Source-only; private allocation internals unobserved",
+            "Reaches exec children": "No: freed before possible child spawn",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s26a",
+          "label": "Returned compiled profile and\nits bytecode",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S26a",
+            "Acquired by": "W: sandbox_compile_string",
+            "When": "Before compilation (compile boundary)",
+            "Held across": "Passed to capture/apply; allocation lifetime inside apply unknown",
+            "Released": "No explicit sandbox_free_profile; exit reclaims remaining process storage",
+            "Authority": "Input to restriction application; not an applied policy by itself",
+            "Sandbox-gated": "Source-only, private object lifetime unknown",
+            "Reaches exec children": "No: new exec image; applied restriction separate S28",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s26b",
+          "label": "Compiler error string\ncompile_err on failure",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S26b",
+            "Acquired by": "W: sandbox_compile_string out parameter",
+            "When": "Before compilation (compile boundary)",
+            "Held across": "Failure reporting only",
+            "Released": "W free when non-null and profile null",
+            "Authority": "None; diagnostic bytes",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child on failed compile path",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s27",
+          "label": "Compiled capture bytes/header\ninside S18",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S27",
+            "Acquired by": "pw_capture_profile / pw_read_memory: mach_vm_read_overwrite, hashes",
+            "When": "Between compilation and apply",
+            "Held across": "Later attempts/phases, until exit; host copies accepted receipt",
+            "Released": "No separate allocation/unmap; S18 teardown",
+            "Authority": "Read own task memory via preexisting task port; publish receipt",
+            "Sandbox-gated": "Source-only, pre-apply",
+            "Reaches exec children": "No: new image, evidence fd excluded",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+              "symbol": "pw_capture_profile"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s28",
+          "label": "Applied sandbox policy",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "S28",
+            "Acquired by": "W: sandbox_apply(profile)",
+            "When": "Between compilation and apply closing boundary",
+            "Held across": "All later attempts/phases, until exit on success",
+            "Released": "One-way, no undo",
+            "Authority": "Restricts starting authority; extension may augment access",
+            "Sandbox-gated": "Source placement; L final application/clean completion, not deny coverage",
+            "Reaches exec children": "Inherited sandbox constraints; exact child policy effects not inventoried here",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s29",
+          "label": "open_read target fd",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S29",
+            "Acquired by": "attempt_file_open_read: open(O_RDONLY)",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Released": "close after best-effort one-byte read; return ignored",
+            "Authority": "Read opened object",
+            "Sandbox-gated": "Source-only; no file probe rerun in pass 1",
+            "Reaches exec children": "No: closed before later exec, which also excludes it",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_read"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s30",
+          "label": "open_write target fd",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S30",
+            "Acquired by": "attempt_file_open_write: open(O_WRONLY | O_TRUNC)",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Released": "close after unchecked one-byte write",
+            "Authority": "Write/truncate opened object; actual write result unpublished",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: later exec excludes it",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_write"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s31a",
+          "label": "create target fd",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S31a",
+            "Acquired by": "attempt_file_create: open(O_WRONLY | O_CREAT, 0600)",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on ordinary cleanup path",
+            "Released": "close, return ignored",
+            "Authority": "Write existing object or create missing object",
+            "Sandbox-gated": "Source-only; existing-file checker inspected, not rerun",
+            "Reaches exec children": "No: later exec excludes it",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "create_existing_file_preserves_contents",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s31b",
+          "label": "Newly created filesystem\nobject, if absent",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S31b",
+            "Acquired by": "attempt_file_create: same open",
+            "When": "After apply within an attempt",
+            "Held across": "Later attempts/phases and beyond worker exit",
+            "Released": "No automatic unlink; later action/external actor may remove",
+            "Authority": "Persistent filesystem effect, mode subject to umask",
+            "Sandbox-gated": "Source-only; creation not implied for existing target",
+            "Reaches exec children": "Child can resolve it by path, not inherited fd",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "create_existing_file_preserves_contents",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s32",
+          "label": "Fresh target fd and read\nobservation",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S32",
+            "Acquired by": "attempt_file_read_fresh: open(O_RDONLY | O_CLOEXEC), fstat, read",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt only on successful close; close failure retained",
+            "Released": "One close, result published; no retry",
+            "Authority": "Read and identify fresh opened object",
+            "Sandbox-gated": "Source-only; extension checker inspected, not rerun",
+            "Reaches exec children": "No: close-on-exec and child exclusion",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_read_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extensions",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s33a",
+          "label": "Bootstrap send-right\nreference",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S33a",
+            "Acquired by": "attempt_mach_lookup: task_get_special_port",
+            "When": "After apply within an attempt",
+            "Held across": "Later attempts/phases, until exit after successful acquisition",
+            "Released": "No matching mach_port_deallocate, even when lookup fails",
+            "Authority": "Bootstrap namespace request authority",
+            "Sandbox-gated": "Source-only; native failure remains possible",
+            "Reaches exec children": "No explicit transfer; special bootstrap port inheritance is separate",
+            "Role": "O, unintended retention"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_mach_lookup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "attempt_outcome_matrix_enforced",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s33b",
+          "label": "Lookup service send right",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S33b",
+            "Acquired by": "attempt_mach_lookup: bootstrap_look_up",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt on successful lookup",
+            "Released": "mach_port_deallocate(mach_task_self, svc), result ignored",
+            "Authority": "Send to looked-up service",
+            "Sandbox-gated": "Source-only; no right-count control",
+            "Reaches exec children": "No explicit port-transfer action",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_mach_lookup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "attempt_outcome_matrix_enforced",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s34a",
+          "label": "Exec stdout/stderr read\nendpoints",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S34a",
+            "Acquired by": "exec_resources_acquire: two pipe calls",
+            "When": "After apply within an attempt",
+            "Held across": "One attempt",
+            "Released": "exec_resources_release, including partial setup/spawn failure",
+            "Authority": "Read child output",
+            "Sandbox-gated": "Source-only; IC/CLI successful captures, no deny run here",
+            "Reaches exec children": "No: explicit addclose and CLOEXEC_DEFAULT",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s34b",
+          "label": "Exec stdout/stderr write\nendpoints",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S34b",
+            "Acquired by": "exec_resources_acquire: two pipe calls",
+            "When": "After apply within an attempt",
+            "Held across": "Until successful spawn in worker; child lifetime may extend",
+            "Released": "Worker closes after spawn; setup/spawn failure releases; child exit closes own refs",
+            "Authority": "Child output channel",
+            "Sandbox-gated": "Source-only; IC/CLI observed streams",
+            "Reaches exec children": "Yes, duplicated as 1/2; originals explicitly closed",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s35a",
+          "label": "Exec file-action heap handle",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S35a",
+            "Acquired by": "exec_resources_acquire: init, addopen/dup2/close",
+            "When": "After apply within an attempt",
+            "Held across": "One attempt",
+            "Released": "exec_resources_release destroys initialized handle",
+            "Authority": "Select child descriptors, including /dev/null",
+            "Sandbox-gated": "Source-only Apple malloc/realloc path",
+            "Reaches exec children": "Handle no; action effects yes",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s35b",
+          "label": "Exec attribute heap handle",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S35b",
+            "Acquired by": "exec_resources_acquire: init/setflags/setpgroup",
+            "When": "After apply within an attempt",
+            "Held across": "One attempt",
+            "Released": "exec_resources_release destroys initialized handle",
+            "Authority": "Child fd isolation and process-group choice",
+            "Sandbox-gated": "Source-only Apple malloc",
+            "Reaches exec children": "Handle no; flags/group effects yes",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s36a",
+          "label": "Exec child PID/process",
+          "kind": "operation",
+          "facts": {
+            "Inventory ID": "S36a",
+            "Acquired by": "attempt_exec_spawn: posix_spawn",
+            "When": "After apply within an attempt",
+            "Held across": "Attempt normally; unconfirmed reap may outlive it",
+            "Released": "Wait observation, conditional group kill, bounded nonblocking reap",
+            "Authority": "Execute requested target under inherited sandbox",
+            "Sandbox-gated": "IC/CLI observed spawn/exit; source-only failure lifetimes",
+            "Reaches exec children": "This is the child; it can spawn descendants",
+            "Role": "O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_exec_spawn"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s36b",
+          "label": "Child process group",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "S36b",
+            "Acquired by": "Exec spawn attributes SETPGROUP, pgroup 0",
+            "When": "After apply within an attempt",
+            "Held across": "As long as members remain, possibly beyond attempt/worker",
+            "Released": "Conditional group kill request, not an absence proof",
+            "Authority": "Cleanup addressing for members that remain",
+            "Sandbox-gated": "Source-only; lifecycle cases inspected, not rerun",
+            "Reaches exec children": "Yes to descendants unless they leave group",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "s37",
+          "label": "Static extension handle and\nnative extension state",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "S37",
+            "Acquired by": "attempt_extension: consume result other than -1",
+            "When": "After apply within an attempt",
+            "Held across": "Across attempts/phases; requested release is not proven revocation",
+            "Released": "Explicit release action once if submitted/eligible; no automatic exit-time release call; OS teardown",
+            "Authority": "Native extension access represented by handle; exact kernel state unobserved",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No admitted exec+extension plan",
+            "Role": "A + O"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n1",
+          "label": "Issuer-channel high duplicate\nspawnFD",
+          "kind": "authority",
+          "facts": {
+            "Inventory ID": "N1",
+            "Acquired by": "E: fcntl(F_DUPFD_CLOEXEC, 64)",
+            "When": "Before compilation",
+            "Held across": "Through E initializer",
+            "Released": "E defer close; fd 3 duplicate lives in issuer",
+            "Authority": "Collision-free delivery of token channel",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No: issuer sibling, duplicate close-on-exec",
+            "Role": "A"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "label": "Issuer spawn file-action\nhandle",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N2",
+            "Acquired by": "E: init, adddup2, three addopen",
+            "When": "Before compilation",
+            "Held across": "Through E initializer",
+            "Released": "E defer destroy",
+            "Authority": "Channel/stdio selection",
+            "Sandbox-gated": "Source-only; unchecked init result",
+            "Reaches exec children": "No worker memory inheritance",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n3",
+          "label": "Issuer spawn attribute handle",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N3",
+            "Acquired by": "E: init and setflags(CLOEXEC_DEFAULT)",
+            "When": "Before compilation",
+            "Held across": "Through E initializer",
+            "Released": "E defer destroy",
+            "Authority": "Issuer fd isolation",
+            "Sandbox-gated": "Source-only; unchecked init result",
+            "Reaches exec children": "No worker memory inheritance",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "label": "Issuer stdio /dev/null\ndescriptors 0/1/2",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N4",
+            "Acquired by": "E: posix_spawn_file_actions_addopen, executed by native spawn",
+            "When": "Before compilation",
+            "Held across": "Issuer lifetime",
+            "Released": "Issuer exit",
+            "Authority": "Read EOF/write discard",
+            "Sandbox-gated": "Source-only, issuer outside specimen sandbox",
+            "Reaches exec children": "No: issuer creates no child",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n5",
+          "label": "Host copied launch argument\nstrings",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N5",
+            "Acquired by": "withCStringArrayCopy: strdup for H/E invocations",
+            "When": "Before compilation",
+            "Held across": "Spawn call only",
+            "Released": "Helper defer free; Swift array lifetime",
+            "Authority": "Transfer launch arguments, not token bytes",
+            "Sandbox-gated": "Source-only; allocation failures not explicitly refused",
+            "Reaches exec children": "Arguments copied into new images, host pointers not inherited",
+            "Role": "P; setup caveat"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "withCStringArrayCopy"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n6",
+          "label": "Host policy byte array and\nrequest-population temporary\narrays/data",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N6",
+            "Acquired by": "H: Array(input.policy.utf8), writeString, captureNonceBytes",
+            "When": "Before compilation",
+            "Held across": "Transfer/population scope; input objects may live through run",
+            "Released": "Swift scope/ARC, not worker teardown",
+            "Authority": "Exact delivered inputs and nonce",
+            "Sandbox-gated": "Source-only; Swift allocation internals unobserved",
+            "Reaches exec children": "No host memory inheritance",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n7",
+          "label": "Host target-resolution\nbuffer/metadata and issuer\nrecord",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "N7",
+            "Acquired by": "E: [CChar], caller-buffer realpath, fstatat, strings/record",
+            "When": "Before compilation",
+            "Held across": "Through preparation; record survives into reply",
+            "Released": "Swift scope/ARC",
+            "Authority": "Resolve token target before worker starts; metadata is host evidence",
+            "Sandbox-gated": "Source-only; no target fd held by PW call site",
+            "Reaches exec children": "No",
+            "Role": "A + E"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n8",
+          "label": "Worker main-frame arguments,\ntiming state and capture\nnonce",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N8",
+            "Acquired by": "W local declarations, pw_clock_start, nonce memcpy",
+            "When": "Before compilation",
+            "Held across": "Main frame until exit; timing changes across phases",
+            "Released": "Process exit (main never returns after successful apply)",
+            "Authority": "Operate release/timing protocol; no new access handle",
+            "Sandbox-gated": "Source-only; stack mapping visible in L",
+            "Reaches exec children": "No: new exec image",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n9a",
+          "label": "Worker temporary pre-compile\ncall frames",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N9a",
+            "Acquired by": "parse_args, map_region, read_all_from_fd, pw_timing_setup, prepare_extension",
+            "When": "Before compilation",
+            "Held across": "Call only",
+            "Released": "Return or process exit; no claim of byte erasure",
+            "Authority": "None beyond existing pointers/rights",
+            "Sandbox-gated": "Source-only; native library internals unobserved",
+            "Reaches exec children": "No: exec replaces stack",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "parse_args"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "map_region"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "read_all_from_fd"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "pw_timing_setup"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n9b",
+          "label": "Capture\nhash/view/digest/sorting call\nframes",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N9b",
+            "Acquired by": "pw_capture_profile, pw_consumed_params_digest, pw_read_memory",
+            "When": "Between compilation and apply",
+            "Held across": "Call only",
+            "Released": "Return or process exit; no claim of byte erasure",
+            "Authority": "Read own memory with existing task right",
+            "Sandbox-gated": "Source-only; qsort/CommonCrypto internals unobserved",
+            "Reaches exec children": "No: exec replaces stack",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+              "symbol": "pw_capture_profile"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n10",
+          "label": "Attempt-local stack buffers,\nargv pointers, polls, wait\nstatus and metadata",
+          "kind": "mixed",
+          "facts": {
+            "Inventory ID": "N10",
+            "Acquired by": "run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds its sysctl result buffer on the stack",
+            "When": "After apply within an attempt",
+            "Held across": "Call/attempt only; output copied into S18",
+            "Released": "Return or process exit",
+            "Authority": "Use already inventoried target/child handles; no separate authority",
+            "Sandbox-gated": "Source-only; compiler stack/page behavior unobserved",
+            "Reaches exec children": "argv_local strings copied; stack not inherited",
+            "Role": "O + P (working/observation storage)"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "run_attempt"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_sysctl_read"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n11",
+          "label": "Post-apply outside-attempt\nautomatic diagnostics and\nseam timespec",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N11",
+            "Acquired by": "wait_for_proceed, proceed_refused, W post-phase seam",
+            "When": "After apply outside an attempt",
+            "Held across": "Call, or nonreturning refusal frame until exit",
+            "Released": "Return/exit; not dynamically allocated by PW",
+            "Authority": "None; diagnostic/control working storage",
+            "Sandbox-gated": "Source-only",
+            "Reaches exec children": "No child spawned on these paths",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "wait_for_proceed"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n12",
+          "label": "Exec child stdin /dev/null fd\n0",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N12",
+            "Acquired by": "exec_resources_acquire registers addopen; native spawn executes it",
+            "When": "After apply within an attempt",
+            "Held across": "Child lifetime",
+            "Released": "Child closes it or exits",
+            "Authority": "Read EOF without exposing policy pipe",
+            "Sandbox-gated": "IC/CLI observed EOF; no independent gating probe here",
+            "Reaches exec children": "Yes, explicit child fd 0",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "n13",
+          "label": "Libc diagnostic state\nreachable after apply",
+          "kind": "reporting",
+          "facts": {
+            "Inventory ID": "N13",
+            "Acquired by": "fail_from_errno, exec_setup_failed, attempt_exec_spawn, attempt_mach_lookup, run_attempt: snprintf, strerror",
+            "When": "After apply within an attempt",
+            "Held across": "Library-dependent; ordinary errno table is static, fallback buffer retained",
+            "Released": "Library/exit; no PW-owned handle",
+            "Authority": "Diagnostic formatting; hidden allocation/locale behavior bounded only by source studied",
+            "Sandbox-gated": "Source-only Apple paths; installed-library internals unobserved",
+            "Reaches exec children": "Library memory not carried across exec",
+            "Role": "P"
+          },
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "fail_from_errno"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_setup_failed"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_exec_spawn"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_mach_lookup"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "run_attempt"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "x1",
+          "label": "Validator predictions",
+          "kind": "external",
+          "facts": {
+            "Inventory ID": "X1",
+            "Acquired by": "planValidatorQueries",
+            "When": "Query collection outside worker",
+            "Held across": "Eligible phase and reply",
+            "Released": "Owning host/controller object lifetime",
+            "Authority": "Live worker PID query through separate validator",
+            "Sandbox-gated": "Outside specimen worker; source-only",
+            "Reaches exec children": "No worker-to-child transfer",
+            "Role": "External evidence"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "planValidatorQueries"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "comparison_matrix",
+              "form": "test"
+            }
+          ],
+          "note": "No transfer into worker; release ordinal is separate"
+        },
+        {
+          "id": "x2",
+          "label": "Host disposition and\ncomparison",
+          "kind": "external",
+          "facts": {
+            "Inventory ID": "X2",
+            "Acquired by": "comparisonEvidence",
+            "When": "After collection/publication",
+            "Held across": "Reply",
+            "Released": "Owning host/controller object lifetime",
+            "Authority": "Join worker publications, query records and process observations",
+            "Sandbox-gated": "Outside specimen worker; source-only",
+            "Reaches exec children": "No worker-to-child transfer",
+            "Role": "External evidence"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "comparisonEvidence"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "comparison_matrix",
+              "form": "test"
+            }
+          ],
+          "note": "Host-owned interpretation under evidence contract"
+        },
+        {
+          "id": "x3",
+          "label": "Host path diagnostics",
+          "kind": "external",
+          "facts": {
+            "Inventory ID": "X3",
+            "Acquired by": "enrichPathDiagnostics",
+            "When": "After attempt collection",
+            "Held across": "Reply",
+            "Released": "Owning host/controller object lifetime",
+            "Authority": "Later path/metadata observations under host authority",
+            "Sandbox-gated": "Outside specimen worker; source-only",
+            "Reaches exec children": "No worker-to-child transfer",
+            "Role": "External evidence"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "enrichPathDiagnostics"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
+              "symbol": "path_query_integrated",
+              "form": "test"
+            }
+          ],
+          "note": "Path spelling alone is not object identity"
+        },
+        {
+          "id": "x4",
+          "label": "Controller denial-log\ncandidates",
+          "kind": "external",
+          "facts": {
+            "Inventory ID": "X4",
+            "Acquired by": "attach_sandbox_logs",
+            "When": "Outside worker; collector surrounds execution",
+            "Held across": "Envelope",
+            "Released": "Owning host/controller object lifetime",
+            "Authority": "External log collection and correlation",
+            "Sandbox-gated": "Outside specimen worker; source-only",
+            "Reaches exec children": "No worker-to-child transfer",
+            "Role": "External evidence"
+          },
+          "sources": [
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "attach_sandbox_logs"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "worker_termination_and_log_correlation",
+              "form": "test"
+            }
+          ],
+          "note": "Candidate association, not worker-native cause"
+        },
+        {
+          "id": "x5",
+          "label": "Compiler receipt in dossier",
+          "kind": "external",
+          "facts": {
+            "Inventory ID": "X5",
+            "Acquired by": "decodeProfileCapture",
+            "When": "Capture before apply; host decode after publication",
+            "Held across": "Reply and optional dossier",
+            "Released": "Owning host/controller object lifetime",
+            "Authority": "Copy/hash admitted receipt from shared evidence",
+            "Sandbox-gated": "Outside specimen worker; source-only",
+            "Reaches exec children": "No worker-to-child transfer",
+            "Role": "External evidence"
+          },
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "decodeProfileCapture"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "dossier_witness",
+              "form": "test"
+            }
+          ],
+          "note": "Receipt and applied-policy evidence are distinct"
+        }
+      ],
+      "edges": [
+        {
+          "id": "W1",
+          "from": "s1b",
+          "to": "s2",
+          "kind": "prepares",
+          "label": "Host maps evidence descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W2",
+          "from": "s1a",
+          "to": "s1b",
+          "kind": "prepares",
+          "label": "Host holds backing-object descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W3",
+          "from": "s1b",
+          "to": "s13b",
+          "kind": "prepares",
+          "label": "Spawn action duplicates evidence descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W4",
+          "from": "s13b",
+          "to": "s18",
+          "kind": "prepares",
+          "label": "Worker maps evidence descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W5",
+          "from": "s3b",
+          "to": "s13c",
+          "kind": "prepares",
+          "label": "Spawn action duplicates readiness endpoint",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W6",
+          "from": "s4a",
+          "to": "s13a",
+          "kind": "prepares",
+          "label": "Spawn action duplicates policy endpoint",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W7",
+          "from": "s4b",
+          "to": "s23",
+          "kind": "prepares",
+          "label": "Policy delivery fills static source buffer",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W8",
+          "from": "s6",
+          "to": "s7",
+          "kind": "prepares",
+          "label": "Worker launch file actions select protocol endpoints",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W9",
+          "from": "n5",
+          "to": "s7",
+          "kind": "prepares",
+          "label": "Copied argv supplies worker launch arguments",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "withCStringArrayCopy"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W10",
+          "from": "n6",
+          "to": "s2",
+          "kind": "prepares",
+          "label": "Host initializes request fields and nonce",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W11",
+          "from": "s23",
+          "to": "s26a",
+          "kind": "prepares",
+          "label": "Compiler reads source buffer",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W12",
+          "from": "s24",
+          "to": "s25",
+          "kind": "prepares",
+          "label": "Snapshot entries populate compiler parameters",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W13",
+          "from": "s25",
+          "to": "s26a",
+          "kind": "prepares",
+          "label": "Compiler receives parameter object",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W14",
+          "from": "s26a",
+          "to": "s27",
+          "kind": "prepares",
+          "label": "Capture reads returned compiled object",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W15",
+          "from": "s35a",
+          "to": "s36a",
+          "kind": "prepares",
+          "label": "Spawn file actions select child descriptors",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W16",
+          "from": "s35b",
+          "to": "s36b",
+          "kind": "prepares",
+          "label": "Spawn attributes select child process group",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W17",
+          "from": "n2",
+          "to": "s9",
+          "kind": "prepares",
+          "label": "Issuer file actions select channel and stdio",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W18",
+          "from": "n3",
+          "to": "s9",
+          "kind": "prepares",
+          "label": "Issuer attributes select descriptor isolation",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W19",
+          "from": "s8b",
+          "to": "n1",
+          "kind": "supplies_authority",
+          "label": "High duplicate of session descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W20",
+          "from": "n1",
+          "to": "s10c",
+          "kind": "supplies_authority",
+          "label": "Issuer receives channel fd",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W21",
+          "from": "s10c",
+          "to": "s10b",
+          "kind": "supplies_authority",
+          "label": "Issuer maps channel fd",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W22",
+          "from": "s8a",
+          "to": "s8b",
+          "kind": "supplies_authority",
+          "label": "Session holds channel object descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W23",
+          "from": "s8b",
+          "to": "s8c",
+          "kind": "supplies_authority",
+          "label": "Host maps authority-bearing channel",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W24",
+          "from": "s8b",
+          "to": "s5",
+          "kind": "supplies_authority",
+          "label": "Host duplicates channel for worker delivery",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W25",
+          "from": "s5",
+          "to": "s13d",
+          "kind": "supplies_authority",
+          "label": "Worker receives optional token descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W26",
+          "from": "s13d",
+          "to": "s21",
+          "kind": "supplies_authority",
+          "label": "Worker maps token descriptor",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W27",
+          "from": "s11a",
+          "to": "s11b",
+          "kind": "prepares",
+          "label": "Loaded API symbols permit issuance",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W28",
+          "from": "s11b",
+          "to": "s12a",
+          "kind": "exercises",
+          "label": "Native issuer returns bearer allocation",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W29",
+          "from": "s12a",
+          "to": "s12b",
+          "kind": "supplies_authority",
+          "label": "Issuer copies accepted bearer bytes",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W30",
+          "from": "s12b",
+          "to": "s22",
+          "kind": "supplies_authority",
+          "label": "Worker borrows same bytes through its mapping",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W31",
+          "from": "s22",
+          "to": "s37",
+          "kind": "supplies_authority",
+          "label": "Requested consume yields native extension handle",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W32",
+          "from": "s26a",
+          "to": "s28",
+          "kind": "exercises",
+          "label": "Apply receives compiled object and imposes policy",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ],
+          "short": "apply restriction"
+        },
+        {
+          "id": "W33",
+          "from": "s33a",
+          "to": "s33b",
+          "kind": "exercises",
+          "label": "Lookup uses acquired bootstrap reference",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_mach_lookup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "attempt_outcome_matrix_enforced",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W34",
+          "from": "s31a",
+          "to": "s31b",
+          "kind": "exercises",
+          "label": "Successful create-open can create absent file",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "create_existing_file_preserves_contents",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W35",
+          "from": "s34b",
+          "to": "s36a",
+          "kind": "exercises",
+          "label": "Child receives output endpoints as stdout/stderr",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W36",
+          "from": "n12",
+          "to": "s36a",
+          "kind": "exercises",
+          "label": "Child receives explicit stdin",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W37",
+          "from": "s37",
+          "to": "s32",
+          "kind": "exercises",
+          "label": "Fresh read attempts access under current extension state",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W38",
+          "from": "s27",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Capture writes receipt into evidence mapping",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+              "symbol": "pw_capture_profile"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W39",
+          "from": "s29",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes open status and available observed path",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_read"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W40",
+          "from": "s30",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes open status; write return discarded",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_open_write"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W41",
+          "from": "s31a",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes open/create status",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_create"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "create_existing_file_preserves_contents",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W42",
+          "from": "s32",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes native open/stat/read/close observations",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_file_read_fresh"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extensions",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W43",
+          "from": "s33b",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes lookup status, not retained port authority",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_mach_lookup"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "attempt_outcome_matrix_enforced",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W44",
+          "from": "s36a",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes spawn, wait and cleanup observations",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_exec_spawn"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W45",
+          "from": "s37",
+          "to": "s18",
+          "kind": "publishes",
+          "label": "Publishes consume/release native result",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W46",
+          "from": "s10b",
+          "to": "s8c",
+          "kind": "publishes",
+          "label": "Issuer publishes through same channel object",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
+              "symbol": "main"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "extension_boundaries",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W47",
+          "from": "s3a",
+          "to": "s13c",
+          "kind": "observes",
+          "label": "Host reads worker readiness byte",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W48",
+          "from": "s2",
+          "to": "s18",
+          "kind": "observes",
+          "label": "Host observes publication in same evidence object",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W49",
+          "from": "s34a",
+          "to": "s36a",
+          "kind": "observes",
+          "label": "Worker drains child output",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "exec_resources_acquire"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_pipes_per_attempt",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "contaminated_worker",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W50",
+          "from": "x3",
+          "to": "s31b",
+          "kind": "observes",
+          "label": "Later host path inspection may observe file effect",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "enrichPathDiagnostics"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
+              "symbol": "path_query_integrated",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W51",
+          "from": "s2",
+          "to": "x2",
+          "kind": "joins",
+          "label": "Host uses admitted publications",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W52",
+          "from": "x1",
+          "to": "x2",
+          "kind": "joins",
+          "label": "Host joins prediction records to attempt evidence",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "planValidatorQueries"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "comparison_matrix",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W53",
+          "from": "x3",
+          "to": "x2",
+          "kind": "joins",
+          "label": "Host attaches later path observations",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "enrichPathDiagnostics"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
+              "symbol": "path_query_integrated",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W54",
+          "from": "s27",
+          "to": "x5",
+          "kind": "joins",
+          "label": "Host decodes and copies receipt",
+          "sources": [
+            {
+              "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+              "symbol": "pw_capture_profile"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "bare_deny_default",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "W55",
+          "from": "x2",
+          "to": "x4",
+          "kind": "joins",
+          "label": "Controller associates external log candidates with run evidence",
+          "sources": [
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "comparisonEvidence"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "comparison_matrix",
               "form": "test"
             }
           ]

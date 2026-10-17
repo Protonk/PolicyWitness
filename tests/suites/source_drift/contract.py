@@ -22,6 +22,9 @@ spec.loader.exec_module(generator)
 identity_spec = importlib.util.spec_from_file_location('generate_worker_identity', ROOT / 'docs/generate_worker_identity.py')
 identity_generator = importlib.util.module_from_spec(identity_spec)
 identity_spec.loader.exec_module(identity_generator)
+architecture_spec = importlib.util.spec_from_file_location('generate_architecture', ROOT / 'docs/generate_architecture.py')
+architecture_generator = importlib.util.module_from_spec(architecture_spec)
+architecture_spec.loader.exec_module(architecture_generator)
 
 # build.sh admits its tracked inputs and takes the checkout lock before any check; a build
 # checkout needs those files and the lock launcher, then the limits documents it checks first.
@@ -57,9 +60,11 @@ def build_references():
 def architecture_references():
     """Everything the architecture check reads: the manifest, its generator, the document, the figures and every cited file."""
     manifest = json.loads((ROOT / 'docs/architecture.json').read_text())
-    paths = {'docs/architecture.json', 'docs/generate_architecture.py', manifest['document']}
+    paths = {'docs/architecture.json', 'docs/generate_architecture.py', *architecture_generator.SPAN_DOCUMENTS}
     for graph in manifest['graphs']:
-        paths |= {f"docs/{graph['file']}.dot", f"docs/{graph['file']}.svg"}
+        document = graph.get('document', manifest['document'])
+        paths.add(document)
+        paths |= {str(Path(document).parent / (graph['file'] + suffix)) for suffix in ('.dot', '.svg')}
         for item in graph['nodes'] + graph['edges']:
             paths |= {ref['path'] for key in ('sources', 'checks') for ref in item[key]}
     return paths

@@ -65,10 +65,14 @@ def region_ownership(root, name):
     if name == 'build':
         return {data['document']: [(gen.REGION_START.format(region=r), gen.REGION_END.format(region=r)) for r in gen.REGIONS]}, {
             str(Path(data['document']).parent / (data['figure'] + suffix)) for suffix in ('.dot', '.svg')}
-    return {data['document']: [(gen.REGION_START.format(graph=g['id']),
-                                gen.REGION_END.format(graph=g['id'])) for g in data['graphs']]}, {
-        str(Path(data['document']).parent / (g['file'] + suffix))
-        for g in data['graphs'] for suffix in ('.dot', '.svg')}
+    regions, whole = {}, set()
+    for graph in data['graphs']:
+        document = gen.graph_document(data, graph)
+        regions.setdefault(document, []).append((gen.REGION_START.format(graph=graph['id']),
+                                                 gen.REGION_END.format(graph=graph['id'])))
+        whole.update(str(Path(document).parent / (graph['file'] + suffix)) for suffix in ('.dot', '.svg'))
+    return regions, whole
+
 
 
 def outside(data, regions):
@@ -443,7 +447,7 @@ class GeneratorContractTests(unittest.TestCase):
     def test_spans_are_authored_outside_regions_and_copied_as_bytes(self):
         common = module('span_checks', ROOT / 'docs/generator_common.py')
         for name, filename, span in [
-            ('architecture', 'docs/ARCHITECTURE.md', 'architecture.graphs'),
+            ('architecture', 'docs/ARCHITECTURE.md', 'architecture.documents.architecture.graphs'),
             ('limits', 'docs/LIMITS.md', 'limits.step_id.value'),
         ]:
             root = self.checkout()
@@ -641,11 +645,12 @@ class GeneratorContractTests(unittest.TestCase):
         root = self.checkout()
         path = root / 'docs/architecture.json'
         data = json.loads(path.read_text())
-        data['graphs'][0]['nodes'][0]['label'] += ' changed'
+        for graph in data['graphs']:
+            graph['nodes'][0]['label'] += ' changed'
         path.write_text(json.dumps(data))
         script = root / 'docs/generate_architecture.py'
         script.write_text(script.read_text().replace('def render_svg(dot_text):',
-            'def render_svg(dot_text):\n    raise RuntimeError("controlled render refusal")'))
+            'def render_svg(dot_text):\n    if \"digraph \" + \"' + data['graphs'][-1]['id'] + '\" in dot_text:\n        raise RuntimeError("controlled render refusal")\n    return "<svg/>"'))
         before = self.snapshot(root)
         result = self.command(root, 'architecture')
         self.assertNotEqual(result.returncode, 0)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the architecture figures and tables from docs/architecture.json.
 
-The manifest owns every node and edge of the graphs in docs/ARCHITECTURE.md,
+The manifest owns every node and edge of the graphs in the registered developer tours,
 each with source and check citations. This script verifies symbol presence
 and test/rule definitions, renders each graph to Graphviz dot text, renders that dot to SVG with the installed
 `dot`, stamps the SVG with the hash of its dot text, and writes the figure
@@ -34,7 +34,7 @@ import generate_limits
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/architecture.json"
 GENERATOR_NAME = "docs/generate_architecture.py"
-SPAN_DOCUMENTS = ("docs/ARCHITECTURE.md",)
+SPAN_DOCUMENTS = ("docs/ARCHITECTURE.md", "docs/WORKER.md")
 REGION_START = "<!-- BEGIN GENERATED ARCHITECTURE GRAPH {graph} -->"
 REGION_END = "<!-- END GENERATED ARCHITECTURE GRAPH {graph} -->"
 STAMP_RE = re.compile(r"<!-- architecture\.json graph (\S+); dot sha256 ([0-9a-f]{64}) -->")
@@ -77,8 +77,8 @@ def _attrs(owner, attrs):
 
 def load_manifest(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 2:
-        raise ValueError("expected architecture manifest schema_version 2")
+    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 3:
+        raise ValueError("expected architecture manifest schema_version 3")
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
     known_limits = {row["id"] for row in limits}
     for text in strings(data):
@@ -89,11 +89,7 @@ def load_manifest(path: Path, root: Path = ROOT):
         for ident in LIMIT_RE.findall(text):
             if ident not in known_limits:
                 raise ValueError(f"unknown limit placeholder: {ident}")
-    document = Path(data["document"])
-    if document.is_absolute() or ".." in document.parts or document.suffix != ".md":
-        raise ValueError("document must be a repository-relative Markdown path")
-    if data["document"] not in SPAN_DOCUMENTS:
-        raise ValueError("document is not registered for architecture spans")
+    validate_destination(data["document"])
     styles = data["styles"]
     if set(styles) != {"node_kinds", "edge_kinds"}:
         raise ValueError("styles must define node_kinds and edge_kinds")
@@ -107,8 +103,9 @@ def load_manifest(path: Path, root: Path = ROOT):
     graph_ids, files, edge_ids = set(), set(), set()
     for graph in data["graphs"]:
         expected = {"id", "title", "file", "rankdir", "clusters", "nodes", "edges", "node_facts", "edge_facts"}
-        if set(graph) != expected:
+        if not expected <= set(graph) or not set(graph) <= expected | {"document"}:
             raise ValueError(f"graph {graph.get('id')}: unexpected/missing fields")
+        validate_destination(graph.get("document", data["document"]))
         gid = graph["id"]
         if not ID_RE.fullmatch(gid) or gid in graph_ids:
             raise ValueError(f"invalid/duplicate graph id {gid!r}")
@@ -173,16 +170,20 @@ def load_manifest(path: Path, root: Path = ROOT):
             raise ValueError(f"{gid}: clusters must be a list")
         clustered = set()
         for cluster in graph["clusters"]:
-            if set(cluster) != {"id", "label", "nodes"} or not ID_RE.fullmatch(cluster["id"]):
+            if (not {"id", "label", "nodes"} <= set(cluster) or
+                    not set(cluster) <= {"id", "label", "nodes", "label_position"} or
+                    not ID_RE.fullmatch(cluster["id"])):
                 raise ValueError(f"{gid}: malformed cluster")
+            if cluster.get("label_position", "top") not in {"top", "bottom"}:
+                raise ValueError(f"{gid}: invalid cluster label position")
             if not isinstance(cluster["nodes"], list) or not cluster["nodes"]:
                 raise ValueError(f"{gid}: cluster {cluster['id']} lists no nodes")
             for nid in cluster["nodes"]:
                 if nid not in node_ids or nid in clustered:
                     raise ValueError(f"{gid}: cluster {cluster['id']}: unknown or repeated node {nid!r}")
                 clustered.add(nid)
-    forbidden = {MANIFEST_NAME, data["document"]}
-    forbidden.update(str(document.parent / (g["file"] + suffix))
+    forbidden = {MANIFEST_NAME, *SPAN_DOCUMENTS}
+    forbidden.update(str(Path(graph_document(data, g)).parent / (g["file"] + suffix))
                      for g in data["graphs"] for suffix in (".dot", ".svg"))
     for graph in data["graphs"]:
         for item in graph["nodes"] + graph["edges"]:
@@ -191,6 +192,20 @@ def load_manifest(path: Path, root: Path = ROOT):
                     if Path(ref["path"]).as_posix() in forbidden:
                         raise ValueError(f"self-citation: {ref['path']}")
     return data
+
+
+def validate_destination(name):
+    if not isinstance(name, str):
+        raise ValueError("document must be a repository-relative Markdown path")
+    path = Path(name)
+    if path.is_absolute() or ".." in path.parts or path.suffix != ".md" or path.as_posix() != name:
+        raise ValueError("document must be a canonical repository-relative Markdown path")
+    if name not in SPAN_DOCUMENTS:
+        raise ValueError("document is not registered for architecture spans")
+
+
+def graph_document(manifest, graph):
+    return graph.get("document", manifest["document"])
 
 
 def _citations(owner, item, root):
@@ -260,6 +275,8 @@ def render_dot(graph, styles, document_name, limits=None):
     for cluster in graph["clusters"]:
         lines.append(f"    subgraph cluster_{cluster['id']} {{")
         lines.append(f'        label="{esc(cluster["label"])}"; style=dashed; color="#888888"; fontsize=10;')
+        if "label_position" in cluster:
+            lines.append('        labelloc=' + ('b' if cluster["label_position"] == "bottom" else 't') + ';')
         for nid in cluster["nodes"]:
             lines.append(f"        {nid};")
         lines.append("    }")
@@ -402,6 +419,9 @@ def span_values(manifest):
     values = {"graphs": len(graphs), "nodes": sum(len(g["nodes"]) for g in graphs),
               "edges": sum(len(g["edges"]) for g in graphs),
               "unpinned": sum(not item["checks"] for g in graphs for item in g["nodes"] + g["edges"])}
+    for document in SPAN_DOCUMENTS:
+        values[f"documents.{Path(document).stem.lower()}.graphs"] = sum(
+            graph_document(manifest, g) == document for g in graphs)
     for graph in graphs:
         values[graph["id"] + ".nodes"] = len(graph["nodes"])
         values[graph["id"] + ".edges"] = len(graph["edges"])
@@ -410,10 +430,16 @@ def span_values(manifest):
     return {name: format_value(value) for name, value in values.items()}
 
 
-def render_document(text, manifest, limits=None):
+def render_document(text, manifest, limits=None, document=None):
     text = render_spans(text, "architecture", span_values(manifest))
-    document_name = Path(manifest["document"]).name
-    for graph in manifest["graphs"]:
+    document = document or manifest["document"]
+    document_name = Path(document).name
+    graphs = [g for g in manifest["graphs"] if graph_document(manifest, g) == document]
+    expected = {g["id"] for g in graphs}
+    for marker in re.findall(r"<!-- (?:BEGIN|END) GENERATED ARCHITECTURE GRAPH (\S+) -->", text):
+        if marker not in expected:
+            raise ValueError(f"{document}: unknown or misrouted graph marker {marker}")
+    for graph in graphs:
         start = REGION_START.format(graph=graph["id"])
         end = REGION_END.format(graph=graph["id"])
         text = replace_block(text, start, end, render_region(graph, document_name, limits))
@@ -435,10 +461,10 @@ def render_svg(dot_text):
 def expected_outputs(root: Path, manifest):
     """Every file this generator owns, with the text it should hold (SVGs by stamp)."""
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
-    document_path = root / manifest["document"]
-    document_name = document_path.name
     outputs = {}
     for graph in manifest["graphs"]:
+        document_path = root / graph_document(manifest, graph)
+        document_name = document_path.name
         dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         outputs[document_path.parent / f"{graph['file']}.dot"] = dot_text
     return outputs
@@ -448,9 +474,9 @@ def check(root: Path):
     manifest = load_manifest(root / MANIFEST_NAME, root)
     problems = []
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
-    document_path = root / manifest["document"]
-    document_name = document_path.name
     for graph in manifest["graphs"]:
+        document_path = root / graph_document(manifest, graph)
+        document_name = document_path.name
         dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         dot_path = document_path.parent / f"{graph['file']}.dot"
         svg_path = document_path.parent / f"{graph['file']}.svg"
@@ -460,16 +486,18 @@ def check(root: Path):
             problems.append(f"{svg_path.relative_to(root)}: missing; regenerate with dot")
         elif not svg_stamp_matches(svg_path.read_text(errors="replace"), graph["id"], dot_text):
             problems.append(f"{svg_path.relative_to(root)}: stamp does not name the current dot text; re-render")
-    if not document_path.is_file():
-        problems.append(f"{manifest['document']}: missing")
-    else:
+    for document in SPAN_DOCUMENTS:
+        document_path = root / document
+        if not document_path.is_file():
+            problems.append(f"{document}: missing")
+            continue
         text = document_path.read_text()
         try:
-            problems.extend(span_problems(text, "architecture", span_values(manifest)))
-            if render_document(text, manifest, limits) != text:
-                problems.append(f"{manifest['document']}: generated regions are stale; regenerate")
+            problems.extend(f"{document}: {p}" for p in span_problems(text, "architecture", span_values(manifest)))
+            if render_document(text, manifest, limits, document) != text:
+                problems.append(f"{document}: generated regions are stale; regenerate")
         except ValueError as error:
-            problems.append(f"{manifest['document']}: {error}")
+            problems.append(f"{document}: {error}")
     nodes = sum(len(g["nodes"]) for g in manifest["graphs"])
     edges = sum(len(g["edges"]) for g in manifest["graphs"])
     summary = (f"architecture manifest: {len(manifest['graphs'])} graphs, {nodes} nodes, {edges} edges; "
@@ -480,12 +508,17 @@ def check(root: Path):
 def write(root: Path, skip_svg: bool):
     manifest = load_manifest(root / MANIFEST_NAME, root)
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
-    document_path = root / manifest["document"]
-    document_name = document_path.name
-    text = document_path.read_text()
-    rendered = render_document(text, manifest, limits)  # validate markers before writing anything
     pending = {}
+    # Validate every destination before rendering, and finish all rendering before writing.
+    for document in SPAN_DOCUMENTS:
+        document_path = root / document
+        text = document_path.read_text()
+        rendered = render_document(text, manifest, limits, document)
+        if rendered != text:
+            pending[document_path] = rendered
     for graph in manifest["graphs"]:
+        document_path = root / graph_document(manifest, graph)
+        document_name = document_path.name
         dot_text = render_dot(graph, manifest["styles"], document_name, limits)
         dot_path = document_path.parent / f"{graph['file']}.dot"
         if not dot_path.is_file() or dot_path.read_text() != dot_text:
@@ -494,8 +527,6 @@ def write(root: Path, skip_svg: bool):
             svg_path = document_path.parent / f"{graph['file']}.svg"
             if not svg_path.is_file() or not svg_stamp_matches(svg_path.read_text(errors="replace"), graph["id"], dot_text):
                 pending[svg_path] = stamp_svg(render_svg(dot_text), graph["id"], dot_text)
-    if rendered != text:
-        pending[document_path] = rendered
     # Finish validation and rendering before publishing any changed copy.
     for path, content in pending.items():
         path.write_text(content)

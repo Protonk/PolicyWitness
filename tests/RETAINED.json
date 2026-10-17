@@ -1102,6 +1102,27 @@
       "reason": "Worker-tour pass 1 corrected generator-contract validation; other five source-drift cases credited from worker-p1-drift.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p2-routing",
+      "run_id": "20261017T222831Z_4cdcc727",
+      "reason": "Worker pass 2 routing checkpoint: architecture and generator controls passed before inventory migration; superseded for final credit.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p2-final",
+      "run_id": "20261017T223303Z_19a7b574",
+      "reason": "Worker pass 2 full drift run: five passed; contract fixture omitted the new document. Preserve failure and source patch; affected cases rerun.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p2-verified",
+      "run_id": "20261017T223822Z_8247f3aa",
+      "reason": "Worker pass 2 final contract, architecture and generator controls passed; other three drift cases credited from full run after reviewed applicability check.",
+      "source": null,
+      "app_inventory": null
     }
   ]
 }

@@ -19,7 +19,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / generator.MANIFEST_NAME).read_text())
         self.document = ROOT / self.manifest['document']
-        self.figures = [self.document.parent / f"{g['file']}{suffix}"
+        self.figures = [(ROOT / generator.graph_document(self.manifest, g)).parent / f"{g['file']}{suffix}"
                         for g in self.manifest['graphs'] for suffix in ('.dot', '.svg')]
 
     def checkout(self):
@@ -28,6 +28,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document']}
+        paths.update(generator.SPAN_DOCUMENTS)
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         paths.update({'docs/generate_limits.py', 'docs/limits.json'})
         limits = json.loads((ROOT / 'docs/limits.json').read_text())
@@ -82,6 +83,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             'missing form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].pop('form'),
             'invalid form': lambda d: d['graphs'][0]['nodes'][0]['checks'][0].update(form='maybe'),
             'self citation': lambda d: d['graphs'][0]['nodes'][0]['sources'][0].update(path='docs/architecture.json', symbol='schema_version'),
+            'invalid cluster label position': lambda d: d['graphs'][0]['clusters'][0].update(label_position='center'),
             'empty note': lambda d: d['graphs'][0]['nodes'][0].__setitem__('note', ' '),
         }
         for name, mutate in mutations.items():
@@ -90,9 +92,18 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             with self.assertRaises(ValueError, msg=name):
                 self.load(data)
 
+    def test_cluster_label_position_is_explicit_and_rendered(self):
+        data = copy.deepcopy(self.manifest)
+        graph = data['graphs'][0]
+        graph['clusters'][0]['label_position'] = 'bottom'
+        self.load(data)
+        self.assertIn('labelloc=b;', generator.render_dot(graph, data['styles'], 'ARCHITECTURE.md'))
+        graph['clusters'][0]['label_position'] = 'top'
+        self.assertIn('labelloc=t;', generator.render_dot(graph, data['styles'], 'ARCHITECTURE.md'))
+
     def test_every_id_is_in_its_generated_region(self):
-        text = self.document.read_text()
         for graph in self.manifest['graphs']:
+            text = (ROOT / generator.graph_document(self.manifest, graph)).read_text()
             start = generator.REGION_START.format(graph=graph['id'])
             end = generator.REGION_END.format(graph=graph['id'])
             region = text.split(start)[1].split(end)[0]
@@ -108,10 +119,11 @@ class ArchitectureDocumentationTests(unittest.TestCase):
                 self.assertIn('Every node and edge above cites at least one test or rule.', region)
 
     def test_svg_stamps_name_their_dot_text(self):
-        document_name = self.document.name
         for graph in self.manifest['graphs']:
+            document = ROOT / generator.graph_document(self.manifest, graph)
+            document_name = document.name
             dot_text = generator.render_dot(graph, self.manifest['styles'], document_name)
-            svg = (self.document.parent / f"{graph['file']}.svg").read_text(errors='replace')
+            svg = (document.parent / f"{graph['file']}.svg").read_text(errors='replace')
             self.assertTrue(generator.svg_stamp_matches(svg, graph['id'], dot_text), graph['id'])
             self.assertFalse(generator.svg_stamp_matches(svg, graph['id'], dot_text + '\n'))
             self.assertFalse(generator.svg_stamp_matches(svg, 'other_graph', dot_text))
@@ -149,6 +161,78 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         second = self.command(root, '--skip-svg')
         self.assertEqual(second.returncode, 0)
         self.assertIn('wrote nothing', second.stdout)
+
+    def test_routing_and_second_document_refusals(self):
+        root = self.checkout()
+        path = root / generator.MANIFEST_NAME
+        data = json.loads(path.read_text())
+        # Moving an existing graph tests both explicit routing and the default destination.
+        graph = data['graphs'][0]
+        original = root / data['document']
+        second = root / 'docs/WORKER.md'
+        start = generator.REGION_START.format(graph=graph['id'])
+        end = generator.REGION_END.format(graph=graph['id'])
+        text = original.read_text()
+        begin, finish = generator.block_bounds(text, start, end)
+        original.write_text(text[:begin] + text[finish:])
+        second.write_text(second.read_text() + '\n' + text[begin:finish] + '\n')
+        graph['document'] = 'docs/WORKER.md'
+        path.write_text(json.dumps(data))
+        result = self.command(root, '--skip-svg')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dot_path = second.parent / (graph['file'] + '.dot')
+        self.assertIn('WORKER.md#', dot_path.read_text())
+        self.assertNotIn('ARCHITECTURE.md#', dot_path.read_text())
+        self.assertIn('wrote nothing', self.command(root, '--skip-svg').stdout)
+        # Stamp and table checks identify the second destination independently.
+        result = self.command(root, '--check')
+        self.assertIn('stamp does not name', result.stderr)
+        svg_path = dot_path.with_suffix('.svg')
+        svg_path.write_text(generator.stamp_svg('<svg/>\n', graph['id'], dot_path.read_text()))
+        # This controlled stamp checks routing; rendering itself is separately exercised.
+        self.assertEqual(self.command(root, '--check').returncode, 0)
+        for document in (original, second):
+            saved = document.read_text()
+            owned = next(g for g in data['graphs'] if generator.graph_document(data, g) == str(document.relative_to(root)))
+            document.write_text(saved.replace(f"| {owned['nodes'][0]['id']} |", '| stale_node |', 1))
+            result = self.command(root, '--check')
+            self.assertIn(str(document.relative_to(root)) + ': generated regions are stale', result.stderr)
+            document.write_text(saved)
+        # A malformed second document refuses before refreshing even a stale first figure.
+        second.write_text(second.read_text().replace(end, '', 1))
+        dot_path.write_text('stale dot\n')
+        before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        result = self.command(root, '--skip-svg')
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('expected exactly one ordered block', result.stderr)
+        self.assertEqual(before, {p: p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_destinations_and_duplicate_ownership_are_rejected(self):
+        mutations = {
+            'absolute destination': lambda d: d['graphs'][0].update(document='/tmp/WORKER.md'),
+            'escaping destination': lambda d: d['graphs'][0].update(document='docs/../WORKER.md'),
+            'unregistered destination': lambda d: d['graphs'][0].update(document='docs/BUILD.md'),
+            'noncanonical destination': lambda d: d['graphs'][0].update(document='./docs/WORKER.md'),
+            'nonstring destination': lambda d: d['graphs'][0].update(document=None),
+            'unknown graph field': lambda d: d['graphs'][0].update(destination='docs/WORKER.md'),
+            'duplicate figure ownership': lambda d: d['graphs'][1].update(file=d['graphs'][0]['file'], document='docs/WORKER.md'),
+            'second destination self citation': lambda d: d['graphs'][0]['nodes'][0]['sources'][0].update(path='docs/WORKER.md', symbol='The Worker'),
+            'old schema': lambda d: d.update(schema_version=2),
+        }
+        for name, mutate in mutations.items():
+            data = copy.deepcopy(self.manifest)
+            mutate(data)
+            with self.assertRaises(ValueError, msg=name):
+                self.load(data)
+        root = self.checkout()
+        path = root / 'docs/WORKER.md'
+        path.write_text(path.read_text() + '\n' + generator.REGION_START.format(graph=self.manifest['graphs'][0]['id'])
+                        + '\n' + generator.REGION_END.format(graph=self.manifest['graphs'][0]['id']))
+        before = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
+        result = self.command(root, '--skip-svg')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('misrouted graph marker', result.stderr)
+        self.assertEqual(before, {p: p.read_bytes() for p in root.rglob('*') if p.is_file()})
 
     def test_broken_marker_or_citation_stops_before_any_write(self):
         root = self.checkout()
