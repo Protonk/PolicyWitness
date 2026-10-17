@@ -451,3 +451,111 @@ do not credit a failed battery as passing or suppress the case for acceptance.
 Completion requires those repairs and gates, with the durable behavior and
 operating guidance in their owning files. The report may then close this plan
 without losing the explanation or evidence needed to maintain the result.
+
+## Execution record: where the work departed from this plan
+
+The repair landed in `b410ac3`, `5bdd485`, `cc90375`, `44220df`, `5265772`
+and `b7b24b4`, with a control correction in `6f0802c`, and was accepted at
+`6f0802c`. The
+[acceptance record](records/BUILD-PROVENANCE-ACCEPTANCE.md#repair-of-the-acceptance-boundaries)
+holds the controls, runs and walkthrough. Departures from the text above,
+and decisions it left open:
+
+- **The shell front end arrived with ownership (§1), not with §4.** An
+  owner needs the requests before it can launch any build, so
+  `tests/lib/checkout_lock.sh`, the request snapshot and
+  `build_requests_missing` landed in the first commit. The snapshot covers
+  `SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, all the
+  variables the shim inserts or the interpreter coerces, rather than
+  `SDKROOT` alone. It travels as `--request NAME=VALUE` and
+  `--request-unset NAME` arguments to `checkout_lock.py`, then in the
+  owner's memory and the handoff reply; nothing is written and no
+  environment variable carries it. `DEVELOPER_DIR` and
+  `MACOSX_DEPLOYMENT_TARGET`, which the shim leaves alone, are taken from
+  the session's environment. The record publishes values only for
+  `SDKROOT`, `DEVELOPER_DIR` and `MACOSX_DEPLOYMENT_TARGET` (home-redacted);
+  the other four are recorded by state, since they can carry machine
+  configuration.
+- **The front end removes the five variables before `/usr/bin/python3`
+  runs, and `build.sh` unsets `SDKROOT` under a claim**, keeping the request
+  in shell variables until SDK selection. The plan did not anticipate this
+  hazard: during development, a shim run with an `SDKROOT` that names no SDK
+  made macOS ask the user to install the Command Line Tools. The
+  invalid-request case of `control_sdk_requests` therefore runs its one
+  `xcrun` lookup under a sandbox profile that denies Mach lookups and other
+  executables, and asserts that no installation request appears.
+- **Nesting is by checkout.** `owned(root)` is admitted through an
+  inherited claim only when the claim names the same checkout; otherwise it
+  takes that checkout's lock itself (`claim_for`). The dispatcher runs
+  fixture repositories and disposable checkouts under its own claim, and
+  refusing every foreign claim there would have refused them. A foreign
+  claim presented to the build's `lock` step still refuses as another
+  checkout.
+- **The launcher supervises its command in a new session.** It forwards
+  SIGINT, SIGTERM and SIGHUP to that group, waits at most `GROUP_GRACE`
+  (10 s) for the group to stop, and returns 128 plus the signal number.
+  A terminal interrupt therefore reaches the owner, which forwards it.
+  On macOS, signalling a group whose only members are zombies returns
+  `EPERM`; both this wait and the probe cleanup treat that as not yet gone.
+  Probes get SIGTERM, then SIGKILL after `TERM_GRACE` (1 s), with cleanup
+  bounded by `CLEANUP_TIMEOUT` (5 s).
+- **Helpers take only `--root`** and derive the session, Cargo target,
+  release and build directories as fixed paths below it. `--session`,
+  `--builddir` and `--sdk-source` are gone, and the SDK source is derived
+  from the recorded request. A direct invocation therefore cannot name a
+  path outside the admitted layout. The session schema is 2: it carries
+  the acquisition nonce, the requests and the admission. `build.sh` no
+  longer creates `controller/target/`; the helper creates it beneath the
+  admitted `controller/`.
+- **Refusal rows.** The count went from 47 to 51. `cache_path_unsafe`
+  replaces `fresh_removal_unsafe` because admission now precedes every write
+  and removal, not only fresh mode's. The other additions are
+  `build_requests_missing`, `cargo_configuration_unresolved`,
+  `cargo_environment_conflict` and `cargo_judgment_unknown`. Messages or
+  steps changed on `lock_claim_invalid`, `cargo_target_reused` and
+  `provenance_required_unknown`. The admission mutation is a mutation of
+  the session helper, not of the script, so mutation entries can now name
+  their file.
+- **The rustup proxy is modelled as Cargo's default launcher.** The proxy
+  prepends `$CARGO_HOME/bin` to `PATH` and sets `RUSTUP_TOOLCHAIN` for the
+  compiler. The resolver identifies the proxy with `rustup show
+  active-toolchain` and confirms it with `cargo +<toolchain> --version`.
+  Detecting it from paths failed behind the test wrappers that sit in front
+  of `cargo` on `PATH`.
+- **The Cargo oracle compares only variables the shim leaves alone.** The
+  recording forwarders are Python started through `/usr/bin/python3`, so
+  `SDKROOT` reaching the compiler through `[env]` is not observed at run
+  time. The resolver's unit tests and `control_cargo_environment_conflict`
+  cover it; the latter refuses before Cargo runs. A compiled forwarder would
+  remove this limit.
+- **Reverted flags reuse a kept unit.** Cargo keeps units for different
+  flags side by side, so returning to flags an earlier build compiled
+  reuses that unit rather than rebuilding. The selection sequence asserts
+  the attribution and the bound fingerprint for that step, not a rebuild.
+- **The validator found two producer bugs, fixed in `5265772` and
+  `b7b24b4`:** a partial build recorded a Swift observation instead of the
+  not-applicable entry, and a Cargo release directory that fresh mode
+  replaced was recorded as reused instead of created.
+- **Fixture and control adjustments.** The signature-facts reader reads
+  codesign's `TeamIdentifier=not set` as no team, which an ad hoc helper
+  displays. The release publish control's codesign stand-in now passes
+  `-dvv` to the real tool, because signature facts are read from that
+  display. The single-SDK guard fixture stamps the next major version after
+  the selected SDK, computed at run time, rather than a fixed 28.0.
+- **Review before the credited run found three control defects, fixed in
+  `6f0802c`.** The `builddir_stamp_missing` and `worker_identity_mismatch`
+  mutations still named the helper arguments that `b410ac3` removed, so the
+  mutation phase would have failed its own precondition. The Cargo oracle
+  recorded, without asserting, that Cargo fails each graph the resolver
+  refuses, although BUILD.md said the control requires it. The lifetime
+  control never showed a standalone Cargo command succeeding once the
+  holder exited. The controls now assert what the document says; the prose
+  was not weakened. Mutation anchors are still checked only when the opt-in
+  control runs.
+- **Acceptance moved to `6f0802c` and Xcode 27.1.** A default battery at
+  `b7b24b4` passed all 188 cases, but the App Store updated Xcode from 27.0
+  to 27.1 during its last minutes and the control correction followed it.
+  It is therefore superseded and not retained. The user completed Xcode's
+  first launch. The app was then built fresh at `6f0802c`, and every gate
+  ran against that build. The SDK and compiler identities did not change.
+  The worker clock finding did not recur and stays open under its own plan.
