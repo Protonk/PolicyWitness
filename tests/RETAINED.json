@@ -821,6 +821,20 @@
       "reason": "Build provenance acceptance: signed_artifact_controls, build_guard_controls, build_refusal_controls and build_toolchain_switch_controls against the same build; every refusal row produced in its variants, the fresh-mode sequence, the mutation demonstrations and the real developer-directory switch.",
       "source": "de5034b0977cafc914b44c49458b635dbb59fae2",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/provenance-repair-default-20261016-credited",
+      "run_id": "20261017T004857Z_5cce7d04",
+      "reason": "Build provenance repair acceptance: the default battery against the fresh signed build at the repaired commit under Xcode 27.1; 188 of 188 passing with no skips, unrun cases or harness errors and an unchanged app; replaces the provenance-acceptance default credit for the repaired boundaries.",
+      "source": "6f0802cb788dbb2de001e788e66f706dad5df945",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/provenance-repair-optin-20261016-credited",
+      "run_id": "20261017T005926Z_348917a8",
+      "reason": "Build provenance repair acceptance: signed_artifact_controls, build_guard_controls, build_refusal_controls and build_toolchain_switch_controls against the same build; every refusal control in both variants, nine sequences including lock lifetime, the Cargo oracle, selection and SDK requests, nine mutation demonstrations and the real developer-directory switch.",
+      "source": "6f0802cb788dbb2de001e788e66f706dad5df945",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

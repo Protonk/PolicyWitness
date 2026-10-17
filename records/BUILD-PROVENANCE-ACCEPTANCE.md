@@ -16,7 +16,11 @@ local checkout; the credited directories are protected through
 
 ## Conclusions
 
-All five gates pass against the final increment. The provenance checks rely
+All five gates pass against the final increment. Later review found five
+boundaries where these runs did not establish the distinction claimed;
+[Repair of the acceptance boundaries](#repair-of-the-acceptance-boundaries)
+lists the claims below that it qualifies, the repair and the runs that now
+carry the credit. The provenance checks rely
 on tool-reported information and do not establish that rebuilding with the
 recorded inputs produces identical bytes; the record and the build document
 state that limit.
@@ -341,8 +345,16 @@ visible state. The design consequence is that no control patches Mach-O
 headers: the "unreadable SDK" branch of the SDK comparison is covered by unit
 controls over constructed `otool` text, and the wrong-SDK build controls use
 a binary genuinely compiled against another installed SDK
-(`-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`). The
-user said they or someone else will manage the classifier issue.
+(`-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk`). This
+note first named the 26.5 SDK; the retained receipt
+`tests/out/runs/provenance-acceptance-optin-20261016-credited/suites/preflight/build_guard_controls/artifacts/compile-wrong-sdk/command.json`
+shows the successful command naming the 15.4 SDK with `-isysroot` and
+minimum 26.0, and the same run's `artifacts/equipment.json` records other
+SDK version 15.4 against the selected SDK 27.0. Those guards now need one
+SDK; the repair section describes the metadata fixture that replaced the
+second one. The record holds no raw classifier decisions, so their exact
+causes cannot be diagnosed from it. The user said they or someone else will
+manage the classifier issue.
 
 ## Remaining findings
 
@@ -375,3 +387,174 @@ user said they or someone else will manage the classifier issue.
   with a working app; no release was made or submitted during this plan.
 - The controller's `app_provenance` response field is unchanged; a
   controller-visible field for the record remains a later, additive change.
+
+## Repair of the acceptance boundaries
+
+Review of this record after `e845b02` found counterexamples at five
+boundaries the account above claimed. The runs above establish the cases
+they exercised and stay retained unchanged; they do not establish the
+distinctions below. This section records the repair, made on 2026-10-16,
+and the runs that now carry the acceptance credit for these boundaries.
+
+### What the original account did not establish
+
+- **Ownership and lifetime.** The `lock` step verified a claim by taking
+  `LOCK_EX | LOCK_NB` on the descriptor the claim named. A stale, separately
+  opened descriptor on a free lock therefore passed as an inherited hold; the
+  `lock_claim_invalid` row above tried such a descriptor only while the real
+  holder held the lock. Session nonces were compared without a hold, and two
+  absent nonces compared equal, so `fresh-remove` run by hand deleted both
+  caches. The dispatcher's descriptor was not inheritable and its cases did
+  not receive it, so a killed dispatcher freed the lock while a case still
+  ran. `control_fresh_sequence` step 12 recorded `held_after_kill` without
+  asserting it; the credited value happened to be true.
+- **Path admission.** `build.sh` created `controller/target/` and the session
+  helper wrote the session before fresh mode checked any path. Through a
+  symlinked `controller/target`, review saw a file outside the checkout
+  overwritten before the later `fresh_removal_unsafe` refusal.
+- **Cargo selection and freshness.** The collector read Cargo settings with
+  line-oriented regular expressions, starting from the manifest directory.
+  It missed inline tables, included files and `[env]`, and refused a
+  recognized file setting even when `RUSTC` overrode it. It read a missing
+  or null `fresh` as `false`, so an absent judgment counted as a rebuild.
+- **Record validation and effective settings.** `record_problems` accepted
+  `null` sections and ignored the recorded linker tools. The accepted app's
+  record carried `deployment_target: null` beside an enforced 26.0. The
+  caller's `SDKROOT` was relayed only on the unclaimed path, and the
+  `/usr/bin/python3` shim inserts `SDKROOT` when the caller leaves it unset,
+  so a Python owner could not tell an absent request from the shim's value.
+- **Probe bounds.** Probes wrote both streams to files until the tool exited.
+  Only stdout's size was checked, and only afterward; stderr was never
+  bounded. Some comparison identities and effective flag lists were
+  truncated, so values that differed only after the cut compared equal.
+
+This qualifies the first four rows of the Conclusions table,
+the `lock_claim_invalid` and `fresh_removal_unsafe` rows of the refusal
+table, the Subprocess ownership review, and the relay paragraph under Real
+toolchain switch. The account below replaces them.
+
+### Repaired boundaries and their controls
+
+Every control named here ran in the credited runs below. The unit tests are
+in `tests/suites/preflight/check_build_provenance.py` (default case
+`preflight/build_provenance_controls`). The build controls are in
+`tests/suites/preflight/opt_in/build_refusals.py` (opt-in case
+`preflight/build_refusal_controls`); they run the unchanged script in a
+disposable checkout, with forwarding tool wrappers whose receipts serve as
+the oracle.
+
+| Boundary | Repair | Reproducing controls |
+| --- | --- | --- |
+| Ownership and lifetime | `checkout_lock.py` owns acquisition, nested admission and protected launches. An owner hands its held descriptor, nonce and requests over a private socket pair it creates when it launches the protected child; admission never takes the lock. Every managed launch passes the descriptor explicitly, including the dispatcher's cases and the test wrappers. The launcher supervises its command in a new session and forwards SIGINT, SIGTERM and SIGHUP. Each helper that writes the session, removes a cache, or publishes or extends the stamp is admitted the same way and requires the session's acquisition nonce. | `test_claims_are_admitted_only_by_a_live_owners_handoff` (stale claim, unheld descriptor on the inode, another open beside a real holder, wrong nonce, closed descriptor, other worktree), `test_owner_exit_during_admission_creates_no_hold`, `test_protected_children_keep_the_hold_after_the_owner_dies`, `test_helpers_refuse_without_ownership`; `control_lock_claim_invalid`, `control_checkout_busy`, `control_lock_lifetime` (signals; a holder beyond a killed owner, shell and wrapper, with a passing and a dropping wrapper; standalone Cargo refused while held and admitted after; nested success; packaging; an independent worktree); `control_fresh_sequence` step 12, which now asserts `held_after_kill`; `dispatcher/retention_controls` (a killed dispatcher's grandchild beyond a passing and a dropping wrapper) |
+| Path admission | Under the verified hold, the session helper admits every component of `builddir/`, `controller/target/`, `controller/target/release/` and the session and stamp destinations before any write. It refuses symlinked, foreign-owned and non-directory components and unsafe destination files. Writes and removals go through the admitted directory descriptors, with identity rechecks, and fresh mode admits both removal roots before removing either. The script no longer creates `controller/target/` itself. `cache_path_unsafe` replaces `fresh_removal_unsafe`. | `test_cache_paths_are_admitted_before_any_write`, `test_fresh_removal_admits_only_owned_real_directories`; `control_cache_path_unsafe` (each component and the session destination, in incremental and fresh mode; outside sentinels, hashes and inventories; a path replaced between helpers; an owned missing directory); `control_fresh_removal_failed`; the mutation "path admission disabled in the session helper", which brings back the original outside-session overwrite and fails the control |
+| Cargo selection and freshness | `tests/lib/cargo_config.py`, with tomli 2.4.1 vendored unmodified under `tests/lib/vendor/`, reads Cargo's configuration the way a single invocation from the caller's directory does. That covers ancestors and Cargo home; `config` over `config.toml`; includes in Cargo's order under byte, file, depth and cycle bounds; the merge rules; value origins for relative paths; environment overrides and an empty wrapper reset; `[env]` with `force` and `relative`; and the rustup proxy. The compiler is probed in Cargo's child environment at the workspace root. A configuration that cannot be read refuses as `cargo_configuration_unresolved`. A forced input that conflicts with the build's selection refuses as `cargo_environment_conflict`. A shipped target without exactly one literal boolean judgment refuses as `cargo_judgment_unknown`. Requested flags are attributed by precedence. | `test_toml_forms_discovery_and_precedence`, `test_program_paths_resolve_as_cargo_resolves_them`, `test_includes_follow_cargo_order_and_refuse_what_cannot_be_read`, `test_env_entries_apply_as_cargo_applies_them`, `test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable`, `test_requested_flags_are_attributed_by_precedence`; `control_cargo_configuration_oracle` (24 configurations: 19 checked against the compiler, wrapper chain, directory and environment real Cargo used; one checked to compile without the manifest directory's file when run from another directory; and 4 the resolver refused, each of which Cargo also failed with status 101); `control_cargo_selection_sequence` (with retained caches: an included relative compiler, a change to only that file, the review's forced `[env]` `PATH` counterexample, encoded flags over `RUSTFLAGS`, target rules over `build.rustflags`, recovery); `control_cargo_configuration_unresolved`, `control_cargo_environment_conflict`, `control_cargo_judgment_unknown` |
+| Record validation and effective settings | One typed validator for the documented record runs in the producer before sealing, in the artifact inspector and in the release-archive reader. Linker tools are compared with the load commands, and the signing section with independently read signature displays. `tests/lib/checkout_lock.sh` records `SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE` with shell builtins before `/usr/bin/python3` runs. The owner carries these requests, and nested builds receive them through the handoff. A build launched by an owner without requests refuses as `build_requests_missing`. The record keeps `configuration.requests` apart from the effective deployment target and SDK, which are taken after selection and after Cargo's `[env]`. The fixture records are authored independently. | `test_records_are_validated_by_shape_in_every_reader`, `test_the_archive_reader_validates_the_record_and_binds_its_outputs`, `test_the_producer_validates_before_sealing`, `test_requests_are_captured_before_python_and_handed_to_nested_owners`; `signed_artifact_controls` (re-signed copies with missing, null and mistyped sections and a changed linker-tool version); the release publish and dispatcher artifact controls with migrated fixture records; `control_build_requests_missing`; `control_sdk_requests` (absent, default named, empty, an explicit path nested under another owned command, and an invalid request refused without a shim seeing it; each compared with the compilations, their environment and the outputs' load commands) |
+| Probe bounds | Probes drain both streams through a selector, with live byte limits and one deadline. Overflow on either stream, or the deadline, fails the observation even after exit 0. The process group then gets SIGTERM, then SIGKILL after a grace period, under a bounded cleanup that reports failure rather than waiting. Failure entries carry only kind, stream, status and sizes. Oversized compiler commands, identities and flag lists become failed observations instead of truncated values. | `test_probes_are_bounded_and_failures_carry_no_output` (overflow on each stream and on both, exact limit, nonzero exit, empty and malformed output, timeout, ignored SIGTERM, an orphaned pipe writer), `test_comparison_inputs_are_complete_within_their_bounds`, `test_failed_required_observations_refuse_compatibility_and_publication`; `control_provenance_probe_failed` with a stderr flood and a canary |
+
+The core build guards now need only one installed SDK.
+`tests/suites/preflight/opt_in/build_guards.py` links a small Mach-O with
+`-Wl,-platform_version,macos,<minimum>,<next major>` and reads its load
+commands before substituting it; in the credited run it stamped SDK 28.0
+beside the selected 27.0, with minimum 26.0. This is a controlled metadata
+mismatch, not evidence of compiling against a second SDK. The
+developer-directory switch remains the separate, equipment-dependent case.
+
+### Commits and identities
+
+| Item | Value |
+| --- | --- |
+| Implementation commits | `b410ac3ba1ba89d0db80750fd48f9cf470ba399e` (ownership handoff and early path admission), `5bdd4852fce2fec328916019c92827d0028cae26` (probe bounds; unvalidated SDK requests kept away from the shims), `cc903757b325cc849e82a4a389d50fb40ad961b7` (Cargo selection and literal freshness), `44220dfba0cbdad2d1688ff322aac9974634606e` (record validation; requests kept apart from effects), `5265772c9bb56dfe3a2794f04e181d428fa1654a` (one-SDK build guards; a partial build's Swift recorded as not applicable), `b7b24b41cebfb463fd3ed4487e0d03f46280446d` (a Cargo release directory that fresh mode replaced recorded as created) |
+| Control correction commit | `6f0802cb788dbb2de001e788e66f706dad5df945`: the `builddir_stamp_missing` and `worker_identity_mismatch` mutations still named helper arguments that `b410ac3` removed, so the mutation phase would have failed its own precondition. The Cargo oracle recorded, but did not assert, that Cargo fails each configuration the resolver refuses. The lifetime control never ran a standalone Cargo command after the holder exited. The build document already claimed the last two. |
+| Tested source snapshot | `6f0802cb788dbb2de001e788e66f706dad5df945`; the acceptance build's record names it with `dirty: false` and `describe` `v0.3.0-36-g6f0802c` |
+| Worker identity | `b3b5f50a1f90e5cf11f864dfaa85b752961b115d773abf49ce00e28dba19f5be` |
+| Refusal count | 51 manifest rows: 17 the script's own, the Meson family row and 33 propagated; the baseline stays empty. Added: `build_requests_missing`, `cache_path_unsafe` (replacing `fresh_removal_unsafe`), `cargo_configuration_unresolved`, `cargo_environment_conflict` and `cargo_judgment_unknown`. Changed: `lock_claim_invalid` (now produced at every admitting step), `cargo_target_reused` (a missing literal judgment is not a rebuild) and `provenance_required_unknown` (also raised when a record fails its own validation). |
+| Steps, invocations, knobs, signing calls | unchanged at 33, 35, 3 and 9 |
+| Acceptance app | `dist/PolicyWitness.app`, built with `make build PW_FRESH_BUILD=1` at the tested snapshot as build 0.3.0 (658); ZIP sha256 `da30cf57894fc415234b8af281d1fd899a0f5e64ceb20f73fe37ba0df065826b`. Its record names Xcode 27.1 (27A9275), SDK 27.0 build 26A425 from `xcrun --sdk macosx default`, Apple clang 21.0.0 (clang-2100.3.34.2), Apple Swift 6.4, and rustc 1.99.0 as Cargo's default selection through the rustup proxy (`stable-aarch64-apple-darwin`). It records `deployment_target` 26.0. The requests show `SDKROOT` unset and `MANPATH` set, recorded by state only. `builddir` and `cargo_release` were both replaced by fresh mode and recorded as created, and every Cargo judgment says rebuilt. |
+
+The App Store updated Xcode from 27.0 (27A266a) to 27.1 between about 17:22
+and 17:30 PDT, during the work. The user completed Xcode's first launch
+before the acceptance build. The SDK, C and Swift compiler identities
+reported before and after the update are the same.
+
+### Replacement acceptance runs
+
+Every command ran from the repository root in an unsandboxed shell, with
+`/opt/homebrew/opt/rustup/bin` prepended to `PATH` and `PYTHONOPTIMIZE`
+unset.
+
+| Gate | Command | Output directory and run id | Result |
+| --- | --- | --- | --- |
+| Signed build, fresh | `make build PW_FRESH_BUILD=1 IDENTITY=...` | `dist/PolicyWitness.app`; record commit `6f0802cb788dbb2de001e788e66f706dad5df945` | passed; every step banner in the documented order; 8 executables and 2 seals signed with the hardened runtime, the Developer ID chain, its team and a secure timestamp |
+| Default battery | `PW_TEST_OUT_DIR=tests/out/runs/provenance-repair-default-20261016-credited tests/run.sh` | `20261017T004857Z_5cce7d04` in `tests/out/runs/provenance-repair-default-20261016-credited` | passed: 188 selected, 188 completed, 188 passed; no skips, unrun cases or harness errors; app unchanged |
+| Opt-in build and artifact controls | `PW_TEST_OUT_DIR=tests/out/runs/provenance-repair-optin-20261016-credited tests/run.sh --case preflight/signed_artifact_controls --case preflight/build_guard_controls --case preflight/build_refusal_controls --case preflight/build_toolchain_switch_controls` | `20261017T005926Z_348917a8` in `tests/out/runs/provenance-repair-optin-20261016-credited` | passed: 4 selected, 4 completed, 4 passed. The refusal controls made 75 control runs (33 in each variant, including the valid neighbour, plus 9 sequences) and 9 mutation demonstrations, every guard stage failing its control. The toolchain switch refused reuse by `developer_dir` and recovered fresh under the Command Line Tools with SDK 26.5 |
+| Controller unit tests under the lock | `tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml` | the managed `controller/target/` | exit 0 through the front end; every batch passed (235, 27, 56 and 15 tests, with one ignored test in each of two batches) |
+| Release preflight report | `/usr/bin/python3 -B tests/lib/release_preflight.py --report` | stdout | exit 0; one problem reported, that HEAD is not at a release tag (it would stamp `v0.3.0-36-g6f0802c`) |
+
+These runs replace the credits of `provenance-acceptance-default-20261016-credited`
+and `provenance-acceptance-optin-20261016-credited` for the boundaries above;
+those runs and their receipts are kept. The lock lifetime observations are in
+`full-lock-lifetime.json`, the oracle's results in `cargo-oracle.json`, and
+the mutation results in `mutations.json`, all under the opt-in run's
+`suites/preflight/build_refusal_controls/artifacts/`.
+
+The following runs informed the work and are not credited:
+
+- `provenance-repair-default-20261016` (run `20261017T001346Z_08a40e69`), the
+  default battery at `b7b24b4` against a build made under Xcode 27.0. All 188
+  cases passed, but its last minutes overlapped the Xcode update and the
+  control correction followed it, so it is superseded and not retained.
+- `tests/out/runs/dev-*` and `.tmp/dev-runs/`, selections and direct control
+  runs during the repair. Among them, `.tmp/dev-runs/final-1` stopped when
+  the Xcode update removed the interpreter's library during a restore build.
+  `.tmp/dev-runs/final-2` ran the mutation phase, the lifetime control and
+  the oracle at the correction before it was committed.
+
+### Documentation walkthrough
+
+The documents were read as an operator would read them, after
+`docs/generate_build.py --check` reported the figure, the scalar spans and
+every region current:
+
+| Path | Manifest | Authored account | Evidence |
+| --- | --- | --- | --- |
+| One valid build | steps `admission`, `lock`, `stamp`, `builddir`, `cargo_admit`, `fresh`, `cargo`, then native compilation, assembly, signing and `evidence`; invocations `inv_lock_launch` and `inv_lock_verify` | BUILD.md "The checkout lock" (front end, handoff, protected launches); "Inputs beyond the tree" (the SDK request, the two build directories, Cargo's environment); "Cache compatibility, replacement and recovery"; SIGNING.md "The provenance record" (requests apart from effects, validation) | the acceptance build's banners and record above; `control_none`; `control_sdk_requests` |
+| `lock_claim_invalid` | produced at `lock` and at every helper step that admits | BUILD.md "The checkout lock", second paragraph | `control_lock_claim_invalid`; the handoff unit tests |
+| `build_requests_missing` | step `lock` | BUILD.md "The checkout lock", second paragraph; tests/README.md, the locking contract | `control_build_requests_missing` |
+| `cache_path_unsafe` | steps `stamp` through `evidence` | BUILD.md "Inputs beyond the tree", the two build directories; "Cache compatibility", fresh mode's replacement | `control_cache_path_unsafe`; the admission mutation |
+| `cargo_configuration_unresolved`, `cargo_environment_conflict` | steps `builddir`, `cargo_admit`, `configure` and `native_check` | BUILD.md "Inputs beyond the tree", Cargo's environment | `control_cargo_configuration_unresolved`, `control_cargo_environment_conflict`, `control_cargo_configuration_oracle` |
+| `cargo_judgment_unknown`, `cargo_target_reused` | step `cargo` | BUILD.md "Cache compatibility", fresh mode's replacement; "The evidence the build embeds" | `control_cargo_judgment_unknown`, `control_cargo_target_reused`, `control_cargo_selection_sequence` |
+| `provenance_probe_failed` | every step that probes | BUILD.md "The evidence the build embeds", the probe bounds | `control_provenance_probe_failed`; the probe unit tests |
+| `provenance_required_unknown` | step `evidence` | SIGNING.md "The provenance record", the validation paragraph | `control_provenance_required_unknown`; `test_the_producer_validates_before_sealing` |
+| Lifetime of the hold | none | BUILD.md "The checkout lock", third paragraph and its known gap; tests/README.md, the locking contract | `control_lock_lifetime`; `dispatcher/retention_controls` |
+
+The step table's Reads and Writes columns place path admission ahead of every
+session and cache write, as the prose does. Nested ownership, request
+capture, Cargo includes and the child environment, and probe bounds mean the
+same in the generated rows and the surrounding sections. Two statements in
+BUILD.md's account of the refusal controls described outcomes the controls
+did not assert: that Cargo fails each configuration the resolver refuses,
+and that a standalone Cargo command succeeds after the holder exits.
+`6f0802c` added both assertions rather than changing the prose.
+
+### Remaining limitations
+
+- The worker clock finding stays open under `runner/SAFE-WAIT-TIME-PLAN.md`.
+  `witness_contract/bug_report_returns_verdicts` passed in both repair
+  batteries; a passing rerun does not resolve the finding.
+- The lock is a managed-entrypoint guarantee. It does not serialize direct
+  tool invocations, and a protected descendant that outlives its command
+  keeps the lock until it exits. A caller that was itself started through the
+  Python shim passes the shim's values to the front end unless it removes
+  them first.
+- The Cargo resolver covers the configuration forms the controls exercise,
+  and refuses an unrecognized value type rather than guessing. Its oracle
+  compares it only with this machine's Cargo 1.99, and only for variables the
+  shim leaves alone, so a forced `SDKROOT` is covered by the resolver tests
+  and the conflict refusal, not by observed compilations.
+- Mutation anchors are checked only when the opt-in refusal controls run. A
+  helper interface change can leave them stale until then, as `b410ac3` did.
+- Cargo's judgment and the current probes describe a reused output's state,
+  not its compilation history; the record and the build document say so.
+- The single-SDK guard fixture is a controlled metadata mismatch. Genuine
+  compilation against another SDK is exercised only by the toolchain switch,
+  which needs two developer directories and fails without them.
