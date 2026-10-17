@@ -126,8 +126,19 @@ with a contradictory receipt. Constructed controls accept a receipt interrupted
 before comparison and reject unequal counts beside later worker execution.
 `WorkerEvidenceTests` also drives the production read-error branch with a closed
 policy descriptor, requiring native failure evidence and no EOF receipt.
-The exact Rust replay is ignored in standalone Cargo runs because it requires
-those fresh driver receipts; it is mandatory in the default `runner_unit` case.
+`WorkerClockTests` runs the lifecycle fixture's clock companions (production C
+main with one substituted continuous-clock boundary) through the real driver:
+clock-setup refusals during and after policy delivery (published operation 12,
+exit 12, no receipt, application or `done`), and, through production
+orchestration with the shipped validator, a phase-2 sample refusal and a
+phase-2 expiry that keep phase 1's chain and phase 2's open collection, a
+rejected exec sample that refuses phase 2 by provenance with independent
+confirmation that the killed child is gone, and an exec arithmetic refusal
+after which phase 2 releases and acts. Their encoded replies are replayed
+through Rust assembly, the Python consumer and the lifecycle oracle by the
+wrapper's `clock_readers` step. These replays are ignored in standalone Cargo
+runs because they require those fresh driver receipts; they are mandatory in
+the default `runner_unit` case.
 
 `CompiledProfileCaptureTests` constructs receipt bytes independently of the
 reader. The shared `contract/compiled_profile.json` cases check schema and

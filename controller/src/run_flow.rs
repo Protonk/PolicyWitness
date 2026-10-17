@@ -1373,6 +1373,131 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     }
 
     #[test]
+    #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
+    fn worker_clock_driver_replies_cross_assembly_and_consumer() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES")
+            .expect("runner_unit receipt directory required");
+        let mut replies: Vec<(String, &str)> = Vec::new();
+        for reason in ["native", "zero_factor", "unrepresentable"] {
+            for delivery in ["buffered", "blocked"] {
+                replies.push((format!("setup-{reason}-{delivery}"), "runner_failed"));
+            }
+        }
+        for (name, outcome) in [
+            ("phase2-own-sample", "runner_failed"),
+            ("phase2-expiry", "runner_failed"),
+            ("sticky-provenance", "runner_failed"),
+            ("arithmetic-local", "ok"),
+        ] {
+            replies.push((name.to_string(), outcome));
+        }
+        for (name, outcome) in replies {
+            let path = std::path::Path::new(&directory).join(format!("worker-clock-{name}.json"));
+            let reply: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            assert_eq!(reply["normalized_outcome"], outcome, "{name}");
+            let (result, data, code) = attach_sandbox_logs(
+                complete_execution(execution_data(Some(reply.clone()))),
+                &json!({"probe_plan":[]}),
+                true,
+                |_, _, _| panic!("logs disabled"),
+            );
+            assert_eq!(code, if outcome == "ok" { 0 } else { 1 }, "{name}");
+            let wire: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(wire["data"]["runner_result"], reply);
+            let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
+            assert_eq!(diagnostics["disposition_integrity"], "valid", "{name}");
+            let sub = &reply["runner_subprocess"];
+            let failure = &sub["worker_evidence"]["failure"];
+            let record = |op: u64, code: u64, detail: u64| {
+                assert_eq!(
+                    (&failure["operation"], &failure["code"], &failure["detail"]),
+                    (&json!(op), &json!(code), &json!(detail)),
+                    "{name}"
+                );
+                assert!(failure["native_result"].is_null() && failure["errno"].is_null());
+            };
+            if name.starts_with("setup-") {
+                // Clock setup is a pre-apply refusal: published failure, exit 12,
+                // no completion, application, readiness or policy receipt.
+                assert_eq!(failure["operation"], 12);
+                assert_eq!(sub["worker_evidence"]["progress"]["operation"], 12);
+                assert!(failure["errno"].is_null());
+                assert!(sub["worker_evidence"]["policy_read"].is_null());
+                assert_eq!(sub["exit_code"], 12);
+                assert_eq!(sub["done_observed"], false);
+                assert_eq!(reply["sandboxed_after_apply"], false);
+            } else {
+                match name.as_str() {
+                    "phase2-own-sample" => record(11, 14, 3),
+                    "phase2-expiry" => record(11, 8, 60_000),
+                    "sticky-provenance" => record(11, 14, 6),
+                    _ => assert!(failure.is_null(), "{name}"),
+                }
+                // Phase 1's chain survives; phase 2 acts only when released.
+                assert_eq!(reply["phases"][0]["ordering"]["proceed_observed"], true);
+                let released = name == "arithmetic-local";
+                assert_eq!(reply["phases"][1]["ordering"]["proceed_observed"], released);
+                assert_eq!(
+                    reply["steps"][1]["comparison"]["order"],
+                    if released {
+                        "query_first"
+                    } else {
+                        "unestablished"
+                    }
+                );
+            }
+            let mut child = Command::new("/usr/bin/python3")
+                .args([
+                    "-B",
+                    "-c",
+                    r#"import json,sys
+sys.path.insert(0,sys.argv[1])
+from consumer import validate,lifecycle
+from lifecycle_oracle import check_record
+e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
+errors=check_record(e); assert not errors,errors
+sub=e['data']['runner_result']['runner_subprocess']
+if sys.argv[2].startswith('setup-'):
+    assert sub['worker_evidence']['failure']['operation']==12 and sub['exit_code']==12, sub
+    assert lifecycle(e)['summaries']==['not_reached'], lifecycle(e)
+else:
+    steps=e['data']['runner_result']['steps']
+    assert steps[0]['attempt']['result_source']=='worker', steps[0]
+"#,
+                ])
+                .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
+                .arg(&name)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(&serde_json::to_vec(&wire).unwrap())
+                .unwrap();
+            let output = child.wait_with_output().unwrap();
+            assert!(
+                output.status.success(),
+                "{name}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            std::fs::write(
+                std::path::Path::new(&directory).join(format!("worker-clock-{name}-envelope.json")),
+                serde_json::to_vec_pretty(&wire).unwrap(),
+            )
+            .unwrap();
+        }
+    }
+
+    #[test]
     fn collector_states_preserve_the_serialized_execution_half() {
         collector_state_controls(false);
     }
@@ -1418,7 +1543,7 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response22/a1_expected.json"
+            "../../tests/fixtures/disposition/response23/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1612,7 +1737,7 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response22/a1_expected.json"
+            "../../tests/fixtures/disposition/response23/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();

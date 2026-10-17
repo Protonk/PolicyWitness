@@ -1309,6 +1309,14 @@ struct ClassifiedRun {
     let error: String?
 }
 
+/// Names for PW_TIME_REASON_* (pw_probe_runner_abi.h), the detail of a local
+/// timing refusal (code 14). Unknown values stay numeric, never milliseconds.
+func workerTimeReason(_ detail: UInt32) -> String {
+    let names: [UInt32: String] = [1: "invalid_timebase", 2: "invalid_duration", 3: "backwards_counter",
+                                   4: "unrepresentable_delta", 5: "deadline_overflow", 6: "prior_clock_fault"]
+    return names[detail] ?? "unknown(\(detail))"
+}
+
 // `internal` (not `private`) so HostOutcomeClassifierTests can drive the
 // worker/validator → NormalizedOutcome decision directly. This is the
 // host's counterpart to computeComparison — the test pins each run shape to
@@ -1352,7 +1360,8 @@ func classify(
         if let evidence = out.workerEvidence {
             if let failure = evidence.failure {
                 let names: [UInt32: String] = [1: "header validation", 2: "policy read", 3: "sandbox_create_params",
-                    4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply", 11: "proceed wait"]
+                    4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply", 11: "proceed wait",
+                    12: "clock setup"]
                 let operation = names[failure.operation] ?? "operation \(failure.operation)"
                 var detail = "pw-probe-runner reported \(operation) failure (code=\(failure.code))"
                 if failure.operation == 11 {
@@ -1361,8 +1370,16 @@ func classify(
                         detail += "; budget=\(failure.detail) ms; release not observed"
                     case (11, 0):
                         detail += "; observed_release_ordinal=\(failure.detail); phase release rejected"
+                    case (14, 0) where failure.detail == 6:
+                        // A refusal caused by an earlier rejected sample, not a new one.
+                        detail += "; proceed refused: worker clock already invalid"
+                    case (14, 0):
+                        detail += "; local timing refusal reason=\(workerTimeReason(failure.detail))"
                     default: break // Unknown detail units remain uninterpreted.
                     }
+                }
+                if failure.operation == 12 && failure.code == 14 && failure.native_kind == 0 {
+                    detail += "; local timing refusal reason=\(workerTimeReason(failure.detail)); no policy byte read"
                 }
                 // Policy delivery refusals name their byte counts: the host's
                 // expectation that exceeded the source capacity, or the count

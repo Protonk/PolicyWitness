@@ -904,6 +904,11 @@
               "path": "tests/suites/witness_contract/check_extension_combinations.py",
               "symbol": "check_row",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "proceed_precedence",
+              "form": "test"
             }
           ]
         },
@@ -1689,7 +1694,7 @@
           "from": "run_spec",
           "to": "shm_region",
           "kind": "guard",
-          "label": "host writes identity, counts, phase partitions, the expected policy length and slots; worker refuses mismatched identity, invalid partition or an expectation the source buffer cannot hold",
+          "label": "host writes identity, counts, phase partitions, the expected policy length and slots; worker refuses mismatched identity, invalid partition, an expectation the source buffer cannot hold, or an unusable timebase or allowance before any policy byte",
           "short": "identity; exit 4 on mismatch",
           "sources": [
             {
@@ -1711,6 +1716,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "PW_FAILURE_LENGTH_EXPECTATION"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "pw_timing_setup"
             }
           ],
           "checks": [
@@ -1738,6 +1747,11 @@
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "policy_expectation_out_of_range_refused",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "clock_arithmetic",
+              "form": "test"
             }
           ]
         },
@@ -1746,12 +1760,16 @@
           "from": "shm_region",
           "to": "reply",
           "kind": "guard",
-          "label": "per-phase release/acquire publication; exact ordinal before actions; disposition from raw facts; collection status agrees with validator observations; native result publication and fresh-read consistency before claims",
+          "label": "per-phase release/acquire publication; exact ordinal before actions after a validated continuous-time decision; disposition from raw facts; collection status agrees with validator observations; native result publication and fresh-read consistency before claims",
           "short": "phase publication; ordinal release",
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "wait_for_proceed"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "pw_clock_sample"
             },
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -1799,6 +1817,16 @@
             {
               "path": "tests/suites/blackbox_e2e/extension_controls.py",
               "symbol": "run_extension_controls",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "proceed_precedence",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+              "symbol": "runWorkerClockTests",
               "form": "test"
             }
           ]

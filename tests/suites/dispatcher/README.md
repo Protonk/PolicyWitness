@@ -115,11 +115,17 @@ bundles, pure Python, with a complete full-build provenance record the fixture
 authors itself (nominal toolchain values, its own `otool` reading of the
 stubs, and the ad hoc signature facts their linker signatures carry, which
 the inspector compares with `codesign -dvv`), around a compiled XPC host stub: the suite wrapper builds
-the clean stub and the `sandbox_check`-importing control stub once per run with
+the clean stub and the control stubs once per run with
 `tests/fixtures/dispatcher/build.sh` into the case artifacts and names them in
-`PW_DISPATCHER_HOST_FIXTURE` (`<name>` and `<name>.imports-sandbox`); only
-`check_artifacts.py` uses the control stub. A missing stub is an equipment
-error, so the suite requires clang.
+`PW_DISPATCHER_HOST_FIXTURE` (`<name>`, `<name>.imports-sandbox`, and the worker
+stubs `<name>.imports-clock` and `<name>.continuous-clock`); only
+`check_artifacts.py` uses the control stubs. Its worker clock scenarios lay a
+real `clock_gettime` import at the worker path only, which inspection must
+reject while the bundle stays sealed; a permitted `mach_continuous_time`
+import, which must pass with that symbol in the retained import list; and
+unreadable worker bytes, whose failed `nm` must be an error rather than an
+empty import set. A missing stub is an equipment error, so the suite requires
+clang.
 Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
 and `controls.json` remain in artifacts for inspection.
 

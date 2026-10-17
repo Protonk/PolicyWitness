@@ -775,6 +775,30 @@ for scenario in proceed_never_set proceed_late_after_expiry proceed_before_appli
   run_proceed_control "$scenario"
 done
 
+if test_selected clock_arithmetic; then
+  test_begin runner_c_worker_harness clock_arithmetic
+  test_step build "compile production clock helpers with a controlled timebase and raw counter"
+  CONTROL="${PW_TEST_ARTIFACTS}/clock-control"
+  test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build_clock_control.sh" "${CONTROL}"
+  if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "ceiling allowances, refusals, sample validation, sticky fault and setup publications"
+  else
+    test_fail "clock arithmetic regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi
+
+if test_selected proceed_precedence; then
+  test_begin runner_c_worker_harness proceed_precedence
+  test_step build "compile the production proceed wait with a controlled counter and race gates"
+  CONTROL="${PW_TEST_ARTIFACTS}/proceed-control"
+  test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build_proceed_control.sh" "${CONTROL}"
+  if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "sampled-time precedence, fail-closed samples, exact exclusions and scheduled race limits"
+  else
+    test_fail "proceed precedence regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi
+
 if test_selected exec_control_states; then
   test_begin runner_c_worker_harness exec_control_states
   test_step build "compile production exec control flow with deterministic native-call equipment"

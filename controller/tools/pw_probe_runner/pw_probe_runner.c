@@ -6,7 +6,9 @@
  *   1. Parse argv: --shm-fd <N> --ready-fd <N> --step-count <N>
  *                  [--policy-fd <N>] (defaults to stdin).
  *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
- *      --shm-fd. Verify ABI identity and prepared sentinel.
+ *      --shm-fd. Verify ABI identity and prepared sentinel. Initialize the
+ *      Mach timebase and every configured allowance in continuous ticks; a
+ *      refusal publishes its failure and exits 12 before any policy byte.
  *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
  *      into a stack-fixed buffer. This is the LAST allocation
  *      attempt before sandbox_apply(). The pipe carries no framing, so
@@ -48,6 +50,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <mach/mach.h>
+#include <mach/mach_time.h>
 #include <poll.h>
 #include <sandbox.h>
 #include <servers/bootstrap.h>
@@ -84,9 +87,9 @@
 #define PW_EXEC_CHILD_DEADLINE_MS_DEFAULT 10000L
 #define PW_EXEC_CHILD_DEADLINE_MS_MAX     60000L
 
-/* Local active-time budget: starts before worker setup and excludes only the
- * interval returned by the release barrier. It does not reconstruct the host's
- * polling clock. The production default leaves room for cleanup/publication
+/* Local active-time budget in continuous ticks, including system sleep: it
+ * starts at the worker origin before setup and excludes only each phase's
+ * acknowledged release wait. It does not reconstruct the host's polling clock. The production default leaves room for cleanup/publication
  * inside the nominal host window; blocking native calls and host scheduling
  * are not made preemptible by this allowance. */
 #define PW_WORKER_WINDOW_MS               120000L
@@ -94,42 +97,196 @@
 #define PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT (PW_WORKER_WINDOW_MS - PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS)
 #define PW_EXEC_REAP_GRACE_MS              1000L
 
-/* Compile-time native-call seam. Tests select a semantic phase, never the
- * ordinal of a clock call elsewhere in the worker. No request can select it. */
+/* Semantic clock stages. Compile-time seams select a raw value or fault by
+ * stage, never by the ordinal of a clock call. No request can select one. */
 enum pw_clock_phase {
     PW_CLOCK_WORKER_START, PW_CLOCK_PROCEED_START, PW_CLOCK_PROCEED_OBSERVE,
     PW_CLOCK_EXEC_ADMIT, PW_CLOCK_EXEC_OBSERVE, PW_CLOCK_EXEC_REAP
 };
-#ifndef PW_MONOTONIC_READ
-#define PW_MONOTONIC_READ(phase, out) clock_gettime(CLOCK_MONOTONIC, (out))
+
+/* Continuous Mach time in relative ticks. It advances during system sleep
+ * and avoids the libc CLOCK_MONOTONIC path, whose gettimeofday fallback a
+ * deny-default profile refused. It has no native error return, so samples are
+ * validated instead. Native controls exercise it under deny-default profiles
+ * on the recorded Apple Silicon configuration; an implementation may read a
+ * user-space counter or enter the kernel, and this comment promises neither.
+ * Compile-time seams select a raw value or timebase result by semantic stage;
+ * no request selects one. */
+#ifndef PW_TIMEBASE_INFO
+#define PW_TIMEBASE_INFO(info) mach_timebase_info(info)
+#endif
+#ifndef PW_CONTINUOUS_READ
+#define PW_CONTINUOUS_READ(phase) ((void)(phase), mach_continuous_time())
 #endif
 
-static int64_t timespec_ns(struct timespec time) {
-    return (int64_t)time.tv_sec * 1000000000LL + time.tv_nsec;
+#define PW_CLOCK_NO_SCOPE UINT32_MAX
+
+/* The first rejected raw sample (the sticky clock fault). Only sample
+ * validation writes it; reason 0 means no sample has been rejected. */
+typedef struct {
+    uint32_t reason, stage, phase, slot;
+} pw_clock_fault_t;
+
+typedef struct {
+    uint32_t numer, denom;
+    uint64_t origin, last;
+    pw_clock_fault_t fault;
+} pw_clock_t;
+
+/* Worker timing in one tick domain: the plan cutoff is the exec allowance
+ * plus committed release exclusions, all relative to the worker origin. */
+typedef struct {
+    pw_clock_t clock;
+    uint64_t proceed_ticks, budget_ticks, child_ticks, reap_ticks;
+    uint64_t plan_deadline;
+    long proceed_ms, budget_ms, child_ms;
+} pw_timing_t;
+
+static const char *const pw_clock_stage_names[] = {
+    "worker_start", "proceed_start", "proceed_observe", "exec_admit", "exec_observe", "exec_reap"
+};
+static const char *const pw_time_reason_names[] = {
+    "none", "invalid_timebase", "invalid_duration", "backwards_counter",
+    "unrepresentable_delta", "deadline_overflow", "prior_clock_fault"
+};
+
+static void pw_clock_start(pw_clock_t *clock) {
+    clock->origin = clock->last = PW_CONTINUOUS_READ(PW_CLOCK_WORKER_START);
 }
 
-static int monotonic_ns(enum pw_clock_phase phase, int64_t *out) {
-    struct timespec time;
-    (void)phase;
-    if (PW_MONOTONIC_READ(phase, &time) != 0) return -1;
-    *out = timespec_ns(time);
+/* A usable sample is at least the origin and the last accepted sample;
+ * equality and zero are valid. A rejection is recorded once, with its
+ * scope, and every later sample is refused without another read. */
+static uint32_t pw_clock_sample(pw_clock_t *clock, enum pw_clock_phase stage,
+                                uint32_t phase, uint32_t slot, uint64_t *elapsed) {
+    if (clock->fault.reason) return PW_TIME_REASON_PRIOR_CLOCK_FAULT;
+    uint64_t raw = PW_CONTINUOUS_READ(stage);
+    if (raw < clock->origin || raw < clock->last) {
+        clock->fault = (pw_clock_fault_t){PW_TIME_REASON_BACKWARDS_COUNTER, (uint32_t)stage, phase, slot};
+        return PW_TIME_REASON_BACKWARDS_COUNTER;
+    }
+    clock->last = raw;
+    *elapsed = raw - clock->origin;
     return 0;
 }
 
-typedef struct {
-    int64_t deadline_ns;
-    long limit_ms;
-    int clock_error;
-} pw_attempt_budget_t;
-
-static pw_attempt_budget_t attempt_budget_start(long limit_ms) {
-    int64_t start = 0;
-    int error = monotonic_ns(PW_CLOCK_WORKER_START, &start) ? (errno ? errno : EIO) : 0;
-    return (pw_attempt_budget_t){start + (int64_t)limit_ms * 1000000LL, limit_ms, error};
+/* Ceiling allowance: at `ticks` the duration has expired, at `ticks - 1` it
+ * has not. Nothing saturates; an unrepresentable allowance is refused. */
+static uint32_t pw_ticks_for_ms(const pw_clock_t *clock, long ms, uint64_t *ticks) {
+    if (!clock->numer || !clock->denom) return PW_TIME_REASON_INVALID_TIMEBASE;
+    if (ms <= 0 || (unsigned long)ms > UINT64_MAX / 1000000u) return PW_TIME_REASON_INVALID_DURATION;
+    __uint128_t product = (__uint128_t)((uint64_t)ms * 1000000u) * clock->denom;
+    __uint128_t whole = product / clock->numer + (product % clock->numer != 0);
+    if (whole > UINT64_MAX) return PW_TIME_REASON_INVALID_DURATION;
+    *ticks = (uint64_t)whole;
+    return 0;
 }
 
-static void attempt_budget_exclude(pw_attempt_budget_t *budget, int64_t interval_ns) {
-    budget->deadline_ns += interval_ns;
+/* Ceiling milliseconds for a bounded tick delta. Callers cap the result
+ * before narrowing it to a poll timeout. */
+static uint32_t pw_ms_for_ticks(const pw_clock_t *clock, uint64_t ticks, uint64_t *ms) {
+    __uint128_t scaled = (__uint128_t)ticks * clock->numer;
+    __uint128_t divisor = (__uint128_t)clock->denom * 1000000u;
+    __uint128_t whole = scaled / divisor + (scaled % divisor != 0);
+    if (whole > UINT64_MAX) return PW_TIME_REASON_UNREPRESENTABLE_DELTA;
+    *ms = (uint64_t)whole;
+    return 0;
+}
+
+static uint32_t pw_ticks_add(uint64_t a, uint64_t b, uint64_t *sum) {
+    uint64_t result;
+    if (__builtin_add_overflow(a, b, &result)) return PW_TIME_REASON_DEADLINE_OVERFLOW;
+    *sum = result;
+    return 0;
+}
+
+/* Bounded text assembly without allocation or libc formatting, usable after
+ * application for evidence diagnostics. */
+typedef struct { char *text; size_t used, capacity; } pw_text_t;
+
+static void pw_text_add(pw_text_t *out, const char *text) {
+    while (*text && out->used + 1 < out->capacity) out->text[out->used++] = *text++;
+    out->text[out->used] = 0;
+}
+
+static void pw_text_add_u32(pw_text_t *out, uint32_t value) {
+    char digits[11];
+    int count = 0;
+    do { digits[count++] = (char)('0' + value % 10u); value /= 10u; } while (value);
+    while (count) { char one[2] = {digits[--count], 0}; pw_text_add(out, one); }
+}
+
+static void pw_text_add_scope(pw_text_t *out, const char *name, uint32_t value) {
+    pw_text_add(out, name);
+    if (value == PW_CLOCK_NO_SCOPE) pw_text_add(out, "none");
+    else pw_text_add_u32(out, value);
+}
+
+static const char *pw_time_reason_name(uint32_t reason) {
+    return reason < sizeof(pw_time_reason_names) / sizeof(*pw_time_reason_names)
+        ? pw_time_reason_names[reason] : "unknown";
+}
+
+static const char *pw_clock_stage_name(uint32_t stage) {
+    return stage < sizeof(pw_clock_stage_names) / sizeof(*pw_clock_stage_names)
+        ? pw_clock_stage_names[stage] : "unknown";
+}
+
+/* "reason=backwards_counter stage=exec_observe phase=0 slot=2" */
+static void pw_text_add_fault(pw_text_t *out, const pw_clock_fault_t *fault) {
+    pw_text_add(out, "reason=");
+    pw_text_add(out, pw_time_reason_name(fault->reason));
+    pw_text_add(out, " stage=");
+    pw_text_add(out, pw_clock_stage_name(fault->stage));
+    pw_text_add_scope(out, " phase=", fault->phase);
+    pw_text_add_scope(out, " slot=", fault->slot);
+}
+
+/* "local_timing=<reason> stage=<stage>", plus the first rejected sample when
+ * the refusal is or follows one. Arithmetic refusals name only themselves. */
+static void pw_text_add_local(pw_text_t *out, uint32_t reason, enum pw_clock_phase stage,
+                              const pw_clock_fault_t *first) {
+    pw_text_add(out, "local_timing=");
+    pw_text_add(out, pw_time_reason_name(reason));
+    pw_text_add(out, " stage=");
+    pw_text_add(out, pw_clock_stage_name((uint32_t)stage));
+    if (first->reason) {
+        pw_text_add(out, " (first rejected sample: ");
+        pw_text_add_fault(out, first);
+        pw_text_add(out, ")");
+    }
+}
+
+/* Pre-apply setup: one timebase query, then every configured allowance. It
+ * obtains conversion metadata only; nothing here is retained for an attempt. */
+static int pw_timing_setup(pw_timing_t *timing, pw_shm_evidence_t *e) {
+    mach_timebase_info_data_t info = {0, 0};
+    pw_progress(e, PW_OP_CLOCK_SETUP, PW_PROGRESS_STARTED, UINT32_MAX);
+    kern_return_t kr = PW_TIMEBASE_INFO(&info);
+    pw_progress(e, PW_OP_CLOCK_SETUP, PW_PROGRESS_RETURNED, UINT32_MAX);
+    if (kr != KERN_SUCCESS) {
+        pw_failure(e, PW_OP_CLOCK_SETUP, PW_FAILURE_NATIVE, PW_NATIVE_INTEGER, kr, 0, 0, UINT32_MAX, 0);
+        pw_diagnostic(e, "clock setup: mach_timebase_info failed");
+        fprintf(stderr, "pw-probe-runner: mach_timebase_info returned %d\n", kr);
+        return -1;
+    }
+    timing->clock.numer = info.numer;
+    timing->clock.denom = info.denom;
+    uint32_t reason = pw_ticks_for_ms(&timing->clock, timing->proceed_ms, &timing->proceed_ticks);
+    if (!reason) reason = pw_ticks_for_ms(&timing->clock, timing->budget_ms, &timing->budget_ticks);
+    if (!reason) reason = pw_ticks_for_ms(&timing->clock, timing->child_ms, &timing->child_ticks);
+    if (!reason) reason = pw_ticks_for_ms(&timing->clock, PW_EXEC_REAP_GRACE_MS, &timing->reap_ticks);
+    if (reason) {
+        pw_failure(e, PW_OP_CLOCK_SETUP, PW_FAILURE_TIME_INVALID, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, reason);
+        pw_diagnostic(e, reason == PW_TIME_REASON_INVALID_TIMEBASE
+            ? "clock setup: Mach timebase has a zero factor (reason in detail)"
+            : "clock setup: a configured duration has no representable tick allowance (reason in detail)");
+        fprintf(stderr, "pw-probe-runner: clock setup refused: %s (numer=%u denom=%u)\n",
+                pw_time_reason_name(reason), info.numer, info.denom);
+        return -1;
+    }
+    timing->plan_deadline = timing->budget_ticks;
+    return 0;
 }
 
 /* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
@@ -771,8 +928,8 @@ static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow)
     return (int)n;
 }
 
-static void attempt_exec_spawn(pw_shm_slot_t *slot,
-                               const pw_attempt_budget_t *budget, long child_deadline_ms) {
+static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
+                               uint32_t phase, uint32_t index) {
     /* Sentinel conventions when no child runs (header documents these). */
     slot->child_pid          = 0;
     slot->child_exit_code    = -1;
@@ -783,23 +940,23 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
     /* Attempt budget admission. Refusal is per-step evidence with no spawn
      * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
      * not a permission result). Otherwise the child's deadline is the
-     * smaller of the per-step deadline and the budget remainder. */
-    int64_t before_spawn = 0;
-    int clock_error = budget->clock_error;
-    if (!clock_error && monotonic_ns(PW_CLOCK_EXEC_ADMIT, &before_spawn) != 0)
-        clock_error = errno ? errno : EIO;
-    if (clock_error) {
+     * smaller of the per-step deadline and the budget remainder. An unusable
+     * clock refuses the spawn with no errno: it is a local fault. */
+    uint64_t now = 0;
+    uint32_t admit_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_ADMIT, phase, index, &now);
+    if (admit_fault) {
         slot->rc = -1;
-        slot->errno_val = clock_error;
-        snprintf(slot->error, sizeof(slot->error),
-                 "exec attempt budget: CLOCK_MONOTONIC unavailable before spawn: %s", strerror(clock_error));
+        slot->errno_val = 0;
+        pw_text_t text = {slot->error, 0, sizeof(slot->error)};
+        pw_text_add(&text, "exec attempt budget: worker clock unusable before spawn; ");
+        pw_text_add_local(&text, admit_fault, PW_CLOCK_EXEC_ADMIT, &timing->clock.fault);
         return;
     }
-    if (before_spawn >= budget->deadline_ns) {
+    if (now >= timing->plan_deadline) {
         slot->rc = -1;
         slot->errno_val = ETIMEDOUT;
         snprintf(slot->error, sizeof(slot->error),
-                 "exec attempt budget: %ld ms exhausted before spawn", budget->limit_ms);
+                 "exec attempt budget: %ld ms exhausted before spawn", timing->budget_ms);
         return;
     }
 
@@ -867,18 +1024,17 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
     if (r->stderr_wfd >= 0) { close(r->stderr_wfd); r->stderr_wfd = -1; }
 
     /* The plan deadline is absolute: spawn/setup latency cannot restart its
-     * remainder. A blocking spawn itself cannot be interrupted here. */
-    int64_t now = 0;
+     * remainder. A blocking spawn itself cannot be interrupted here. Local
+     * timing faults are kept apart from native observation errors. */
     int observation_errno = 0;
     const char *observation_call = NULL;
     int deadline_expired = 0, child_exited = 0, ownership_known = 1;
-    int64_t deadline_ns = budget->deadline_ns;
+    uint64_t deadline = timing->plan_deadline, child_deadline = 0;
     int deadline_clamped = 1;
-    if (monotonic_ns(PW_CLOCK_EXEC_OBSERVE, &now) != 0) {
-        observation_errno = errno ? errno : EIO;
-        observation_call = "clock";
-    } else if (now + (int64_t)child_deadline_ms * 1000000LL < deadline_ns) {
-        deadline_ns = now + (int64_t)child_deadline_ms * 1000000LL;
+    uint32_t local_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_OBSERVE, phase, index, &now);
+    if (!local_fault) local_fault = pw_ticks_add(now, timing->child_ticks, &child_deadline);
+    if (!local_fault && child_deadline < deadline) {
+        deadline = child_deadline;
         deadline_clamped = 0;
     }
     const char *deadline_note = deadline_clamped ? "exec attempt budget deadline" : "exec child deadline";
@@ -889,11 +1045,10 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
     size_t stdout_n = 0, stderr_n = 0;
     int stdout_overflow = 0, stderr_overflow = 0;
     int stdout_open = 1, stderr_open = 1;
-    while (!observation_errno) {
-        if (monotonic_ns(PW_CLOCK_EXEC_OBSERVE, &now) != 0) {
-            observation_errno = errno ? errno : EIO; observation_call = "clock"; break;
-        }
-        if (now >= deadline_ns) { deadline_expired = 1; break; }
+    while (!observation_errno && !local_fault) {
+        local_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_OBSERVE, phase, index, &now);
+        if (local_fault) break;
+        if (now >= deadline) { deadline_expired = 1; break; }
         if (!child_exited) {
             siginfo_t info = {0};
             if (waitid(P_PID, (id_t)child, &info, WEXITED | WNOHANG | WNOWAIT) != 0) {
@@ -917,8 +1072,11 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
             pfds[npfds++] = (struct pollfd){r->stderr_rfd, POLLIN, 0};
         }
         /* Also revisit leader status when no pipe is open. Round up sub-ms
-         * remainders so a near-boundary observation cannot busy-loop. */
-        int64_t left_ms = (deadline_ns - now + 999999LL) / 1000000LL;
+         * remainders so a near-boundary observation cannot busy-loop; cap
+         * the bounded delta before narrowing it to a poll timeout. */
+        uint64_t left_ms = 0;
+        local_fault = pw_ms_for_ticks(&timing->clock, deadline - now, &left_ms);
+        if (local_fault) break;
         int poll_ms = left_ms > 10 ? 10 : (int)left_ms;
         int pr = poll(pfds, npfds, poll_ms);
         if (pr < 0 && errno == EINTR) continue;
@@ -971,7 +1129,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
     slot->child_stderr[stderr_n] = '\0';
 
     int cleanup_errno = 0;
-    if ((deadline_expired || observation_errno) && ownership_known) {
+    if ((deadline_expired || observation_errno || local_fault) && ownership_known) {
         if (kill(-child_pgid, SIGKILL) != 0 && errno != ESRCH) {
             cleanup_errno = errno;
             /* A leader-only fallback cannot prove group cleanup. */
@@ -981,22 +1139,23 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
 
     /* No blocking reap, even after a successful kill request. Keep raw status
      * only after waitpid returns our child. Failed cleanup must neither hang
-     * the worker nor fabricate a clean exit from a zero-initialized status. */
+     * the worker nor fabricate a clean exit from a zero-initialized status.
+     * Unusable reap time still permits the immediate nonblocking observation;
+     * otherwise timed reaping stops with the local fault and no status. */
     int status = 0, reap_errno = 0;
     pid_t reaped = 0;
-    int64_t reap_start = 0;
-    int reap_clock_ok = monotonic_ns(PW_CLOCK_EXEC_REAP, &reap_start) == 0;
-    int reap_clock_errno = reap_clock_ok ? 0 : (errno ? errno : EIO);
+    uint64_t reap_deadline = 0;
+    uint32_t reap_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_REAP, phase, index, &now);
+    if (!reap_fault) reap_fault = pw_ticks_add(now, timing->reap_ticks, &reap_deadline);
     for (;;) {
         reaped = waitpid(child, &status, WNOHANG);
         if (reaped == child) break;
         if (reaped < 0 && errno != EINTR) { reap_errno = errno; break; }
         if (!ownership_known || cleanup_errno) break; /* pending, not a native wait failure */
-        if (!reap_clock_ok) { reap_errno = reap_clock_errno; break; }
-        if (monotonic_ns(PW_CLOCK_EXEC_REAP, &now) != 0) { reap_errno = errno ? errno : EIO; break; }
-        if (now - reap_start >= (int64_t)PW_EXEC_REAP_GRACE_MS * 1000000LL) {
-            reap_errno = ETIMEDOUT; break;
-        }
+        if (reap_fault) break;
+        reap_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_REAP, phase, index, &now);
+        if (reap_fault) break;
+        if (now >= reap_deadline) { reap_errno = ETIMEDOUT; break; }
         (void)poll(NULL, 0, 1);
     }
 
@@ -1006,14 +1165,22 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot,
         if (WIFEXITED(status)) slot->child_exit_code = WEXITSTATUS(status);
         else if (WIFSIGNALED(status)) slot->child_term_signal = WTERMSIG(status);
     }
-    if (observation_errno || cleanup_errno || reaped != child) {
+    if (observation_errno || cleanup_errno || reaped != child || local_fault || reap_fault) {
         slot->rc = -1;
-        /* Post-spawn errno is never a claim that sandbox admission failed. */
+        /* Post-spawn errno is never a claim that sandbox admission failed. A
+         * local timing fault contributes none; native errors keep theirs. */
         slot->errno_val = observation_errno ? observation_errno : cleanup_errno ? cleanup_errno : reap_errno;
-        snprintf(slot->error, sizeof(slot->error),
+        int length = snprintf(slot->error, sizeof(slot->error),
                  "exec observation=%s errno=%d; group_cleanup_errno=%d; reaped=%d reap_errno=%d",
-                 observation_call ? observation_call : deadline_expired ? deadline_note : "complete",
+                 observation_call ? observation_call : local_fault ? "local timing"
+                     : deadline_expired ? deadline_note : "complete",
                  observation_errno, cleanup_errno, reaped == child, reap_errno);
+        if ((local_fault || reap_fault) && length > 0 && (size_t)length < sizeof(slot->error)) {
+            pw_text_t text = {slot->error, (size_t)length, sizeof(slot->error)};
+            pw_text_add(&text, "; ");
+            pw_text_add_local(&text, local_fault ? local_fault : reap_fault,
+                              local_fault ? PW_CLOCK_EXEC_OBSERVE : PW_CLOCK_EXEC_REAP, &timing->clock.fault);
+        }
         return;
     }
 
@@ -1251,8 +1418,7 @@ static void attempt_file_read_fresh(pw_shm_slot_t *slot) {
  * untouched lands at a known state. `completed` is the LAST write
  * (release ordering) so the host's acquire-load of completed
  * synchronizes with every other slot write. */
-static void run_attempt(pw_shm_slot_t *slot,
-                        const pw_attempt_budget_t *budget, long child_deadline_ms,
+static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase, uint32_t index,
                         int kill_before_publish) {
     slot->rc = 0;
     slot->errno_val = 0;
@@ -1272,7 +1438,7 @@ static void run_attempt(pw_shm_slot_t *slot,
     case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
     case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;
     case PW_ATTEMPT_EXEC_SPAWN:
-        attempt_exec_spawn(slot, budget, child_deadline_ms);
+        attempt_exec_spawn(slot, timing, phase, index);
         break;
     default:
         slot->rc = -1;
@@ -1317,34 +1483,60 @@ static _Noreturn void spin_for_exit(pw_shm_header_t *hdr) {
     }
 }
 
-/* No allocation, sleep or I/O after apply. CLOCK_MONOTONIC reads the macOS
- * commpage. An unusable clock fails closed even if release is already visible. */
-static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
-                                uint32_t phase_index, long budget_ms) {
+/* Test-only gates around the sampled decision; the shipped worker compiles
+ * them away and no request can enable them. */
+#ifndef PW_PROCEED_DECIDED
+#define PW_PROCEED_DECIDED(phase) ((void)0)
+#endif
+#ifndef PW_PROCEED_CANCEL_LOADED
+#define PW_PROCEED_CANCEL_LOADED(phase) ((void)0)
+#endif
+
+static _Noreturn void proceed_refused(pw_shm_header_t *hdr, pw_shm_evidence_t *e, uint32_t phase_index,
+                                      uint32_t reason, const char *diagnostic) {
+    pw_failure(e, PW_OP_PROCEED, PW_FAILURE_TIME_INVALID, PW_NATIVE_NONE, 0, 0, 0, phase_index, reason);
+    pw_diagnostic(e, diagnostic);
+    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+    spin_for_exit(hdr);
+}
+
+/* No allocation, sleep or I/O after apply. Expiry is decided by sampled
+ * continuous time: an unusable sample, an expired sample, a future release
+ * and cancellation each end the phase before any acknowledgement, even with
+ * release already visible. A late host release cannot revive a refusal. The
+ * phase's wait is excluded from the exec plan once, at acknowledgement. */
+static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
+                             uint32_t phase_index, pw_timing_t *timing) {
     pw_shm_phase_t *phase = &hdr->phases[phase_index];
     pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, phase->first_slot);
     atomic_store_explicit(&phase->arrived, 1u, memory_order_release);
-    struct timespec start, now;
-    int rc = PW_MONOTONIC_READ(PW_CLOCK_PROCEED_START, &start);
-    int clock_errno = errno;
+    if (timing->clock.fault.reason) {
+        /* An earlier exec rejected a sample: refuse without another read. */
+        char text[PW_SHM_ERROR_MAX];
+        pw_text_t out = {text, 0, sizeof(text)};
+        pw_text_add(&out, "proceed refused: worker clock already invalid; first rejected sample: ");
+        pw_text_add_fault(&out, &timing->clock.fault);
+        proceed_refused(hdr, e, phase_index, PW_TIME_REASON_PRIOR_CLOCK_FAULT, text);
+    }
+    uint64_t start = 0, now = 0, extended = 0;
+    if (pw_clock_sample(&timing->clock, PW_CLOCK_PROCEED_START, phase_index, PW_CLOCK_NO_SCOPE, &start))
+        proceed_refused(hdr, e, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
+                        "proceed wait: worker clock went backwards at proceed start (reason in detail)");
     for (;;) {
-        if (rc != 0) {
-            pw_failure(e, PW_OP_PROCEED, PW_FAILURE_NATIVE, PW_NATIVE_CLOCK,
-                       rc, 1, clock_errno, phase_index, (uint32_t)budget_ms);
-            pw_diagnostic(e, "proceed wait: CLOCK_MONOTONIC failed");
-            break;
-        }
-        rc = PW_MONOTONIC_READ(PW_CLOCK_PROCEED_OBSERVE, &now);
-        clock_errno = errno;
-        if (rc != 0) continue;
-        int64_t elapsed_ns = (int64_t)(now.tv_sec - start.tv_sec) * 1000000000LL
-            + now.tv_nsec - start.tv_nsec;
-        if (elapsed_ns >= (int64_t)budget_ms * 1000000LL) {
+        if (pw_clock_sample(&timing->clock, PW_CLOCK_PROCEED_OBSERVE, phase_index, PW_CLOCK_NO_SCOPE, &now))
+            proceed_refused(hdr, e, phase_index, PW_TIME_REASON_BACKWARDS_COUNTER,
+                            "proceed wait: worker clock went backwards while observing release (reason in detail)");
+        uint64_t waited = now - start;
+        if (waited >= timing->proceed_ticks) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE,
-                       0, 0, 0, phase_index, (uint32_t)budget_ms);
+                       0, 0, 0, phase_index, (uint32_t)timing->proceed_ms);
             pw_diagnostic(e, "proceed wait: worker_proceed_wait budget expired (milliseconds in detail)");
             break;
         }
+        if (pw_ticks_add(timing->plan_deadline, waited, &extended))
+            proceed_refused(hdr, e, phase_index, PW_TIME_REASON_DEADLINE_OVERFLOW,
+                            "proceed wait: exec plan deadline cannot exclude this wait (reason in detail)");
+        PW_PROCEED_DECIDED(phase_index);
         uint32_t ordinal = atomic_load_explicit(&hdr->proceed, memory_order_acquire);
         if (ordinal > phase_index + 1u) {
             pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PHASE_RELEASE, PW_NATIVE_NONE,
@@ -1352,12 +1544,15 @@ static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
             pw_diagnostic(e, "release names a future phase");
             break;
         }
-        if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) _exit(0);
+        uint32_t cancelled = atomic_load_explicit(&hdr->exit_requested, memory_order_acquire);
+        PW_PROCEED_CANCEL_LOADED(phase_index);
+        if (cancelled != 0u) _exit(0);
         if (ordinal == phase_index + 1u) {
+            timing->plan_deadline = extended;
             atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);
             atomic_store_explicit(&hdr->proceed_observed, ordinal, memory_order_release);
             pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, phase->first_slot);
-            return elapsed_ns;
+            return;
         }
         for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
     }
@@ -1396,10 +1591,13 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    pw_attempt_budget_t attempt_budget = attempt_budget_start(args.exec_attempt_budget_ms > 0
-        ? args.exec_attempt_budget_ms : PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
-    long child_deadline_ms = args.exec_child_deadline_ms > 0
-        ? args.exec_child_deadline_ms : PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
+    /* The worker origin: setup after this sample is charged to the exec budget. */
+    pw_timing_t timing = {
+        .proceed_ms = args.proceed_wait_ms,
+        .budget_ms = args.exec_attempt_budget_ms > 0 ? args.exec_attempt_budget_ms : PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT,
+        .child_ms = args.exec_child_deadline_ms > 0 ? args.exec_child_deadline_ms : PW_EXEC_CHILD_DEADLINE_MS_DEFAULT,
+    };
+    pw_clock_start(&timing.clock);
 
     void *base = map_region(args.shm_fd);
     if (!base) return 3;
@@ -1499,6 +1697,12 @@ int main(int argc, char **argv) {
         return 10;
     }
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_RETURNED, UINT32_MAX);
+
+    /* Clock setup follows the adjacent header/policy-read refusal convention:
+     * a published failure and a distinct exit, with applied, done and apply_rc
+     * untouched. It precedes every policy byte and the application. */
+    if (pw_timing_setup(&timing, evidence) != 0) return 12;
+
     uint32_t param_count = hdr->param_count;
     for (uint32_t i = 0; i < param_count; i++) {
         params[i].key[PW_SHM_PARAM_KEY_MAX - 1u] = '\0';
@@ -1711,11 +1915,10 @@ int main(int argc, char **argv) {
 
     for (uint32_t phase_index = 0; phase_index < hdr->phase_count; phase_index++) {
         pw_shm_phase_t *phase = &hdr->phases[phase_index];
-        int64_t release_wait_ns = wait_for_proceed(hdr, evidence, phase_index, args.proceed_wait_ms);
-        attempt_budget_exclude(&attempt_budget, release_wait_ns);
+        wait_for_proceed(hdr, evidence, phase_index, &timing);
         for (uint32_t i = phase->first_slot; i < phase->end_slot; i++) {
             pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
-            run_attempt(&slots[i], &attempt_budget, child_deadline_ms,
+            run_attempt(&slots[i], &timing, phase_index, i,
                         args.kill_before_publish_slot == (long)i);
             pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
         }

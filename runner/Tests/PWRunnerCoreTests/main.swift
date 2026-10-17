@@ -65,6 +65,9 @@ runCWorkerClockTests(tk)
 runWorkerEvidenceTests(tk)
 // Policy pipe deadline and independently observed transfer/cleanup evidence.
 runPolicyTransferTests(tk)
+// The C worker's continuous-time setup and timing refusals through the real host
+// driver, with production main and one substituted clock boundary per companion.
+runWorkerClockTests(tk)
 // CWorker + ValidatorClient orchestration with real children: the join of
 // worker slots and validator verdicts into one result.
 runCWorkerValidatorTests(tk)

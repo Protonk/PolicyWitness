@@ -35,8 +35,8 @@ def replace_once(source, old, new):
 
 def worker_source(source, gate):
     # Bypass each actual wait while retaining phase publications and attempts.
-    return replace_once(source, '        int64_t release_wait_ns = wait_for_proceed(hdr, evidence, phase_index, args.proceed_wait_ms);',
-        '        int64_t release_wait_ns = 0; (void)wait_for_proceed; /* deliberate bypass */\n'
+    return replace_once(source, '        wait_for_proceed(hdr, evidence, phase_index, &timing);',
+        '        (void)wait_for_proceed; /* deliberate bypass */\n'
         '        atomic_store_explicit(&phase->arrived, 1u, memory_order_release);\n'
         f'        while (access({json.dumps(str(gate))}, F_OK) != 0) usleep(1000); /* test collection gate */\n'
         '        atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);\n'

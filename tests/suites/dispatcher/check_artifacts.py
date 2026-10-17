@@ -18,6 +18,9 @@ from fixture_bundle import bundle, seal, fingerprint
 # The compiled fixture hosts: the suite wrapper builds them once per run.
 HOST = Path(os.environ['PW_DISPATCHER_HOST_FIXTURE'])
 HOST_IMPORTS_SANDBOX = HOST.with_name(HOST.name + '.imports-sandbox')
+WORKER_IMPORTS_CLOCK = HOST.with_name(HOST.name + '.imports-clock')
+WORKER_CONTINUOUS_CLOCK = HOST.with_name(HOST.name + '.continuous-clock')
+WORKER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
 
 
 def exercise(out, name):
@@ -34,7 +37,8 @@ def exercise(out, name):
         shutil.copyfile(ROOT / 'tests/fixtures/dispatcher' / source, path)
         path.chmod(0o755)
     app = repo / 'dist/PolicyWitness.app'
-    bundle(app, HOST_IMPORTS_SANDBOX if name == 'host_imports_sandbox' else HOST)
+    worker = {'worker_imports_clock': WORKER_IMPORTS_CLOCK, 'worker_continuous_clock': WORKER_CONTINUOUS_CLOCK}.get(name)
+    bundle(app, HOST_IMPORTS_SANDBOX if name == 'host_imports_sandbox' else HOST, worker=worker)
     helper = app / 'Contents/MacOS/pw-runner-client'
     manifest_path = app / 'Contents/Resources/Evidence/manifest.json'
     manifest = json.loads(manifest_path.read_text())
@@ -72,6 +76,19 @@ def exercise(out, name):
     elif name == 'host_imports_sandbox':
         # The bundle is intact and sealed; only the host's undefined symbols differ.
         expected_issue = 'host_invariance'
+    elif name == 'worker_imports_clock':
+        # The bundle is intact and sealed; only the worker's undefined symbols differ.
+        expected_issue = 'worker_clock'
+    elif name == 'worker_unreadable_imports':
+        # Bytes nm cannot read, with the manifest following: inspection failure
+        # must be an error, never an empty (passing) import set.
+        (app / WORKER_REL).write_bytes(b'not a Mach-O worker\n')
+        for entry in manifest['entries']:
+            if entry['rel_path'] == WORKER_REL:
+                entry['sha256'] = fingerprint(app / WORKER_REL)
+        manifest_path.write_text(json.dumps(manifest))
+        seal(app)
+        expected_issue = 'worker_clock'
     elif name == 'missing_record':
         (app / 'Contents/Resources/Evidence/provenance.json').unlink()
         seal(app)
@@ -110,8 +127,9 @@ def exercise(out, name):
     evidence = repo / 'tests/out/runs/default/artifact-integrity'
     issues = json.loads((evidence / 'inspection.json').read_text())
     executed = [json.loads(line)['id'] for line in receipts.read_text().splitlines()]
-    assert result.returncode == (0 if name == 'valid' else 1), (name, result.stderr)
-    assert run['ok'] is (name == 'valid')
+    valid = name in ('valid', 'worker_continuous_clock')
+    assert result.returncode == (0 if valid else 1), (name, result.stderr)
+    assert run['ok'] is valid
     assert integrity['valid_before'] is (expected_issue is None)
     if expected_issue:
         assert expected_issue in {e['code'] for e in issues['errors']}, issues
@@ -124,10 +142,21 @@ def exercise(out, name):
         if name == 'host_imports_sandbox':
             assert all(s['returncode'] == 0 for s in issues['signatures'])
             assert issues['host_invariance']['sandbox_symbols'] == ['_sandbox_check'], issues['host_invariance']
+        if name == 'worker_imports_clock':
+            assert all(s['returncode'] == 0 for s in issues['signatures'])
+            assert issues['worker_clock']['returncode'] == 0, issues['worker_clock']
+            assert issues['worker_clock']['forbidden'] == ['_clock_gettime'], issues['worker_clock']
+        if name == 'worker_unreadable_imports':
+            receipt = issues['worker_clock']
+            assert receipt['returncode'] != 0 and receipt.get('error') and receipt['undefined'] is None, receipt
     else:
         assert executed == ['probe/app', 'probe/worker', 'probe/offline']
         assert issues['host_invariance']['returncode'] == 0, issues['host_invariance']
         assert issues['host_invariance']['sandbox_symbols'] == [], issues['host_invariance']
+        assert issues['worker_clock']['returncode'] == 0 and issues['worker_clock']['forbidden'] == [], issues['worker_clock']
+        if name == 'worker_continuous_clock':
+            # The permitted continuous clock is read from the worker's real imports.
+            assert '_mach_continuous_time' in issues['worker_clock']['undefined'], issues['worker_clock']
         delta = json.loads((evidence / 'changes.json').read_text())
         if name.startswith('mutate_'):
             assert integrity['unchanged'] is False
@@ -147,7 +176,8 @@ if __name__ == '__main__':
     out.mkdir(parents=True, exist_ok=True)
     cases = [exercise(out, name) for name in ('valid', 'missing_helper', 'damaged_signature',
         'resigned_stale_manifest', 'missing_manifest_entry', 'duplicate_manifest_entry',
-        'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'missing_record', 'stale_record',
+        'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'worker_imports_clock',
+        'worker_continuous_clock', 'worker_unreadable_imports', 'missing_record', 'stale_record',
         'contradictory_record', 'mutate_pass', 'mutate_fail', 'mutate_crash')]
     (out / 'controls.json').write_text(json.dumps(cases, indent=2) + '\n')
     print(f'{len(cases)} artifact controls passed')

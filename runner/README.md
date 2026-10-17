@@ -66,7 +66,10 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
    before actions, then publishes phase completion before its next arrival.
    Each phase retains immutable publications and its own validator evidence.
    No later record joins a closed collection. Expired waits and worker loss
-   stop progression; earlier observations remain.
+   stop progression; earlier observations remain. The worker decides expiry
+   from validated continuous-clock samples in one tick domain shared with its
+   exec allowances; an unusable sample also refuses the phase before
+   acknowledgement, and a late release cannot revive it.
 5. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
@@ -96,7 +99,7 @@ describe these bounds and remaining cleanup limitations.
 ## Specimen inputs
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 22, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 23, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The runner consumes `PWRunnerRunSpec`: the accepted request version, SBPL

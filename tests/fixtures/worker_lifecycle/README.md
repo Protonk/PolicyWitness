@@ -69,9 +69,30 @@ This forces a raw acknowledgement after the driver has broken ownership.
 An optional `|/tmp/receipt` suffix records waiting/ack/attempt/expiry for the
 test-owned collection gate. For the pre-ack signal token, `<receipt>.die` gates
 the signal. These unsandboxed fixtures test protocol interpretation, not native
-policy enforcement. `.identity-mismatch` refuses a header whose last identity byte differs. `.clock-failure` and
-`.clock-failure-later` substitute only the real C producer's clock boundary and
-fail closed at the initial and subsequent clock reads.
+policy enforcement. `.identity-mismatch` refuses a header whose last identity byte differs.
+
+The clock companions compile the production C main from
+[clock_failure.c](clock_failure.c) with one continuous-clock boundary
+substituted; every seam leaves a stale `EPERM`. `.clock-setup-failure`,
+`.clock-zero-factor` and `.clock-unrepresentable` change only the timebase
+query and refuse clock setup before the policy read. `.clock-failure` and
+`.clock-failure-later` return a value below the origin at the first proceed
+start or observation sample. `.clock-phase2` does so at phase 2's own start
+after holding it 200 ms, so the host's collection of that phase begins first.
+`.clock-expire2` jumps 2^62 ticks forward 200 ms into phase 2's wait, a valid
+expiry. `.clock-sticky` rejects the first exec observation sample.
+`.clock-arith` selects a 1/150000000 timebase and jumps the first exec
+observation to one millisecond before the default plan cutoff, so the child
+deadline overflows while the sample is valid. Jumps persist, keeping later
+samples ordered. These establish publication and interpretation of timing
+refusals, not native clock behavior.
+
+Three standalone controls compile production worker code with a controlled
+timebase and counter and run in `runner_c_worker_harness`:
+[clock_control.c](clock_control.c) (`clock_arithmetic`),
+[proceed_control.c](proceed_control.c) (`proceed_precedence`) and
+[exec_control.c](exec_control.c) (`exec_control_states`), each with its own
+build script.
 
 The `.worker-limits` companion compiles the existing C default-value probe. The
 Swift budget inequality consumes its output directly; the independent native

@@ -926,6 +926,69 @@
       "reason": "Safe-wait investigation: 45 baseline runner/ordering cases, plus attached native clock reproduction, deterministic boundaries, raw logs, source snapshots and installed-code inspection. No replacement-worker acceptance claimed.",
       "source": "f467962de4c051157121c1c90c8d001969252a27",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-baseline-20261017",
+      "run_id": "20261017T141514Z_23321a89",
+      "reason": "Safe-wait repair baseline before the step-1 build: pre-repair worker a1c8ea3b (built from 399de80, identity fffe4dff) imports _clock_gettime; baseline-worker/ holds the raw nm -u receipt, --version identity and bundle provenance.",
+      "source": "3a5ce5cd5426dc1392c5972e1315742c236e51f9",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-step1-20261017",
+      "run_id": "20261017T143002Z_da851ad0",
+      "reason": "Safe-wait repair step-1 checkpoint (setup refusal, readers, response 23) on an uncommitted tree: 47 of 50 passed. runner_unit failed only on response-22 live fixtures; Rust unit exposed a hard-coded attempt position in disposition.rs, then fixed. Not credited.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-step2-20261017",
+      "run_id": "20261017T145649Z_f6a02041",
+      "reason": "Safe-wait repair step-2 checkpoint (tick-domain proceed/exec) on an uncommitted tree: 65 of 66 passed; runner_unit failed only on response-22 live fixtures awaiting refresh. Not credited.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-live-fixtures-20261017",
+      "run_id": "20261017T150743Z_22c33c66",
+      "reason": "Response-23 live fixture refresh on the final safe-wait candidate (worker identity 33890392, hash cdfdbf9c): all six cases passed. Current response23 fixtures are exact copies of these outputs; producer stamps intact.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-core-20261017",
+      "run_id": "20261017T150918Z_278aa649",
+      "reason": "Safe-wait repair core acceptance on the final candidate: all 81 cases passed, including clock_arithmetic, proceed_precedence, exec_control_states, opt-in native_clock (36M continuous samples usable; old clock failed in all 6 restrictive-policy runs and none of the 3 allow-default runs), both ordering mutations and signed artifact controls. Uncommitted tree; snapshot in safe-wait-repair-default-final-20261017/acceptance.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-default-20261017",
+      "run_id": "20261017T151501Z_2f12f918",
+      "reason": "First safe-wait default battery: 188 of 190. selection_controls exposed native_clock missing from the opt_in group (fixed); deny_capture_covers_the_run overlapped an unplanned 232 s idle system sleep (pmset 08:24:09-08:28:01): the second hold was refused for an exhausted exec budget and the host sentinel expired. Environmental and uncontrolled, not the planned sleep/wake check. Not credited.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-rerun-20261017",
+      "run_id": "20261017T153159Z_3e3af357",
+      "reason": "Safe-wait reruns after the opt_in group fix, under caffeinate -i: selection_controls, deny_capture_covers_the_run and source_drift all passed (8 of 8).",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-repair-default-final-20261017",
+      "run_id": "20261017T153455Z_120c9dbc",
+      "reason": "Credited safe-wait repair default battery under caffeinate -i: all 190 cases passed on the final signed candidate (worker identity 33890392, hash cdfdbf9c), no system sleep during the run. acceptance/ holds the exact source snapshot (HEAD fcc3558 plus tracked patch and untracked files), core selection and console logs. Actual sleep/wake validation remains pending.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/safe-wait-review-fixes-20261017",
+      "run_id": "20261017T160608Z_bdfc9a2f",
+      "reason": "Safe-wait pre-commit review: all 7 cases passed on unchanged signed worker 33890392/cdfdbf9c. Replaces earlier exec_control_states and source_drift credits after adding regression-after-arithmetic-refusal provenance assertions and correcting documentation. review/ records the exact source snapshot and reviewed reuse of unaffected core/default cases. Actual sleep/wake remains pending.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

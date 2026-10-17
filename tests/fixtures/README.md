@@ -115,8 +115,10 @@ startup controls; it contains no expected selections or result-checking logic.
 SIGINT. They use the exec fixture's existing readiness/ping/release protocol;
 the cancellation checker reuses its kernel process-exit observer.
 `fixture_bundle.py` lays out fake signed bundles around compiled Mach-O stubs
-(`host_clean.c`, `host_imports_sandbox.c` and `controller_stub.c`, built by
-`build.sh` once per suite run and named in `PW_DISPATCHER_HOST_FIXTURE`) and
+(`host_clean.c`, `host_imports_sandbox.c`, `worker_imports_clock.c`,
+`worker_continuous_clock.c` and `controller_stub.c`, built by `build.sh` once
+per suite run and named in `PW_DISPATCHER_HOST_FIXTURE`; a worker stub can
+replace the clean stub at the worker path only) and
 writes a complete full-build provenance record it authors: nominal toolchain
 values, the stand-ins' hashes and load commands read with its own `otool`
 parse, and the ad hoc signature facts their linker signatures carry, which the

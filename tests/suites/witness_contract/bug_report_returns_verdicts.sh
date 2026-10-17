@@ -10,20 +10,24 @@ PW_TEST_ID="bug_report_returns_verdicts"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "bug-report specimen produces sandbox_check verdicts in steps[]"
+test_step "run" "bug-report specimen: verdict, applied release chain, published attempt and confirmed cleanup"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 
-SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+# The bug-report specimen, and its allow-default neighbour as the positive
+# open/path control. The policy text is the only difference.
+for name in specimen neighbour; do
+  /usr/bin/python3 - "${PW_TEST_ARTIFACTS}/${name}.json" "${name}" <<'PY'
 import json, sys
 from pathlib import Path
+policy = {"specimen": "(version 2)\n(deny default)\n(allow file-read-data)",
+          "neighbour": "(version 2)\n(allow default)"}[sys.argv[2]]
 spec = {
     "schema_version": 5,
-    "specimen_id": "witness_contract_verdicts",
-    "policy": {"format": "sbpl", "sbpl_source": "(version 2)\n(deny default)\n(allow file-read-data)"},
+    "specimen_id": "witness_contract_verdicts" if sys.argv[2] == "specimen" else "witness_contract_verdicts_allow_default",
+    "policy": {"format": "sbpl", "sbpl_source": policy},
     "probe_plan": [{
         "step_id": "fr1",
         "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "none"}},
@@ -32,35 +36,65 @@ spec = {
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
-
-RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
-set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
-set -e
+  set +e
+  "${PW_BIN}" run "${PW_TEST_ARTIFACTS}/${name}.json" >"${PW_TEST_ARTIFACTS}/${name}-run.json" 2>/dev/null
+  set -e
+done
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+/usr/bin/python3 - "${PW_TEST_ARTIFACTS}/specimen-run.json" "${PW_TEST_ARTIFACTS}/neighbour-run.json" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
-env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-runner = env.get("data", {}).get("runner_result") or {}
-steps = runner.get("steps") or []
-if not steps:
-    outcome = runner.get("normalized_outcome")
-    raise SystemExit(
-        f"steps[] is empty (outcome={outcome!r}); the bug-report "
-        f"specimen should produce a verdict for each probe."
-    )
-sb = steps[0].get("sandbox_check") or {}
-# Policy is (deny default)(allow file-read-data), so the file-read-data
-# verdict is deterministically allow. Pin it: accepting deny here would let
-# a flipped-verdict regression pass while the step still "produces a verdict".
-if sb.get("outcome") != "allow":
-    raise SystemExit(
-        f"expected sandbox_check.outcome=allow for (allow file-read-data), "
-        f"got {sb.get('outcome')!r}"
-    )
+
+def load(path):
+    env = json.loads(Path(path).read_text(encoding="utf-8"))
+    return env.get("data", {}), env.get("data", {}).get("runner_result") or {}
+
+def worker_account(label, data, runner):
+    """Application, release/acknowledgement, publication and cleanup, read from
+    the reply's own observations. None of these establishes a policy cause."""
+    steps = runner.get("steps") or []
+    if not steps:
+        raise SystemExit(f"{label}: steps[] is empty (outcome={runner.get('normalized_outcome')!r})")
+    sub = runner.get("runner_subprocess") or {}
+    assert runner.get("sandboxed_after_apply") is True, f"{label}: no published application"
+    failure = (sub.get("worker_evidence") or {}).get("failure")
+    assert failure is None, f"{label}: worker failure published: {failure}"
+    ordering = (runner.get("phases") or [{}])[0].get("ordering") or {}
+    for link in ("collection_closed_before_proceed", "proceed_set", "proceed_observed", "worker_lifetime_established"):
+        assert ordering.get(link) is True, f"{label}: release/acknowledgement link {link} missing: {ordering}"
+    assert ordering.get("protocol_violations") == [], f"{label}: {ordering}"
+    attempt = steps[0].get("attempt") or {}
+    assert attempt.get("result_source") == "worker", f"{label}: attempt not published by the worker: {attempt}"
+    assert (attempt.get("lifecycle") or {}).get("summary") == "completed", f"{label}: {attempt.get('lifecycle')}"
+    assert sub.get("done_observed") is True and sub.get("reaped") is True, f"{label}: {sub}"
+    assert sub.get("exit_code") == 0 and sub.get("term_signal") is None, f"{label}: worker cleanup unconfirmed: {sub}"
+    assert (data.get("runner_sandbox_diagnostics") or {}).get("process_disposition") == "clean_exit", label
+    return steps[0], attempt
+
+data, runner = load(sys.argv[1])
+step, attempt = worker_account("specimen", data, runner)
+# The prediction: (deny default)(allow file-read-data) answers allow. Pin it:
+# accepting deny would let a flipped-verdict regression pass.
+outcome = (step.get("sandbox_check") or {}).get("outcome")
+assert outcome == "allow", f"expected sandbox_check.outcome=allow for (allow file-read-data), got {outcome!r}"
+# The attempt, independently: the open actually ran and returned. A completed
+# permission failure is valid timing evidence; success is not required.
+rc, err = attempt.get("rc"), attempt.get("errno")
+assert isinstance(rc, int), f"attempt.rc is not an int: {rc!r}"
+assert (rc == 0 and err is None) or (rc != 0 and isinstance(err, int) and err > 0), f"rc={rc!r} errno={err!r}"
+observed = attempt.get("observed_path")
+assert observed in (None, "/private/etc/hosts"), f"descriptor-derived path disagrees: {observed!r}"
+order = (step.get("comparison") or {}).get("order")
+assert order == "query_first", f"established release chain should support query_first, got {order!r}"
+print(f"specimen: prediction={outcome}; open rc={rc} errno={err} observed_path={observed!r}; order={order}")
+
+data, runner = load(sys.argv[2])
+step, attempt = worker_account("neighbour", data, runner)
+assert attempt.get("rc") == 0 and attempt.get("errno") is None, f"allow-default open failed: {attempt}"
+assert attempt.get("observed_path") == "/private/etc/hosts", f"allow-default path evidence: {attempt.get('observed_path')!r}"
+print("neighbour: allow-default open succeeded with descriptor-derived /private/etc/hosts")
 PY
 ASSERT_RC=$?
 set -e
@@ -69,4 +103,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "bug-report specimen yields a verdict for the first probe" "{}"
+test_pass "$(head -1 "${ASSERT_LOG}")" "{\"log\":\"${ASSERT_LOG}\"}"

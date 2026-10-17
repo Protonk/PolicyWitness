@@ -30,9 +30,19 @@ done
 /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 -DPW_MISMATCHED_IDENTITY \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
   "${ROOT_DIR}/tests/fixtures/worker_lifecycle/worker.c" -lsandbox -o "${OUTPUT}.identity-mismatch"
-for suffix in clock-failure clock-failure-later; do
-  flags=(-DPW_CLOCK_FAIL_INITIAL)
-  if [[ "$suffix" == clock-failure-later ]]; then flags+=(-DPW_CLOCK_FAIL_LATER); fi
+for suffix in clock-failure clock-failure-later clock-phase2 clock-sticky clock-expire2 clock-arith \
+    clock-setup-failure clock-zero-factor clock-unrepresentable; do
+  case "$suffix" in
+    clock-failure) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_START -DPW_CLOCK_BACKWARDS_READ=1) ;;
+    clock-failure-later) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_OBSERVE -DPW_CLOCK_BACKWARDS_READ=1) ;;
+    clock-phase2) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_START -DPW_CLOCK_BACKWARDS_READ=2 -DPW_CLOCK_FAILURE_DELAY_MS=200) ;;
+    clock-sticky) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_EXEC_OBSERVE -DPW_CLOCK_BACKWARDS_READ=1) ;;
+    clock-expire2) flags=(-DPW_CLOCK_EXPIRE_SECOND_PHASE) ;;
+    clock-arith) flags=(-DPW_CLOCK_EXEC_NEAR_CUTOFF) ;;
+    clock-setup-failure) flags=(-DPW_CLOCK_SETUP_FAILURE) ;;
+    clock-zero-factor) flags=(-DPW_CLOCK_ZERO_FACTOR) ;;
+    clock-unrepresentable) flags=(-DPW_CLOCK_UNREPRESENTABLE) ;;
+  esac
   /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Wno-deprecated-declarations -O2 "${flags[@]}" \
     -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
     "${ROOT_DIR}/tests/fixtures/worker_lifecycle/clock_failure.c" -lsandbox -o "${OUTPUT}.${suffix}"

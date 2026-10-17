@@ -150,6 +150,15 @@ fn sufficient_disposition_basis(name: &str, claim: &Value) -> bool {
 
 type DispositionPosition = (usize, u64, u64);
 
+/// Temporal order of worker operations (pw_probe_runner_abi.h): clock setup (12)
+/// follows header validation (1), proceed (11) precedes the indexed attempts (9).
+const PROTOCOL_ORDER: [u64; 12] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10];
+
+/// The protocol position of the indexed attempt operation.
+fn attempt_position() -> usize {
+    PROTOCOL_ORDER.iter().position(|v| *v == 9).unwrap()
+}
+
 fn disposition_progress(
     sub: &Value,
     count: usize,
@@ -157,9 +166,7 @@ fn disposition_progress(
     let progress = &sub["worker_evidence"]["progress"];
     let op = progress["operation"].as_u64();
     let stage = progress["stage"].as_u64();
-    let order = [1, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
-        .iter()
-        .position(|v| Some(*v) == op);
+    let order = PROTOCOL_ORDER.iter().position(|v| Some(*v) == op);
     let (Some(op), Some(stage @ (1 | 2)), Some(order)) = (op, stage, order) else {
         return (None, None, None);
     };
@@ -176,7 +183,11 @@ fn disposition_progress(
         return (Some("invalid"), None, None);
     }
     if phase_wait {
-        return (Some("none"), None, Some((9, index.unwrap(), 0)));
+        return (
+            Some("none"),
+            None,
+            Some((attempt_position(), index.unwrap(), 0)),
+        );
     }
     (
         Some(if op == 9 {
@@ -509,8 +520,8 @@ fn validate_disposition(
         }
         let slot = step.get("slot").and_then(Value::as_str);
         let supported = step["attempt_support"] == "supported";
-        let reached = position.map_or(false, |p| p >= (9, i as u64, 1));
-        let returned = position.map_or(false, |p| p >= (9, i as u64, 2));
+        let reached = position.map_or(false, |p| p >= (attempt_position(), i as u64, 1));
+        let returned = position.map_or(false, |p| p >= (attempt_position(), i as u64, 2));
         let boundary_conflict =
             terminal && position.is_some() && !reached && slot == Some("completed");
         let result_conflict = terminal && returned && slot == Some("incomplete") && supported;
@@ -1637,7 +1648,7 @@ mod tests {
     #[test]
     fn validator_collection_ownership_rejects_transplants_and_ignores_pid_reuse() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response23/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1700,7 +1711,7 @@ mod tests {
     #[test]
     fn shared_evidence_type_corpus() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response23/issuer_abnormal_run.json"
         ))
         .unwrap();
         let rows: Vec<Value> = serde_json::from_str(include_str!(
@@ -1735,7 +1746,7 @@ mod tests {
     #[test]
     fn missing_issuer_result_rejects_publication_and_payload_without_erasing_cleanup() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response23/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1801,7 +1812,7 @@ mod tests {
     #[test]
     fn published_abnormal_issuer_exit_requires_both_observations() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response23/issuer_abnormal_run.json"
         ))
         .unwrap();
         let baseline = &envelope["data"]["runner_result"];
@@ -1823,7 +1834,7 @@ mod tests {
     #[test]
     fn native_event_references_and_publication_gate_disposition() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/blackbox_e2e/checker/response22/extension_run.json"
+            "../../tests/fixtures/blackbox_e2e/checker/response23/extension_run.json"
         ))
         .unwrap();
         let runner = &envelope["data"]["runner_result"];
@@ -2066,9 +2077,28 @@ mod tests {
     }
 
     #[test]
+    fn clock_setup_progress_is_a_known_position_before_the_policy_read() {
+        let word = |op: u64, stage: u64| {
+            json!({"worker_evidence": {"progress":
+                {"operation": op, "stage": stage, "raw": (op << 24) | (stage << 20)}}})
+        };
+        let (header, setup, read, open) = (word(1, 2), word(12, 2), word(2, 1), word(13, 1));
+        let (header_answer, _, header) = disposition_progress(&header, 1);
+        let (setup_answer, setup_index, setup) = disposition_progress(&setup, 1);
+        let (_, _, read) = disposition_progress(&read, 1);
+        assert_eq!(
+            (header_answer, setup_answer, setup_index),
+            (Some("none"), Some("none"), None)
+        );
+        assert!(header.unwrap() < setup.unwrap() && setup.unwrap() < read.unwrap());
+        // An open code acquires no temporal meaning from its magnitude.
+        assert_eq!(disposition_progress(&open, 1), (None, None, None));
+    }
+
+    #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response22/a1_expected.json"
+            "../../tests/fixtures/disposition/response23/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

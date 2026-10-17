@@ -38,7 +38,8 @@ which the child stopped.
 
 | Observations | Required account | Summary |
 | --- | --- | --- |
-| Proceed wait expiry (operation 11, code 8) or native clock failure (kind 3) | Preserve budget detail/diagnostic and zero attempts; late release cannot revive | `runner_failed` |
+| Proceed wait expiry (operation 11, code 8) or local timing refusal (operation 11, code 14) | Preserve budget or reason detail/diagnostic and zero attempts for that phase; late release cannot revive | `runner_failed` |
+| Clock setup refusal (operation 12) | Preserve the native Mach return or local reason; A=false, D=false, R untouched, reaped exit 12; no receipt, application or action | `runner_failed` |
 | Death awaiting release | Preserve disposition/progress without inventing a failure record or policy cause | `runner_failed` |
 | Valid worker failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
 | Incomplete or malformed worker failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
@@ -663,6 +664,9 @@ reporting obligations and registered test owners.
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
 | `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; compiled layout and exact-identity rejection |
+| `runner_c_worker_harness/clock_arithmetic`, `proceed_precedence`, `exec_control_states` | Production clock helpers, proceed wait and exec flow with a controlled timebase and raw counter: ceiling allowances, checked arithmetic, sample rejection and provenance, setup publications, precedence, race gates, exact exclusions and every exec timing stage | Deterministic boundaries only; not platform clock behavior, sleep or a sandbox cause |
+| Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
+| `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
@@ -711,7 +715,10 @@ payload is read through progress. This is the latest milestone, not a history.
 
 Operations: 1 compatible header validation, 2 policy read, 3 parameter allocation,
 4 parameter assignment, 5 compilation, 6 optional profile capture, 7 readiness
-write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait.
+write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait,
+12 clock setup. Temporal order differs from numeric order: clock setup follows
+header validation and precedes the policy read; proceed precedes each phase's
+attempts.
 Started means control reached the call boundary; returned means control returned, regardless
 of success. Application is established only by `applied == 1`. Completed attempt
 outputs are established only by that slot's `completed == 1`.
@@ -725,8 +732,11 @@ outputs are established only by that slot's `completed == 1`.
 | assignment i returns and i+1 starts | Atomic progress identifies exactly one boundary; no torn index/stage |
 | readiness write fails | Its own immutable rc/errno record remains; execution may proceed to apply and done |
 | optional capture omitted | Transition compile → readiness is valid |
+| clock setup returned; timebase query failed | Operation 12/code 1/native kind 1 with the actual Mach return, no errno; diagnostic, exit 12, no done |
+| clock setup returned; zero factor or unrepresentable allowance | Operation 12/code 14/kind 0, reason in detail; diagnostic, exit 12, no done, even for a plan without exec |
 | proceed wait starts; budget expires | Operation 11/code 8, budget milliseconds in detail, done; no acknowledgement or attempt, even after late release |
-| proceed clock fails | Operation 11/code 1/native kind 3, actual return and errno; done, no attempts |
+| proceed sample below the origin or the last accepted sample | Operation 11/code 14/kind 0, reason 3 in detail, the stage in the diagnostic; done, no acknowledgement or attempts |
+| proceed after an earlier exec rejected a sample | Operation 11/code 14, reason 6 in detail, no new sample; the diagnostic names the first rejection's reason, stage, phase and slot; done, no acknowledgement |
 | release acknowledged; worker dies | Lifetime and eligible query order remain established; attempt evidence may be missing |
 | attempt i starts but never completes | Progress may identify the started slot; no completed result or claim that it never ran |
 | failure published; diagnostic incomplete; cleanup fails | Failure status, diagnostic availability and host observations survive independently |
@@ -747,8 +757,9 @@ Published payload fields have the same names and integer types in Swift/JSON:
 with UINT32_MAX meaning absent. JSON renames the latter two to optional `errno`
 and `index`. Native kind 0 means no native return (stored result is padding,
 JSON native_result is omitted); 1 is a signed integer return; 2 is a NULL pointer
-return represented by zero, never a pointer address; 3 is a native clock-call
-return. Unfamiliar kinds retain the raw signed result. Unknown operation/code/detail
+return represented by zero, never a pointer address; 3 is the historical native
+clock-call return, which the current worker never publishes. Unfamiliar kinds
+retain the raw signed result. Unknown operation/code/detail
 are transported unchanged; recognition is not validity. Invalid errno presence
 or a nonzero result tagged as NULL rejects payload decoding.
 Code 1 is native failure, 2 source capacity rejection (detail is maximum source
@@ -757,17 +768,27 @@ bytes, excluding NUL), 3 policy read error, 4 step capacity, 5 parameter capacit
 expiry, 9 embedded policy NUL, 10 invalid phase partition/publication input,
 11 a future release ordinal, 12 an expected policy length the source buffer
 cannot hold (header operation 1; detail is the refused expectation; refused
-before any policy byte is read; exit 10), and 13 a policy whose length at EOF
+before any policy byte is read; exit 10), 13 a policy whose length at EOF
 differs from the host's expectation (operation 2; detail is the received count;
-exit 11). Code 9's detail is the NUL byte offset; code 10's is the phase
+exit 11), and 14 a local timing refusal with no native result or errno, whose
+detail is a reason: 1 invalid timebase, 2 invalid or unrepresentable duration,
+3 backwards counter (a rejected sample), 4 unrepresentable delta, 5 deadline or
+exclusion overflow, 6 prior clock fault. Clock setup (operation 12) refuses
+before the policy read with exit 12 and without `done`, like the header and
+policy-read refusals; it never claims a status-word result. Code 9's detail is the NUL byte offset; code 10's is the phase
 capacity. On the policy read the order is capacity (2, which stops before EOF
 and publishes no receipt), then the EOF receipt publication, then length (13),
 then NUL (9); codes 12 and 13 precede any libsandbox call, so no prefix or
 extension of the submission is compiled. For proceed operation 11, failure index names the zero-based
-phase: code 8 and native-clock failure code 1/kind 3 carry the wait budget in
-milliseconds, while code 11 carries the observed release ordinal. Human diagnostics
-interpret those units only for the known code/kind combination; unknown details
-remain raw. No errno is claimed for libsandbox
+phase: code 8 carries the wait budget in milliseconds, code 11 the observed release
+ordinal and code 14 a timing reason, never milliseconds. Reason 6 records a
+refusal caused by an earlier rejected sample, not a new sample failure; only an
+actual rejected sample carries reason 3. Human diagnostics interpret those units
+only for the known code/kind combination; unknown details remain raw. Exec timing
+faults are slot diagnostics, not failure records: a refusal before spawn has rc -1,
+no child and no errno; after spawn the PID, captured bytes and any reaped status
+survive, cleanup runs while ownership is known, and a native kill or wait errno is
+kept beside the local reason. No errno is claimed for libsandbox
 allocation/parameter/compile calls, whose return contracts do not establish it.
 Failed apply and failed read capture errno immediately; zero remains a value.
 
@@ -1268,8 +1289,8 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 | --- | --- | --- |
 | Release ordinal | `proceed` = phase index + 1 | shared header; [layout golden](fixtures/contract/abi_layout.txt) |
 | Latest acknowledgement ordinal | `proceed_observed`; immutable `phases[i].acknowledged` | shared header; [layout golden](fixtures/contract/abi_layout.txt) |
-| Worker operation | `PW_OP_PROCEED` = 11 | `pw_probe_runner_abi.h` |
-| Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8; clock failure is `PW_FAILURE_NATIVE` with kind `PW_NATIVE_CLOCK` = 3 | `pw_probe_runner_abi.h` |
+| Worker operation | `PW_OP_PROCEED` = 11; clock setup `PW_OP_CLOCK_SETUP` = 12 | `pw_probe_runner_abi.h` |
+| Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8; local timing refusal `PW_FAILURE_TIME_INVALID` = 14 with a `PW_TIME_REASON_*` detail | `pw_probe_runner_abi.h` |
 | Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
 | Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
 | Request overrides | `validator_io_timeout_ms`, `validator_total_timeout_ms` | `PWRunnerTestOverrides` |

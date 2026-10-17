@@ -26,6 +26,15 @@ Offline release controls also exercise the release procedure's decision points.
   issuer entitlement read-back belongs to the
   [BYOXPC controls](../runner_byoxpc/README.md) and
   [extension controls](../witness_contract/README.md#native-extension-boundaries).
+- Runs `nm -u` on the shipped `pw-probe-runner` and rejects an undefined
+  `_clock_gettime`: the worker times release waits and exec attempts with
+  continuous Mach time because libc's `CLOCK_MONOTONIC` path can fall back to a
+  Unix syscall that a deny-default profile refuses. The raw import list and
+  `nm` status are retained; a failed inspection is an error, never an empty
+  import set. Like the host check this sees direct linked imports only, not
+  dynamic lookups or library-internal calls, so it complements the
+  [timing controls](../runner_c_worker_harness/README.md) rather than
+  establishing usable time. Host and validator clocks are not inspected here.
 - Never executes `policy-witness` or the runner.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.

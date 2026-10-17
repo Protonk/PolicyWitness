@@ -718,8 +718,28 @@
           "description": "Worker release barrier: max slots proceed"
         },
         {
+          "id": "clock_arithmetic",
+          "description": "production continuous-time helpers: ceiling allowances, checked arithmetic, sample validation and setup refusal publications"
+        },
+        {
+          "id": "proceed_precedence",
+          "description": "production proceed wait: sampled-time precedence, fail-closed samples, exact exclusions and scheduled race limits"
+        },
+        {
           "id": "exec_control_states",
           "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls"
+        },
+        {
+          "id": "native_clock",
+          "default": false,
+          "description": "Production continuous-clock helpers stay usable in fresh processes under deny-default profiles; the old clock is recorded beside them",
+          "command": [
+            "bash",
+            "tests/suites/runner_c_worker_harness/opt_in/native_clock.sh"
+          ],
+          "requires": [
+            "clang"
+          ]
         }
       ]
     },
@@ -1789,7 +1809,8 @@
         "sandbox_extensions_native/feasibility",
         "witness_contract/extensions_byoxpc",
         "witness_contract/path_query_observations",
-        "witness_contract/path_query_integrated"
+        "witness_contract/path_query_integrated",
+        "runner_c_worker_harness/native_clock"
       ]
     },
     "failure_boundaries": {

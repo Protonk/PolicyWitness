@@ -59,4 +59,10 @@ test_run_logged "${PW_TEST_ARTIFACTS}/transfer-readers.log" "policy transfer rea
   --include-ignored --exact run_flow::tests::policy_transfer_driver_replies_cross_assembly_and_consumer
 if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/transfer-readers.log"; then test_fail "transfer replay did not run"; fi
 
+test_step clock_readers "replay actual worker clock refusal replies through Rust assembly and the independent consumer"
+test_run_logged "${PW_TEST_ARTIFACTS}/clock-readers.log" "worker clock reader replay failed" \
+  cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --bin policy-witness -- \
+  --include-ignored --exact run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer
+if ! grep -Fxq 'running 1 test' "${PW_TEST_ARTIFACTS}/clock-readers.log"; then test_fail "worker clock replay did not run"; fi
+
 test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"

@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "fffe4dffeb2815f4c079953f816b73ccd27ef9784b294179ec8ef7f88f734ba7"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xff, 0xfe, 0x4d, 0xff, 0xeb, 0x28, 0x15, 0xf4, 0xc0, 0x79, 0x95, 0x3f, 0x81, 0x6b, 0x73, 0xcc, 0xd2, 0x7e, 0xf9, 0x78, 0x4b, 0x29, 0x41, 0x79, 0xec, 0x8e, 0xf7, 0xf8, 0x8f, 0x73, 0x4b, 0xa7};
+#define PW_WORKER_ABI_IDENTITY_HEX "33890392b9337f128a06b89b7d831192e5e8d809f0a5f41613e8745c2d9c9eb9"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x33, 0x89, 0x03, 0x92, 0xb9, 0x33, 0x7f, 0x12, 0x8a, 0x06, 0xb8, 0x9b, 0x7d, 0x83, 0x11, 0x92, 0xe5, 0xe8, 0xd8, 0x09, 0xf0, 0xa5, 0xf4, 0x16, 0x13, 0xe8, 0x74, 0x5c, 0x2d, 0x9c, 0x9e, 0xb9};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -254,7 +254,10 @@ enum {
     PW_OP_HEADER = 1, PW_OP_POLICY_READ = 2, PW_OP_PARAMS_CREATE = 3,
     PW_OP_PARAM_SET = 4, PW_OP_COMPILE = 5, PW_OP_CAPTURE = 6,
     PW_OP_READY = 7, PW_OP_APPLY = 8, PW_OP_ATTEMPT = 9, PW_OP_FINISHED = 10,
-    PW_OP_PROCEED = 11
+    PW_OP_PROCEED = 11,
+    /* Mach timebase initialization and duration preparation. Temporally it
+     * follows header validation (1) and precedes the policy read (2). */
+    PW_OP_CLOCK_SETUP = 12
 };
 enum { PW_PROGRESS_STARTED = 1, PW_PROGRESS_RETURNED = 2 };
 enum {
@@ -273,10 +276,24 @@ enum {
     /* The count read at EOF differs from policy_bytes_expected; detail is the
      * received count. Like code 9, this refuses to compile a prefix (or an
      * extension) of the source the reply's policy_sha256 describes. */
-    PW_FAILURE_SOURCE_LENGTH = 13
+    PW_FAILURE_SOURCE_LENGTH = 13,
+    /* A local worker timing refusal with no native result or errno; detail
+     * is a PW_TIME_REASON_* value, never milliseconds. */
+    PW_FAILURE_TIME_INVALID = 14
 };
+/* Kind 3 is the historical CLOCK_MONOTONIC failure; the current worker's
+ * continuous clock has no native error return and never publishes it. */
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };
+/* Detail values for PW_FAILURE_TIME_INVALID and exec timing diagnostics.
+ * Only a rejected raw sample is BACKWARDS_COUNTER; PRIOR_CLOCK_FAULT refuses
+ * later timed work after such a rejection. The others are operation-local
+ * arithmetic refusals that leave the clock usable. */
+enum {
+    PW_TIME_REASON_INVALID_TIMEBASE = 1, PW_TIME_REASON_INVALID_DURATION = 2,
+    PW_TIME_REASON_BACKWARDS_COUNTER = 3, PW_TIME_REASON_UNREPRESENTABLE_DELTA = 4,
+    PW_TIME_REASON_DEADLINE_OVERFLOW = 5, PW_TIME_REASON_PRIOR_CLOCK_FAULT = 6
+};
 
 /* Worker-owned publication contract is specified in
  * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract".

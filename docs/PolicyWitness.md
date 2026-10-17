@@ -758,8 +758,10 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   capacities exclude any terminating NUL.
 - Time rows distinguish defaults, elapsed monotonic deadlines, nominal waits
   and unenforced allowances. Monotonic deadlines are unaffected by wall-clock
-  adjustments. Nominal waits can take longer than their listed duration; each
-  row describes what expiry does.
+  adjustments. The C worker's release wait and exec allowances count continuous
+  Mach time, which includes system sleep; host, validator and controller waits
+  keep their own clocks, and no worker time is compared with them. Nominal waits
+  can take longer than their listed duration; each row describes what expiry does.
 - The Control column describes `policy-witness` flags using four words.
   "Fixed" means no flag changes the value in this build. "Flag" names the flag
   that does. "Derived" means the value follows from another row.
@@ -822,14 +824,14 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
-| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed monotonic deadline for each phase release after the worker arrives. Expiry or clock failure records the phase index and prevents its actions; earlier published phase evidence remains. | Fixed. |
+| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Sampled continuous time for each phase release after the worker arrives, converted once before application to a ceiling tick allowance. Continuous time includes system sleep. Expiry records the phase index and milliseconds and prevents its actions. An unusable sample, an earlier rejected sample or an unrepresentable plan exclusion records a local timing refusal with its reason instead; neither invents a native result or errno. Earlier published phase evidence remains. | Fixed. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Informative allowance between the validator budgets and worker release wait. No separate timeout or refusal occurs at this value. | Not enforced; no flag. |
 | Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum proposed `_test_overrides.validator_io_timeout_ms`. Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor. | Fixed. |
 | Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Nominal wait for validator exit after collection closes. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
-| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Elapsed monotonic deadline after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
-| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Elapsed monotonic budget shared by exec steps, including worker setup and intervening work but excluding the worker release wait. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A clock failure refuses spawn or leaves an observation error after spawn. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
-| Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Elapsed monotonic allowance to confirm an exec child's exit after observation ends. Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
+| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
+| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
+| Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Continuous-time allowance to confirm an exec child's exit after observation ends. Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
@@ -987,7 +989,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 22, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 23, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1177,6 +1179,17 @@ reply. An evidence-preserving reporting failure retains contradictions as
 diagnostics and omits every comparison.
 Compilation returning NULL
 is distinct from parameter setup or application returning an integer failure.
+Before reading the policy, the worker queries the Mach timebase and converts its
+release wait and exec allowances to continuous-clock ticks; a failure there is
+operation 12 (clock setup) with the native Mach return, or code 14 with a reason
+in `detail`, and the worker exits 12 before any policy byte or application. A
+phase's release wait (operation 11) reports expiry as code 8 with the budget in
+milliseconds, and a local timing refusal as code 14 with a reason, never
+milliseconds: reason 3 means a clock sample went backwards and reason 6 that an
+earlier sample, named in the diagnostic, already invalidated the clock. Neither
+carries a native result or errno, and neither is a sandbox cause. An exec
+attempt's timing fault appears in that step's error text and contributes no
+errno; an accompanying native observation or cleanup failure retains its errno.
 Numeric operation/code values are open: unfamiliar values remain available.
 Missing/incomplete publication exposes no payload. Diagnostic text can be absent,
 complete, empty, truncated or incomplete; its availability does not determine

@@ -140,6 +140,16 @@ that production-encoded reply. The fixture’s query answers are controlled data
 - Specimens are generated inline per test.
 - `happy_path_baseline` uses a stable `(version 1) (allow default)`
   policy with one file read step.
+- `bug_report_returns_verdicts` runs the `(version 2)(deny default)(allow
+  file-read-data)` specimen whose worker clock once failed after application.
+  Beside the `allow` prediction it requires successful application, no worker
+  failure record, the collection/release/acknowledgement chain, the worker's
+  published attempt, `query_first` and a confirmed clean worker exit. The open's
+  actual rc/errno is retained and validated without requiring success: a
+  completed permission failure is valid evidence. Descriptor-derived path
+  evidence is checked when present. The `(version 2)(allow default)` neighbour
+  is the positive open/path control. Prediction and attempt assertions stay
+  independent; neither establishes agreement or universal permission.
 - The validator shortfall and decode-failure cases share the checked-in
   `tests/fixtures/validator` transcripts and `runner_validator_failure`
   contract checks. Both require reversed partial verdicts to retain step

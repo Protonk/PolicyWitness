@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response22/valid_run.json'
+BASE = ROOT / 'tests/fixtures/blackbox_e2e/checker/response23/valid_run.json'
 COMPARER = ROOT / 'tests/lib/envelope_compare.py'
 
 

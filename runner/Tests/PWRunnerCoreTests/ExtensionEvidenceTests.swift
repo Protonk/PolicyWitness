@@ -202,7 +202,7 @@ func runExtensionEvidenceTests(_ tk: TestKit) {
         }
         tk.run("published abnormal issuer exit retains both observations and rejects invented claims") {
             let raw = try JSONSerialization.jsonObject(with: Data(contentsOf: repositoryRoot().appendingPathComponent(
-                "tests/fixtures/blackbox_e2e/checker/response22/issuer_abnormal_run.json"))) as! [String: Any]
+                "tests/fixtures/blackbox_e2e/checker/response23/issuer_abnormal_run.json"))) as! [String: Any]
             let data = (raw["data"] as! [String: Any])["runner_result"]!
             let baseline = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: data))
             _ = try pwRunnerEncodeJSON(baseline)

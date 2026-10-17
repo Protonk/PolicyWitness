@@ -345,6 +345,33 @@ selection, deduplication, configuration validation, and complete accounting.
   invariant or equipment error never counts as detecting a mutation. The selected
   production app is inventoried before/after and is never patched or re-signed.
 
+### Native worker clock applicability
+
+- **Suite name:** `runner_c_worker_harness`, case `native_clock`.
+- **Location:** `tests/suites/runner_c_worker_harness/opt_in/native_clock.sh`
+  and `native_clock.c`.
+- **Purpose:** Run the production continuous-clock helpers in fresh processes
+  under the original version-2 policy, bare deny-default and allow-default, in
+  the production order and with the first explicit raw read after application.
+  Every sample must validate and no continuous-clock process may have a deny
+  record. The standalone `CLOCK_MONOTONIC` neighbour is recorded as observed;
+  its intermittent failure need not recur in a given run.
+- **Opt-in reason:** Reads unified logging and observes OS-sensitive native
+  behavior; its claims are scoped to the recorded machine and implementation.
+- **Resource dependency:** clang and an unsandboxed shell for `log show`. A
+  refused log query leaves deny records unavailable, which is not proof of
+  safety. No app, identity or service install is needed; the worker's Mach-O
+  architecture is recorded when the app is present.
+- **When to run:** After a change to the worker's clock source, timebase setup
+  or sample validation, an OS or SDK update, or on another supported machine.
+  Select with `tests/run.sh --case runner_c_worker_harness/native_clock`.
+- **Artifacts:** `<run>/suites/runner_c_worker_harness/native_clock/artifacts/`:
+  `platform.txt`, `installed-disassembly.txt` (a separate lldb process),
+  `results.ndjson` (setup returns, factors, sample counts, PIDs and reaps),
+  `summary.json` and the raw `deny-log.ndjson` with its status.
+- **Gating:** Required for worker clock changes; it does not test an actual
+  system sleep/wake, which needs separately arranged equipment.
+
 ### BYOXPC entitlement read-back
 
 - **Case:** `runner_byoxpc/entitlement_readback`

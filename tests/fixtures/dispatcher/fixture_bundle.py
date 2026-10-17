@@ -32,6 +32,7 @@ XPC = 'Contents/XPCServices/PWRunner.xpc'
 FILES += [XPC + '/Contents/MacOS/' + name for name in
           ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')]
 HOST = XPC + '/Contents/MacOS/PWRunner'
+WORKER = XPC + '/Contents/MacOS/pw-probe-runner'
 CONTROLLER = FILES[0]
 RECORD = 'Contents/Resources/Evidence/provenance.json'
 SYMBOLS = 'Contents/Resources/Evidence/symbols.json'
@@ -132,7 +133,8 @@ def manifest(app):
         schema_version=1, app_bundle_id='fixture.policy-witness', app_binary_rel_path=FILES[0], entries=entries)))
 
 
-def bundle(app, host):
+def bundle(app, host, worker=None):
+    """`worker`, when given, is the stub laid at the worker path instead of `host`."""
     host = Path(host)
     base = host.with_name(host.name[:-len('.imports-sandbox')] if host.name.endswith('.imports-sandbox') else host.name)
     controller = base.with_name(base.name + '.controller')
@@ -141,7 +143,8 @@ def bundle(app, host):
     for name in FILES:
         path = app / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes((controller if name == CONTROLLER else host).read_bytes())
+        stub = controller if name == CONTROLLER else Path(worker) if worker and name == WORKER else host
+        path.write_bytes(stub.read_bytes())
         path.chmod(0o755)
     for directory, executable in ((app, 'policy-witness'), (app / XPC, 'PWRunner')):
         (directory / 'Contents/Info.plist').write_bytes(plistlib.dumps({

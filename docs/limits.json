@@ -829,13 +829,17 @@
       "title": "Worker release wait",
       "value": 60000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic deadline for each phase release after the worker arrives.",
-      "effect": "Expiry or clock failure records the phase index and prevents its actions; earlier published phase evidence remains.",
+      "counting": "Sampled continuous time for each phase release after the worker arrives, converted once before application to a ceiling tick allowance. Continuous time includes system sleep.",
+      "effect": "Expiry records the phase index and milliseconds and prevents its actions. An unusable sample, an earlier rejected sample or an unrepresentable plan exclusion records a local timing refusal with its reason instead; neither invents a native result or errno. Earlier published phase evidence remains.",
       "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
           "symbol": "PW_PROCEED_WAIT_MS_DEFAULT"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "wait_for_proceed"
         }
       ],
       "checks": [
@@ -862,9 +866,21 @@
           "symbol": "runOrderingTests",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "tests/fixtures/worker_lifecycle/proceed_control.c",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "control"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
+          "symbol": "runWorkerClockTests",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "wait_for_proceed uses CLOCK_MONOTONIC before acknowledging host release. Failure publishes done, then the exit-request spin can outlive a dead host. Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+      "behavior": "wait_for_proceed decides expiry from a validated continuous sample before consulting release or cancellation. A pre-expiry sample can be followed by delayed scheduling and a late acknowledgement, and a release stored before expiry can be refused by an expired next sample; cancellation wins only when its load observes it. A sample below the origin or the last accepted sample fails closed without another clock, and a rejection during an earlier exec refuses later phases without another read. Each phase's measured wait is added to the exec plan once, in ticks, at acknowledgement. Failure publishes done, then the exit-request spin can outlive a dead host. Deterministic precedence, race-gate, sample and exclusion controls establish the order; native controls exercise the clock under deny-default profiles on the recorded machine; actual system sleep is untested. Production duration is value-checked."
     },
     {
       "id": "validator_release_margin",
@@ -922,7 +938,7 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Default elapsed monotonic deadline for one phase\u2019s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
+      "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
       "control": "Fixed.",
       "sources": [
@@ -984,8 +1000,8 @@
       "title": "Exec child deadline",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic deadline after successful spawn, limited by the remaining `exec_attempt_budget`.",
-      "effect": "Expiry fails the attempt while preserving any observed natural exit code. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped.",
+      "counting": "Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`.",
+      "effect": "Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped.",
       "control": "Fixed.",
       "sources": [
         {
@@ -1005,9 +1021,15 @@
           "symbol": "runCWorkerTests",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "tests/fixtures/worker_lifecycle/exec_control.c",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "control"
         }
       ],
-      "behavior": "The absolute child deadline and local exec plan cutoff are compared without restarting the plan budget after spawn. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even after leader exit. Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
+      "behavior": "The absolute child deadline and local exec plan cutoff are compared in ticks with checked addition, without restarting the plan budget after spawn. EOF and child exit are observed separately. Deadline, observation failure or a local timing fault requests process-group termination while the leader is still owned, even after leader exit. Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
     },
     {
       "id": "exec_attempt_budget",
@@ -1015,8 +1037,8 @@
       "title": "Exec attempt budget",
       "value": 115000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic budget shared by exec steps, including worker setup and intervening work but excluding the worker release wait.",
-      "effect": "Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A clock failure refuses spawn or leaves an observation error after spawn. Blocking spawn and non-exec operations may outlast this allowance.",
+      "counting": "Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep.",
+      "effect": "Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance.",
       "control": "Fixed.",
       "sources": [
         {
@@ -1025,7 +1047,7 @@
         },
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-          "symbol": "attempt_budget_start"
+          "symbol": "pw_timing_setup"
         }
       ],
       "checks": [
@@ -1048,7 +1070,7 @@
           "form": "test"
         }
       ],
-      "behavior": "attempt_budget_start runs before worker setup; attempt_budget_exclude removes only the interval returned by the release barrier. Exec attempts receive an absolute cutoff independent of the host polling clock. Clock failure after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, clock failures and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
+      "behavior": "pw_clock_start records the worker origin before setup; pw_timing_setup converts the allowance to a ceiling tick count before policy reading or application and refuses an invalid timebase or unrepresentable duration with exit 12. wait_for_proceed adds each phase's measured wait once with checked addition. Exec attempts receive an absolute cutoff independent of the host polling clock. A local timing fault after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, every timing stage, arithmetic refusals and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
     },
     {
       "id": "exec_reap_grace",
@@ -1056,8 +1078,8 @@
       "title": "Exec child reap grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Elapsed monotonic allowance to confirm an exec child's exit after observation ends.",
-      "effect": "Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit.",
+      "counting": "Continuous-time allowance to confirm an exec child's exit after observation ends.",
+      "effect": "Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit.",
       "control": "Fixed.",
       "sources": [
         {
@@ -1079,7 +1101,7 @@
           "form": "control"
         }
       ],
-      "behavior": "Final reaping uses nonblocking waitpid in a local monotonic observation window. Failed group termination permits only an immediate nonblocking reap. The allowance does not bound native syscall duration or host descheduling. Controlled pending/EINTR waits exhaust the grace; kill, wait and clock failures retain missing status. Every wait is required to be nonblocking."
+      "behavior": "Final reaping uses nonblocking waitpid in a local continuous-time observation window. Failed group termination or unusable reap time permits only an immediate nonblocking reap, whose status is kept when it returns the child. The allowance does not bound native syscall duration or host descheduling. Controlled pending/EINTR waits exhaust the grace; kill, wait and local timing faults retain missing status. Every wait is required to be nonblocking."
     },
     {
       "id": "client_rpc_wait",

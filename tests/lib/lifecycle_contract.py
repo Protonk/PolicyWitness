@@ -109,11 +109,14 @@ TRIGGER_FOR_STOP = {'sentinel_deadline': 'deadline_expiry', 'done': 'completion'
                     'policy_write_error': 'policy_transfer_error', 'policy_transfer_deadline': 'policy_transfer_timeout'}
 
 # Worker protocol positions (pw_probe_runner_abi.h). Temporal order is the
-# protocol's, not the numeric opcode's: proceed (11) precedes attempts (9).
+# protocol's, not the numeric opcode's: clock setup (12) follows header
+# validation (1) and precedes the policy read (2); proceed (11) precedes
+# attempts (9).
 OPERATIONS = {1: 'header', 2: 'policy_read', 3: 'params_create', 4: 'param_set', 5: 'compile',
-              6: 'capture', 7: 'ready', 8: 'apply', 9: 'attempt', 10: 'finished', 11: 'proceed'}
+              6: 'capture', 7: 'ready', 8: 'apply', 9: 'attempt', 10: 'finished', 11: 'proceed',
+              12: 'clock_setup'}
 PHASES = {1: 'started', 2: 'returned'}
-PROTOCOL_ORDER = (1, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10)
+PROTOCOL_ORDER = (1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10)
 OP_ATTEMPT, OP_FINISHED, OP_PARAM_SET = 9, 10, 4
 INDEXED_OPERATIONS = {OP_ATTEMPT: 'step_index', OP_PARAM_SET: 'parameter_index'}
 
@@ -586,6 +589,15 @@ EXAMPLES = (
             [_step(NOT_REACHED, UNPUBLISHED)], [],
             {'process_disposition': 'nonzero_exit', 'termination_cause': CAUSE_UNKNOWN, 'stop_reason': 'child_reaped',
              'partial_steps': True, 'summaries': ['not_reached']}),
+    # Clock setup (12) is a known position before the policy read, so its
+    # returned word places every step before its boundary.
+    Example('clock_setup_refusal_before_policy_read',
+            observations(progress=progress(12, 2), steps=(step('incomplete'), step('incomplete')),
+                         **dict(SELF_SIGNAL, term_signal=None, exit_code=12)),
+            dict(SELF_SIGNAL_CLAIMS, final_status=_supported('exit_code', 12), progress_association=_supported('none')),
+            [_step(NOT_REACHED, UNPUBLISHED), _step(NOT_REACHED, UNPUBLISHED)], [],
+            {'process_disposition': 'nonzero_exit', 'termination_cause': CAUSE_UNKNOWN, 'stop_reason': 'child_reaped',
+             'partial_steps': True, 'summaries': ['not_reached', 'not_reached']}),
     Example('completed_then_grace_exhausted_kill',
             observations(reaped=True, term_signal=9, poll_stop_reason='done', exit_requested=True,
                          termination_request=KILLED_9, cleanup_trigger='completion', grace_end='exhausted',

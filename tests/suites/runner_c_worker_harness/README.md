@@ -13,8 +13,9 @@ observations without involving the XPC host.
 ## What's pinned
 
 `harness.c` drives the lifecycle, attempt, pre-apply and release scenarios
-below. The separate `exec_control_states` case exercises production exec
-control flow with deterministic native-call equipment.
+below. The separate `clock_arithmetic`, `proceed_precedence` and
+`exec_control_states` cases compile production worker code with deterministic
+clock and native-call equipment; see [Worker timing controls](#worker-timing-controls).
 
 ### Core lifecycle
 
@@ -112,6 +113,58 @@ the refusals begin. Both plans end with a read of `/etc/hosts` that must
 succeed, and both require every slot completed, `done` published within a
 second of the budget edge (`done_after_applied_ms`) and a clean worker exit.
 See `exec_attempt_budget` in `docs/LIMITS.md`.
+
+### Worker timing controls
+
+The worker times release waits and exec attempts in one continuous Mach time
+domain of relative ticks. Each control compiles the production C source with
+a controlled timebase and raw counter through its compile-time seams; expected
+answers are literals or the defining inequality, never the helper under test.
+Each seam leaves a stale `EPERM` that no timing record may report.
+
+- `clock_arithmetic` ([clock_control.c](../../fixtures/worker_lifecycle/clock_control.c)):
+  ceiling allowances at 1/1, 125/3, reciprocal and extreme ratios; the exact
+  edge and one tick below; refusals for zero factors, nonpositive or
+  unrepresentable durations; 128-bit products a 64-bit multiply would
+  overflow; ceiling millisecond conversion of bounded deltas; checked addition
+  that never saturates or writes on overflow; three one-tick exclusions summing
+  to exactly 3 ticks (125 ns); equal and zero samples accepted; regression
+  against the last sample (even above the origin), wrap and below-origin
+  samples rejected with stage/phase/slot, after which nothing is read again;
+  and clock-setup failure publications (operation 12 with a native Mach return
+  or code 14 with a reason).
+- `proceed_precedence` ([proceed_control.c](../../fixtures/worker_lifecycle/proceed_control.c)):
+  forked children wait on real shared-memory atomics. An unusable start or
+  observation fails closed with release visible; the exact edge expires and one
+  tick below acknowledges; cancellation observed by its load wins; an expired
+  sample precedes cancellation; a delayed pre-expiry decision still acknowledges
+  and excludes only the sampled interval; a future release fails before
+  cancellation; a stale phase-1 release cannot release phase 2 and repeated
+  polls exclude once; a successful backwards sample fails closed; fractional
+  waits add their exact tick sum; an earlier rejected exec sample refuses
+  without another read, naming its origin; and an unrepresentable exclusion
+  refuses. Test-only gates after the time decision and after the cancellation
+  load show the sampled-time limits: a decision held beyond the allowance still
+  acknowledges, and cancellation stored after its load is too late, each with a
+  before-decision complement. Acknowledgement, action-start progress and a real
+  `/etc/hosts` open are observed independently.
+- `exec_control_states` ([exec_control.c](../../fixtures/worker_lifecycle/exec_control.c)):
+  see below.
+
+The opt-in `native_clock` case
+([native_clock.sh](opt_in/native_clock.sh)) runs the production clock helpers in
+fresh processes under the original `(version 2)(deny default)(allow
+file-read-data)` policy, bare `(version 2)(deny default)` and `(version 2)(allow
+default)`: the production order (origin before setup and application) and a
+variant whose first explicit raw read follows application, three repeats each.
+Every continuous sample must validate and no continuous-clock process may have a
+deny record. The standalone `CLOCK_MONOTONIC` neighbour is recorded as observed;
+its intermittent failure need not recur. It retains the machine, translation
+state, SDK, Mach-O architectures, timebase, counts, PIDs, reaps, a separate-process
+disassembly of the installed clocks and any available deny records. It reads
+unified logging, so it is opt-in. Its claims are scoped to the recorded machine
+and implementation; it neither proves an always user-space path nor tests an
+actual system sleep.
 
 ### Pre-apply self-defense
 
@@ -252,13 +305,22 @@ The release controls exercise `proceed_never_set`, `proceed_late_after_expiry`,
 `host_lost_while_waiting`, and `max_slots_proceed`. They poll every slot and
 attempt progress before release. Expiry forbids later attempts; the host-loss
 case owns final termination and establishes no worker self-exit guarantee.
-The native-clock substitution controls run in `runner_unit` against the real C
+The clock substitution controls run in `runner_unit` against the real C
 producer companions. ABI mismatch remains a pre-application refusal.
 
 `exec_control_states` compiles the production exec helper with deterministic
-native-call equipment. It checks absolute deadlines across slow spawn, release
-exclusion and intervening work, early pipe EOF, an exited leader with open
-streams, semantic clock failures, interrupted waits and failed cleanup. Every
-reap must be nonblocking; absent status cannot become exit zero. No process or
-sandbox is created by this control; `runner_exec_lifecycle` supplies independent
-live-process evidence.
+native-call equipment and a controlled continuous counter. It checks absolute
+tick deadlines across slow spawn, multiple release exclusions and intervening
+work, exact plan exhaustion and child-deadline clamping, early pipe EOF and an
+exited leader with open streams. Every timing stage fails closed as a local
+fault with no errno: no spawn on an admission fault; group cleanup after an
+observation fault; at reap, an immediate observation keeps its status and
+otherwise status stays missing; a later attempt refuses because of the first
+rejected sample, naming it; a native kill error survives beside the local
+reason; and a child-deadline overflow refuses only its attempt, leaving the
+clock usable. A subsequent rejected sample records its own stage, phase and
+slot as the first sticky origin, preserved through later refusals. Interrupted
+waits and failed cleanup keep their native errors.
+Every reap must be nonblocking; absent status cannot become exit zero. No
+process or sandbox is created by this control; `runner_exec_lifecycle` supplies
+independent live-process evidence.

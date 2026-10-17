@@ -156,7 +156,7 @@ enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 enum PWContract {
     static let requestSchema: Int = 5
-    static let responseSchema: Int = 22
+    static let responseSchema: Int = 23
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -1723,9 +1723,10 @@ enum PWDisposition {
         "deadline_expiry": "host_sentinel_deadline", "completion": "host_exit_grace_exhausted",
         "poll_wait_error": "host_cleanup_after_wait_error", "policy_transfer_error": "host_cleanup_after_transfer_error", "policy_transfer_timeout": "host_cleanup_after_transfer_timeout"]
     static let notRecorded = "not_recorded"
-    /// Temporal order of worker operations (pw_probe_runner_abi.h): proceed (11)
-    /// precedes the indexed attempts (9); completion (10) follows them.
-    static let protocolOrder: [UInt32] = [1, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
+    /// Temporal order of worker operations (pw_probe_runner_abi.h): clock setup
+    /// (12) follows header validation (1) and precedes the policy read (2);
+    /// proceed (11) precedes the indexed attempts (9); completion (10) follows them.
+    static let protocolOrder: [UInt32] = [1, 12, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
     static let runReferences = ["reaped", "exit_code", "term_signal", "poll_stop_reason", "exit_requested",
                                        "termination_request", "wait_errors", "cleanup_trigger", "grace_end",
                                        "collection_basis", "done_observed", "progress", "worker_failure", "plan"]

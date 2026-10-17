@@ -311,14 +311,23 @@ func runOrderingTests(_ tk: TestKit) {
             try expectEqual(orderedSteps(out, validator)[0].comparison?.order, "unestablished")
         }
         for suffix in [".clock-failure", ".clock-failure-later"] {
-            tk.run("proceed_clock_failure \(suffix) fails closed at native boundary") {
+            tk.run("proceed_clock_failure \(suffix): a backwards sample fails closed as a local refusal") {
+                // The companion's start or first observation sample is below the
+                // origin, with a stale EPERM; the host still releases the phase.
                 let out = try orderingWorker("(version 1)(allow default)", suffix: suffix)
                 try expectEqual(out.workerEvidence?.failure?.operation, 11)
-                try expectEqual(out.workerEvidence?.failure?.native_kind, 3)
-                try expectEqual(out.workerEvidence?.failure?.native_result, -1)
-                try expectEqual(out.workerEvidence?.failure?.errno, EIO)
+                try expectEqual(out.workerEvidence?.failure?.code, 14)
+                try expectEqual(out.workerEvidence?.failure?.native_kind, 0)
+                try expectNil(out.workerEvidence?.failure?.native_result)
+                try expectNil(out.workerEvidence?.failure?.errno)
+                try expectEqual(out.workerEvidence?.failure?.index, 0)
+                try expectEqual(out.workerEvidence?.failure?.detail, 3)
+                try expectContains(out.workerEvidence?.diagnostic.text ?? "", "went backwards")
                 try expectTrue(out.done)
                 try expectFalse(out.proceedObserved || out.slots[0].completed)
+                let summary = classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0)
+                try expectContains(summary.error ?? "", "local timing refusal reason=backwards_counter")
+                try expectFalse((summary.error ?? "").contains("budget="), "the reason is not milliseconds")
             }
         }
     }

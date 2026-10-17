@@ -44,6 +44,18 @@ def sandbox_imports(nm_output):
     return sorted(names)
 
 
+# The worker times release waits and exec attempts with continuous Mach time.
+# libc's clock_gettime(CLOCK_MONOTONIC) can fall back to a Unix syscall that a
+# deny-default profile refuses, so the worker must not import it.
+WORKER_FORBIDDEN_IMPORTS = ('_clock_gettime',)
+
+
+def forbidden_worker_imports(nm_output):
+    """The forbidden undefined symbols in the worker's `nm -u` output, sorted and unique."""
+    names = {line.strip().split()[-1] for line in nm_output.splitlines() if line.strip()}
+    return sorted(names.intersection(WORKER_FORBIDDEN_IMPORTS))
+
+
 def digest(path):
     hasher = hashlib.sha256()
     with path.open('rb') as stream:
@@ -171,6 +183,27 @@ def inspect(app):
         error('host_invariance', host, str(exc))
         receipt['error'] = str(exc)
     report['host_invariance'] = receipt
+
+    # Worker clock: its direct linked imports carry no forbidden clock call. A
+    # failed inspection is an error, never an empty import set. Dynamic lookups
+    # and library-internal calls are outside what this check can see.
+    worker = SERVICE + '/Contents/MacOS/pw-probe-runner'
+    receipt = {'path': worker, 'argv': [NM, '-u', str(app / worker)], 'returncode': None,
+               'undefined': None, 'forbidden': []}
+    try:
+        contained(worker)
+        result = subprocess.run(receipt['argv'], capture_output=True, text=True, timeout=30)
+        receipt.update(returncode=result.returncode)
+        if result.returncode != 0:
+            raise ValueError(result.stderr.strip() or 'nm failed')
+        receipt['undefined'] = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        receipt['forbidden'] = forbidden_worker_imports(result.stdout)
+        if receipt['forbidden']:
+            error('worker_clock', worker, 'worker imports a forbidden clock call: ' + ', '.join(receipt['forbidden']))
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        error('worker_clock', worker, 'worker import inspection failed: ' + str(exc))
+        receipt['error'] = str(exc)
+    report['worker_clock'] = receipt
 
     manifest = None
     try:
