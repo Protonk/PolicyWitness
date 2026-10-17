@@ -24,6 +24,14 @@ investigation found no candidate failures on its native arm64 machine, but did
 not test an integrated replacement, actual sleep/wake, or native Intel. Its
 passing baseline suites are not acceptance evidence for this repair.
 
+PolicyWitness's support target is Apple Silicon on macOS 26 or later. Intel
+clock behavior is outside this plan and adds no implementation or acceptance
+gate. The deliverable is a signed candidate validated on the available native
+arm64 machine, with actual sleep/wake validation recorded as pending. Equipment
+and permission for that observation have not been established; it does not gate
+the local deliverable. The plan does not authorize power-state changes on the
+machine running the development session.
+
 This change covers the worker clock source, conversion, deadlines, failure
 reporting, affected readers, tests and documentation. Keep the current host and
 worker responsibilities, polling structures, allowance values and per-phase
@@ -66,7 +74,11 @@ The associated plan is the inbound link to the investigation, following
 Implement a small worker-local clock context and helpers in the existing C
 worker. Do not introduce a general clock framework. The context owns the
 timebase numerator/denominator, a raw origin, the last accepted raw sample and
-an explicit local fault state. Use `<mach/mach_time.h>` and fixed storage.
+an immutable first-fault record. That record holds the local reason, semantic
+clock stage, zero-based specimen phase and action slot when applicable; absence
+of a phase or slot is explicit for setup. Use `<mach/mach_time.h>` and fixed
+storage. Pass this context through the wait and exec helpers so the first
+fault's origin is captured where it occurs, not reconstructed by a later caller.
 
 Capture the origin at the existing `WORKER_START` position, after argument
 parsing and before mapping/setup. A raw read does not require conversion.
@@ -75,9 +87,8 @@ the timebase once, before policy reading, compilation, readiness or application.
 Check `mach_timebase_info`'s `kern_return_t`; only after `KERN_SUCCESS`, inspect
 and require nonzero numerator and denominator. Then prepare all configured
 worker durations. Setup time after the origin remains charged to the exec
-budget. No shared payload may be written
-before ABI/header validation; a mapping or identity failure retains its current
-refusal behavior.
+budget. No shared payload may be written before ABI/header validation; a mapping
+or identity failure retains its current refusal behavior.
 
 This initialization obtains unit-conversion metadata only. It grants no file,
 socket, token or retained-port authority to an attempt. Do not add permissions,
@@ -88,7 +99,13 @@ phase exclusions. A sample is usable only if its raw value is at least both
 the origin and the last accepted raw value; equality and raw zero are valid.
 Subtract only after those checks. A regression, including observed wrap, marks
 the clock unusable for subsequent timed work. Do not fall back to another clock
-or recover by clearing the fault on the next successful-looking sample.
+or recover by clearing the fault on the next successful-looking sample. A later
+caller refuses because of that recorded fault without taking another sample;
+it must not report a fresh backwards counter at its own stage. Arithmetic
+failures identify their own stage and scope as well. A deadline-addition failure
+refuses the affected operation without poisoning an otherwise usable raw clock;
+it is not evidence that the counter regressed. The sticky prior-fault refusal
+applies to the unusable clock state.
 
 For a positive budget in nanoseconds, compute its tick allowance as:
 
@@ -105,10 +122,11 @@ confirmed the ceiling inequality for unit, 125/3, reciprocal and extreme
 32-bit ratios; the implementation still needs compiled boundary controls.
 
 Keep exclusions in ticks: three one-tick waits at 125/3 are 125 ns together,
-whereas flooring each separately would charge only 123 ns. Never convert each
-wait to integer nanoseconds and feed those rounded intervals back into a tick
-deadline. Use checked `uint64_t` addition for the plan deadline, child deadline
-and accumulated exclusions. This deliberately replaces the current signed
+whereas flooring each separately would exclude only 123 ns and charge the
+budget 2 ns more. Never convert each wait to integer nanoseconds and feed those
+rounded intervals back into a tick deadline. Use checked `uint64_t` addition
+for the plan deadline, child deadline and accumulated exclusions. This
+deliberately replaces the current signed
 nanosecond deadline representation and its unchecked additions.
 
 Convert only bounded **deltas** when a millisecond polling timeout is needed,
@@ -128,22 +146,38 @@ numeric codes and existing bounded diagnostics.
 
 | Boundary | Publication and continuation |
 | --- | --- |
-| Native timebase initialization fails | Add `PW_OP_CLOCK_SETUP` (operation 12). Publish code `PW_FAILURE_NATIVE`, kind `PW_NATIVE_INTEGER`, the actual Mach return, no errno, no item index, detail zero. Publish failure, diagnostic and `done`, then return a nonzero pre-apply exit status. No ready/apply/action result is fabricated. |
-| Invalid timebase or unrepresentable configured duration | Under operation 12, publish a new `PW_FAILURE_TIME_INVALID` (code 14), `PW_NATIVE_NONE`, no native result or errno, no index, and a documented reason in `detail`. Publish diagnostic and `done`, then return nonzero before applying any specimen, including plans without exec. |
+| Native timebase initialization fails | Add `PW_OP_CLOCK_SETUP` (operation 12). Publish code `PW_FAILURE_NATIVE`, kind `PW_NATIVE_INTEGER`, the actual Mach return, no errno, no item index, detail zero. Publish the diagnostic and return the new clock-setup exit status 12, without publishing `done`. No ready/apply/action result is fabricated. |
+| Invalid timebase or unrepresentable configured duration | Under operation 12, publish a new `PW_FAILURE_TIME_INVALID` (code 14), `PW_NATIVE_NONE`, no native result or errno, no index, and a documented reason in `detail`. Publish the diagnostic and return exit status 12 without `done`, before applying any specimen, including plans without exec. |
 | Invalid proceed sample or exclusion arithmetic | Operation 11/code 14/kind zero, no native result or errno, phase index, reason in `detail`; diagnostic names the stage. Publish `done`, then use the existing exit-request spin. No acknowledgement or action for that phase. |
+| Proceed refused because an earlier exec invalidated the clock | Operation 11/code 14/kind zero, current phase index, `prior_clock_fault` reason in `detail`; diagnostic names the original reason, semantic stage, phase and slot. Publish `done` and spin without acknowledgement. This records the current refusal, not a new sample failure. |
 | Valid elapsed proceed time reaches its allowance | Retain operation 11/code 8, wait milliseconds in `detail`, phase index and the existing terminal behavior. Future-release code 11 retains its ordinal detail. |
 | Exec timing invalid before spawn | Complete that attempt with `rc=-1`, no child, `errno_val=0` for the local fault and an explicit timing-stage/reason diagnostic. Refuse spawn; retain ordinary budget exhaustion's existing `ETIMEDOUT` convention. |
 | Exec timing invalid after spawn or during reap | Keep the PID, captured bytes and any independently reaped status. Record the local reason separately from real wait/poll/read/kill failures in the existing slot diagnostic. Enter the existing ownership-aware cleanup path; a local fault alone contributes no errno. |
 
+Setup refusal follows the adjacent header and policy-read convention: failure
+publication followed by a distinct nonzero return, with `applied=0`, `done=0`
+and no claimed `apply_rc`. Exit status 12 is unused in the current worker.
+Leave `apply_rc` storage untouched; do not introduce a second status-word
+convention for setup or rely on failure precedence to hide the inconsistent
+terminal-publication combination `applied=0, done=1, apply_rc=0`. Keep that
+contract row unchanged.
+
 Define code 14's reason values alongside the ABI enums: invalid timebase,
 invalid/unrepresentable duration, backwards counter, unrepresentable delta,
-and deadline/exclusion overflow. Do not interpret these details as milliseconds.
+deadline/exclusion overflow and prior clock fault. Do not interpret these
+details as milliseconds. Only an actual rejected sample gets the backwards
+counter reason. Subsequent exec refusals also retain the first-fault origin
+and identify themselves as refusals due to that earlier fault.
 For exec, retain separate local-fault state and native-error variables internally;
 zero errno must no longer mean that an observation loop has no failure. If a
 local fault and native cleanup fault coexist, preserve both in the bounded
 diagnostic and retain the actual native errno in the existing errno field.
-The exec reason remains diagnostic rather than a new machine-readable record;
-classification must not parse its English text or claim sandbox attribution.
+The precise origin remains in bounded diagnostics rather than a new wire
+record. The distinct prior-fault reason makes the later proceed refusal
+machine-distinguishable from a new sample failure. Render that reason as
+"proceed refused: worker clock already invalid", with the preserved origin
+in the diagnostic; never summarize it as a new proceed clock regression.
+Classification must not parse English text or claim sandbox attribution.
 
 Keep `PW_NATIVE_CLOCK` and its documented historical meaning transportable;
 do not redefine it as the result of `mach_continuous_time`, which has no native
@@ -161,7 +195,10 @@ code/detail handling in `CWorkerOrchestrator.swift`. Preserve the phase-local
 operation-11 filtering and all unknown-code transport rules.
 Exercise setup refusal while the host is still delivering policy: an independent
 pipe failure or early reap must not obscure the published clock-setup failure,
-and no policy receipt or completed application may be invented.
+and no policy receipt or completed application may be invented. Assert the
+failure payload, `done=0`, `applied=0`, no acknowledgement/actions and independently
+reaped exit 12, including after reply serialization. Check the raw publication
+combination as well as the summary so precedence cannot conceal a contradiction.
 
 Use one additive response-schema increment in
 [contract.json](../docs/contract.json) for this coordinated evidence/reader
@@ -174,12 +211,22 @@ setup milestone and its disposition interpretation under the
 
 ## Implementation sequence
 
+Before **each** checkpoint build, including steps 1 and 2, regenerate with
+`python3 docs/generate_worker_identity.py` after editing any covered input and
+run its `--check`. The generator hashes all worker/runner `.c`, `.h` and `.swift`
+inputs plus its declared build inputs; `build.sh` refuses stale copies before
+compilation and checks again before signing. Regenerate after any intervening
+covered edit, even a comment or generated contract-version change in a source.
+Each signed checkpoint and its fixtures must use that checkpoint's identity;
+do not defer regeneration until final acceptance.
+
 ### 1. Establish the clock and its failure paths
 
 Add the context, setup, checked duration conversion and semantic raw-read seam.
-Replace `PW_MONOTONIC_READ` with separate compile-time seams for the real
-timebase call and the raw continuous read. Preserve the existing semantic phase
-names; no request override or ambient environment variable selects a fault.
+Introduce separate compile-time seams for the real timebase call and the raw
+continuous read, which replace `PW_MONOTONIC_READ` in step 2. Preserve the
+existing semantic phase names; no request override or ambient environment
+variable selects a fault.
 The production raw-read signature returns ticks, not a manufactured rc/errno.
 
 Add compiled controls against these production helpers for setup failure,
@@ -188,6 +235,11 @@ unrepresentable allowances, regressions and addition overflow. Supply expected
 answers independently of the helper under test. Update failure transport and
 reader controls in the same work unit. This checkpoint must demonstrate correct
 native/local distinction and refusal before application, not just compilation.
+For staged development, introduce the continuous-time helpers and their setup
+controls alongside the existing clock seam first; switch all production timing
+callers together in step 2. This keeps intermediate signed checkpoints buildable
+without a mixed-domain proceed/exec implementation. Remove the old seam in that
+switch, then enable the worker-import check described below.
 
 ### 2. Move proceed and exec accounting together
 
@@ -198,9 +250,10 @@ phases. Preserve the plan's absolute cutoff across spawn/setup delays, select
 the smaller of the remaining plan deadline and the post-spawn child deadline,
 and use the same source for the reap allowance.
 
-For each phase, publish progress and arrival once, then take its start sample.
-Reject an unusable start before entering the polling loop. Each polling
-decision must have this order:
+For each phase, publish progress and arrival once, then inspect the clock state.
+If it already carries a fault, publish the prior-fault refusal without a new
+sample. Otherwise take its start sample and reject an unusable start before
+entering the polling loop. Each polling decision must have this order:
 
 1. Obtain and validate the next observation sample. Reject unusable time before
    consulting release; do not restart the phase's allowance on another poll.
@@ -246,17 +299,32 @@ Use fixtures outside the signed app. The following are required observations:
 
 | Control group | Required result and distinguishing control |
 | --- | --- |
-| Original dependency | Compile production worker code with a test-only boundary that refuses direct post-apply `CLOCK_MONOTONIC` calls, including after earlier successes. The old path must fail; the repaired path must complete the ordinary specimen without invoking it. Pair this with real native runs below, because substitution alone does not establish platform safety. |
+| Removed dependency | Extend the shared artifact inspector to reject `_clock_gettime` in the built worker's undefined imports. Retain raw `nm -u` output and command status; inspection failure is not an empty import set. The existing pre-repair worker has this import; the candidate must not. Exercise the checker with independently passing and rejected symbol inputs and a compiled fixture that really imports `clock_gettime`. Pair this structural check with the native and timing-boundary controls; absence of the import alone does not establish usable time or correct ordering. |
 | Tick arithmetic | Test 1/1, 125/3, reciprocal and extreme ratios; exact edge and one tick below; zero, regression relative to the last sample even when still above the origin, wrap, multiplication/narrowing/addition overflow. Multiple fractional-nanosecond phase waits must extend the plan by their exact tick sum once. An unchecked multiply, floor instead of ceiling, or duplicated exclusion must fail these controls. |
 | Proceed precedence | Port the investigation's modes 0–8 to the new seam and native/local distinction; mode 9 must now fail closed. Test unusable start/observation with release already present, expiry with release and cancellation present, valid release, cancellation, future release before cancellation, and stale phase-1 release during phase 2. Observe acknowledgement, action-start progress and completed native action independently. |
 | Scheduled races | Add test-only gates immediately after the time decision and after the cancellation load. Hold the first beyond the allowance: the pre-expiry decision can still acknowledge. Store cancellation behind the second: it can be too late. Complement both with before-decision controls; do not require a winner in an unscheduled race. |
 | Phase/evidence integration | Gate real host collection; acknowledgement and action start stay absent before release. Fail phase 2 time after phase 1 completes; retain phase 1 publications, native results and any supported `query_first`. Retain partial phase-2 validator records on expiry, while its attempts remain unavailable and its order unestablished. Validate serialized replies through independent readers. |
+| Sticky fault provenance | Inject a backwards sample in phase 1's exec observation or reap stage, then offer valid raw values for phase 2. Preserve the first stage/phase/slot in the completed exec diagnostic; phase 2 must refuse with `prior_clock_fault`, without taking a new sample or attributing a regression to phase 2. Check the serialized summary and diagnostic, missing phase-2 acknowledgement/actions, retained phase-1 publications, and independent child cleanup. Contrast a fault first encountered by phase 2's own read. |
 | Exec accounting and cleanup | Vary spawn latency, intervening non-exec time, multiple exclusions, exact plan exhaustion, child-deadline clamping and every timing stage. Check no spawn on refusal, captured output/status survival after spawn, and combined local clock plus native kill/wait failures. Keep pending/EINTR reaps bounded and independently clean up real children whose driver cannot confirm cleanup. |
 
 Use the existing `runner_c_worker_harness/exec_control_states`, remainder and
 sequence cases, `OrderingTests`, `PhaseProtocolTests`, `WorkerEvidenceTests`,
 disposition/contract tests and live exec suites wherever they already own these
 observations. Extend them instead of duplicating whole harnesses.
+
+The removed-dependency control belongs in
+[artifact.py](../tests/lib/artifact.py) beside the existing host-import check,
+with preflight checker controls and documentation. Inspect only the worker for
+this prohibition; host and validator clocks remain out of scope. The check
+sees direct linked imports, not dynamic lookups or arbitrary library-internal
+behavior, so retain source review and native observations. This is the maintained
+regression guard. The retained original clock failure and a pre-repair artifact
+inspection supply the one-time baseline. Before the first candidate build
+replaces the baseline bundle, retain its import receipt, worker hash and source
+identity with the baseline evidence. Do not preserve an old production clock
+branch, compile historical source on every test run, or depend on
+`records/` to make a maintained test fail. There is no new old-clock mutation
+in `mutations.py`; its existing ordering mutations keep their separate purpose.
 
 Strengthen `witness_contract/bug_report_returns_verdicts`: its current assertion
 only checks the prediction's `allow` outcome. For this regression also require
@@ -276,7 +344,7 @@ the worker-wait bypass and premature-host-release mutation must still produce
 early effects detected while collection is held. A mutation that no longer
 applies or merely fails compilation supplies no acceptance credit.
 
-### 4. Establish native applicability and update the account
+### 4. Validate the available native platform and update the account
 
 Add an opt-in native clock control using the production clock helpers under the
 original version-2 policy, bare deny-default and allow-default. Use fresh
@@ -292,35 +360,60 @@ failure comparison; its failure need not recur in every run. Missing deny logs
 are not proof of safety, and the investigation's log timestamp offsets must
 not be adjusted into stronger correlation.
 
-Two applicability checks require equipment or events absent from the existing
-investigation. They do not block implementing the clock, evidence and
-deterministic controls, but their results bound acceptance:
+Run the candidate native controls and signed integration selection on the
+available native arm64 machine. Preparation observed `uname -m` = `arm64` and
+macOS 26.7.1/build 25G241; record the actual equipment again for implementation
+runs. Retain OS/SDK/architecture, timebase and applicable installed/source path
+evidence. Inspect any selected fallback separately; do not claim an always
+userspace path. A denied or unusable candidate path on this machine blocks the
+local deliverable and requires investigation, not extra specimen permission or
+a silent fallback to `CLOCK_MONOTONIC`.
 
-- **Supported native configurations and fallback paths.** Run the candidate
-  controls and signed integration selection on native arm64 and native x86_64
-  configurations supported by the build. Retain OS/SDK/architecture, timebase
-  and applicable installed/source path evidence. Rosetta or a cross-compile
-  does not establish native Intel behavior. Inspect a selected fallback
-  separately; do not assert the arm64 counter-register fast path was used
-  everywhere. A denied or otherwise unusable candidate path blocks acceptance
-  on that configuration and requires a revised repair, not a policy allowance
-  or a silent fallback to `CLOCK_MONOTONIC`. Missing equipment leaves that
-  validation explicitly outstanding, not passed or silently removed from scope.
-- **Actual system sleep/wake.** On dedicated, operator-coordinated equipment,
-  hold a worker at a test gate after its proceed start sample, establish real
-  system sleep and wake independently, then permit the next sample. With sleep
-  longer than its short allowance, it must expire before acknowledgement even
-  with release visible. A companion exec control must charge sleep outside
-  waits and exclude the entire measured wait when that wait is valid. Retain
-  raw tick deltas, factors, sleep/wake evidence and a no-sleep neighbour.
-  `SIGSTOP`, a process delay or mocked ticks are not system sleep. If actual
-  sleep is unobserved, no tested-sleep claim is available; if the check
-  contradicts the chosen semantics, stop acceptance and investigate the path.
+The existing [build target](../meson.build) derives architecture from the host
+CPU and declares a macOS 26 minimum; that expression is not a support matrix.
+The support decision for this plan is Apple Silicon only. Update the platform
+requirements in [README.md](../README.md), [BUILD.md](../docs/BUILD.md) and the
+[user guide](../docs/PolicyWitness.md) to say so, while documenting the particular
+arm64 configuration actually tested. Do not require native Intel equipment,
+Rosetta tests, x86_64 clock-path research or an Intel fallback to complete this
+repair. Apple Silicon configurations may themselves select different clock
+paths; keep native observations scoped to the recorded machine and implementation.
+
+**Actual system sleep/wake is a follow-up outside the local delivery gate.**
+No dedicated test machine, wake arrangement or authorization to interrupt this
+development session is established. Do not sleep this Mac, change power settings
+or schedule wake events as part of this implementation. First arrange a separate
+operator-approved session and machine. The installed `pmset(1)` manual documents
+relative wake scheduling and requires root for setting changes; those privileges
+are not assumed here. The test owner must choose and authorize a wake method
+and retain cleanup of any test-owned wake event without cancelling unrelated
+events.
+
+On that equipment, hold a worker after its proceed start sample, independently
+establish real system sleep/wake, then allow the next sample. A short-budget
+case must expire before acknowledgement even with release visible. In a
+separate valid-wait case use the existing 60 s maximum: the **whole measured
+wait**, including scheduling, must be below 60 s, with margin supplied by an
+arranged timed or operator wake. Do not raise the production cap or credit an
+over-budget wake as a successful exclusion. A companion exec observation must
+charge sleep outside waits and exclude the measured valid wait in ticks.
+Retain raw deltas/factors, sleep/wake evidence, a no-sleep neighbour and process
+cleanup. Missing sleep or a missed wake window gives no success credit; a
+contradiction with continuous-time accounting requires investigation before
+claiming tested sleep behavior.
+
+Required local deterministic controls inject counter advances through these
+same wait/exec boundaries, including a valid long wait and an expired one. They
+establish accounting, not system sleep. `SIGSTOP` and process delays likewise
+cannot establish sleep inclusion. Documentation may state the API's documented
+sleep semantics while explicitly distinguishing the absent native sleep test.
+Record the sleep follow-up as unperformed, not a skipped passing case. Its
+absence permits the locally validated candidate handoff, but not a claim of
+experimentally verified sleep/wake acceptance. Intel is outside support scope,
+not another pending acceptance item.
 
 The exact original commpage fallback condition and the log timestamp offset
 remain historical research questions; resolving them is not a repair gate.
-The plan does require supported-configuration evidence and an actual sleep
-control before claiming complete timing acceptance.
 
 Update [limits.json](../docs/limits.json) for `worker_proceed_wait`,
 `exec_attempt_budget`, `exec_child_wait` and `exec_reap_grace`, including the
@@ -340,9 +433,9 @@ citations in [architecture.json](../docs/architecture.json) and regenerate with
 documentation describes the resulting behavior and links maintained tests,
 not the investigation or a change-history narrative.
 
-Regenerate worker identity with `docs/generate_worker_identity.py` after all
-native, host, protocol and build inputs settle. No layout expansion is planned;
-run compiled C/Swift layout agreement and review any unexpected layout-golden
+Regenerate worker identity again after the final native, host, protocol and build
+edits, in addition to every earlier checkpoint regeneration. No layout expansion
+is planned; run compiled C/Swift layout agreement and review any unexpected layout-golden
 delta rather than accepting it automatically. Keep helper code in the existing
 worker translation unit; if implementation needs a new native source, update
 its Meson target and source-list/build account together. Use owning generators,
@@ -352,7 +445,8 @@ never hand-edit generated regions or the signed app's evidence.
 
 Build a matching signed candidate through [BUILD.md](../docs/BUILD.md). Run
 from the repository root with fresh output directories and assertions enabled.
-Inspect selections with `--list` before execution. A concrete core selection is:
+Regenerate/check identity before this build as before every checkpoint. Inspect
+selections with `--list` before execution. A concrete core selection is:
 
 ```sh
 PW_TEST_OUT_DIR=tests/out/runs/safe-wait-repair-core \
@@ -365,11 +459,13 @@ PW_TEST_OUT_DIR=tests/out/runs/safe-wait-repair-core \
 ```
 
 Add the newly registered clock/native cases and affected live multi-phase
-witness cases to that selection. Then run the complete default battery against
-the final candidate in another fresh directory. The default battery does not
-replace the opt-in ordering, native-clock or sleep controls. After any further
-source change, rerun affected checks under the repository's evidence-reuse
-rules; earlier baseline credit cannot certify a new worker identity.
+witness cases and the new preflight import-checker controls to that selection.
+Then run the complete default battery against the final candidate in another
+fresh directory. The default battery does not replace the opt-in ordering and
+native-clock controls. Real sleep/wake remains the separately arranged follow-up
+above. After any further source change, regenerate identity when covered and
+rerun affected checks under the repository's evidence-reuse rules; earlier
+baseline credit cannot certify a new worker identity.
 
 Run app/XPC/log/signing-dependent checks outside restrictive automation
 sandboxing. If a harness restriction first appears, rerun the same failing
@@ -379,13 +475,16 @@ failures, source/build provenance, raw inputs and cleanup observations. Use the
 checkout lock, managed output and retention/pruning helpers; never remove the
 lock or protected evidence to obtain a clean run.
 
-The repair is complete when the common tick domain is implemented without the
-unsafe worker clock dependency, setup/arithmetic failures have honest evidence,
-boundary and race controls reject the original unsafe behaviors, integrated
-phase and exec evidence survives correctly, both ordering mutations are caught,
-supported-platform and sleep checks are accounted for, and the final signed
-candidate passes the required selections and default battery. The handoff must
-identify the accepted source/build and run IDs, distinguish deterministic,
-native and source-path evidence, and name any outstanding applicability check.
-An outstanding required configuration or sleep check means implementation can
-be ready for that validation; complete acceptance must not be claimed.
+The local implementation deliverable is complete when the common tick domain
+is implemented without the unsafe worker import, setup refusals preserve the
+pre-apply publication convention, first-fault origins survive later refusals,
+arithmetic and race controls reject the unsafe behaviors, integrated phase and
+exec evidence survives correctly, both ordering mutations are caught, and the
+signed arm64 candidate passes the required local selections and default battery.
+The handoff must identify the accepted source/build, equipment and run IDs and
+distinguish deterministic, native and source-path evidence. Its status is
+"validated on the recorded Apple Silicon configuration; actual sleep/wake
+validation pending" until that follow-up has its own result. The platform
+requirements must state Apple Silicon only; there is no pending Intel gate.
+Future native validation extends or revises the evidence using new observations;
+it does not rewrite the local run's original result.
