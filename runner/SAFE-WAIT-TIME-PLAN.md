@@ -124,3 +124,12 @@ worker lifetime and cleanup ownership meet.
 
 This is a suggested connection for the investigating agent. Investigating or
 closing P4 is outside this plan's scope, and P4 adds no acceptance gate here.
+
+## Related investigation: timed issuance (context only)
+
+[Deferred timed issuance](../records/ISSUANCE-TIMING-OUTFLOW.md) is a related
+potential use of the phase/release protocol. Its investigation may benefit from
+the timing and ordering findings here, particularly around host delay and
+cancellation while a sandboxed worker waits. Implementing timed issuance or
+redesigning token delivery remains outside this plan's scope and adds no
+acceptance gate.
