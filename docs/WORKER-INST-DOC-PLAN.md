@@ -2,24 +2,18 @@
 
 ## Status
 
-Pass 1 is complete at production source
-`6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6`. Work commit:
-`90fcb1b9a1e48a1e41725e9faca3095297ee493c` (`docs: complete worker tour pass 1 inventory`). The inventory has 78 entries. Rows 1–7, 9 and 11–14 are
-verified and await adjudication; new rows 15–19 also await adjudication.
-Rows 8 and 10 retain their existing ownership/limitation decisions and remain
-implementing for pass 3. No row closed, no production source changed, and no
-WORKER.md prose or map was written.
+Pass 1 comparison is complete. Rows 15 and 16 were the two findings held
+outside the tree; both were recovered in the pass 1 register. This commit
+records that comparison, the user's adjudications and the outflow decision.
+The pass 1 inventory/evidence work is in
+`90fcb1b9a1e48a1e41725e9faca3095297ee493c`; its production source is
+`6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6`.
 
-The pass 1 evidence ledger records the signed build, two production launch
-observations, inheritance controls, source-only findings and observation
-limits. The worker/host/issuer sources are unchanged from the `e901fc0`
-planning baseline. The current inventory supersedes the seeded spine and
-corrects overstrong survey sentences explicitly in the row details.
-
-This is the pass 1 stop: the user compares the inventory with findings held
-outside the tree and adjudicates the ready rows. Pass 2 also waits for the
-outflow/migration decision. At the end of each later pass, update this Status
-with the pass, opened/closed rows and the commit holding its work.
+Rows 1–19 are implementing. No row closes at this adjudication checkpoint.
+Row 15 is explanation only, with the fix outside this scope; row 7 authorizes
+source comment corrections in pass 4; row 19 authorizes stronger verification
+and setup refusal in pass 4. Production source remains unchanged. Pass 2
+may now begin, followed by pass 3 and its user review stop.
 
 ## What this plan produces
 
@@ -351,40 +345,39 @@ xnu null-env extraction path corroborates the observed empty environment.
 
 ## Register
 
-Pass 1 rechecks the survey at `6fd44fb`. Rows 8 and 10 retain their existing
-adjudications. All other rows below await the user's decision: recommended
-wording is a candidate for adjudication, not an accepted limitation or a closed
-row. No production fix is authorized by this pass. Rows 15–19 are new.
+The user adopted the recommended dispositions for rows 1–7, 9 and 11–19,
+with the explicit exceptions recorded below for rows 7, 15 and 19. Rows 8 and
+10 retain their existing adjudications. All rows are implementing; the scope
+in each detail controls later changes. The checkpoint closes no row.
 
-| # | Candidate | Pass 1 evidence | State | Recommended disposition / existing adjudication |
+| # | Candidate | Pass 1 evidence | State | Adjudicated disposition |
 | --- | --- | --- | --- | --- |
-| 1 | Worker launch has a different inheritance contract from exec children | H has no close-by-default attributes; nil envp is empty in the examined Apple path and L; L observes fds 0–4, IC demonstrates an extra inherited descriptor/environment value | awaiting adjudication | Explain the launch rule and bounded observations; consider explicit descriptor isolation as a separate fix, not something L proves unnecessary |
-| 2 | Policy, evidence and readiness descriptors remain open | W has no close of 0/3/4; L observes all three before/after apply; child controls exclude inherited endpoints | awaiting adjudication | Explain retention; do not claim that closing these would leave only attempt fds, since stdio/ambient inheritance remains |
-| 3 | `open_write` truncates on open and attempts an unchecked write | `attempt_file_open_write` uses `O_TRUNC`, discards write/close results and reports open success | awaiting adjudication | Correct guide/tour wording to distinguish attempted byte write from an observed write; no behavior change recommended |
-| 4 | `open_read` reports open success only | One-byte read and close are attempted without retaining returns | awaiting adjudication | Correct guide/tour wording; contrast published `read_fresh` observations |
-| 5 | `create` opens existing files and supplies a masked creation mode | No `O_EXCL`/`O_TRUNC`; mode argument 0600, subject to inherited umask; existing-file checker asserts bytes/identity | awaiting adjudication | Explain intended open/create behavior and scope mode claim to the supplied argument |
-| 6 | Exec preparation allocates after apply; formatting needs a narrower account | Apple spawn wrapper allocates both handles and can grow action storage; fixed PW diagnostic destinations do not establish library-wide allocation freedom | awaiting adjudication | Explain per-attempt allocation and diagnostic call boundary; keep architecture's already-scoped preallocation claim; correct stale comments via row 7 |
-| 7 | Source comments state retired or overbroad premises | Stack/static, last-allocation, no-allocation, R5/R6 and Swift-worker comments remain; main also says every write checks its return and misdescribes fatal-signal interpretation | awaiting adjudication | Correct source comments in an adjudicated source commit with identity regeneration/build/identity validation |
+| 1 | Worker launch has a different inheritance contract from exec children | H has no close-by-default attributes; nil envp is empty in the examined Apple path and L; L observes fds 0–4, IC demonstrates an extra inherited descriptor/environment value | implementing | Explain the launch rule and bounded observations; consider explicit descriptor isolation as a separate fix, not something L proves unnecessary |
+| 2 | Policy, evidence and readiness descriptors remain open | W has no close of 0/3/4; L observes all three before/after apply; child controls exclude inherited endpoints | implementing | Explain retention; do not claim that closing these would leave only attempt fds, since stdio/ambient inheritance remains |
+| 3 | `open_write` truncates on open and attempts an unchecked write | `attempt_file_open_write` uses `O_TRUNC`, discards write/close results and reports open success | implementing | Correct guide/tour wording to distinguish attempted byte write from an observed write; no behavior change recommended |
+| 4 | `open_read` reports open success only | One-byte read and close are attempted without retaining returns | implementing | Correct guide/tour wording; contrast published `read_fresh` observations |
+| 5 | `create` opens existing files and supplies a masked creation mode | No `O_EXCL`/`O_TRUNC`; mode argument 0600, subject to inherited umask; existing-file checker asserts bytes/identity | implementing | Explain intended open/create behavior and scope mode claim to the supplied argument |
+| 6 | Exec preparation allocates after apply; formatting needs a narrower account | Apple spawn wrapper allocates both handles and can grow action storage; fixed PW diagnostic destinations do not establish library-wide allocation freedom | implementing | Explain per-attempt allocation and diagnostic call boundary; keep architecture's already-scoped preallocation claim; correct stale comments via row 7 |
+| 7 | Source comments state retired or overbroad premises | Stack/static, last-allocation, no-allocation, R5/R6 and Swift-worker comments remain; main also says every write checks its return and misdescribes fatal-signal interpretation | implementing | Source comment corrections authorized for pass 4, with identity regeneration/build/identity validation |
 | 8 | Ownership of private-extension limitation | Existing architecture paragraph and intended worker-tour location rechecked | implementing | Adjudicated: WORKER.md owns it; ARCHITECTURE links there, in pass 3/integration |
-| 9 | Native release does not establish revocation; an after-release read is nevertheless observed | Checker accepts either after-release result and verifies bytes if successful; seed's “nothing observes” wording was too broad | awaiting adjudication | Keep accepted private-API scope from row 8 and correct the candidate sentence; no new universal revocation assertion |
+| 9 | Native release does not establish revocation; an after-release read is nevertheless observed | Checker accepts either after-release result and verifies bytes if successful; seed's “nothing observes” wording was too broad | implementing | Keep accepted private-API scope from row 8 and correct the candidate sentence; no new universal revocation assertion |
 | 10 | Exec descendants can outlive the worker/run | Group targeting and possible unconfirmed reap verified; existing accepted descendant limit remains | implementing | Adjudicated ownership move; preserve accepted scope and distinguish worker-death/unreaped-child paths |
-| 11 | Ambient worker state is only partly inventoried | L observes cwd, uid/gid, fds, argv/environment and VM regions; task-port census refused; signal mask/limits/private internal state unobserved | awaiting adjudication | Explain measured starting substrate; accept explicitly bounded observation as a limitation if desired; no empty-process claim |
-| 12 | Ignored SIGPIPE reaches exec children; extension-specific core-limit inheritance is unreachable in admitted plans | Spawn sets neither signal reset flag; `extensionMeaningFailure` refuses exec+extension; helper's own SIGPIPE ignore prevents independent signal evidence | awaiting adjudication | Explain signal inheritance, correct the seeded extension-to-exec claim, and reserve a signal observer for any requested stronger guarantee |
-| 13 | Extension requests can change worker core limits before apply | `prepare_extension` sets both limits to zero only after requested extension symbols resolve; local failure is published | awaiting adjudication | Explain request-dependent process context and native failure branches; no change recommended |
-| 14 | Worker-side token erasure is path-dependent | Proceed refusal/spin, cancellation exit, compile/parameter/apply failures and early returns can bypass post-loop erase; host `erase` is separate | awaiting adjudication | Explain exact worker/host erasure sites, including accepted mapping retained until exit; any extra worker erase requires a separate fix |
-| 15 | Mach lookup retains the acquired bootstrap reference | `task_get_special_port` succeeds before lookup; only `svc` is deallocated, including on repeated lookup/failure paths | awaiting adjudication | Fix worker reference balance with success/failure and repeated-attempt regression controls; until then state retention |
-| 16 | Compiled-object lifetime has no explicit PW destruction | `profile` goes to capture/apply and no `sandbox_free_profile` is declared/called; private apply ownership is unobserved | awaiting adjudication | Explain the call/ownership boundary; investigate API ownership before authorizing a free, which could otherwise be invalid |
-| 17 | Several resources cross the proposed role boundaries | Token mapping carries authority and protocol metadata; native extension acquisition occurs inside an attempt; shared working storage and signal state have multiple purposes | awaiting adjudication | Keep these resources outside single-role clusters, with named roles; do not force all inventory rows into one cluster |
-| 18 | Oversized issuer token erasure covers a bounded prefix | I computes bounded `strnlen`, rejects oversize, erases that length and frees; no full allocation extent is established | awaiting adjudication | Correct erasure scope and investigate safe full-buffer disposal before a fix; accepted-token path remains distinct |
-| 19 | Host/issuer launch setup does not check every acquisition/setup return | H ignores file-action init/adddup2 results and shm flag/unlink results; E ignores handle init results; copied argv can contain nil after failed strdup | awaiting adjudication | Strengthen verification and explicitly refuse failed setup if adjudicated; source identifies unchecked paths, not a reproduced production failure |
+| 11 | Ambient worker state is only partly inventoried | L observes cwd, uid/gid, fds, argv/environment and VM regions; task-port census refused; signal mask/limits/private internal state unobserved | implementing | Explain measured starting substrate; accept the explicitly bounded observation as a limitation; no empty-process claim |
+| 12 | Ignored SIGPIPE reaches exec children; extension-specific core-limit inheritance is unreachable in admitted plans | Spawn sets neither signal reset flag; `extensionMeaningFailure` refuses exec+extension; helper's own SIGPIPE ignore prevents independent signal evidence | implementing | Explain signal inheritance, correct the seeded extension-to-exec claim, and reserve a signal observer for any requested stronger guarantee |
+| 13 | Extension requests can change worker core limits before apply | `prepare_extension` sets both limits to zero only after requested extension symbols resolve; local failure is published | implementing | Explain request-dependent process context and native failure branches; no change recommended |
+| 14 | Worker-side token erasure is path-dependent | Proceed refusal/spin, cancellation exit, compile/parameter/apply failures and early returns can bypass post-loop erase; host `erase` is separate | implementing | Explain exact worker/host erasure sites, including accepted mapping retained until exit; any extra worker erase requires a separate fix |
+| 15 | Mach lookup retains the acquired bootstrap reference | `task_get_special_port` succeeds before lookup; only `svc` is deallocated, including on repeated lookup/failure paths | implementing | Explain retention now; the reference-balance fix is separate scope |
+| 16 | Compiled-object lifetime has no explicit PW destruction | `profile` goes to capture/apply and no `sandbox_free_profile` is declared/called; private apply ownership is unobserved | implementing | Explain the call/ownership boundary; investigate API ownership before authorizing a free, which could otherwise be invalid |
+| 17 | Several resources cross the proposed role boundaries | Token mapping carries authority and protocol metadata; native extension acquisition occurs inside an attempt; shared working storage and signal state have multiple purposes | implementing | Keep these resources outside single-role clusters, with named roles; do not force all inventory rows into one cluster |
+| 18 | Oversized issuer token erasure covers a bounded prefix | I computes bounded `strnlen`, rejects oversize, erases that length and frees; no full allocation extent is established | implementing | Correct erasure scope and investigate safe full-buffer disposal before a fix; accepted-token path remains distinct |
+| 19 | Host/issuer launch setup does not check every acquisition/setup return | H ignores file-action init/adddup2 results and shm flag/unlink results; E ignores handle init results; copied argv can contain nil after failed strdup | implementing | Strengthen verification and explicitly refuse failed setup in pass 4; preserve reproduction and regression-control requirements |
 
 ### Row details
 
-Every detail below records a candidate sentence, implementing evidence and
-its limits, a possible refutation/control, and the recommendation. No new row
-has an adjudication, implementation or validated after-change sentence yet.
-Those fields remain pending at this pass's stop; revised candidate sentences
-are not silently treated as closed rows.
+Each detail retains the original candidate, evidence, refutation and
+recommendation. The adjudication and authorized scope follow that material;
+validation and the after sentence remain to be recorded in the appropriate
+pass. Adopting a disposition is not closing a row.
 
 **Row 1.** First candidate: “The worker's launch is not isolated the way its
 children's are.” The desired claim is an exact launch inventory. H's three
@@ -409,6 +402,9 @@ host supplies the worker's protocol endpoints and leaves other descriptors to
 native close-on-exec rules; the examined nil environment yields no entries.”
 Exact inputs, observations and paths are in the pass 1 evidence ledger below.
 
+Adjudication: Explain the native launch rule and bounded observations. Explicit worker descriptor isolation is separate scope; no production change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 2.** First candidate: “Descriptors 0, 3 and 4 stay open from launch
 to exit; descriptor 5 is closed once the channel is mapped; exec children
 inherit none of them.” W and `prepare_extension` establish the call sites;
@@ -424,6 +420,9 @@ closed: it omits inherited stdio and row 1. No removal is authorized. The
 proposed wording names cleanup calls and early-exit exceptions instead of
 promising successful close on every path.
 
+Adjudication: Explain retained protocol descriptors and cleanup exceptions. No descriptor-removal change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 3.** First candidate: “`open_write` opens the target for writing,
 truncates it to zero length and writes one byte, and reports only the open
 result.” Source confirms the truncating open and a one-byte `write`, not a
@@ -436,6 +435,9 @@ status is the open result.” A deterministic controlled failed-write return
 would falsify a stronger “one byte was written” claim; no probe is needed to
 establish that the return is discarded. Guide/tour correction awaits decision.
 
+Adjudication: Correct the guide and worker tour to distinguish truncating open, attempted byte write and published open result. No behavior change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 4.** First candidate: “`open_read` opens the target, reads one byte
 and discards it, and reports only the open result; `read_fresh` records what
 it read.” `attempt_file_open_read` issues the read, but an empty file, error
@@ -447,6 +449,9 @@ read; that is narrower than general file semantics and was inspected, not
 rerun. A failed-read control would refute any upgrade from open success to a
 read observation. Source settles the present publication difference.
 
+Adjudication: Correct the guide and worker tour to distinguish open success from the unpublished read and close results, contrasted with read_fresh. No behavior change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 5.** First candidate: “`create` opens an existing target for writing
 without truncating it, and creates a missing one with mode 0600.”
 `attempt_file_create` supplies `O_WRONLY | O_CREAT` and mode 0600, without
@@ -457,6 +462,9 @@ it neither checks every file type nor the new-file mode. Inspected only.
 Recommended candidate names the open flags and mode argument, with umask,
 and explains that success can mean opening an existing file. A changed
 identity or contents in that controlled case would refute preservation.
+
+Adjudication: Explain intended open/create behavior and the supplied mode argument subject to umask. No behavior change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 6.** First candidate: “Exec attempts allocate after apply at
 PolicyWitness call sites.” `exec_resources_acquire` calls both opaque-handle
@@ -494,6 +502,9 @@ those allocations would refute the source-specific allocation assertion;
 measuring one allocation-free invocation would not establish a library-wide
 promise. No allocation probe was needed or run.
 
+Adjudication: Explain per-attempt allocations and the diagnostic library-call boundary; preserve the scoped architecture claim. Source comment corrections belong to row 7. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 7.** First candidate: “Worker source comments describe retired
 premises.” Confirmed items: header's stack-fixed buffer and last-allocation
 claim; attempt-section stack-only/no-allocation/R6 language; R5 declaration
@@ -508,6 +519,9 @@ adjudicated source-comment correction naming the exact current behaviors and
 bounded controls. No behavior test validates historical prose; identity
 regeneration, signed build and identity agreement are required for any source
 edit. Neither source comments nor worker identity have been edited in pass 1.
+
+Adjudication: Source comment corrections are authorized for pass 4, in their own source commit with worker-identity regeneration, signed build and covering validation. This authorizes comment corrections, not runtime behavior changes. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 8.** First candidate: “Two documents will state the private-extension
 limit.” The existing architecture paragraph separates PW buffer erasure from
@@ -528,6 +542,9 @@ native release result and subsequent requested access observations; a zero
 release result is not an access-revocation observation.” Keep this within
 row 8's accepted private-API scope, subject to the user's row 9 adjudication.
 No new revocation assertion or live extension run was made.
+
+Adjudication: Retain the accepted private-API limitation under row 8 and explain the observed after-release read with its allowed outcomes. No universal revocation claim or native API change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 10.** First candidate: “Exec helpers can outlive the worker.”
 `attempt_exec_spawn` addresses the child's process group on exceptional
@@ -556,6 +573,9 @@ would extend the observation, not retroactively make this one complete. The
 pre-ready and post-apply specimens use distinct workers, so VM address or size
 differences are not within-process changes. No subtraction of them is claimed.
 
+Adjudication: Explain the measured starting substrate and accept the explicitly bounded observation as a Known gap. No new isolation guarantee or runtime change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 12.** First candidate: “Exec children inherit the worker's ignored
 SIGPIPE and its zero core-dump limit.” The SIGPIPE portion follows W's
 `signal` and absence of `POSIX_SPAWN_SETSIGDEF`/`SETSIGMASK` in
@@ -572,6 +592,9 @@ that reads disposition/mask before modifying them would test that narrower
 claim if stronger verification is desired. The guard and fixture are source
 review, not a freshly executed admission case.
 
+Adjudication: Explain inherited signals and correct the unreachable extension-to-exec claim. A stronger signal guarantee and dedicated observer remain separate scope. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 13.** First candidate: “The core-dump limit differs between extension
 and non-extension runs.” `prepare_extension` returns before symbol resolution
 and `setrlimit` when no extension is requested; missing symbols also return
@@ -584,6 +607,9 @@ A native limit read before/after preparation would refute any unconditional
 numeric difference; source already settles the conditional call, so no probe
 was added. Admission prevents this request-dependent change reaching ordinary
 exec attempts in the same specimen (row 12).
+
+Adjudication: Explain request-dependent core-limit changes and their failure branches. No native behavior change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 14.** First candidate: “The normal-completion token erase is skipped
 on the proceed-refusal path.” Confirmed `proceed_refused` and timeout/future
@@ -601,6 +627,9 @@ and exceptions. A future worker-erasure guarantee needs a controlled refusal
 before consume with independent channel-byte observation; not run because
 source already decides the absent call. No change to release/wait logic.
 
+Adjudication: Explain the worker and host erase sites and early exits, including the retained accepted mapping. Additional worker erasure is separate fix scope. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 15.** First candidate: “A Mach lookup attempt drops its acquired
 service right but retains the bootstrap send-right reference it obtained,
 including when the service lookup fails.” `attempt_mach_lookup` calls
@@ -615,6 +644,9 @@ without an owned reference or an omitted matching release would refute it.
 Until adjudicated, S33a records retention rather than hiding it in “attempt
 only.”
 
+Adjudication: Explain retention now; the fix is separate scope. No reference-release change or regression-control waiver is authorized in this work. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 16.** First candidate: “The compiled profile is retained until worker
 exit.” That allocation-lifetime sentence exceeds the visible source:
 `sandbox_apply` is private and may have ownership behavior not established
@@ -627,6 +659,9 @@ ownership uncertainty; investigate before adding any free. An API ownership
 contract or independent native lifecycle observation could resolve it. The
 absence of a PW call is source-decided; no heap-probing experiment was needed
 to avoid an unsupported lifetime promise.
+
+Adjudication: Explain the capture/apply call chain and private ownership boundary. Investigate API ownership before any future free; no destruction change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 17.** First candidate: “Every resource belongs to one experimental
 role.” The channel object/mappings carry both bearer bytes and admission or
@@ -642,6 +677,9 @@ A resource-level decomposition with truly distinct columns can justify a
 split; a color assignment cannot refute dual use. Validation in pass 2 will
 review actual node/edge statements, not just SVG generation.
 
+Adjudication: Draw resources with multiple roles or no role outside single-role clusters and name their roles in prose. No runtime change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
+
 **Row 18.** First candidate: “The issuer erases the token before freeing
 it.” I uses `strnlen(token, PW_EXTENSION_TOKEN_BYTES)`, then erases that many
 bytes and calls `free`. For an accepted bounded string, all non-NUL bytes are
@@ -654,6 +692,9 @@ contract before choosing a full-buffer disposal fix or accepting the limit.
 A controlled issuer API returning a longer known allocation, with erasure
 observed before free, would refute a full-erasure claim; source settles the
 present bounded call. No sensitive token bytes were collected in this pass.
+
+Adjudication: Correct the bounded-prefix erasure account and leave safe full-buffer disposal investigation before a future fix. No native disposal change is authorized. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 **Row 19.** First candidate: “The host prepares the worker's protocol
 resources and refuses every failed setup before spawn.” H ignores the return
@@ -672,6 +713,9 @@ resource cleanup; a low-fd control must establish actual source/destination
 collision rather than infer it from a label. No production fix or injected
 failure run in pass 1. Candidate wording names requested actions and their
 unchecked returns pending the decision.
+
+Adjudication: Strengthen verification and explicitly refuse failed setup in pass 4. Keep a failing reproduction and distinguishing regression controls, then regenerate identity, make a signed build and run the covering cases. Source review alone is not validation of this fix. State: implementing. Validation and after sentence
+are pending; no row closes at this checkpoint.
 
 ### Pass 1 branch and completeness audit
 
@@ -1136,18 +1180,15 @@ reuse unrelated evidence for a pass.
 - Documentation and its machinery land in documentation commits. Any
   production change lands in its own adjudicated commit.
 
-## Outflow (provisional)
+## Outflow
 
-Two things are outflow, not this plan: modularizing the generation machinery
-so the architecture, build and worker accounts share it, and migrating prose
-into semi-structured output locked to the app's characteristics.
+The first draft leaves the inventory in the manifest as per-resource facts
+with citations and leaves the prose authored. It adds no rule tying the
+inventory to call sites. This is the user's decision before pass 2 starts.
+The manifest and its generated tables preserve the inventory for a later
+migration; review against source remains responsible for completeness.
 
-As this plan stands, the first draft leaves the inventory in the manifest as
-per-resource facts with citations, and leaves the prose authored. It adds no
-rule tying the inventory to the worker's call sites. Such a rule would add a
-parser over the C worker and a baseline. Build it only if a pass shows the
-inventory drifting from source.
-
-The state the first draft must leave for a later migration agent is to be
-settled with the user before pass 2, and this section revised then. That
-decision may change how pass 2 shapes the manifest.
+Modularizing the architecture, build and worker generation machinery and
+migrating prose into semi-structured output are separate work. A parser over
+the worker's call sites and its baseline are also separate work; this plan
+does not introduce either.
