@@ -11,16 +11,14 @@ A query about a sandbox is not the same thing as attempting an operation inside 
 
 Even a well-arranged experiment does not make its results self-interpreting. An operation can fail for reasons other than sandbox denial; success can depend on entitlements, inherited resources, and conditions outside the SBPL text. A `sandbox_check` answer and an attempt result may differ without establishing why, or appear to agree without proving that prediction and enforcement agree. 
 
-> The [user guide](docs/PolicyWitness.md) has the specimen format, the output
-> envelope and the operating guidance.
-
 ## The Experiment
 
 PolicyWitness operates on specimens: an SBPL policy and a plan of probes. Each specimen gets a fresh worker that applies the policy once. An unsandboxed host arranges for a separate validator to query the worker's live PID before releasing it to attempt the planned operations. The host collects observations through a reporting path outside the policy under test. A specimen can also contain ordered phases, allowing successive rounds of queries and attempts within the same worker.
 
 The result is one JSON envelope containing the available predictions, attempts and their observed outcomes, together with evidence of their provenance and ordering. Comparison records relate those observations without declaring whether prediction and enforcement agree. Missing or incomplete observations remain visible rather than being turned into conclusions.
 
-> How one run unfolds in time, the boundaries it crosses and the checks that pin each of them: the [architecture tour](docs/ARCHITECTURE.md).
+> How one run unfolds in time, the boundaries it crosses and the checks that pin each of them: the [architecture tour](docs/ARCHITECTURE.md). The [user guide](docs/PolicyWitness.md) has the specimen format, the output
+> envelope and the operating guidance.
 
 ## Entitlements + SBPL
 
