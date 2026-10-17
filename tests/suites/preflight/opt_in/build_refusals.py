@@ -449,7 +449,8 @@ def passing(co, build, variant):
         assert outputs[relative]['cargo']['fresh'] == build.judgments()[name]['fresh']
         assert outputs[relative]['signature']['timestamp'] is True and outputs[relative]['signature']['leaf'] == co.identity
     assert build.record['toolchain']['sdk']['version'] == build.session['sdk_check']['selected']
-    assert build.record['configuration']['build_directories']['cargo_release']['state'] in ('created', 'reused')
+    release = build.record['configuration']['build_directories']['cargo_release']
+    assert release['state'] in ('created', 'reused') and not (release['replaced_by_fresh_mode'] and release['state'] == 'reused'), release
     return build
 
 

@@ -1428,7 +1428,8 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
             builddir=dict(state='reused' if builddir_state.get('configured_before') else 'created',
                           replaced_by_fresh_mode=bool(builddir_state.get('fresh_replaced')),
                           stamp=builddir_state.get('stamp_after_compile') or builddir_state.get('stamp_state')),
-            cargo_release=dict(state='reused' if cargo_state.get('existed_before') else 'created',
+            # A directory fresh mode replaced was created anew, as builddir/ records after its replacement.
+            cargo_release=dict(state='reused' if cargo_state.get('existed_before') and not cargo_state.get('fresh_replaced') else 'created',
                                replaced_by_fresh_mode=bool(cargo_state.get('fresh_replaced'))),
             fresh_mode=dict(requested=bool(fresh.get('requested')), replacement=fresh.get('replacement')),
             cargo_admission={k: v for k, v in ((session.get('cargo') or {}).get('admission') or {}).items() if k != 'exact'}),
