@@ -112,3 +112,15 @@ in the runner reference and owning contracts, and update generated architecture
 inputs if process or channel boundaries change. The investigation report holds
 the experiment history; it must not become the sole explanation of shipped
 behavior.
+
+## Related parking-lot item: P4 (context only)
+
+[P4 — Give unfinished cleanup an explicit owner](../records/EVIDENCE-CLARITY-PARKING-LOT.md#p4--give-unfinished-cleanup-an-explicit-owner)
+is related to this investigation. A safe worker clock can bound the proceed
+wait, while the host's final reap can still block; a bounded wait does not
+establish a total response-time bound. This distinction is especially relevant
+when considering moving deadline authority to the host, where cancellation,
+worker lifetime and cleanup ownership meet.
+
+This is a suggested connection for the investigating agent. Investigating or
+closing P4 is outside this plan's scope, and P4 adds no acceptance gate here.
