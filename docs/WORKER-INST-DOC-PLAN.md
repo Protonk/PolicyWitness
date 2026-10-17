@@ -4,10 +4,17 @@
 
 No pass has started. The plan is grounded at `e901fc0`. Worker, host and
 helper sources there are those of v0.3.1, since `6fd9f06` and `e901fc0`
-changed only this file. The uncommitted BYOXPC investigation files and catalog
-additions in the working tree are not evidence for this plan. The seed register
-was surveyed from source at `e901fc0`; cited runtime cases were inspected, not
-rerun.
+changed only this file, and `8ccbc53` still carries them unchanged. The
+uncommitted BYOXPC investigation files and catalog additions in the working
+tree are not evidence for this plan. The seed register was surveyed from source
+at `e901fc0`; cited runtime cases were inspected, not rerun.
+
+A second source-only survey on 2026-10-17, at the same worker sources, seeded
+the inventory spine, pinned the inventory periods to symbols, moved rows 2, 3,
+4, 5, 7 and 9 to awaiting adjudication with recommended dispositions, added
+rows 12 to 14, and recorded the user's adjudication of rows 8 and 10. Findings
+that survey withheld from the register are held by the user outside the tree;
+the pass 1 stop compares the inventory against them.
 
 At the end of every pass, update this section with the pass reached, the
 register rows opened and closed, and the commit holding the pass's work.
@@ -152,8 +159,8 @@ or two, is drawn outside the role clusters and opens a row.
 
 ## The inventory
 
-Pass 1 builds an inventory of everything the worker holds or acquires. It is
-complete over PolicyWitness's own call sites, from the host's spawn
+Pass 1 completes an inventory of everything the worker holds or acquires. It
+is complete over PolicyWitness's own call sites, from the host's spawn
 preparation in [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) to
 the worker's exit, including the extension issuer's path into the worker.
 
@@ -172,53 +179,196 @@ descriptors, spawn attributes, environment and process context.
 | --- | --- |
 | Resource | What is held, named as the source names it |
 | Acquired by | Process and call site (symbol) |
-| When | Before compilation; between compilation and apply; after apply within an attempt; after apply outside an attempt |
+| When | One of the four periods below |
 | Held across | The attempt only; later attempts in the phase; later phases; until exit |
 | Released | Call site, or at exit |
 | Authority | What the resource lets the worker do that it otherwise could not, or none |
 | Sandbox-gated | Observed (cite the case), source-only, or unknown |
+| Reaches exec children | Yes, no or unknown, with the inheritance rule that decides it; the [inheritance suite](../tests/suites/runner_exec_inheritance/README.md) observes environment and descriptors only |
 | Role | One of the three roles or external evidence; none or several opens a row |
+
+The periods are fixed by symbols in
+[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c):
+
+- **Before compilation** ends at the `sandbox_compile_string` call in `main`
+  and includes the host's preparation and the issuer's path.
+- **Between compilation and apply** holds the capture, the pre-ready seam and
+  the ready byte, and ends at `sandbox_apply`.
+- **After apply within an attempt** is the body of `run_attempt`.
+- **After apply outside an attempt** is `wait_for_proceed`, the erase after
+  the phase loop, the two post-phase seams, the done publication and
+  `spin_for_exit`.
 
 Call-site completeness does not reach library internals, such as what
 `sandbox_compile_string`, the extension routines or libc formatting allocate.
 Record the call and mark its internal behavior unobserved, unless a source or
 probe establishes it.
 
-Draft the inventory as a working table in a section of this plan. In pass 2 it
-becomes the map's manifest nodes, and then the working table is deleted,
-because the manifest owns it.
+The working table lives in this plan until pass 2 turns it into the map's
+manifest nodes and deletes it, because the manifest owns it.
+
+### Inventory spine
+
+The spine was seeded from source on 2026-10-17. It lists each acquisition
+call site in source order, with the resource and the acquiring call only.
+Every other column is pass 1's; in particular, nothing in the spine says when
+or whether a resource is released. Extend the spine where the reading finds an
+acquisition it lacks, and merge rows only where every column agrees. The spine
+omits calls that return values without a handle (`mach_timebase_info`,
+`mach_continuous_time`, `getpid`, `fcntl(F_GETPATH)`) and the attempts that
+acquire nothing beyond stack storage (`unlink`, `access`, `sysctl_read`);
+confirm those omissions. External-evidence producers (the validator, the log
+collector, the host's readers) hold nothing in the worker and belong to pass
+2's fourth group. Library-internal allocation at any post-apply site is row
+6's question.
+
+| # | Resource | Acquired by |
+| --- | --- | --- |
+| S1 | Evidence region object and the host's descriptor to it; name unlinked at once, `FD_CLOEXEC` cleared, sized by `ftruncate` | Host, [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift): `pw_cworker_shm_open_create` |
+| S2 | Host mapping of the evidence region; zeroed, populated, every page touched, `prepared` stored | Host, `runCWorker`: `mmap` |
+| S3 | Ready pipe, both ends `FD_CLOEXEC`; the write end becomes worker descriptor 4 | Host, `runCWorker`: `pipe` |
+| S4 | Policy pipe, write end `F_SETNOSIGPIPE` and `O_NONBLOCK`; the read end becomes worker descriptor 0 | Host, `runCWorker`: `pipe` |
+| S5 | Token delivery duplicate of the session's delivery descriptor; becomes worker descriptor 5 | Host, `runCWorker`: `fcntl(F_DUPFD_CLOEXEC, 64)` |
+| S6 | Spawn file actions for the worker: four `adddup2` entries, no spawn attributes | Host, `runCWorker`: `posix_spawn_file_actions_init` |
+| S7 | The worker process, spawned with nil attributes and nil environment | Host, `runCWorker`: `posix_spawn` |
+| S8 | Extension channel object, the host's descriptor (`FD_CLOEXEC`) and the host's mapping, with magic and resolved target written | Host, [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift): `pw_cworker_shm_open_create`, `mmap` |
+| S9 | The issuer process, spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT`, the channel at descriptor 3 and stdio from `/dev/null` | Host, `ExtensionSession`: `posix_spawn` |
+| S10 | The issuer's channel mapping and zero core-dump limit | Issuer, [`main`](../controller/tools/pw_probe_runner/pw_extension_issuer.c): `setrlimit`, `mmap` |
+| S11 | libsandbox handle and three resolved symbols in the issuer | Issuer, `main`: `dlopen`, `dlsym` |
+| S12 | The token, written into the channel with its length | Issuer, `main`: `sandbox_extension_issue_file` |
+| S13 | Worker descriptors 0, 3, 4 and 5, by explicit file action | Received; numbers read by [`parse_args`](../controller/tools/pw_probe_runner/pw_probe_runner.c) |
+| S14 | Worker descriptors 1 and 2, and any host descriptor without `FD_CLOEXEC` | Received; no PolicyWitness call site sets them (row 1) |
+| S15 | Worker environment, from a nil `envp` | Received (row 1) |
+| S16 | Worker process context: signal dispositions and mask, resource limits, working directory, umask, task and bootstrap ports, loaded libraries and their threads | Received (row 11) |
+| S17 | `SIGPIPE` disposition `SIG_IGN` | Worker, [`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `signal` |
+| S18 | Worker mapping of the evidence region, `PW_SHM_REGION_BYTES`, `MAP_SHARED` | Worker, [`map_region`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `fstat`, `mmap` |
+| S19 | Native extension entry points in static pointers | Worker, [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `dlsym(RTLD_DEFAULT)` |
+| S20 | Zero core-dump limit, only when `extension_requested` | Worker, `prepare_extension`: `setrlimit(RLIMIT_CORE)` |
+| S21 | Worker mapping of the extension channel, `PW_EXTENSION_CHANNEL_BYTES`, `MAP_SHARED` | Worker, `prepare_extension`: `fstat`, `mmap` |
+| S22 | The token bytes inside that mapping, admitted by the length and NUL rules | Worker, `prepare_extension`: channel inspection |
+| S23 | Policy source buffer, `static`, `PW_SHM_POLICY_BYTES`, filled from descriptor 0 | Worker, `main`: `read_all_from_fd` |
+| S24 | Consumed parameter snapshot, `static`, `PW_SHM_MAX_PARAMS` entries | Worker, `main`: `memcpy` |
+| S25 | SandboxParams object | Worker, `main`: `sandbox_create_params`, `sandbox_set_param` |
+| S26 | Compiled profile object, and the compiler's error string on failure | Worker, `main`: `sandbox_compile_string` |
+| S27 | Nothing new: profile memory read through the task port into the capture region of S18 | Worker, [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h): `mach_vm_read_overwrite` |
+| S28 | The applied policy, a restriction of the worker's own authority | Worker, `main`: `sandbox_apply` |
+| S29 | Target descriptor of `open_read`, with one byte read | Worker, [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `open(O_RDONLY)` |
+| S30 | Target descriptor of `open_write`, with one byte written | Worker, [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `open(O_WRONLY \| O_TRUNC)` |
+| S31 | Target descriptor of `create`, and the file it may create | Worker, [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `open(O_WRONLY \| O_CREAT, 0600)` |
+| S32 | Target descriptor of `read_fresh`, with identity and a bounded read | Worker, [`attempt_file_read_fresh`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `open(O_RDONLY \| O_CLOEXEC)`, `fstat`, `read` |
+| S33 | Mach rights taken by the lookup attempt | Worker, [`attempt_mach_lookup`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `task_get_special_port`, `bootstrap_look_up` |
+| S34 | Two exec capture pipes | Worker, [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `pipe` |
+| S35 | Exec spawn handles, flagged `POSIX_SPAWN_CLOEXEC_DEFAULT` and `POSIX_SPAWN_SETPGROUP` | Worker, `exec_resources_acquire`: `posix_spawn_file_actions_init`, `posix_spawnattr_init` |
+| S36 | The exec child and its process group, spawned with an empty environment | Worker, [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `posix_spawn` |
+| S37 | Extension handle in static storage, from the token of S22 | Worker, [`attempt_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c): `extension_consume` |
+
+The survey found no acquisition after apply outside an attempt. Confirm that
+along `wait_for_proceed`, the post-loop erase, the two seams and
+`spin_for_exit`.
+
+### Launch-inventory observation (rows 1 and 11)
+
+Source cannot decide what the launchd-managed host leaves open, or what a nil
+environment yields. The observation that decides it: one production worker,
+under an allow-default specimen, held by the post-apply hang seam and
+inspected from outside during the hang; a second worker held by the pre-ready
+hang seam gives the pre-apply state. The baseline instruments are `lsof -p`
+for descriptors and `ps -E -p` for the environment. Add mappings and Mach
+rights only if a same-user observer can obtain them against the signed worker,
+and state the boundary either way. The
+[contaminated-worker case](../tests/suites/runner_exec_inheritance/README.md#contaminated-worker)
+is the positive control: it shows a worker carrying what its parent left open,
+so an empty finding against the real host is a finding about the host, not
+about the instrument. The nil-environment half can also be decided by reading
+xnu's spawn path; the reading and the observation should agree.
 
 ## Register
 
-The seed rows come from the planning survey. Their evidence is what the survey
-saw at `e901fc0`, source-only unless noted, and should be verified before
-deciding. None is adjudicated. Later rows are added as passes find them.
+Rows 1 to 11 come from the planning survey and rows 12 to 14 from the second
+survey. Evidence is what each survey saw in source at `e901fc0`, source-only
+unless noted, and is verified again before a row changes state. Rows 8 and 10
+are adjudicated; the rest await pass 1 or the user. Later rows are added as
+passes find them.
 
 | # | Candidate | Survey evidence | State | Disposition |
 | --- | --- | --- | --- | --- |
-| 1 | The worker's launch is not isolated the way its children's are | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) calls `posix_spawn` with file actions for fds 0, 3, 4 and optionally 5, no spawn attributes and a nil environment. The issuer ([`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)) and exec children ([`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)) set `POSIX_SPAWN_CLOEXEC_DEFAULT`. Which other host descriptors the worker inherits (stdio included), and what the nil environment yields, is unobserved; the dossier records neither. | open | |
-| 2 | Pre-apply descriptors stay open after apply | The worker does not close the policy descriptor, the shared-region descriptor or the ready pipe after use, so all three are held across apply and every attempt. [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c) closes the token descriptor after mapping. Exec children do not inherit them. Whether any experiment is affected is undecided. | open | |
-| 3 | `open_write` truncates and writes | [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c) opens with `O_WRONLY \| O_TRUNC`, writes one byte, ignores the write and close results and reports open success. The guide's [attempt kinds](PolicyWitness.md#attempt-kinds-the-runner-implements) entry says only "exercise file ops on `target`"; the survey found no document stating the truncation. | open | |
-| 4 | `open_read` reports open success only | [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) reads one byte, "so the kernel observes the read", and discards the result. `read_fresh` is the action that records a read. | open | |
-| 5 | `create` opens an existing file without truncating it | [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c) uses `O_WRONLY \| O_CREAT` without `O_EXCL`; its comment calls this "semantics callers depend on". The [existing-file create](../tests/suites/witness_contract/README.md#create-on-an-existing-file) case checks bytes and identity. | open | |
-| 6 | Exec attempts allocate after apply at PolicyWitness call sites | Since `63927cd`, `exec_resources_acquire` initializes spawn file actions and attributes inside the attempt. On Darwin these are opaque handles whose init functions allocate (verify against the SDK's libc before relying on this). `fail_from_errno` formats with `snprintf` and `strerror` after apply. The [Runner simplicity](ARCHITECTURE.md#principles-as-enforced-constraints) principle names request, evidence and token storage as preallocated; the inventory decides whether that sentence holds at its stated scope. | open | |
-| 7 | Worker source comments describe retired premises | The header calls reading the policy into a stack buffer "the LAST allocation attempt before sandbox_apply()", yet parameter creation and `sandbox_compile_string` (commented as allocating internally) follow it. The attempt section says "No allocations post-apply" per "R6". The comments cite R5 and R6, which nothing else in the tracked tree defines, and "the Swift worker". | open | |
-| 8 | Two documents will state the private-extension limit | ARCHITECTURE has it as a Known gap under its principles; WORKER.md will state it beside its inventory. Decide which document owns the paragraph and which links to it. | open | |
-| 9 | Release is not revocation | [check_extensions.py](../tests/suites/witness_contract/check_extensions.py) permits access after a successful release ("A successful release does not itself require access revocation"); nothing checks revocation. | open | |
-| 10 | Exec helpers can outlive the worker | ARCHITECTURE's Known gap covers descendants that leave the child's process group. Worker death during exec can leave helpers alive. This has row 8's ownership question, plus whether to accept it. | open | |
-| 11 | The worker's ambient resources are uninventoried | No source or control establishes the full set of descriptors, ports, threads and library mappings the worker holds at apply. Row 1 is the part PolicyWitness controls; this row is the rest. A stronger claim would need an independently observed launch inventory or targeted instrumentation with a stated observation boundary. | open | |
+| 1 | The worker's launch is not isolated the way its children's are | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) calls `posix_spawn` with file actions for fds 0, 3, 4 and optionally 5, no spawn attributes and a nil environment. The issuer ([`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)) and exec children ([`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)) set `POSIX_SPAWN_CLOEXEC_DEFAULT`. Which other host descriptors the worker inherits (stdio included), and what the nil environment yields, is unobserved; the dossier records neither. Decided by the launch-inventory observation under The inventory, with the contaminated-worker case as its control. | open | |
+| 2 | Pre-apply descriptors stay open after apply | The worker does not close the policy descriptor, the shared-region descriptor or the ready pipe after use, so all three are held across apply and every attempt. [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c) closes the token descriptor after mapping. Exec children do not inherit them. Confirmed 2026-10-17: the worker has no `close` of descriptors 0, 3 or 4, and `prepare_extension` closes 5 after mapping. Whether any experiment is affected is a disposition, not a survey question. | awaiting adjudication | Recommended: intended behavior that needs explaining; see the row detail. |
+| 3 | `open_write` truncates and writes | [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c) opens with `O_WRONLY \| O_TRUNC`, writes one byte, ignores the write and close results and reports open success. The guide's [attempt kinds](PolicyWitness.md#attempt-kinds-the-runner-implements) entry says only "exercise file ops on `target`"; the survey found no document stating the truncation. Confirmed 2026-10-17. | awaiting adjudication | Recommended: correct the document; see the row detail. |
+| 4 | `open_read` reports open success only | [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) reads one byte, "so the kernel observes the read", and discards the result. `read_fresh` is the action that records a read. Confirmed 2026-10-17. | awaiting adjudication | Recommended: correct the document; see the row detail. |
+| 5 | `create` opens an existing file without truncating it | [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c) uses `O_WRONLY \| O_CREAT` without `O_EXCL`; its comment calls this "semantics callers depend on". The [existing-file create](../tests/suites/witness_contract/README.md#create-on-an-existing-file) case checks bytes and identity. Confirmed 2026-10-17. | awaiting adjudication | Recommended: intended behavior that needs explaining; see the row detail. |
+| 6 | Exec attempts allocate after apply at PolicyWitness call sites | Since `63927cd`, `exec_resources_acquire` initializes spawn file actions and attributes inside the attempt. On Darwin these are opaque handles whose init functions allocate (verify against the SDK's libc before relying on this). `fail_from_errno` formats with `snprintf` and `strerror` after apply. The [Runner simplicity](ARCHITECTURE.md#principles-as-enforced-constraints) principle names request, evidence and token storage as preallocated; the inventory decides whether that sentence holds at its stated scope. Decided by reading xnu's libsyscall spawn wrapper, where the handle init functions are defined, and the libc formatting calls: a citation, not a probe. | open | |
+| 7 | Worker source comments describe retired premises | The header calls reading the policy into a stack buffer "the LAST allocation attempt before sandbox_apply()", yet parameter creation and `sandbox_compile_string` (commented as allocating internally) follow it. The attempt section says "No allocations post-apply" per "R6". The comments cite R5 and R6, which nothing else in the tracked tree defines, and "the Swift worker". Confirmed 2026-10-17, with one more item: the header calls the policy buffer stack-fixed, and `main` declares it `static`. | awaiting adjudication | Recommended: correct the source comments; see the row detail. |
+| 8 | Two documents will state the private-extension limit | ARCHITECTURE has it as a Known gap under its principles; WORKER.md will state it beside its inventory. Decide which document owns the paragraph and which links to it. | implementing | Adjudicated 2026-10-17: WORKER.md owns the paragraph and ARCHITECTURE.md links to it. Lands with pass 3 and the integration work. |
+| 9 | Release is not revocation | [check_extensions.py](../tests/suites/witness_contract/check_extensions.py) permits access after a successful release ("A successful release does not itself require access revocation"); nothing checks revocation. Confirmed 2026-10-17: the checker accepts either result of the after-release read. | awaiting adjudication | Recommended: accept, inside row 8's paragraph; see the row detail. |
+| 10 | Exec helpers can outlive the worker | ARCHITECTURE's Known gap covers descendants that leave the child's process group. Worker death during exec can leave helpers alive. This has row 8's ownership question, plus whether to accept it. | implementing | Adjudicated 2026-10-17: WORKER.md owns the paragraph and ARCHITECTURE.md links to it; the limitation stays accepted as ARCHITECTURE states it today. Lands with pass 3 and the integration work. |
+| 11 | The worker's ambient resources are uninventoried | No source or control establishes the full set of descriptors, ports, threads and library mappings the worker holds at apply. Row 1 is the part PolicyWitness controls; this row is the rest. A stronger claim would need an independently observed launch inventory or targeted instrumentation with a stated observation boundary. Decided, within its stated boundary, by the launch-inventory observation under The inventory. | open | |
+| 12 | Exec children inherit the worker's ignored `SIGPIPE` and its zero core-dump limit | `main` sets `SIGPIPE` to `SIG_IGN`; [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) sets only `POSIX_SPAWN_CLOEXEC_DEFAULT` and `POSIX_SPAWN_SETPGROUP`, so an ignored disposition survives the exec; `prepare_extension` zeroes `RLIMIT_CORE` when an extension is requested, and limits are inherited. The inheritance observer, [helper.c](../tests/fixtures/exec/helper.c), reports environment and descriptors and ignores `SIGPIPE` itself, so no case observes either. The explicit-descriptor and empty-environment contract is narrower than a clean child. | open | |
+| 13 | The core-dump limit differs between extension and non-extension runs | `prepare_extension` returns before `setrlimit` when `extension_requested` is 0, so process context is a function of the request. | open | |
+| 14 | The normal-completion token erase is skipped on the proceed-refusal path | The timeout and refusal paths of [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c) publish `done` and spin without returning, so the erase after the phase loop in `main` is not reached. The erase at the consume decision and the host's erase of the shared pages still apply. The sentence about erasure stands with its exception. | open | |
+
+### Row details
+
+**Row 2.** Candidate sentence: "Descriptors 0, 3 and 4 stay open from launch
+to exit; descriptor 5 is closed once the channel is mapped; exec children
+inherit none of them." Symbols: `main`, `prepare_extension`,
+`exec_resources_acquire`. After the host closes its ends, descriptor 0 reads
+EOF and descriptor 4 has no reader; descriptor 3 backs a mapping that outlives
+it. Refutation: a post-apply use of any of the three, or a child holding one.
+Recommended: explain as intended behavior, with the inheritance suite as the
+child-side evidence. The alternative is a fix that closes all three before
+apply, which shortens the sentence to "after apply the worker holds only the
+descriptors its attempts open" at the cost of a worker change, identity
+regeneration and a signed build, for no change in what any attempt can observe.
+
+**Row 3.** Candidate sentence: "`open_write` opens the target for writing,
+truncates it to zero length and writes one byte, and reports only the open
+result." Symbol: `attempt_file_open_write`. Refutation: a run after which the
+target's length is not one byte. Recommended: correct the document, in the
+guide's attempt-kinds entry and the worker tour; no worker change.
+
+**Row 4.** Candidate sentence: "`open_read` opens the target, reads one byte
+and discards it, and reports only the open result; `read_fresh` records what
+it read." Symbols: `attempt_file_open_read`, `attempt_file_read_fresh`.
+Recommended: correct the document, in the same places as row 3.
+
+**Row 5.** Candidate sentence: "`create` opens an existing target for writing
+without truncating it, and creates a missing one with mode 0600." Symbol:
+`attempt_file_create`; the existing-file create case checks bytes and
+identity. Recommended: intended behavior that needs explaining; the case is
+its evidence.
+
+**Row 7.** Items: the header's "stack-fixed buffer" and "LAST allocation
+attempt before sandbox_apply()", the attempt section's "No allocations
+post-apply" and its "R6", the "R5" at the SPI declarations, and the two
+"Swift worker" references. Recommended: correct the source comments in one
+commit. That changes worker source, so it follows "Changes a row authorizes":
+identity regeneration, a signed build and the identity check. Comments are
+leads, not evidence, so no behavioral case covers them.
+
+**Row 9.** Candidate sentence: "A successful release returns zero; nothing in
+PolicyWitness observes whether access is revoked afterward." Symbol:
+`attempt_extension`; [check_extensions.py](../tests/suites/witness_contract/check_extensions.py)
+accepts either outcome of the after-release read. Recommended: accept, as the
+revocation clause of row 8's paragraph, which ARCHITECTURE already states. A
+case asserting the after-release read under the denying policy would be new
+evidence and is separate scope if wanted.
 
 ## Passes
 
 Each pass ends with a commit of its work and an update to Status. A pass
 marked *stop* ends with a review with the user before the next pass starts.
 
-**Pass 1: inventory** (*stop*). Build the inventory. Recheck the seed rows
-against source. Take rows that source can decide to "awaiting adjudication",
-with a recommended disposition. Design a probe, with a control that could
+**Pass 1: inventory** (*stop*). Fill the spine's remaining columns and extend
+it where the reading finds an acquisition it lacks. Verify the rows already
+awaiting adjudication rather than re-deriving them, and take any further row
+that source decides to "awaiting adjudication" with a recommended disposition.
+Decide row 6 from source. Run the launch-inventory observation for rows 1 and
+11 with its control, and design any other probe, with a control that could
 refute its hypothesis, only where source cannot decide a row and the answer
 would change the document. Write no prose. At the stop, the user reviews the
-inventory's scope and adjudicates the rows ready for it.
+inventory's scope, compares it with the findings withheld from the register,
+and adjudicates the rows ready for it.
 
 **Pass 2: map.** Add destination support to the generator with its controls,
 as described below. Then add manifest nodes and edges from the inventory and
@@ -295,7 +445,8 @@ through its principal examples and names the resources that fit no role.
   disposition decides, without presenting them as result paths.
 - Contrast the worker's launch with the explicit descriptor and
   empty-environment contract for exec children, which excludes the worker's
-  reporting descriptor. Row 1's disposition decides how.
+  reporting descriptor. Rows 1 and 12 decide how, and row 12 decides what
+  that contract leaves out.
 
 ### 3. What can become an observation
 
@@ -356,8 +507,10 @@ AGENTS files.
 
 Limits sit beside the promises they limit. A Known gap paragraph comes only
 from a row adjudicated as an accepted limitation. Intentional semantic limits
-are explained as behavior rather than labeled gaps. The document ends with
-**Known gaps**, indexing those paragraphs in document order.
+are explained as behavior rather than labeled gaps. The private-extension and
+exec-descendant paragraphs move here from ARCHITECTURE under rows 8 and 10.
+The document ends with **Known gaps**, indexing those paragraphs in document
+order.
 
 ## The capability map
 
@@ -431,7 +584,7 @@ different things.
 | Publication versus effect | [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`pw_progress`](../controller/tools/pw_probe_runner/pw_worker_evidence.h), [`buildAttemptResult`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [worker evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract). | [Death before publication](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication) and [its checker](../tests/suites/witness_contract/check_killed_before_publication.py) observe the file effect independently and require withholding its unpublished result. |
 | File observations | [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_file_read_fresh`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [fresh-read semantics](PolicyWitness.md#extension-and-fresh-read-output). | [Existing-file create](../tests/suites/witness_contract/README.md#create-on-an-existing-file) checks bytes and identity; [extension checks](../tests/suites/witness_contract/check_extensions.py) inspect fresh descriptor identity and bytes. Source establishes which older action returns are discarded. |
 | Per-attempt exec acquisition | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`exec_resources_release`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c). | [C harness exec controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt), [their assertions](../tests/suites/runner_c_worker_harness/run.sh) and [public exec cases](../tests/suites/runner_use_c_worker/README.md). The descriptor ceiling rules out holding all steps' pipes at once; source establishes placement after apply. |
-| Exec-child isolation/lifetime | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [execution limits](LIMITS.md#execution-budgets). | [Inheritance](../tests/suites/runner_exec_inheritance/README.md) contaminates the worker and reads explicit child state; [lifecycle](../tests/suites/runner_exec_lifecycle/README.md) observes processes independently. Neither establishes a clean worker environment or general process-tree containment. |
+| Exec-child isolation/lifetime | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [execution limits](LIMITS.md#execution-budgets). | [Inheritance](../tests/suites/runner_exec_inheritance/README.md) contaminates the worker and reads explicit child state; [lifecycle](../tests/suites/runner_exec_lifecycle/README.md) observes processes independently. Neither establishes a clean worker environment or general process-tree containment, and the observer reports environment and descriptors, not signal state or limits (row 12). |
 | Timing and ordering | [`pw_timing_setup`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift), [`buildOrdering`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [ordering evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states). | [Timing controls](../tests/suites/runner_c_worker_harness/README.md#worker-timing-controls) test sampled decisions; [gated effects/external mutation](../tests/suites/witness_contract/README.md#predictions-before-attempts) test observed ordering and snapshot limits. The opt-in barrier mutation control tests detection of bypass. |
 | Extension authority | [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift), [issuer source](../controller/tools/pw_probe_runner/pw_extension_issuer.c), [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c), [`attempt_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [extension evidence](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence). | [Extension boundaries](../tests/suites/witness_contract/README.md#native-extension-boundaries), [native fixtures](../tests/fixtures/extension_controls/README.md) and [fresh-read checks](../tests/suites/witness_contract/check_extensions.py). The live checker permits access after successful release; it does not verify revocation. |
 | Prediction and comparison | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [`comparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [validator source](../controller/tools/sb_api_validator/sb_api_validator.c); [claim/evidence review](../tests/FAILURE-PROPAGATION-CONTRACT.md#claimevidence-review). | [Independent targets](../tests/suites/witness_contract/README.md#independent-prediction-and-attempt-targets), [comparison matrix](../tests/suites/witness_contract/README.md#comparison-matrix) and [unit controls](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift). Constructed records test interpretation, not kernel causation. |
@@ -444,7 +597,7 @@ different things.
 | Existing owner | Relationship to the new tour |
 | --- | --- |
 | [Repository README](../README.md#documentation) | Add the worker tour beside the architecture and build tours, with its experimental-design purpose. |
-| [Architecture tour](ARCHITECTURE.md) | Keeps temporal orchestration, topology, ordering and channel ownership. Link from the Runner simplicity principle to the new account. Rows 8 and 10 decide which document owns the private-extension and exec-descendant Known gaps. Update the document graph and the figure-count sentence. |
+| [Architecture tour](ARCHITECTURE.md) | Keeps temporal orchestration, topology, ordering and channel ownership. Link from the Runner simplicity principle to the new account. Under rows 8 and 10, its private-extension and exec-descendant Known gap paragraphs move to WORKER.md, the places they stood link there, and its Known gaps index shrinks to match. Update the document graph and the figure-count sentence. |
 | [Build tour](BUILD.md) and [signing reference](SIGNING.md) | Keep compilation, identity generation, signing and provenance. Link to them from starting authority; add a reciprocal link near native compilation if useful. |
 | [Runner reference](../runner/README.md) | Keeps the source map, lifecycle and test seams. Add a worker-tour link near the architecture link. |
 | [Wire contract](CONTRACT.md), [request grammar](REQUEST-GRAMMAR.md), [user guide](PolicyWitness.md), [limits](LIMITS.md), [evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) | Keep accepted inputs, fields, capacities and claims. Link to existing anchors rather than copying tables or creating a normative vocabulary. A row may correct one of them, as row 3 may for the guide. |
