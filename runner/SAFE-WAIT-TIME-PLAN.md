@@ -103,16 +103,6 @@ small set of acceptance cases that would distinguish it from an unsafe repair.
 If evidence is insufficient, name the unresolved question, the next resolving
 observation and the implementation decision it blocks.
 
-Before turning the prototype into production work, update this plan with the
-chosen behavior and the resulting implementation, contract and test scope.
-That scope must account for worker identity, any C/Swift shared-layout change
-and the ordering mutation gate. Correct the unconditional source comment with
-an evidence-supported description. Put lasting timing and ordering guarantees
-in the runner reference and owning contracts, and update generated architecture
-inputs if process or channel boundaries change. The investigation report holds
-the experiment history; it must not become the sole explanation of shipped
-behavior.
-
 ## Related parking-lot item: P4 (context only)
 
 [P4 — Give unfinished cleanup an explicit owner](../records/EVIDENCE-CLARITY-PARKING-LOT.md#p4--give-unfinished-cleanup-an-explicit-owner)
