@@ -1,198 +1,429 @@
 # Plan: The Worker — Instrument and Constraints
 
-## Intended result and scope
+## Status
 
-Create `docs/WORKER.md`, titled **The Worker: Instrument and Constraints**, as
-the third major developer tour beside [ARCHITECTURE.md](ARCHITECTURE.md) and
-[BUILD.md](BUILD.md). Its organizing question is: **What can the worker carry
-across the sandbox boundary without compromising the experiment?**
+No pass has started. The plan is grounded at `e901fc0`. Worker, host and
+helper sources there are those of v0.3.1, since `6fd9f06` and `e901fc0`
+changed only this file. The uncommitted BYOXPC investigation files and catalog
+additions in the working tree are not evidence for this plan. The seed register
+was surveyed from source at `e901fc0`; cited runtime cases were inspected, not
+rerun.
 
-Write for a contributor--someone who who understands the repository README and 
-needs to judge a proposed worker change and *does not* need to be sold the 
-benefits of PolicyWitness. Explain why this apparatus can supply particular
-observations, and how changing its preparation, authority or reporting could
-change what those observations mean. Organize by constraints and capabilities,
-rather than another run timeline or source-file walkthrough. Use a capability
-map as the principal illustration in order to enforce this structural difference.
+At the end of every pass, update this section with the pass reached, the
+register rows opened and closed, and the commit holding the pass's work.
 
-This plan follows [the project-planning guidance](../CONTRIBUTING.md#planning-a-change).
-It is grounded in source, contracts and test assertions at commit `6fd9f06`,
-on the v0.3.1 implementation. The committed changes after that release affect
-the retained-evidence index and this planning file, not worker implementation.
-Existing uncommitted BYOXPC investigation files and catalog additions are not
-evidence for this proposal. Runtime cases cited below were inspected, not rerun
-as part of planning; their presence is not a fresh passing result.
+## What this plan produces
 
-Implementing this plan includes the document, generated illustration,
-navigation and documentation-check integration. It does not change production
-behavior, wire contracts, limits, native sources or experimental policy. Do not
-repair an implementation limitation to make a stronger sentence true--one of the
-sentinel benefits of writing WORKER.md will be re-evaluation of the system in
-light of the new document. The document exists to expose when a sentence in it 
-is hard to write.
+`docs/WORKER.md`, titled **The Worker: Instrument and Constraints**, is the
+third developer tour beside [ARCHITECTURE.md](ARCHITECTURE.md) and
+[BUILD.md](BUILD.md). Its organizing question is: **what can the worker carry
+across the sandbox boundary without compromising the experiment?** It is
+written for a contributor who has read the repository README, needs to judge a
+proposed worker change, and does not need PolicyWitness sold to them. It is
+organized by resources and the authority they carry, not by time or source
+file. A generated capability map is its principal figure.
+
+Writing the document is also an assessment of the worker, as writing the
+architecture and build tours assessed the run and the build. An accurate
+account of an awkward instrument contains awkward sentences. A sentence that
+is hard to write, or a generated row the prose cannot agree with, is how a
+defect is found. The precedent is `63927cd`. The architecture plan's account
+of the worker before apply had to say that it created exec pipes under a
+descriptor budget. The premise behind that was false. Moving the pipes inside
+the attempt removed the budget, its limits and seven harness cases.
+
+The work proceeds in passes. Each finding is recorded in the register, decided
+by the user, then fixed or accepted, and finally re-proved in the text.
+Production changes happen only through adjudicated rows, in their own commits.
+The writer never repairs the implementation to make a sentence true.
+
+## How the assessment works
+
+### The scope rule
+
+Every sentence in WORKER.md states what the worker does, at a scope where it
+could be wrong: what it holds, when it acquires it, what it publishes. When the
+true scope needs an exception, the sentence carries the exception, and the
+exception opens a register row. No hard sentence is dropped. None is softened
+into a negative ("does not establish …") or moved elsewhere to avoid it.
+
+Negative statements have two homes in the document. A Known gap paragraph
+records a guarantee the user has accepted as incomplete. A link to the owning
+contract says what a field does not mean. The guarded qualifications in this
+plan are working material for the register, not the document's register. A
+responsible reader, perhaps superintending their own fork, can tell from
+accurate positive claims what PolicyWitness is not.
+
+### Evidence
+
+Keep three kinds of evidence distinct:
+
+- **Mechanical grounding:** a cited symbol exists, a test is defined, a
+  generated region is current. It detects drift; it does not establish
+  behavior.
+- **Assertion coverage:** what a cited check actually asserts, in which
+  configurations, and what it leaves untested. A suite's name or a passing run
+  is not coverage evidence.
+- **Observed behavior:** a recorded probe or case reaches the path and
+  observes the effect. It holds for the revision, inputs and environment
+  exercised. A cited case is not a freshly executed case.
+
+Mark source-only conclusions as such.
+
+### The register
+
+Each row moves through `open → investigating → awaiting adjudication →
+implementing → validating → closed`. The user decides each disposition:
+
+- correct the document, including a source comment;
+- fix the worker or host;
+- strengthen verification;
+- accept a limitation, written as a Known gap;
+- intended behavior that needs explaining.
+
+A row can carry more than one disposition. A documentation-only resolution
+skips implementation but not validation. Reopen a row when new evidence
+contradicts its decision or a change invalidates the evidence it rested on.
+
+Give each investigated row a detail entry under its number, below the register
+table:
+
+- the sentence as it first had to be written, and the claim it was reaching for;
+- implementing symbols, cited checks and what they assert;
+- the hypothesis and the observation that would refute it;
+- for any probe, its exact inputs, expected and actual results, and evidence
+  path;
+- the recommended disposition with its reasoning, the user's adjudication and
+  the scope of any authorized change;
+- the validation, and the sentence after the change.
+
+The before and after sentences are the re-proof. A row closes when the
+document says something accurate about the changed or accepted instrument.
+
+A broad suite passing does not discard a counterexample. Weakening a promise,
+adding a prose baseline exception, or narrowing a check merely to make the
+document and tests agree is an adjudication, not an edit.
+
+### Changes a row authorizes
+
+A fix keeps a failing reproduction and adds a regression control that
+distinguishes the defect from the fix. It lands in its own commit, naming the
+row number.
+
+Changing worker or host source means regenerating the worker identity
+(`python3 docs/generate_worker_identity.py`) before building, making a signed
+build, and running the exact cases that cover the changed path. Changing the
+phase wait, the release store or query eligibility also requires
+`witness_contract/order_barrier_mutations`. Follow
+[the maintenance checklist](../AGENTS.md#maintenance-checklist-when-changing-things)
+for request, evidence or layout changes. A change that would alter the wire
+contract goes back to the user as separate scope.
 
 ## Editorial decisions
 
-Connect the proposed subjects through a concrete distinction: **prepared
-reporting apparatus, deliberately supplied authority, and resources acquired by
-the attempted operation**. These categories describe experimental roles, not a
-claim that reporting apparatus has no authority or no effects.
+Organize the account around three experimental roles: **prepared reporting
+apparatus, deliberately supplied authority, and resources acquired by the
+attempted operation**. Evidence that arrives from outside the worker forms a
+fourth group. The roles describe what a resource is for in the experiment.
+They do not claim that reporting apparatus carries no authority or has no
+effects. Membership is a finding, not a premise: a resource that fits no role,
+or two, is drawn outside the role clusters and opens a row.
 
-- Treat the boundary as policy application inside an already running process.
+- Treat the boundary as policy application inside an already-running process.
   The worker already has executable code, native libraries, memory and process
-  context. A fresh worker is not an empty process. Subsequent phases use the
-  same applied worker and can observe effects of earlier actions.
-- Explain C and fixed layouts through the small, inspectable post-application
-  surface they support. Avoid claiming that C cannot allocate, that all native
-  calls are allocation-free, or that all post-apply work is raw syscalls. Exec
-  setup and private extension calls require qualifications.
-- Use ordinary file access, exec preparation and an explicit extension experiment
-  as the principal examples. Include Mach lookup and sysctl in the inventory,
-  without expanding into a catalogue of sandbox operations.
+  context. A fresh worker is not an empty process. Later phases use the same
+  applied worker and can observe effects of earlier actions.
+- State the post-apply surface at its actual extent. Where PolicyWitness's own
+  post-apply calls allocate, open or create something, say so. Where a
+  library's internal behavior is unobserved, name the call and say its
+  internals are unobserved.
+- Use ordinary file access, exec and an explicit extension experiment as the
+  principal examples. Include Mach lookup and sysctl in the inventory without
+  expanding into a catalogue of sandbox operations.
 - Explain ordering as a condition of meaningful comparison. Link to the
-  architecture tour for the protocol and the evidence contract for eligibility;
-  a release ordinal is not a verdict delivered to the worker.
-- Separate intentional ignorance from missing evidence. The worker deliberately
-  does not classify prediction/enforcement agreement; an unpublished native
-  result is unavailable evidence. Neither licenses an inferred cause.
-- Describe current behavior, not change history or aspirational rules. Source
-  comments are leads to inspect, not sufficient evidence: older broad allocation
-  and attempt descriptions in the worker need the qualifications below.
+  architecture tour for the protocol and the evidence contract for
+  eligibility. A release ordinal is not a verdict delivered to the worker.
+- Separate intentional ignorance from missing evidence. The worker
+  deliberately does not classify prediction/enforcement agreement, while an
+  unpublished native result is unavailable evidence. Neither licenses an
+  inferred cause.
+- Describe current behavior. Source comments are leads, not evidence; a stale
+  comment is itself a register row.
+
+## The inventory
+
+Pass 1 builds an inventory of everything the worker holds or acquires. It is
+complete over PolicyWitness's own call sites, from the host's spawn
+preparation in [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) to
+the worker's exit, including the extension issuer's path into the worker.
+
+"Acquires" means creating or receiving any of:
+
+- memory or a mapping;
+- a descriptor;
+- a Mach port or right;
+- a process;
+- authority: entitlements, policy, an extension token.
+
+The inventory also covers what the worker receives without asking: inherited
+descriptors, spawn attributes, environment and process context.
+
+| Column | Records |
+| --- | --- |
+| Resource | What is held, named as the source names it |
+| Acquired by | Process and call site (symbol) |
+| When | Before compilation; between compilation and apply; after apply within an attempt; after apply outside an attempt |
+| Held across | The attempt only; later attempts in the phase; later phases; until exit |
+| Released | Call site, or at exit |
+| Authority | What the resource lets the worker do that it otherwise could not, or none |
+| Sandbox-gated | Observed (cite the case), source-only, or unknown |
+| Role | One of the three roles or external evidence; none or several opens a row |
+
+Call-site completeness does not reach library internals, such as what
+`sandbox_compile_string`, the extension routines or libc formatting allocate.
+Record the call and mark its internal behavior unobserved, unless a source or
+probe establishes it.
+
+Draft the inventory as a working table in a section of this plan. In pass 2 it
+becomes the map's manifest nodes, and then the working table is deleted,
+because the manifest owns it.
+
+## Register
+
+The seed rows come from the planning survey. Their evidence is what the survey
+saw at `e901fc0`, source-only unless noted, and should be verified before
+deciding. None is adjudicated. Later rows are added as passes find them.
+
+| # | Candidate | Survey evidence | State | Disposition |
+| --- | --- | --- | --- | --- |
+| 1 | The worker's launch is not isolated the way its children's are | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) calls `posix_spawn` with file actions for fds 0, 3, 4 and optionally 5, no spawn attributes and a nil environment. The issuer ([`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)) and exec children ([`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)) set `POSIX_SPAWN_CLOEXEC_DEFAULT`. Which other host descriptors the worker inherits (stdio included), and what the nil environment yields, is unobserved; the dossier records neither. | open | |
+| 2 | Pre-apply descriptors stay open after apply | The worker does not close the policy descriptor, the shared-region descriptor or the ready pipe after use, so all three are held across apply and every attempt. [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c) closes the token descriptor after mapping. Exec children do not inherit them. Whether any experiment is affected is undecided. | open | |
+| 3 | `open_write` truncates and writes | [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c) opens with `O_WRONLY \| O_TRUNC`, writes one byte, ignores the write and close results and reports open success. The guide's [attempt kinds](PolicyWitness.md#attempt-kinds-the-runner-implements) entry says only "exercise file ops on `target`"; the survey found no document stating the truncation. | open | |
+| 4 | `open_read` reports open success only | [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) reads one byte, "so the kernel observes the read", and discards the result. `read_fresh` is the action that records a read. | open | |
+| 5 | `create` opens an existing file without truncating it | [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c) uses `O_WRONLY \| O_CREAT` without `O_EXCL`; its comment calls this "semantics callers depend on". The [existing-file create](../tests/suites/witness_contract/README.md#create-on-an-existing-file) case checks bytes and identity. | open | |
+| 6 | Exec attempts allocate after apply at PolicyWitness call sites | Since `63927cd`, `exec_resources_acquire` initializes spawn file actions and attributes inside the attempt. On Darwin these are opaque handles whose init functions allocate (verify against the SDK's libc before relying on this). `fail_from_errno` formats with `snprintf` and `strerror` after apply. The [Runner simplicity](ARCHITECTURE.md#principles-as-enforced-constraints) principle names request, evidence and token storage as preallocated; the inventory decides whether that sentence holds at its stated scope. | open | |
+| 7 | Worker source comments describe retired premises | The header calls reading the policy into a stack buffer "the LAST allocation attempt before sandbox_apply()", yet parameter creation and `sandbox_compile_string` (commented as allocating internally) follow it. The attempt section says "No allocations post-apply" per "R6". The comments cite R5 and R6, which nothing else in the tracked tree defines, and "the Swift worker". | open | |
+| 8 | Two documents will state the private-extension limit | ARCHITECTURE has it as a Known gap under its principles; WORKER.md will state it beside its inventory. Decide which document owns the paragraph and which links to it. | open | |
+| 9 | Release is not revocation | [check_extensions.py](../tests/suites/witness_contract/check_extensions.py) permits access after a successful release ("A successful release does not itself require access revocation"); nothing checks revocation. | open | |
+| 10 | Exec helpers can outlive the worker | ARCHITECTURE's Known gap covers descendants that leave the child's process group. Worker death during exec can leave helpers alive. This has row 8's ownership question, plus whether to accept it. | open | |
+| 11 | The worker's ambient resources are uninventoried | No source or control establishes the full set of descriptors, ports, threads and library mappings the worker holds at apply. Row 1 is the part PolicyWitness controls; this row is the rest. A stronger claim would need an independently observed launch inventory or targeted instrumentation with a stated observation boundary. | open | |
+
+## Passes
+
+Each pass ends with a commit of its work and an update to Status. A pass
+marked *stop* ends with a review with the user before the next pass starts.
+
+**Pass 1: inventory** (*stop*). Build the inventory. Recheck the seed rows
+against source. Take rows that source can decide to "awaiting adjudication",
+with a recommended disposition. Design a probe, with a control that could
+refute its hypothesis, only where source cannot decide a row and the answer
+would change the document. Write no prose. At the stop, the user reviews the
+inventory's scope and adjudicates the rows ready for it.
+
+**Pass 2: map.** Add destination support to the generator with its controls,
+as described below. Then add manifest nodes and edges from the inventory and
+render. Read the SVG at normal size as an assessment, not just a legibility
+check. Look for:
+
+- an edge that implies authority flowing where none does;
+- a resource drawn inside a role it only partly fits;
+- a node with no path to anything the experiment observes.
+
+Each such reading becomes a row. A matching SVG stamp does not establish
+legibility.
+
+**Pass 3: prose** (*stop*). Draft from the section briefs against the map,
+under the scope rule. Every hard sentence becomes a row that keeps the
+sentence as it was written. At the stop, the user reviews the draft with the
+register.
+
+**Pass 4: changes.** Implement the adjudicated rows as described under
+"Changes a row authorizes", re-prove each in the document and regenerate. This
+pass recurs after any later stop that adjudicates new rows.
+
+**Pass 5: challenge.** Read in both directions:
+
+- from each material claim to its implementation, assertions and observations;
+- along the worker from spawn to exit, looking for operations, descriptors,
+  branches and failure paths the account omits.
+
+Challenge universal words: "every", "only", "before", "after apply", "fixed",
+"fresh". Counterexamples go back to the register, not to the editor.
+
+**Pass 6: plan-blind audit** (*stop*). A fresh agent that has not seen this
+plan reads WORKER.md, the map and the cited sources. It reports claims it
+cannot support and omissions it finds. Commit the audit prompt as its own file
+so the auditor sees a clean tree. Keep the report under `.tmp/audits/`, so
+that its numbers do not trip the prose baseline. Findings enter the register
+for the user to adjudicate, and pass 4 follows.
+
+**Closeout.**
+
+- Complete the integration work.
+- Move the register's substance into a record under `records/`, linked only
+  from this plan.
+- Delete this plan.
+
+The document is ready to publish when every material claim has a supported
+account or an accepted limitation, each implemented fix has its validation,
+and no open row could change what the document says.
 
 ## Proposed document structure
 
-These sections establish the argument. The writer may improve heading wording
-and paragraph balance without reopening the scope or evidence decisions.
+The writer may change heading wording and paragraph balance. A finding that
+the structure itself misrepresents the worker is a register row.
 
 ### 1. The experimental question
 
-Introduce the tension between surviving the specimen and remaining exposed to
-what it tests. Establish the host/worker split briefly: the worker applies the
-policy and conducts attempts; the unsandboxed host arranges queries, collects
+Introduce the tension between surviving the specimen and staying exposed to
+what it tests. Establish the host/worker split briefly. The worker applies the
+policy and conducts attempts. The unsandboxed host arranges queries, collects
 publications and replies. Explain why opening a target beforehand asks a
-different question from opening it under the specimen policy.
+different question from opening it under the specimen policy. Place the tour
+beside the run and build tours as an account of the instrument, not a
+normative contract.
 
-Locate this tour beside the run and build tours. It is an explanatory account
-of the instrument, not another normative contract or a proof of the macOS
-sandbox's completeness.
+### 2. What the worker holds
 
-### 2. What the worker brings with it
+The map and the generated inventory tables go here. Prose explains each role
+through its principal examples and names the resources that fit no role.
 
-Place the capability map here, followed by a compact inventory using these roles.
-Explain purpose and experimental consequence instead of enumerating ABI offsets.
-
-| Group | Material to account for | Required qualification |
-| --- | --- | --- |
-| Prepared reporting and coordination | Host-created, zeroed/pre-touched evidence mapping; worker mapping before apply; fixed request, slot, phase, diagnostic and optional capture storage; release/acknowledgement words and exit request. | This is an intentionally available reporting resource. Pre-touching does not establish pinned memory or universal survival. Publication and cleanup remain separate facts. |
-| Policy and setup inputs | Policy pipe, expected/read byte counts, parameter snapshot, native compilation, optional compiler-object capture, pre-apply ready pipe, timebase/allowance setup and SIGPIPE handling. | Readiness is a pre-apply hint. Compilation and imports are policy preparation, not target-access observations. The receipt is compiler output before apply, not kernel policy readback. |
-| Starting authority and context | Selected worker binary's signing entitlements and ordinary process context; supplied policy bytes, including explicit controller-resolved augments. | Entitlements and augments affect the experiment. The worker's environment is unrecorded. Its launch does not have the descriptor and environment isolation contract provided for an exec child. |
-| Explicit extension authority | Ordinary-authority issuer, host target preparation, separate transient token mapping, worker delivery validation, pre-resolved consume/release symbols and later lifecycle actions. | A token is an explicit intervention, not ordinary reporting storage. Issuance, delivery, consumption, release and later access are distinct. The issuer does not receive the selected worker's entitlement plist. |
-| Acquisitions under the policy | Fresh target opens; unlink/access; bootstrap-port/service lookup; sysctl calls; per-attempt exec pipes, spawn handles and child launch. | Describe acquisition at the actual attempt boundary. Not every setup call is sandbox-gated, and acquiring one resource does not establish all effects of a compound attempt. |
-
-Distinguish the backing mapping from its descriptor: results are published through
-mapped memory, not post-apply writes to a reporting pipe. The token mapping has
-different authority, ownership and erasure rules. Policy and readiness pipes must
-not appear as equivalent post-apply result paths.
-
-Describe deliberately supplied worker descriptors from the launch actions,
-without implying a complete inventory of ambient descriptors or Mach rights.
-Contrast this with the explicit descriptor and empty-environment contract for
-exec children, including exclusion of the worker's reporting descriptor.
+- Distinguish the backing mapping from its descriptor. Results are published
+  through mapped memory; the token mapping has different authority, ownership
+  and erasure rules.
+- State where the policy and ready descriptors stand after apply, as row 2's
+  disposition decides, without presenting them as result paths.
+- Contrast the worker's launch with the explicit descriptor and
+  empty-environment contract for exec children, which excludes the worker's
+  reporting descriptor. Row 1's disposition decides how.
 
 ### 3. What can become an observation
 
 Explain the operational knowledge the worker needs: attempt kinds and targets,
 bounded arguments, phase partitions and ordinals, time allowances, extension
-handle state, native returns and publication state. It compiles through libsandbox;
-it is not a policy interpreter deciding what should happen.
+handle state, native returns and publication state. It compiles through
+libsandbox; it is not a policy interpreter deciding what should happen. Build
+the section on three distinctions:
 
-Build this section around three distinctions:
-
-1. **A native call and a published result.** Progress is a latest atomic milestone,
-   not a complete trace. A pre-call marker establishes reaching that boundary;
-   immutable payload becomes readable only through publication. Use the existing
-   create-then-kill-before-publication control: the independently observed file
-   exists while the reply correctly withholds the completed result. Explain why
-   reading partially written payload would be wrong.
-2. **An attempted operation and the effect recorded.** Contrast `open_read` with
-   `read_fresh`: the former attempts a byte read but ignores its result and reports
-   open success; the latter retains separate open/stat/read/close observations,
-   descriptor identity and a bounded content prefix. Mention that `open_write`
-   ignores write/close returns, `create` can open an existing file without
-   truncation, and a child's nonzero exit does not negate successful spawning.
-   Link to the action reference for the complete catalogue.
-3. **Firsthand evidence and external observations.** Predictions originate in the
-   validator; disposition and comparison assembly belong to the host; later path
-   enrichment is a host observation; logs and dossier assembly are outside the
-   worker. Neither predictions nor logs become the worker's explanation of a
-   failure. A permission-shaped result is distinct from a sandbox-cause claim.
+1. **A native call and a published result.** Progress is a latest atomic
+   milestone, not a trace. A pre-call marker establishes reaching that
+   boundary, while immutable payload becomes readable only through
+   publication. Use the create-then-kill-before-publication control: the
+   independently observed file exists while the reply withholds the completed
+   result. Explain why reading partially written payload would be wrong.
+2. **An attempted operation and the effect recorded.** Contrast `open_read`
+   with `read_fresh`, then cover `open_write`, `create`, and an exec child's
+   nonzero exit after successful spawning. Rows 3 to 5 settle the wording.
+   Link to the action reference for the full catalogue.
+3. **Firsthand evidence and external observations.** Predictions originate in
+   the validator, and disposition and comparison assembly belong to the host.
+   Later path enrichment is a host observation; logs and dossier assembly are
+   outside the worker. Neither predictions nor logs become the worker's
+   explanation of a failure.
 
 Link to the existing ownership and comparison contracts rather than copying
-their field tables. Explain that validator queries use no-report mode, eligible
-`query_first` records establish order rather than a snapshot, and unchanged path
-spelling does not establish unchanged object identity.
+their tables. Validator queries use no-report mode. Eligible `query_first`
+records establish order, not a snapshot. An unchanged path spelling does not
+establish an unchanged object.
 
 ### 4. Changes that would change the experiment
 
-Use short design-review cases. Identify the tempting change, the question it
-would actually answer, the current constraint and its evidence. Do not present
-hypothetical changes as discovered bugs.
+Short design-review cases. Each names the tempting change, the question it
+would answer instead, and the current behavior. The current-behavior column is
+a set of claims for pass 5 to confirm, each with its evidence; one that does
+not hold is a row. Do not present hypothetical changes as discovered bugs.
 
-| Improvement to examine | Experimental consequence and current response |
-| --- | --- |
-| Open a target before apply, or retain its descriptor across extension phases. | Observes use of previously acquired authority rather than fresh acquisition under current conditions. Fresh reads open and close within each action. |
-| Prepare all exec pipes/handles before apply for reliability. | Moves attempt setup outside the specimen and can hide setup restrictions or exhaustion. Current setup is per attempt after apply; descriptor-ceiling and bare-deny controls test different aspects. They do not prove future macOS versions leave setup ungated. |
-| Warm up an extension by consuming before apply, or hide tokens in reporting state. | Introduces authority before the declared intervention. Current code resolves symbols without calling consume/release, uses a separate channel and publishes lifecycle results at requested actions. |
-| Retry with a changed path, extra authority or friendlier policy; reuse a sandboxed worker for a new specimen. | Substitutes changed conditions for the submitted experiment. Use a separate specimen or explicit action to investigate those conditions. Do not claim there are no retries: interrupted I/O and process-observation loops retry within their protocols. |
-| Add `exec_baseline` automatically to make an experiment run. | Changes the tested policy; its broad file-read allowance can override the denial under investigation. Augmentation is explicit and accounted for in resolved source. |
-| Move interpretation/reporting into the sandboxed process, or treat success/missing output as self-explanatory. | Makes replies depend on specimen-controlled communication or imports unsupported conclusions. Retain external assembly and distinguish missing publication from a missing effect. |
+| Tempting change | Question it would answer instead | Current behavior to confirm |
+| --- | --- | --- |
+| Open a target before apply, or keep its descriptor across extension phases. | Use of previously acquired authority rather than fresh acquisition under current conditions. | Fresh reads open and close within each action. |
+| Prepare all exec pipes and handles before apply, for reliability. | Moves attempt setup outside the specimen; can hide setup restrictions or exhaustion. | Setup happens per attempt, after apply; descriptor-ceiling and bare-deny controls test different aspects. |
+| Warm up an extension by consuming before apply, or hide tokens in reporting state. | Introduces authority before the declared intervention. | Symbols are resolved without calling consume or release; a separate channel carries the token; lifecycle results are published at the requested actions. |
+| Retry with a changed path, extra authority or a friendlier policy; reuse a sandboxed worker for a new specimen. | Substitutes changed conditions for the submitted experiment. | No such retry exists; interrupted I/O and process-observation loops do retry within their protocols. |
+| Add `exec_baseline` automatically so an experiment runs. | Changes the tested policy; its broad file-read allowance can override the denial under investigation. | Augmentation is explicit and accounted for in the resolved source. |
+| Move interpretation or reporting into the sandboxed process, or treat success or missing output as self-explanatory. | Makes replies depend on specimen-controlled communication, or imports unsupported conclusions. | Assembly is external, and missing publication is distinguished from a missing effect. |
 
-Explain the analogous ordering risk briefly: removing the hold until collection
-closure would let worker effects change what supposedly prior queries see.
-Even the intact hold does not freeze external actors or prevent earlier actions
-within a phase from changing conditions for later actions.
+Explain the ordering risk briefly. Removing the hold until collection closes
+would let worker effects change what supposedly prior queries see. The intact
+hold does not freeze external actors, and it does not stop earlier actions
+within a phase from changing conditions for later ones.
 
 ### 5. Where the instrument stops
 
-Keep qualifications beside the promises they limit. Explain how a contributor
-should assess a new capability: identify its authority, acquisition boundary,
-native observation, publication mechanism and an independent control that could
-falsify the claim. This is explanatory guidance; working rules stay in AGENTS files.
+Explain how a contributor assesses a new capability. Identify its authority,
+its acquisition point, its native observation and publication mechanism, and
+an independent control that could falsify the claim. Working rules stay in
+AGENTS files.
 
-Cover these limits without converting them into repair tasks:
+Limits sit beside the promises they limit. A Known gap paragraph comes only
+from a row adjudicated as an accepted limitation. Intentional semantic limits
+are explained as behavior rather than labeled gaps. The document ends with
+**Known gaps**, indexing those paragraphs in document order.
 
-- PW-owned preallocated buffers do not describe private libraries' allocation or
-  retained state. Erasure observations concern PW-owned storage; native release
-  success does not establish access revocation.
-- Query ordering, prepared metadata and later descriptor identity do not establish
-  a stable world. Consume/release earlier in the same phase can change authority
-  after that phase's query collection.
-- Deadlines govern specific waits and observation loops, not the entire lifecycle.
-  Blocking operations can outlast allowances. Termination requests, EOF and leader
-  exit do not establish descendant cleanup. Worker death during exec can leave
-  helpers alive, and descendants can leave the child's process group.
-- Source identity, compiled-layout checks and signed provenance answer different
-  questions. None proves runtime correctness or authenticates shared-memory
-  observations against an adversarial peer. This tour is not a security proof.
+## The capability map
 
-Consider this as you think about limits: even though this plan has very guarded 
-language, that exists to help us avoid overclaiming. The guardedness does not 
-need to be reproduced in the WORKER document itself, which should be guarded 
-by only making positive claims about what it is responsible for and allowing the 
-responsible reader (a contributor who might be superindending their own fork!)
-to draw their own conclusions as to what PolicyWitness is not.  
+Add a graph to [architecture.json](architecture.json), routed to WORKER.md and
+rendered as `docs/worker-capabilities.dot` and `docs/worker-capabilities.svg`.
+The map answers "what kind of resource or evidence is this, and which boundary
+does it cross?" It is not a timeline, a sequence diagram or a copy of the
+process topology.
 
-End with **Known gaps**, indexing only paragraphs introduced as “Known gap” beside
-their owning promises, in document order. Intentional semantic limits need not
-all be called implementation gaps. Use that label for incomplete guarantees,
-such as unobserved private state, unrecorded worker environment and incomplete
-descendant containment.
+- One node per inventory resource. Merge entries only where the inventory
+  shows them identical in every column.
+- The node facts are the inventory columns. The node's first source cites the
+  acquisition call site, so the citation sits next to the claim it most needs
+  to support.
+- Clusters for the three roles and external evidence, labeled in text as well
+  as color. The generator allows a node in at most one cluster and permits
+  unclustered nodes. A resource with two roles or none stays outside the
+  clusters, and the prose names it.
+- Edge kinds by role (prepares, supplies authority, exercises, publishes,
+  observes, joins), added to the manifest's shared styles. Edge ids use a
+  prefix no other graph uses, such as `W`.
+- Draw evidence and token mappings as separate nodes. Make the application
+  boundary legible without implying it erases preexisting resources.
+- Edges among external evidence join collected evidence. None implies a
+  prediction or explanation sent into an attempt.
+- Include an accessible description in the document. The caption may promise
+  that citations resolve and checks are defined, not that they prove the
+  behavior. Use limit placeholders for durations and sizes.
+
+The generator currently admits one destination:
+[`load_manifest`](generate_architecture.py) requires an exact set of top-level
+keys under schema 2, and `SPAN_DOCUMENTS` names only ARCHITECTURE.md. The
+change is bounded:
+
+1. Add an optional per-graph document destination, defaulting to the
+   top-level one, and advance the manifest schema. This is not a wire-version
+   change. Register the destinations, and keep strict rejection of unknown
+   fields, escaping paths and duplicate outputs.
+2. Route the new graph to WORKER.md, leaving the existing figures in
+   ARCHITECTURE.md. Update rendering, SVG links and tooltips, inventories,
+   self-citation exclusions and check/write paths for each destination.
+   Validate every document and finish rendering before writing any output.
+3. Register WORKER.md for architecture spans. ARCHITECTURE's sentence saying
+   how many figures it generates renders the `architecture.graphs` span, which
+   counts every manifest graph; revise it to count the figures embedded there,
+   using per-graph spans where prose needs counts. Register WORKER.md with the
+   limits span owner only if a value is essential; prefer links to limits.
+4. Update [architecture controls](../tests/suites/source_drift/architecture.py)
+   and [generator ownership controls](../tests/suites/source_drift/generators.py).
+   Add passing and rejected controls for:
+   - routing;
+   - stale regions or figures in either document;
+   - invalid destinations;
+   - duplicate ownership;
+   - broken markers in the second document;
+   - a render failure that leaves both documents and all figures untouched.
+
+   Keep idempotence, citation-definition and no-self-citation checks.
+
+ARCHITECTURE's document graph gains the new document and its edges.
 
 ## Supporting evidence
 
-Use these anchors for claim-to-evidence review. Inspect assertions when selecting
-citations: source location, test definition, controlled interpretation and live
-observation establish different things.
+Use these anchors when reviewing claims against evidence. Source location,
+test definition, controlled interpretation and live observation establish
+different things.
 
 | Claim area | Implementation and normative anchors | Controls and their limits |
 | --- | --- | --- |
@@ -208,117 +439,35 @@ observation establish different things.
 | Starting authority/policy | [`enforce_required_entitlements`](../controller/src/runner_select.rs), [augment implementation](../controller/src/augments.rs); [BYOXPC](PolicyWitness.md#external-runners-byoxpc) and [augment limits](../runner/augments/README.md#exec_baseline-composition-limits). | [Selection controls](../controller/src/runner_select.rs), [BYOXPC suite](../tests/suites/runner_byoxpc/README.md), [augment unit tests](../runner/Tests/PWRunnerCoreTests/AugmentTests.swift). Entitlement read-back is not an inventory of every source of authority. |
 | Compiler receipt | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h), [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift); [receipt contract](PolicyWitness.md#compiled-object-receipt-opt-in). | [Capture controls](../runner/Tests/PWRunnerCoreTests/CompiledProfileCaptureTests.swift) and [dossier witness](../tests/suites/witness_contract/README.md#specimen-dossier). Compiler bytes, application publication and effective permissions remain distinct. |
 
-## Capability map and generator ownership
-
-Use a generated Graphviz SVG with a nearby generated source/check table, following
-the architecture figures. The map should answer “what kind of resource or evidence
-is this, and which boundary does it cross?” It should not be a timeline, sequence
-diagram or duplicate process topology.
-
-Use four visually distinct groups, with textual labels as well as color:
-
-- **Prepared apparatus:** reporting/coordination memory, policy/parameter inputs,
-  compiled object and clock setup. Distinguish optional pre-apply capture from
-  post-apply result publication.
-- **Authority supplied:** selected worker entitlements and resolved policy; a
-  separately drawn issuer/token path. Consumption is an action under the policy,
-  not an inevitable consequence of delivery.
-- **Actions under the policy:** fresh file acquisition, native lookup/sysctl,
-  exec setup/child and extension lifecycle. Group related actions where detail
-  would obscure the central distinction.
-- **External evidence:** validator predictions, host lifecycle/path observations,
-  controller/log evidence. Connections join collected evidence; they must not
-  imply predictions or explanations sent into attempts.
-
-Give every node and edge a stable ID. Label edges by role—prepares, supplies
-authority, exercises, publishes, observes or joins—rather than chronological
-numbers. Evidence and token mappings must be separate nodes. Make the application
-boundary legible without implying it erases preexisting resources. Keep labels
-compact and place qualifications in the adjacent table/prose. Include an
-accessible description in the document.
-
-**Chosen implementation:** extend the existing architecture manifest/generator
-to place this graph in `WORKER.md`. Do not introduce another generator or embed
-the full map in both tours. This retains the citation, rendering, stale-copy and
-build-gate machinery, but requires a bounded documentation-tool change because
-the current generator assumes one Markdown destination.
-
-1. Extend [architecture.json](architecture.json) and
-   [`load_manifest`](generate_architecture.py) with an optional per-graph document
-   destination, defaulting to the existing top-level destination. Advance the
-   architecture manifest schema for this shape; this is not a wire-version
-   change. Register the intended destinations and retain strict rejection of
-   unknown fields, escaping paths and duplicate outputs.
-2. Route the new graph to `docs/WORKER.md`, with generated files
-   `docs/worker-capabilities.dot` and `docs/worker-capabilities.svg`. Existing
-   figures stay in `ARCHITECTURE.md`. Update rendering, SVG links/tooltips,
-   inventories, self-citation exclusions and check/write paths to use each
-   destination. Validate all documents and finish rendering before publishing
-   any changed output.
-3. Register the document in architecture span ownership. Preserve global graph
-   count semantics; revise the architecture introduction so it no longer equates
-   all manifest graphs with figures embedded there. Use existing per-graph spans
-   if the new prose needs counts. Prefer links to limits over numerical copies;
-   register the document with the limits span owner if a value is essential.
-4. Update [architecture controls](../tests/suites/source_drift/architecture.py)
-   and [generator ownership controls](../tests/suites/source_drift/generators.py)
-   for multiple destinations. Add passing and rejected controls for routing,
-   stale regions/figures in either document, invalid destinations, duplicate
-   ownership, broken markers in the second document, and render failure leaving
-   both documents and all figures untouched. Retain idempotence, citation-definition
-   and no-self-citation checks.
-
-Every map element must cite an implementing source and a suitable test or rule
-using the manifest's citation forms. Review what each check establishes. The
-caption may promise that citations resolve and checks are defined; it must not
-say those facts prove the behavior. Use limit placeholders for numerical
-durations or sizes in manifest facts.
-
 ## Integration work
 
 | Existing owner | Relationship to the new tour |
 | --- | --- |
-| [Repository README](../README.md#documentation) | Add the worker tour beside architecture and build with its experimental-design purpose. |
-| [Architecture tour](ARCHITECTURE.md) | Retain temporal orchestration, topology, ordering and channel ownership. Link from the worker rationale/principles to the new account. Update the generated document graph for the new destination, document and checks. |
-| [Build tour](BUILD.md) and [signing reference](SIGNING.md) | Retain compilation, identity generation, signing and provenance. Link to them from starting authority; add a reciprocal worker link near native compilation if useful. |
-| [Runner reference](../runner/README.md) | Retain source map, lifecycle and test seams. Add a worker-tour link near the architecture link. |
-| [Wire contract](CONTRACT.md), [request grammar](REQUEST-GRAMMAR.md), [user guide](PolicyWitness.md), [limits](LIMITS.md), [evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) | Retain accepted inputs, fields, capacities and claims. Link to existing anchors; do not copy tables or create a new normative vocabulary. The standalone user guide need not gain this developer tour as a companion. |
+| [Repository README](../README.md#documentation) | Add the worker tour beside the architecture and build tours, with its experimental-design purpose. |
+| [Architecture tour](ARCHITECTURE.md) | Keeps temporal orchestration, topology, ordering and channel ownership. Link from the Runner simplicity principle to the new account. Rows 8 and 10 decide which document owns the private-extension and exec-descendant Known gaps. Update the document graph and the figure-count sentence. |
+| [Build tour](BUILD.md) and [signing reference](SIGNING.md) | Keep compilation, identity generation, signing and provenance. Link to them from starting authority; add a reciprocal link near native compilation if useful. |
+| [Runner reference](../runner/README.md) | Keeps the source map, lifecycle and test seams. Add a worker-tour link near the architecture link. |
+| [Wire contract](CONTRACT.md), [request grammar](REQUEST-GRAMMAR.md), [user guide](PolicyWitness.md), [limits](LIMITS.md), [evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) | Keep accepted inputs, fields, capacities and claims. Link to existing anchors rather than copying tables or creating a normative vocabulary. A row may correct one of them, as row 3 may for the guide. |
 
-Extend [`check_known_gap_index`](../tests/suites/source_drift/check.py) to include
-the new tour. Extend disposable-checkout controls in
-[check_planner.py](../tests/suites/source_drift/check_planner.py) and the architecture
+Extend [`check_known_gap_index`](../tests/suites/source_drift/check.py) to the
+new tour. Extend the disposable-checkout controls in
+[check_planner.py](../tests/suites/source_drift/check_planner.py) and the
 document graph's account of that rule. Update the
-[source-drift reference](../tests/suites/source_drift/README.md) for the destination,
-manifest schema and gap coverage. Existing catalog cases can own these controls;
-a new suite is unnecessary.
+[source-drift reference](../tests/suites/source_drift/README.md) for the
+destination, manifest schema and gap coverage. Existing catalog cases can own
+these controls.
 
-The prose/link scan already includes `docs/*.md`. Use backticked-symbol link
-labels for symbols and ordinary filename labels for file links. Do not add prose
-baseline exceptions for new unverified citations or copied constants. Edit
-generator inputs and authored regions, regenerate through their owners and review
-the diff; do not hand-edit generated tables, DOT or SVG. The existing architecture
-check in the build should cover the new outputs without changing the production
-build sequence.
+The prose and link scan already covers `docs/*.md`. Use backticked-symbol
+labels for symbol links and filename labels for file links. Do not add prose
+baseline exceptions for unverified citations or copied constants. Edit
+generator inputs and authored regions, then regenerate through their owners;
+never hand-edit generated tables, DOT or SVG.
 
-## Execution and verification
+## Verification
 
-Implement in this order:
-
-1. Recheck the source snapshot and evidence anchors. If production changed, update
-   affected claims and controls first. Establish the inventory and map's source/check
-   entries before drafting prose.
-2. Add the document skeleton and map destination support with its controls.
-   Generate the figure/tables and inspect the SVG at normal reading size for
-   legibility, grouping, edge direction and misleading authority/evidence flows.
-   A matching SVG stamp does not establish visual quality.
-3. Write the tour from the section briefs, incorporating the map and publication
-   counterexample. Add navigation and gap-check integration.
-4. Review each substantive claim against implementation, the owning contract and
-   cited assertions. Focus on open-only semantics, private allocation, worker
-   versus child inheritance, publication versus effect, and release versus revocation.
-5. Regenerate affected outputs, require a second generation to change nothing,
-   run generator check modes, then run the public documentation selection below
-   with a fresh output directory.
+Documentation passes (2, 3, 5 and the integration) regenerate affected
+outputs, require a second generation to change nothing, run the check modes,
+and run `source_drift` with fresh output:
 
 ```sh
 python3 docs/generate_architecture.py
@@ -329,55 +478,54 @@ python3 docs/generate_contract.py --check
 python3 docs/generate_worker_identity.py --check
 python3 docs/generate_limits.py --check
 tests/run.sh --suite source_drift --list
-PW_TEST_OUT_DIR=tests/out/runs/worker-documentation-REPLACE_WITH_UNIQUE_NAME \
+PW_TEST_OUT_DIR=tests/out/runs/worker-doc-REPLACE_WITH_PASS_AND_NAME \
   tests/run.sh --suite source_drift
 ```
 
-Replace the placeholder run name. If limits span registration or another
-generator's inputs changed, run that owning generator before its check too.
-Follow [test guidance](../tests/AGENTS.md#choose-and-run-verification) for equipment,
-locking and sandboxed compiler-discovery retries. Do not bypass a refusal or
-reuse unrelated evidence for a pass. Source drift checks generated ownership,
-links, citations, spans, baseline and build refusals; it does not establish
-runtime semantics.
+If another generator's inputs changed, run that generator before its check.
+`source_drift` checks generated ownership, links, citations, spans, baseline
+and build refusals. It does not establish runtime semantics.
 
-No live worker battery or signed rebuild is required merely to add this tour
-and its documentation machinery. If writing exposes a disputed runtime claim,
-narrow it to inspected evidence or run the exact existing case that can resolve
-it, against an applicable signed build with fresh retained output. Record the
-canonical ID, source/build applicability and actual result. A cited case is not
-a freshly executed case. Production changes belong in separate scope; changes
-to the wait, release store or query eligibility still require
-`witness_contract/order_barrier_mutations` under repository guidance.
+Pass 4 changes to worker or host source need what "Changes a row authorizes"
+lists: identity regeneration, a signed build, the row's reproduction and
+regression control, and the exact covering cases. Record each case's
+canonical ID, the source and build it applied to, and its actual result in the
+row's detail entry. A probe in pass 1 or 5 follows the same recording rule.
+Follow [test guidance](../tests/AGENTS.md#choose-and-run-verification) for
+equipment, locking and sandboxed-harness retries. Never bypass a refusal or
+reuse unrelated evidence for a pass.
 
-Acceptance requires:
+## Acceptance
 
-- The map and prose distinguish prepared reporting resources, supplied authority,
-  attempted acquisitions and external observations without reconstructing a timeline.
-- Design-review examples explain which experimental question would change, with
-  implementation/evidence anchors and qualifications.
+- The map and prose distinguish prepared reporting resources, supplied
+  authority, acquisitions under the policy and external observations without
+  reconstructing a timeline. Resources that fit no role are drawn and named.
+- The inventory is complete over PolicyWitness's call sites, as defined above,
+  and the manifest owns it.
+- Every material claim is supported, or is an adjudicated accepted limitation
+  written as a Known gap. No open row could change the account.
+- Every closed row has its before and after sentences, its adjudication and,
+  for a change, its reproduction, regression control and validation.
 - No sentence upgrades a native return, publication flag, hash, log candidate
   or path spelling beyond what its owning contract permits.
-- Figure and prose are readable; generated outputs are reproducible and owned;
-  links, citations, gap indexes and source-drift controls pass without new baseline
-  exceptions. Existing figure destinations and count meanings remain correct.
-- The diff contains the document and supporting documentation machinery, with
-  no production, ABI, wire-version or policy behavior change.
+- Generated outputs are reproducible and owned. Links, citations, gap indexes
+  and source-drift controls pass without new baseline exceptions. Existing
+  figure destinations and count meanings remain correct.
+- Documentation and its machinery land in documentation commits. Any
+  production change lands in its own adjudicated commit.
 
-## Remaining questions and decision boundaries
+## Outflow (provisional)
 
-No unresolved scope or structural decision blocks execution. Leave paragraph
-balance, final heading wording and exact diagram layout to the writer.
+Two things are outflow, not this plan: modularizing the generation machinery
+so the architecture, build and worker accounts share it, and migrating prose
+into semi-structured output locked to the app's characteristics.
 
-Two empirical questions remain outside the proposed guarantees: the complete
-ambient-resource inventory of the worker, and private extension routines'
-allocation/state behavior. Current sources and controls establish neither. Say
-so in the document. Stronger claims would require an independently observed
-worker launch inventory or targeted native instrumentation with a stated
-observation boundary; neither is a prerequisite for this account.
+As this plan stands, the first draft leaves the inventory in the manifest as
+per-resource facts with citations, and leaves the prose authored. It adds no
+rule tying the inventory to the worker's call sites. Such a rule would add a
+parser over the C worker and a baseline. Build it only if a pass shows the
+inventory drifting from source.
 
-If implementation and a normative contract disagree, stop strengthening that
-claim and identify the discrepancy. Resolve it through focused inspection or
-evidence before publication, or explicitly document the limitation. This plan
-authorizes an accurate account of the current instrument, not changes to make
-the instrument fit that account.
+The state the first draft must leave for a later migration agent is to be
+settled with the user before pass 2, and this section revised then. That
+decision may change how pass 2 shapes the manifest.
