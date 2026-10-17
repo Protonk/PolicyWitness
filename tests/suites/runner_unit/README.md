@@ -134,7 +134,12 @@ orchestration with the shipped validator, a phase-2 sample refusal and a
 phase-2 expiry that keep phase 1's chain and phase 2's open collection, a
 rejected exec sample that refuses phase 2 by provenance with independent
 confirmation that the killed child is gone, and an exec arithmetic refusal
-after which phase 2 releases and acts. Their encoded replies are replayed
+after which phase 2 releases and acts. Phase-2 injection uses a bounded fixture
+handshake with the validator-launch hook, exercised with prompt and delayed
+authorization; fixed sleeps do not establish collection order. Missing receipts
+and stale gates fail explicitly, and withholding authorization confirms fixture
+timeout and driver reap without a fabricated timing failure. Gate receipts are
+retained beside the replies. Both authorization schedules' encoded replies are replayed
 through Rust assembly, the Python consumer and the lifecycle oracle by the
 wrapper's `clock_readers` step. These replays are ignored in standalone Cargo
 runs because they require those fresh driver receipts; they are mandatory in

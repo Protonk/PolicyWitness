@@ -74,11 +74,73 @@ private func sleepProbe(_ id: String) -> PWRunnerProbeStep {
         attempt: PWRunnerAttempt(kind: "exec", action: "spawn", target: "/bin/sleep", args: ["5"]))
 }
 
+/// A test-owned handshake with the clock companion. The driver reaches phase-2
+/// collection before authorizing the injected sample. The receipt establishes
+/// that the fixture selected that sample; the final reply independently proves
+/// failure publication and absent acknowledgement/actions, even after release.
+private final class WorkerClockGate {
+    let directory: URL
+    private var events: [String] = []
+    private var ownsDirectory = false
+
+    init(_ suffix: String) throws {
+        directory = URL(fileURLWithPath: try clockCompanion(suffix) + ".gate")
+        // Refuse stale gates instead of allowing an earlier trigger to release.
+        guard Darwin.mkdir(directory.path, 0o700) == 0 else {
+            throw TestFailure(message: "cannot create fresh clock gate (errno=\(errno)): \(directory.path)")
+        }
+        ownsDirectory = true
+    }
+
+    deinit { if ownsDirectory { try? FileManager.default.removeItem(at: directory) } }
+
+    func has(_ marker: String) -> Bool {
+        FileManager.default.fileExists(atPath: directory.appendingPathComponent(marker).path)
+    }
+
+    func wait(_ marker: String, timeoutMs: UInt64 = 6_000) throws {
+        let deadline = DispatchTime.now().uptimeNanoseconds + timeoutMs * 1_000_000
+        while !has(marker) {
+            if DispatchTime.now().uptimeNanoseconds >= deadline {
+                events.append("timeout:\(marker)")
+                throw TestFailure(message: "clock fixture did not publish \(marker)")
+            }
+            usleep(1_000)
+        }
+        events.append("observed:\(marker)")
+    }
+
+    func releaseFromCollection(delayMs: UInt32) throws {
+        events.append("collection-entered")
+        try wait("ready")
+        try expectFalse(has("injected"), "the fixture injected before collection authorized it")
+        // Deliberate host descheduling stress, longer than the old 200 ms window.
+        // The marker handshake, not this delay, establishes the ordering.
+        if delayMs > 0 { usleep(delayMs * 1_000) }
+        try expectFalse(has("injected"), "the fixture injected while the host withheld its trigger")
+        try expectFalse(has("timed-out"), "fixture gate timed out before authorization")
+        try Data().write(to: directory.appendingPathComponent("collection-open"), options: .withoutOverwriting)
+        events.append("collection-authorized")
+        try wait("injected")
+        try expectFalse(has("timed-out"))
+    }
+
+    func retain(_ name: String) throws {
+        let receipt: [String: Any] = ["host_events": events,
+            "worker_ready": has("ready"), "collection_authorized": has("collection-open"),
+            "sample_injected": has("injected"), "fixture_timed_out": has("timed-out")]
+        let bytes = try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+        try bytes.write(to: directory.deletingLastPathComponent().appendingPathComponent("worker-clock-\(name)-gate.json"))
+    }
+}
+
 /// Full production orchestration with a companion worker and the shipped
-/// validator. `collectionDelayMs` holds the second phase's validator launch,
-/// so a worker refusal or expiry occurs while that collection is open.
-private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, collectionDelayMs: UInt32 = 0,
+/// validator. A non-nil gate delay enables explicit phase-2 synchronization;
+/// zero exercises prompt authorization and a positive value stresses a late host.
+private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, gateDelayMs: UInt32? = nil,
                          name: String) throws -> PWRunnerRunResult {
+    let gate = try gateDelayMs.map { _ in try WorkerClockGate(suffix) }
+    var gateFailure: Error?
     var launches = 0
     var reply = CWorkerOrchestrator.run(parsed: PWRunnerRunSpec(specimen_id: name,
         policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
@@ -88,9 +150,17 @@ private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, collectionD
         validatorExecutablePath: appEquipment("sb_api_validator"),
         validatorSpawn: { pid, path, actions, argv in
             launches += 1
-            if launches == 2 && collectionDelayMs > 0 { usleep(collectionDelayMs * 1_000) }
+            if launches == 2, let gate {
+                do { try gate.releaseFromCollection(delayMs: gateDelayMs ?? 0) }
+                catch { gateFailure = error; return EIO }
+            }
             return nativeValidatorSpawn(pid, path, actions, argv)
         })
+    // The driver still owns worker cleanup when a handshake fails. Only throw
+    // after orchestration has returned; retain failed coordination receipts too.
+    try gate?.retain(name)
+    if let gateFailure { throw gateFailure }
+    if gate != nil { try expectEqual(launches, 2, "phase-2 collection was not reached") }
     // The service adds host path diagnostics after orchestration.
     reply.steps = enrichPathDiagnostics(steps: reply.steps)
     let bytes = try pwRunnerEncodeJSON(reply)
@@ -201,30 +271,36 @@ func runWorkerClockTests(_ tk: TestKit) {
         }
     }
     tk.group("worker timing faults across phases: production orchestration and shipped validator") {
-        tk.run("phase 2's own backwards sample refuses after phase 1 completes and keeps its prediction") {
-            let reply = try clockPhases(".clock-phase2", first: accessProbe("first"), collectionDelayMs: 400, name: "phase2-own-sample")
-            let failure = reply.runner_subprocess?.worker_evidence?.failure
-            try expectEqual(reply.normalized_outcome, NormalizedOutcome.runnerFailed)
-            try expectEqual(failure?.operation, 11); try expectEqual(failure?.code, 14)
-            try expectEqual(failure?.detail, 3); try expectEqual(failure?.index, 1)
-            try expectNil(failure?.native_result); try expectNil(failure?.errno)
-            try expectContains(reply.runner_subprocess?.worker_evidence?.diagnostic.text ?? "", "proceed start")
-            try expectContains(reply.error ?? "", "local timing refusal reason=backwards_counter")
-            // Phase 1's chain, prediction and native result are untouched.
-            try expectEqual(reply.phases[0].ordering?.chainEstablished, true)
-            try expectEqual(reply.steps[0].attempt.result_source, "worker")
-            try expectEqual(reply.steps[0].attempt.rc, 0)
-            try expectEqual(reply.steps[0].comparison?.order, "query_first")
-            try expectSecondPhaseUnreleased(reply, collected: true)
-        }
-        tk.run("phase 2 expiry from a valid forward jump retains its open collection") {
-            let reply = try clockPhases(".clock-expire2", first: accessProbe("first"), collectionDelayMs: 600, name: "phase2-expiry")
-            let failure = reply.runner_subprocess?.worker_evidence?.failure
-            try expectEqual(failure?.operation, 11); try expectEqual(failure?.code, 8)
-            try expectEqual(failure?.detail, 60_000); try expectEqual(failure?.index, 1)
-            try expectContains(reply.error ?? "", "budget=60000 ms")
-            try expectEqual(reply.steps[0].comparison?.order, "query_first")
-            try expectSecondPhaseUnreleased(reply, collected: true)
+        for delay in [UInt32(0), 350] {
+            let schedule = delay == 0 ? "prompt host" : "delayed host"
+            let suffix = delay == 0 ? "" : "-delayed-host"
+            tk.run("phase 2's own backwards sample keeps its prediction (\(schedule))") {
+                let reply = try clockPhases(".clock-phase2", first: accessProbe("first"), gateDelayMs: delay,
+                                            name: "phase2-own-sample" + suffix)
+                let failure = reply.runner_subprocess?.worker_evidence?.failure
+                try expectEqual(reply.normalized_outcome, NormalizedOutcome.runnerFailed)
+                try expectEqual(failure?.operation, 11); try expectEqual(failure?.code, 14)
+                try expectEqual(failure?.detail, 3); try expectEqual(failure?.index, 1)
+                try expectNil(failure?.native_result); try expectNil(failure?.errno)
+                try expectContains(reply.runner_subprocess?.worker_evidence?.diagnostic.text ?? "", "proceed start")
+                try expectContains(reply.error ?? "", "local timing refusal reason=backwards_counter")
+                // Phase 1's chain, prediction and native result are untouched.
+                try expectEqual(reply.phases[0].ordering?.chainEstablished, true)
+                try expectEqual(reply.steps[0].attempt.result_source, "worker")
+                try expectEqual(reply.steps[0].attempt.rc, 0)
+                try expectEqual(reply.steps[0].comparison?.order, "query_first")
+                try expectSecondPhaseUnreleased(reply, collected: true)
+            }
+            tk.run("phase 2 expiry retains its open collection (\(schedule))") {
+                let reply = try clockPhases(".clock-expire2", first: accessProbe("first"), gateDelayMs: delay,
+                                            name: "phase2-expiry" + suffix)
+                let failure = reply.runner_subprocess?.worker_evidence?.failure
+                try expectEqual(failure?.operation, 11); try expectEqual(failure?.code, 8)
+                try expectEqual(failure?.detail, 60_000); try expectEqual(failure?.index, 1)
+                try expectContains(reply.error ?? "", "budget=60000 ms")
+                try expectEqual(reply.steps[0].comparison?.order, "query_first")
+                try expectSecondPhaseUnreleased(reply, collected: true)
+            }
         }
         tk.run("a rejected exec sample in phase 1 refuses phase 2 by provenance, without a new sample") {
             let reply = try clockPhases(".clock-sticky", first: sleepProbe("first"), name: "sticky-provenance")
@@ -261,6 +337,57 @@ func runWorkerClockTests(_ tk: TestKit) {
             try expectEqual(reply.steps[1].attempt.result_source, "worker")
             try expectEqual(reply.steps[1].attempt.rc, 0)
             try expectEqual(reply.steps[1].comparison?.order, "query_first")
+        }
+    }
+    tk.group("clock fixture handshake failure and cleanup") {
+        tk.run("missing fixture receipt fails within the host's gate allowance") {
+            let gate = try WorkerClockGate(".clock-phase2")
+            var refused = false
+            do { try gate.wait("ready", timeoutMs: 20) }
+            catch is TestFailure { refused = true }
+            try gate.retain("missing-receipt")
+            try expectTrue(refused)
+            try expectFalse(gate.has("collection-open") || gate.has("injected"))
+        }
+        tk.run("a stale gate is refused and its existing trigger is preserved") {
+            let owned = try WorkerClockGate(".clock-phase2")
+            let trigger = owned.directory.appendingPathComponent("collection-open")
+            try Data("stale trigger".utf8).write(to: trigger)
+            var refused = false
+            do { _ = try WorkerClockGate(".clock-phase2") }
+            catch is TestFailure { refused = true }
+            try expectTrue(refused)
+            try expectEqual(try String(contentsOf: trigger), "stale trigger")
+        }
+        tk.run("withheld authorization times out the fixture and the driver reaps it") {
+            let gate = try WorkerClockGate(".clock-phase2")
+            var gateFailure: Error?
+            var collections: [Int] = []
+            let input = CWorkerInput(workerExecutablePath: try clockCompanion(".clock-phase2"),
+                policy: "(version 1)(allow default)",
+                slots: [CWorkerSlotInput(stepId: "first", attemptKind: .sysctlRead, target: "kern.ostype"),
+                        CWorkerSlotInput(stepId: "later", attemptKind: .sysctlRead, target: "kern.ostype")],
+                phases: [CWorkerPhaseInput(firstSlot: 0, endSlot: 1), CWorkerPhaseInput(firstSlot: 1, endSlot: 2)],
+                sentinelTimeoutMs: 1_000, exitGraceMs: 1_000)
+            let result = runCWorker(input, phaseBoundary: { _, index in
+                collections.append(index)
+                if index == 1 {
+                    do { try gate.wait("ready"); try gate.wait("timed-out") }
+                    catch { gateFailure = error }
+                }
+            })
+            try gate.retain("withheld-authorization")
+            if let gateFailure { throw gateFailure }
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "fixture driver failed: \(result)")
+            }
+            try expectEqual(collections, [0, 1])
+            try expectEqual(out.reaped, true)
+            try expectTrue(out.applied && out.phases[0].completed)
+            try expectEqual(out.exitCode, 71); try expectNil(out.termSignal)
+            try expectFalse(out.done || out.phases[1].acknowledged || out.slots[1].completed)
+            try expectNil(out.workerEvidence?.failure, "fixture timeout must not fabricate a production timing failure")
+            try expectFalse(gate.has("collection-open") || gate.has("injected"))
         }
     }
 }

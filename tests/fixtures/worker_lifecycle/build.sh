@@ -35,9 +35,9 @@ for suffix in clock-failure clock-failure-later clock-phase2 clock-sticky clock-
   case "$suffix" in
     clock-failure) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_START -DPW_CLOCK_BACKWARDS_READ=1) ;;
     clock-failure-later) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_OBSERVE -DPW_CLOCK_BACKWARDS_READ=1) ;;
-    clock-phase2) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_START -DPW_CLOCK_BACKWARDS_READ=2 -DPW_CLOCK_FAILURE_DELAY_MS=200) ;;
+    clock-phase2) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_PROCEED_START -DPW_CLOCK_BACKWARDS_READ=2 -DPW_CLOCK_PHASE_GATE) ;;
     clock-sticky) flags=(-DPW_CLOCK_BACKWARDS_STAGE=PW_CLOCK_EXEC_OBSERVE -DPW_CLOCK_BACKWARDS_READ=1) ;;
-    clock-expire2) flags=(-DPW_CLOCK_EXPIRE_SECOND_PHASE) ;;
+    clock-expire2) flags=(-DPW_CLOCK_EXPIRE_SECOND_PHASE -DPW_CLOCK_PHASE_GATE) ;;
     clock-arith) flags=(-DPW_CLOCK_EXEC_NEAR_CUTOFF) ;;
     clock-setup-failure) flags=(-DPW_CLOCK_SETUP_FAILURE) ;;
     clock-zero-factor) flags=(-DPW_CLOCK_ZERO_FACTOR) ;;

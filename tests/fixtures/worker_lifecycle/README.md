@@ -77,15 +77,31 @@ substituted; every seam leaves a stale `EPERM`. `.clock-setup-failure`,
 `.clock-zero-factor` and `.clock-unrepresentable` change only the timebase
 query and refuse clock setup before the policy read. `.clock-failure` and
 `.clock-failure-later` return a value below the origin at the first proceed
-start or observation sample. `.clock-phase2` does so at phase 2's own start
-after holding it 200 ms, so the host's collection of that phase begins first.
-`.clock-expire2` jumps 2^62 ticks forward 200 ms into phase 2's wait, a valid
-expiry. `.clock-sticky` rejects the first exec observation sample.
+start or observation sample. `.clock-phase2` does so at phase 2's own start;
+`.clock-expire2` jumps 2^62 ticks forward at its first observation, a valid
+expiry. Both wait for explicit collection authorization as described below.
+`.clock-sticky` rejects the first exec observation sample.
 `.clock-arith` selects a 1/150000000 timebase and jumps the first exec
 observation to one millisecond before the default plan cutoff, so the child
 deadline overflows while the sample is valid. Jumps persist, keeping later
 samples ordered. These establish publication and interpretation of timing
 refusals, not native clock behavior.
+
+The two gated companions derive `<executable>.gate` from their executable path
+before entering production main. The Swift test creates that directory fresh;
+an existing directory is refused. At the selected phase-2 read, the companion
+creates `ready` and waits for `collection-open`, which only the second
+validator-launch hook creates. It acknowledges selection of the injected
+sample with `injected`; the production reply separately establishes failure
+publication and missing acknowledgement/actions. A late release remains valid
+test scheduling and cannot undo the selected invalid or expired sample.
+The fixture uses an independent native continuous clock to bound its gate wait
+to five seconds; expiry creates `timed-out` and exits 71 without fabricating
+a production timing failure. The host bounds each receipt wait to six seconds.
+Prompt and deliberately delayed authorization, a missing receipt, stale gates,
+and withheld authorization with confirmed reap are covered in `WorkerClockTests`.
+The tests retain `worker-clock-*-gate.json` receipts and remove their owned gate
+directories. These controls run under allow-default and add no production seam.
 
 Three standalone controls compile production worker code with a controlled
 timebase and counter and run in `runner_c_worker_harness`:

@@ -1387,7 +1387,9 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
         }
         for (name, outcome) in [
             ("phase2-own-sample", "runner_failed"),
+            ("phase2-own-sample-delayed-host", "runner_failed"),
             ("phase2-expiry", "runner_failed"),
+            ("phase2-expiry-delayed-host", "runner_failed"),
             ("sticky-provenance", "runner_failed"),
             ("arithmetic-local", "ok"),
         ] {
@@ -1433,8 +1435,8 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
                 assert_eq!(reply["sandboxed_after_apply"], false);
             } else {
                 match name.as_str() {
-                    "phase2-own-sample" => record(11, 14, 3),
-                    "phase2-expiry" => record(11, 8, 60_000),
+                    "phase2-own-sample" | "phase2-own-sample-delayed-host" => record(11, 14, 3),
+                    "phase2-expiry" | "phase2-expiry-delayed-host" => record(11, 8, 60_000),
                     "sticky-provenance" => record(11, 14, 6),
                     _ => assert!(failure.is_null(), "{name}"),
                 }
