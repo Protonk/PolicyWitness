@@ -69,8 +69,11 @@ give the reasons.
    choose to carry one anyway, record it in `contract.json` as that section
    describes. Update, through their
    owning generators where they have one:
-   - the user guide's external-runner section, saying that `already_ran` now
-     reaches a caller only after its deadline;
+   - the user guide's external-runner section, explaining that a qualifying
+     `already_ran` triggers re-acquisition within the existing deadline. The
+     last refusal is returned when that deadline expires. A refusal can also
+     reach the caller earlier if it does not meet the re-acquisition conditions
+     or if a process observation fails before retirement is established;
    - the controller README's run lifecycle and its run inventory, which gains
      process reads;
    - affected shape goldens.
