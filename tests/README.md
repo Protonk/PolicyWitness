@@ -172,7 +172,8 @@ After read-only planning, execution takes an OS-held advisory lock on
 `tests/.checkout.lock`, rechecks retention and output eligibility, and holds the
 lock through finalization. The file stays in place between operations; the held
 lock belongs to its inode. PID, start time and the acquisition nonce in the owner
-record identify the outermost owner; closing the last descriptor releases the
+record identify the outermost owner, and its socket identity binds the
+admission channel; closing the last descriptor releases the
 lock, while run records determine completion. Nothing unlocks explicitly,
 because an explicit unlock by one holder would also end a hold shared with a
 child that holds the same descriptor.
@@ -181,7 +182,11 @@ Acquisition, nested admission and protected launches belong to
 `tests/lib/checkout_lock.py`. An owner is a live process whose scope holds the
 lock: it took the lock without blocking, or the owner of an inherited claim on
 this checkout admitted it by handing over the held descriptor over a private
-channel created at launch. Environment values only locate a claim; a claim
+channel created at launch. Its socket identity must match the acquisition
+record and the kernel-reported channel peer PID must match
+the acquisition owner; nested scopes pass that original channel onward, so
+the original owner's exit ends admission even while descendants hold the
+lock. Environment values only locate a claim; a claim
 whose owner is gone, a stale, closed or foreign descriptor, a wrong nonce or
 another checkout's claim refuses, and admission never takes a free lock. The
 dispatcher holds its scope through execution and passes the descriptor to each

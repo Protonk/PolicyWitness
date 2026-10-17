@@ -8,6 +8,7 @@ The build-driving controls in the opt-in preflight cases establish the same
 refusals through the unchanged script.
 """
 import copy
+import errno
 from contextlib import contextmanager, ExitStack, redirect_stderr, redirect_stdout
 import fcntl
 import hashlib
@@ -18,6 +19,7 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -172,6 +174,7 @@ FAKE_OWNER = textwrap.dedent('''
     root, mode, client, result, release = sys.argv[2:7]
     fd, record = checkout_lock.acquire(root)
     server, end = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+    checkout_lock.bind_channel(fd, end)
     env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
     env.update(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(end.fileno()))
     subprocess.Popen([sys.executable, '-B', client, sys.argv[1], root, result, release], env=env, pass_fds=(end.fileno(),))
@@ -215,6 +218,145 @@ ADMISSION_CLIENT = textwrap.dedent('''
 
 
 class LockTests(unittest.TestCase):
+    def test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor(self):
+        # The impostor is a separate process. It knows the public record and
+        # opens the right inode, but never owned its locked open description.
+        impostor = self.script('impostor.py', textwrap.dedent('''
+            import json, os, socket, sys, threading
+            sys.path.insert(0, sys.argv[1])
+            import checkout_lock
+            root = sys.argv[2]
+            fd = os.open(root + '/tests/.checkout.lock', os.O_RDONLY)
+            record = checkout_lock.read_owner(fd)
+            server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+            def answer():
+                _, fds, _, _ = socket.recv_fds(server, 65536, 1)
+                with socket.socket(fileno=fds[0]) as reply:
+                    info = os.fstat(fd)
+                    message = dict(v=1, status='ok', nonce=record['nonce'], device=info.st_dev, inode=info.st_ino, requests=None)
+                    socket.send_fds(reply, [json.dumps(message).encode()], [fd])
+            threading.Thread(target=answer, daemon=True).start()
+            env = dict(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(client.fileno()))
+            try:
+                admission = checkout_lock.admit(root, env, timeout=1)
+                admission.close()
+                print('ADMITTED')
+            except checkout_lock.Refusal as exc:
+                print('REFUSED: ' + str(exc))
+        '''))
+        with checkout_lock.owned(self.root, env=clean_env()):
+            result = subprocess.run([PYTHON, '-B', str(impostor), LIB, str(self.root)], capture_output=True, text=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('REFUSED: the channel was not created by the acquisition owner', result.stdout)
+            self.assertFalse(lock_free(self.root))
+
+    def test_admission_send_is_bounded_when_the_channel_queue_is_full(self):
+        fd, record = checkout_lock.acquire(self.root)
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+        checkout_lock.bind_channel(fd, client)
+        try:
+            while True:
+                try:
+                    client.send(b'x' * 1024, socket.MSG_DONTWAIT)
+                except OSError as exc:
+                    self.assertIn(exc.errno, (errno.EAGAIN, errno.ENOBUFS))
+                    break
+            env = {CLAIM['root']: str(self.root), CLAIM['nonce']: record['nonce'], CLAIM['channel']: str(client.fileno())}
+            started = time.monotonic()
+            with self.assertRaises(checkout_lock.Refusal):
+                checkout_lock.admit(self.root, env, timeout=0.1)
+            self.assertLess(time.monotonic() - started, 2)
+            self.assertFalse(lock_free(self.root))
+        finally:
+            server.close()
+            client.close()
+            os.close(fd)
+
+    def test_nested_scope_cannot_admit_after_acquisition_owner_exits(self):
+        ready, proceed, result = (self.work / name for name in ('nested-ready', 'nested-proceed', 'nested-result'))
+        nested = self.script('nested.py', textwrap.dedent('''
+            import os, pathlib, sys, time
+            sys.path.insert(0, sys.argv[1])
+            import checkout_lock
+            root, ready, proceed, result = map(pathlib.Path, sys.argv[2:])
+            with checkout_lock.owned(root) as scope:
+                ready.write_text(str(os.getpid()))
+                deadline = time.monotonic() + 20
+                while not proceed.exists() and time.monotonic() < deadline:
+                    time.sleep(.05)
+                try:
+                    checkout_lock.admit(root, scope.child_env(), timeout=1).close()
+                    result.write_text('admitted')
+                except checkout_lock.Refusal:
+                    result.write_text('refused')
+        '''))
+        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', str(nested), LIB, str(self.root), str(ready), str(proceed), str(result)],
+                                 env=clean_env(), start_new_session=True)
+        try:
+            wait_for(ready.exists)
+            owner.kill()
+            owner.wait(timeout=5)
+            self.assertFalse(lock_free(self.root), 'the nested scope must still hold the old acquisition')
+            proceed.touch()
+            wait_for(result.exists)
+            self.assertEqual(result.read_text(), 'refused')
+            wait_for(lambda: lock_free(self.root))
+        finally:
+            proceed.touch()
+            if owner.poll() is None:
+                owner.kill()
+                owner.wait()
+
+    def test_another_socket_from_the_owner_process_is_not_the_acquisition_channel(self):
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
+            server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+            try:
+                env = dict(scope.child_env(), **{CLAIM['channel']: str(client.fileno())})
+                with self.assertRaisesRegex(checkout_lock.Refusal, 'does not belong to this acquisition'):
+                    checkout_lock.admit(self.root, env, timeout=.1)
+            finally:
+                server.close()
+                client.close()
+
+    def test_cancellation_bounds_a_command_and_descendant_that_ignore_signals(self):
+        # Shorten only the grace periods, so a broken supervisor fails promptly.
+        launcher = ('import sys; sys.path.insert(0, sys.argv.pop(1)); import checkout_lock; '
+                    'checkout_lock.GROUP_GRACE=.2; checkout_lock.KILL_GRACE=2; sys.exit(checkout_lock.main())')
+        stubborn = self.script('stubborn.py', textwrap.dedent('''
+            import json, os, signal, subprocess, sys, time
+            sys.path.insert(0, sys.argv[1])
+            import checkout_lock
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], pass_fds=checkout_lock.inherited_fds())
+            with open(sys.argv[2], 'w') as stream:
+                json.dump([os.getpid(), child.pid], stream)
+            time.sleep(30)
+        '''))
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            report = self.work / f'stubborn-{signum}.json'
+            owner = subprocess.Popen([PYTHON, '-B', '-c', launcher, LIB, '--root', str(self.root), '--',
+                                      PYTHON, '-B', str(stubborn), LIB, str(report)], env=clean_env(), start_new_session=True)
+            pids = []
+            try:
+                wait_for(report.exists)
+                wait_for(lambda: report.read_text().endswith(']'))
+                pids = json.loads(report.read_text())
+                self.assertFalse(lock_free(self.root))
+                os.kill(owner.pid, signum)
+                self.assertEqual(owner.wait(timeout=5), 128 + signum)
+                wait_for(lambda: all(not alive(pid) for pid in pids), timeout=5)
+                self.assertTrue(lock_free(self.root))
+            finally:
+                for pid in pids:
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                if owner.poll() is None:
+                    owner.kill()
+                    owner.wait()
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-lock-', dir='/private/tmp')
         self.addCleanup(directory.cleanup)
@@ -277,7 +419,7 @@ class LockTests(unittest.TestCase):
                                                        'is not an owner channel'),
                     'wrong nonce over the real channel': (dict(claim, **{CLAIM['nonce']: 'f' * 32}), scope.pass_fds(), None, 'another acquisition'),
                     'another worktree': (dict(claim, **{CLAIM['root']: str(other)}), scope.pass_fds(), None, 'another checkout'),
-                    'another worktree asked of this owner': (dict(claim, **{CLAIM['root']: str(other)}), scope.pass_fds(), other, 'another checkout'),
+                    'another worktree asked of this owner': (dict(claim, **{CLAIM['root']: str(other)}), scope.pass_fds(), other, 'does not belong to this acquisition'),
                     'malformed claim without a channel': ({CLAIM['fd']: str(scope.fd), CLAIM['root']: str(self.root), CLAIM['nonce']: scope.nonce},
                                                           (scope.fd,), None, 'not set'),
                 }
@@ -468,9 +610,28 @@ class LockTests(unittest.TestCase):
             with self.assertRaises(checkout_lock.Refusal):
                 with checkout_lock.owned(self.root, requests=snapshot, env=scope.child_env(clean_env())):
                     pass
+        large = checkout_lock.Requests(dict(expected, CPATH='x' * checkout_lock.REQUEST_LIMIT))
+        with checkout_lock.owned(self.root, requests=large, env=clean_env()) as scope:
+            with checkout_lock.admitted(self.root, scope.child_env()) as handed:
+                self.assertEqual(handed.requests.values, large.values, 'a multi-chunk reply lost request bytes')
+        with self.assertRaisesRegex(checkout_lock.Refusal, 'combined request snapshot'):
+            checkout_lock.Requests({name: 'x' * checkout_lock.REQUEST_LIMIT for name in checkout_lock.REQUEST_NAMES})
 
 
 class ProbeTests(unittest.TestCase):
+    def test_cleanup_has_one_deadline_even_when_the_group_cannot_be_reaped(self):
+        from unittest import mock
+        # Model an unobservable/unreaped group. Each observation consumes its
+        # whole allowance; resetting that allowance would exceed the contract.
+        def remains(process, pgid, timeout):
+            time.sleep(timeout)
+            return False
+        with mock.patch.object(prov, 'CLEANUP_TIMEOUT', .2), mock.patch.object(prov, 'TERM_GRACE', .05), \
+                mock.patch.object(prov, 'group_gone', side_effect=remains), mock.patch.object(prov.os, 'killpg'):
+            started = time.monotonic()
+            self.assertEqual(prov.terminate_group(mock.Mock(pid=123)), 'failed')
+            self.assertLess(time.monotonic() - started, .32)
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-probe-', dir='/private/tmp')
         self.addCleanup(directory.cleanup)
@@ -818,6 +979,19 @@ class FreshRemovalTests(unittest.TestCase):
 
 
 class OwnershipAndAdmissionTests(unittest.TestCase):
+    def test_refused_start_does_not_create_a_missing_target_directory(self):
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
+            status, _, err = self.start(scope.child_env(clean_env()))
+            self.assertEqual(status, 2, err)
+            self.assertIn('no preserved build requests', err)
+            self.assertFalse((self.root / 'controller/target').exists())
+        with checkout_lock.owned(self.root, requests=UNSET_REQUESTS, env=clean_env()) as scope:
+            (self.root / 'builddir').symlink_to(self.outside / 'builddir')
+            status, _, err = self.start(scope.child_env(clean_env()))
+            self.assertEqual(status, 2, err)
+            self.assertIn('is a symlink', err)
+            self.assertFalse((self.root / 'controller/target').exists())
+
     """Helpers refuse before any write without a live owner's handoff, a valid session or admitted paths."""
 
     def setUp(self):
@@ -1005,7 +1179,8 @@ class CargoJudgmentTests(unittest.TestCase):
                 (directory / f'bin-{name}.json').write_text(json.dumps(data))
         return dict(reason='compiler-artifact', package_id=f'path+file://{self.root}/controller#0.1.0',
                     manifest_path=str(self.root / 'controller/Cargo.toml'), target=dict(kind=['bin'], name=name),
-                    profile=dict(opt_level='3', debuginfo=0), features=[], filenames=[str(executable)], executable=str(executable), fresh=fresh)
+                    profile=dict(opt_level='3', debuginfo=0, debug_assertions=False, overflow_checks=False, test=False),
+                    features=[], filenames=[str(executable)], executable=str(executable), fresh=fresh)
 
     def judge(self, messages, require='0', bins=('policy-witness', 'sandbox-log-observer', 'sbpl-check')):
         path = self.target / 'pw-build-messages.jsonl'
@@ -1076,6 +1251,9 @@ class CargoJudgmentTests(unittest.TestCase):
             'string true': lambda m: dict(m, fresh='true'),
             'another executable': lambda m: dict(m, executable=str(self.release / 'elsewhere')),
             'no profile': lambda m: without(m, 'profile'),
+            'empty profile': lambda m: dict(m, profile={}),
+            'test profile': lambda m: dict(m, profile=dict(m['profile'], test=True)),
+            'profile flag string': lambda m: dict(m, profile=dict(m['profile'], debug_assertions='false')),
             'not a binary': lambda m: dict(m, target=dict(m['target'], kind=['lib'])),
         }
         for require in ('0', '1'):
@@ -1125,6 +1303,19 @@ class CargoJudgmentTests(unittest.TestCase):
 
 class CargoConfigurationTests(unittest.TestCase):
     """The resolver's reading of constructed configuration graphs; real Cargo is the oracle in the opt-in refusal controls."""
+
+    def test_failed_launcher_observations_never_fall_back_to_standalone_cargo(self):
+        from unittest import mock
+        with mock.patch.object(cargo_config.shutil, 'which', side_effect=lambda name, **kwargs: '/tools/' + name):
+            for kind in ('timeout', 'output_overflow', 'launch_failed'):
+                with self.subTest(kind=kind):
+                    probe = lambda *args, **kwargs: dict(status='failed', kind=kind)
+                    for env in ({}, dict(RUSTUP_TOOLCHAIN='stable')):
+                        with self.assertRaises(cargo_config.Unresolved):
+                            cargo_config.launcher(self.work, env, probe)
+        with mock.patch.object(cargo_config.shutil, 'which', side_effect=lambda name, **kwargs: '/tools/cargo' if name == 'cargo' else None):
+            with self.assertRaises(cargo_config.Unresolved):
+                cargo_config.launcher(self.work, {}, lambda *a, **k: None)
 
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-cargo-config-', dir='/private/tmp')
@@ -1549,6 +1740,16 @@ class RecordTests(unittest.TestCase):
             'sdkroot disagrees with the SDK': put('/other/SDK', 'configuration', 'sdkroot'),
             'request state unknown': put(dict(state='maybe'), 'configuration', 'requests', 'SDKROOT'),
             'request missing': drop('configuration', 'requests', 'CPATH'),
+            'set SDK request without value': put(dict(state='set'), 'configuration', 'requests', 'SDKROOT'),
+            'private request leaks its value': put(dict(state='set', value='/private/includes'), 'configuration', 'requests', 'CPATH'),
+            'SDK source contradicts request': put('SDKROOT named by the caller', 'toolchain', 'sdk', 'source'),
+            'empty stamp projection': put({}, 'configuration', 'toolchain_stamp', 'projection'),
+            'wrong replacement type': put('garbage', 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
+            'absent replacement observation': put(None, 'configuration', 'build_directories', 'fresh_mode', 'replacement'),
+            'fresh mode knob disagrees': put('0', 'configuration', 'knobs', 'PW_FRESH_BUILD'),
+            'fresh mode reused a target': lambda r: r['outputs'][0]['cargo'].__setitem__('fresh', True),
+            'Meson xpc is a string': put(dict(status='ok', values=dict(xpc='not-a-boolean')), 'configuration', 'meson_options'),
+            'empty Cargo profile': lambda r: r['outputs'][0]['cargo'].__setitem__('profile', {}),
             'an output field null': lambda r: r['outputs'][1].__setitem__('uuid', None),
             'an output tools list of strings': lambda r: r['outputs'][1].__setitem__('tools', ['ld']),
             'a Cargo judgment null': lambda r: next(o for o in r['outputs'] if 'cargo' in o)['cargo'].__setitem__('fresh', None),
@@ -1595,11 +1796,27 @@ class RecordTests(unittest.TestCase):
         data, controller = prov.read_zip_record(archive(record))
         self.assertEqual(json.loads(data), record)
         self.assertEqual(controller, hashlib.sha256((valid / prov.CONTROLLER).read_bytes()).hexdigest())
+        oversized = dict(record, padding='x' * prov.RECORD_LIMIT)
+        with self.assertRaisesRegex(ValueError, 'beyond .* bytes'):
+            prov.read_zip_record(archive(oversized, name='oversized.zip'))
+        (valid / prov.RECORD_PATH).write_text(json.dumps(oversized))
+        manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
+        self.assertIn('exceeds', prov.record_problems(valid, manifest)[0][2])
         broken = copy.deepcopy(record)
         broken['configuration']['deployment_target'] = None
         with self.assertRaises(ValueError) as refused:
             prov.read_zip_record(archive(broken, name='null.zip'))
         self.assertIn('invalid provenance record', str(refused.exception))
+        for label in ('load commands', 'signature facts'):
+            changed = copy.deepcopy(record)
+            output = changed['outputs'][1]
+            if label == 'load commands':
+                output['tools'] = [dict(tool='3', version='999.0')]
+            else:
+                output['signature']['adhoc'] = False
+            self.assertEqual(prov.record_shape_problems(changed), [])
+            with self.assertRaisesRegex(ValueError, label):
+                prov.read_zip_record(archive(changed, name=label + '.zip'))
         members = {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS}
         members['Contents/MacOS/sbpl-check'] += b'\0other bytes'
         with self.assertRaises(ValueError) as refused:
@@ -1626,7 +1843,7 @@ class RecordTests(unittest.TestCase):
         toolchain['sdk']['version']['line'] = record['toolchain']['sdk']['version']
         toolchain['sdk']['path']['line'] = '/fixture/SDK'
         judgment = next(o for o in record['outputs'] if 'cargo' in o)['cargo']
-        session = dict(knobs=dict(BUILD_XPC='1', PW_INSPECTION='1', PW_FRESH_BUILD='1'), toolchain=toolchain,
+        session = dict(knobs=dict(BUILD_XPC='1', PW_INSPECTION='1', PW_FRESH_BUILD='0'), toolchain=toolchain,
                        worker_identity=dict(status='ok', reported='0' * 64), stamp=dict(commit='0' * 40, describe='fixture', dirty=False,
                                                                                       version='0.0.0', build_number='0'),
                        requests={name: dict(state='unset') for name in ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
@@ -1666,6 +1883,29 @@ class RecordTests(unittest.TestCase):
         invoked = {i['command'].split()[1] for i in model['invocations'] if i['command'].startswith('tests/lib/build_provenance.py')}
         self.assertEqual(invoked, set(prov.SUBCOMMANDS) - {'inspect'})
         self.assertIn('inspect', prov.SUBCOMMANDS)
+
+    def test_opt_in_mutation_anchors_match_current_sources(self):
+        # Loading and applying mutations in memory needs no build or signing.
+        # Execution remains opt-in; stale anchors fail the default battery.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('build_refusals', ROOT / 'tests/suites/preflight/opt_in/build_refusals.py')
+        controls = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(controls)
+        for refusal, label, mutate, *where in controls.MUTATIONS:
+            with self.subTest(refusal=refusal, mutation=label):
+                source = (ROOT / (where[0] if where else 'build.sh')).read_text()
+                self.assertNotEqual(source, mutate(source))
+        script = (ROOT / 'build.sh').read_text()
+        self.assertEqual(script.count(controls.REQUIRE_REBUILT), 1)
+        self.assertNotEqual(controls._without_self_checks(script), script)
+
+    def test_unknown_wrapper_hashes_never_establish_stamp_compatibility(self):
+        for missing in (None, {'wrapper': dict(command='/wrapper', sha256=None)}):
+            fields = {'rustc.wrappers': missing}
+            difference = prov.compare_fields(fields, fields, ['rustc.wrappers'])
+            self.assertEqual(difference[-1], 'unavailable')
+        fields = {'rustc.wrappers': {'wrapper': dict(command='/wrapper', sha256='a' * 64)}}
+        self.assertIsNone(prov.compare_fields(fields, fields, ['rustc.wrappers']))
 
 
 if __name__ == '__main__':

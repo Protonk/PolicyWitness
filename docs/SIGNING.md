@@ -145,14 +145,20 @@ Validation. One typed validator defines the record above
 required field present and not null, exact booleans, strings and integers,
 bounded strings and lists, the full build's or the partial build's compilers
 and outputs, only the documented observation statuses and the unknowns the
-field policy permits, no field the record does not define, signing entries
+field policy permits, no undefined top-level field, signing entries
 that repeat the outputs' signature facts, and effective settings that agree
 with the outputs. The evidence step refuses to write a record it rejects; the
 inspector applies it and then compares every claimed load-command field,
 linker tools included, with the bytes and each nested signature claim with
 `codesign -dvv`'s display; the release-archive reader applies it to the
 accepted ZIP's record and binds each nested output's hash to that ZIP's
-member, without extraction. A record from before this validator that leaves
+member. It copies the named executables to a temporary directory to compare
+their load commands and signature displays too; it never executes them.
+Both readers enforce the helper's [`RECORD_LIMIT`](../tests/lib/build_provenance.py) before parsing. Cargo profiles,
+Meson options, toolchain-stamp projections and fresh-mode replacement
+observations have typed fields; fresh-mode observations must agree with the
+knob, directory states and per-target rebuild judgments.
+A record from before this validator that leaves
 a required field null is refused, not reinterpreted.
 
 What the hashes mean. A newly calculated output hash identifies the bytes the

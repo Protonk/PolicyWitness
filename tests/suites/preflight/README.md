@@ -98,6 +98,16 @@ Offline release controls also exercise the release procedure's decision points.
   reader, which also binds each output's hash to the ZIP member, beside valid
   full and partial records and each permitted unknown. It needs clang for the Mach-O
   stand-ins and is in the default battery.
+  It also checks unrelated-socket handoffs with copied public owner records,
+  admission after the original owner exits while a nested scope survives,
+  a full channel queue, complete large request replies, and cancellation of
+  a command and descendant that ignore signals. Missing target directories
+  remain absent after a refused session start. Typed Cargo profiles, Meson
+  options, stamp projections and fresh-mode observations are checked, and
+  archive load commands and signature claims are compared with the ZIP's
+  executable bytes. Applying every opt-in mutation in memory checks its
+  anchors in the default battery; the opt-in run establishes that the
+  mutated guards actually fail their controls.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS
@@ -187,7 +197,9 @@ Offline release controls also exercise the release procedure's decision points.
 
 - `release_publish_controls` exercises the three release tools against a real
   temporary repository with a bare `origin`, fixture ZIPs, attempts and run
-  records. The tag preflight must refuse an untagged or dirty tree, a
+  records. Its ZIP members are real linker-signed Mach-O stand-ins whose
+  load commands and signature facts the independent fixture writer records.
+  The tag preflight must refuse an untagged or dirty tree, a
   lightweight tag, a remote holding a different tag, an unreachable remote and
   an existing archive, and must only warn under `--report`. Archiving must
   refuse a hash, acceptance, notarization, tag, guide, notes or battery

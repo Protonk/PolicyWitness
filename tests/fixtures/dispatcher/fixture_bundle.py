@@ -69,7 +69,9 @@ def record(app):
         else:
             entry['signature'] = dict(LINKER_SIGNED)
         if name in CARGO_TARGETS:
-            entry['cargo'] = dict(status='reported', fresh=False, profile={}, package_id='fixture', executable='fixture',
+            entry['cargo'] = dict(status='reported', fresh=False,
+                                  profile=dict(opt_level='3', debuginfo=0, debug_assertions=False, overflow_checks=False, test=False),
+                                  package_id='fixture', executable='fixture',
                                   fingerprint=dict(status='unavailable', binding=None, limitation='fixture bundle'),
                                   effective_rustflags=None, note='fixture bundle',
                                   rustflags_source=dict(kind='none', resolved=True, tokens=[], overrides=[], agrees=None,
@@ -107,9 +109,11 @@ def record(app):
             deployment_target=minimum, sdkroot='/fixture/SDK',
             build_directories=dict(builddir=dict(state='created', replaced_by_fresh_mode=True, stamp='published'),
                                    cargo_release=dict(state='created', replaced_by_fresh_mode=True),
-                                   fresh_mode=dict(requested=True, replacement=None),
+                                   fresh_mode=dict(requested=True, replacement={
+                                       'builddir': dict(path='builddir', existed=True, removed=True),
+                                       'cargo_release': dict(path='controller/target/release', existed=True, removed=True)}),
                                    cargo_admission=dict(target_directory='/fixture/target', build_directory='/fixture/target')),
-            toolchain_stamp=dict(scope_note='fixture bundle', projection={})),
+            toolchain_stamp=dict(scope_note='fixture bundle', projection=dict(status='unavailable', reason='fixture bundle'))),
         outputs=outputs,
         signing=dict(identity='fixture: linker-signed stand-ins',
                      nested=[dict(rel_path=o['rel_path'], leaf=None, team=None, timestamp=False) for o in outputs if 'signature' in o],

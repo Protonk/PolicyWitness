@@ -14,9 +14,9 @@ took the lock without blocking (the outermost owner, which writes the owner
 record: pid, start time and the acquisition nonce), or a live owner admitted
 it by handing over the held descriptor (a nested owner). Python callers hold
 an owner for a block (`owned`); the command line holds one for its command.
-Every owner serves admissions on a private channel for as long as its scope
-lasts, and refuses none of its own descendants that ask with its root and
-nonce. The channel is a datagram socket pair created by the owner; only the
+The acquisition owner serves admissions on a private channel for as long as
+its scope lasts. Nested owners pass that same channel onward. The channel
+is a datagram socket pair created by the acquisition owner; only the
 children it launches inherit the client end, so a socket pathname or a nonce
 alone admits nobody.
 
@@ -24,8 +24,10 @@ Admission. A nested process proves ownership only through a handoff: over
 the channel its environment names, it sends the root and nonce it was given
 with a fresh reply socket, and the owner answers on that socket with the held
 descriptor, the nonce and the lock file's inode. The admitted process checks
-that the descriptor is open on this checkout's lock file and that the owner
-record carries the nonce. Environment values (PW_CHECKOUT_LOCK_ROOT,
+that the channel's socket identity matches the acquisition record and its
+kernel-reported peer PID matches the acquisition owner,
+the descriptor is open on this checkout's lock file and the owner record
+carries the nonce. Environment values (PW_CHECKOUT_LOCK_ROOT,
 PW_CHECKOUT_LOCK_NONCE, PW_CHECKOUT_LOCK_CHANNEL and PW_CHECKOUT_LOCK_FD)
 only locate a claim. A missing, stale, foreign or malformed claim refuses, and
 so does a claim whose owner is gone or does not answer within
@@ -60,7 +62,9 @@ them.
         Take the lock without blocking, or be admitted by the owner of an
         inherited claim on this checkout, then supervise COMMAND in its own process group:
         forward SIGINT, SIGTERM and SIGHUP to that group, serve admissions
-        while it runs and exit with its status. Without request options the
+        while it runs and exit with its status. Cancellation allows GROUP_GRACE
+        seconds before SIGKILL and KILL_GRACE seconds to observe exit, then
+        returns 128 + the original signal. Without request options the
         owner holds no requests (ownership-only commands need none).
 
     checkout_lock.py --verify [--root CHECKOUT] [--build-requests]
@@ -74,12 +78,15 @@ malformed request options or a missing command. Otherwise the command's
 status is returned, 128 + N for a command stopped by signal N.
 """
 import argparse
+import array
+import errno
 from contextlib import contextmanager
 import fcntl
 import json
 import os
 from pathlib import Path
 import re
+import select
 import signal
 import socket
 import stat
@@ -106,6 +113,10 @@ REQUEST_LIMIT = 16 * 1024
 MESSAGE_LIMIT = 64 * 1024
 HANDOFF_TIMEOUT = 10
 GROUP_GRACE = 10
+KILL_GRACE = 5
+# Darwin sys/un.h: SOL_LOCAL / LOCAL_PEERPID. The kernel records the creator
+# of a socketpair; inherited ends retain that identity across exec and forks.
+SOL_LOCAL, LOCAL_PEERPID = 0, 2
 
 
 class Refusal(ValueError):
@@ -124,6 +135,8 @@ class Requests:
             if value is not None and (not isinstance(value, str) or '\0' in value or len(value.encode()) > REQUEST_LIMIT):
                 raise Refusal(f'request {name} is not a bounded string')
         self.values = dict(values)
+        if len(json.dumps(self.to_json()).encode()) > MESSAGE_LIMIT - 4096:
+            raise Refusal('the combined request snapshot exceeds the handoff message bound')
 
     @classmethod
     def from_arguments(cls, assigned, unset):
@@ -149,6 +162,8 @@ class Requests:
         for name, entry in data.items():
             if not isinstance(entry, dict) or entry.get('state') not in ('set', 'unset'):
                 raise Refusal('the owner sent a malformed request snapshot')
+            if entry['state'] == 'set' and not isinstance(entry.get('value'), str):
+                raise Refusal('the owner sent a set request without its value')
             values[name] = entry.get('value') if entry['state'] == 'set' else None
         return cls(values)
 
@@ -213,6 +228,15 @@ def acquire(root):
     os.ftruncate(fd, 0)
     os.pwrite(fd, (json.dumps(record) + '\n').encode(), 0)
     return fd, record
+
+
+def bind_channel(fd, channel):
+    """Publish this acquisition's client socket identity before launching any children."""
+    record = read_owner(fd)
+    info = os.fstat(channel.fileno())
+    record['channel'] = dict(device=info.st_dev, inode=info.st_ino)
+    os.ftruncate(fd, 0)
+    os.pwrite(fd, (json.dumps(record) + '\n').encode(), 0)
 
 
 @contextmanager
@@ -296,6 +320,46 @@ class Admission:
             self.fd = None
 
 
+def send_request(channel, request, reply_fd, deadline):
+    """Bound the send as well as the answer without changing the shared socket's flags."""
+    while True:
+        try:
+            channel.sendmsg([request], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [reply_fd]))], socket.MSG_DONTWAIT)
+            return
+        except BlockingIOError:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([], [channel], [], remaining)[1]:
+                raise Refusal('the owner channel did not accept the request before the handoff deadline')
+        except OSError as exc:
+            if exc.errno == errno.ENOBUFS:
+                raise Refusal('the owner channel queue is full')
+            raise
+
+
+def receive_answer(channel, deadline):
+    """Read a bounded stream through EOF; SCM_RIGHTS may accompany any chunk."""
+    chunks, received, size, flags = [], [], 0, 0
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise socket.timeout()
+            channel.settimeout(remaining)
+            chunk, fds, observed, _ = socket.recv_fds(channel, MESSAGE_LIMIT + 1 - size, 2)
+            received.extend(fds)
+            flags |= observed
+            size += len(chunk)
+            if size > MESSAGE_LIMIT or len(received) > 1 or flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
+                raise Refusal('the owner answer exceeds the handoff bound')
+            if not chunk:
+                return b''.join(chunks), received, flags
+            chunks.append(chunk)
+    except BaseException:
+        for fd in received:
+            os.close(fd)
+        raise
+
+
 def admit(root, env=None, *, timeout=HANDOFF_TIMEOUT):
     """Be admitted by the owner of the inherited claim: an Admission, or a Refusal. Never takes the lock."""
     env = os.environ if env is None else env
@@ -317,15 +381,32 @@ def admit(root, env=None, *, timeout=HANDOFF_TIMEOUT):
     try:
         if channel.family != socket.AF_UNIX or channel.type != socket.SOCK_DGRAM:
             raise Refusal(f"descriptor {found['channel']} is not an owner channel")
+        # A socket plus a copied nonce/inode does not establish a handoff. Bind
+        # the channel to the acquisition owner before trusting any reply.
+        record_fd = os.open(root / LOCK, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            if not stat.S_ISREG(os.fstat(record_fd).st_mode):
+                raise Refusal('lock file is not a regular file')
+            owner = read_owner(record_fd)
+        finally:
+            os.close(record_fd)
+        try:
+            peer_pid = channel.getsockopt(SOL_LOCAL, LOCAL_PEERPID)
+        except OSError:
+            raise Refusal('the owner of this claim is gone; its channel has no connected peer')
+        if not owner or type(owner.get('pid')) is not int or peer_pid != owner['pid']:
+            raise Refusal('the channel was not created by the acquisition owner')
+        if owner.get('channel') != dict(device=info.st_dev, inode=info.st_ino):
+            raise Refusal('the channel does not belong to this acquisition')
+        deadline = time.monotonic() + timeout
         request = json.dumps(dict(v=1, op='admit', root=str(root), nonce=found['nonce'])).encode()
         try:
-            socket.send_fds(channel, [request], [remote.fileno()])
+            send_request(channel, request, remote.fileno(), deadline)
         except OSError:
             raise Refusal('the owner of this claim is gone; nothing new can be admitted under it')
         remote.close()
-        local.settimeout(timeout)
         try:
-            message, received, flags, _ = socket.recv_fds(local, MESSAGE_LIMIT, 2)
+            message, received, flags = receive_answer(local, deadline)
         except socket.timeout:
             raise Refusal(f'the owner of this claim did not answer within {timeout} s')
         except OSError as exc:
@@ -350,7 +431,7 @@ def admit(root, env=None, *, timeout=HANDOFF_TIMEOUT):
         if [reply.get('device'), reply.get('inode')] != list(expected) or reply.get('nonce') != found['nonce']:
             raise Refusal('the owner answered for another acquisition')
         record = read_owner(fd)
-        if not record or record.get('nonce') != found['nonce']:
+        if not record or record.get('nonce') != found['nonce'] or record.get('pid') != owner['pid']:
             raise Refusal('owner record does not carry the claimed nonce')
         requests = Requests.from_json(reply.get('requests'))
         received = []
@@ -378,14 +459,20 @@ def admitted(root, env=None):
 class Scope:
     """A live owner: the held descriptor, its acquisition, the requests it binds and the channel it serves."""
 
-    def __init__(self, root, fd, nonce, identity, requests, *, nested):
+    def __init__(self, root, fd, nonce, identity, requests, *, nested, channel=None):
         self.root, self.fd, self.nonce, self.identity = Path(root), fd, nonce, identity
         self.requests, self.nested = requests, nested
-        self.server, self.client = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+        if nested:
+            self.server, self.client = None, socket.socket(fileno=os.dup(channel))
+        else:
+            self.server, self.client = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+            bind_channel(fd, self.client)
         self.stopping = threading.Event()
         self.thread = threading.Thread(target=self.serve, name='checkout-lock-owner', daemon=True)
 
     def start(self):
+        if self.nested:
+            return
         self.server.settimeout(0.2)
         self.thread.start()
 
@@ -421,7 +508,9 @@ class Scope:
             else:
                 answer = dict(v=1, status='ok', nonce=self.nonce, device=self.identity[0], inode=self.identity[1],
                               requests=None if self.requests is None else self.requests.to_json())
-                socket.send_fds(reply, [json.dumps(answer).encode()], [self.fd])
+                encoded = json.dumps(answer).encode()
+                sent = socket.send_fds(reply, [encoded], [self.fd])
+                reply.sendall(encoded[sent:])
                 return
             reply.sendall(json.dumps(dict(v=1, status='refused', reason=reason)).encode())
         except OSError:
@@ -453,9 +542,12 @@ class Scope:
         """Run a protected command in its own process group, forwarding termination; its status as an exit code."""
         child = self.popen(argv, env=env, start_new_session=True)
         forwarded = []
+        cancelled_at = []
 
         def forward(signum, _frame):
             forwarded.append(signum)
+            if not cancelled_at:
+                cancelled_at.append(time.monotonic())
             try:
                 os.killpg(child.pid, signum)
             except (ProcessLookupError, PermissionError):
@@ -463,34 +555,47 @@ class Scope:
 
         previous = {signum: signal.signal(signum, forward) for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
         try:
-            status = child.wait()
+            while child.poll() is None and not cancelled_at:
+                time.sleep(0.05)
+            if cancelled_at:
+                remaining = max(0, cancelled_at[0] + GROUP_GRACE - time.monotonic())
+                if not group_finished(child.pid, remaining, child):
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except (ProcessLookupError, PermissionError):
+                        pass
+                    if not group_finished(child.pid, KILL_GRACE, child):
+                        print(f'WARN: protected processes of the cancelled command are still running; {LOCK} stays held until they exit',
+                              file=sys.stderr)
+                return 128 + forwarded[0]
+            status = child.returncode
         finally:
             for signum, handler in previous.items():
                 signal.signal(signum, handler)
-        if forwarded and not group_finished(child.pid, GROUP_GRACE):
-            print(f'WARN: protected processes of the cancelled command are still running; {LOCK} stays held until they exit',
-                  file=sys.stderr)
         return 128 - status if status < 0 else status
 
     def close(self):
         self.stopping.set()
-        try:
-            self.server.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-        self.server.close()
+        if self.server is not None:
+            try:
+                self.server.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            self.server.close()
         if self.thread.is_alive():
             self.thread.join(timeout=2)
         self.client.close()
         os.close(self.fd)
 
 
-def group_finished(pgid, timeout):
+def group_finished(pgid, timeout, child=None):
     """Whether every member of a process group has exited, observed for up to timeout seconds.
 
     macOS answers EPERM while the only members left are zombies, so that answer means not yet."""
     deadline = time.monotonic() + timeout
     while True:
+        if child is not None:
+            child.poll()  # reap the leader so it cannot keep the group alive as a zombie
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
@@ -506,8 +611,8 @@ def group_finished(pgid, timeout):
 def owned(root, *, requests=None, env=None):
     """Own the checkout lock for the block: take it, or be admitted by the owner of an inherited claim on this checkout.
 
-    The scope serves nested admissions for its descendants until the block
-    ends. A nested scope uses its owner's requests; supplying requests to one
+    The acquisition scope serves admissions until its block ends; nested
+    scopes preserve its channel. A nested scope uses its owner's requests; supplying requests to one
     refuses. A claim on another checkout is not a claim on this one: separate
     worktrees have independent locks, so the scope takes this one itself and
     its children inherit only its own claim."""
@@ -520,7 +625,8 @@ def owned(root, *, requests=None, env=None):
             admission = admit(root, env)
         except Refusal as exc:
             raise Refusal(f'checkout lock claim is not verified: {exc}; {UNSET_REMEDY}')
-        scope = Scope(root, admission.fd, admission.nonce, admission.identity, admission.requests, nested=True)
+        scope = Scope(root, admission.fd, admission.nonce, admission.identity, admission.requests, nested=True,
+                      channel=claim(env)['channel'])
     else:
         fd, record = acquire(root)
         held = os.fstat(fd)

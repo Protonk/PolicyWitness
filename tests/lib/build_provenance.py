@@ -81,6 +81,7 @@ import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 
@@ -104,6 +105,7 @@ LINE_LIMIT = 200
 COMMAND_LIMIT = 8
 FLAG_LIMIT = 64
 TOOLS_LIMIT = 16
+RECORD_LIMIT = 256 * 1024
 HOME_MARKER = '<home>'
 FRESH_REMEDY = 'set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/'
 PATH_POLICY = 'the build admits only real directories of this user inside the checkout'
@@ -251,6 +253,7 @@ def probe(argv, *, cwd=None, env=None, timeout=PROBE_TIMEOUT, limit=PROBE_LIMIT,
 def terminate_group(process):
     """Stop a probe's process group within a bound: 'complete' when the leader is reaped and no member remains."""
     pgid = process.pid
+    deadline = time.monotonic() + CLEANUP_TIMEOUT
     for signum, grace in ((signal.SIGTERM, TERM_GRACE), (signal.SIGKILL, CLEANUP_TIMEOUT)):
         try:
             os.killpg(pgid, signum)
@@ -258,9 +261,9 @@ def terminate_group(process):
             break
         except PermissionError:
             pass  # only zombies remain; group_gone reaps the leader
-        if group_gone(process, pgid, grace):
+        if group_gone(process, pgid, min(grace, max(0, deadline - time.monotonic()))):
             return 'complete'
-    return 'complete' if group_gone(process, pgid, CLEANUP_TIMEOUT) else 'failed'
+    return 'complete' if group_gone(process, pgid, 0) else 'failed'
 
 
 def group_gone(process, pgid, timeout):
@@ -335,11 +338,18 @@ class BuildPaths:
         self.root_fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         try:
             self.admit('controller', required=True)
-            self.admit(TARGET, create=create_target)
+            self.admit(TARGET)
             if TARGET in self.fds:
                 self.admit(RELEASE)
                 self.admit_file(TARGET, SESSION_NAME)
             self.admit(BUILDDIR)
+            # Admit every existing component before creating even an empty
+            # cache parent. A refused sibling must leave the checkout intact.
+            if create_target and TARGET not in self.fds:
+                self.recheck('controller')
+                self.admit(TARGET, create=True)
+                self.admit(RELEASE)
+                self.admit_file(TARGET, SESSION_NAME)
         except BaseException:
             self.close()
             raise
@@ -529,6 +539,8 @@ def build_scope(root, *, create_target=False, session=True):
     except checkout_lock.Refusal as exc:
         raise Refusal(f'checkout lock claim is not verified: {exc}; build helpers mutate only under an owned build', 2)
     try:
+        if create_target and admission.requests is None:
+            raise Refusal(checkout_lock.NO_REQUESTS, 2)
         paths = BuildPaths(root, create_target=create_target)
         try:
             current = None
@@ -791,8 +803,10 @@ def stamp_record(fields, *, xpc, source_dir, published_at=None, extended_at=None
 
 def compare_fields(stamped, current, names):
     """The first differing field, or None; a value absent on either side is a difference, never equality."""
+    def unavailable(value):
+        return value is None or (isinstance(value, dict) and any(unavailable(v) for v in value.values()))
     for name in names:
-        if name not in stamped or stamped[name] is None or current.get(name) is None:
+        if unavailable(stamped.get(name)) or unavailable(current.get(name)):
             return name, stamped.get(name), current.get(name), 'unavailable'
         if stamped[name] != current[name]:
             return name, stamped[name], current[name], 'changed'
@@ -1087,6 +1101,10 @@ def judgment_problem(name, messages, admitted):
         return 'the message names another executable than the admitted one'
     if not isinstance(message.get('profile'), dict):
         return 'the message carries no profile'
+    profile_problems = []
+    CARGO_PROFILE(message['profile'], 'profile', profile_problems)
+    if profile_problems:
+        return 'the message carries an invalid binary profile: ' + '; '.join(profile_problems)
     if 'fresh' not in message:
         return 'fresh is missing'
     if type(message['fresh']) is not bool:
@@ -1478,7 +1496,7 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
     forbidden = forbidden_content(text, os.environ)
     if forbidden:
         raise Refusal('the record would publish ' + forbidden, 2)
-    if len(text) > 256 * 1024:
+    if len(text.encode()) > RECORD_LIMIT:
         raise Refusal('the record exceeds its size bound', 2)
     return record
 
@@ -1638,15 +1656,15 @@ FLAGS = array(text(LINE_LIMIT, empty=True), FLAG_LIMIT)
 FLAGS_OR_NULL = array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True)
 
 
-def request_shape():
+def request_shape(*, private=False):
     def check(value, where, problems):
         if type(value) is not dict:
             problems.append(f'{where} is not an object')
             return
         state = value.get('state')
-        if state == 'set' and 'value' in value:
+        if state == 'set' and 'value' in value and not private:
             obj(dict(state=one_of('set'), value=text(TEXT_LIMIT, empty=True)), closed=True)(value, where, problems)
-        elif state == 'set':
+        elif state == 'set' and private:
             obj(dict(state=one_of('set')), closed=True)(value, where, problems)
         elif state == 'unset':
             obj(dict(state=one_of('unset')), closed=True)(value, where, problems)
@@ -1681,7 +1699,12 @@ FINGERPRINT = alternatives(
 FLAG_SOURCE = obj(dict(kind=text(), resolved=boolean(), tokens=array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True),
                        overrides=array(text(), 8), agrees=boolean(nullable=True), effective_source=text()),
                   dict(rules=array(text(), 64, nullable=True)))
-CARGO_JUDGMENT = obj(dict(status=one_of('reported'), fresh=boolean(), profile=mapping(Shape(lambda v, w, p: None), 32), package_id=text(TEXT_LIMIT),
+CARGO_PROFILE = obj(dict(opt_level=one_of('0', '1', '2', '3', 's', 'z'),
+                         debuginfo=Shape(lambda v, w, p: None if (type(v) is int and v in (0, 1, 2)) or
+                                         (type(v) is str and v in ('none', 'limited', 'full', 'line-directives-only', 'line-tables-only'))
+                                         else p.append(f'{w} is not a Cargo debuginfo level'), nullable=True),
+                         debug_assertions=boolean(), overflow_checks=boolean(), test=one_of(False)), closed=True)
+CARGO_JUDGMENT = obj(dict(status=one_of('reported'), fresh=boolean(), profile=CARGO_PROFILE, package_id=text(TEXT_LIMIT),
                           executable=text(TEXT_LIMIT), fingerprint=FINGERPRINT, effective_rustflags=FLAGS_OR_NULL,
                           rustflags_source=FLAG_SOURCE, note=NOTE))
 SIGNATURE = obj(dict(status=one_of('ok'), leaf=text(nullable=True), team=text(nullable=True), timestamp=boolean(), runtime=boolean(),
@@ -1690,6 +1713,37 @@ OUTPUT = obj(dict(rel_path=text(TEXT_LIMIT), uuid=text(36, UUID), platform=text(
                   sdk=text(16, VERSION), tools=array(obj(dict(tool=text(16), version=text(32)), closed=True), TOOLS_LIMIT),
                   sha256=text(64, HEX64, nullable=True)), dict(signature=SIGNATURE, note=NOTE, cargo=CARGO_JUDGMENT))
 BUILD_DIRECTORY = obj(dict(state=one_of('created', 'reused'), replaced_by_fresh_mode=boolean()), dict(stamp=text(nullable=True)))
+TIMESTAMP = text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'))
+STAMP_FIELDS = {
+    'developer_dir': text(TEXT_LIMIT), 'sdk.path': text(TEXT_LIMIT), 'sdk.version': text(16, VERSION), 'sdk.build': text(32),
+    'compilers.c.command': COMMAND, 'compilers.c.identity': text(), 'rustc.command': text(TEXT_LIMIT), 'rustc.identity': text(),
+    'rustc.wrappers': obj(optional={name: obj(dict(command=text(TEXT_LIMIT), sha256=text(64, HEX64, nullable=True)), closed=True)
+                                  for name in ('wrapper', 'workspace_wrapper')}, closed=True),
+}
+
+
+def stamp_projection(value, where, problems):
+    if isinstance(value, dict) and value.get('status') == 'unavailable':
+        obj(dict(status=one_of('unavailable'), reason=NOTE), closed=True)(value, where, problems)
+        return
+    obj(dict(scope=obj(dict(xpc=boolean()), closed=True), published_at=TIMESTAMP,
+             extended_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'), nullable=True), fields=obj()), closed=True)(value, where, problems)
+    if not isinstance(value, dict) or not isinstance(value.get('scope'), dict):
+        return
+    fields = dict(STAMP_FIELDS)
+    if value['scope'].get('xpc') is True:
+        fields.update({'compilers.swift.command': COMMAND, 'compilers.swift.identity': text()})
+    obj(fields, closed=True)(value.get('fields'), where + '.fields', problems)
+
+
+MESON_OPTION_SHAPES = {name: text() for name in FIXED_MESON_OPTIONS}
+MESON_OPTION_SHAPES.update({name: boolean() for name in ('debug', 'werror', 'strip', 'b_lto', 'b_coverage', 'b_bitcode',
+                                                        'b_pie', 'b_staticpic', 'b_lundef', 'inspection', 'xpc')})
+MESON_OPTION_SHAPES.update({name: FLAGS for name in ('c_args', 'c_link_args', 'swift_args', 'swift_link_args')})
+# Meson has published b_sanitize as both a string and an array across supported versions.
+MESON_OPTION_SHAPES['b_sanitize'] = Shape(lambda v, w, p: (text() if isinstance(v, str) else FLAGS)(v, w, p))
+REPLACEMENT = obj({name: obj(dict(path=one_of(relative), existed=boolean(), removed=boolean()), closed=True)
+                   for name, relative in (('builddir', BUILDDIR), ('cargo_release', RELEASE))}, closed=True, nullable=True)
 RECORD_SHAPE = obj(dict(
     schema_version=one_of(SCHEMA_VERSION),
     generated_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ')),
@@ -1704,19 +1758,20 @@ RECORD_SHAPE = obj(dict(
         rustc=RUSTC, cargo=TOOL, meson=TOOL, ninja=TOOL)),
     configuration=obj(dict(
         knobs=obj({name: one_of('0', '1') for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')}, closed=True),
-        meson_options=alternatives(('ok', obj(dict(values=mapping(Shape(lambda v, w, p: None), 64)))), ('unknown', obj())),
+        meson_options=alternatives(('ok', obj(dict(values=obj(optional=MESON_OPTION_SHAPES, closed=True)))), ('unknown', obj())),
         rustflags=obj(dict(requested=obj(dict(source=one_of('caller', 'script', 'none'), tokens=array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True)),
                                          dict(oversized=boolean())),
                            flag_environment=mapping(one_of('set', 'unset'), 8), note=NOTE)),
-        requests=obj({name: request_shape() for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+        requests=obj({name: request_shape(private=name in ('CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE'))
+                      for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
                      closed=True),
         deployment_target=text(16, re.compile(r'\d+\.\d+')),
         sdkroot=text(TEXT_LIMIT),
         build_directories=obj(dict(builddir=BUILD_DIRECTORY, cargo_release=BUILD_DIRECTORY,
-                                   fresh_mode=obj(dict(requested=boolean(), replacement=Shape(lambda v, w, p: None, nullable=True))),
+                                   fresh_mode=obj(dict(requested=boolean(), replacement=REPLACEMENT)),
                                    cargo_admission=obj(dict(target_directory=text(TEXT_LIMIT), build_directory=text(TEXT_LIMIT)),
                                                        dict(layout_environment=mapping(text(TEXT_LIMIT, empty=True), 8))))),
-        toolchain_stamp=obj(dict(scope_note=NOTE, projection=obj())))),
+        toolchain_stamp=obj(dict(scope_note=NOTE, projection=Shape(stamp_projection))))),
     outputs=array(OUTPUT, 16, empty=False),
     signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),
                                                             timestamp=boolean()), closed=True), 16), note=NOTE)),
@@ -1732,6 +1787,31 @@ def record_shape_problems(record):
     if problems or type(record) is not dict:
         return problems
     full = record['configuration']['knobs']['BUILD_XPC'] == '1'
+    configuration = record['configuration']
+    directories = configuration['build_directories']
+    fresh = directories['fresh_mode']
+    if fresh['requested'] != (configuration['knobs']['PW_FRESH_BUILD'] == '1'):
+        problems.append('record.configuration fresh mode disagrees with PW_FRESH_BUILD')
+    if fresh['requested'] != (fresh['replacement'] is not None):
+        problems.append('record.configuration fresh mode must carry replacement observations exactly when requested')
+    for name in ('builddir', 'cargo_release'):
+        directory = directories[name]
+        replacement = (fresh['replacement'] or {}).get(name)
+        if replacement and (replacement['existed'] != replacement['removed'] or
+                            directory['replaced_by_fresh_mode'] != replacement['removed'] or directory['state'] != 'created'):
+            problems.append(f'record.configuration.build_directories.{name} disagrees with its fresh replacement')
+        if directory['replaced_by_fresh_mode'] and not fresh['requested']:
+            problems.append(f'record.configuration.build_directories.{name} claims replacement without fresh mode')
+    options = configuration['meson_options']
+    if options['status'] == 'ok':
+        values = options['values']
+        for name in FIXED_MESON_OPTIONS:
+            if name.startswith('swift_') and not full:
+                continue
+            if name not in values:
+                problems.append(f'record.configuration.meson_options.values.{name} is missing')
+        if values.get('xpc') != full or values.get('inspection') != (configuration['knobs']['PW_INSPECTION'] == '1'):
+            problems.append('record.configuration.meson_options disagrees with the build knobs')
     swift = record['toolchain']['compilers']['swift']
     if full:
         OBSERVED_COMPILER(swift, 'record.toolchain.compilers.swift', problems)
@@ -1750,6 +1830,8 @@ def record_shape_problems(record):
             problems.append(f'{where}.signature belongs to every nested output and never to the controller')
         if (output['rel_path'] in CARGO_TARGETS) != ('cargo' in output):
             problems.append(f'{where}.cargo belongs to the Cargo targets and only to them')
+        if fresh['requested'] and output.get('cargo', {}).get('fresh') is True:
+            problems.append(f'{where}.cargo.fresh reports reuse in a fresh build')
     claimed = [(n['rel_path'], n['leaf'], n['team'], n['timestamp']) for n in record['signing']['nested']]
     actual = [(o['rel_path'], o['signature']['leaf'], o['signature']['team'], o['signature']['timestamp']) for o in record['outputs'] if 'signature' in o]
     if claimed != actual:
@@ -1762,6 +1844,10 @@ def record_shape_problems(record):
             problems.append(f"record.outputs[{output['rel_path']}].sdk {output['sdk']} differs from the selected SDK {record['toolchain']['sdk']['version']}")
     if record['configuration']['sdkroot'] != record['toolchain']['sdk']['path']:
         problems.append('record.configuration.sdkroot differs from the selected SDK path')
+    request = configuration['requests']['SDKROOT']
+    caller_sdk = request['state'] == 'set' and bool(request.get('value'))
+    if caller_sdk != (record['toolchain']['sdk']['source'] == 'SDKROOT named by the caller'):
+        problems.append('record.toolchain.sdk.source disagrees with the preserved SDKROOT request')
     child = record['toolchain']['rustc']['selection']['child_environment']
     if child['MACOSX_DEPLOYMENT_TARGET'] != minimum or child['SDKROOT'] != record['configuration']['sdkroot']:
         problems.append("record.toolchain.rustc.selection.child_environment disagrees with the effective deployment target or SDK")
@@ -1782,7 +1868,11 @@ def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=
     problems = []
     path = app / RECORD_PATH
     try:
-        record = json.loads(path.read_bytes())
+        with path.open('rb') as stream:
+            raw = stream.read(RECORD_LIMIT + 1)
+        if len(raw) > RECORD_LIMIT:
+            raise ValueError(f'record exceeds {RECORD_LIMIT} bytes')
+        record = json.loads(raw)
     except (OSError, ValueError) as exc:
         return [('provenance', RECORD_PATH, f'record is not readable: {exc}')]
     if not isinstance(record, dict) or record.get('schema_version') != SCHEMA_VERSION:
@@ -1840,22 +1930,28 @@ def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=
             if observed is None:
                 problems.append(('provenance_signature', relative, 'no independent signature observation for the claimed signature'))
             elif claimed != observed:
-                differing = sorted(k for k in set(observed) | set(claimed or {}) if (claimed or {}).get(k) != observed.get(k))
+                claimed = claimed if isinstance(claimed, dict) else {}
+                differing = sorted(k for k in set(observed) | set(claimed) if claimed.get(k) != observed.get(k))
                 problems.append(('provenance_signature', relative, f"record signature facts differ from codesign's display: {', '.join(differing)}"))
     return problems
 
 
 def read_zip_record(archive):
-    """The record bytes and the controller's digest from a release ZIP, read without extraction or execution.
+    """The record bytes and controller digest from a release ZIP; no archived code is executed.
 
     The record must have the documented shape, and every nested output it names
-    must be a member of the ZIP whose bytes hash to the recorded value."""
+    must hash to its recorded value. Load commands and signatures are observed
+    on temporary copies of the named executables, never trusted from the record."""
     import zipfile
+    import signer_check
     with zipfile.ZipFile(archive) as zipped:
         try:
-            record = zipped.read('PolicyWitness.app/' + RECORD_PATH)
+            with zipped.open('PolicyWitness.app/' + RECORD_PATH) as stream:
+                record = stream.read(RECORD_LIMIT + 1)
         except KeyError:
             raise ValueError('the accepted ZIP carries no provenance record')
+        if len(record) > RECORD_LIMIT:
+            raise ValueError(f'the accepted ZIP carries a provenance record beyond {RECORD_LIMIT} bytes')
 
         def member_digest(relative):
             hasher = hashlib.sha256()
@@ -1876,9 +1972,21 @@ def read_zip_record(archive):
         problems = record_shape_problems(data)
         if problems:
             raise ValueError('the accepted ZIP carries an invalid provenance record: ' + '; '.join(problems[:5]))
-        for output in data['outputs']:
-            if output['rel_path'] != CONTROLLER and member_digest(output['rel_path']) != output['sha256']:
-                raise ValueError(f"the accepted ZIP's {output['rel_path']} differs from its provenance record's hash")
+        with tempfile.TemporaryDirectory(prefix='pw-archive-provenance-') as temporary:
+            path = Path(temporary) / 'executable'
+            for output in data['outputs']:
+                relative = output['rel_path']
+                if relative != CONTROLLER and member_digest(relative) != output['sha256']:
+                    raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's hash")
+                with zipped.open('PolicyWitness.app/' + relative) as source, path.open('wb') as destination:
+                    shutil.copyfileobj(source, destination)
+                metadata = output_metadata(path)
+                if metadata.get('status') != 'ok' or any(metadata.get(k) != output[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')):
+                    raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's load commands")
+                if relative != CONTROLLER:
+                    observed = signer_check.signature(path)
+                    if not observed.get('readable') or signer_check.facts(observed) != output['signature']:
+                        raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's signature facts")
     return record, controller
 
 

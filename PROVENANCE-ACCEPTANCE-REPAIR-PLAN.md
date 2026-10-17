@@ -559,3 +559,10 @@ and decisions it left open:
   first launch. The app was then built fresh at `6f0802c`, and every gate
   ran against that build. The SDK and compiler identities did not change.
   The worker clock finding did not recur and stays open under its own plan.
+
+Review of `e398c38` reproduced further ownership, cancellation, path-admission,
+record-validation and unknown-observation defects. The corrections and their
+regression controls are recorded in
+[the review addendum](records/BUILD-PROVENANCE-ACCEPTANCE.md#review-corrections).
+The preceding pass counts remain historical evidence; closure requires the
+replacement acceptance gates for the reviewed implementation.

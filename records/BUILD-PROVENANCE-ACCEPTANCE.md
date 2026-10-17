@@ -394,7 +394,9 @@ Review of this record after `e845b02` found counterexamples at five
 boundaries the account above claimed. The runs above establish the cases
 they exercised and stay retained unchanged; they do not establish the
 distinctions below. This section records the repair, made on 2026-10-16,
-and the runs that now carry the acceptance credit for these boundaries.
+and its credited runs. The subsequent [review corrections](#review-corrections)
+qualify this closure: those passing runs did not exercise every boundary the
+implementation claimed.
 
 ### What the original account did not establish
 
@@ -558,3 +560,65 @@ and that a standalone Cargo command succeeds after the holder exits.
 - The single-SDK guard fixture is a controlled metadata mismatch. Genuine
   compilation against another SDK is exercised only by the toolchain switch,
   which needs two developer directories and fails without them.
+
+## Review corrections
+
+Review of `e398c38` reproduced additional defects in the implementation tested
+at `6f0802c`. The retained summaries do report 188/188 and 4/4 passing with
+unchanged artifacts; the issue was what those controls established. Their
+receipts remain intact. Replacement acceptance is required for the changes
+below before this plan can be closed.
+
+- **Channel identity and nested admission.** A separate process could copy
+  the public owner record, create an unrelated socket pair and hand over an
+  independently opened, unheld descriptor on the correct inode. Admission
+  accepted it. A nested scope also served admissions after the acquisition
+  owner exited. Admission now binds the channel's socket identity to the
+  acquisition record and its kernel-reported peer PID to the acquisition
+  owner; nested scopes pass the original channel on.
+  The new impostor and surviving-nested-scope controls fail against the
+  previous helper and pass with the repair.
+- **Cancellation and handoff bounds.** The supervisor waited indefinitely
+  for a command ignoring the forwarded signal before reaching its bounded
+  group wait. The new stubborn-command control times out against the old
+  helper; the repaired supervisor returns the original signal status after
+  at most 10 seconds of grace and 5 seconds observing SIGKILL cleanup.
+  Admission now bounds its send, reads complete stream replies, and rejects
+  request snapshots too large for the complete handoff. Controls cover a
+  full queue, a large request reply and an oversized combined snapshot.
+  Probe cleanup also uses one deadline across TERM, KILL and the final
+  observation; it previously restarted its allowance for each wait. A
+  constructed unreaped-group control exercises that otherwise rare path.
+- **Admission before creation.** A refused session start created a missing
+  `controller/target` before checking the sibling `builddir`, or before
+  noticing missing preserved requests. The helper now verifies requests and
+  all existing cache components first. Both refusals leave that parent absent.
+- **Record structure and consistency.** The old validator accepted an empty
+  stamp projection, string-valued Meson booleans, an arbitrary replacement
+  value and empty Cargo profiles. These counterexamples were reproduced
+  against the previous module using the credited app's real record. Typed
+  fields now cover those structures, set requests require their permitted
+  values, private requests retain presence only, and fresh-mode observations
+  agree with the knob, directory states and Cargo's literal rebuild judgments.
+  Cargo admission also refuses malformed or test-harness artifact profiles.
+- **Independent archive observations.** A ZIP's matching hashes did not
+  establish that its recorded linker tools or signature claims were true.
+  The archive reader now observes load commands and signatures on temporary
+  copies of its named executables. Both record readers limit bytes before
+  parsing. Release fixtures now carry real linker-signed Mach-O stand-ins
+  and independently authored metadata, rather than arbitrary text members.
+- **Unknown observations.** Two missing wrapper hashes compared equal
+  inside an otherwise populated compatibility field. Recursive unknowns
+  now prevent reuse. Failed launcher observations no longer silently select
+  the standalone-Cargo model. Resolving the launcher requires an explicit
+  `RUSTUP_TOOLCHAIN` or an active toolchain reported by `rustup` on `PATH`.
+- **Mutation maintenance.** The default provenance controls now apply all
+  nine opt-in mutations in memory and require each anchor to match. The
+  opt-in execution still establishes that each mutated guard fails its
+  control. This removes the mutation-anchor limitation listed above.
+
+The owning build and signing documentation, build manifest and generated
+account, locking reference, suite reference and fixtures describe these
+repairs. The worker identity inputs did not change. The worker-clock finding,
+the managed-entrypoint scope, Cargo's reused-output history limit, and the
+Cargo oracle's Python-shim limitation remain as described above.

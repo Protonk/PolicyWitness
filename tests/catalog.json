@@ -89,7 +89,7 @@
         },
         {
           "id": "release_publish_controls",
-          "requires": [],
+          "requires": ["clang"],
           "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches"
         },
         {

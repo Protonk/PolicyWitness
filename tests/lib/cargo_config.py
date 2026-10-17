@@ -107,7 +107,8 @@ class Reader:
         if info.st_size > FILE_BYTES:
             raise Unresolved(f'{path} is larger than {FILE_BYTES} bytes')
         try:
-            data = path.read_bytes()
+            with path.open('rb') as stream:
+                data = stream.read(FILE_BYTES + 1)
         except OSError as exc:
             raise Unresolved(f'{path} cannot be read ({exc.__class__.__name__})')
         if len(data) > FILE_BYTES:
@@ -250,23 +251,25 @@ def launcher(cwd, env, probe):
 
     The proxy is recognised by what it does, through whatever `cargo` on PATH
     runs (a wrapper included): only a rustup proxy accepts a `+toolchain`
-    argument. Without rustup on PATH, or without an active toolchain, nothing
-    proxies Cargo."""
+    argument. An unreadable probe cannot establish that Cargo is standalone;
+    resolution refuses when no toolchain is available to distinguish them."""
     cargo = shutil.which('cargo', path=env.get('PATH'))
     if not cargo:
         raise Unresolved('cargo is not on PATH')
     rustup = shutil.which('rustup', path=env.get('PATH'))
-    if not rustup:
-        return dict(kind='cargo', cargo=cargo)
     toolchain = env.get('RUSTUP_TOOLCHAIN')
     if not toolchain:
+        if not rustup:
+            raise Unresolved('the Cargo launcher cannot be resolved without rustup on PATH or an explicit RUSTUP_TOOLCHAIN')
         found = probe([rustup, 'show', 'active-toolchain'], cwd=cwd, env=env, limit=4096, stderr_limit=4096)
         words = found['text'].split() if found['status'] == 'ok' else []
         if not words:
-            return dict(kind='cargo', cargo=cargo)
+            raise Unresolved('rustup did not establish the active toolchain (' + found.get('kind', 'malformed_output') + ')')
         toolchain = words[0]
     proxied = probe([cargo, f'+{toolchain}', '--version'], cwd=cwd, env=env, limit=4096, stderr_limit=4096)
     if proxied['status'] != 'ok':
+        if proxied.get('kind') != 'nonzero_exit':
+            raise Unresolved('the Cargo launcher probe failed (' + proxied.get('kind', 'unknown') + ')')
         return dict(kind='cargo', cargo=cargo)
     return dict(kind='rustup proxy', cargo=cargo, toolchain=toolchain)
 

@@ -1,5 +1,6 @@
 """Offline controls for the tag preflight, release archiving and GitHub publication."""
 from contextlib import redirect_stderr, redirect_stdout
+import copy
 import hashlib
 import io
 import json
@@ -22,6 +23,7 @@ import retention
 import release_runs
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import completed_output
+import fixture_bundle
 sys.path.insert(0, str(ROOT / 'tests/fixtures/release'))
 from publish_tools import GitHub
 
@@ -124,65 +126,32 @@ def check_preflight(out):
     return repo
 
 
-HELPERS = {'Contents/MacOS/sandbox-log-observer': b'fixture observer\n', 'Contents/MacOS/sbpl-check': b'fixture sbpl-check\n'}
-ZERO = '0' * 64
+FIXTURE_RECORD = None
+FIXTURE_MEMBERS = None
+
+
+def prepare_provenance_fixture(out):
+    """Real linker-signed Mach-O members, described by the independent fixture writer."""
+    global FIXTURE_RECORD, FIXTURE_MEMBERS
+    host = out / 'provenance-host'
+    subprocess.run(['bash', str(ROOT / 'tests/fixtures/dispatcher/build.sh'), str(host)], check=True, capture_output=True)
+    app = out / 'provenance-fixture.app'
+    fixture_bundle.bundle(app, host)
+    data = json.loads((app / fixture_bundle.RECORD).read_text())
+    data['configuration']['knobs']['BUILD_XPC'] = '0'
+    data['toolchain']['compilers']['swift'] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')
+    paths = ('Contents/MacOS/policy-witness', 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check')
+    data['outputs'] = [o for o in data['outputs'] if o['rel_path'] in paths]
+    data['signing']['nested'] = [o for o in data['signing']['nested'] if o['rel_path'] in paths]
+    data['source'].update(describe='fixture-A', version='0.9.0', build_number='3')
+    FIXTURE_RECORD = data
+    FIXTURE_MEMBERS = {path: (app / path).read_bytes() for path in paths}
 
 
 def fixture_record(build):
-    """A complete partial-build record, authored here, whose nested outputs are the ZIP's helper members; `build`
-    distinguishes the accepted build from a later one by its describe string."""
-    signature = dict(status='ok', leaf='Developer ID Application: Control (TEAMID00AA)', team='TEAMID00AA', timestamp=True,
-                     runtime=True, adhoc=False, developer_id_chain=True)
-    output = lambda rel, digest: dict(rel_path=rel, uuid='00000000-0000-0000-0000-00000000000' + str(len(rel) % 10), platform='1',
-                                      minos='26.0', sdk='27.0', tools=[dict(tool='3', version='1.0')], sha256=digest)
-    judgment = dict(status='reported', fresh=False, profile={}, package_id='fixture', executable='fixture', note='fixture',
-                    fingerprint=dict(status='unavailable', binding=None, limitation='fixture'), effective_rustflags=None,
-                    rustflags_source=dict(kind='none', resolved=True, tokens=[], overrides=[], agrees=None, effective_source='fixture'))
-    outputs = [dict(output('Contents/MacOS/policy-witness', None), note='fixture controller', cargo=judgment)]
-    outputs += [dict(output(rel, hashlib.sha256(data).hexdigest()), signature=signature, cargo=judgment) for rel, data in HELPERS.items()]
-    program = lambda source, command: dict(source=source, command=command, overrides=[], file=None, disabled=False)
-    observed = lambda **fields: dict(status='ok', **fields)
-    return dict(
-        schema_version=1, generated_at='2026-01-01T00:00:00Z',
-        source=dict(commit=ZERO[:40], describe=f'fixture-{build}', dirty=False, version='0.9.0', build_number='3', worker_identity=ZERO,
-                    input_hashes={name: ZERO for name in ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
-                                                          'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')}),
-        toolchain=dict(developer_dir=dict(value='/fixture/Developer', source='xcode-select'),
-                       sdk=dict(path='/fixture/SDK', version='27.0', build='FIXTURE', source='xcrun --sdk macosx default'),
-                       xcode=dict(status='ok', version='27.0', build='FIXTURE'),
-                       compilers=dict(c=dict(configured=dict(command=['cc'], id='clang', version='0', full_version=None),
-                                             observed=observed(command=['cc'], identity='fixture cc 0')),
-                                      swift=dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')),
-                       rustc=observed(command='/fixture/rustc', source='default', identity='rustc 0.0.0 (fixture)', release='0.0.0',
-                                      commit_hash='', host='fixture', llvm_version='', wrappers={}, selection_environment={},
-                                      selection_note='fixture',
-                                      selection=dict(files=[], launcher=dict(kind='cargo', toolchain=None),
-                                                     programs=dict(rustc=program('default', '/fixture/rustc'), wrapper=program('none', None),
-                                                                   workspace_wrapper=program('none', None)),
-                                                     env_entries={},
-                                                     child_environment=dict(SDKROOT='/fixture/SDK', MACOSX_DEPLOYMENT_TARGET='26.0', DEVELOPER_DIR=None,
-                                                                            RUSTUP_TOOLCHAIN=None, path_replaced_by_env=False,
-                                                                            rustup_home_replaced_by_env=False))),
-                       cargo=observed(command='/fixture/cargo', version='cargo 0'), meson=observed(command='/fixture/meson', version='0'),
-                       ninja=observed(command='/fixture/ninja', version='0')),
-        configuration=dict(knobs=dict(BUILD_XPC='0', PW_INSPECTION='1', PW_FRESH_BUILD='1'), meson_options=dict(status='unknown'),
-                           rustflags=dict(requested=dict(source='none', tokens=[]), flag_environment={}, note='fixture'),
-                           requests={name: dict(state='unset') for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH',
-                                                                             'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
-                           deployment_target='26.0', sdkroot='/fixture/SDK',
-                           build_directories=dict(builddir=dict(state='created', replaced_by_fresh_mode=True, stamp='published'),
-                                                  cargo_release=dict(state='created', replaced_by_fresh_mode=True),
-                                                  fresh_mode=dict(requested=True, replacement=None),
-                                                  cargo_admission=dict(target_directory='/fixture/target', build_directory='/fixture/target')),
-                           toolchain_stamp=dict(scope_note='fixture', projection={})),
-        outputs=outputs,
-        signing=dict(identity='Developer ID Application: Control (TEAMID00AA)',
-                     nested=[dict(rel_path=o['rel_path'], leaf=signature['leaf'], team='TEAMID00AA', timestamp=True) for o in outputs[1:]],
-                     note='fixture'),
-        limits=['offline fixture record; no build produced it'])
-
-
-FIXTURE_RECORD = fixture_record('A')
+    data = copy.deepcopy(FIXTURE_RECORD)
+    data['source']['describe'] = f'fixture-{build}'
+    return data
 
 
 def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True):
@@ -194,8 +163,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
                 PWBuildDescribe=describe or f'v{version}')
     with zipfile.ZipFile(archive, 'w') as zipped:
         zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
-        zipped.writestr('PolicyWitness.app/Contents/MacOS/policy-witness', b'#!/bin/sh\n')
-        for relative, data in HELPERS.items():
+        for relative, data in FIXTURE_MEMBERS.items():
             zipped.writestr('PolicyWitness.app/' + relative, data)
         if record:
             zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(FIXTURE_RECORD))
@@ -552,6 +520,7 @@ def check_publish(out, repo, dest, notes):
 
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
+    prepare_provenance_fixture(out)
     check_preflight(out)
     repo, dest, notes = check_archive(out)
     check_publish(out, repo, dest, notes)
