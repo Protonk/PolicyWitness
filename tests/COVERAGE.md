@@ -33,6 +33,13 @@ column says why, and names the closest unit or harness coverage.
 
 ## Evidence contract coverage
 
+The opt-in `runner_exec_inheritance/launch_inventory` case records external
+descriptor/environment observations at production pre-ready and post-apply
+sleep seams, with the contaminated-worker case as a dependency. It retains
+optional mapping/port inspection failures and confirms worker cleanup. Its
+source-and-timing placement is not a live publication read; it adds no clean
+worker, signal-state, resource-limit or universal inheritance guarantee.
+
 The complementary evidence-focused case
 `witness_contract/pre_apply_failure_reports_no_policy_verdict` exercises the
 real CLI with a populated plan and pre-ready delay/deadline overrides, then

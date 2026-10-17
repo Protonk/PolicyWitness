@@ -55,3 +55,29 @@ This development recipe deliberately depends on the C source's spawn details;
 it must be reviewed when those details change. It is opt-in so the normal
 contract suite continues to exercise the built distributable without requiring
 these source transformations. See `tests/OPT_IN_TESTS.md`.
+
+## Production launch inventory (opt-in)
+
+`tests/run.sh --case runner_exec_inheritance/launch_inventory` selects the
+contaminated-worker control as a dependency, then observes two shipped workers
+running the same empty allow-default plan. Existing pre-ready and post-apply
+sleep overrides hold them for external inspection. The observer records worker
+and parent identities, `lsof`, plain `ps` and `ps -E`, and attempts `vmmap` and
+`lsmp` as the current user. It requires complete mandatory command captures,
+matching final worker identity, expected readiness evidence, confirmed reaping
+and subsequent process absence. No external runner is installed.
+
+Boundary placement comes from the selected seam, source order and observation
+timing; the observer does not read the worker's publication flags live. A
+successful command is raw inventory evidence, not a universal isolation claim.
+No specific descriptor set or environment count is required. Optional mapping
+or port inspection failures are retained as observation boundaries, not empty
+inventories. `lsof`'s text mappings are not a complete library census. The
+positive control establishes that a parent-supplied descriptor and environment
+value can reach a worker; ordinary CLI exec controls cover the child's narrower
+contract. Signal state, resource limits and extension-bearing workers remain
+outside this observation. See [opt-in guidance](../../OPT_IN_TESTS.md).
+
+Each boundary retains the exact specimen, CLI capture, process listings, each
+observer's argv/status/raw streams, and `observations.json`. The case takes
+about forty seconds and needs unsandboxed XPC and same-user process inspection.

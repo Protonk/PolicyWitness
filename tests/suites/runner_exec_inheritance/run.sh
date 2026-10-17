@@ -6,6 +6,15 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 WORKER="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
 source "${ROOT_DIR}/tests/lib/case.sh"
 
+if test_selected launch_inventory; then
+test_begin runner_exec_inheritance launch_inventory
+test_step observe "inventory two signed workers at the pre-ready and post-apply seams"
+test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "launch inventory failed" \
+  "${ROOT_DIR}/tests/suites/runner_exec_inheritance/launch_inventory.py" \
+  "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
+test_pass "both production workers observed and reaped; optional task-access boundaries retained"
+fi
+
 inheritance_setup() {
 [[ -x "${PW_BIN}" && -x "${WORKER}" ]] || test_fail "built app/worker missing"
 # Keep the helper path below the worker argv[0] bound for the direct ABI adapter.

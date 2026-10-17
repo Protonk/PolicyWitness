@@ -1010,6 +1010,18 @@
             "clang"
           ],
           "default": false
+        },
+        {
+          "id": "launch_inventory",
+          "description": "Observe production worker descriptors, environment and optional task inventories before and after apply; retain observer limitations",
+          "requires": [
+            "app",
+            "worker"
+          ],
+          "default": false,
+          "depends_on": [
+            "runner_exec_inheritance/contaminated_worker"
+          ]
         }
       ]
     },
@@ -1824,7 +1836,8 @@
         "witness_contract/extensions_byoxpc",
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
-        "runner_c_worker_harness/native_clock"
+        "runner_c_worker_harness/native_clock",
+        "runner_exec_inheritance/launch_inventory"
       ]
     },
     "failure_boundaries": {

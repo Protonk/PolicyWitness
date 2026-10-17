@@ -47,6 +47,21 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### Production worker launch inventory
+
+- **Case:** `runner_exec_inheritance/launch_inventory`
+- **Location:** `tests/suites/runner_exec_inheritance/launch_inventory.py`
+- **Purpose:** Record descriptors, environment and accessible mappings/ports
+  of signed production workers at the pre-ready and post-apply sleep seams.
+  The contaminated-worker case is a required positive control.
+- **Opt-in reason:** Exploratory process inspection, optional task-port access
+  and two twenty-second holds. Run outside the automation sandbox.
+- **Equipment:** Signed app, embedded worker, clang for the dependency, macOS
+  `ps`, `lsof`, `vmmap` and `lsmp`. No service installation or signing mutation.
+- **Artifacts:** `<run>/suites/runner_exec_inheritance/launch_inventory/artifacts/`.
+  Failed optional task inspection is recorded; mandatory observations and
+  production cleanup must succeed. This is not a general clean-launch oracle.
+
 ### Native path-query observations
 
 - **Case:** `witness_contract/path_query_observations`
