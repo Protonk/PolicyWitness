@@ -5,43 +5,22 @@ SBPL profile to a disposable process, records available predictions and what
 happened when each probe was attempted, and prints the evidence as one JSON
 envelope.
 
-Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
+## The Problem
+
+A query about a sandbox is not the same thing as attempting an operation inside it. `sandbox_check` answers questions about a live process, while an attempt takes place in a process that has already applied a policy it cannot remove. To put the two observations alongside one another, an experiment must keep the right process alive, establish their order, and recover its report even if the policy forbids ordinary communication. Preparation matters too: opening a resource before applying the sandbox can change what a later operation actually tests.
+
+Even a well-arranged experiment does not make its results self-interpreting. An operation can fail for reasons other than sandbox denial; success can depend on entitlements, inherited resources, and conditions outside the SBPL text. A `sandbox_check` answer and an attempt result may differ without establishing why, or appear to agree without proving that prediction and enforcement agree. 
 
 > The [user guide](docs/PolicyWitness.md) has the specimen format, the output
 > envelope and the operating guidance.
 
-## Flow
+## The Experiment
 
-PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The
-controller hands each specimen to a fresh runner, an unsandboxed XPC host that
-spawns a C worker that applies the policy to itself once. An optional file-extension
-declaration first runs a separate issuer outside that policy; bounded token bytes
-travel through a transient channel to the worker. Explicit lifecycle actions
-consume the token and release its native handle in that same worker. A simple `probe_plan`
-runs as one phase; an explicit `phases` sequence divides actions into ordered
-intervals in that same worker. At each phase arrival, the host plans queries
-afresh. When eligible queries exist and the clock and collection budget permit,
-the host tries to start a fresh validator against the worker's PID. Collection
-closes before that phase's actions are released, including on collection
-failure. The host joins the observations into one reply and exits; the
-controller wraps the reply in the envelope it prints.
+PolicyWitness operates on specimens: an SBPL policy and a plan of probes. Each specimen gets a fresh worker that applies the policy once. An unsandboxed host arranges for a separate validator to query the worker's live PID before releasing it to attempt the planned operations. The host collects observations through a reporting path outside the policy under test. A specimen can also contain ordered phases, allowing successive rounds of queries and attempts within the same worker.
 
-In the ordinary reply format, each probe step carries three records: the
-prediction, the attempt, and a comparison that relates the two. The comparison
-says what was observed and in what order; it never says whether prediction
-and enforcement agree, and no failure is attributed to the sandbox without
-evidence. An evidence-preserving reporting failure retains observations and
-omits every comparison. Kernel denial records
-from the unified log are attached out of band, as candidates rather than
-verdicts, and cannot change the execution result. The guide's
-[reading rules](docs/PolicyWitness.md#reading-a-comparison-record) say how to
-use each record. Extension preparation, issuance and delivery have their own
-records; consume/release events carry native results and publication evidence
-without a comparison. Fresh reads retain descriptor identity and bounded bytes.
-None of these records declares effective permission or successful revocation.
+The result is one JSON envelope containing the available predictions, attempts and their observed outcomes, together with evidence of their provenance and ordering. Comparison records relate those observations without declaring whether prediction and enforcement agree. Missing or incomplete observations remain visible rather than being turned into conclusions.
 
-> How one run unfolds in time, the boundaries it crosses and the checks that
-> pin each of them: the [architecture tour](docs/ARCHITECTURE.md).
+> How one run unfolds in time, the boundaries it crosses and the checks that pin each of them: the [architecture tour](docs/ARCHITECTURE.md).
 
 ## Entitlements + SBPL
 
