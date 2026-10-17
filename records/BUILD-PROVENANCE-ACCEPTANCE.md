@@ -538,7 +538,7 @@ did not assert: that Cargo fails each configuration the resolver refuses,
 and that a standalone Cargo command succeeds after the holder exits.
 `6f0802c` added both assertions rather than changing the prose.
 
-### Remaining limitations
+### Limitations recorded at `6f0802c`
 
 - The worker clock finding stays open under `runner/SAFE-WAIT-TIME-PLAN.md`.
   `witness_contract/bug_report_returns_verdicts` passed in both repair
@@ -566,8 +566,8 @@ and that a standalone Cargo command succeeds after the holder exits.
 Review of `e398c38` reproduced additional defects in the implementation tested
 at `6f0802c`. The retained summaries do report 188/188 and 4/4 passing with
 unchanged artifacts; the issue was what those controls established. Their
-receipts remain intact. Replacement acceptance is required for the changes
-below before this plan can be closed.
+receipts remain intact. The replacement acceptance below now carries the
+credit for the reviewed implementation.
 
 - **Channel identity and nested admission.** A separate process could copy
   the public owner record, create an unrelated socket pair and hand over an
@@ -622,3 +622,88 @@ account, locking reference, suite reference and fixtures describe these
 repairs. The worker identity inputs did not change. The worker-clock finding,
 the managed-entrypoint scope, Cargo's reused-output history limit, and the
 Cargo oracle's Python-shim limitation remain as described above.
+
+### Acceptance of the reviewed implementation
+
+The implementation and regression controls are in `be14f3a`; `c23dd42`
+corrects the shared release fixture's initialization for every consumer.
+Acceptance ran against clean commit
+`c23dd42588dbf48714c9f984c267a00af203d4e5`, before this reporting update.
+The signed full build is **0.3.0 (662)**, describing
+`v0.3.0-40-gc23dd42`, with `source.dirty: false`. Both cache areas were
+replaced and all three shipped Cargo targets reported `fresh: false`.
+Xcode 27.1 (`27A9275`) selected SDK 27.0 (`26A425`).
+
+| Gate | Evidence | Result |
+| --- | --- | --- |
+| Fresh signed full build | `review-acceptance/build.log` and `provenance.json` in the credited default run | Exit 0; commit and clean stamp checked; every shipped Cargo target rebuilt. |
+| Default battery | `runs/provenance-review-default-20261017-credited`, run `20261017T025051Z_98fb0575` | 188/188 passed, no skips, unrun cases or harness errors; valid app unchanged. Includes 35 provenance helper tests, dispatcher controls, source drift, and release publication/rotation. |
+| Four required opt-ins | `runs/provenance-review-optin-20261017`, run `20261017T021818Z_99467b08` | 4/4 passed, no skips, unrun cases or harness errors; valid app unchanged. Includes 17 build-guard checks, 75 refusal runs, nine state sequences and nine guard mutations. |
+| Managed Cargo tests | `review-acceptance/cargo-test.log` in the credited default run | Exit 0; every batch passed. The two ordinarily ignored fixture entrypoints are exercised explicitly by their owning default cases. |
+| Release preflight report | `review-acceptance/release-preflight.json` and `.stderr` in the credited default run | `--report` exited 0; its only warning is that HEAD is not at a release tag. This is not strict release authorization. |
+
+The opt-in toolchain switch used Xcode's SDK 27.0 and the CLT's SDK 26.5
+(`25F70`). Its equipment probes found that the CLT's default SDK 27.0 did
+not link with its own tools, so the control explicitly selected the installed,
+linkable SDK 26.5. The developer directory, C and Swift identities, SDK
+path, version and build differed; incompatible reuse was refused and fresh
+recovery passed. `switch.json`, `equipment.json`, and the link receipts under
+that case retain the observations. The older SDK 15.4 note earlier in this
+record describes its original receipts, not this replacement run.
+
+The default run's `review-acceptance/receipt.json` binds the manual commands,
+their exit statuses, the two credited run IDs and these final identities:
+
+| Item | SHA-256 or identity |
+| --- | --- |
+| Worker source identity | `b3b5f50a1f90e5cf11f864dfaa85b752961b115d773abf49ce00e28dba19f5be` |
+| Final ZIP | `031aa866d747df58a9fc368bf97a670773782ec9700e284a321de06e1087d0d7` |
+| Final controller | `48a376393b835a43c92c00fb9b1be4b683de5002c341be45a02102a0ea42fef8` |
+| Embedded provenance record | `21c8a42b51bfb56f1daa3bfccd162fc2e002a4f39d1a9b163a400aadcbb15345` |
+
+The same directory retains `regression-baseline.log` and
+`regression-fields.json`: the unrelated-socket and surviving-nested-owner
+controls reject the previous implementation, its stubborn-command test
+times out, and the malformed-record, premature-directory-creation and
+unknown-wrapper-hash counterexamples reproduce against the previous module.
+These review receipts were added after the managed battery completed;
+they supplement its original case reports.
+
+The first review battery, `runs/provenance-review-default-20261017`, run
+`20261017T021436Z_c03c0675`, is retained without acceptance credit. It found
+that release rotation imported the shared ZIP fixture without running its
+new initializer. That run was interrupted after the failure: 10 cases passed,
+one failed and 177 remained unrun, with the app unchanged. `c23dd42` makes
+initialization automatic and declares clang for that consumer. Both release
+fixture consumers then passed together, followed by the fresh build and
+complete replacement runs above. No failed or incomplete battery is counted
+as passing.
+
+The build manifest still describes 33 steps and 51 refusals, with none in
+the refusal baseline. Its ownership row now names the acquisition's socket
+identity and peer PID; its Cargo row names a typed non-test profile. The
+authored lock and cache sections explain the same ordering and lifetime.
+SIGNING.md describes typed nested records, bounded readers and independent
+archive observations. Their generating and citation checks passed; the
+review added no unverified prose-baseline entries.
+
+Reviewed evidence-reuse exception: the reporting changes after `c23dd42`
+only update this record and `tests/RETAINED.json`, remove the completed plan,
+and redirect its link in the worker-clock plan. The executed scripts, helpers,
+fixtures and signed app bytes are unchanged; these reporting changes do not
+alter the exercised build, admission, probe or archive-validation paths.
+The affected documentation checks were rerun with
+`PW_TEST_OUT_DIR=tests/out/runs/provenance-review-closure-docs-20261017 tests/run.sh --case source_drift/limits_documentation --case source_drift/generator_contract`:
+run `20261017T030604Z_9de468c2` passed both cases without skips or harness
+errors. Its retained entry leaves the source null because it checked the
+uncommitted reporting edits, rather than claiming a clean source commit.
+
+These repairs and acceptance gates complete the provenance repair plan;
+its planning text is retired into this record and the owning documentation.
+The worker-clock finding remains open in `runner/SAFE-WAIT-TIME-PLAN.md`;
+its bug-report case passed again without resolving the finding. The remaining
+scope limits are the managed-entrypoint lock guarantee, the lack of historical
+compiler attribution for reused outputs, and the Cargo 1.99 oracle's inability
+to independently observe shim-affected SDKROOT. The latter remains covered
+by resolver and pre-Cargo conflict controls. No release or publication was
+performed, and unrelated disposable output was left in place.

@@ -25,7 +25,7 @@ to preserve the race-sensitive relationship among time, release, cancellation
 and acknowledgement. Selecting a promising clock API is only part of the work.
 
 This investigation is independent of
-[the build provenance repairs](../PROVENANCE-ACCEPTANCE-REPAIR-PLAN.md). It covers
+[the completed build provenance repairs](../records/BUILD-PROVENANCE-ACCEPTANCE.md#review-corrections). It covers
 the proceed wait first. Inventory other uses of `PW_MONOTONIC_READ`, including
 exec timing, to understand shared dependencies before changing that seam; do
 not silently broaden a proceed-wait experiment into a general timing rewrite.
