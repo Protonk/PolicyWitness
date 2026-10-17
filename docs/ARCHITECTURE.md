@@ -279,9 +279,8 @@ collection basis reads `execution_may_continue` rather than
 records reply delivery, the end of observation and the end of execution
 separately. There is no global lifecycle deadline.
 
-Known gap: an exec child's descendant that leaves the child's process group
-can outlive the run unobserved. The worker targets the child's process group
-when sending cleanup signals at the exec deadline and at cleanup.
+The worker tour owns the [exec-descendant limitation](WORKER.md#acquisitions-inside-attempts)
+and explains the resources and observations retained during exec cleanup.
 
 Each budget covers a specific stage. The issuer's monotonic wait,
 [`extension_issuer_wait`](LIMITS.md#execution-budgets), begins after issuer spawn
@@ -514,12 +513,12 @@ support the constraints on each stage.
   Native lifecycle actions use that preallocated storage. The explicit token
   channel carries authority; fresh reads acquire their target descriptors after
   apply. Exec pipes and spawn handles are also acquired after apply, inside the
-  attempt, and released before the slot completes.
+  attempt, and released before the slot completes. The
+  [worker tour](WORKER.md) accounts for those resources and their authority.
 
-Known gap: private extension calls may allocate or retain internal state that PW
-cannot inspect. Erasure observations cover PW-owned transient buffers; successful
-native results and phase progress do not establish kernel extension state,
-stable identity, effective permissions or access revocation.
+The worker tour owns the [private-extension limitation](WORKER.md#supplied-extension-authority),
+including the distinction between transient buffers, native results and private
+state.
 
 Known gap: a connection that races the host's retirement can fail before it
 is refused. Later requests are promised `already_ran`, but a connection that
@@ -597,7 +596,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 46 nodes and 63 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 46 nodes and 64 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -634,7 +633,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | identity_sources | worker and runner sources | source |  | every byte the identity digest covers |  | [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | meson_build | meson.build | source |  | the native targets and their explicit source lists |  | [`pwrunner_core`](../meson.build) | [`check_meson_source_lists`](../tests/suites/source_drift/check.py) |  |
 | suites | tests/suites/<name>/ | source |  | one run.sh and README per suite |  | [`suites_with_run_sh`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
-| drift_check | source_drift check.py | check |  |  | copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) | [`check_readmes_present`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_baseline_in_catalog_defaults`](../tests/suites/source_drift/check.py); [`check_runner_outcome_suites_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_kind_enum_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_planner`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py); [`check_harness_note_agreement`](../tests/suites/source_drift/check.py); [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py); [`check_meson_source_lists`](../tests/suites/source_drift/check.py); [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| drift_check | source_drift check.py | check |  |  | copies and vocabularies that are not generated, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) | [`check_readmes_present`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_baseline_in_catalog_defaults`](../tests/suites/source_drift/check.py); [`check_runner_outcome_suites_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_kind_enum_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_planner`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py); [`check_harness_note_agreement`](../tests/suites/source_drift/check.py); [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py); [`check_meson_source_lists`](../tests/suites/source_drift/check.py); [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | drift_limits | source_drift limits.py | check |  |  | the limits generator's copies and every local documentation link | [`broken_links`](../tests/suites/source_drift/generators.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | drift_contract | source_drift contract.py | check |  |  | the contract and identity generators' copies | [`ContractVersionTests`](../tests/suites/source_drift/contract.py) | [`contract_versions`](../tests/suites/source_drift/run.sh) |  |
 | drift_architecture | source_drift architecture.py | check |  |  | this manifest against its dot, SVG and document copies | [`ArchitectureDocumentationTests`](../tests/suites/source_drift/architecture.py) | [`architecture_documentation`](../tests/suites/source_drift/run.sh) |  |
@@ -717,6 +716,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D61 | drift_check | build_md | checks | Known gap paragraphs equal the index, as in the architecture document | [`known_gap_index_problems`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D62 | agents_md | build_md | copies | manually repeated warning; first paragraph agrees after whitespace normalization | [`HARNESS_NOTE_FILES`](../tests/suites/source_drift/check.py) | [`check_harness_note_agreement`](../tests/suites/source_drift/check.py) |  |
 | D65 | gen_architecture | worker_md | writes | per-graph destination; capability figure and inventory beside WORKER.md | [`graph_document`](../docs/generate_architecture.py) | [`test_routing_and_second_document_refusals`](../tests/suites/source_drift/architecture.py) |  |
+| D66 | drift_check | worker_md | checks | Known gap paragraphs equal the final index in document order | [`check_known_gap_index`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 
 Every node and edge above cites at least one test or rule.
 
@@ -842,11 +842,6 @@ Every node and edge above cites at least one test or rule.
 Each gap is stated in full where the promise it limits is stated; this list
 only points there, in document order.
 
-- [One run in time](#one-run-in-time): an exec child's descendant that
-  leaves the child's process group can outlive the run unobserved.
-- [Principles as enforced constraints](#principles-as-enforced-constraints):
-  private extension calls have unobserved allocation/state behavior beyond
-  PW-owned buffers and native publication.
 - [Principles as enforced constraints](#principles-as-enforced-constraints):
   a connection that races the host's retirement can fail before it is
   refused.

@@ -2,17 +2,30 @@
 
 ## Status
 
-Pass 2 is complete in this checkpoint (`docs: complete worker capability map`).
+Pass 3 is complete at its review stop in this checkpoint
+(`docs: complete worker tour pass 3 draft`). Pass 2 work is committed in
+`83f61f35a96d295f2a2a94aa29740664ec2971f6`.
 Pass 1 comparison and adjudication are committed in `f5e5136`: rows 15 and 16
 were the two findings held outside the tree, and both were recovered. Pass 1
 work remains in `90fcb1b9a1e48a1e41725e9faca3095297ee493c` against production
 source `6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6`.
 
-The manifest owns the inventory and the generated capability map. Destination
-support, refusal controls, native-size figure review and pass 2 verification
-are complete. Rows 20 and 21 opened from map review and await adjudication;
-rows 1–19 remain implementing. No row closed and no production source changed.
-Pass 3 follows, then stops for user review; pass 4 is not part of this run.
+[WORKER.md](WORKER.md) now has the resource/authority draft and generated map.
+The accepted private-extension and exec-descendant gaps moved there verbatim;
+the architecture tour links to their new owner. Inventory facts remain in the
+manifest and prose remains authored, with no call-site completeness rule.
+
+Rows 1–6, 8–18 are validating the draft; rows 7 and 19 remain implementing
+for pass 4. Row 15 explains retention, with its fix outside this scope. Row 7
+authorizes source comment corrections; row 19 authorizes stronger verification,
+with production hardening subject to separate adjudication. Rows 20 and 21
+opened in map review and row 22 in prose review; all three await adjudication.
+No row closed and no production source changed.
+
+All pass 3 source-drift cases passed, every generator check passed, and a second
+architecture generation wrote nothing. Evidence and applicability are recorded
+below. Stop here for the user's draft/register review. Pass 4 has not started;
+no push or release was performed.
 
 ## What this plan produces
 
@@ -231,33 +244,34 @@ xnu null-env extraction path corroborates the observed empty environment.
 
 The user adopted the recommended dispositions for rows 1–7, 9 and 11–19,
 with the explicit exceptions recorded below for rows 7, 15 and 19. Rows 8 and
-10 retain their existing adjudications. All rows are implementing; the scope
-in each detail controls later changes. The checkpoint closes no row.
+10 retain their existing adjudications. At that checkpoint all rows were implementing; subsequent draft re-proof
+updates appear in their details. The adjudicated scope controls later changes;
+the checkpoint closed no row.
 
-| # | Candidate | Pass 1 evidence | State | Adjudicated disposition |
+| # | Candidate | Evidence | State | Adjudicated disposition / recommendation for open rows |
 | --- | --- | --- | --- | --- |
-| 1 | Worker launch has a different inheritance contract from exec children | H has no close-by-default attributes; nil envp is empty in the examined Apple path and L; L observes fds 0–4, IC demonstrates an extra inherited descriptor/environment value | implementing | Explain the launch rule and bounded observations; consider explicit descriptor isolation as a separate fix, not something L proves unnecessary |
-| 2 | Policy, evidence and readiness descriptors remain open | W has no close of 0/3/4; L observes all three before/after apply; child controls exclude inherited endpoints | implementing | Explain retention; do not claim that closing these would leave only attempt fds, since stdio/ambient inheritance remains |
-| 3 | `open_write` truncates on open and attempts an unchecked write | `attempt_file_open_write` uses `O_TRUNC`, discards write/close results and reports open success | implementing | Correct guide/tour wording to distinguish attempted byte write from an observed write; no behavior change recommended |
-| 4 | `open_read` reports open success only | One-byte read and close are attempted without retaining returns | implementing | Correct guide/tour wording; contrast published `read_fresh` observations |
-| 5 | `create` opens existing files and supplies a masked creation mode | No `O_EXCL`/`O_TRUNC`; mode argument 0600, subject to inherited umask; existing-file checker asserts bytes/identity | implementing | Explain intended open/create behavior and scope mode claim to the supplied argument |
-| 6 | Exec preparation allocates after apply; formatting needs a narrower account | Apple spawn wrapper allocates both handles and can grow action storage; fixed PW diagnostic destinations do not establish library-wide allocation freedom | implementing | Explain per-attempt allocation and diagnostic call boundary; keep architecture's already-scoped preallocation claim; correct stale comments via row 7 |
+| 1 | Worker launch has a different inheritance contract from exec children | H has no close-by-default attributes; nil envp is empty in the examined Apple path and L; L observes fds 0–4, IC demonstrates an extra inherited descriptor/environment value | validating | Explain the launch rule and bounded observations; consider explicit descriptor isolation as a separate fix, not something L proves unnecessary |
+| 2 | Policy, evidence and readiness descriptors remain open | W has no close of 0/3/4; L observes all three before/after apply; child controls exclude inherited endpoints | validating | Explain retention; do not claim that closing these would leave only attempt fds, since stdio/ambient inheritance remains |
+| 3 | `open_write` truncates on open and attempts an unchecked write | `attempt_file_open_write` uses `O_TRUNC`, discards write/close results and reports open success | validating | Correct guide/tour wording to distinguish attempted byte write from an observed write; no behavior change recommended |
+| 4 | `open_read` reports open success only | One-byte read and close are attempted without retaining returns | validating | Correct guide/tour wording; contrast published `read_fresh` observations |
+| 5 | `create` opens existing files and supplies a masked creation mode | No `O_EXCL`/`O_TRUNC`; mode argument 0600, subject to inherited umask; existing-file checker asserts bytes/identity | validating | Explain intended open/create behavior and scope mode claim to the supplied argument |
+| 6 | Exec preparation allocates after apply; formatting needs a narrower account | Apple spawn wrapper allocates both handles and can grow action storage; fixed PW diagnostic destinations do not establish library-wide allocation freedom | validating | Explain per-attempt allocation and diagnostic call boundary; keep architecture's already-scoped preallocation claim; correct stale comments via row 7 |
 | 7 | Source comments state retired or overbroad premises | Stack/static, last-allocation, no-allocation, R5/R6 and Swift-worker comments remain; main also says every write checks its return and misdescribes fatal-signal interpretation | implementing | Source comment corrections authorized for pass 4, with identity regeneration/build/identity validation |
-| 8 | Ownership of private-extension limitation | Existing architecture paragraph and intended worker-tour location rechecked | implementing | Adjudicated: WORKER.md owns it; ARCHITECTURE links there, in pass 3/integration |
-| 9 | Native release does not establish revocation; an after-release read is nevertheless observed | Checker accepts either after-release result and verifies bytes if successful; seed's “nothing observes” wording was too broad | implementing | Keep accepted private-API scope from row 8 and correct the candidate sentence; no new universal revocation assertion |
-| 10 | Exec descendants can outlive the worker/run | Group targeting and possible unconfirmed reap verified; existing accepted descendant limit remains | implementing | Adjudicated ownership move; preserve accepted scope and distinguish worker-death/unreaped-child paths |
-| 11 | Ambient worker state is only partly inventoried | L observes cwd, uid/gid, fds, argv/environment and VM regions; task-port census refused; signal mask/limits/private internal state unobserved | implementing | Explain measured starting substrate; accept the explicitly bounded observation as a limitation; no empty-process claim |
-| 12 | Ignored SIGPIPE reaches exec children; extension-specific core-limit inheritance is unreachable in admitted plans | Spawn sets neither signal reset flag; `extensionMeaningFailure` refuses exec+extension; helper's own SIGPIPE ignore prevents independent signal evidence | implementing | Explain signal inheritance, correct the seeded extension-to-exec claim, and reserve a signal observer for any requested stronger guarantee |
-| 13 | Extension requests can change worker core limits before apply | `prepare_extension` sets both limits to zero only after requested extension symbols resolve; local failure is published | implementing | Explain request-dependent process context and native failure branches; no change recommended |
-| 14 | Worker-side token erasure is path-dependent | Proceed refusal/spin, cancellation exit, compile/parameter/apply failures and early returns can bypass post-loop erase; host `erase` is separate | implementing | Explain exact worker/host erasure sites, including accepted mapping retained until exit; any extra worker erase requires a separate fix |
-| 15 | Mach lookup retains the acquired bootstrap reference | `task_get_special_port` succeeds before lookup; only `svc` is deallocated, including on repeated lookup/failure paths | implementing | Explain retention now; the reference-balance fix is separate scope |
-| 16 | Compiled-object lifetime has no explicit PW destruction | `profile` goes to capture/apply and no `sandbox_free_profile` is declared/called; private apply ownership is unobserved | implementing | Explain the call/ownership boundary; investigate API ownership before authorizing a free, which could otherwise be invalid |
-| 17 | Several resources cross the proposed role boundaries | Token mapping carries authority and protocol metadata; native extension acquisition occurs inside an attempt; shared working storage and signal state have multiple purposes | implementing | Keep these resources outside single-role clusters, with named roles; do not force all inventory rows into one cluster |
-| 18 | Oversized issuer token erasure covers a bounded prefix | I computes bounded `strnlen`, rejects oversize, erases that length and frees; no full allocation extent is established | implementing | Correct erasure scope and investigate safe full-buffer disposal before a fix; accepted-token path remains distinct |
-| 19 | Host/issuer launch setup does not check every acquisition/setup return | H ignores file-action init/adddup2 results and shm flag/unlink results; E ignores handle init results; copied argv can contain nil after failed strdup | implementing | Strengthen verification and explicitly refuse failed setup in pass 4; preserve reproduction and regression-control requirements |
-
+| 8 | Ownership of private-extension limitation | Existing architecture paragraph and intended worker-tour location rechecked | validating | Adjudicated: WORKER.md owns it; ARCHITECTURE links there, in pass 3/integration |
+| 9 | Native release does not establish revocation; an after-release read is nevertheless observed | Checker accepts either after-release result and verifies bytes if successful; seed's “nothing observes” wording was too broad | validating | Keep accepted private-API scope from row 8 and correct the candidate sentence; no new universal revocation assertion |
+| 10 | Exec descendants can outlive the worker/run | Group targeting and possible unconfirmed reap verified; existing accepted descendant limit remains | validating | Adjudicated ownership move; preserve accepted scope and distinguish worker-death/unreaped-child paths |
+| 11 | Ambient worker state is only partly inventoried | L observes cwd, uid/gid, fds, argv/environment and VM regions; task-port census refused; signal mask/limits/private internal state unobserved | validating | Explain measured starting substrate; accept the explicitly bounded observation as a limitation; no empty-process claim |
+| 12 | Ignored SIGPIPE reaches exec children; extension-specific core-limit inheritance is unreachable in admitted plans | Spawn sets neither signal reset flag; `extensionMeaningFailure` refuses exec+extension; helper's own SIGPIPE ignore prevents independent signal evidence | validating | Explain signal inheritance, correct the seeded extension-to-exec claim, and reserve a signal observer for any requested stronger guarantee |
+| 13 | Extension requests can change worker core limits before apply | `prepare_extension` sets both limits to zero only after requested extension symbols resolve; local failure is published | validating | Explain request-dependent process context and native failure branches; no change recommended |
+| 14 | Worker-side token erasure is path-dependent | Proceed refusal/spin, cancellation exit, compile/parameter/apply failures and early returns can bypass post-loop erase; host `erase` is separate | validating | Explain exact worker/host erasure sites, including accepted mapping retained until exit; any extra worker erase requires a separate fix |
+| 15 | Mach lookup retains the acquired bootstrap reference | `task_get_special_port` succeeds before lookup; only `svc` is deallocated, including on repeated lookup/failure paths | validating | Explain retention now; the reference-balance fix is separate scope |
+| 16 | Compiled-object lifetime has no explicit PW destruction | `profile` goes to capture/apply and no `sandbox_free_profile` is declared/called; private apply ownership is unobserved | validating | Explain the call/ownership boundary; investigate API ownership before authorizing a free, which could otherwise be invalid |
+| 17 | Several resources cross the proposed role boundaries | Token mapping carries authority and protocol metadata; native extension acquisition occurs inside an attempt; shared working storage and signal state have multiple purposes | validating | Keep these resources outside single-role clusters, with named roles; do not force all inventory rows into one cluster |
+| 18 | Oversized issuer token erasure covers a bounded prefix | I computes bounded `strnlen`, rejects oversize, erases that length and frees; no full allocation extent is established | validating | Correct erasure scope and investigate safe full-buffer disposal before a fix; accepted-token path remains distinct |
+| 19 | Host/issuer launch setup does not check every acquisition/setup return | H ignores file-action init/adddup2 results and shm flag/unlink results; E ignores handle init results; copied argv can contain nil after failed strdup | implementing | Strengthen verification in pass 4; production refusal/hardening requires a separate adjudication |
 | 20 | Authority cluster and arrows can overstate supplied power | Map review finds ambient context in S16a and apply/entry-point edges whose original style suggested granting authority | awaiting adjudication | Keep S16a unclustered; distinguish preparation, exercising an API and imposing restriction; confirm this account at the prose stop |
 | 21 | Inventory resources can be disconnected from drawn observations | Native-size map review finds ambient state and working-storage nodes without incident edges; direct observation is narrower than resource existence | awaiting adjudication | Retain visible inventory nodes and describe the graph as selected relationships, not a proof that every resource is observed; consider focused views in later work |
+| 22 | Existing exec documentation upgrades bounded controls into general claims | Guide says setup is not a sandbox operation; harness README treats a descriptor ceiling as proof of post-apply placement | awaiting adjudication | Correct these documentation claims to measured setup behavior and source-established placement; no runtime change proposed |
 
 ### Row details
 
@@ -292,6 +306,11 @@ Exact inputs, observations and paths are in the pass 1 evidence ledger below.
 Adjudication: Explain the native launch rule and bounded observations. Explicit worker descriptor isolation is separate scope; no production change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#starting-authority-and-ambient-context): “The worker launch uses nil spawn attributes and leaves other descriptors to native close-on-exec inheritance.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 2.** First candidate: “Descriptors 0, 3 and 4 stay open from launch
 to exit; descriptor 5 is closed once the channel is mapped; exec children
 inherit none of them.” W and `prepare_extension` establish the call sites;
@@ -310,6 +329,11 @@ promising successful close on every path.
 Adjudication: Explain retained protocol descriptors and cleanup exceptions. No descriptor-removal change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#reporting-apparatus): “The worker retains its evidence descriptor as well as the mapping. Its policy input and readiness descriptors also stay open until exit.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 3.** First candidate: “`open_write` opens the target for writing,
 truncates it to zero length and writes one byte, and reports only the open
 result.” Source confirms the truncating open and a one-byte `write`, not a
@@ -320,10 +344,15 @@ omits truncation. Recommended candidate: “`open_write` calls a truncating
 write-open, then attempts to write `x` and close the descriptor; its reported
 status is the open result.” A deterministic controlled failed-write return
 would falsify a stronger “one byte was written” claim; no probe is needed to
-establish that the return is discarded. Guide/tour correction awaits decision.
+establish that the return is discarded. The original recommendation was a guide/tour correction; adjudication follows.
 
 Adjudication: Correct the guide and worker tour to distinguish truncating open, attempted byte write and published open result. No behavior change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “Published success is the open result; the write and close returns are discarded.” Guide wording is corrected under this row's authorization.
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 4.** First candidate: “`open_read` opens the target, reads one byte
 and discards it, and reports only the open result; `read_fresh` records what
@@ -339,6 +368,11 @@ read observation. Source settles the present publication difference.
 Adjudication: Correct the guide and worker tour to distinguish open success from the unpublished read and close results, contrasted with read_fresh. No behavior change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “Opens read-only, attempts a one-byte read and close, and discards those latter returns.” Guide wording is corrected under this row's authorization.
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 5.** First candidate: “`create` opens an existing target for writing
 without truncating it, and creates a missing one with mode 0600.”
 `attempt_file_create` supplies `O_WRONLY | O_CREAT` and mode 0600, without
@@ -352,6 +386,11 @@ identity or contents in that controlled case would refute preservation.
 
 Adjudication: Explain intended open/create behavior and the supplied mode argument subject to umask. No behavior change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “Existing targets are opened without truncation; missing targets can be created.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 6.** First candidate: “Exec attempts allocate after apply at
 PolicyWitness call sites.” `exec_resources_acquire` calls both opaque-handle
@@ -392,6 +431,11 @@ promise. No allocation probe was needed or run.
 Adjudication: Explain per-attempt allocations and the diagnostic library-call boundary; preserve the scoped architecture claim. Source comment corrections belong to row 7. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “The examined Apple spawn implementation allocates both handles and can grow action storage.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 7.** First candidate: “Worker source comments describe retired
 premises.” Confirmed items: header's stack-fixed buffer and last-allocation
 claim; attempt-section stack-only/no-allocation/R6 language; R5 declaration
@@ -417,6 +461,11 @@ revocation. Existing adjudication remains: move ownership to WORKER.md in
 pass 3 and link from ARCHITECTURE. Validation will check paragraph ownership,
 links and the Known gaps index. No move or after-sentence exists in pass 1.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#supplied-extension-authority): “Known gap: private extension calls may allocate or retain internal state that PW cannot inspect.” The accepted paragraph moved verbatim; ARCHITECTURE now links to its owner, and both gap indexes were updated.
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 9.** First candidate: “A successful release returns zero; nothing in
 PolicyWitness observes whether access is revoked afterward.” The latter
 clause is too broad: `check_extensions.py` retains the after-release fresh
@@ -433,6 +482,11 @@ No new revocation assertion or live extension run was made.
 Adjudication: Retain the accepted private-API limitation under row 8 and explain the observed after-release read with its allowed outcomes. No universal revocation claim or native API change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#supplied-extension-authority): “The worker publishes the native release result and any subsequent requested read observations.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 10.** First candidate: “Exec helpers can outlive the worker.”
 `attempt_exec_spawn` addresses the child's process group on exceptional
 cleanup and retains leader ownership with WNOWAIT before reaping. It records
@@ -444,6 +498,11 @@ accepts the architecture's escaped-descendant limitation and moves its
 paragraph in pass 3. Inventory S36 separates child, group and pipe lifetimes;
 additional prose must not expand the existing acceptance into an unreviewed
 claim that every child is cleaned up or every descendant is observed.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “Known gap: an exec child's descendant that leaves the child's process group can outlive the run unobserved.” The accepted paragraph moved verbatim; ARCHITECTURE now links to its owner, and both gap indexes were updated.
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 11.** First candidate: “The worker's ambient resources are
 uninventoried.” L establishes a bounded census: descriptors, cwd `/`, uid 501,
@@ -462,6 +521,11 @@ differences are not within-process changes. No subtraction of them is claimed.
 
 Adjudication: Explain the measured starting substrate and accept the explicitly bounded observation as a Known gap. No new isolation guarantee or runtime change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#starting-authority-and-ambient-context): “Known gap: the starting-state observation is bounded to the exercised launch configuration.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 12.** First candidate: “Exec children inherit the worker's ignored
 SIGPIPE and its zero core-dump limit.” The SIGPIPE portion follows W's
@@ -482,6 +546,11 @@ review, not a freshly executed admission case.
 Adjudication: Explain inherited signals and correct the unreachable extension-to-exec claim. A stronger signal guarantee and dedicated observer remain separate scope. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#starting-authority-and-ambient-context): “Exec-child setup selects descriptor isolation and a new process group, while leaving ignored-signal inheritance and the signal mask to native spawn rules.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 13.** First candidate: “The core-dump limit differs between extension
 and non-extension runs.” `prepare_extension` returns before symbol resolution
 and `setrlimit` when no extension is requested; missing symbols also return
@@ -497,6 +566,11 @@ exec attempts in the same specimen (row 12).
 
 Adjudication: Explain request-dependent core-limit changes and their failure branches. No native behavior change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#starting-authority-and-ambient-context): “For an extension request, preparation sets both core limits to zero after resolving the private entry points; local failure is recorded.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 14.** First candidate: “The normal-completion token erase is skipped
 on the proceed-refusal path.” Confirmed `proceed_refused` and timeout/future
@@ -517,6 +591,11 @@ source already decides the absent call. No change to release/wait logic.
 Adjudication: Explain the worker and host erase sites and early exits, including the retained accepted mapping. Additional worker erasure is separate fix scope. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#supplied-extension-authority): “Compile/apply/parameter failures, proceed refusal, cancellation and interruption inside a native call can bypass the final loop erasure.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 15.** First candidate: “A Mach lookup attempt drops its acquired
 service right but retains the bootstrap send-right reference it obtained,
 including when the service lookup fails.” `attempt_mach_lookup` calls
@@ -534,6 +613,11 @@ only.”
 Adjudication: Explain retention now; the fix is separate scope. No reference-release change or regression-control waiver is authorized in this work. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#acquisitions-inside-attempts): “Leaves the acquired bootstrap reference until process exit, including after lookup failure and repeated attempts.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 16.** First candidate: “The compiled profile is retained until worker
 exit.” That allocation-lifetime sentence exceeds the visible source:
 `sandbox_apply` is private and may have ownership behavior not established
@@ -549,6 +633,11 @@ to avoid an unsupported lifetime promise.
 
 Adjudication: Explain the capture/apply call chain and private ownership boundary. Investigate API ownership before any future free; no destruction change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#reporting-apparatus): “The compiled profile has no explicit PW destruction call; ownership changes inside the private apply routine remain unobserved.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 17.** First candidate: “Every resource belongs to one experimental
 role.” The channel object/mappings carry both bearer bytes and admission or
@@ -567,6 +656,11 @@ review actual node/edge statements, not just SVG generation.
 Adjudication: Draw resources with multiple roles or no role outside single-role clusters and name their roles in prose. No runtime change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
 
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#capability-map): “White nodes have multiple roles or form the ambient execution substrate.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
+
 **Row 18.** First candidate: “The issuer erases the token before freeing
 it.” I uses `strnlen(token, PW_EXTENSION_TOKEN_BYTES)`, then erases that many
 bytes and calls `free`. For an accepted bounded string, all non-NUL bytes are
@@ -582,6 +676,11 @@ present bounded call. No sensitive token bytes were collected in this pass.
 
 Adjudication: Correct the bounded-prefix erasure account and leave safe full-buffer disposal investigation before a future fix. No native disposal change is authorized. State: implementing. Validation and after sentence
 are pending; no row closes at this checkpoint.
+
+Pass 3 draft re-proof in [WORKER.md](WORKER.md#supplied-extension-authority): “An oversized token is rejected and that inspected prefix is erased; the allocation extent beyond the bound is unobserved.”
+Validation: source/assertion review at the scope above and fresh documentation
+checks in the pass 3 ledger; no new runtime observation. State: validating,
+pending the draft review; not closed.
 
 **Row 19.** First candidate: “The host prepares the worker's protocol
 resources and refuses every failed setup before spawn.” H ignores the return
@@ -601,8 +700,14 @@ collision rather than infer it from a label. No production fix or injected
 failure run in pass 1. Candidate wording names requested actions and their
 unchecked returns pending the decision.
 
-Adjudication: Strengthen verification and explicitly refuse failed setup in pass 4. Keep a failing reproduction and distinguishing regression controls, then regenerate identity, make a signed build and run the covering cases. Source review alone is not validation of this fix. State: implementing. Validation and after sentence
-are pending; no row closes at this checkpoint.
+Adjudication: Strengthen verification in pass 4. Authorized scope is passing
+and rejected controls for setup failures and descriptor collisions. The selected
+exception authorizes verification; the recommendation to add production refusal
+is not adopted here. Any resulting runtime hardening requires a separate
+adjudication. Source instrumentation, if required for the authorized controls,
+keeps the worker-identity, signed-build and covering-validation requirements.
+State: implementing; verification and the after sentence remain pending. No
+regression-control waiver is authorized.
 
 **Row 20.** Map candidate: “The gold group contains deliberately supplied
 authority.” S16a also contains inherited credentials and ambient policy context.
@@ -635,6 +740,71 @@ observation boundary, with focused visual views a possible later improvement.
 This is awaiting adjudication, not an accepted new instrumentation guarantee.
 The native-size review found readable node/edge labels after dropping redundant
 edge-kind words; the full inventory requires scrolling in the SVG.
+
+**Row 22.** Prose candidates encountered in existing owners: “None of that
+setup is a sandbox operation, so under an unaugmented `(deny default)` the
+denied call is `posix_spawn` itself” in the guide, and the harness README's
+claim that its descriptor-ceiling result “proves that the worker creates each
+attempt's pipes and spawn handles inside the attempt, after apply”. These
+sentences upgrade one profile/environment observation and a peak-descriptor
+control into broader gating and placement claims. The first issue is related
+to rows 6–7's source-comment finding but also occurs in authored user/test
+references, whose correction was not specifically adjudicated.
+
+Source: [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+is called by the exec attempt after apply. Assertions in
+[the harness](../tests/suites/runner_c_worker_harness/run.sh) check successful
+setup reaching spawn for the denying case and completed children under a
+resource ceiling for the per-attempt case. A worker preparing one attempt's
+pipes just before apply could still meet that ceiling; a different native
+implementation or resource failure could stop setup. No new runtime probe or
+mutation was needed to distinguish these assertions from source placement,
+and none ran in pass 3. Recommended disposition: correct the two owning
+references to these scopes and link the worker tour, with no production change.
+They remain unchanged pending user adjudication. The draft's positive sentence
+is “The ceiling checks reuse across attempts; the denying case observes setup
+reaching spawn for its profile and environment. Source establishes post-apply
+placement.” This row is awaiting adjudication and remains open at the stop.
+
+### Pass 3 draft re-proof and validation
+
+The after sentences below are the draft under review, not closed-row claims.
+Source and cited assertions were reviewed at their stated scope; no runtime
+case was rerun in pass 3. Documentation machinery and the gap moves receive
+fresh validation in this pass. Rows with completed documentation work are
+validating pending review. Rows 7 and 19 remain implementing for pass 4, and
+rows 20–22 await adjudication. No row closes at this stop.
+
+### Pass 3 evidence ledger
+
+Public command: `PW_TEST_OUT_DIR=tests/out/runs/worker-p3-final tests/run.sh
+--suite source_drift`. Run ID: `20261017T224648Z_56da5fa6`. All selected
+cases passed: `source_drift/runner_source_manifests_agree`,
+`source_drift/limits_documentation`, `source_drift/contract_versions`,
+`source_drift/architecture_documentation`, `source_drift/build_documentation`
+and `source_drift/generator_contract`. The source/guidance controls include
+passing and rejected Known gap ownership mutations in all three tours.
+The generator-contract result retains the existing baseline unchanged.
+
+Architecture regenerated twice; the second run wrote nothing. Architecture,
+build, contract, worker-identity and limits check modes passed. Source review
+confirmed that both accepted gap paragraphs moved verbatim, their former
+locations link to the new owner, and the Known gaps indexes agree. The README,
+runner reference and document graph link the new tour. The guide's file-action
+wording now states the native observation under rows 3–5; row 22's broader exec
+claims remain for adjudication. Receiving-side source citations were added to
+selected map edges while drafting; their rendered geometry is unchanged.
+
+This is documentation and verification evidence, not a fresh live worker run.
+The retained `documentation-source/` attachment records base commit
+`83f61f35a96d295f2a2a94aa29740664ec2971f6` and the tested worktree patch.
+Retention source is null because the pass 3 inputs were uncommitted. Subsequent
+Status, scope clarification and evidence-ledger edits plus the retention entry
+are bookkeeping; prose/link and generator checks were repeated before commit.
+The clarified row 19 entry records the user's selected verification-only scope,
+without authorizing the original recommendation's runtime refusal change.
+Production source and worker identity remain unchanged from pass 1. No row
+closed, and the work stops before pass 4.
 
 ### Pass 2 evidence ledger
 

@@ -1855,6 +1855,15 @@ The C worker implements these `(attempt.kind, attempt.action)`
 combinations:
 
 - `("file", "open_read" | "read_fresh" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
+  `open_read` opens read-only, attempts a one-byte read and close, and discards
+  those latter returns; its status reports the open result. `open_write` opens
+  with `O_WRONLY | O_TRUNC`, then attempts to write `x` and close, discarding
+  those returns; success reports the truncating open, not an observed byte
+  transfer. `create` uses `O_WRONLY | O_CREAT` with mode argument `0600`, subject
+  to umask: an existing file is opened without truncation, and an absent target
+  can be created. `read_fresh` instead retains separate native open, stat, read
+  and close observations and bounded content, as described in
+  [fresh-read output](#extension-and-fresh-read-output).
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
 - `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
 - `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper

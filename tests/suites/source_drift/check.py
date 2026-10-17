@@ -942,6 +942,7 @@ SHAPE_GOLDENS = {"reply": REPO_ROOT / "tests/fixtures/contract/response_shape.js
 
 
 BUILD_DOC = REPO_ROOT / "docs/BUILD.md"
+WORKER_DOC = REPO_ROOT / "docs/WORKER.md"
 
 
 def architecture_prose() -> str:
@@ -979,9 +980,9 @@ def section(prose: str, heading: str) -> str | None:
 def check_known_gap_index() -> list[str]:
     """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else.
 
-    The convention holds in the architecture document and the build document alike."""
+    The convention holds in the architecture, build and worker tours."""
     problems = []
-    for document in (ARCHITECTURE_DOC, BUILD_DOC):
+    for document in (ARCHITECTURE_DOC, BUILD_DOC, WORKER_DOC):
         problems.extend(known_gap_index_problems(document))
     return problems
 

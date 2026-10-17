@@ -9,7 +9,9 @@ reply, which the controller wraps in its output envelope.
 [AGENTS.md](AGENTS.md) describes how to change and test the runner, including
 the native helpers maintained under `controller/tools/`. The
 [architecture tour](../docs/ARCHITECTURE.md) describes the process and evidence
-boundaries across the application.
+boundaries across the application. The
+[worker tour](../docs/WORKER.md) explains the instrument's resources, authority
+and experimental constraints.
 
 ## Key files
 

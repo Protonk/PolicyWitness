@@ -3085,7 +3085,7 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, the Known gap index, the evidence-channel landing paths and the core ideas"
+            "Guards": "copies and vocabularies that are not generated, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas"
           },
           "sources": [
             {
@@ -4885,6 +4885,26 @@
             {
               "path": "tests/suites/source_drift/architecture.py",
               "symbol": "test_routing_and_second_document_refusals",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D66",
+          "from": "drift_check",
+          "to": "worker_md",
+          "kind": "checks",
+          "label": "Known gap paragraphs equal the final index in document order",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_known_gap_index"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/run.sh",
+              "symbol": "runner_source_manifests_agree",
               "form": "test"
             }
           ]
@@ -9013,6 +9033,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
               "symbol": "runCWorker"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "map_region"
             }
           ],
           "checks": [
@@ -9213,6 +9237,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "main"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+              "symbol": "pw_capture_profile"
             }
           ],
           "checks": [
@@ -9463,6 +9491,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
               "symbol": "runCWorker"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
             }
           ],
           "checks": [
@@ -9563,6 +9595,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "prepare_extension"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension"
             }
           ],
           "checks": [
@@ -9879,6 +9915,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
               "symbol": "main"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
+              "symbol": "ExtensionSession"
             }
           ],
           "checks": [
@@ -9984,6 +10024,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
               "symbol": "runCWorker"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "comparisonEvidence"
             }
           ],
           "checks": [
@@ -10044,6 +10088,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
               "symbol": "pw_capture_profile"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "decodeProfileCapture"
             }
           ],
           "checks": [

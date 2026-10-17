@@ -24,7 +24,7 @@ def main(out):
              'runner/Services/PWRunner/main.swift', 'runner/Clients/PWRunnerClient/main.swift',
              'tests/COVERAGE.md', 'tests/catalog.json', 'docs/PolicyWitness.md',
              'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
-             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md', 'docs/BUILD.md',
+             'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md', 'docs/BUILD.md', 'docs/WORKER.md',
              'tests/fixtures/contract/response_shape.json',
              'tests/fixtures/contract/envelope_shape.json',
              'tests/suites/source_drift/check.py']
@@ -123,6 +123,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     scenarios = [(name, {path: source}, expected, diagnostic)
                  for name, path, source, expected, diagnostic in scenarios]
     scenarios += guidance_scenarios(repo)
+    scenarios += gap_scenarios(repo)
     originals = {path: (repo / path).read_text()
                  for _, changes, _, _ in scenarios for path in changes}
     receipts = []
@@ -204,6 +205,29 @@ def guidance_scenarios(repo):
                           ('reordered', ''.join(reordered))]:
         scenarios.append((f'guidance-principle-label-{name}', {agents: changed}, 1, 'core ideas:'))
     scenarios.append(('guidance-restored', documents, 0, None))
+    return scenarios
+
+
+def gap_scenarios(repo):
+    """Exercise every tour's paragraph/index ownership through the real checker."""
+    scenarios = []
+    for name in ('ARCHITECTURE', 'BUILD', 'WORKER'):
+        path = Path(f'docs/{name}.md')
+        source = (repo / path).read_text()
+        heading = '## Known gaps'
+        assert source.count(heading) == 1
+        added = source.replace(heading,
+            '## Gap control\n\nKnown gap: controlled incomplete guarantee.\n\n' + heading)
+        indexed = added.rstrip() + '\n- [Gap control](#gap-control): controlled guarantee.\n'
+        scenarios.extend([
+            (f'gap-unindexed-{name}', {path: added}, 1, f'known gaps: docs/{name}.md'),
+            (f'gap-indexed-{name}', {path: indexed}, 0, None),
+            (f'gap-heading-missing-{name}', {path: source.replace(heading, '## Other ending')},
+             1, f'known gaps: docs/{name}.md'),
+            (f'gap-spurious-index-{name}', {path: source.rstrip() + '\n- [Gap control](#gap-control)\n'},
+             1, f'known gaps: docs/{name}.md'),
+            (f'gap-restored-{name}', {path: source}, 0, None),
+        ])
     return scenarios
 
 

@@ -1123,6 +1123,13 @@
       "reason": "Worker pass 2 final contract, architecture and generator controls passed; other three drift cases credited from full run after reviewed applicability check.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p3-final",
+      "run_id": "20261017T224648Z_56da5fa6",
+      "reason": "Worker pass 3 full source-drift validation: all six cases passed, including gap-index mutations for all three tours; exact tested base and worktree patch retained.",
+      "source": null,
+      "app_inventory": null
     }
   ]
 }
