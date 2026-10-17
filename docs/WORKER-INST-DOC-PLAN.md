@@ -2,7 +2,8 @@
 
 ## Status
 
-Pass 3 is complete at its review stop in this checkpoint
+Pass 3 is complete at its review stop. Work commit:
+`fad2bb873142b5d20364a48f8dd2b0cf467796d8`
 (`docs: complete worker tour pass 3 draft`). Pass 2 work is committed in
 `83f61f35a96d295f2a2a94aa29740664ec2971f6`.
 Pass 1 comparison and adjudication are committed in `f5e5136`: rows 15 and 16
