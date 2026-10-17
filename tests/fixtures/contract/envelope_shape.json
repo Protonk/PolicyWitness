@@ -18,6 +18,7 @@
     "envelope.data": {
       "policy_check": "object",
       "request_failure": "object",
+      "runner_acquisition": "array",
       "runner_client": "object",
       "runner_result": "object",
       "runner_sandbox_diagnostics": "object",
@@ -97,6 +98,53 @@
       "code": "string",
       "expected_schema": "number",
       "path": "array"
+    },
+    "envelope.data.runner_acquisition[]": {
+      "generation": "object",
+      "observation_error": "string",
+      "observed_exit": "object",
+      "runner_client": "object",
+      "runner_result": "object",
+      "wait_outcome": "string"
+    },
+    "envelope.data.runner_acquisition[].generation": {
+      "executable_path": "string",
+      "pid": "number",
+      "start_sec": "number",
+      "start_usec": "number"
+    },
+    "envelope.data.runner_acquisition[].observed_exit": {
+      "basis": "string",
+      "observed_at_unix_ms": "number",
+      "replacement": "object"
+    },
+    "envelope.data.runner_acquisition[].observed_exit.replacement": {
+      "executable_path": "string",
+      "pid": "number",
+      "start_sec": "number",
+      "start_usec": "number"
+    },
+    "envelope.data.runner_acquisition[].runner_client": {
+      "argv": "array",
+      "capture_limit_bytes": "number",
+      "ended_at_unix_ms": "number",
+      "exit_code": "number",
+      "request_delivery": "object",
+      "started_at_unix_ms": "number",
+      "stderr": "string",
+      "stderr_bytes_received": "number",
+      "stderr_bytes_retained": "number",
+      "stderr_truncated": "boolean",
+      "stdout_bytes_received": "number",
+      "stdout_bytes_retained": "number",
+      "stdout_capture_error": "string",
+      "stdout_parse_error": "string",
+      "stdout_raw": "string",
+      "stdout_truncated": "boolean"
+    },
+    "envelope.data.runner_acquisition[].runner_client.request_delivery": {
+      "bytes_written": "number",
+      "error": "string"
     },
     "envelope.data.runner_client": {
       "argv": "array",

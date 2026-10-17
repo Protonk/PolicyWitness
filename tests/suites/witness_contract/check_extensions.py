@@ -35,11 +35,8 @@ def specimen(target, phases):
 def capture(pw, out, name, spec, *, expected_rc=0, session_state=None):
     directory = out / name
     if session_state:
-        sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
-        import session
         spec['runner'] = {'mode': 'byoxpc', 'service': session_state['service_name']}
         directory.mkdir(parents=True, exist_ok=True)
-        session.retire_host(session_state, directory, session.command)
     with RunCapture(pw, directory, spec, cli_args=['--no-log-capture']) as captured:
         assert captured.wait(timeout=40) == expected_rc, captured.metadata_path
         envelope = captured.load_json()

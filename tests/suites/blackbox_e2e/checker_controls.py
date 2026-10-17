@@ -204,6 +204,34 @@ def consumer_controls(artifacts, current):
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
     run('retained_live_run', current, allowed_write)
 
+    # Constructed acquisition interpretation, independent of the controller.
+    acquired = copy.deepcopy(current)
+    attempt = dict(runner_client=copy.deepcopy(current['data']['runner_client']),
+        runner_result=dict(schema_version=contract.RESPONSE_SCHEMA, normalized_outcome='already_ran', steps=[], pid=987),
+        generation=dict(pid=987, start_sec=1, start_usec=2, executable_path='/constructed/host'),
+        observed_exit=dict(basis='esrch', observed_at_unix_ms=3, replacement=None),
+        wait_outcome='retired', observation_error=None)
+    acquired['data']['runner_acquisition'] = [attempt]
+    run('acquisition_retired', acquired, allowed_write)
+    for name, mutate, diagnostic in [
+        ('malformed_generation', lambda a: a.update(generation=['invalid']), 'requires refusal, generation and client objects'),
+        ('worker_present', lambda a: a['runner_result'].update(runner_subprocess={}), 'pre-worker refusal'),
+        ('wrong_pid', lambda a: a['generation'].update(pid=988), 'pre-worker refusal'),
+        ('unsupported_refusal', lambda a: a['runner_result'].update(schema_version=0), 'pre-worker refusal'),
+        ('unknown_is_not_exit', lambda a: a.update(wait_outcome='observation_failed', observation_error='denied'), 'wait outcome'),
+        ('reuse_missing_start', lambda a: a['observed_exit'].update(basis='pid_reused', replacement=dict(pid=987)), 'different start time'),
+        ('reuse_same_start', lambda a: a['observed_exit'].update(basis='pid_reused', replacement=copy.deepcopy(a['generation'])), 'different start time'),
+        ('delivery_failed', lambda a: a['runner_client'].update(request_delivery=dict(bytes_written=0, error='broken pipe')), 'failed delivery'),
+    ]:
+        changed = copy.deepcopy(acquired)
+        mutate(changed['data']['runner_acquisition'][0])
+        run('acquisition_' + name, changed, rejected_by=diagnostic)
+    for status in ('deadline', 'observation_failed'):
+        changed = copy.deepcopy(acquired)
+        changed['data']['runner_acquisition'][0].update(wait_outcome=status, observed_exit=None,
+            observation_error='denied' if status == 'observation_failed' else None)
+        run('acquisition_' + status, changed, allowed_write)
+
     # Source identity is provenance across runs, not a reader admission gate.
     # These constructed metadata changes assert no agreement between hosts.
     other_producer = copy.deepcopy(current)

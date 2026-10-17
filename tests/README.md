@@ -477,6 +477,10 @@ absent annotated mismatch after evidence validation. There is no skip-policy fla
 errors. Exit 2 means planning/configuration was rejected before execution.
 The [dispatcher suite](suites/dispatcher/README.md) documents the independent controls.
 
+BYOXPC sessions use durable private registries. The opt-in
+`runner_byoxpc/default_location` case alone exercises the shared default registry;
+`bad_neighbor_claims` and `single_use` establish re-acquisition under contention.
+
 ## Comparing native builds
 
 Four scripts under `tests/lib/` record build inputs, prepare candidate apps

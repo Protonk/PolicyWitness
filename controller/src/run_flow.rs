@@ -28,6 +28,7 @@ use crate::json_contract;
 use crate::log_capture::LogTimeout;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::request_patch::{RequestError, parse_request, validate_request_version};
+use crate::runner_acquisition::{NativeObserver, ProcessObserver, RefusedAttempt, acquire};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
@@ -43,7 +44,8 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 
 /// `data` of a `kind: "run"` envelope: the dossier plus the execution records.
 /// Execution keys are present on every run envelope; an uncollected record is
-/// null. The optional request_failure is included only when supplied.
+/// null. Acquisition history is empty when no refusal qualified. The optional
+/// request_failure is included only when supplied.
 #[derive(Serialize)]
 struct ExecutionData {
     pub specimen: Specimen,
@@ -51,6 +53,7 @@ struct ExecutionData {
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
     pub runner_result: Option<Value>,
+    pub runner_acquisition: Vec<RefusedAttempt>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_failure: Option<Value>,
 }
@@ -173,6 +176,7 @@ fn execution_only(
             timeout_ms,
             runner_client,
             runner_result,
+            runner_acquisition: Vec::new(),
             request_failure: None,
         },
         sandbox_log_capture: None,
@@ -257,6 +261,7 @@ struct RunDependencies<'a> {
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
     pub registry_path: Option<&'a Path>,
+    pub process_observer: &'a dyn ProcessObserver,
     pub client: &'a dyn Fn(
         &str,
         &str,
@@ -272,6 +277,7 @@ impl RunDependencies<'static> {
             load_manifest: &evidence::load_manifest,
             registry_path: None,
             client: &run_pw_runner_client,
+            process_observer: &NativeObserver,
         }
     }
 }
@@ -681,15 +687,35 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let held = serde_json::to_string_pretty(&request_value)
         .map_err(|e| format!("failed to encode request JSON: {e}"))?;
 
-    let (runner_client, runner_result) = match (deps.client)(
-        &runner_target.service_name,
-        &held,
+    let acquired = acquire(
         parsed.timeout_ms,
-        &runner_target.connection,
-    ) {
-        Ok(pair) => pair,
-        Err(error) => return tool_error(specimen, timeout_ms, error),
+        matches!(
+            runner_target.connection,
+            RunnerConnectionKind::MachService { .. }
+        )
+        .then_some(runner_target.executable_path.as_deref())
+        .flatten(),
+        deps.process_observer,
+        |remaining| {
+            (deps.client)(
+                &runner_target.service_name,
+                &held,
+                remaining,
+                &runner_target.connection,
+            )
+        },
+    );
+    let acquired = match acquired {
+        Ok(value) => value,
+        Err(failure) => {
+            let (result, mut data) = tool_error_envelope(specimen, timeout_ms, failure.error);
+            data.execution.runner_acquisition = failure.refusals;
+            return envelope(result, &data, 2);
+        }
     };
+    let runner_client = acquired.client;
+    let runner_result = acquired.reply;
+    let runner_acquisition = acquired.refusals;
 
     // The reply is retained unchanged on every refusal; nothing reads it
     // before admission.
@@ -705,6 +731,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
                 timeout_ms,
                 runner_client: Some(runner_client),
                 runner_result,
+                runner_acquisition,
                 request_failure: None,
             });
             let (result, data, exit_code) = attach_sandbox_logs(
@@ -718,7 +745,8 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
             return envelope(result, &data, exit_code);
         }
     };
-    let data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
+    let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
+    data.execution.runner_acquisition = runner_acquisition;
     envelope(
         json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
         &data,
@@ -1031,6 +1059,7 @@ mod tests {
             timeout_ms: Some(DEFAULT_TIMEOUT_MS),
             runner_client: Some(client_run(runner.as_ref())),
             runner_result: runner,
+            runner_acquisition: Vec::new(),
             request_failure: None,
         }
     }
@@ -1101,8 +1130,9 @@ mod tests {
         answers
     }
 
-    const DATA_KEYS: [&str; 7] = [
+    const DATA_KEYS: [&str; 8] = [
         "policy_check",
+        "runner_acquisition",
         "runner_client",
         "runner_result",
         "runner_sandbox_diagnostics",
@@ -2401,6 +2431,29 @@ else:
     }
 
     #[test]
+    fn refused_host_attempts_never_extend_the_admitted_log_window() {
+        let mut data = execution_data(Some(worker("ok", None)));
+        let client = data.runner_client.as_mut().unwrap();
+        client.started_at_unix_ms = 50_000;
+        client.ended_at_unix_ms = 51_000;
+        data.runner_acquisition = vec![crate::runner_acquisition::tests::shape_attempt()];
+        let mut called = false;
+        attach_sandbox_logs(
+            complete_execution(data),
+            &json!({}),
+            false,
+            |pid, _, window| {
+                called = true;
+                assert_eq!(pid, 42);
+                assert_eq!(window.started_at_unix_ms, 50_000);
+                assert_eq!(window.ended_at_unix_ms, 51_000);
+                Ok(capture_with("captured", vec![]))
+            },
+        );
+        assert!(called);
+    }
+
+    #[test]
     fn successful_run_keeps_correlations_without_a_termination_cause() {
         let runner = worker("ok", None);
         let cap = capture_with("captured", vec![event(Some(42))]);
@@ -2653,6 +2706,7 @@ else:
                 timeout_ms: Some(7),
                 runner_client: None,
                 runner_result: Some(xpc_error.clone()),
+                runner_acquisition: Vec::new(),
                 request_failure: None,
             });
             assert_eq!(completed.exit_code, 1, "{status}");
@@ -3139,6 +3193,7 @@ else:
             };
             let app_root = app.to_path_buf();
             let deps = RunDependencies {
+                process_observer: &NativeObserver,
                 app_root: &|| Ok(app_root.clone()),
                 load_manifest: &load_manifest,
                 registry_path: registry,
@@ -3991,7 +4046,7 @@ else:
                 "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
                 "normalized_outcome": "ok", "rc": 0, "pid": 42, "steps": [],
             });
-            let data = RunData {
+            let mut data = RunData {
                 execution: ExecutionData {
                     specimen,
                     policy_check: Some(PolicyCheckCapture {
@@ -4013,6 +4068,7 @@ else:
                         output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
                     }),
                     runner_result: Some(reply),
+                    runner_acquisition: vec![crate::runner_acquisition::tests::shape_attempt()],
                     // Field-complete shape fixture, including an optional refusal record.
                     request_failure: Some(
                         json!({"code": "unknown_field", "path": ["policy", "typo"],
@@ -4069,6 +4125,8 @@ else:
                     },
                 }),
             };
+            data.execution.runner_acquisition[0].runner_client =
+                serde_json::to_value(data.execution.runner_client.as_ref().unwrap()).unwrap();
             (full_result(), data)
         }
 
@@ -4126,7 +4184,10 @@ else:
             crate::shape::collect(
                 &wire,
                 "envelope",
-                &["envelope.data.runner_result"],
+                &[
+                    "envelope.data.runner_result",
+                    "envelope.data.runner_acquisition[].runner_result",
+                ],
                 &mut current,
             )
             .unwrap();

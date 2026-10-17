@@ -22,6 +22,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
+- `tests/suites/runner_byoxpc/opt_in/default_location.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
 - `tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh`
@@ -87,20 +88,25 @@ supplied launchd observations: bootout/unlink failures, unknown/unowned state,
 process loss after bootout, and failed retirement persistence. These controls
 establish state transitions; the opt-in case supplies actual launchd evidence.
 
-`single_use` uses the owned team-matched session helper and two shipped CLI
-clients. The owner creates a unique file before a controlled post-attempt hold.
-The second client must receive `already_ran` from the same host PID without
-creating its own file; the owner must finish. After observed host retirement
-and the launchd respawn allowance, a fresh host must serve a normal request.
-This case verifies removal before deleting its staging and recovery record.
+`single_use` retains the raw shipped-client refusal while an owner holds its
+host. A concurrent public request records that same generation's refusal, waits
+for observed retirement, then succeeds on a fresh generation. Append-only effects
+establish one execution per successful request and none for the raw refusal.
 
-`bad_neighbor_claims` is investigation equipment for the
-[coexistence findings](../../BYOXPC-BAD-NEIGHBOR-INVESTIGATION.md). Against one
-owned service it runs spaced, back-to-back, after-reply, foreign-held and
-throttle-queued requests, plus registry lock contention on a fixture registry.
-Each `already_ran` is attributed to the host generation that issued it, and to
-the request holding that host's claim, from a process sampler and the host's
-XPC log lines, never from the outcome string. Constructed checker controls reject
-PID reuse and unknown holders first. Only the spaced positive control, the
-foreign-held schedule and lock contention are asserted. Outcomes of the unheld
-schedules are recorded, not asserted.
+`bad_neighbor_claims` is the coexistence acceptance control. Schedule A spaces
+requests and requires zero re-acquisitions. Public back-to-back (B), foreign-held
+(D) and throttle-queued (E) requests must succeed with recorded re-acquisition;
+every refusing generation is attributed from independent process samples and
+owner requests. C retains the raw shipped-client observation. A bounded request
+ends in `already_ran` without an effect while its neighbor continues holding.
+The case checks that the default registry does not advertise its private session,
+and keeps fixture registry-lock contention controls. A successful effect contains
+exactly one appended byte. Artifacts include every attempt, generation, attribution
+and the host's XPC log stream. Constructed controls reject PID reuse and unknown
+holders before live scheduling.
+
+`default_location` is the sole session using the shared default registry. It
+checks the default list and real user plist, runs one specimen without
+`PW_RUNNER_REGISTRY`, and verifies removal. Registry contention is a failure,
+without retry. All other sessions use durable private registries; see the
+[fixture recovery contract](../../fixtures/byoxpc/README.md).

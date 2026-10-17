@@ -1,10 +1,10 @@
 """Occupied-claim explanations against one installed BYOXPC service.
 
-Investigation equipment, not a specimen test. The session's requests and a
+Coexistence acceptance control. The session's requests and a
 foreign authorized client's requests reach one owned service. Process
 observations attribute each refusal to the host generation that issued it and
 to the request that held that host's claim; the already_ran string alone never
-does. Outcomes of the unheld schedules are recorded, not asserted.
+does. Public requests must recover within their deadline without duplicate effects.
 """
 import json
 import os
@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/byoxpc'))
 import contract
 from consumer import validate
-from neighbor_lab import ProcessWatch, generation_state, save, wait_for
+from neighbor_lab import ProcessWatch, generation, generation_state, process_label, save, wait_for
 
 pw, directory = sys.argv[1:3]
 out = Path(directory)
@@ -30,6 +30,8 @@ macos = Path(state['bundle_path']) / 'Contents/MacOS'
 HOST, WORKER = str(macos / 'PWRunner'), str(macos / 'pw-probe-runner')
 work = out / 'claims'
 work.mkdir()
+effects = Path(state['staging']) / 'effects'
+effects.mkdir()
 requests, children = [], []
 
 
@@ -66,6 +68,9 @@ def attribute(refusal, hosts, owners):
 
 
 def checker_controls():
+    assert process_label('host', 1) == 'host'
+    assert process_label('host', 10) == 'fork_child'
+    assert process_label('worker', 10) == 'worker'
     # Constructed observations: a matching PID outside the window (reuse), and
     # a generation that served nobody known, must not be attributed to anyone.
     hosts = [dict(generation='10@1.000000', pid=10, ppid=1, first_seen_ns=0, unseen_after_ns=50),
@@ -84,13 +89,17 @@ def checker_controls():
     workers = [dict(pid=20, ppid=10, first_seen_ns=110, unseen_after_ns=120)]
     assert served_host(dict(worker_pid=20, start_ns=105, end_ns=190), hosts, workers) == ('10@2.000000', 'worker_parent')
     assert served_host(dict(worker_pid=21, start_ns=0, end_ns=400), hosts, []) == (None, 'unidentified')
+    # A returned worker's sampled parent is usable even if it was sampled only
+    # before exec. Its inherited host path does not make it a second host.
+    workers[0]['label'] = 'fork_child'
+    assert served_host(dict(worker_pid=20, start_ns=105, end_ns=190), hosts, workers) == ('10@2.000000', 'worker_parent')
 
 
 def specimen(name, effect, hang, runner):
     spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
-        probe_plan=[dict(step_id='create', sandbox_check=dict(operation='file-write-create',
-            filter=dict(kind='path', value=str(effect))), attempt=dict(kind='file', action='create', target=str(effect)))])
+        probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
+            filter=dict(kind='path', value='/bin/sh')), attempt=dict(kind='exec', action='spawn', target='/bin/sh', args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))])
     if runner:
         spec['runner'] = dict(mode='byoxpc', service=service)
     if hang:
@@ -98,17 +107,17 @@ def specimen(name, effect, hang, runner):
     return spec
 
 
-def launch(name, actor, *, hang=0, direct=False):
+def launch(name, actor, *, hang=0, direct=False, timeout=30000):
     """Start one request through the public CLI or the shipped client directly."""
     folder = work / f'{len(requests):02d}-{name}'
     folder.mkdir()
-    effect = folder / 'effect'
+    effect = effects / name
     spec = specimen(name, effect, hang, runner=not direct)
     (folder / 'specimen.json').write_text(json.dumps(spec, indent=2) + '\n')
     if direct:
-        argv = [str(client), 'run', '--timeout-ms', '30000', '--mach-service', '--request', '-', service]
+        argv = [str(client), 'run', '--timeout-ms', str(timeout), '--mach-service', '--request', '-', service]
     else:
-        argv = [pw, 'run', str(folder / 'specimen.json'), '--no-log-capture', '--timeout-ms', '30000']
+        argv = [pw, 'run', str(folder / 'specimen.json'), '--no-log-capture', '--timeout-ms', str(timeout)]
     record = dict(name=name, actor=actor, direct=direct, argv=argv, folder=str(folder), effect=str(effect),
                   host_states_at_start={h['generation']: generation_state(h['generation'])
                                         for h in watch.snapshot('host') if h['unseen_after_ns'] is None})
@@ -134,10 +143,16 @@ def finish(process, record):
     else:
         assert not validate(raw), validate(raw)
         reply = raw['data']['runner_result']
+        record['acquisitions'] = raw['data']['runner_acquisition']
+        record['final_client'] = raw['data']['runner_client']
     subprocess_record = reply.get('runner_subprocess') or {}
     record.update(outcome=reply['normalized_outcome'], reply_pid=reply.get('pid'),
                   worker_pid=subprocess_record.get('pid'), steps=len(reply.get('steps') or []),
                   effect_exists=Path(record['effect']).exists())
+    if record['effect_exists']:
+        observed = Path(record['effect']).read_bytes()
+        (folder / 'effect.bytes').write_bytes(observed)
+        assert observed == b'x', ('effect occurred more than once', record)
     save(folder / 'record.json', record)
     return record
 
@@ -185,20 +200,19 @@ try:
         second = run(f'direct-next-{index}', 'session', direct=True)
         schedules['direct_after_reply'].append([first['name'], second['name']])
 
-    # D. A foreign authorized client discovers the service in the shared registry
+    # D. A foreign authorized client uses the service name directly
     # and holds a fresh host's claim; the session then requests that service.
     wait_retired('foreign held claim')
-    listing = subprocess.run([pw, 'runner', 'list'], capture_output=True, text=True, timeout=30)
+    listing = subprocess.run([pw, 'runner', 'list'], capture_output=True, text=True, timeout=30, env={k:v for k,v in os.environ.items() if k != 'PW_RUNNER_REGISTRY'})
     (work / 'neighbor-runner-list.json').write_text(listing.stdout)
     discovered = [r['service_name'] for r in json.loads(listing.stdout)['data']['runners']]
-    assert service in discovered, ('neighbor could not discover the session service', discovered)
-    neighbor, held = launch('neighbor-held', 'neighbor', hang=6000)
+    assert service not in discovered, ('private session advertised in default registry', discovered)
+    neighbor, held = launch('neighbor-held', 'neighbor', hang=6000, direct=True)
     wait_for(lambda: Path(held['effect']).exists() or neighbor.poll() is not None, 'neighbor effect', timeout=20)
     assert neighbor.poll() is None and Path(held['effect']).exists(), 'neighbor never held the claim'
     held_hosts = [h['generation'] for h in watch.snapshot('host') if generation_state(h['generation']) == 'alive']
     assert len(held_hosts) == 1, ('one live host expected while the neighbor holds it', held_hosts)
     refused = run('session-during-neighbor', 'session')
-    assert neighbor.poll() is None, 'neighbor finished before the session request completed'
     finish(neighbor, held)
     wait_retired('continuation after the neighbor')
     after = run('session-after-neighbor', 'session')
@@ -213,15 +227,23 @@ try:
         primer = run(f'throttle-primer-{index}', 'session', direct=True)
         wait_retired(f'throttle window {index}')
         spawned = max(h['first_seen_ns'] for h in watch.snapshot('host'))
-        neighbor, first = launch(f'neighbor-queued-{index}', 'neighbor', direct=True)
+        neighbor, first = launch(f'neighbor-queued-{index}', 'neighbor', direct=True, hang=1000)
         time.sleep(.1)
-        session_process, second = launch(f'session-queued-{index}', 'session', direct=True)
+        session_process, second = launch(f'session-queued-{index}', 'session')
         first['since_last_spawn_ms'] = (first['start_ns'] - spawned) / 1e6
         second['since_last_spawn_ms'] = (second['start_ns'] - spawned) / 1e6
         finish(neighbor, first)
         finish(session_process, second)
         queued.append(dict(primer=primer['name'], neighbor=first['name'], session=second['name']))
     schedules['throttle_queue'] = queued
+
+    # Deadline control: a proven foreign claim outlives our entire budget.
+    wait_retired('bounded acquisition')
+    neighbor, bounded_owner = launch('neighbor-bounded', 'neighbor', direct=True, hang=4000)
+    wait_for(lambda: Path(bounded_owner['effect']).exists(), 'bounded owner effect')
+    bounded = run('session-bounded', 'session', timeout=1000)
+    finish(neighbor, bounded_owner)
+    schedules['bounded'] = bounded['name']
 
     # F. Registry lock contention on a fixture-owned registry: removal of an
     # absent service is refused while another process holds the lock.
@@ -254,14 +276,15 @@ finally:
     except subprocess.TimeoutExpired:
         log.kill()
     hosts, workers = watch.snapshot('host'), watch.snapshot('worker')
-    save(work / 'processes.json', dict(hosts=hosts, workers=workers, sampler=watch.summary(),
+    fork_children = watch.snapshot('fork_child')
+    save(work / 'processes.json', dict(hosts=hosts, workers=workers, fork_children=fork_children, sampler=watch.summary(),
                                        paths=dict(host=HOST, worker=WORKER)))
     save(work / 'requests.json', requests)
 
 served = []
 for record in requests:
     if record.get('outcome') == 'ok':
-        record['host'], record['host_basis'] = served_host(record, hosts, workers)
+        record['host'], record['host_basis'] = served_host(record, hosts, workers + fork_children)
         served.append(record)
 attributions = {}
 for record in requests:
@@ -284,13 +307,44 @@ assert len({r['host'] for r in spaced}) == 3 and None not in {r['host'] for r in
 for record in requests:
     if record.get('outcome') == 'already_ran':
         assert record['steps'] == 0 and record['worker_pid'] is None and not record['effect_exists'], record
-# Controlled interference: the refusal came from the host the neighbor held.
-foreign = schedules['foreign_held']
-refusal = by_name[foreign['refused']]
-assert refusal['outcome'] == 'already_ran', refusal
-assert refusal['attribution'] == dict(host=foreign['held_host'], cause='neighbor_claim', holder='neighbor-held'), refusal['attribution']
-assert by_name['neighbor-held']['outcome'] == 'ok' and by_name['neighbor-held']['effect_exists']
-assert by_name['session-after-neighbor']['outcome'] == 'ok' and by_name['session-after-neighbor']['effect_exists']
+# Attribute every refusal in a public acquisition from independent sampled
+# generations and the owner requests, never from the refusal outcome alone.
+for record in requests:
+    for index, attempt in enumerate(record.get('acquisitions', [])):
+        key = generation(attempt['generation'])
+        matches = [h for h in hosts if h['generation'] == key]
+        assert len(matches) == 1 and attempt['generation']['executable_path'] == HOST, attempt
+        holders = [r for r in served if r['host'] == key]
+        assert len(holders) == 1, ('unattributed refusing generation', key, holders)
+        attribution = dict(host=key, cause=holders[0]['actor'] + '_claim', holder=holders[0]['name'])
+        attributions[f"{record['name']}:{index}"] = attribution
+        assert attempt['runner_result']['pid'] == matches[0]['pid']
+        assert attempt['runner_result']['steps'] == [] and attempt['runner_result'].get('runner_subprocess') is None
+        if record['outcome'] == 'ok':
+            assert record['host'] != key, ('re-acquired a generation that already refused us', record)
+            assert attempt['wait_outcome'] == 'retired' and attempt['observed_exit'] is not None
+            assert record['final_client']['started_at_unix_ms'] >= attempt['observed_exit']['observed_at_unix_ms']
+for name in schedules['spaced']:
+    assert by_name[name]['acquisitions'] == [], by_name[name]
+for names in [schedules['public_back_to_back'], [schedules['foreign_held']['refused']],
+              [row['session'] for row in schedules['throttle_queue']]]:
+    records = [by_name[name] for name in names]
+    assert all(r['outcome'] == 'ok' and r['effect_exists'] for r in records), records
+    assert sum(len(r['acquisitions']) for r in records) >= 1, records
+foreign = by_name[schedules['foreign_held']['refused']]
+assert attributions[foreign['name'] + ':0']['holder'] == 'neighbor-held'
+for row in schedules['throttle_queue']:
+    assert by_name[row['session']]['acquisitions'], row
+    assert attributions[row['session'] + ':0']['holder'] == row['neighbor']
+    queued_host = next(h for h in hosts if h['generation'] == by_name[row['neighbor']]['host'])
+    assert queued_host['first_seen_ns'] > by_name[row['session']]['start_ns'], ('clients did not queue before spawn', row)
+bounded = by_name[schedules['bounded']]
+assert bounded['outcome'] == 'already_ran' and not bounded['effect_exists'], bounded
+assert len(bounded['acquisitions']) == 1 and bounded['acquisitions'][0]['wait_outcome'] == 'deadline'
+assert bounded['acquisitions'][0]['observed_exit'] is None
+assert attributions[bounded['name'] + ':0']['holder'] == 'neighbor-bounded'
+summary['attributions'] = attributions
+save(work / 'summary.json', summary)
 lock = schedules['registry_lock']
 assert lock['contended']['returncode'] != 0 and 'busy' in lock['contended']['stdout'] + lock['contended']['stderr'], lock
 assert 'busy' not in lock['uncontended']['stdout'] + lock['uncontended']['stderr'], lock

@@ -18,9 +18,9 @@ def main():
              'malformed_install_reply', 'wrong_team', 'changed_entitlements', 'helper_changed',
              'connection_failure', 'remove_failure', 'remove_warning', 'remove_lies', 'launchctl_equipment',
              'registered_unowned_plist', 'uncertain_install', 'uncertain_no_record',
-             'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup')
-    setup_ok = {'success', 'no_entitlements', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup'}
-    retained = {'unowned_plist', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'uncertain_no_record'}
+             'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup', 'registry_nonempty')
+    setup_ok = {'success', 'no_entitlements', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup', 'registry_nonempty'}
+    retained = {'unowned_plist', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'uncertain_no_record', 'registry_nonempty'}
     for mode in modes:
         work = out / mode
         app = work / 'Selected.app'
@@ -64,7 +64,7 @@ def main():
         try:
             try:
                 install(config['pw'], app, artifacts, env, 'fixture identity', invoke=invoke,
-                        launch_agents=work / 'LaunchAgents',
+                        launch_agents=work / 'LaunchAgents', registry_root=work / 'registries',
                         variant='adhoc_noauth' if mode == 'adhoc_noauth' else 'team')
             except Exception as exc:
                 errors['setup'] = str(exc)
@@ -72,6 +72,7 @@ def main():
             state = json.loads(state_path.read_text())
             durable = Path(state['state_path'])
             staging = Path(state['staging'])
+            assert Path(state['registry_path']).parent.parent == work / 'registries'
             assert json.loads(durable.read_text()) == state, 'durable ownership differs from receipt'
             if mode == 'original_output_deleted':
                 config['ownership'] = str(durable)
@@ -97,14 +98,18 @@ def main():
                 errors['cleanup'] = str(exc)
             assert ('cleanup' in errors) == (mode in retained), (mode, errors)
             assert staging.exists() == (mode in retained), (mode, errors)
+            assert Path(state['registry_path']).parent.exists() == (mode in retained), (mode, errors)
             assert env.exists() == (mode in setup_ok and mode != 'original_output_deleted'), (mode, errors)
             actual_source = {str(p.relative_to(app)): p.read_bytes() for p in app.rglob('*') if p.is_file()}
             assert source_bytes == actual_source, 'selected app was changed'
             os_state = json.loads(Path(config['state']).read_text())
-            assert unrelated in os_state['runners'], 'unrelated registration removed'
+            if mode == 'registry_nonempty':
+                assert os_state['runners'] == [unrelated] and not os_state['loaded'], os_state
             if mode not in retained:
-                assert os_state['runners'] == [unrelated] and not os_state['loaded'], (mode, os_state)
+                assert os_state['runners'] == [] and not os_state['loaded'], (mode, os_state)
             receipts = [json.loads(line) for line in Path(config['receipts']).read_text().splitlines()]
+            assert all(r['registry_path'] == state['registry_path'] for r in receipts if r['argv'][0] == config['pw'])
+            assert not (artifacts / 'verify-host-retired.json').exists()
             installs = [r for r in receipts if r['argv'][1:3] == ['runner', 'install']]
             assert len(installs) <= 1
             removals = [r for r in receipts if r['argv'][1:3] == ['runner', 'remove']]

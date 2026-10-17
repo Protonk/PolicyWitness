@@ -61,6 +61,8 @@ if [[ -z "${RUNNER_ID}" || -z "${SERVICE_NAME}" ]]; then
   exit 1
 fi
 
+export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${RUNNER_ENV_PATH}")"
+
 export PW_TEST_RUNNER_MODE="byoxpc"
 export PW_TEST_RUNNER_SERVICE="${SERVICE_NAME}"
 export PW_TEST_RUNNER_EXPECT_KIND="byoxpc"

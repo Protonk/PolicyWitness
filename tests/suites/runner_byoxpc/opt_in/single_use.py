@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from consumer import validate
+sys.path.insert(0, str(ROOT / "tests/fixtures/byoxpc"))
+from neighbor_lab import process_identity, generation, generation_state
 
 pw, directory = sys.argv[1:]
 out = Path(directory)
@@ -23,28 +25,32 @@ state = json.loads(Path(json.loads((out / 'session.json').read_text())['state_pa
 # a request that must reach a fresh host.
 respawn_wait = plistlib.loads(Path(state['plist_path']).read_bytes()).get('ThrottleInterval', 10) + 1
 processes = []
+effects = Path(state['staging']) / 'effects'
+effects.mkdir()
 
-def launch(name, hang=0):
-    effect = out / (name + '.effect')
+def launch(name, hang=0, direct=False):
+    effect = effects / name
     assert not effect.exists(), 'refusing reused effect path'
     spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id=name,
         runner=dict(mode='byoxpc', service=service),
         policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
-        probe_plan=[dict(step_id='create', sandbox_check=dict(operation='file-write-create',
-            filter=dict(kind='path', value=str(effect))), attempt=dict(kind='file', action='create', target=str(effect)))])
+        probe_plan=[dict(step_id='create', sandbox_check=dict(operation='process-exec*',
+            filter=dict(kind='path', value='/bin/sh')), attempt=dict(kind='exec', action='spawn', target='/bin/sh', args=['-c', 'printf x >> "$1"', 'effect', str(effect)]))])
+    if direct: spec.pop('runner')
     if hang: spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
     path = out / (name + '.specimen.json'); path.write_text(json.dumps(spec, indent=2)+'\n')
     with (out/(name+'.json')).open('w') as stdout, (out/(name+'.stderr')).open('w') as stderr:
-        process = subprocess.Popen([pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000'],
+        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', '30000', '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000']
+        process = subprocess.Popen(argv,
             stdout=stdout, stderr=stderr, start_new_session=True)
     processes.append(process)
     return process, effect
 
-def receive(process, name, code):
+def receive(process, name, code, direct=False):
     assert process.wait(timeout=40) == code, name
     doc = json.loads((out/(name+'.json')).read_text())
     assert not validate(doc), validate(doc)
-    return doc['data']['runner_result']
+    return doc if direct else doc['data']['runner_result']
 
 try:
     # Installation's verify call consumed a host. Wait beyond launchd's respawn
@@ -75,17 +81,31 @@ try:
         and Path(row.split(None,2)[2]).name=='pw-probe-runner']
     assert len(worker_children)==1, 'exactly one held worker required'
 
-    second, absent = launch('refused')
-    refusal = receive(second, 'refused', 1)
+    owner_generation = process_identity(host_pid)
+    assert owner_generation['observed']
+    second, absent = launch('refused', direct=True)
+    refusal = receive(second, 'refused', 0, direct=True)
     assert first.poll() is None, 'refusal retired the active owner'
     assert refusal['normalized_outcome'] == 'already_ran', refusal
     assert refusal.get('runner_subprocess') is None and refusal['steps'] == [], refusal
     assert not absent.exists(), 'refused request attempted file creation'
+    waiting, waiting_effect = launch('reacquired')
     owner = receive(first, 'owner', 0)
+    recovered = receive(waiting, 'reacquired', 0)
+    envelope = json.loads((out / 'reacquired.json').read_text())
+    attempts = envelope['data']['runner_acquisition']
+    assert len(attempts) == 1, attempts
+    attempt = attempts[0]
+    assert generation(attempt['generation']) == generation(owner_generation), attempt
+    assert attempt['wait_outcome'] == 'retired' and attempt['observed_exit'] is not None
+    assert envelope['data']['runner_client']['started_at_unix_ms'] >= attempt['observed_exit']['observed_at_unix_ms']
+    assert generation_state(generation(owner_generation)) == 'gone'
+    assert recovered['runner_subprocess']['pid'] != owner['runner_subprocess']['pid']
+    assert waiting_effect.read_bytes() == b'x'
     assert owner['normalized_outcome'] == 'ok' and owner['runner_subprocess']['reaped'] is True, owner
     assert owner['test_overrides']['worker_post_apply_hang_ms'] == 15000
     assert refusal['pid'] == host_pid and owner['runner_subprocess']['pid'] == worker_children[0], 'host/child receipts disagree with replies'
-    assert marker.exists() and not absent.exists()
+    assert marker.read_bytes() == b'x' and not absent.exists()
     pid = host_pid; deadline = time.monotonic()+5
     while True:
         try: os.kill(pid, 0)
@@ -95,7 +115,9 @@ try:
     time.sleep(respawn_wait)
     third, marker = launch('fresh')
     fresh = receive(third, 'fresh', 0)
-    assert fresh['normalized_outcome'] == 'ok' and marker.exists(), fresh
+    assert fresh['normalized_outcome'] == 'ok' and marker.read_bytes() == b'x', fresh
+    for name in ('owner', 'reacquired', 'fresh'):
+        (out / (name + '.effect.bytes')).write_bytes((effects / name).read_bytes())
     (out/'receipts.json').write_text(json.dumps(dict(shared_host=pid, owner_worker=worker_children[0], fresh_worker=fresh['runner_subprocess']['pid'],
         owner_effect=True, refused_effect=False, owner_retired=True), indent=2)+'\n')
 finally:

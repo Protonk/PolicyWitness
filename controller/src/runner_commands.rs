@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use crate::app_layout::{BUNDLE_ISSUER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
+use crate::runner_acquisition::{NativeObserver, RefusedAttempt, acquire};
 use crate::runner_client::run_pw_runner_client;
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
@@ -30,6 +31,7 @@ struct RunnerInstallData {
 
 #[derive(Serialize)]
 struct RunnerVerifyData {
+    runner_acquisition: Vec<RefusedAttempt>,
     state: RunnerState,
     runner_id: Option<String>,
     service_name: String,
@@ -596,12 +598,38 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
             return Err("external runners cannot be built-in kinds".to_string());
         }
     };
-    let (_, runner_result) =
-        run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection)?;
+    let acquired = acquire(
+        timeout_ms,
+        Some(Path::new(&record.executable_path)),
+        &NativeObserver,
+        |remaining| run_pw_runner_client(&record.service_name, &held, remaining, &connection),
+    );
+    let acquired = match acquired {
+        Ok(value) => value,
+        Err(failure) if failure.refusals.is_empty() => return Err(failure.error),
+        Err(failure) => {
+            let data = RunnerVerifyData {
+                runner_acquisition: failure.refusals,
+                state: record.state,
+                runner_id: Some(record.id.clone()),
+                service_name: record.service_name.clone(),
+                runner_pid: None,
+                normalized_outcome: "tool_error".into(),
+            };
+            json_contract::print_envelope(
+                "runner_verify",
+                json_contract::JsonResult::new(false, 2, Some("tool_error"), Some(failure.error)),
+                &data,
+            )?;
+            return Ok(2);
+        }
+    };
+    let runner_result = acquired.reply;
     let (runner_pid, outcome) = project_verify_reply(runner_result.as_ref());
 
     let ok = outcome == "ok";
     let data = RunnerVerifyData {
+        runner_acquisition: acquired.refusals,
         state: record.state,
         runner_id: Some(record.id.clone()),
         service_name: record.service_name.clone(),

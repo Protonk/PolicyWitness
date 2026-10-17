@@ -218,9 +218,13 @@
             "Started by": "the controller",
             "Sandboxed": "no",
             "Native sandbox API": "none",
-            "Lifetime": "one run"
+            "Lifetime": "one acquisition attempt; external pre-admission refusals can require another client within the same deadline"
           },
           "sources": [
+            {
+              "path": "controller/src/runner_acquisition.rs",
+              "symbol": "acquire"
+            },
             {
               "path": "runner/Clients/PWRunnerClient/main.swift",
               "symbol": "readDataToEndOfFile"
@@ -239,6 +243,11 @@
             {
               "path": "tests/suites/blackbox_e2e/checker_controls.py",
               "symbol": "client_output_control",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_acquisition.rs",
+              "symbol": "retirement_and_pid_reuse_allow_only_a_fresh_attempt_with_remaining_budget",
               "form": "test"
             }
           ]
@@ -5202,6 +5211,11 @@
             {
               "path": "tests/suites/runner_byoxpc/run.sh",
               "symbol": "runner_install",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/runner_acquisition.rs",
+              "symbol": "retirement_and_pid_reuse_allow_only_a_fresh_attempt_with_remaining_budget",
               "form": "test"
             }
           ]

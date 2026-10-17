@@ -26,14 +26,14 @@ def save(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def command(out, argv, *, timeout=30, check=True):
+def command(out, argv, *, timeout=30, check=True, env=None):
     out.mkdir(parents=True)
     meta = {'argv': list(map(str, argv)), 'returncode': None, 'harness_timeout': False}
     save(out / 'command.json', meta)
     started = time.monotonic()
     try:
         with (out / 'stdout').open('wb') as stdout, (out / 'stderr').open('wb') as stderr:
-            result = subprocess.run(meta['argv'], stdout=stdout, stderr=stderr, timeout=timeout)
+            result = subprocess.run(meta['argv'], stdout=stdout, stderr=stderr, timeout=timeout, env=env)
         meta['returncode'] = result.returncode
     except subprocess.TimeoutExpired:
         meta['harness_timeout'] = True

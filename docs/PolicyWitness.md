@@ -819,7 +819,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Host reply flush delay (`host_exit_delay`) | 50 milliseconds | Delay scheduled by the terminal request owner after replying. The unsandboxed host exits when the delay elapses. A second connection reaching the retiring host meets the terminal claim. | Fixed. |
-| Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default reply wait for the fixed runner verify specimen. An expired wait returns the client timeout outcome. Verification consumes the single-use host it reaches. | Flag `--timeout-ms` on `runner verify`. |
+| Runner verification wait (`runner_verify_wait`) | 5,000 milliseconds | Default allowance for the fixed runner verify specimen, shared across host re-acquisition and client waits. An expired client RPC returns its timeout outcome; acquisition deadline exhaustion returns the last qualifying already_ran refusal. An admitted verification consumes its single-use host. | Flag `--timeout-ms` on `runner verify`. |
 | Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
@@ -832,7 +832,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
 | Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Continuous time from the worker origin before setup, shared by exec steps, including worker setup and intervening work but excluding each acknowledged release wait. Continuous time includes system sleep. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Continuous-time allowance to confirm an exec child's exit after observation ends. Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
-| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
+| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default reply allowance; external runner acquisition shares it across refused attempts, retirement waits and the final client. Each client capture records its own wall-clock span. An expired client RPC yields `xpc_timeout`. Exhaustion while waiting after a qualifying external `already_ran` returns the last refusal. Inner worker and validator budgets do not expand. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 | Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
@@ -900,7 +900,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 ### Interactions that matter
 
 - Budgets nest, and one flag changes one of them. `--timeout-ms` sets
-  `client_rpc_wait`, which bounds only the client's wait. The worker polling
+  `client_rpc_wait`, which also bounds external host re-acquisition. The worker polling
   window `worker_sentinel_wait`, the validator deadline `validator_io_wait`,
   the release wait `worker_proceed_wait` and the exec budgets keep their own
   values, so no number here is an end-to-end runtime. The reply records the
@@ -2076,6 +2076,36 @@ Common decode errors (quick fixes)
 
 ## External runners (BYOXPC)
 
+For `run` and `runner verify`, a qualifying `already_ran` refusal triggers
+re-acquisition within the existing request timeout. The reply must pass current
+response admission, carry empty steps and no worker, and name a live host whose
+executable matches the selected registry record. The controller captures its
+kernel start time and waits for that generation to disappear (ESRCH or a changed
+start time) before starting another client. The host remains single-use.
+
+The last refusal is returned when the deadline expires. A refusal can reach the
+caller earlier if it does not qualify or a process observation fails before
+retirement is established. Hosts that cannot be observed, including system-scope
+hosts under restricted access, keep that refusal behavior.
+
+Other outcomes, including XPC connection errors, do not trigger re-acquisition.
+A connection racing a host's exit can fail before delivering a refusal; that
+error does not establish that the request was refused before admission.
+
+`data.runner_acquisition` is an array of qualifying refused attempts (empty when
+none qualified). Each contains `runner_client`, the unchanged refusal in
+`runner_result`, and `generation` with `pid`, `start_sec`, `start_usec` and
+`executable_path`. `wait_outcome` is `retired`, `deadline` or
+`observation_failed`; `observation_error` retains a failed observation diagnostic.
+`observed_exit` is null without established retirement, otherwise it records
+`basis` (`esrch` or `pid_reused`), `observed_at_unix_ms`, and the replacement
+identity for PID reuse. The replacement's executable is uncollected. These
+records identify the refusing host, not the client holding its claim.
+Only the final attempt supplies the ordinary runner result, client capture,
+deny-log interval and downstream observations. On deadline exhaustion that
+final result is the last refusal, also retained in the acquisition array.
+
+
 Use this when you need entitlements that are not in the built-in runner.
 BYOXPC is the only external runner kind.
 
@@ -2206,10 +2236,9 @@ exits. The next request starts a fresh host once launchd allows a launch,
 which the installed plist's `ThrottleInterval` bounds at <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span --> after the
 previous launch. A request that reaches the verified host while it is still
 retiring, or a fresh host that another connection reached first, is refused
-with `normalized_outcome: already_ran`. Such a refusal executed nothing
-(`steps` is empty and there is no `runner_subprocess`), so the request can be
-sent again; in the project's own measurements a run issued half a second
-after verification completed in about 0.3 s when admitted.
+with `normalized_outcome: already_ran`. The controller re-acquires after this
+pre-worker refusal only when it can identify the selected host's generation
+and observe its retirement, as described above.
 
 ### Use the runner in a specimen
 

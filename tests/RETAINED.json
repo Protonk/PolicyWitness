@@ -1039,6 +1039,41 @@
       "reason": "BYOXPC coexistence investigation: replicate of occupied-claim schedules A-D, cited by tests/BYOXPC-BAD-NEIGHBOR-INVESTIGATION.md. Executed from 488308a plus an earlier uncommitted bad_neighbor_claims case without schedules E and F.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coexistence-all-1",
+      "run_id": "20261017T191838Z_084c271a",
+      "reason": "Initial BYOXPC coexistence full battery: 218 pass, 4 fail, no skips. Failures exposed obsolete retirement calls, overlong test effect arguments and stale native provenance input. Diagnostic history only; replaced by coexistence-all-2 and coexistence-final-checks. Initial signed build differs from the final build; the source snapshot is a diagnostic capture, not an asserted exact initial build tree.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coexistence-controls-2",
+      "run_id": "20261017T202311Z_68bd9966",
+      "reason": "BYOXPC follow-up on final signed build: native feasibility passed; controls exposed a raw-client argument error and fork-before-exec sampler misclassification. Extension maximum request returned XPC4097 during host exit, with no qualifying refusal; logs retained. Diagnostic history only, not credited.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coexistence-controls-3",
+      "run_id": "20261017T202928Z_477b28dc",
+      "reason": "All three targeted BYOXPC controls passed on final signed build: extension workload unchanged from the preceding transport failure, coexistence generation attribution, and raw refusal plus public re-acquisition. Final credits are recorded in coexistence-final-checks/acceptance.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coexistence-all-2",
+      "run_id": "20261017T203216Z_2400a037",
+      "reason": "Final signed app subjected to all 222 cases including every opt-in: 220 pass, 2 fail, no skips or unrun cases. Generator contract found an obsolete prose-baseline row; the BYOXPC maximum-reply workload met an XPC4097 host-exit race. Both corrected test paths are rerun in coexistence-final-checks. Other results are credited there with a documented dependency review; this historical run remains failed.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/coexistence-final-checks",
+      "run_id": "20261017T212456Z_84078542",
+      "reason": "BYOXPC coexistence final acceptance: all 9 affected checks passed after removing an obsolete prose-baseline row and adding observed host retirement between BYOXPC reply-size workloads. Combined with reviewed results from coexistence-all-2, all 222 registered cases have passing evidence on the unchanged signed app. acceptance/ holds source archives, hashes, per-case credits, dependency review, build log and cleanup evidence. Uncommitted sources; concurrent docs/WORKER-INST-DOC-PLAN.md excluded. Unproven XPC errors remain outside production re-acquisition.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

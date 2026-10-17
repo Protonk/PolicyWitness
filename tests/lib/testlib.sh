@@ -376,30 +376,6 @@ has_gui_launchd_domain() {
   /bin/launchctl print "gui/${uid}" >/dev/null 2>&1
 }
 
-cleanup_runner_service() {
-  local pw_bin="$1"
-  local service_name="$2"
-  local scope="${3:-user}"
-
-  if [[ -z "${service_name}" ]]; then
-    return 0
-  fi
-
-  if [[ "${scope}" == "system" ]]; then
-    /bin/launchctl bootout "system/${service_name}" >/dev/null 2>&1 || true
-    if [[ -n "${pw_bin}" && -x "${pw_bin}" ]]; then
-      "${pw_bin}" runner remove --service-name "${service_name}" --skip-bootout >/dev/null 2>&1 || true
-    fi
-    rm -f "/Library/LaunchDaemons/${service_name}.plist" >/dev/null 2>&1 || true
-  else
-    /bin/launchctl bootout "gui/$(/usr/bin/id -u)/${service_name}" >/dev/null 2>&1 || true
-    if [[ -n "${pw_bin}" && -x "${pw_bin}" ]]; then
-      "${pw_bin}" runner remove --service-name "${service_name}" --skip-bootout >/dev/null 2>&1 || true
-    fi
-    rm -f "${HOME}/Library/LaunchAgents/${service_name}.plist" >/dev/null 2>&1 || true
-  fi
-}
-
 render_specimen_with_runner() {
   local input_path="$1"
   local output_path="$2"

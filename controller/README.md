@@ -13,7 +13,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly. |
 | Requests | [request_patch.rs](src/request_patch.rs): parsing, version admission and structured refusals; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
-| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): Swift-client invocation and capture; [disposition.rs](src/disposition.rs): worker disposition validation/projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
+| Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): Swift-client invocation and capture; [runner_acquisition.rs](src/runner_acquisition.rs): external host generation observation and re-acquisition; [disposition.rs](src/disposition.rs): worker disposition validation/projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
 | Log evidence | [sandbox_log.rs](src/sandbox_log.rs): window, observer admission and candidate matching; [log_capture.rs](src/log_capture.rs): supervised reads and cleanup; [log_show.rs](src/log_show.rs): query and parser shared with replay controls. |
@@ -73,7 +73,11 @@ value. `PW_VERIFY_EVIDENCE=1` adds manifest hash verification under
 2. Remove controller-owned selection fields and serialize the resolved request
    once. Deliver those held bytes to `pw-runner-client run --request -` on stdin;
    no temporary request file is written.
-3. Invoke a fresh host for the specimen. After successful policy application in
+3. Invoke a fresh host for the specimen. For an external runner, an admitted
+   `already_ran` with empty steps and no worker permits re-acquisition only after
+   its live PID and start time identify the selected executable and that
+   generation is observed gone. All attempts share the original timeout.
+   Unknown process observations stop acquisition with the refusal. After successful policy application in
    a fresh worker, the host collects eligible validator queries against that
    waiting worker, closes collection, then releases attempts and joins the
    observations into its reply. It omits the validator when no queries are
@@ -104,7 +108,9 @@ the app evidence manifest once, requested augment files under
 `Contents/Resources/Augments/`, the literal SBPL import closure, selected binary
 bytes needed for dossier hashes, and host `sysctl` facts. Evidence verification
 additionally hashes manifest entries. Built-in selection uses the manifest's
-fixed service path; external selection reads the registry. Neither reads an
+fixed service path; external selection reads the registry. External host re-acquisition also reads
+process start times with `proc_pidinfo` and executable paths with `proc_pidpath`;
+only ESRCH or an observed different start time establishes retirement. Neither reads an
 `Info.plist`: service names come from the manifest or registry.
 
 The controller launches `pw-runner-client` for the selected run, `sbpl-check`
@@ -115,7 +121,7 @@ belong to the separately dispatched `runner` commands; `bundle::read_bundle_info
 is used only by install.
 
 [`RunDependencies`](src/run_flow.rs) names the controllable app root, manifest
-loader, registry location and client invocation. Orchestration tests count
+loader, registry location, process observer and client invocation. Orchestration tests count
 manifest loads and client calls; the built-in selection control uses an app
 root without an Info.plist.
 
@@ -134,6 +140,13 @@ admitting its exact response version. Another integer version produces
 `malformed_runner_response`. Both retain the reply with exit 1 and withhold
 runner-derived diagnostics and log capture. Request-delivery failure takes
 precedence as `tool_error`, leaving any captured reply uninterpreted.
+
+`data.runner_acquisition` records qualifying refused attempts, their client
+captures, refusing generations and exit or failed-wait observations. It is empty
+when none qualified. The final attempt alone supplies `runner_client`,
+`runner_result` and the deny-log window; refusal records never supply downstream
+worker evidence. `runner verify` uses the same acquisition procedure and retains
+the same refusal array.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
 received/retained byte counts. Each stream retains at most
@@ -164,7 +177,7 @@ availability and failures cannot change execution evidence or CLI exit status.
 | --- | --- |
 | `result`, CLI exit status | Execution: [`complete_execution`](src/run_flow.rs); early admission and usage refusals remain in [`cmd_run`](src/run_flow.rs) and [cli.rs](src/cli.rs). No log inputs. |
 | `data.runner_result` | Execution: [runner_client.rs](src/runner_client.rs) parses the reply; `ExecutionData` retains it unchanged. Logs borrow worker identity and attempt evidence without a mutable runner reference. |
-| `data.runner_client`, `policy_check`, `specimen`, `timeout_ms`, `request_failure` | Execution: transport, preparation, admission and independent fallback compilation in [run_flow.rs](src/run_flow.rs). Client timestamps supply the later log window. |
+| `data.runner_client`, `runner_acquisition`, `policy_check`, `specimen`, `timeout_ms`, `request_failure` | Execution: transport, preparation, admission and independent fallback compilation in [run_flow.rs](src/run_flow.rs). Client timestamps supply the later log window. |
 | Diagnostics `process_disposition`, `termination_cause`, `stop_reason`, `disposition_integrity`, `disposition_issues` | Execution: [disposition.rs](src/disposition.rs) projects the carried worker disposition and raw supporting facts after response admission. |
 | Entire `data.sandbox_log_capture` | Logs: [sandbox_log.rs](src/sandbox_log.rs) supervises and admits the observer; [`finish_sandbox_log_capture`](src/run_flow.rs) replaces candidate associations. Candidates never become runner-step or comparison fields. |
 | Diagnostics `correlation_status`, `permission_failures_without_record` | Logs: [`log_diagnostics`](src/run_flow.rs), using capture status, authoritative worker PID, candidate associations and per-step observations. |

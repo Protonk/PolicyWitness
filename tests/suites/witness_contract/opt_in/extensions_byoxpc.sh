@@ -23,6 +23,7 @@ PY
 test_step install "install an owned runner; read back issuer and worker authority independently"
 test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "extension BYOXPC setup failed" \
   "$SESSION_TOOL" install "$PW_BIN" "$PW_APP_DIR" "$PW_TEST_ARTIFACTS" "${PW_TEST_ARTIFACTS}/runner_env.json" "$IDENTITY" "$SUPPLIED"
+export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
 test_check_python "${PW_TEST_ARTIFACTS}/readback.log" "extension issuer read-back failed" \
   "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/entitlement_readback.py" "$PW_BIN" "$PW_TEST_ARTIFACTS" "$SUPPLIED"
 test_step lifecycle "repeat native lifecycle, placement, omission and target preparation through BYOXPC"

@@ -12,6 +12,7 @@ derived; the corpus is evidence that real replies stay inside that bound.
 import errno
 import copy
 import json
+import re
 import secrets
 import shutil
 import subprocess
@@ -140,13 +141,57 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
     assert not errors, errors
 
 
+def host_handoff(directory):
+    """Start size-limit workloads after the preceding host has retired.
+
+    Large replies take time to decode, so the next request can race the previous
+    host's exit without receiving an already_ran reply. Contention is exercised
+    separately; this test needs a reply from the host that checks its limits.
+    Failed launchctl/process observations never establish retirement.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/byoxpc'))
+    from neighbor_lab import executable_path, generation, generation_state, process_identity, save, wait_for
+    receipt = {}
+    try:
+        result = subprocess.run(['/bin/launchctl', 'print', SESSION['target']],
+                                capture_output=True, text=True, timeout=10)
+        receipt['launchd'] = dict(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr)
+        assert result.returncode == 0, receipt
+        match = re.search(r'^\s*pid = (\d+)\s*$', result.stdout, re.M)
+        if match is None:
+            receipt['outcome'] = 'launchd_reports_no_pid'
+            return
+        pid = int(match[1])
+        identity = process_identity(pid)
+        receipt['identity'] = identity
+        if not identity['observed']:
+            assert identity['absent'], ('unknown host observation', receipt)
+            receipt['outcome'] = 'esrch_before_identity'
+            return
+        key = generation(identity)
+        path = executable_path(pid)
+        receipt['executable_path'] = path
+        state = generation_state(key)
+        if state != 'gone':
+            assert state == 'alive', ('unknown host observation', receipt)
+            assert path == str(Path(SESSION['bundle_path']) / 'Contents/MacOS/PWRunner'), receipt
+
+            def retired():
+                state = generation_state(key)
+                assert state != 'unknown', ('unknown host observation', receipt)
+                return state == 'gone'
+
+            wait_for(retired, 'size-limit host handoff', timeout=10)
+        receipt['outcome'] = 'generation_gone'
+    finally:
+        save(directory / 'host-handoff.json', receipt)
+
+
 def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measure_margin=False, **expectations):
     if SESSION:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/byoxpc'))
-        import session
         request['runner'] = dict(mode='byoxpc', service=SESSION['service_name'])
         (out / name).mkdir(parents=True, exist_ok=True)
-        session.retire_host(SESSION, out / name, session.command)
+        host_handoff(out / name)
     run = RunCapture(pw, out / name, request,
                      cli_args=['--timeout-ms', '120000'] + ([] if capture_logs else ['--no-log-capture']))
     with run:

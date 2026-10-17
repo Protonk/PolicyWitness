@@ -8,12 +8,10 @@ import json
 import os
 from pathlib import Path
 import plistlib
-import re
 import secrets
 import shutil
 import sys
 import tempfile
-import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'caller_auth'))
 from bundle import CLIENT, SERVICE, command, inventory, save, signature
@@ -60,33 +58,17 @@ def service_present(state, out, label, invoke):
     return False
 
 
-def retire_host(state, out, invoke, timeout=5.0):
-    """Wait until launchd lists no running host for the owned service.
-
-    A served reply's `pid` names the worker, not the host, so the host is
-    read from launchd's own listing: while it reports a PID, wait for that
-    process to exit, then re-read. On-demand launches need a connection, so
-    the loop ends once the retiring host is gone.
-    """
-    deadline = time.monotonic() + timeout
-    observed = []
-    attempt = 0
-    while True:
-        attempt += 1
-        rc, raw, _ = tool(out, f'host-retirement-{attempt}', ['/bin/launchctl', 'print', state['target']], invoke=invoke, check=False)
-        match = re.search(r'^\s*pid = (\d+)\s*$', raw.decode('utf-8', 'replace'), re.M) if rc == 0 else None
-        if match is None:
-            break
-        pid = int(match[1])
-        observed.append(pid)
-        while True:
-            try:
-                os.kill(pid, 0)
-            except ProcessLookupError:
-                break
-            assert time.monotonic() < deadline, f'host {pid} did not retire within {timeout} s'
-            time.sleep(0.02)
-    save(out / 'verify-host-retired.json', {'hosts': observed, 'retired': True})
+def session_invoke(pw, state, invoke):
+    """Scope the registry override to this session's CLI calls, keeping HOME real."""
+    def scoped(out, argv, **kwargs):
+        if str(argv[0]) == str(pw):
+            env = dict(os.environ)
+            env.pop('PW_RUNNER_REGISTRY', None)
+            if state.get('registry_path') is not None:
+                env['PW_RUNNER_REGISTRY'] = state['registry_path']
+            kwargs['env'] = env
+        return invoke(out, argv, **kwargs)
+    return scoped
 
 
 def registry(pw, out, label, invoke):
@@ -113,7 +95,7 @@ def persist_state(state, receipt=None):
         save(receipt, state)
 
 
-def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team", supplied_entitlements=None):
+def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team", supplied_entitlements=None, default_location=False, registry_root=None):
     receipt = out / 'session.json'
     assert not receipt.exists(), f'ownership receipt already exists: {receipt}'
     app = app.resolve()
@@ -127,7 +109,10 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
              'install_attempted': False, 'install_finished': False, 'removed': False,
              'state_path': str(staging / 'session.json'), 'receipt_path': str(receipt),
              'source_inventory': inventory(app), 'variant': variant}
+    registry_root = registry_root or Path.home() / 'Library/Application Support/PolicyWitness/test-sessions'
+    state['registry_path'] = None if default_location else str(registry_root / service / 'runners.json')
     persist_state(state, receipt)
+    invoke = session_invoke(pw, state, invoke)
     _, bundle = owned_bundle(state)
     existing = registry(pw, out, 'registry-before', invoke)
     envelope(out, 'reconcile-before', [pw, 'runner', 'reconcile'], invoke)
@@ -220,13 +205,8 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     tool(out, 'processes-before-verify', ['/bin/ps', '-axo', 'pid=,ppid=,lstart=,comm='], invoke=invoke, check=False)
     # A connection failure here is a failed case, never an automatic skip.
     envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
-    # The verify request consumed a host. Until that host has exited, a
-    # connection can still reach it and meet its terminal claim (already_ran),
-    # so wait for its retirement before handing the runner to the caller; the
-    # next request then only waits for launchd's respawn throttle.
-    retire_host(state, out, invoke)
     assert inventory(app) == json.loads((out / 'source-before.json').read_text()), 'setup changed selected app'
-    save(env_path, {'runner_id': record['id'], 'service_name': service})
+    save(env_path, {'runner_id': record['id'], 'service_name': service, 'PW_RUNNER_REGISTRY': state['registry_path']})
 
 
 def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
@@ -238,6 +218,7 @@ def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
     if durable.exists():
         state = json.loads(durable.read_text())
     staging, bundle = owned_bundle(state)
+    invoke = session_invoke(pw, state, invoke)
     if not staging.exists():
         assert state['removed'], 'staging disappeared before verified cleanup'
         return
@@ -267,6 +248,23 @@ def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
             assert not service_present(state, out, 'launchd-after', invoke), 'service still loaded after removal'
             assert not os.path.lexists(plist), 'launchd plist remains after removal'
             assert not any(r['service_name'] == state['service_name'] for r in registry(pw, out, 'registry-after', invoke)), 'runner remains registered'
+        if state.get('registry_path') is not None:
+            registry_path = Path(state['registry_path'])
+            assert registry_path.name == 'runners.json' and registry_path.parent.name == state['service_name']
+            assert registry_path.parent.resolve() == registry_path.parent, 'registry directory redirected'
+            # Never delete an occupied registry, an unknown file, or a lock
+            # inode held by another process. A crash leaves this durable owner.
+            if registry_path.parent.exists():
+                import fcntl
+                lock = registry_path.with_suffix('.json.lock')
+                with lock.open('a+') as holder:
+                    fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    entries = registry(pw, out, 'registry-empty', invoke)
+                    assert not entries, 'session registry is not empty; retaining ownership'
+                    assert set(p.name for p in registry_path.parent.iterdir()) <= {'runners.json', 'runners.json.lock'}, 'unexpected registry files'
+                    registry_path.unlink(missing_ok=True)
+                    lock.unlink()
+                    registry_path.parent.rmdir()
         after = inventory(Path(state['source_app']))
         save(out / 'source-after.json', after)
         assert after == state['source_inventory'], 'test changed selected app'
@@ -292,12 +290,12 @@ def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
 
 
 if __name__ == '__main__':
-    if sys.argv[1] in ('install', 'install-noauth'):
+    if sys.argv[1] in ('install', 'install-noauth', 'install-default'):
         # An optional seventh argument names an entitlements plist to supply
         # instead of the source's own.
         supplied = plistlib.loads(Path(sys.argv[7]).read_bytes()) if len(sys.argv) > 7 else None
         install(sys.argv[2], Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5]), sys.argv[6],
-                variant='adhoc_noauth' if sys.argv[1] == 'install-noauth' else 'team', supplied_entitlements=supplied)
+                variant='adhoc_noauth' if sys.argv[1] == 'install-noauth' else 'team', supplied_entitlements=supplied, default_location=sys.argv[1] == 'install-default')
     elif sys.argv[1] == 'cleanup':
         cleanup(sys.argv[2], Path(sys.argv[3]))
     else:

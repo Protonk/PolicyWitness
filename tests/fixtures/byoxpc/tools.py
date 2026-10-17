@@ -10,7 +10,7 @@ config = json.loads(Path(sys.argv[1]).read_text())
 argv = sys.argv[2:]
 mode = config['mode']
 state_path = Path(config['state'])
-state = json.loads(state_path.read_text()) if state_path.exists() else {'loaded': False, 'runners': [config['unrelated']], 'pending_cleanup': []}
+state = json.loads(state_path.read_text()) if state_path.exists() else {'loaded': False, 'runners': [config['unrelated']] if mode == 'registry_nonempty' else [], 'pending_cleanup': []}
 ownership = json.loads(Path(config.get('ownership', str(Path(config['out']) / 'session.json'))).read_text())
 bundle = Path(ownership['bundle_path'])
 service = ownership['service_name']
@@ -87,6 +87,11 @@ if argv[0] == '/bin/launchctl':
     state['loaded'] = False
     finish()
 assert argv[0] == config['pw'] and argv[1] == 'runner', argv
+assert os.environ.get('PW_RUNNER_REGISTRY') == ownership['registry_path']
+registry_path = Path(ownership['registry_path'])
+registry_path.parent.mkdir(parents=True, exist_ok=True)
+registry_path.write_text(json.dumps(state))
+receipt['registry_path'] = str(registry_path)
 if argv[2] == 'list':
     reply({'runners': state['runners'], 'pending_cleanup': state['pending_cleanup']})
 if argv[2] == 'reconcile':
@@ -134,8 +139,6 @@ if argv[2] == 'install':
         finish()
     reply({'runner': record, 'plist_path': str(plist)})
 if argv[2] == 'verify':
-    # The fake host is this process: it has exited by the time the helper
-    # polls the PID, as a real verified host retires after its reply.
     reply({'runner_pid': os.getpid()}, ok=mode != 'connection_failure')
 assert argv[2:] == ['remove', '--id', 'owned-id'], 'removal did not target the owned registration'
 if mode == 'remove_failure':

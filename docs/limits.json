@@ -668,13 +668,17 @@
       "title": "Runner verification wait",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Default reply wait for the fixed runner verify specimen.",
-      "effect": "An expired wait returns the client timeout outcome. Verification consumes the single-use host it reaches.",
+      "counting": "Default allowance for the fixed runner verify specimen, shared across host re-acquisition and client waits.",
+      "effect": "An expired client RPC returns its timeout outcome; acquisition deadline exhaustion returns the last qualifying already_ran refusal. An admitted verification consumes its single-use host.",
       "control": "Flag `--timeout-ms` on `runner verify`.",
       "sources": [
         {
           "path": "controller/src/runner_commands.rs",
           "symbol": "RUNNER_VERIFY_DEFAULT_TIMEOUT_MS"
+        },
+        {
+          "path": "controller/src/runner_acquisition.rs",
+          "symbol": "acquire"
         }
       ],
       "checks": [
@@ -689,9 +693,15 @@
           "symbol": "verification_request_is_the_fixed_allow_all_specimen",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "controller/src/runner_acquisition.rs",
+          "symbol": "multiple_refusals_share_one_budget_and_launch_failure_preserves_history",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "The compiled default and the fixed verification request are tested. Live timeout scheduling is source-inspected."
+      "behavior": "The compiled default, fixed verification request and shared acquisition deadline are tested."
     },
     {
       "id": "worker_policy_transfer",
@@ -938,7 +948,7 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
+      "counting": "Default elapsed monotonic deadline for one phase\u2019s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
       "control": "Fixed.",
       "sources": [
@@ -1109,8 +1119,8 @@
       "title": "Runner RPC wait",
       "value": 240000,
       "unit": "milliseconds",
-      "counting": "Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`.",
-      "effect": "An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets.",
+      "counting": "Default reply allowance; external runner acquisition shares it across refused attempts, retirement waits and the final client. Each client capture records its own wall-clock span.",
+      "effect": "An expired client RPC yields `xpc_timeout`. Exhaustion while waiting after a qualifying external `already_ran` returns the last refusal. Inner worker and validator budgets do not expand.",
       "control": "Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted.",
       "sources": [
         {
@@ -1124,6 +1134,10 @@
         {
           "path": "runner/Clients/PWRunnerClient/main.swift",
           "symbol": "defaultClientTimeoutMs"
+        },
+        {
+          "path": "controller/src/runner_acquisition.rs",
+          "symbol": "acquire"
         }
       ],
       "checks": [
@@ -1138,9 +1152,15 @@
           "symbol": "documented_controller_limits",
           "kind": "value",
           "form": "test"
+        },
+        {
+          "path": "controller/src/runner_acquisition.rs",
+          "symbol": "multiple_refusals_share_one_budget_and_launch_failure_preserves_history",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "The production wait and timeout response are source-inspected; compiled default agreement is tested."
+      "behavior": "Compiled default agreement is tested. Controlled acquisition tests cover shared deadlines, retirement observation failures and the last refusal; live coexistence covers held and queued hosts."
     },
     {
       "id": "runner_remove_teardown_wait",

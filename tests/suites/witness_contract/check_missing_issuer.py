@@ -16,7 +16,6 @@ staging, bundle = Path(state['staging']), Path(state['bundle_path'])
 assert bundle == staging / 'PWRunner.xpc' and staging.parent == Path('/private/tmp')
 receipts = out / 'missing-issuer'
 receipts.mkdir()
-session.retire_host(state, receipts, session.command)
 issuer = bundle / 'Contents/MacOS/pw-extension-issuer'
 backup = staging / 'issuer-held-for-missing-file-control'
 recovery = staging / 'issuer-mutation.json'

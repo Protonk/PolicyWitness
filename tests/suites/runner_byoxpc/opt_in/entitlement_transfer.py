@@ -1,5 +1,6 @@
 """Selection admits the worker that holds the key true; the file effect witnesses it."""
 import json
+import os
 from pathlib import Path
 import plistlib
 import subprocess
@@ -15,6 +16,7 @@ KEY = 'com.apple.security.cs.allow-jit'
 pw, directory = sys.argv[1:]
 out = Path(directory)
 services = {copy: json.loads((out / copy / 'runner_env.json').read_text())['service_name'] for copy in ('granted', 'denied')}
+registries = {value['service_name']: value['PW_RUNNER_REGISTRY'] for copy in services for value in [json.loads((out / copy / 'runner_env.json').read_text())]}
 receipts = {}
 
 
@@ -31,7 +33,7 @@ def run(name, service, target, *, required=None, code=0):
     path = out / (name + '.specimen.json')
     path.write_text(json.dumps(spec, indent=2) + '\n')
     before = target.read_bytes()
-    result = subprocess.run([pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000'], capture_output=True, timeout=60)
+    result = subprocess.run([pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000'], capture_output=True, timeout=60, env=dict(os.environ, PW_RUNNER_REGISTRY=registries[service]))
     (out / (name + '.json')).write_bytes(result.stdout)
     (out / (name + '.stderr')).write_bytes(result.stderr)
     assert result.returncode == code, (name, result.returncode, result.stderr)

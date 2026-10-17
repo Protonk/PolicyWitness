@@ -199,7 +199,8 @@ def main():
     source_files = ['tests/fixtures/sandbox_extensions/native.c', 'tests/fixtures/sandbox_extensions/build.sh',
                     'tests/suites/sandbox_extensions_native/check.py', 'tests/suites/sandbox_extensions_native/run.sh',
                     'tests/catalog.json', 'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/lib/test_cli.py',
-                    'tests/lib/suite_run.py', 'SANDBOX-EXTENSIONS-PLAN.md']
+                    'tests/lib/suite_run.py', 'tests/fixtures/sandbox_extensions/README.md',
+                    'tests/suites/sandbox_extensions_native/README.md']
     source_hashes = {}
     for name in source_files:
         data = (ROOT / name).read_bytes()

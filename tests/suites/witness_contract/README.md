@@ -78,7 +78,11 @@ installed bytes and the shipped baseline. A missing issuer path must produce
 the named capability refusal before worker launch. The owned installed-copy
 control removes the actual issuer, retains a restoration receipt, checks public
 validation, then restores and verifies the exact bytes. The same BYOXPC session
-runs the maximum-reply workloads. Cleanup verifies service removal. These workloads place
+runs the maximum-reply workloads. Between those size-limit workloads, a successful
+`launchctl print` supplies the host PID and kernel generation observations establish
+retirement; unknown observations fail the test. This avoids connecting during a
+host's exit without a refusal reply. The BYOXPC coexistence controls independently
+exercise overlapping requests without this handoff. Cleanup verifies service removal. These workloads place
 their targets in owned temporary directories to avoid requesting Desktop access.
 
 `extension_boundaries` compiles the production issuer and worker with the

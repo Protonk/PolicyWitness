@@ -73,6 +73,12 @@ def executable_path(pid):
     return buffer.value[:length].decode('utf-8', 'replace') if length > 0 else None
 
 
+def process_label(label, ppid):
+    # This fixture watches launchd services. A forked child can still expose
+    # PWRunner's executable before exec; it is not another launchd host.
+    return 'fork_child' if label == 'host' and ppid != 1 else label
+
+
 class ProcessWatch:
     """Sample processes whose executable path is watched.
 
@@ -94,18 +100,26 @@ class ProcessWatch:
         count = LIBPROC.proc_listallpids(buffer, ctypes.sizeof(buffer))
         seen = set()
         for pid in buffer[:count]:
-            path = executable_path(pid) if pid > 0 else None
+            before = process_identity(pid) if pid > 0 else None
+            if not before or not before['observed']:
+                continue
+            path = executable_path(pid)
             if path not in self.watched:
                 continue
             identity = process_identity(pid)
-            if not identity['observed']:
+            if not identity['observed'] or generation(before) != generation(identity):
                 continue
             key = generation(identity)
+            label = process_label(self.watched[path], identity['ppid'])
             seen.add(key)
             with self.lock:
                 record = self.generations.setdefault(key, dict(
-                    generation=key, label=self.watched[path], path=path, pid=pid,
-                    ppid=identity['ppid'], first_seen_ns=started, unseen_after_ns=None, reappeared=0))
+                    generation=key, label=label, path=path, pid=pid,
+                    ppid=identity['ppid'], first_seen_ns=started, unseen_after_ns=None, reappeared=0,
+                    executable_observations=[]))
+                if not record['executable_observations'] or record['path'] != path:
+                    record['executable_observations'].append(dict(path=path, label=label, observed_ns=started))
+                record['path'], record['label'] = path, label
                 record['last_seen_ns'] = started
                 if record['unseen_after_ns'] is not None:
                     record['unseen_after_ns'] = None

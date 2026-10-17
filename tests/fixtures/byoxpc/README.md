@@ -18,6 +18,22 @@ record against them. Signature, runtime and connection checks must succeed
 before the wrapper receives its runner environment. Installation failure is a
 failed case.
 
+Every ordinary team or no-auth session uses a registry at
+`~/Library/Application Support/PolicyWitness/test-sessions/<service>/runners.json`.
+Its path is persisted in durable `session.json` before the first registry read,
+and every helper CLI and specimen wrapper receives `PW_RUNNER_REGISTRY`.
+`HOME` remains real for signing and the user LaunchAgents location. The registry
+survives reboot independently of temporary bundle staging. Only
+`runner_byoxpc/default_location` installs without a registry override.
+
+For recovery, inspect `runner list` and `runner reconcile` first. An unregistered
+candidate's label names its directory under `test-sessions`; set
+`PW_RUNNER_REGISTRY` to that directory's `runners.json` and inspect its records.
+Ownership comes from the record's exact service, scope, bundle and pending-cleanup
+state, never from the label alone. The record's bundle path locates the durable
+session receipt. Preserve staging and that registry until removal is verified;
+the helper deletes a private registry directory only after confirming it is empty.
+
 The wrapper arms cleanup before setup. Staging contains durable `session.json`
 with its service, bundle/plist paths, domain, source inventory, installation
 observations and removal state. The run-local `session.json` is a diagnostic
@@ -53,7 +69,10 @@ fake tools.
 `neighbor_lab.py` observes process generations for coexistence controls. A
 generation is a PID plus its kernel start time from `proc_pidinfo`; only ESRCH
 is absence, and any other failed query is an observation failure.
-`ProcessWatch` sweeps all PIDs about once a millisecond and records each process
-whose executable path is watched, with first and last sweep times. A generation
+`ProcessWatch` pauses one millisecond between sweeps and records each process
+whose executable path is watched, with first and last sweep times. Start-time
+reads bracket the executable read. A host must have launchd as its parent;
+children still exposing the host path before exec are recorded as fork children,
+and observed executable transitions are retained. A generation
 missing from a later sweep is reported as unseen, not as exited. Processes
 shorter than a sweep can be missed; sweep timing is retained with the samples.

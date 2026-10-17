@@ -16,8 +16,9 @@ IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 [[ -n "$IDENTITY" ]] || test_fail "matching Developer ID required"
 test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "owned BYOXPC setup failed" \
   "$SESSION_TOOL" install "$PW_BIN" "$PW_APP_DIR" "$PW_TEST_ARTIFACTS" "${PW_TEST_ARTIFACTS}/runner_env.json" "$IDENTITY"
+export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
 test_step claims "attribute occupied claims: spaced, back-to-back, after-reply, foreign held, throttle-queued requests; registry lock contention"
-test_check_python "${PW_TEST_ARTIFACTS}/claims.log" "occupied-claim investigation failed" \
+test_check_python "${PW_TEST_ARTIFACTS}/claims.log" "coexistence control failed" \
   "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.py" "$PW_BIN" "$PW_TEST_ARTIFACTS"
 test_check_python "${PW_TEST_ARTIFACTS}/cleanup.log" "BYOXPC cleanup failed" \
   "$SESSION_TOOL" cleanup "$PW_BIN" "${PW_TEST_ARTIFACTS}/session.json"

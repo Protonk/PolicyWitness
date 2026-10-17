@@ -181,3 +181,11 @@ helper and observer JSON receivers. These are transport controls; real producer
 attribution remains covered by `witness_contract/worker_progress_and_failure`,
 `witness_contract/worker_sparse_failure`, and the `failure_boundaries` cases
 listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership).
+
+BYOXPC host acquisition is covered by `runner_byoxpc/single_use` and
+`runner_byoxpc/bad_neighbor_claims`: attributed refusals, fresh generations,
+exactly-once effects, a bounded refusal, and a spaced zero-re-acquisition control.
+`unit/rust.unit` covers non-qualifying replies, failed observations, PID reuse,
+shared deadlines and preservation of the admitted client's time span.
+`runner_byoxpc/default_location` keeps default registry/plist resolution live;
+`shell_helpers/byoxpc_setup` checks private registry routing and durable cleanup.

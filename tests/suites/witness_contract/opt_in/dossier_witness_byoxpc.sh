@@ -20,6 +20,7 @@ IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 test_step install "copy, sign, install and verify an owned BYOXPC runner"
 test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "BYOXPC setup failed" \
   "${SESSION_TOOL}" install "${PW_BIN}" "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${PW_TEST_ARTIFACTS}/runner_env.json" "${IDENTITY}"
+export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
 test_step run "the dossier of a run selected through the installed runner: provenance, bundle-local binaries hashed against the shipped baselines"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "BYOXPC dossier witness failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_dossier.py" "${PW_BIN}" "${PW_TEST_ARTIFACTS}/byoxpc" \

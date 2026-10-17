@@ -23,12 +23,6 @@
       "document": "docs/PolicyWitness.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "after verification completed in about 0.3 s when admitted."
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
       "text": "the key is ten seconds). Three serial runs with a short pause between them"
     },
     {
