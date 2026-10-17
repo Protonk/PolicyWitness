@@ -10,6 +10,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import tempfile
 from unittest.mock import patch
 import zipfile
 
@@ -155,6 +156,11 @@ def fixture_record(build):
 
 
 def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True):
+    # Rotation controls import this fixture directly, without this module's
+    # main(). Prepare its independent Mach-O members for every entrypoint.
+    if FIXTURE_MEMBERS is None:
+        with tempfile.TemporaryDirectory(prefix='pw-release-fixture-', dir='/private/tmp') as directory:
+            prepare_provenance_fixture(Path(directory))
     commit = commit or git(repo, 'rev-parse', 'HEAD')
     dist = repo / 'dist'
     dist.mkdir(exist_ok=True)
@@ -520,7 +526,6 @@ def check_publish(out, repo, dest, notes):
 
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
-    prepare_provenance_fixture(out)
     check_preflight(out)
     repo, dest, notes = check_archive(out)
     check_publish(out, repo, dest, notes)

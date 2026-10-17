@@ -94,7 +94,7 @@
         },
         {
           "id": "release_rotation_controls",
-          "requires": [],
+          "requires": ["clang"],
           "description": "Release cleanup keeps the latest release and newest local output, protects active and recovery work, and resumes interrupted deletion"
         }
       ]
