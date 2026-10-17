@@ -101,8 +101,10 @@ Offline release controls also exercise the release procedure's decision points.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS
-  minimum, one or every shipped output with a Mach-O built against another
-  installed SDK, sign `sbpl-check` ad hoc, or sign that helper, the service
+  minimum, one or every shipped output with a Mach-O whose `LC_BUILD_VERSION`
+  names another SDK version (linked with the selected SDK and stamped by the
+  linker's `-platform_version`, a controlled metadata mismatch whose load
+  commands the control reads before substituting it), sign `sbpl-check` ad hoc, or sign that helper, the service
   seal or the app seal with `--timestamp=none`. Both full and partial builds
   must refuse wrong minima and wrong SDKs before assembly while preserving
   previous distribution bytes. The ad hoc and timestamp-less signatures must
@@ -111,8 +113,9 @@ Offline release controls also exercise the release procedure's decision points.
   created; the control inspects each such signature independently before
   crediting the refusal. Successful siblings must package both variants. Raw
   command and tool receipts survive temporary-checkout cleanup. This case
-  requires the full toolchain, a second installed SDK and a Developer ID
-  identity, and is opt-in.
+  requires the full toolchain with one installed SDK and a Developer ID
+  identity, and is opt-in. Actual selection changes between two toolchains
+  belong to `build_toolchain_switch_controls`.
 - `build_refusal_controls` runs the unchanged build script in a disposable
   checkout once per refusal the build manifest lists, in each variant the
   refusal applies to. A fault is arranged beside one boundary: a tracked input

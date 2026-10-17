@@ -92,16 +92,18 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Case:** `preflight/build_guard_controls`
 - **Location:** `tests/suites/preflight/opt_in/build_guards.py`
 - **Purpose:** Drive the unchanged build script through Cargo and native minimum
-  mismatches, one or every shipped output built against another installed SDK,
+  mismatches, one or every shipped output replaced by a Mach-O whose
+  `LC_BUILD_VERSION` names another SDK version (linked with the selected SDK,
+  the version stamped by the linker's `-platform_version`: a controlled
+  metadata mismatch, not a compile against a second SDK),
   an ad hoc helper after successful deep verification, and a helper, the
   service seal or the app seal signed with `--timestamp=none` (omitting the
   flag is not a reliable fault). Assert the diagnostics, statuses, the
   signatures made (inspected independently) and preserved or absent outputs,
   alongside successful full and partial builds.
 - **Resource dependency:** Built app for identity resolution, matching Developer
-  ID, Cargo with cached dependencies, Meson, Ninja, the C/Swift toolchains and
-  a second installed macOS SDK of another version (the Command Line Tools
-  keep several). Builds run offline in a disposable checkout under
+  ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains
+  with one installed macOS SDK. Builds run offline in a disposable checkout under
   `/private/tmp`; signing still needs the timestamp service and an
   unsandboxed shell. No app is launched.
 - **Opt-in reason:** Runs multiple builds and signs both variants with keychain

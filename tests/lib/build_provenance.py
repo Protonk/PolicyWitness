@@ -1381,6 +1381,9 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
     compilers = {}
     for language in ('c', 'swift'):
         entry = toolchain['compilers'].get(language)
+        # A partial build compiles no Swift, even in a directory an earlier full build configured with a Swift compiler.
+        if language == 'swift' and not xpc:
+            entry = None
         if entry is None:
             compilers[language] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled') if language == 'swift' else dict(status='unknown')
         else:

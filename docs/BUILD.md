@@ -589,8 +589,11 @@ The opt-in [`test_build_guards`](../tests/suites/preflight/opt_in/build_guards.p
 control drives the unchanged build script with real compilers and signing
 tools in a disposable checkout. In both variants, a tool wrapper substitutes
 a wrong-minimum Cargo or native output, which the build must name and exit 2
-before assembly; one output or every shipped output built against another
-installed SDK, which the SDK comparison must name before assembly; a helper
+before assembly; one output or every shipped output whose `LC_BUILD_VERSION`
+names another SDK version, linked with the selected SDK and stamped by the
+linker's `-platform_version` (a controlled metadata mismatch, not a compile
+against a second SDK), which the SDK comparison must name before assembly; a
+helper
 signed ad hoc; and a helper, the service seal or the app seal signed with
 `--timestamp=none`, which deep verification accepts and the signer check
 must name and refuse before observer signing, guide staging or ZIP creation,

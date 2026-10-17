@@ -115,7 +115,12 @@ the cancellation checker reuses its kernel process-exit observer.
 `fixture_bundle.py` lays out fake signed bundles around compiled Mach-O stubs
 (`host_clean.c`, `host_imports_sandbox.c` and `controller_stub.c`, built by
 `build.sh` once per suite run and named in `PW_DISPATCHER_HOST_FIXTURE`) and
-writes a provenance record describing the stand-ins' bytes and load commands;
+writes a complete full-build provenance record it authors: nominal toolchain
+values, the stand-ins' hashes and load commands read with its own `otool`
+parse, and the ad hoc signature facts their linker signatures carry, which the
+inspector compares with `codesign -dvv`. `retention_case.py` can also start a
+grandchild beyond itself that passes on, or drops, the checkout lock
+descriptors, for the dispatcher's lock-lifetime control;
 `seal_tool.py` is the independent file-seal command installed only inside
 fixture repositories; it imports nothing but the standard library. The real
 inspector still parses and checks their manifests, records and inventories. Real signing controls use disposable copies

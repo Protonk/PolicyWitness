@@ -3,8 +3,9 @@
 Each scenario drives the unchanged build script in a disposable checkout with
 one fault injected by a tool wrapper: a Cargo or Meson output replaced by a
 real Mach-O built for another macOS minimum, one or every shipped output
-replaced by a Mach-O built against another installed SDK, a helper signed ad
-hoc, or a helper, the XPC seal or the app seal signed without a secure
+replaced by a Mach-O whose LC_BUILD_VERSION names another SDK version (linked
+with the selected SDK, the version stamped by the linker's -platform_version,
+so one installed SDK suffices), a helper signed ad hoc, or a helper, the XPC seal or the app seal signed without a secure
 timestamp (`--timestamp=none`; merely omitting the flag is not a reliable
 fault). The script's own checks make every refusal; the scenario asserts the
 diagnostic, the status, the banners before and after, the signatures that
@@ -60,22 +61,17 @@ def inventory(root):
             for p in sorted(root.rglob('*')) if p.is_file()}
 
 
-def other_sdk(selected_version):
-    """An installed macOS SDK whose numeric version differs from the selected one; equipment, not a fabrication."""
-    roots = [Path('/Library/Developer/CommandLineTools/SDKs'),
-             Path(subprocess.check_output(['/usr/bin/xcode-select', '-p'], text=True).strip()) / 'Platforms/MacOSX.platform/Developer/SDKs']
-    wanted = build_provenance.normalize_version(selected_version)
-    for base in roots:
-        for sdk in sorted(base.glob('MacOSX*.sdk')) if base.is_dir() else []:
-            if sdk.is_symlink():
-                continue
-            try:
-                version = plistlib.loads((sdk / 'SDKSettings.plist').read_bytes()).get('Version')
-            except (OSError, ValueError):
-                continue
-            if build_provenance.normalize_version(str(version)) not in (None, wanted):
-                return sdk, str(version)
-    return None, None
+def distinct_sdk(selected_version):
+    """An SDK version for the linker to stamp that no comparison can mistake for the selected one: the next major."""
+    major = int(selected_version.split('.')[0])
+    return f'{major + 1}.0'
+
+
+def build_version(path):
+    """minos and sdk from otool -l, read here rather than by the helper under test."""
+    text = subprocess.check_output(['/usr/bin/otool', '-l', str(path)], text=True)
+    block = text[text.index('cmd LC_BUILD_VERSION'):]
+    return text, tuple(re.search(r'^\s*' + key + r' (\S+)\s*$', block, re.M).group(1) for key in ('minos', 'sdk'))
 
 
 def display(path):
@@ -126,20 +122,23 @@ def test_build_guards(out, identity):
         load_commands = subprocess.check_output(['/usr/bin/otool', '-l', wrong_binary], text=True)
         (out / 'wrong-minimum.load-commands').write_text(load_commands)
         assert f'minos {wrong_minimum}' in load_commands, load_commands
-        # A real Mach-O built against another installed SDK, with the plist's minimum, so only the SDK check can tell it apart.
+        # A Mach-O linked with the selected SDK whose LC_BUILD_VERSION names a distinct SDK version, by the real linker's
+        # -platform_version, with the plist's minimum: a controlled metadata mismatch only the SDK check can tell apart.
+        # It is not evidence of compiling against a second SDK, and it needs only the one installed SDK.
         selected_sdk = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], text=True).strip()
-        sdk, sdk_version = other_sdk(selected_sdk)
-        assert sdk is not None, f'equipment: no installed macOS SDK with a version other than the selected {selected_sdk}'
+        stamped_sdk = distinct_sdk(selected_sdk)
         wrong_sdk_binary = work / 'wrong-sdk'
-        status, _, stderr = command(out / 'compile-wrong-sdk',
-            ['/usr/bin/xcrun', 'clang', '-isysroot', sdk, f'-mmacosx-version-min={minimum}', source, '-o', wrong_sdk_binary],
+        status, _, stderr = command(out / 'link-wrong-sdk',
+            ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', f'-mmacosx-version-min={minimum}',
+             f'-Wl,-platform_version,macos,{minimum},{stamped_sdk}', source, '-o', wrong_sdk_binary],
             cwd=work, env=base_env)
         assert status == 0, stderr
-        metadata = build_provenance.output_metadata(wrong_sdk_binary)
-        (out / 'wrong-sdk.load-commands').write_text(json.dumps(metadata, indent=2))
-        assert metadata['minos'] == minimum and build_provenance.normalize_version(metadata['sdk']) == build_provenance.normalize_version(sdk_version), metadata
-        assert build_provenance.normalize_version(metadata['sdk']) != build_provenance.normalize_version(selected_sdk)
-        save(out / 'equipment.json', dict(selected_sdk=selected_sdk, other_sdk=str(sdk), other_sdk_version=sdk_version, minimum=minimum, wrong_minimum=wrong_minimum))
+        load_commands, (stamped_minimum, stamped) = build_version(wrong_sdk_binary)
+        (out / 'wrong-sdk.load-commands').write_text(load_commands)
+        assert stamped_minimum == minimum and build_provenance.normalize_version(stamped) == build_provenance.normalize_version(stamped_sdk), (stamped_minimum, stamped)
+        assert build_provenance.normalize_version(stamped) != build_provenance.normalize_version(selected_sdk)
+        save(out / 'equipment.json', dict(selected_sdk=selected_sdk, stamped_sdk=stamped_sdk, minimum=minimum, wrong_minimum=wrong_minimum,
+                                          note='the wrong-SDK fixture is linked with the selected SDK and a distinct LC_BUILD_VERSION sdk'))
 
         cargo_outputs = [root / 'controller/target/release' / name for name in ('policy-witness', 'sandbox-log-observer', 'sbpl-check')]
         for variant, xpc in (('full', '1'), ('partial', '0')):
@@ -217,7 +216,7 @@ def test_build_guards(out, identity):
                         assert 'shipped outputs disagree with the selected SDK version' in stderr, stderr[-4000:]
                         named = cargo_outputs[-1:] if fault == 'sdk_cargo' else cargo_outputs + meson_outputs
                         for path in named:
-                            assert f'{path}: built against SDK {metadata["sdk"]}; the selected SDK is {selected_sdk}' in stderr, (path, stderr[-4000:])
+                            assert f'{path}: built against SDK {stamped}; the selected SDK is {selected_sdk}' in stderr, (path, stderr[-4000:])
                         assert 'Checking the configured native source lists' in stdout and 'Assembling app bundle' not in stdout, stdout
                         assert inventory(dist) == before, 'SDK refusal changed previous distribution output'
                         assert not any(r['tool'] == 'codesign' for r in receipts), receipts
