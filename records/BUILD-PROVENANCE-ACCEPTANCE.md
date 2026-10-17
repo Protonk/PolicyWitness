@@ -356,7 +356,7 @@ second one. The record holds no raw classifier decisions, so their exact
 causes cannot be diagnosed from it. The user said they or someone else will
 manage the classifier issue.
 
-## Remaining findings
+## Findings at provenance acceptance
 
 - **A worker clock read denied under a deny-default profile (pre-existing,
   outside this plan).** In the preliminary default battery
@@ -365,9 +365,9 @@ manage the classifier issue.
   failed: the worker reported `proceed wait: CLOCK_MONOTONIC failed` with
   errno 1 and the run's deny capture holds one event for that worker pid,
   `deny(1) syscall-unix 116`, which is `SYS_gettimeofday` in the SDK's
-  syscall table. The worker reads its proceed-wait clock with
-  `clock_gettime(CLOCK_MONOTONIC)` ([pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c),
-  `wait_for_proceed`), expecting a commpage read; the denied syscall shows
+  syscall table. That worker read its proceed-wait clock with
+  `clock_gettime(CLOCK_MONOTONIC)` in `wait_for_proceed`, expecting a commpage
+  read; the denied syscall shows
   that the library took a system-call path at least once under
   `(deny default)(allow file-read-data)`. The worker failed closed, the
   controller reported `runner_failed` with the diagnostic and no verdict or
@@ -375,7 +375,9 @@ manage the classifier issue.
   machine and in the credited run; the wait, release store and
   eligibility rules are untouched by this plan, so the condition is reported
   here with its evidence rather than changed. The preliminary run is
-  retained for that evidence, not credited for acceptance.
+  retained for that evidence, not credited for acceptance. The clock dependency
+  was subsequently repaired in `085e23e`; the current
+  [timing contract](../docs/LIMITS.md#execution-budgets) uses continuous Mach time.
 - `docs/architecture.json` was left unchanged: the build introduces no
   process, channel or boundary at run time, and the controller does not read
   the record.
@@ -540,9 +542,10 @@ and that a standalone Cargo command succeeds after the holder exits.
 
 ### Limitations recorded at `6f0802c`
 
-- The worker clock finding stays open under `runner/SAFE-WAIT-TIME-PLAN.md`.
+- The worker clock finding was unresolved at this checkpoint.
   `witness_contract/bug_report_returns_verdicts` passed in both repair
-  batteries; a passing rerun does not resolve the finding.
+  batteries; those reruns did not resolve the finding. The dependency was
+  subsequently repaired in `085e23e`.
 - The lock is a managed-entrypoint guarantee. It does not serialize direct
   tool invocations, and a protected descendant that outlives its command
   keeps the lock until it exits. A caller that was itself started through the
@@ -619,9 +622,10 @@ credit for the reviewed implementation.
 
 The owning build and signing documentation, build manifest and generated
 account, locking reference, suite reference and fixtures describe these
-repairs. The worker identity inputs did not change. The worker-clock finding,
-the managed-entrypoint scope, Cargo's reused-output history limit, and the
-Cargo oracle's Python-shim limitation remain as described above.
+repairs. The worker identity inputs did not change in these provenance repairs.
+At that checkpoint, the worker-clock finding, the managed-entrypoint scope,
+Cargo's reused-output history limit, and the Cargo oracle's Python-shim
+limitation remained as described above.
 
 ### Acceptance of the reviewed implementation
 
@@ -700,8 +704,8 @@ uncommitted reporting edits, rather than claiming a clean source commit.
 
 These repairs and acceptance gates complete the provenance repair plan;
 its planning text is retired into this record and the owning documentation.
-The worker-clock finding remains open in `runner/SAFE-WAIT-TIME-PLAN.md`;
-its bug-report case passed again without resolving the finding. The remaining
+The worker-clock dependency was subsequently repaired in `085e23e`; the
+bug-report reruns recorded here did not themselves resolve it. The remaining
 scope limits are the managed-entrypoint lock guarantee, the lack of historical
 compiler attribution for reused outputs, and the Cargo 1.99 oracle's inability
 to independently observe shim-affected SDKROOT. The latter remains covered

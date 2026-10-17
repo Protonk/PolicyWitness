@@ -114,7 +114,7 @@ private final class WorkerClockGate {
         events.append("collection-entered")
         try wait("ready")
         try expectFalse(has("injected"), "the fixture injected before collection authorized it")
-        // Deliberate host descheduling stress, longer than the old 200 ms window.
+        // Deliberate host descheduling stress while authorization is withheld.
         // The marker handshake, not this delay, establishes the ordering.
         if delayMs > 0 { usleep(delayMs * 1_000) }
         try expectFalse(has("injected"), "the fixture injected while the host withheld its trigger")

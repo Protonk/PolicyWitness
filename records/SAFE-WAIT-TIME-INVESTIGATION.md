@@ -391,6 +391,8 @@ PW_TEST_OUT_DIR=tests/out/runs/safe-wait-baseline-live-20261016 \
 
 The durable [probe driver](safe-wait-time/run_probes.py) retains every native
 argv, stdout/stderr, wall-time bracket and process reap, plus source hashes.
+This equipment requires pre-repair commit `fcc3558`: `order_probe.c` depends on
+that worker's `PW_MONOTONIC_READ` seam and wait signature.
 For a fresh reproduction (change the output path if it already exists):
 
 ```sh

@@ -38,10 +38,10 @@ registration/admission, or certify arbitrary previously installed runners.
 A thin arm64 executable has no x86_64 slice for Rosetta to execute. Any future
 runtime policy for external bundles needs its own scope and tests.
 
-Keep this work independent of [the worker timing repair](runner/SAFE-WAIT-TIME-PLAN.md).
+Keep this work independent of [worker timing](docs/LIMITS.md#execution-budgets).
 Do not change wait logic, clocks, release stores, query eligibility, shared-memory
-layout or specimen contracts. When the changes are combined, regenerate worker
-identity and rebuild the combined sources before crediting integrated results.
+layout or specimen contracts. Regenerate worker identity and rebuild the changed
+sources before crediting integrated results.
 
 ## Basis for the design
 
