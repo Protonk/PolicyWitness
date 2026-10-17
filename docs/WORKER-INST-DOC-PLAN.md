@@ -3,8 +3,8 @@
 ## Status
 
 Pass 1 is complete at production source
-`6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6`. Its work commit is recorded in the
-commit receipt after this pass lands. The inventory has 78 entries. Rows 1–7, 9 and 11–14 are
+`6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6`. Work commit:
+`90fcb1b9a1e48a1e41725e9faca3095297ee493c` (`docs: complete worker tour pass 1 inventory`). The inventory has 78 entries. Rows 1–7, 9 and 11–14 are
 verified and await adjudication; new rows 15–19 also await adjudication.
 Rows 8 and 10 retain their existing ownership/limitation decisions and remain
 implementing for pass 3. No row closed, no production source changed, and no
