@@ -8,11 +8,14 @@ Offline release controls also exercise the release procedure's decision points.
 - Requires expected executables/resources, valid strict signatures for the app,
   service, and helpers, and matching hashes for every manifest entry. Required
   helper entries cannot silently disappear from the manifest. The provenance
-  record must be present and listed, name every shipped executable once with
-  a valid path, carry no controller hash, and agree with the manifest and the
-  bytes on every other hash and with each executable's load commands on its
-  UUID, platform, minimum and SDK; a record for another build with the same
-  inventory is refused.
+  record must be present and listed, have the documented shape (typed
+  sections, no null required field, the variant's compilers and outputs,
+  effective settings that agree with the outputs), name every shipped
+  executable once with a valid path, carry no controller hash, agree with the
+  manifest and the bytes on every other hash, with each executable's load
+  commands on its UUID, platform, minimum, SDK and linker tools, and with
+  `codesign -dvv`'s display of each nested signature it claims; a record for
+  another build with the same inventory is refused.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
   `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
   symbol lookup. The [host-source check](../source_drift/README.md) covers
@@ -34,8 +37,14 @@ Offline release controls also exercise the release procedure's decision points.
   valid copy, removes a helper, damages a code page, and restores the helper.
   It then changes the copied runner's plist and re-signs inside-out with the
   matching Developer ID while retaining the old manifest. All signatures must
-  verify, but inspection must reject the stale runner hash. No copy is launched;
-  cleanup removes only the temporary directory and checks the source inventory.
+  verify, but inspection must reject the stale runner hash. It then writes
+  semantically faulty records (a null or missing section, a wrong type, a null
+  deployment target or required observation, a malformed request, a linker
+  tool version alone, a signature claim, and the hash, inventory and SDK
+  faults), refreshes the manifest and re-signs each copy so every signature
+  verifies, and requires exactly the codes each fault produces. No copy is
+  launched; cleanup removes only the temporary directory and checks the source
+  inventory.
 - `byoxpc_verification_controls` uses never-launched signed copies and isolated
   child registry/home directories. Corrupting a worker or issuer code page must
   fail recursive installation checks and subsequently identify both the bundle
@@ -82,7 +91,12 @@ Offline release controls also exercise the release procedure's decision points.
   requested flags attributed by precedence; signature displays establishing
   class, team and timestamp; and records refused for a swapped bundle,
   missing, duplicate or invalid outputs, a controller hash inside the seal,
-  wrong hashes or wrong load-command metadata. It needs clang for the Mach-O
+  wrong hashes or wrong load-command metadata, every required section and
+  representative nested fields missing, null or of the wrong type, a linker
+  tool version alone, and a signature claim the display contradicts, by the
+  inspector, by the producer before it writes and by the release-archive
+  reader, which also binds each output's hash to the ZIP member, beside valid
+  full and partial records and each permitted unknown. It needs clang for the Mach-O
   stand-ins and is in the default battery.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
@@ -223,8 +237,11 @@ Offline release controls also exercise the release procedure's decision points.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles
-  around compiled Mach-O stubs with a provenance record describing them,
-  shared with the release controls here.
+  around compiled Mach-O stubs with a complete full-build provenance record
+  authored by the fixture (its own `otool` parse and the stubs' ad hoc
+  linker signatures), shared with the release controls here. The release
+  publish controls author a complete partial-build record whose helpers are
+  members of their fixture ZIP.
 - `tests/fixtures/release/tools.py`: controlled external-tool boundary and receipts.
 - `tests/fixtures/release/publish_tools.py`: GitHub stand-in for publication controls.
 - `tests/fixtures/release/hanging_command.py`: real command processes; reuses

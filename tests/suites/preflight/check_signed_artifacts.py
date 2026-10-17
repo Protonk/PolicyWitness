@@ -106,15 +106,29 @@ def main(source, out, identity):
                 scenarios.append(name)
                 return result
 
+            helper = lambda r: next(o for o in r['outputs'] if o['rel_path'] == helper_rel)
+            # Each fault with the exact codes it must produce: the record's shape (`provenance`), its agreement with the
+            # bytes, the manifest and the load commands, and with codesign's own display of each nested signature.
             faults = {
-                'resigned_record_wrong_sdk': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == helper_rel).__setitem__('sdk', '1.0'), 'provenance_metadata'),
-                'resigned_record_wrong_hash': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == helper_rel).__setitem__('sha256', 'f' * 64), 'provenance_hash'),
-                'resigned_record_missing_output': (lambda r: r['outputs'].remove(next(o for o in r['outputs'] if o['rel_path'] == helper_rel)), 'provenance_output'),
-                'resigned_record_duplicate_output': (lambda r: r['outputs'].append(dict(next(o for o in r['outputs'] if o['rel_path'] == helper_rel))), 'provenance_output'),
-                'resigned_record_controller_hash': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == 'Contents/MacOS/policy-witness').__setitem__('sha256', 'a' * 64), 'provenance_hash'),
-                'resigned_record_unsupported': (lambda r: r.__setitem__('schema_version', 99), 'provenance'),
+                'resigned_record_wrong_sdk': (lambda r: helper(r).__setitem__('sdk', '1.0'), {'provenance_metadata', 'provenance'}),
+                'resigned_record_wrong_hash': (lambda r: helper(r).__setitem__('sha256', 'f' * 64), {'provenance_hash'}),
+                'resigned_record_missing_output': (lambda r: r['outputs'].remove(helper(r)), {'provenance_output', 'provenance'}),
+                'resigned_record_duplicate_output': (lambda r: r['outputs'].append(dict(helper(r))), {'provenance_output', 'provenance'}),
+                'resigned_record_controller_hash': (lambda r: next(o for o in r['outputs'] if o['rel_path'] == 'Contents/MacOS/policy-witness').__setitem__('sha256', 'a' * 64),
+                                                    {'provenance_hash', 'provenance'}),
+                'resigned_record_unsupported': (lambda r: r.__setitem__('schema_version', 99), {'provenance'}),
+                'resigned_record_null_section': (lambda r: r.__setitem__('toolchain', None), {'provenance'}),
+                'resigned_record_missing_section': (lambda r: r.pop('configuration'), {'provenance'}),
+                'resigned_record_wrong_type': (lambda r: r['source'].__setitem__('dirty', 'no'), {'provenance'}),
+                'resigned_record_null_deployment_target': (lambda r: r['configuration'].__setitem__('deployment_target', None), {'provenance'}),
+                'resigned_record_malformed_request': (lambda r: r['configuration']['requests'].__setitem__('SDKROOT', dict(state='maybe')), {'provenance'}),
+                'resigned_record_null_required_observation': (lambda r: r['toolchain']['compilers']['c'].__setitem__('observed', None), {'provenance'}),
+                'resigned_record_linker_tool': (lambda r: helper(r)['tools'][0].__setitem__('version', helper(r)['tools'][0]['version'] + '.1'),
+                                                {'provenance_metadata'}),
+                'resigned_record_signature_claim': (lambda r: helper(r)['signature'].__setitem__('runtime', not helper(r)['signature']['runtime']),
+                                                    {'provenance_signature'}),
             }
-            for name, (mutate, code) in faults.items():
+            for name, (mutate, codes) in faults.items():
                 record = json.loads(original_record)
                 mutate(record)
                 record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
@@ -127,7 +141,7 @@ def main(source, out, identity):
                 command(out / ('verify-' + name), ['/usr/bin/codesign', '--verify', '--deep', '--strict', faulty_app])
                 faulty = observe_record(name)
                 assert all(s['returncode'] == 0 for s in faulty['signatures']), (name, faulty['signatures'])
-                assert not faulty['ok'] and {e['code'] for e in faulty['errors']} == {code}, (name, faulty['errors'])
+                assert not faulty['ok'] and {e['code'] for e in faulty['errors']} == codes, (name, faulty['errors'])
             record_path.write_bytes(original_record)
             manifest_path.write_bytes(original_manifest)
             sign(faulty_app, identity, app_id, out / 'sign-app-restored-record')

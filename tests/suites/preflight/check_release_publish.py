@@ -124,7 +124,65 @@ def check_preflight(out):
     return repo
 
 
-FIXTURE_RECORD = dict(schema_version=1, source=dict(kind='fixture', build='A'), toolchain={}, configuration={}, outputs=[], signing={})
+HELPERS = {'Contents/MacOS/sandbox-log-observer': b'fixture observer\n', 'Contents/MacOS/sbpl-check': b'fixture sbpl-check\n'}
+ZERO = '0' * 64
+
+
+def fixture_record(build):
+    """A complete partial-build record, authored here, whose nested outputs are the ZIP's helper members; `build`
+    distinguishes the accepted build from a later one by its describe string."""
+    signature = dict(status='ok', leaf='Developer ID Application: Control (TEAMID00AA)', team='TEAMID00AA', timestamp=True,
+                     runtime=True, adhoc=False, developer_id_chain=True)
+    output = lambda rel, digest: dict(rel_path=rel, uuid='00000000-0000-0000-0000-00000000000' + str(len(rel) % 10), platform='1',
+                                      minos='26.0', sdk='27.0', tools=[dict(tool='3', version='1.0')], sha256=digest)
+    judgment = dict(status='reported', fresh=False, profile={}, package_id='fixture', executable='fixture', note='fixture',
+                    fingerprint=dict(status='unavailable', binding=None, limitation='fixture'), effective_rustflags=None,
+                    rustflags_source=dict(kind='none', resolved=True, tokens=[], overrides=[], agrees=None, effective_source='fixture'))
+    outputs = [dict(output('Contents/MacOS/policy-witness', None), note='fixture controller', cargo=judgment)]
+    outputs += [dict(output(rel, hashlib.sha256(data).hexdigest()), signature=signature, cargo=judgment) for rel, data in HELPERS.items()]
+    program = lambda source, command: dict(source=source, command=command, overrides=[], file=None, disabled=False)
+    observed = lambda **fields: dict(status='ok', **fields)
+    return dict(
+        schema_version=1, generated_at='2026-01-01T00:00:00Z',
+        source=dict(commit=ZERO[:40], describe=f'fixture-{build}', dirty=False, version='0.9.0', build_number='3', worker_identity=ZERO,
+                    input_hashes={name: ZERO for name in ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
+                                                          'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')}),
+        toolchain=dict(developer_dir=dict(value='/fixture/Developer', source='xcode-select'),
+                       sdk=dict(path='/fixture/SDK', version='27.0', build='FIXTURE', source='xcrun --sdk macosx default'),
+                       xcode=dict(status='ok', version='27.0', build='FIXTURE'),
+                       compilers=dict(c=dict(configured=dict(command=['cc'], id='clang', version='0', full_version=None),
+                                             observed=observed(command=['cc'], identity='fixture cc 0')),
+                                      swift=dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')),
+                       rustc=observed(command='/fixture/rustc', source='default', identity='rustc 0.0.0 (fixture)', release='0.0.0',
+                                      commit_hash='', host='fixture', llvm_version='', wrappers={}, selection_environment={},
+                                      selection_note='fixture',
+                                      selection=dict(files=[], launcher=dict(kind='cargo', toolchain=None),
+                                                     programs=dict(rustc=program('default', '/fixture/rustc'), wrapper=program('none', None),
+                                                                   workspace_wrapper=program('none', None)),
+                                                     env_entries={},
+                                                     child_environment=dict(SDKROOT='/fixture/SDK', MACOSX_DEPLOYMENT_TARGET='26.0', DEVELOPER_DIR=None,
+                                                                            RUSTUP_TOOLCHAIN=None, path_replaced_by_env=False,
+                                                                            rustup_home_replaced_by_env=False))),
+                       cargo=observed(command='/fixture/cargo', version='cargo 0'), meson=observed(command='/fixture/meson', version='0'),
+                       ninja=observed(command='/fixture/ninja', version='0')),
+        configuration=dict(knobs=dict(BUILD_XPC='0', PW_INSPECTION='1', PW_FRESH_BUILD='1'), meson_options=dict(status='unknown'),
+                           rustflags=dict(requested=dict(source='none', tokens=[]), flag_environment={}, note='fixture'),
+                           requests={name: dict(state='unset') for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH',
+                                                                             'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+                           deployment_target='26.0', sdkroot='/fixture/SDK',
+                           build_directories=dict(builddir=dict(state='created', replaced_by_fresh_mode=True, stamp='published'),
+                                                  cargo_release=dict(state='created', replaced_by_fresh_mode=True),
+                                                  fresh_mode=dict(requested=True, replacement=None),
+                                                  cargo_admission=dict(target_directory='/fixture/target', build_directory='/fixture/target')),
+                           toolchain_stamp=dict(scope_note='fixture', projection={})),
+        outputs=outputs,
+        signing=dict(identity='Developer ID Application: Control (TEAMID00AA)',
+                     nested=[dict(rel_path=o['rel_path'], leaf=signature['leaf'], team='TEAMID00AA', timestamp=True) for o in outputs[1:]],
+                     note='fixture'),
+        limits=['offline fixture record; no build produced it'])
+
+
+FIXTURE_RECORD = fixture_record('A')
 
 
 def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True):
@@ -137,13 +195,15 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
     with zipfile.ZipFile(archive, 'w') as zipped:
         zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
         zipped.writestr('PolicyWitness.app/Contents/MacOS/policy-witness', b'#!/bin/sh\n')
+        for relative, data in HELPERS.items():
+            zipped.writestr('PolicyWitness.app/' + relative, data)
         if record:
             zipped.writestr('PolicyWitness.app/Contents/Resources/Evidence/provenance.json', json.dumps(FIXTURE_RECORD))
     (dist / 'PolicyWitness.md').write_text(f'# guide {version}\n')
     # The working app is build B by now: a later build whose record must never reach the archive of A's accepted ZIP.
     working = dist / 'PolicyWitness.app/Contents/Resources/Evidence'
     working.mkdir(parents=True, exist_ok=True)
-    (working / 'provenance.json').write_text(json.dumps(dict(FIXTURE_RECORD, source=dict(kind='fixture', build='B'))))
+    (working / 'provenance.json').write_text(json.dumps(fixture_record('B')))
     (dist / 'PolicyWitness.app/Contents/MacOS').mkdir(parents=True, exist_ok=True)
     (dist / 'PolicyWitness.app/Contents/MacOS/policy-witness').write_bytes(b'#!/bin/sh\n# build B\n')
     if not attempt:
@@ -247,8 +307,8 @@ def check_archive(out):
         member = zipped.read('PolicyWitness.app/Contents/Resources/Evidence/provenance.json')
         controller = hashlib.sha256(zipped.read('PolicyWitness.app/Contents/MacOS/policy-witness')).hexdigest()
     archived_record = dest / 'evidence/provenance.json'
-    assert archived_record.read_bytes() == member and json.loads(member)['source']['build'] == 'A'
-    assert json.loads((dist / 'PolicyWitness.app/Contents/Resources/Evidence/provenance.json').read_text())['source']['build'] == 'B'
+    assert archived_record.read_bytes() == member and json.loads(member)['source']['describe'] == 'fixture-A'
+    assert json.loads((dist / 'PolicyWitness.app/Contents/Resources/Evidence/provenance.json').read_text())['source']['describe'] == 'fixture-B'
     provenance = record['provenance']
     assert provenance['path'] == 'evidence/provenance.json' and provenance['sha256'] == hashlib.sha256(member).hexdigest()
     assert provenance['controller_sha256'] == controller != hashlib.sha256(b'#!/bin/sh\n# build B\n').hexdigest()
@@ -256,7 +316,7 @@ def check_archive(out):
     # A swapped archived record, a record that differs from the ZIP's, and a changed controller hash are refused on verification.
     original_record, original_release = archived_record.read_bytes(), (dest / 'release.json').read_bytes()
     for name, mutate, needle in (
-            ('swapped record', lambda: archived_record.write_bytes(json.dumps(dict(FIXTURE_RECORD, source=dict(kind='other'))).encode()), 'checksum mismatch'),
+            ('swapped record', lambda: archived_record.write_bytes(json.dumps(fixture_record('other')).encode()), 'checksum mismatch'),
             ('controller hash', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, controller_sha256='0' * 64)))), 'controller hash differs'),
             ('record hash', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, sha256='0' * 64)))), 'checksum mismatch'),
             ('missing seal facts', lambda: (dest / 'release.json').write_text(json.dumps(dict(record, provenance=dict(provenance, app_signature=None)))), 'seal facts')):

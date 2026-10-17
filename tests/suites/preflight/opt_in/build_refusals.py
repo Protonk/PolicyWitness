@@ -1862,6 +1862,92 @@ def control_cargo_selection_sequence(co, variant):
     return plain
 
 
+def mach_o_build_version(path):
+    """minos and sdk from otool -l, parsed here rather than by the record's producer."""
+    text = subprocess.run(['/usr/bin/otool', '-l', str(path)], capture_output=True, text=True, check=True, timeout=60).stdout
+    block = text[text.index('cmd LC_BUILD_VERSION'):]
+    return tuple(re.search(r'^\s*' + key + r' (\S+)\s*$', block, re.M).group(1) for key in ('minos', 'sdk'))
+
+
+def contained_xcrun(fixture, invalid):
+    """A BASH_ENV that runs xcrun for the invalid request under a sandbox denying Mach lookups and other executables, so a
+    failing SDK lookup cannot reach the installer; every other xcrun call is the real one."""
+    fixture.mkdir(parents=True, exist_ok=True)
+    profile = fixture / 'xcrun.sb'
+    profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)(allow process-exec (literal "/usr/bin/xcrun"))'
+                       '(deny file-write*)(allow file-write* (subpath ' + json.dumps(str(fixture.resolve())) + '))\n')
+    script = fixture / 'contained.bash'
+    script.write_text('/usr/bin/xcrun() {\n'
+                      '  if [[ "${2:-}" == ' + shlex.quote(invalid) + ' ]]; then\n'
+                      '    printf "%s\\n" "$*" >> ' + shlex.quote(str(fixture / 'calls')) + '\n'
+                      '    command /usr/bin/sandbox-exec -f ' + shlex.quote(str(profile)) + ' /usr/bin/xcrun "$@"\n'
+                      '    return\n'
+                      '  fi\n'
+                      '  command /usr/bin/xcrun "$@"\n}\n')
+    return script
+
+
+def control_sdk_requests(co, variant):
+    """The caller's SDK request through each entrypoint, kept apart from the SDK the build selects: absent, the default named
+    explicitly, explicitly empty, and an explicit path through the shell front end with another owned command nested under
+    it. Each build's compilations (forwarding wrappers), the environment they received and the outputs' load commands (read
+    here) must agree with the record's effective settings. An invalid explicit request refuses at SDK selection instead of
+    falling back to the default, without a shim ever running with it."""
+    selected = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+    version = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], text=True).strip()
+    real_cc = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '-f', 'clang'], text=True).strip()
+    real_rustc = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip() if shutil.which('rustup') else shutil.which('rustc')
+    recorded = ['SDKROOT', 'MACOSX_DEPLOYMENT_TARGET']
+    cc = co.forwarding('cc-requests', real_cc, mode='direct', record_env=recorded)
+    rustc = co.forwarding('rustc-requests', real_rustc, mode='direct', record_env=recorded)
+    tools = dict(CC=str(cc), RUSTC=str(rustc))
+    front_end = ['/bin/bash', str(co.root / 'tests/lib/checkout_lock.sh'), '--root', str(co.root), '--']
+    nested = (f'/bin/bash {shlex.quote(str(co.root / "build.sh"))} && /bin/bash {shlex.quote(str(co.root / "tests/lib/checkout_lock.sh"))} '
+              f'--root {shlex.quote(str(co.root))} -- /usr/bin/python3 -B {shlex.quote(str(co.root / "tests/lib/checkout_lock.py"))} '
+              f'--verify --root {shlex.quote(str(co.root))} --build-requests')
+    cases = (('absent', {}, None, dict(state='unset'), 'xcrun --sdk macosx default'),
+             ('default-named', dict(SDKROOT='macosx'), None, dict(state='set', value='macosx'), 'SDKROOT named by the caller'),
+             ('explicitly-empty', dict(SDKROOT=''), None, dict(state='set', value=''), 'xcrun --sdk macosx default'),
+             ('explicit-path-front-end', dict(SDKROOT=selected), [*front_end, '/bin/bash', '-c', nested],
+              dict(state='set', value=prov.redact(selected)), 'SDKROOT named by the caller'))
+    build = None
+    for index, (label, env, argv, request, source) in enumerate(cases):
+        build = co.build(f'sdk_requests-{label}', variant, env=dict(tools, **env), argv=argv, fresh='1' if index == 0 else '0')
+        passing(co, build, variant)
+        record = build.record
+        assert record['configuration']['requests']['SDKROOT'] == request, (label, record['configuration']['requests'])
+        assert record['toolchain']['sdk']['source'] == source, (label, record['toolchain']['sdk'])
+        assert build.session['requests']['SDKROOT'] == (dict(state='unset') if request['state'] == 'unset'
+                                                        else dict(state='set', value=env['SDKROOT'])), build.session['requests']
+        assert record['configuration']['sdkroot'] == prov.redact(selected) == record['toolchain']['sdk']['path'], record['configuration']
+        assert record['configuration']['deployment_target'] == co.minimum
+        compiled = [r for r in build.forward if r['kind'] == 'compile']
+        assert {r['wrapper'] for r in compiled} == {'cc-requests', 'rustc-requests'} or index > 0, {r['wrapper'] for r in compiled}
+        for receipt in compiled:
+            assert receipt['environment'] == dict(SDKROOT=selected, MACOSX_DEPLOYMENT_TARGET=co.minimum), (label, receipt['environment'])
+        for output in record['outputs']:
+            minos, sdk = mach_o_build_version(build.app / output['rel_path'])
+            assert (minos, sdk) == (output['minos'], output['sdk']), (label, output['rel_path'], minos, sdk)
+            assert prov.normalize_version(minos) == prov.normalize_version(co.minimum) and prov.normalize_version(sdk) == prov.normalize_version(version)
+        if argv:
+            handed = {words[1]: words for words in (line.split(' ') for line in build.stdout.splitlines() if line.startswith('request '))}
+            assert bytes.fromhex(handed['SDKROOT'][3]).decode() == selected, ('the nested owner did not hand over the outer request', handed)
+    # An invalid explicit request refuses at SDK selection; its xcrun call is contained, and no default is substituted.
+    invalid = '/private/tmp/pw-no-such-sdk-' + os.urandom(4).hex()
+    fixture = co.work / 'sdk-request-invalid'
+    refused = co.build('sdk_requests-invalid', variant, env=dict(SDKROOT=invalid, BASH_ENV=str(contained_xcrun(fixture, invalid))))
+    check(refused, 2, f'xcrun could not select the macOS SDK (DEVELOPER_DIR=unset, requested {invalid})',
+          present=('Selecting the macOS SDK',), absent=('Checking the native build directory', 'Building Rust'))
+    assert 'requesting installation' not in refused.output, refused.output[-2000:]
+    assert (fixture / 'calls').read_text().split('\n')[0].startswith(f'--sdk {invalid}'), (fixture / 'calls').read_text()
+    assert refused.session['requests']['SDKROOT'] == dict(state='set', value=invalid)
+    assert not refused.receipts
+    preserved(refused)
+    restored = co.build('sdk_requests-restore', variant, fresh='1')
+    passing(co, restored, variant)
+    return build
+
+
 # The recording forwarders are Python started through the system shim, which inserts SDKROOT, CPATH, LIBRARY_PATH, MANPATH
 # and LC_CTYPE into its own environment, so only variables the shim leaves alone are compared; [env] applies one rule to
 # every name, which MACOSX_DEPLOYMENT_TARGET exercises.
@@ -2080,6 +2166,7 @@ SEQUENCES = [
     ('lock_lifetime', control_lock_lifetime),
     ('cargo_configuration_oracle', control_cargo_configuration_oracle),
     ('cargo_selection_sequence', control_cargo_selection_sequence),
+    ('sdk_requests', control_sdk_requests),
 ]
 
 

@@ -138,10 +138,12 @@ def inspect(app):
     # Signer consistency: every signed executable carries one signer, the controller's when the
     # controller is signed. An ad hoc helper inside a production-signed app is refused; an app signed
     # ad hoc throughout, or a fixture whose only signed executable is a linker-signed stub, is consistent.
+    observed = {}
     try:
         signers = {}
         for relative in EXECUTABLES:
             found = signer_check.signature(contained(relative))
+            observed[relative] = signer_check.facts(found)
             if found['leaf'] or found['adhoc']:
                 signers[relative] = (found['leaf'], found['adhoc'])
         reference = signers.get(CONTROLLER) or next(iter(signers.values()), None)
@@ -215,7 +217,8 @@ def inspect(app):
     # for another build, or a record with an incomplete list, is refused.
     try:
         contained(PROVENANCE)
-        for code, path, message in build_provenance.record_problems(app, manifest if isinstance(manifest, dict) else None):
+        for code, path, message in build_provenance.record_problems(app, manifest if isinstance(manifest, dict) else None,
+                                                                    signatures=observed):
             error(code, path, message)
     except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
         error('provenance', PROVENANCE, str(exc))

@@ -111,7 +111,10 @@ imports nothing but the standard library and knows no bundle layout; manifest
 parsing, hashing, and inventories still use the real inspector. Production has
 no bypass setting. Apple's signature semantics are checked separately by
 `preflight/signed_artifact_controls`. `fixture_bundle.py` lays out the fake
-bundles, pure Python, around a compiled XPC host stub: the suite wrapper builds
+bundles, pure Python, with a complete full-build provenance record the fixture
+authors itself (nominal toolchain values, its own `otool` reading of the
+stubs, and the ad hoc signature facts their linker signatures carry, which
+the inspector compares with `codesign -dvv`), around a compiled XPC host stub: the suite wrapper builds
 the clean stub and the `sandbox_check`-importing control stub once per run with
 `tests/fixtures/dispatcher/build.sh` into the case artifacts and names them in
 `PW_DISPATCHER_HOST_FIXTURE` (`<name>` and `<name>.imports-sandbox`); only

@@ -66,7 +66,7 @@ def parse_display(text):
                 authorities=authorities,
                 adhoc='Signature=adhoc' in text,
                 runtime='runtime' in (flags.group(1).split(',') if flags else []),
-                team=teams[0].strip() if teams else None,
+                team=teams[0].strip() if teams and teams[0].strip() != 'not set' else None,  # codesign's words for no team
                 timestamp=bool(timestamps),
                 signed_time=bool(signed_times),
                 readable=readable)
@@ -83,6 +83,14 @@ def signature(path):
                         signed_time=False, readable=True)
         raise OSError(f'codesign could not read {path}: {result.stderr.strip() or result.returncode}')
     return parse_display(result.stderr)
+
+
+def facts(found):
+    """The bounded signature facts a provenance record claims, from one parsed display."""
+    chain = found['authorities'][1:]
+    return dict(status='ok', leaf=found['leaf'], team=found['team'], timestamp=bool(found['timestamp']),
+                runtime=bool(found['runtime']), adhoc=bool(found['adhoc']),
+                developer_id_chain=bool(chain) and chain[-1] == APPLE_ROOT and DEVELOPER_ID_CA in chain)
 
 
 def expected_team(identity):

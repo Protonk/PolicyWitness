@@ -93,7 +93,14 @@ exhaustive account of private runtime dependencies, and it says so in its
 - `configuration`: the three knobs; the fixed-policy subset of Meson's
   effective options plus `inspection` and `xpc`; the requested Rust flags
   with the source that set them and which flag variables were set; the
-  deployment target and `SDKROOT`; each build directory's state (`created`
+  caller's `requests`, kept apart from what the build selected: `SDKROOT`
+  set (with its exact value, an empty one included) or unset as the caller
+  left it before any Python ran, `DEVELOPER_DIR` and
+  `MACOSX_DEPLOYMENT_TARGET` with their values, and only the set or unset
+  state of `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`; the effective
+  `deployment_target` and `sdkroot`, as Cargo's resolved environment gives
+  them to the compiler, which must equal the plist's minimum, every output's
+  minimum and the selected SDK's path; each build directory's state (`created`
   or `reused`, whether fresh mode replaced it, and what happened to the
   stamp), fresh mode's replacement report and Cargo's admitted directories;
   and a projection of the toolchain stamp with its scope.
@@ -133,14 +140,30 @@ with a `<home>` marker; the exact paths stay in the local stamp
 which are not shipped. The record never carries `PATH`, other environment
 variables, keychain contents or raw tool output.
 
+Validation. One typed validator defines the record above
+([`record_shape_problems`](../tests/lib/build_provenance.py)): every section and
+required field present and not null, exact booleans, strings and integers,
+bounded strings and lists, the full build's or the partial build's compilers
+and outputs, only the documented observation statuses and the unknowns the
+field policy permits, no field the record does not define, signing entries
+that repeat the outputs' signature facts, and effective settings that agree
+with the outputs. The evidence step refuses to write a record it rejects; the
+inspector applies it and then compares every claimed load-command field,
+linker tools included, with the bytes and each nested signature claim with
+`codesign -dvv`'s display; the release-archive reader applies it to the
+accepted ZIP's record and binds each nested output's hash to that ZIP's
+member, without extraction. A record from before this validator that leaves
+a required field null is refused, not reinterpreted.
+
 What the hashes mean. A newly calculated output hash identifies the bytes the
 record captured; it does not authenticate their compilation history. A cached
 executable replaced before evidence capture can be reported reusable by Cargo
 and can agree with the record's hashes, SDK and minimum checks; the record
 states that limit, and the inspector refuses the separate faults it can see:
 a record that disagrees with the manifest or the bytes, wrong load-command
-metadata, an incomplete or duplicated output inventory, and any change after
-capture or sealing. The build document explains the [cache compatibility
+metadata or linker tools, a signature claim the display contradicts, an
+incomplete or duplicated output inventory, a record of the wrong shape, and
+any change after capture or sealing. The build document explains the [cache compatibility
 checks](BUILD.md#cache-compatibility-replacement-and-recovery) that precede
 the compiles and [what the record separates](BUILD.md#the-evidence-the-build-embeds).
 

@@ -214,10 +214,7 @@ def signature_facts(path: Path) -> Dict[str, Any]:
         found = signer_check.signature(path)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return dict(status="unreadable", kind=exc.__class__.__name__)
-    chain = found["authorities"][1:]
-    return dict(status="ok", leaf=found["leaf"], team=found["team"], timestamp=bool(found["timestamp"]),
-                runtime=bool(found["runtime"]), adhoc=bool(found["adhoc"]),
-                developer_id_chain=bool(chain) and chain[-1] == signer_check.APPLE_ROOT and signer_check.DEVELOPER_ID_CA in chain)
+    return signer_check.facts(found)
 
 
 def worker_reported_identity(app: Path) -> Optional[str]:

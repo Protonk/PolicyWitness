@@ -1138,8 +1138,8 @@
         "full",
         "partial"
       ],
-      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands and signature display",
-      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two",
+      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands and signature display; the caller's requests and Cargo's effective deployment target and SDK, from the build session",
+      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two; the record only after it passes its own validation",
       "refusals": [
         "evidence_failed",
         "provenance_required_unknown",
@@ -3241,7 +3241,7 @@
     },
     {
       "id": "provenance_required_unknown",
-      "message": "provenance: a required observation, the build session or a shipped output's load commands or hash cannot be established, or the record would publish forbidden content",
+      "message": "provenance: a required observation, the build session or a shipped output's load commands or hash cannot be established, the record fails its own validation, or it would publish forbidden content",
       "kind": "propagated",
       "steps": [
         "evidence"
@@ -3277,6 +3277,18 @@
         {
           "path": "tests/suites/preflight/check_build_provenance.py",
           "symbol": "test_records_are_bounded_redacted_and_complete",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_producer_validates_before_sealing",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_records_are_validated_by_shape_in_every_reader",
           "form": "test",
           "coverage": "helper"
         }

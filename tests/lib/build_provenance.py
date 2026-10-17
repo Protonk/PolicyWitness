@@ -121,8 +121,10 @@ CARGO_SELECTION_ENV = ('RUSTC', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER', 'CAR
 UNRESOLVED_REMEDY = 'the compiler Cargo would select, or the environment it would give it, is unknown'
 CARGO_FLAG_ENV = ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS')
 CARGO_LAYOUT_ENV = ('CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'CARGO_HOME')
-ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 'SDKROOT',
-               'MACOSX_DEPLOYMENT_TARGET', 'RUSTFLAGS', 'PW_VERSION', 'PW_BUILD_NUMBER')
+# Caller settings recorded at session start: the interpreter shim leaves these alone, so this process sees the
+# caller's values; SDKROOT and the other shim-affected variables come from the owner's requests instead.
+ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTFLAGS',
+               'PW_VERSION', 'PW_BUILD_NUMBER')
 SUBCOMMANDS = ('session-start', 'stamp-check', 'fresh-remove', 'cargo-admit', 'cargo-judge', 'stamp-publish',
                'stamp-extend', 'sdk-check', 'worker-identity', 'inspect')
 CONTROLLER = 'Contents/MacOS/policy-witness'
@@ -1407,14 +1409,18 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
     except Refusal as exc:
         stamp_projection = dict(status='unavailable', reason=str(exc)[:LINE_LIMIT])
     requested = (session.get('cargo') or {}).get('requested_rustflags', {})
+    effective = ((session.get('cargo') or {}).get('selection') or {}).get('child_environment')
+    if not isinstance(effective, dict) or not effective.get('MACOSX_DEPLOYMENT_TARGET') or not effective.get('SDKROOT'):
+        raise Refusal("the session carries no effective deployment target and SDK from Cargo's resolved environment; the record cannot be written", 2)
     configuration = dict(
         knobs={name: knobs.get(name) for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')},
         meson_options=session.get('meson_options', dict(status='unknown')),
         rustflags=dict(requested=dict(source=requested.get('source'), tokens=requested.get('tokens', [])),
                        flag_environment=(session.get('cargo') or {}).get('flag_environment', {}),
                        note='effective flags are recorded per output from Cargo\'s fingerprint; they are additional compiler arguments, not the complete command'),
-        deployment_target=session.get('environment', {}).get('MACOSX_DEPLOYMENT_TARGET'),
-        sdkroot=redact(session.get('environment', {}).get('SDKROOT')),
+        requests=caller_requests(session),
+        deployment_target=effective['MACOSX_DEPLOYMENT_TARGET'],
+        sdkroot=effective['SDKROOT'],
         build_directories=dict(
             builddir=dict(state='reused' if builddir_state.get('configured_before') else 'created',
                           replaced_by_fresh_mode=bool(builddir_state.get('fresh_replaced')),
@@ -1461,6 +1467,9 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
                   limits=['tool reports and hashes of the captured bytes; not reproducibility, compiler correctness, '
                           'execution of particular bytes or an exhaustive account of private runtime dependencies',
                           'a cached executable replaced before capture can be reported reusable by Cargo and still agree with these hashes'])
+    problems = record_shape_problems(record)
+    if problems:
+        raise Refusal('the record fails its own validation: ' + '; '.join(problems[:5]), 2)
     text = json.dumps(record, indent=2, sort_keys=True)
     forbidden = forbidden_content(text, os.environ)
     if forbidden:
@@ -1468,6 +1477,27 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
     if len(text) > 256 * 1024:
         raise Refusal('the record exceeds its size bound', 2)
     return record
+
+
+def caller_requests(session):
+    """What the caller asked for, apart from what the build then selected: SDKROOT and the variables the interpreter
+    shim inserts from the owner's requests, DEVELOPER_DIR and MACOSX_DEPLOYMENT_TARGET as the caller's environment held
+    them at session start. Values are published only for the SDK, developer directory and deployment target."""
+    requests = session.get('requests')
+    if not isinstance(requests, dict):
+        raise Refusal("the session carries no caller requests; the record cannot be written", 2)
+    out = {}
+    for name in ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE'):
+        entry = requests.get(name)
+        if not isinstance(entry, dict) or entry.get('state') not in ('set', 'unset'):
+            raise Refusal(f"the session's request for {name} is malformed; the record cannot be written", 2)
+        out[name] = dict(state=entry['state'])
+        if name == 'SDKROOT' and entry['state'] == 'set':
+            out[name]['value'] = redact(entry.get('value', ''))
+    environment = session.get('environment') or {}
+    for name in ('DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET'):
+        out[name] = dict(state='set', value=redact(environment[name])) if name in environment else dict(state='unset')
+    return out
 
 
 def forbidden_content(text, env):
@@ -1481,10 +1511,269 @@ def forbidden_content(text, env):
     return None
 
 
+# ---- the record's shape -----------------------------------------------------------------------------
+
+HEX64 = re.compile(r'[0-9a-f]{64}')
+UUID = re.compile(r'[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
+VERSION = re.compile(r'\d+(\.\d+)*')
+TEXT_LIMIT = 2000
+FAILURE_KINDS = ('launch_failed', 'timeout', 'nonzero_exit', 'empty_output', 'malformed_output', 'output_overflow', 'oversized_output')
+FULL_OUTPUTS = (CONTROLLER, *('Contents/MacOS/' + n for n in TOP_HELPERS), SERVICE + '/Contents/MacOS/PWRunner',
+                *(SERVICE + '/Contents/MacOS/' + n for n in NESTED_HELPERS))
+PARTIAL_OUTPUTS = (CONTROLLER, 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check')
+
+
+class Shape:
+    """A typed check of one value: exact types (a bool is not an integer), bounds, and whether null is allowed."""
+
+    def __init__(self, check, nullable=False):
+        self.check, self.nullable = check, nullable
+
+    def __call__(self, value, where, problems):
+        if value is None:
+            if not self.nullable:
+                problems.append(f'{where} is null')
+            return
+        self.check(value, where, problems)
+
+
+def text(limit=LINE_LIMIT, pattern=None, nullable=False, empty=False):
+    def check(value, where, problems):
+        if type(value) is not str:
+            problems.append(f'{where} is not a string')
+        elif len(value) > limit:
+            problems.append(f'{where} exceeds {limit} characters')
+        elif not value and not empty:
+            problems.append(f'{where} is empty')
+        elif pattern is not None and value and not pattern.fullmatch(value):
+            problems.append(f'{where} is malformed')
+    return Shape(check, nullable)
+
+
+def boolean(nullable=False):
+    return Shape(lambda value, where, problems: None if type(value) is bool else problems.append(f'{where} is not a boolean'), nullable)
+
+
+def integer(nullable=False):
+    return Shape(lambda value, where, problems: None if type(value) is int else problems.append(f'{where} is not an integer'), nullable)
+
+
+def one_of(*values, nullable=False):
+    return Shape(lambda value, where, problems: None if value in values and type(value) is type(values[0])
+                 else problems.append(f'{where} is not one of {", ".join(map(str, values))}'), nullable)
+
+
+def array(item, limit, nullable=False, empty=True):
+    def check(value, where, problems):
+        if type(value) is not list:
+            problems.append(f'{where} is not an array')
+            return
+        if len(value) > limit:
+            problems.append(f'{where} holds more than {limit} items')
+        if not value and not empty:
+            problems.append(f'{where} is empty')
+        for index, element in enumerate(value[:limit]):
+            item(element, f'{where}[{index}]', problems)
+    return Shape(check, nullable)
+
+
+def mapping(value_shape, limit=64, key=None, nullable=False):
+    def check(value, where, problems):
+        if type(value) is not dict:
+            problems.append(f'{where} is not an object')
+            return
+        if len(value) > limit:
+            problems.append(f'{where} holds more than {limit} entries')
+        for name, element in value.items():
+            if key is not None and not key.fullmatch(name):
+                problems.append(f'{where} has a malformed key')
+            value_shape(element, f'{where}.{name}', problems)
+    return Shape(check, nullable)
+
+
+def obj(required=None, optional=None, nullable=False, closed=False):
+    required, optional = required or {}, optional or {}
+
+    def check(value, where, problems):
+        if type(value) is not dict:
+            problems.append(f'{where} is not an object')
+            return
+        for name, shape in required.items():
+            if name not in value:
+                problems.append(f'{where}.{name} is missing')
+            else:
+                shape(value[name], f'{where}.{name}', problems)
+        for name, shape in optional.items():
+            if name in value:
+                shape(value[name], f'{where}.{name}', problems)
+        if closed:
+            for name in value:
+                if name not in required and name not in optional:
+                    problems.append(f'{where}.{name} is not a field of this record')
+    return Shape(check, nullable)
+
+
+def alternatives(*cases, nullable=False):
+    """The first case whose discriminating `status` matches decides; a status no case names is a problem."""
+    def check(value, where, problems):
+        if type(value) is not dict:
+            problems.append(f'{where} is not an object')
+            return
+        for status, shape in cases:
+            if value.get('status') == status:
+                shape(value, where, problems)
+                return
+        problems.append(f"{where}.status is not one of {', '.join(status for status, _ in cases)}")
+    return Shape(check, nullable)
+
+
+ANY_TEXT = text(TEXT_LIMIT)
+NOTE = text(TEXT_LIMIT)
+COMMAND = array(text(LINE_LIMIT), COMMAND_LIMIT, empty=False)
+FLAGS = array(text(LINE_LIMIT, empty=True), FLAG_LIMIT)
+FLAGS_OR_NULL = array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True)
+
+
+def request_shape():
+    def check(value, where, problems):
+        if type(value) is not dict:
+            problems.append(f'{where} is not an object')
+            return
+        state = value.get('state')
+        if state == 'set' and 'value' in value:
+            obj(dict(state=one_of('set'), value=text(TEXT_LIMIT, empty=True)), closed=True)(value, where, problems)
+        elif state == 'set':
+            obj(dict(state=one_of('set')), closed=True)(value, where, problems)
+        elif state == 'unset':
+            obj(dict(state=one_of('unset')), closed=True)(value, where, problems)
+        else:
+            problems.append(f'{where}.state is not set or unset')
+    return Shape(check)
+
+
+OBSERVED_COMPILER = obj(dict(configured=obj(dict(command=COMMAND, id=text(), version=text(empty=True), full_version=text(nullable=True, empty=True))),
+                             observed=obj(dict(status=one_of('ok'), command=COMMAND, identity=text()))))
+PROGRAM = obj(dict(source=text(), command=text(TEXT_LIMIT, nullable=True), overrides=array(text(), 8), file=text(TEXT_LIMIT, nullable=True),
+                   disabled=boolean()))
+SELECTION = obj(dict(
+    files=array(obj(dict(path=text(TEXT_LIMIT), includes=array(obj(dict(path=text(TEXT_LIMIT), optional=boolean(), loaded=boolean())), 64))), 64),
+    launcher=obj(dict(kind=one_of('cargo', 'rustup proxy'), toolchain=text(nullable=True))),
+    programs=obj(dict(rustc=PROGRAM, wrapper=PROGRAM, workspace_wrapper=PROGRAM)),
+    env_entries=mapping(obj(dict(applied=boolean(), force=boolean(), relative=boolean(), file=text(TEXT_LIMIT, nullable=True))), 256),
+    child_environment=obj(dict(SDKROOT=text(TEXT_LIMIT, nullable=True), MACOSX_DEPLOYMENT_TARGET=text(nullable=True),
+                               DEVELOPER_DIR=text(TEXT_LIMIT, nullable=True), RUSTUP_TOOLCHAIN=text(nullable=True),
+                               path_replaced_by_env=boolean(), rustup_home_replaced_by_env=boolean()))))
+WRAPPER = obj(dict(source=text(), command=text(TEXT_LIMIT)), dict(sha256=text(64, HEX64)))
+RUSTC = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), source=one_of('RUSTC', 'CARGO_BUILD_RUSTC', 'build.rustc', 'default'),
+                 identity=text(), release=text(), commit_hash=text(empty=True), host=text(), llvm_version=text(empty=True),
+                 wrappers=obj(optional=dict(wrapper=WRAPPER, workspace_wrapper=WRAPPER), closed=True),
+                 selection_environment=mapping(text(TEXT_LIMIT, empty=True), 16), selection=SELECTION, selection_note=NOTE))
+TOOL = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), version=text()))
+FINGERPRINT = alternatives(
+    ('observed', obj(dict(binding=mapping(text(TEXT_LIMIT), 8), rustflags=FLAGS, rustc_fingerprint=text(nullable=True),
+                          profile_fingerprint=text(nullable=True), limitation=NOTE))),
+    *((status, obj(dict(binding=mapping(text(TEXT_LIMIT), 8, nullable=True), limitation=NOTE)))
+      for status in ('unavailable', 'ambiguous', 'malformed', 'unsupported', 'oversized')))
+FLAG_SOURCE = obj(dict(kind=text(), resolved=boolean(), tokens=array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True),
+                       overrides=array(text(), 8), agrees=boolean(nullable=True), effective_source=text()),
+                  dict(rules=array(text(), 64, nullable=True)))
+CARGO_JUDGMENT = obj(dict(status=one_of('reported'), fresh=boolean(), profile=mapping(Shape(lambda v, w, p: None), 32), package_id=text(TEXT_LIMIT),
+                          executable=text(TEXT_LIMIT), fingerprint=FINGERPRINT, effective_rustflags=FLAGS_OR_NULL,
+                          rustflags_source=FLAG_SOURCE, note=NOTE))
+SIGNATURE = obj(dict(status=one_of('ok'), leaf=text(nullable=True), team=text(nullable=True), timestamp=boolean(), runtime=boolean(),
+                     adhoc=boolean(), developer_id_chain=boolean()))
+OUTPUT = obj(dict(rel_path=text(TEXT_LIMIT), uuid=text(36, UUID), platform=text(8, re.compile(r'\d+')), minos=text(16, VERSION),
+                  sdk=text(16, VERSION), tools=array(obj(dict(tool=text(16), version=text(32)), closed=True), TOOLS_LIMIT),
+                  sha256=text(64, HEX64, nullable=True)), dict(signature=SIGNATURE, note=NOTE, cargo=CARGO_JUDGMENT))
+BUILD_DIRECTORY = obj(dict(state=one_of('created', 'reused'), replaced_by_fresh_mode=boolean()), dict(stamp=text(nullable=True)))
+RECORD_SHAPE = obj(dict(
+    schema_version=one_of(SCHEMA_VERSION),
+    generated_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ')),
+    source=obj(dict(commit=text(64), describe=text(), dirty=boolean(), version=text(32, VERSION), build_number=text(16, re.compile(r'\d+')),
+                    worker_identity=text(64, HEX64), input_hashes=obj({name: text(64, HEX64) for name in SOURCE_INPUTS}, closed=True))),
+    toolchain=obj(dict(
+        developer_dir=obj(dict(value=text(TEXT_LIMIT), source=one_of('DEVELOPER_DIR', 'xcode-select'))),
+        sdk=obj(dict(path=text(TEXT_LIMIT), version=text(16, VERSION), build=text(32), source=one_of('SDKROOT named by the caller', 'xcrun --sdk macosx default'))),
+        xcode=alternatives(('ok', obj(dict(version=text(), build=text()))),
+                           ('unknown', obj(dict(reason=one_of(*FAILURE_KINDS)), dict(returncode=integer(nullable=True))))),
+        compilers=obj(dict(c=OBSERVED_COMPILER, swift=Shape(lambda v, w, p: None))),
+        rustc=RUSTC, cargo=TOOL, meson=TOOL, ninja=TOOL)),
+    configuration=obj(dict(
+        knobs=obj({name: one_of('0', '1') for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')}, closed=True),
+        meson_options=alternatives(('ok', obj(dict(values=mapping(Shape(lambda v, w, p: None), 64)))), ('unknown', obj())),
+        rustflags=obj(dict(requested=obj(dict(source=one_of('caller', 'script', 'none'), tokens=array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True)),
+                                         dict(oversized=boolean())),
+                           flag_environment=mapping(one_of('set', 'unset'), 8), note=NOTE)),
+        requests=obj({name: request_shape() for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+                     closed=True),
+        deployment_target=text(16, re.compile(r'\d+\.\d+')),
+        sdkroot=text(TEXT_LIMIT),
+        build_directories=obj(dict(builddir=BUILD_DIRECTORY, cargo_release=BUILD_DIRECTORY,
+                                   fresh_mode=obj(dict(requested=boolean(), replacement=Shape(lambda v, w, p: None, nullable=True))),
+                                   cargo_admission=obj(dict(target_directory=text(TEXT_LIMIT), build_directory=text(TEXT_LIMIT)),
+                                                       dict(layout_environment=mapping(text(TEXT_LIMIT, empty=True), 8))))),
+        toolchain_stamp=obj(dict(scope_note=NOTE, projection=obj())))),
+    outputs=array(OUTPUT, 16, empty=False),
+    signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),
+                                                            timestamp=boolean()), closed=True), 16), note=NOTE)),
+    limits=array(NOTE, 8, empty=False)), closed=True)
+
+
+def record_shape_problems(record):
+    """Every way a record departs from the documented shape: required fields present and not null, exact types, bounds,
+    the variant's compilers and outputs, permitted unknowns only where the field policy allows them, and signing claims
+    that repeat the outputs' own."""
+    problems = []
+    RECORD_SHAPE(record, 'record', problems)
+    if problems or type(record) is not dict:
+        return problems
+    full = record['configuration']['knobs']['BUILD_XPC'] == '1'
+    swift = record['toolchain']['compilers']['swift']
+    if full:
+        OBSERVED_COMPILER(swift, 'record.toolchain.compilers.swift', problems)
+    elif swift != dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'):
+        problems.append('record.toolchain.compilers.swift is not the partial build\'s not-applicable entry')
+    paths = [o['rel_path'] for o in record['outputs']]
+    expected = FULL_OUTPUTS if full else PARTIAL_OUTPUTS
+    if sorted(paths) != sorted(expected) or len(set(paths)) != len(paths):
+        problems.append(f"record.outputs name {sorted(paths)}, not the {'full' if full else 'partial'} build's shipped executables")
+    for output in record['outputs']:
+        where = f"record.outputs[{output['rel_path']}]"
+        controller = output['rel_path'] == CONTROLLER
+        if controller != (output['sha256'] is None):
+            problems.append(f'{where}.sha256 must be null exactly for the controller')
+        if controller == ('signature' in output):
+            problems.append(f'{where}.signature belongs to every nested output and never to the controller')
+        if (output['rel_path'] in CARGO_TARGETS) != ('cargo' in output):
+            problems.append(f'{where}.cargo belongs to the Cargo targets and only to them')
+    claimed = [(n['rel_path'], n['leaf'], n['team'], n['timestamp']) for n in record['signing']['nested']]
+    actual = [(o['rel_path'], o['signature']['leaf'], o['signature']['team'], o['signature']['timestamp']) for o in record['outputs'] if 'signature' in o]
+    if claimed != actual:
+        problems.append('record.signing.nested does not repeat the outputs\' signature facts in order')
+    minimum = record['configuration']['deployment_target']
+    for output in record['outputs']:
+        if normalize_version(output['minos']) != normalize_version(minimum):
+            problems.append(f"record.outputs[{output['rel_path']}].minos {output['minos']} differs from the effective deployment target {minimum}")
+        if normalize_version(output['sdk']) != normalize_version(record['toolchain']['sdk']['version']):
+            problems.append(f"record.outputs[{output['rel_path']}].sdk {output['sdk']} differs from the selected SDK {record['toolchain']['sdk']['version']}")
+    if record['configuration']['sdkroot'] != record['toolchain']['sdk']['path']:
+        problems.append('record.configuration.sdkroot differs from the selected SDK path')
+    child = record['toolchain']['rustc']['selection']['child_environment']
+    if child['MACOSX_DEPLOYMENT_TARGET'] != minimum or child['SDKROOT'] != record['configuration']['sdkroot']:
+        problems.append("record.toolchain.rustc.selection.child_environment disagrees with the effective deployment target or SDK")
+    return problems
+
+
 # ---- inspection of a record ----------------------------------------------------------------------------
 
-def record_problems(app, manifest, *, read_metadata=output_metadata):
-    """Problems a record has against its manifest and bundle bytes, as (code, path, message) triples."""
+def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=None):
+    """Problems a record has against its manifest and bundle bytes, as (code, path, message) triples.
+
+    The record must have the documented shape (record_shape_problems) and agree
+    with the manifest and the bytes on every hash, with each executable's load
+    commands on UUID, platform, minimum, SDK and linker tools, and, where the
+    inspector supplies independently observed signature facts, with each
+    nested signature it claims."""
     app = Path(app)
     problems = []
     path = app / RECORD_PATH
@@ -1494,9 +1783,8 @@ def record_problems(app, manifest, *, read_metadata=output_metadata):
         return [('provenance', RECORD_PATH, f'record is not readable: {exc}')]
     if not isinstance(record, dict) or record.get('schema_version') != SCHEMA_VERSION:
         return [('provenance', RECORD_PATH, f'expected provenance schema_version={SCHEMA_VERSION}')]
-    for key in ('source', 'toolchain', 'configuration', 'outputs', 'signing'):
-        if key not in record:
-            problems.append(('provenance', RECORD_PATH, f'record lacks {key}'))
+    for problem in record_shape_problems(record):
+        problems.append(('provenance', RECORD_PATH, problem))
     outputs = record.get('outputs')
     if not isinstance(outputs, list):
         return problems + [('provenance', RECORD_PATH, 'record outputs must be a list')]
@@ -1539,28 +1827,55 @@ def record_problems(app, manifest, *, read_metadata=output_metadata):
         if metadata.get('status') != 'ok':
             problems.append(('provenance_metadata', relative, 'load commands are not readable'))
             continue
-        for key in ('uuid', 'platform', 'minos', 'sdk'):
+        for key in ('uuid', 'platform', 'minos', 'sdk', 'tools'):
             if entry.get(key) != metadata.get(key):
                 problems.append(('provenance_metadata', relative, f'record {key} {entry.get(key)!r} differs from the load commands {metadata.get(key)!r}'))
+        if signatures is not None and relative != CONTROLLER:
+            observed = signatures.get(relative)
+            claimed = entry.get('signature')
+            if observed is None:
+                problems.append(('provenance_signature', relative, 'no independent signature observation for the claimed signature'))
+            elif claimed != observed:
+                differing = sorted(k for k in set(observed) | set(claimed or {}) if (claimed or {}).get(k) != observed.get(k))
+                problems.append(('provenance_signature', relative, f"record signature facts differ from codesign's display: {', '.join(differing)}"))
     return problems
 
 
 def read_zip_record(archive):
-    """The record bytes and the controller's digest from a release ZIP, read without extraction."""
+    """The record bytes and the controller's digest from a release ZIP, read without extraction or execution.
+
+    The record must have the documented shape, and every nested output it names
+    must be a member of the ZIP whose bytes hash to the recorded value."""
     import zipfile
     with zipfile.ZipFile(archive) as zipped:
         try:
             record = zipped.read('PolicyWitness.app/' + RECORD_PATH)
         except KeyError:
             raise ValueError('the accepted ZIP carries no provenance record')
-        hasher = hashlib.sha256()
-        with zipped.open('PolicyWitness.app/' + CONTROLLER) as stream:
-            for block in iter(lambda: stream.read(1024 * 1024), b''):
-                hasher.update(block)
-    data = json.loads(record.decode('utf-8'))
-    if not isinstance(data, dict) or data.get('schema_version') != SCHEMA_VERSION:
-        raise ValueError('the accepted ZIP carries an unsupported provenance record')
-    return record, hasher.hexdigest()
+
+        def member_digest(relative):
+            hasher = hashlib.sha256()
+            try:
+                with zipped.open('PolicyWitness.app/' + relative) as stream:
+                    for block in iter(lambda: stream.read(1024 * 1024), b''):
+                        hasher.update(block)
+            except KeyError:
+                raise ValueError(f'the accepted ZIP lacks {relative}, which its provenance record names')
+            return hasher.hexdigest()
+        controller = member_digest(CONTROLLER)
+        try:
+            data = json.loads(record.decode('utf-8'))
+        except ValueError:
+            raise ValueError('the accepted ZIP carries an unreadable provenance record')
+        if not isinstance(data, dict) or data.get('schema_version') != SCHEMA_VERSION:
+            raise ValueError('the accepted ZIP carries an unsupported provenance record')
+        problems = record_shape_problems(data)
+        if problems:
+            raise ValueError('the accepted ZIP carries an invalid provenance record: ' + '; '.join(problems[:5]))
+        for output in data['outputs']:
+            if output['rel_path'] != CONTROLLER and member_digest(output['rel_path']) != output['sha256']:
+                raise ValueError(f"the accepted ZIP's {output['rel_path']} differs from its provenance record's hash")
+    return record, controller
 
 
 # ---- the command line ---------------------------------------------------------------------------------

@@ -148,10 +148,18 @@ def check(out):
         source_before = fingerprint(source)
         tools = Tools(mode, work / 'receipts.jsonl')
 
+        real_run = subprocess.run
+
+        def modeled(argv, *args, **kwargs):
+            # Signature displays are observations the record's claims are compared with, so they stay real.
+            if '-dvv' in argv:
+                return real_run(argv, *args, **kwargs)
+            return subprocess.CompletedProcess(argv, 0, '', '')
+
         def inspect(app):
-            # Model only signature success here: all manifest/layout/inventory
-            # checking remains real. Actual signatures have separate live controls.
-            with patch.object(artifact.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')):
+            # Model only signature verification success here: all manifest/layout/inventory
+            # checking and every signature display remain real. Actual signatures have separate live controls.
+            with patch.object(artifact.subprocess, 'run', side_effect=modeled):
                 return artifact.inspect(app)
 
         with (work / 'stdout').open('w') as stdout, (work / 'stderr').open('w') as stderr:

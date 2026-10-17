@@ -10,6 +10,7 @@ refusals through the unchanged script.
 import copy
 from contextlib import contextmanager, ExitStack, redirect_stderr, redirect_stdout
 import fcntl
+import hashlib
 import io
 import json
 import os
@@ -1398,6 +1399,7 @@ class SignatureDisplayTests(unittest.TestCase):
         self.assertTrue(any('signed by Apple Development' in p for p in signer_check.signature_problems(development, self.IDENTITY)))
         adhoc = signer_check.parse_display('Identifier=x\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=1 flags=0x2(adhoc) hashes=1+1 location=embedded\nSignature=adhoc\nTeamIdentifier=not set\n')
         self.assertEqual(signer_check.signature_problems(adhoc, self.IDENTITY), ['signed by ad hoc, not ' + self.IDENTITY])
+        self.assertIsNone(adhoc['team'], "codesign's `TeamIdentifier=not set` names no team")
         runtime = signer_check.parse_display(self.VALID.replace('flags=0x10000(runtime)', 'flags=0x0(none)'))
         self.assertTrue(any('hardened runtime' in p for p in signer_check.signature_problems(runtime, self.IDENTITY)))
         ambiguous = signer_check.parse_display(self.VALID + self.VALID)
@@ -1480,6 +1482,180 @@ class RecordTests(unittest.TestCase):
         manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
         manifest['entries'][0]['sha256'] = 'c' * 64
         self.assertTrue(any(c == 'provenance_hash' for c, _ in [(c, p) for c, p, _ in prov.record_problems(valid, manifest)]))
+
+    def partial(self, record):
+        """The partial build's record for the same stand-ins: Cargo's outputs only, no Swift compiler."""
+        out = copy.deepcopy(record)
+        out['configuration']['knobs']['BUILD_XPC'] = '0'
+        out['toolchain']['compilers']['swift'] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')
+        out['outputs'] = [o for o in out['outputs'] if o['rel_path'] in prov.PARTIAL_OUTPUTS]
+        out['signing']['nested'] = [n for n in out['signing']['nested'] if n['rel_path'] in prov.PARTIAL_OUTPUTS]
+        return out
+
+    def test_records_are_validated_by_shape_in_every_reader(self):
+        valid = self.app('shape')
+        self.assertEqual(self.problems(valid), [])
+        record = json.loads((valid / prov.RECORD_PATH).read_text())
+        # Valid neighbours: the partial build's record, and each optional observation the field policy lets stay unknown.
+        self.assertEqual(prov.record_shape_problems(self.partial(record)), [])
+        neighbours = {
+            'xcode unknown': lambda r: r['toolchain'].__setitem__('xcode', dict(status='unknown', reason='nonzero_exit', returncode=1)),
+            'meson options unknown': lambda r: r['configuration'].__setitem__('meson_options', dict(status='unknown')),
+            'stamp projection unavailable': lambda r: r['configuration']['toolchain_stamp'].__setitem__('projection', dict(status='unavailable', reason='x')),
+            'fingerprint ambiguous': lambda r: r['outputs'][0]['cargo'].__setitem__('fingerprint', dict(status='ambiguous', binding=None, limitation='x')),
+            'wrapper without a hash': lambda r: r['toolchain']['rustc'].__setitem__('wrappers', dict(wrapper=dict(source='RUSTC_WRAPPER', command='/w'))),
+            'explicitly empty SDK request': lambda r: r['configuration']['requests'].__setitem__('SDKROOT', dict(state='set', value='')),
+        }
+        for label, mutate in neighbours.items():
+            with self.subTest(neighbour=label):
+                changed = copy.deepcopy(record)
+                mutate(changed)
+                self.assertEqual(prov.record_shape_problems(changed), [], label)
+        # Every required section and representative nested fields: missing, null and the wrong type; each is a problem.
+        def drop(*keys):
+            def mutate(r):
+                node = r
+                for key in keys[:-1]:
+                    node = node[key]
+                node.pop(keys[-1])
+            return mutate
+
+        def put(value, *keys):
+            def mutate(r):
+                node = r
+                for key in keys[:-1]:
+                    node = node[key]
+                node[keys[-1]] = value
+            return mutate
+        faults = {}
+        for section in ('generated_at', 'source', 'toolchain', 'configuration', 'outputs', 'signing', 'limits'):
+            faults[f'{section} missing'] = drop(section)
+            faults[f'{section} null'] = put(None, section)
+            faults[f'{section} wrong type'] = put(7, section)
+        faults.update({
+            'dirty is a string': put('no', 'source', 'dirty'),
+            'an input hash missing': drop('source', 'input_hashes', 'meson.build'),
+            'worker identity not hex': put('z' * 64, 'source', 'worker_identity'),
+            'SDK version null': put(None, 'toolchain', 'sdk', 'version'),
+            'C compiler observation failed': put(dict(status='failed', kind='timeout'), 'toolchain', 'compilers', 'c', 'observed'),
+            'Swift compiler missing in a full build': put(dict(status='not applicable', reason='partial build: the XPC pieces were not compiled'),
+                                                          'toolchain', 'compilers', 'swift'),
+            'rustc selection missing': drop('toolchain', 'rustc', 'selection'),
+            'rustc source unknown': put('guess', 'toolchain', 'rustc', 'source'),
+            'xcode status unknown kind': put(dict(status='maybe'), 'toolchain', 'xcode'),
+            'knob is an integer': put(1, 'configuration', 'knobs', 'BUILD_XPC'),
+            'deployment target null': put(None, 'configuration', 'deployment_target'),
+            'deployment target disagrees with the outputs': put('1.0', 'configuration', 'deployment_target'),
+            'sdkroot disagrees with the SDK': put('/other/SDK', 'configuration', 'sdkroot'),
+            'request state unknown': put(dict(state='maybe'), 'configuration', 'requests', 'SDKROOT'),
+            'request missing': drop('configuration', 'requests', 'CPATH'),
+            'an output field null': lambda r: r['outputs'][1].__setitem__('uuid', None),
+            'an output tools list of strings': lambda r: r['outputs'][1].__setitem__('tools', ['ld']),
+            'a Cargo judgment null': lambda r: next(o for o in r['outputs'] if 'cargo' in o)['cargo'].__setitem__('fresh', None),
+            'a signature timestamp string': lambda r: r['outputs'][1]['signature'].__setitem__('timestamp', 'true'),
+            'signing nested disagrees': lambda r: r['signing']['nested'][0].__setitem__('timestamp', True),
+            'an unknown top-level field': put('x', 'extra'),
+            'a partial knob with full outputs': put('0', 'configuration', 'knobs', 'BUILD_XPC'),
+            'a string beyond its bound': put('x' * (prov.LINE_LIMIT + 1), 'toolchain', 'rustc', 'identity'),
+        })
+        for label, mutate in faults.items():
+            with self.subTest(fault=label):
+                changed = copy.deepcopy(record)
+                mutate(changed)
+                self.assertTrue(prov.record_shape_problems(changed), label)
+                (valid / prov.RECORD_PATH).write_text(json.dumps(changed))
+                self.assertIn('provenance', {code for code, _ in self.problems(valid)}, label)
+        # Only a linker tool's version changes: the shape holds and the load commands disagree.
+        changed = copy.deepcopy(record)
+        changed['outputs'][1]['tools'] = [dict(t, version=t['version'] + '.1') for t in changed['outputs'][1]['tools']] or [dict(tool='3', version='1')]
+        self.assertEqual(prov.record_shape_problems(changed), [])
+        (valid / prov.RECORD_PATH).write_text(json.dumps(changed))
+        self.assertEqual({code for code, _ in self.problems(valid)}, {'provenance_metadata'})
+        # A signature claim that differs from codesign's display of the bytes: the inspector names it.
+        fixture_bundle.record(valid)
+        observed = {o['rel_path']: dict(o['signature']) for o in record['outputs'] if 'signature' in o}
+        manifest = json.loads((valid / 'Contents/Resources/Evidence/manifest.json').read_text())
+        self.assertEqual(prov.record_problems(valid, manifest, signatures=observed), [])
+        observed[record['outputs'][1]['rel_path']]['adhoc'] = False
+        self.assertEqual({c for c, _, _ in prov.record_problems(valid, manifest, signatures=observed)}, {'provenance_signature'})
+
+    def test_the_archive_reader_validates_the_record_and_binds_its_outputs(self):
+        valid = self.app('archive')
+        record = self.partial(json.loads((valid / prov.RECORD_PATH).read_text()))
+
+        def archive(record, members=None, name='release.zip'):
+            import zipfile
+            path = self.work / name
+            members = dict(members if members is not None else {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS})
+            with zipfile.ZipFile(path, 'w') as zipped:
+                for relative, data in members.items():
+                    zipped.writestr('PolicyWitness.app/' + relative, data)
+                zipped.writestr('PolicyWitness.app/' + prov.RECORD_PATH, json.dumps(record))
+            return path
+        data, controller = prov.read_zip_record(archive(record))
+        self.assertEqual(json.loads(data), record)
+        self.assertEqual(controller, hashlib.sha256((valid / prov.CONTROLLER).read_bytes()).hexdigest())
+        broken = copy.deepcopy(record)
+        broken['configuration']['deployment_target'] = None
+        with self.assertRaises(ValueError) as refused:
+            prov.read_zip_record(archive(broken, name='null.zip'))
+        self.assertIn('invalid provenance record', str(refused.exception))
+        members = {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS}
+        members['Contents/MacOS/sbpl-check'] += b'\0other bytes'
+        with self.assertRaises(ValueError) as refused:
+            prov.read_zip_record(archive(record, members, 'swapped.zip'))
+        self.assertIn('differs from its provenance record', str(refused.exception))
+        members.pop('Contents/MacOS/sbpl-check')
+        with self.assertRaises(ValueError) as refused:
+            prov.read_zip_record(archive(record, members, 'missing.zip'))
+        self.assertIn('lacks Contents/MacOS/sbpl-check', str(refused.exception))
+
+    def test_the_producer_validates_before_sealing(self):
+        app = self.app('producer')
+        record = json.loads((app / prov.RECORD_PATH).read_text())
+        root = self.work / 'producer-root'
+        for relative in prov.SOURCE_INPUTS:
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(relative)
+        (root / 'builddir').mkdir()
+        rustc = dict(record['toolchain']['rustc'], exact_command='/fixture/rustc')
+        rustc.pop('selection_note')
+        toolchain = fake_observation(rustc=rustc, compilers={'c': fake_observation()['compilers']['c'],
+                                                             'swift': dict(configured=dict(command=['swiftc'], id='llvm', version='6.4', full_version=None),
+                                                                           observed=dict(status='ok', command=['swiftc'], identity='swift 6.4'))})
+        toolchain['sdk']['version']['line'] = record['toolchain']['sdk']['version']
+        toolchain['sdk']['path']['line'] = '/fixture/SDK'
+        judgment = next(o for o in record['outputs'] if 'cargo' in o)['cargo']
+        session = dict(knobs=dict(BUILD_XPC='1', PW_INSPECTION='1', PW_FRESH_BUILD='1'), toolchain=toolchain,
+                       worker_identity=dict(status='ok', reported='0' * 64), stamp=dict(commit='0' * 40, describe='fixture', dirty=False,
+                                                                                      version='0.0.0', build_number='0'),
+                       requests={name: dict(state='unset') for name in ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+                       environment={}, cargo=dict(judgments={name: dict(judgment) for name in prov.CARGO_TARGETS.values()},
+                                                  selection=record['toolchain']['rustc']['selection'],
+                                                  requested_rustflags=dict(source='none', tokens=[]), flag_environment={},
+                                                  admission=dict(target_directory='/t', build_directory='/t')),
+                       builddir=dict(configured_before=False, stamp_state='published'), cargo_release=dict(existed_before=False))
+        manifest = json.loads((app / 'Contents/Resources/Evidence/manifest.json').read_text())
+
+        def produce(session):
+            return prov.collect(session, app, root, 'fixture: linker-signed stand-ins', manifest_entries=manifest['entries'],
+                                signature=lambda path: dict(fixture_bundle.LINKER_SIGNED))
+        produced = produce(session)
+        self.assertEqual(prov.record_shape_problems(produced), [])
+        for label, mutate, needle in (
+                ('no effective deployment target (the null the accepted app carried)', lambda s: s['cargo']['selection']['child_environment'].__setitem__('MACOSX_DEPLOYMENT_TARGET', None),
+                 'no effective deployment target'),
+                ('requests absent', lambda s: s.pop('requests'), 'no caller requests'),
+                ('an effective deployment target the outputs do not carry', lambda s: s['cargo']['selection']['child_environment'].__setitem__('MACOSX_DEPLOYMENT_TARGET', '1.0'),
+                 'fails its own validation'),
+                ('an xcode observation of another shape', lambda s: s['toolchain'].__setitem__('xcode', dict(status='maybe')), 'fails its own validation'),
+                ('a judgment that is not a boolean', lambda s: s['cargo']['judgments']['sbpl-check'].__setitem__('fresh', 'false'), 'fails its own validation')):
+            with self.subTest(producer=label):
+                changed = copy.deepcopy(session)
+                mutate(changed)
+                with self.assertRaises(prov.Refusal) as refused:
+                    produce(changed)
+                self.assertIn(needle, str(refused.exception))
 
     def test_helper_subcommands_are_the_ones_the_script_invokes(self):
         import importlib.util

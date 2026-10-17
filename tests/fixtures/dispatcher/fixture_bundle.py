@@ -10,18 +10,20 @@ error here, never a compile on the side); the runnable controller stub beside
 it (`<host>.controller`) stands in for the controller, and the clean stub for
 every other executable. This inventory is deliberately independent of
 `tests/lib/artifact.py`'s `EXECUTABLES`: a mismatch fails the valid control,
-which is the point. `record(app)` writes a provenance record describing the
-stand-ins' current bytes and load commands; the inspector's checks over that
-record are real, so a control that keeps a stale record beside changed bytes
-must expect a provenance finding.
+which is the point. `record(app)` writes a complete provenance record for a
+full build, authored here: nominal toolchain and configuration values of the
+documented shape, the stand-ins' hashes and load commands read with this
+file's own `otool` parse, and the signature facts the linker-signed stand-ins
+carry (ad hoc, no leaf, team, runtime or timestamp). The inspector's checks
+over that record are real and independent of this file, so a control that
+keeps a stale record beside changed bytes must expect a provenance finding.
 """
 import json
 from pathlib import Path
 import plistlib
-import sys
+import re
+import subprocess
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
-import build_provenance
 from seal_tool import fingerprint, seal as seal_paths
 
 FILES = ['Contents/MacOS/' + name for name in
@@ -40,22 +42,79 @@ def seal(app):
     seal_paths(app, [app, app / XPC, *(app / name for name in FILES)])
 
 
+CARGO_TARGETS = {'Contents/MacOS/policy-witness', 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check'}
+ZERO = '0' * 64
+LINKER_SIGNED = dict(status='ok', leaf=None, team=None, timestamp=False, runtime=False, adhoc=True, developer_id_chain=False)
+
+
+def load_commands(path):
+    """UUID and LC_BUILD_VERSION as otool prints them, parsed here."""
+    text = subprocess.run(['/usr/bin/otool', '-l', str(path)], capture_output=True, text=True, check=True, timeout=60).stdout
+    uuid = re.search(r'^\s*uuid (\S+)\s*$', text, re.M).group(1)
+    block = text[text.index('cmd LC_BUILD_VERSION'):]
+    block = block[:block.index('Load command')] if 'Load command' in block else block
+    value = lambda key: re.search(r'^\s*' + key + r' (\S+)\s*$', block, re.M).group(1)
+    tools = [dict(tool=tool, version=version) for tool, version in re.findall(r'^\s*tool (\S+)\s*\n\s*version (\S+)\s*$', block, re.M)]
+    return dict(uuid=uuid, platform=value('platform'), minos=value('minos'), sdk=value('sdk'), tools=tools)
+
+
 def record(app):
-    """A provenance record describing the stand-ins as they are now; the fixture's other sections are nominal."""
+    """A full build's provenance record describing the stand-ins as they are now."""
     outputs = []
     for name in FILES:
-        metadata = build_provenance.output_metadata(app / name)
-        if metadata.get('status') != 'ok':
-            raise ValueError(f'fixture executable has no readable load commands: {name}')
-        entry = dict(rel_path=name, uuid=metadata['uuid'], platform=metadata['platform'], minos=metadata['minos'],
-                     sdk=metadata['sdk'], tools=metadata['tools'],
-                     sha256=None if name == CONTROLLER else fingerprint(app / name))
-        if name in build_provenance.CARGO_TARGETS:
-            entry['cargo'] = dict(status='fixture')
+        found = load_commands(app / name)
+        entry = dict(rel_path=name, sha256=None if name == CONTROLLER else fingerprint(app / name), **found)
+        if name == CONTROLLER:
+            entry['note'] = 'fixture controller: its hash is outside the sealed record'
+        else:
+            entry['signature'] = dict(LINKER_SIGNED)
+        if name in CARGO_TARGETS:
+            entry['cargo'] = dict(status='reported', fresh=False, profile={}, package_id='fixture', executable='fixture',
+                                  fingerprint=dict(status='unavailable', binding=None, limitation='fixture bundle'),
+                                  effective_rustflags=None, note='fixture bundle',
+                                  rustflags_source=dict(kind='none', resolved=True, tokens=[], overrides=[], agrees=None,
+                                                        effective_source='fixture bundle'))
         outputs.append(entry)
-    data = dict(schema_version=build_provenance.SCHEMA_VERSION, generated_at='fixture', source=dict(kind='fixture'),
-                toolchain=dict(kind='fixture'), configuration=dict(kind='fixture'), outputs=outputs,
-                signing=dict(identity=None, nested=[]), limits=['offline fixture bundle; no build produced it'])
+    minimum, sdk = outputs[0]['minos'], outputs[0]['sdk']
+    observed = lambda **fields: dict(status='ok', **fields)
+    program = lambda source, command: dict(source=source, command=command, overrides=[], file=None, disabled=False)
+    compiler = dict(configured=dict(command=['cc'], id='clang', version='0', full_version=None), observed=observed(command=['cc'], identity='fixture cc 0'))
+    data = dict(
+        schema_version=1, generated_at='2026-01-01T00:00:00Z',
+        source=dict(commit=ZERO[:40], describe='fixture', dirty=False, version='0.0.0', build_number='0', worker_identity=ZERO,
+                    input_hashes={name: ZERO for name in ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
+                                                          'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')}),
+        toolchain=dict(
+            developer_dir=dict(value='/fixture/Developer', source='xcode-select'),
+            sdk=dict(path='/fixture/SDK', version=sdk, build='FIXTURE', source='xcrun --sdk macosx default'),
+            xcode=dict(status='unknown', reason='launch_failed', returncode=None),
+            compilers=dict(c=compiler, swift=dict(compiler, configured=dict(compiler['configured'], command=['swiftc'], id='llvm'))),
+            rustc=observed(command='/fixture/rustc', source='default', identity='rustc 0.0.0 (fixture)', release='0.0.0', commit_hash='',
+                           host='fixture', llvm_version='', wrappers={}, selection_environment={}, selection_note='fixture bundle',
+                           selection=dict(files=[], launcher=dict(kind='cargo', toolchain=None),
+                                          programs=dict(rustc=program('default', '/fixture/rustc'), wrapper=program('none', None),
+                                                        workspace_wrapper=program('none', None)),
+                                          env_entries={}, child_environment=dict(SDKROOT='/fixture/SDK', MACOSX_DEPLOYMENT_TARGET=minimum,
+                                                                                 DEVELOPER_DIR=None, RUSTUP_TOOLCHAIN=None,
+                                                                                 path_replaced_by_env=False, rustup_home_replaced_by_env=False))),
+            cargo=observed(command='/fixture/cargo', version='cargo 0'), meson=observed(command='/fixture/meson', version='0'),
+            ninja=observed(command='/fixture/ninja', version='0')),
+        configuration=dict(
+            knobs=dict(BUILD_XPC='1', PW_INSPECTION='1', PW_FRESH_BUILD='1'), meson_options=dict(status='unknown'),
+            rustflags=dict(requested=dict(source='none', tokens=[]), flag_environment={}, note='fixture bundle'),
+            requests={name: dict(state='unset') for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH',
+                                                              'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+            deployment_target=minimum, sdkroot='/fixture/SDK',
+            build_directories=dict(builddir=dict(state='created', replaced_by_fresh_mode=True, stamp='published'),
+                                   cargo_release=dict(state='created', replaced_by_fresh_mode=True),
+                                   fresh_mode=dict(requested=True, replacement=None),
+                                   cargo_admission=dict(target_directory='/fixture/target', build_directory='/fixture/target')),
+            toolchain_stamp=dict(scope_note='fixture bundle', projection={})),
+        outputs=outputs,
+        signing=dict(identity='fixture: linker-signed stand-ins',
+                     nested=[dict(rel_path=o['rel_path'], leaf=None, team=None, timestamp=False) for o in outputs if 'signature' in o],
+                     note='fixture bundle'),
+        limits=['offline fixture bundle; no build produced it'])
     path = app / RECORD
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
