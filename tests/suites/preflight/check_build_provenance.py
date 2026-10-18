@@ -20,6 +20,7 @@ import re
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
@@ -33,6 +34,7 @@ sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 import build_provenance as prov
 import cargo_config
 import checkout_lock
+import output_target
 import signer_check
 import fixture_bundle
 
@@ -1557,6 +1559,224 @@ class SdkTests(unittest.TestCase):
         self.assertIn('not a numeric version', err)
         status, _, err = run_main(['sdk-check', '--root', str(work), '--sdk-version', sdk, str(source)], env)
         self.assertEqual(status, 1, 'a file without load commands never agrees')
+
+
+# ---- the output target: real Mach-O fixtures and an independent reading of their bytes ----------------------------
+
+CPU_ARM64, CPU_X86_64 = 0x0100000c, 0x01000007
+LC_BUILD_VERSION = 0x32
+
+
+def oracle_name(cputype, cpusubtype):
+    """The architecture a CPU type and subtype name, read here from the header, not from lipo."""
+    if cputype == CPU_ARM64:
+        return {0: 'arm64', 2: 'arm64e'}.get(cpusubtype & 0x00ffffff, f'arm64 subtype {cpusubtype}')
+    if cputype == CPU_X86_64:
+        return 'x86_64'
+    return f'cputype {cputype:#x}'
+
+
+def oracle(path):
+    """The container, architectures, file type and platform a file's bytes carry, by walking its header and load
+    commands directly: the fixtures' independent description, never the helper under test."""
+    data = Path(path).read_bytes()
+    if data[:4] == b'\xcf\xfa\xed\xfe' and len(data) >= 32:
+        cputype, cpusubtype, filetype, ncmds = struct.unpack_from('<IIII', data, 4)
+        platform, offset = None, 32
+        for _ in range(ncmds):
+            if offset + 8 > len(data):
+                platform = None
+                break
+            command, size = struct.unpack_from('<II', data, offset)
+            if command == LC_BUILD_VERSION:
+                platform = str(struct.unpack_from('<I', data, offset + 8)[0])
+            offset += size
+        return dict(container='thin', architectures=[oracle_name(cputype, cpusubtype)], filetype=filetype, platform=platform)
+    if data[:4] == b'\xca\xfe\xba\xbe':
+        slices = struct.unpack_from('>I', data, 4)[0]
+        names = [oracle_name(*struct.unpack_from('>II', data, 8 + 20 * index)) for index in range(slices)]
+        return dict(container='fat', architectures=names, slices=slices)
+    return dict(container=None)
+
+
+def target_fixtures(work):
+    """Real Mach-O fixtures linked with the selected macOS SDK, and malformed files, by name.
+
+    The platform mismatch is an arm64 Mac Catalyst executable (platform 6), which
+    the macOS SDK links; a dSYM companion of an x86_64 executable is debug data
+    and is not runnable code."""
+    source = work / 'main.c'
+    source.write_text('int main(void) { return 0; }\n')
+
+    def clang(*args):
+        subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', *map(str, args)], check=True, capture_output=True, timeout=120)
+
+    found = {}
+    for name, flags in (('thin-arm64', ['-arch', 'arm64']), ('thin-x86_64', ['-arch', 'x86_64']), ('thin-arm64e', ['-arch', 'arm64e']),
+                        ('universal', ['-arch', 'arm64', '-arch', 'x86_64'])):
+        found[name] = work / name
+        clang(*flags, '-mmacosx-version-min=26.0', source, '-o', found[name])
+    found['one-slice-fat'] = work / 'one-slice-fat'
+    subprocess.run(['/usr/bin/lipo', '-create', found['thin-arm64'], '-output', found['one-slice-fat']], check=True, capture_output=True)
+    found['catalyst-arm64'] = work / 'catalyst-arm64'
+    clang('-target', 'arm64-apple-ios17.0-macabi', source, '-o', found['catalyst-arm64'])
+    found['truncated'] = work / 'truncated'
+    found['truncated'].write_bytes(found['thin-arm64'].read_bytes()[:100])
+    found['short-header'] = work / 'short-header'
+    found['short-header'].write_bytes(found['thin-arm64'].read_bytes()[:6])
+    found['text'] = work / 'text'
+    found['text'].write_text('#!/bin/sh\nexit 0\n')
+    found['empty'] = work / 'empty'
+    found['empty'].write_bytes(b'')
+    found['class-file'] = work / 'class-file'   # the fat magic with a Java class file's version words, not a container
+    found['class-file'].write_bytes(b'\xca\xfe\xba\xbe\x00\x00\x00\x41' + b'\0' * 64)
+    found['missing'] = work / 'missing'
+    objects = work / 'debug.o'
+    clang('-arch', 'x86_64', '-g', '-c', source, '-o', objects)
+    found['debug-x86_64'] = work / 'debug-x86_64'
+    clang('-arch', 'x86_64', '-mmacosx-version-min=26.0', objects, '-o', found['debug-x86_64'])
+    subprocess.run(['/usr/bin/xcrun', 'dsymutil', found['debug-x86_64'], '-o', work / 'debug-x86_64.dSYM'], check=True, capture_output=True)
+    found['dsym-x86_64'] = work / 'debug-x86_64.dSYM/Contents/Resources/DWARF/debug-x86_64'
+    return found
+
+
+class OutputTargetTests(unittest.TestCase):
+    """The output check against real fixtures whose bytes this class reads itself first."""
+
+    # What the fixtures' bytes must be before the helper is consulted, and the one decision each must produce.
+    EXPECTED = {
+        'thin-arm64': (dict(container='thin', architectures=['arm64'], platform='1'), []),
+        'thin-x86_64': (dict(container='thin', architectures=['x86_64'], platform='1'), ['architecture x86_64, not exactly arm64']),
+        'thin-arm64e': (dict(container='thin', architectures=['arm64e'], platform='1'), ['architecture arm64e, not exactly arm64']),
+        'universal': (dict(container='fat', architectures=['arm64', 'x86_64']), ['not a thin Mach-O', 'not exactly arm64']),
+        'one-slice-fat': (dict(container='fat', architectures=['arm64']), ['a fat container with 1 slice(s) (arm64), not a thin Mach-O']),
+        'catalyst-arm64': (dict(container='thin', architectures=['arm64'], platform='6'), ['platform 6 (Mac Catalyst), not macOS (1)']),
+    }
+    MALFORMED = {'truncated': 'no readable LC_BUILD_VERSION platform', 'short-header': 'the Mach-O header is truncated',
+                 'text': 'not a Mach-O file', 'empty': 'not a Mach-O file', 'class-file': 'not a Mach-O file',
+                 'missing': 'unreadable (FileNotFoundError)'}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.directory = tempfile.TemporaryDirectory(prefix='pw-output-target-', dir='/private/tmp')
+        cls.work = Path(cls.directory.name).resolve()
+        cls.fixtures = target_fixtures(cls.work)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.directory.cleanup()
+
+    def observe(self, path, module=output_target):
+        return module.observe(path, probe=prov.probe, read_metadata=prov.output_metadata)
+
+    def test_fixtures_are_what_their_bytes_say(self):
+        for name, (expected, _) in self.EXPECTED.items():
+            with self.subTest(fixture=name):
+                found = oracle(self.fixtures[name])
+                self.assertEqual(found['container'], expected['container'])
+                self.assertEqual(sorted(found['architectures']), sorted(expected['architectures']))
+                if 'platform' in expected:
+                    self.assertEqual((found['filetype'], found['platform']), (2, expected['platform']))
+        self.assertEqual(oracle(self.fixtures['dsym-x86_64'])['filetype'], output_target.MH_DSYM)
+        self.assertEqual(oracle(self.fixtures['dsym-x86_64'])['architectures'], ['x86_64'])
+        self.assertEqual(oracle(self.fixtures['truncated'])['platform'], None, 'the truncated copy keeps its header but loses its load commands')
+        self.assertFalse(self.fixtures['missing'].exists())
+
+    def test_observations_are_kept_apart_from_the_decision(self):
+        for name, (expected, reasons) in self.EXPECTED.items():
+            with self.subTest(fixture=name):
+                found = self.observe(self.fixtures[name])
+                self.assertEqual(found['problems'], [])
+                self.assertEqual(found['container'], expected['container'])
+                self.assertEqual(sorted(found['architectures']), sorted(expected['architectures']))
+                self.assertEqual(found['platform'], expected.get('platform'))
+                if expected['container'] == 'fat':
+                    self.assertEqual(found['slices'], len(expected['architectures']))
+                problems = output_target.target_problems(found)
+                self.assertEqual(len(problems), len(reasons), problems)
+                for reason, problem in zip(reasons, problems):
+                    self.assertIn(reason, problem)
+                self.assertEqual(output_target.describe(found).startswith(str(self.fixtures[name]) + ': '), True)
+        for name, reason in self.MALFORMED.items():
+            with self.subTest(fixture=name):
+                found = self.observe(self.fixtures[name])
+                self.assertEqual(output_target.target_problems(found), [reason])
+                self.assertIsNone(found['architectures'] if name != 'truncated' else found['platform'])
+
+    def test_failed_and_inconsistent_tool_reports_refuse(self):
+        thin = self.fixtures['thin-arm64']
+        reports = {'nonzero': dict(status='failed', kind='nonzero_exit'), 'timeout': dict(status='failed', kind='timeout'),
+                   'empty': dict(status='ok', text='\n'), 'two names for a thin file': dict(status='ok', text='arm64 x86_64\n'),
+                   'unknown name': dict(status='ok', text='arm65\n'), 'oversized': dict(status='ok', text='a' * 40 + '\n'),
+                   'substring': dict(status='ok', text='xarm64\n')}
+        for label, report in reports.items():
+            with self.subTest(report=label):
+                found = output_target.observe(thin, probe=lambda argv, **_: report, read_metadata=prov.output_metadata)
+                self.assertIsNone(found['architectures'])
+                self.assertTrue(output_target.target_problems(found))
+        found = output_target.observe(thin, probe=prov.probe, read_metadata=lambda path: dict(status='failed', platform=None))
+        self.assertEqual(output_target.target_problems(found), ['no readable LC_BUILD_VERSION platform'])
+        calls = []
+        output_target.observe(thin, probe=lambda argv, **bounds: calls.append((argv, bounds)) or prov.probe(argv, **bounds),
+                              read_metadata=prov.output_metadata)
+        self.assertEqual(calls[0][0], ['/usr/bin/lipo', '-archs', str(thin)], 'architecture names come from lipo -archs on the file')
+        self.assertEqual(calls[0][1], dict(limit=4096, stderr_limit=4096))
+
+    def test_runnable_code_is_found_by_header_and_dsym_data_is_not_code(self):
+        app = self.work / 'scan.app'
+        (app / 'Contents/MacOS').mkdir(parents=True)
+        (app / 'Contents/Resources').mkdir(parents=True)
+        shutil.copy2(self.fixtures['thin-arm64'], app / 'Contents/MacOS/main')
+        shutil.copy2(self.fixtures['universal'], app / 'Contents/Resources/renamed.txt')
+        shutil.copy2(self.fixtures['truncated'], app / 'Contents/Resources/torn')
+        shutil.copytree(self.work / 'debug-x86_64.dSYM', app / 'Contents/MacOS/main.dSYM')
+        (app / 'Contents/Info.plist').write_text('<plist/>')
+        (app / 'Contents/MacOS/link').symlink_to(self.fixtures['thin-x86_64'])
+        found = [str(path.relative_to(app)) for path in output_target.runnable_code(app)]
+        self.assertEqual(found, ['Contents/MacOS/main', 'Contents/Resources/renamed.txt', 'Contents/Resources/torn'])
+        # A dSYM companion's own metadata names another architecture; it is excluded as debug data, not passed.
+        dsym = self.observe(app / 'Contents/MacOS/main.dSYM/Contents/Resources/DWARF/debug-x86_64')
+        self.assertEqual((dsym['filetype'], dsym['architectures']), (output_target.MH_DSYM, ['x86_64']))
+        # A Mach-O moved under a dSYM directory is still code: exclusion is by file type, not by path.
+        shutil.copy2(self.fixtures['thin-x86_64'], app / 'Contents/MacOS/main.dSYM/Contents/Resources/DWARF/hidden')
+        self.assertIn('Contents/MacOS/main.dSYM/Contents/Resources/DWARF/hidden',
+                      [str(path.relative_to(app)) for path in output_target.runnable_code(app)])
+        (app / 'Contents/Resources/locked').mkdir()
+        (app / 'Contents/Resources/locked').chmod(0)
+        self.addCleanup((app / 'Contents/Resources/locked').chmod, 0o755)
+        with self.assertRaises(OSError):
+            output_target.runnable_code(app)
+
+    def test_weakened_predicates_fail_these_controls(self):
+        """Each weakening, applied to a copy of the helper, accepts a fixture the decision above refuses."""
+        import importlib.util
+        source = (ROOT / 'tests/lib/output_target.py').read_text()
+        weakenings = {
+            'container requirement removed': (
+                "    if observation['container'] != CONTAINER:\n        found.append(", "    if False:\n        found.append(", 'one-slice-fat'),
+            'the predicate reduced to arm64 membership': (
+                "    if observation['architectures'] != [ARCHITECTURE]:", "    if ARCHITECTURE not in observation['architectures']:", 'universal'),
+            'names matched as a substring': (
+                "    if observation['architectures'] != [ARCHITECTURE]:", "    if ARCHITECTURE not in names:", 'thin-arm64e'),
+            'platform requirement removed': (
+                "    if observation['container'] == CONTAINER and observation['platform'] != PLATFORM:", "    if False:", 'catalyst-arm64'),
+        }
+        for label, (old, new, fixture) in weakenings.items():
+            with self.subTest(weakening=label):
+                self.assertEqual(source.count(old), 1, old)
+                mutated = source.replace(old, new, 1)
+                if label == 'the predicate reduced to arm64 membership':
+                    # Membership alone is masked by the container rule for every fat file; the reduction drops both.
+                    mutated = mutated.replace("    if observation['container'] != CONTAINER:\n        found.append(",
+                                              "    if False:\n        found.append(", 1)
+                path = self.work / f"weakened-{label.replace(' ', '-')}.py"
+                path.write_text(mutated)
+                spec = importlib.util.spec_from_file_location(path.stem.replace('-', '_'), path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                self.assertEqual(output_target.target_problems(self.observe(self.fixtures[fixture])) != [], True)
+                self.assertEqual(module.target_problems(self.observe(self.fixtures[fixture], module)), [],
+                                 f'{label}: the weakened helper must accept {fixture}, which this control refuses')
 
 
 class SignatureDisplayTests(unittest.TestCase):
