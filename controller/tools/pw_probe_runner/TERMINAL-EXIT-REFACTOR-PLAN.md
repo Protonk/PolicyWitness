@@ -115,7 +115,9 @@ In [CWorker.swift](../../../runner/Sources/PWRunnerCore/CWorker.swift), after
 process cleanup and before computing `collectionBasis` or taking the final
 snapshot, call `observeAcknowledgement()` when `process.status != nil`. This
 covers both polling-loop reap and cleanup reap. Retain the existing observations
-during polling and grace.
+during polling and grace. Reconciliation applies after abnormal termination as
+well as clean exit; do not condition it on `done`, exit code zero, completed
+phases or successful run classification.
 
 Use the existing predicate, `ownershipUnbroken && phase.releaseSet && ack == 1`.
 The resulting credit describes ownership through the worker's acknowledgement;
@@ -160,12 +162,13 @@ races or branches an ordinary specimen cannot reliably force.
 | Boundary | Required control and observation |
 | --- | --- |
 | Terminal exit without permission | Direct production-worker harness retains its mapping, leaves `exit_requested` zero and independently reaps exit 0 after normal completion and terminal refusal. Observe `done`, relevant failure/slots and no cleanup kill. Include allow-default, bare deny-default and an empty final phase. A bounded deadline must fail the old spin behavior. |
-| Fast-exit acknowledgement race | In `CWorkerLifecycleTests.swift`/`PhaseProtocolTests.swift`, force acknowledgement and `done` between the host's last samples and polling reap. Require `child_reaped`, confirmed clean exit, retained publication and `query_first`. Removing the final reconciliation must lose ordering credit. |
+| Fast-exit acknowledgement race | In `CWorkerLifecycleTests.swift`/`PhaseProtocolTests.swift`, force acknowledgement between the host's last samples and polling reap, with ownership intact and no earlier host acknowledgement observation. Cover both clean exit with `done` and fatal termination without `done` or phase completion. Both require `child_reaped`, confirmed reap and `query_first`; the abnormal variant must retain its observed signal and `runner_failed` classification. Removing final reconciliation must lose ordering credit in both variants. |
 | Ownership and phase boundaries | Force a wait error before acknowledgement, then later acknowledgement and confirmed reap; retain the error and withhold credit. Also retain an earlier established phase when a later phase loses ownership; unreleased phases and protocol violations never qualify. |
 | Deadlines and failures after acknowledgement | Retain an actual deadline despite late `done`. Retain qualified earlier queries when attempts fail or the worker dies after acknowledgement; do not require completed phase/run. Confirm real exit/signal independently. |
 | Refusal during collection | Delay the collector across worker refusal. Preserve received raw records, missing results and collector stop facts with order `unestablished`; perform no refused-phase actions. Use constructed allow/deny records to pin reader interpretation, and live execution to observe actual collection/exit behavior without fixing its native answer. |
 | Early departures and cancellation | Exercise accepted-channel early-return branches and pre-ack cancellation. Verify original codes, failures, unchanged status-word/publication rules, no acknowledgement or actions, and accepted-byte erasure. Retain timing/expiry/future-release precedence controls. |
-| Token erasure | Extend extension boundary equipment to observe the entire accepted token buffer after ordinary departures while host-side erasure is withheld. Verify consume-time and pre-hang/signal erasure separately, rejected-channel handling and null-channel safety. Native release-call observations must show no implicit release. |
+| Token erasure | Inspect the accepted channel's fixed buffer capacity independently of the erase call's length, with nonzero fixture bytes beyond the token's terminating NUL and host-side erasure withheld. Require the full buffer zero after ordinary departures; a shortened erase must fail. Verify consume-time and pre-hang/signal erasure separately, rejected-channel handling and null-channel safety. Native release-call observations must show no implicit release. |
+| Erasure before terminal publication | On a terminal refusal before consumption, observe the full accepted buffer at the actual `done` publication boundary, before any later cleanup can run. Require zero bytes when `done` first becomes visible. A deterministic control that moves erasure after publication must fail even if the buffer is zero after reap. |
 | Evidence and readers | Preserve completed slots, application/failure evidence and valid compiled-profile receipts after clean worker exit. Test raw allow/deny with unestablished order through supported readers. A degraded reply with an apparently complete retained chain still has no comparisons or recovered qualification. |
 
 Use the existing
@@ -176,6 +179,29 @@ Use the existing
 Extend existing test groups where possible. Register any new Swift group in
 `runner/Tests/PWRunnerCoreTests/main.swift` and any new harness case in the
 catalog with its actual prerequisites and coverage.
+
+Strengthen the worker erasure oracle in
+[control.c](../../../tests/fixtures/extension_controls/control.c): its existing
+`controlled_erase` scans only the length passed to the erase function and cannot
+detect an erroneously shortened call. The new oracle must inspect
+`sizeof(channel->token)` through the independently held worker-channel mapping,
+without deriving its scan bound from the erase argument, `token_length` or a
+string scan. Seed and confirm nonzero bytes in the padding after the valid
+terminating NUL, including the end of the buffer, before worker cleanup can
+run. Preserve valid channel framing. Keep the issuer's separately allocated
+string observation distinct from this fixed-capacity worker-channel oracle.
+
+Attach a compile-time observation gate directly to the terminal `done`
+release-store in the production-source test build. Hold the worker immediately
+after that store and before any subsequent cleanup or exit; the independent
+observer must acquire `done` and inspect the whole retained channel while the
+worker is held. Exercise a refusal path with an accepted, unconsumed token so
+earlier consumption cannot make the assertion pass. Withhold host erasure until
+the observation is complete. The gate compiles away in the shipped worker.
+Run negative controls that shorten erasure and that move erasure after the
+store/gate, keeping the independent observations unchanged. Require the
+respective full-buffer and publication-boundary assertions to fail; a final
+post-reap zero scan alone does not establish erasure order.
 
 Update controls that depend on the old handshake:
 
@@ -250,9 +276,11 @@ for the candidate's final live acceptance. Follow
 equipment failures and the prescribed retry outside an automation sandbox.
 
 Completion requires the production worker's no-permission exit and independent
-reap observations, ordinary token-erasure controls, the host race and negative
-ownership controls, preserved reader/qualification semantics and passing signed
-acceptance. Record any unrun or failed checks as such. Report residual native
+reap observations, independent full-buffer and pre-publication token-erasure
+controls, recovery of previously unseen acknowledgement after both clean and
+abnormal exit, negative ownership controls, preserved reader/qualification
+semantics and passing signed acceptance. Record any unrun or failed checks as
+such. Report residual native
 exit/call and descendant limitations for the later exec investigation. This
 refactor can be implemented before that investigation without selecting a
 descendant supervision design.
