@@ -278,6 +278,11 @@ account. Applying SBPL adds the specimen restriction to this starting state.
 Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
 change the submitted policy and are recorded as such.
 
+PW does not determine whether privacy consent mediation affected a worker
+attempt. A recorded error or timeout leaves that question unresolved. The
+[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
+target-selection guidance for this limitation.
+
 Host spawn actions select the policy, evidence and readiness endpoints, plus
 the optional token endpoint. The worker launch uses nil spawn attributes and
 leaves other descriptors to native close-on-exec inheritance. Its standard

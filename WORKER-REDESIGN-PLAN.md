@@ -32,11 +32,16 @@ is implemented, reviewed and accepted against the signed app; its
 [acceptance record](records/worker-validator-default/implementation-acceptance.md)
 retains default/override selection, native launch controls and the full default
 battery. The [execution-environment investigation](controller/src/EXECUTION-ENVIRONMENT-PLAN.md)
-is complete and independently reviewed; its
-[report](records/worker-execution-environment/investigation.md) recommends retaining
-the application model, clarifying ambient consent mediation in the worker prose,
-and deferring permanent worker-credential observations until a concrete consumer
-requires them. No environment refactor or new execution experiment was performed.
+is complete and independently reviewed. The user accepted retaining the
+application model and deferring permanent worker-credential observations until
+a concrete consumer requires them. The selected
+[worker-account clarification](docs/WORKER.md#starting-authority-and-ambient-context)
+states what PW leaves unresolved about privacy consent mediation. The
+[investigation report](records/worker-execution-environment/investigation.md)
+retains the alternatives and their rationale. No environment refactor or new
+execution experiment was performed. The
+[thread summary](records/worker-redesign-followups/thread-summary.md) brings
+together the decisions, implemented changes, verification and remaining work.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -65,7 +70,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 | WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Implemented; signed acceptance passed |
 | WA-03 | [Exec investigation](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) and [evidence refactor](controller/tools/pw_probe_runner/EXEC-EVIDENCE-REFACTOR-PLAN.md) | Separate collection, cleanup-request and reap facts; retain current cleanup policy | Evidence refactor implemented; signed acceptance passed; supervisor undecided |
 | WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Reviewed; selected validator-default refactor implemented and accepted; optional records deferred |
-| WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Investigation reviewed; recommend retaining model and clarifying limitation; decision ready |
+| WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Retain model; selected worker-account clarification implemented; optional credentials deferred |
 | WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Preserve and disclose bounded reading; optional raw length metadata remains a separate choice | Naming/disclosure implemented; signed acceptance passed |
 
 The initial three follow-ups ran concurrently, with shared-checkout builds and
@@ -98,12 +103,13 @@ Selected directions and remaining decision checkpoints are:
   longer receive fallback. Optional dynamic allowance and native intervention
   records remain deferred; the completed refactors create no need for a
   configuration schema or mode split.
-- Environment: retain existing selected provenance and actual attempt evidence;
-  the reviewed recommendation adds no general environment schema or automatic
-  permission baseline. Name privacy consent mediation as an ambient limitation
-  in the worker account. Existing test-owned observers provide a starting point
-  for a focused cross-scope credential study; permanent product fields remain a separate
-  capability choice. This recommendation is ready for user review.
+- Environment: the user selected retaining existing selected provenance and
+  actual attempt evidence, without a general environment schema or automatic
+  permission baseline. The worker account now states that PW does not determine
+  whether privacy consent mediation affected an attempt and links existing
+  target-selection guidance. Existing test-owned observers provide a starting
+  point for a focused cross-scope credential study; permanent product fields
+  remain a separate capability choice.
 
 Settle descriptor implementation before new supervisor launch wiring. Let the
 implemented exec evidence supply the fact distinctions before configuration chooses

@@ -3,7 +3,8 @@
 [Parent and handoff scope](../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-10 in the [initial audit](../../records/worker-pass6/initial-report.md).
 State: source/evidence investigation complete and independently reviewed at
-`a458b2876da794dd159848ae1bc02e0c65d15c62`; recommendation ready for user review.
+`a458b2876da794dd159848ae1bc02e0c65d15c62`. The user selected retaining the current
+application model; the scoped worker-account clarification is implemented.
 
 The [investigation report](../../records/worker-execution-environment/investigation.md)
 recommends retaining the current application model and naming privacy consent
@@ -20,8 +21,15 @@ owner identities cannot substitute for worker measurements. The
 [source snapshot](../../records/worker-execution-environment/reviewed-sources.json)
 and [prior-evidence account](../../records/worker-execution-environment/reviewed-evidence.json)
 preserve the basis and limits of this recommendation. Runtime or documentation
-implementation remains a separate decision; this status does not close the
-parent's documentation register.
+changes beyond the selected clarification remain separate decisions; this
+status does not close the parent's documentation register.
+
+The [worker account](../../docs/WORKER.md#starting-authority-and-ambient-context)
+states that PW does not determine whether privacy consent mediation affected an
+attempt, that an error or timeout leaves that question unresolved, and where
+to find target-selection guidance. The rationale about a hypothetical generic
+permission preflight remains in the investigation report. The current-behavior
+account describes PW's observation boundary without adding that design argument.
 
 ## Starting point
 
