@@ -138,8 +138,12 @@ stale-copy, marker and build-refusal controls.
   in every manifest carries a form. A `test` is defined in the cited file, in
   that file's language; a `rule` is a drift-rule function; a `control` is a
   fixture, golden, helper or compiled C control a test compares against.
-  Every node, edge and limit cites at least one `test` or `rule`. A common
-  word that merely occurs in a file cannot satisfy a `test`.
+  Worker-capability rows may have an empty check list, rendered as source-only
+  support. Each of their check citations names its reviewed assertion scope;
+  the generator requires nonempty scope text but does not verify its relevance.
+  Other nodes and edges, limits, and nonempty worker check lists cite at least
+  one `test` or `rule`. A common word that merely occurs in a file cannot
+  satisfy a `test`.
 - **G6. No self-citation.** A manifest cites neither itself nor any region or
   whole-file output of its own generator, since the generator would then
   verify text it wrote.

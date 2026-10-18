@@ -9,12 +9,15 @@ reader's findings and disclosed context exposure;
 availability and subsequent cleanup of the reported orphan. The
 [redesign parent plan](../WORKER-REDESIGN-PLAN.md) separates code-local
 application investigations from retained work on WORKER's evidence and map
-model. Terminal exit is implemented and accepted. Narrow descriptor and bounded
-sysctl directions are selected; an exec evidence refactor is specified for
-review while cleanup policy remains undecided. Configuration has a reviewed
-source inventory, and environment remains staged. The parent tracks the plans,
-reports and preliminary documentation-model review. Register adjudications
-and closures are unchanged. The checkpoints below retain their earlier scope.
+model. Terminal exit, exec evidence separation, descriptor lifetime, bounded
+sysctl disclosure and validator-default selection are implemented and accepted.
+The environment investigation retained the current application model with a
+worker-account clarification. The parent tracks those decisions and their
+evidence. The subsequent
+[documentation correction record](../records/worker-documentation-corrections/report.md)
+addresses the user's five remaining documentation findings, including rows 25
+and 27 below. Other register adjudications remain unchanged. The checkpoints
+below retain their earlier scope.
 
 Worker-language resolution completed after `143c8a4`. The
 [resolution report](../records/worker-language-resolution/report.md) records
@@ -327,9 +330,9 @@ the checkpoint closed no row.
 | 22 | Existing exec documentation upgrades bounded controls into general claims | Pass 5 finds the same overclaim in the per-attempt test source comment after guide/README correction | awaiting adjudication | Reopened for the remaining test comment; correct assertion scope, with no runtime change |
 | 23 | Low worker descriptors can corrupt protocol endpoint delivery | Actual action overlap replaces evidence fd 3 with policy pipe; self-dup readiness fd 4 is absent in child receipt | awaiting adjudication | Recommend collision-safe endpoint preparation, including self-dup close-on-exec handling, in separate fix scope |
 | 24 | Identified setup errors can reach spawn or leave a shared-memory name | Injected action/strdup/unlink failures have native child/name observations; failed init reaches fixture-contained invalid-handle use | awaiting adjudication | Recommend explicit setup refusal and cleanup ownership for these paths; preserve reproductions and add fix-distinguishing controls when authorized |
-| 25 | Map citations point to different paths or owners | C1: optional parameters/capture/token cited to bare-deny; absent creation cited to existing-file control; logs cited to disabled capture and host comparison | awaiting adjudication | Correct owning symbols and relevant checks; preserve source-only labels unless actual behavior is credited |
+| 25 | Map citations point to different paths or owners | C1: optional parameters/capture/token cited to bare-deny; absent creation cited to existing-file control; logs cited to disabled capture and host comparison | closed | Owners and scoped assertions corrected; source-only support explicit; source-drift validation passed in the documentation correction record |
 | 26 | Closed worker stderr can corrupt exec stderr delivery | Unchanged signed worker: three children report fd 2/write EBADF; three baseline children capture stderr successfully | awaiting adjudication | Explain the controlled starting-state limitation; authorize any collision-safe descriptor hardening separately |
-| 27 | Compiler outputs are dated before compilation | C3: S26a/S26b say before compilation though references return from sandbox_compile_string | awaiting adjudication | Correct acquisition period to the compiler-return boundary, without an allocator-timing claim |
+| 27 | Compiler outputs are dated before compilation | C3: S26a/S26b say before compilation though references return from sandbox_compile_string | closed | Acquisition now reads “On compilation return, before apply”; source review and generated-copy checks passed; no private allocation-time claim |
 | 28 | Ordinary extension test removes staging on unknown child cleanup | T1: TemporaryDirectory unwinds after capture failure; RunCapture owns only CLI cleanup | awaiting adjudication | Give the test durable staging ownership and exit-gated cleanup, with failure-path controls |
 
 ### Row details
@@ -1045,8 +1048,11 @@ boundary would refute a mismatch; a broad pass cannot. Existing parameter,
 capture, extension, absent-create and log controls supply more relevant starting
 points. Recommended: correct owner/check citations and review their actual
 assertions; keep source-only facts source-only. This source-supported finding
-needs no new native probe. No graph, prose or citation correction is authorized
-by this review round. State: awaiting adjudication.
+needs no new native probe. That review checkpoint authorized no graph, prose or
+citation correction and left the row awaiting adjudication. The user's
+subsequent five-finding review selected the documentation repair: owning
+references, relevant scoped assertions and explicit source-only support are now
+corrected. Validation is recorded in the documentation correction record.
 
 **Row 26.** First sentence: “The child receives explicit null-device stdin,
 captured stdout/stderr, an empty environment and a new process group.” C2 finds
@@ -1080,7 +1086,9 @@ current label dates returned resources too early. Bare-deny does not date native
 allocations or exercise the error-string branch. Recommended: describe acquisition
 at compilation/return before capture and apply. No claim about the exact private
 allocation instant is intended. Source settles the wording; no new execution is
-needed. No edit is made pending adjudication. State: awaiting adjudication.
+needed. That checkpoint left the edit pending adjudication. The user's subsequent
+review selected the correction. Both cells now read “On compilation return,
+before apply”; validation is recorded in the documentation correction record.
 
 **Row 28.** First omission: the ordinary `witness_contract/extensions` test has
 no child-exit gate before its `TemporaryDirectory` deletes the target tree on

@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "document": "docs/ARCHITECTURE.md",
   "styles": {
     "node_kinds": {
@@ -6459,7 +6459,6 @@
         "Held across",
         "Release / teardown action",
         "Authority",
-        "Sandbox-gated",
         "Reaches exec children",
         "Role"
       ],
@@ -6565,7 +6564,6 @@
             "Held across": "Later phases; last mapping/reference may outlive worker",
             "Release / teardown action": "H requests immediate shm_unlink; injected failure leaves name after teardown",
             "Authority": "Shared writable input/publication storage",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "No explicit child reference; see S13b",
             "Role": "P"
           },
@@ -6577,14 +6575,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6599,7 +6593,6 @@
             "Held across": "Through successful worker spawn; host mapping remains through collection",
             "Release / teardown action": "H setup/spawn-failure close, or ownership relinquished and close after transfer deadline starts on successful spawn",
             "Authority": "Can map/resize the evidence object",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "Worker receives it; later validators cannot inherit the closed host reference; exec child excludes worker evidence descriptors",
             "Role": "P"
           },
@@ -6611,19 +6604,16 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             },
             {
               "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact."
             }
           ]
         },
@@ -6638,7 +6628,6 @@
             "Held across": "Beyond host descriptor close, through collection including after worker exit or unconfirmed cleanup",
             "Release / teardown action": "H defer munmap",
             "Authority": "Read worker publications; write input/release/exit request",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "No: exec replaces address space",
             "Role": "P"
           },
@@ -6650,19 +6639,16 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
               "symbol": "runCWorkerLifecycleTests",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled worker publications, ownership, acknowledgement reconciliation and confirmed reap; includes acknowledgement recovered after abnormal exit."
             },
             {
               "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact."
             }
           ]
         },
@@ -6677,7 +6663,6 @@
             "Held across": "Readiness wait only",
             "Release / teardown action": "H after readiness wait or setup/spawn failure",
             "Authority": "Observe ready byte",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "No: close-on-exec",
             "Role": "P"
           },
@@ -6689,9 +6674,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6706,7 +6692,6 @@
             "Held across": "Through worker spawn",
             "Release / teardown action": "H immediately after spawn or failure",
             "Authority": "Supply worker readiness endpoint",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "Worker fd 4; child excludes it",
             "Role": "P"
           },
@@ -6718,9 +6703,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6735,7 +6721,6 @@
             "Held across": "Through worker spawn",
             "Release / teardown action": "H immediately after spawn or failure",
             "Authority": "Receive policy bytes",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "Worker fd 0 replaced in exec child",
             "Role": "P"
           },
@@ -6747,9 +6732,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6764,7 +6750,6 @@
             "Held across": "Through bounded policy transfer",
             "Release / teardown action": "H after transfer or setup/spawn failure",
             "Authority": "Deliver source and EOF",
-            "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "No: close-on-exec",
             "Role": "P"
           },
@@ -6776,9 +6761,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6793,7 +6779,6 @@
             "Held across": "Through driver return",
             "Release / teardown action": "H defer close",
             "Authority": "Duplicate authority-bearing channel",
-            "Sandbox-gated": "Host before apply; controlled failed endpoint action still spawns",
             "Reaches exec children": "Worker fd 5; exec/extension combination refused",
             "Role": "A"
           },
@@ -6805,16 +6790,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
-          ]
+          ],
+          "note": "Setup controls observe a failed endpoint action followed by spawn."
         },
         {
           "id": "s6",
@@ -6827,7 +6809,6 @@
             "Held across": "Through driver return",
             "Release / teardown action": "H defer destroy",
             "Authority": "Prescribes worker descriptor table",
-            "Sandbox-gated": "Host before apply; controlled init/add failures reach later uses or spawn",
             "Reaches exec children": "Handle no; actions determine worker state",
             "Role": "P; setup caveat"
           },
@@ -6839,16 +6820,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
-          ]
+          ],
+          "note": "Setup controls observe later uses after failed file-action initialization/addition; fixture containment is not production refusal."
         },
         {
           "id": "s7",
@@ -6861,7 +6839,6 @@
             "Held across": "Until exit; unconfirmed cleanup may outlive driver",
             "Release / teardown action": "Terminal publication: erase accepted token, release done, _exit; early return, cancellation, fatal signal or H termination; H waitpid observes reap",
             "Authority": "Executes specimen with inherited context and signed identity",
-            "Sandbox-gated": "Source-only spawn; L observed two lifetimes",
             "Reaches exec children": "It parents exec children; not itself inherited",
             "Role": "none (ambient execution substrate)"
           },
@@ -6879,12 +6856,14 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             },
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "terminal_exit_without_request",
-              "form": "test"
+              "form": "test",
+              "scope": "Applied worker publishes done and exits cleanly without a host exit request."
             }
           ]
         },
@@ -6899,7 +6878,6 @@
             "Held across": "Issuer then worker; through session",
             "Release / teardown action": "E requests shm_unlink; injected failure leaves name after teardown",
             "Authority": "Holds transferable token and issuer metadata",
-            "Sandbox-gated": "Source-only, outside worker sandbox",
             "Reaches exec children": "No admitted exec+extension plan",
             "Role": "A + E"
           },
@@ -6913,12 +6891,14 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -6933,7 +6913,6 @@
             "Held across": "Through session",
             "Release / teardown action": "E deinit close, including setup-failure returns",
             "Authority": "Map/duplicate token channel",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: close-on-exec except explicit delivery dup",
             "Role": "A"
           },
@@ -6945,9 +6924,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Instrumented issuer-session setup controls observe descriptor cleanup; shared-object identity is not established by matching descriptor metadata."
             }
           ]
         },
@@ -6962,7 +6942,6 @@
             "Held across": "Through reply preparation",
             "Release / teardown action": "E erase before reply; deinit erases, unmaps",
             "Authority": "Read issuance evidence; supply/erase token",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: address space replaced",
             "Role": "A + E"
           },
@@ -6976,7 +6955,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -6991,7 +6971,6 @@
             "Held across": "Until issuer exit; delivery requires confirmed clean reap",
             "Release / teardown action": "I return; E wait/terminate",
             "Authority": "Ordinary signed issuer authority for file token issuance",
-            "Sandbox-gated": "Source-only; no live issuer case rerun in pass 1",
             "Reaches exec children": "No: sibling, reaped before worker delivery",
             "Role": "A"
           },
@@ -7005,7 +6984,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7020,7 +7000,6 @@
             "Held across": "Until issuer exit",
             "Release / teardown action": "Exit; failure returns before mapping",
             "Authority": "Restricts core-dump production",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: issuer creates no exec child",
             "Role": "P"
           },
@@ -7034,7 +7013,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7049,7 +7029,6 @@
             "Held across": "Until publication/exit",
             "Release / teardown action": "Normal munmap; malformed header exits without explicit unmap",
             "Authority": "Write token and issuance metadata",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child",
             "Role": "A + E"
           },
@@ -7063,7 +7042,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7078,7 +7058,6 @@
             "Held across": "Through I mapping attempt",
             "Release / teardown action": "I close(3) after mmap; earlier errors leave to exit",
             "Authority": "Map channel",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child",
             "Role": "A"
           },
@@ -7092,7 +7071,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7107,7 +7087,6 @@
             "Held across": "Until exit; no explicit dlclose",
             "Release / teardown action": "Loader/process teardown; internals unobserved",
             "Authority": "Makes private issuance API callable, not an entitlement grant",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child",
             "Role": "A"
           },
@@ -7121,7 +7100,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7136,7 +7116,6 @@
             "Held across": "Issuance check/call; loader image remains",
             "Release / teardown action": "Automatic values end with I; no independent handle release",
             "Authority": "API entry points; consume/release are checked, not invoked",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child",
             "Role": "A"
           },
@@ -7150,7 +7129,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7165,7 +7145,6 @@
             "Held across": "Copy/reject decision only",
             "Release / teardown action": "I bounded erase then free; oversized tail caveat",
             "Authority": "Bearer bytes for native extension consumption",
-            "Sandbox-gated": "Source-only; private internals unobserved",
             "Reaches exec children": "No: issuer storage not inherited",
             "Role": "A"
           },
@@ -7179,9 +7158,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
-          ]
+          ],
+          "note": "Private issuance allocation internals remain unobserved."
         },
         {
           "id": "s12b",
@@ -7194,7 +7175,6 @@
             "Held across": "Until worker consume decision or ordinary departure after channel acceptance; earlier mapping/header refusals leave erasure to the host; host erasure is independent; fatal interruption may bypass worker cleanup",
             "Release / teardown action": "Worker full-buffer erasure in S22; independent host erasure in S8c",
             "Authority": "Transferable extension token",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No admitted exec+extension plan",
             "Role": "A"
           },
@@ -7212,12 +7192,14 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "terminal_erasure",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent full-capacity and publication-boundary observations reject shortened or late erasure, including refusal paths."
             }
           ]
         },
@@ -7232,7 +7214,6 @@
             "Held across": "Later attempts and phases, until exit",
             "Release / teardown action": "No W close; exit",
             "Authority": "Read remaining policy stream; normally EOF after source receipt",
-            "Sandbox-gated": "L observed pre/post presence; gating unknown",
             "Reaches exec children": "No: child addopen replaces stdin",
             "Role": "P, retained after use"
           },
@@ -7246,7 +7227,8 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
           ]
         },
@@ -7261,7 +7243,6 @@
             "Held across": "Later attempts and phases, until exit",
             "Release / teardown action": "No W close; exit",
             "Authority": "Map backing object separately from existing mapping",
-            "Sandbox-gated": "L observed pre/post presence; gating unknown",
             "Reaches exec children": "No: child CLOEXEC_DEFAULT",
             "Role": "P"
           },
@@ -7275,12 +7256,14 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -7295,7 +7278,6 @@
             "Held across": "Later attempts and phases, until exit",
             "Release / teardown action": "No W close; exit",
             "Authority": "Write readiness pipe; host later closes reader",
-            "Sandbox-gated": "L observed pre/post presence; gating unknown",
             "Reaches exec children": "No: child CLOEXEC_DEFAULT",
             "Role": "P"
           },
@@ -7309,12 +7291,14 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -7329,7 +7313,6 @@
             "Held across": "Through extension preparation",
             "Release / teardown action": "prepare_extension closes once; early main refusals leave to exit",
             "Authority": "Map token channel",
-            "Sandbox-gated": "Source-only; close failure published on prepared path",
             "Reaches exec children": "No admitted exec+extension plan; child flags would exclude it",
             "Role": "A"
           },
@@ -7343,12 +7326,14 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -7363,7 +7348,6 @@
             "Held across": "Until exit",
             "Release / teardown action": "Exit; no explicit W close",
             "Authority": "Whatever underlying endpoints allow; L saw read/write /dev/null",
-            "Sandbox-gated": "L: inherited null-device stdout/stderr observed",
             "Reaches exec children": "No: exec-child capture pipes replace 1/2",
             "Role": "none"
           },
@@ -7377,9 +7361,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
-          ]
+          ],
+          "note": "L observed read/write null-device stdout and stderr."
         },
         {
           "id": "s14b",
@@ -7392,8 +7378,7 @@
             "Held across": "Until exit unless a file action overwrites number",
             "Release / teardown action": "No generic W sweep; exit",
             "Authority": "Depends on inherited objects",
-            "Sandbox-gated": "IC demonstrates inheritance; L saw no extra numeric fd",
-            "Reaches exec children": "No: exec-child CLOEXEC_DEFAULT; IC/CLI observed isolation",
+            "Reaches exec children": "No: exec-child CLOEXEC_DEFAULT; IC/CLI test child isolation",
             "Role": "none"
           },
           "sources": [
@@ -7406,9 +7391,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
-          ]
+          ],
+          "note": "L observed no additional numeric descriptor; the contaminated-worker control separately supplies a positive inheritance case."
         },
         {
           "id": "s14c",
@@ -7421,7 +7408,6 @@
             "Held across": "Until worker exit if original number survives file actions; closing the host descriptor does not remove this child reference",
             "Release / teardown action": "No generic W sweep; exit",
             "Authority": "Same evidence object as S13b, not a second object",
-            "Sandbox-gated": "Source-only possibility; L saw no extra alias",
             "Reaches exec children": "No: exec-child CLOEXEC_DEFAULT",
             "Role": "P"
           },
@@ -7431,13 +7417,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "L observed no original-number evidence alias in its endpoint arrangement; source permits other arrangements."
         },
         {
           "id": "s15",
@@ -7450,8 +7431,7 @@
             "Held across": "Until exit",
             "Release / teardown action": "Process teardown",
             "Authority": "No entries observed; potential environment-dependent behavior is source-scoped",
-            "Sandbox-gated": "L plain/-E ps identical; Apple nil-env path corroborates",
-            "Reaches exec children": "No: explicit {NULL} child env; IC/CLI",
+            "Reaches exec children": "No: explicit {NULL} child env; IC/CLI test this boundary",
             "Role": "none"
           },
           "sources": [
@@ -7464,9 +7444,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
-          ]
+          ],
+          "note": "L produced identical plain and environment-displaying ps output; this is scoped to those two launches."
         },
         {
           "id": "s16a",
@@ -7479,7 +7461,6 @@
             "Held across": "Until exit; SBPL/extension interventions alter effective access",
             "Release / teardown action": "Exit, not a PW reset",
             "Authority": "Starting access and restrictions; built-in manifest has empty entitlements",
-            "Sandbox-gated": "Source + signed manifest; effective authority not fully measured",
             "Reaches exec children": "Credentials/policy inherit subject to exec semantics; child signature supplies own entitlements",
             "Role": "Supplied entitlements plus ambient authority/restrictions; mixed starting substrate"
           },
@@ -7493,13 +7474,8 @@
               "symbol": "enforce_required_entitlements"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "launch_inventory",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Selected signing metadata and required-key checks do not measure effective worker authority."
         },
         {
           "id": "s16g",
@@ -7512,7 +7488,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "Exit",
             "Authority": "Relative file-target resolution",
-            "Sandbox-gated": "L cwd /; gating unknown",
             "Reaches exec children": "Yes, no chdir action",
             "Role": "none"
           },
@@ -7526,9 +7501,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
-          ]
+          ],
+          "note": "L observed cwd / in both launches."
         },
         {
           "id": "s16h",
@@ -7541,7 +7518,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "Exit",
             "Authority": "Reduces requested creation mode",
-            "Sandbox-gated": "Source-only inheritance; live value unknown",
             "Reaches exec children": "Yes, no umask action",
             "Role": "none"
           },
@@ -7551,13 +7527,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No live umask measurement is credited."
         },
         {
           "id": "s16c",
@@ -7570,7 +7541,6 @@
             "Held across": "Until exit, except extension core-limit intervention",
             "Release / teardown action": "Exit; S20 changes core limit",
             "Authority": "Caps allocation, files, core, processes etc.",
-            "Sandbox-gated": "Unknown live values",
             "Reaches exec children": "Yes by spawn inheritance; public extension/exec exclusion applies",
             "Role": "none"
           },
@@ -7580,13 +7550,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No live resource-limit census is credited."
         },
         {
           "id": "s16i",
@@ -7599,7 +7564,6 @@
             "Held across": "Until exit except S17",
             "Release / teardown action": "W changes SIGPIPE only",
             "Authority": "Affects fatal delivery and ignored signals",
-            "Sandbox-gated": "Source-only; no signal census",
             "Reaches exec children": "Ignored dispositions persist, caught handlers reset by exec",
             "Role": "none"
           },
@@ -7609,13 +7573,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No live inherited-signal census is credited."
         },
         {
           "id": "s16j",
@@ -7628,7 +7587,6 @@
             "Held across": "Until exit",
             "Release / teardown action": "No PW reset",
             "Authority": "Controls blocked signal delivery",
-            "Sandbox-gated": "Source-only; live mask unknown",
             "Reaches exec children": "Yes, no SETSIGMASK",
             "Role": "none"
           },
@@ -7638,13 +7596,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No live signal-mask measurement is credited."
         },
         {
           "id": "s16e",
@@ -7657,7 +7610,6 @@
             "Held across": "Until exit or library changes",
             "Release / teardown action": "No PW general release; full live right census unavailable",
             "Authority": "Task/IPC authority, bootstrap namespace access",
-            "Sandbox-gated": "L lsmp refused; exact set unknown",
             "Reaches exec children": "Special-port inheritance/native exec rules; exact set unknown",
             "Role": "none"
           },
@@ -7671,9 +7623,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
-          ]
+          ],
+          "note": "L port inspection was refused; the exact live right set remains unknown."
         },
         {
           "id": "s16f",
@@ -7686,7 +7640,6 @@
             "Held across": "Until exit or library release",
             "Release / teardown action": "Native runtime; no PW census/teardown",
             "Authority": "Executable code, storage and runtime service access",
-            "Sandbox-gated": "L vmmap inventory; per-allocation origin and gating unknown",
             "Reaches exec children": "Not the same mappings/threads: exec loads a new image",
             "Role": "none"
           },
@@ -7700,9 +7653,11 @@
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
-          ]
+          ],
+          "note": "L retained vmmap output; per-allocation origin and policy gating remain unknown."
         },
         {
           "id": "s17",
@@ -7715,7 +7670,6 @@
             "Held across": "All attempts/phases, until exit",
             "Release / teardown action": "No reset",
             "Authority": "Survive broken ready-pipe write; also changes exec-child behavior",
-            "Sandbox-gated": "Source-only; L pre-ready final EPIPE survived",
             "Reaches exec children": "Yes: no SETSIGDEF; no dedicated live signal control",
             "Role": "P + effect on O"
           },
@@ -7727,11 +7681,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_exec_inheritance/run.sh",
+              "symbol": "launch_inventory",
+              "form": "test",
+              "scope": "Pre-ready hold requires readiness errno EPIPE followed by clean worker completion and confirmed reap."
             }
-          ]
+          ],
+          "note": "L pre-ready launch retained readiness errno EPIPE and later clean completion."
         },
         {
           "id": "s18",
@@ -7744,7 +7700,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "No explicit W unmap; exit",
             "Authority": "Read requests, publish results, observe release/exit",
-            "Sandbox-gated": "Source-only; mapped before compilation",
             "Reaches exec children": "No: exec replaces mappings and excludes fd 3",
             "Role": "P"
           },
@@ -7754,13 +7709,7 @@
               "symbol": "map_region"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "launch_inventory",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "s19",
@@ -7773,7 +7722,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "Static storage at exit; no dynamic handle acquired here",
             "Authority": "Callable native consume/release, no pre-apply consumption",
-            "Sandbox-gated": "Source-only; library internals unobserved",
             "Reaches exec children": "No admitted combination; pointer storage not inherited across exec",
             "Role": "A"
           },
@@ -7787,9 +7735,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
-          ]
+          ],
+          "note": "Private loader/library internals remain unobserved."
         },
         {
           "id": "s20",
@@ -7802,7 +7752,6 @@
             "Held across": "All later attempts/phases, until exit if call succeeds",
             "Release / teardown action": "No reset; exit",
             "Authority": "Restricts core dumping; missing symbols/setup failure qualify it",
-            "Sandbox-gated": "Source-only, request-dependent",
             "Reaches exec children": "No admitted exec with extension; hypothetical ABI child would inherit",
             "Role": "P + process context"
           },
@@ -7816,7 +7765,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -7831,7 +7781,6 @@
             "Held across": "Accepted mapping until exit, including after erase",
             "Release / teardown action": "Rejected mapping: erase/munmap; accepted: no explicit unmap",
             "Authority": "Read/erase token and inspect channel admission metadata",
-            "Sandbox-gated": "Source-only; rejection unmap failure recorded",
             "Reaches exec children": "No admitted combination; address space replaced on exec",
             "Role": "A + P"
           },
@@ -7845,9 +7794,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
-          ]
+          ],
+          "note": "Rejected-mapping unmap failure is recorded on the preparation path."
         },
         {
           "id": "s22",
@@ -7860,7 +7811,6 @@
             "Held across": "Until consume decision or ordinary departure after acceptance; fatal interruption may bypass cleanup",
             "Release / teardown action": "Full-buffer erase before done, early return or cancellation exit; no native release; separate host erasure remains",
             "Authority": "Consumable bearer token; validation does not consume it",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No admitted combination",
             "Role": "A"
           },
@@ -7882,12 +7832,14 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "terminal_erasure",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent full-capacity and publication-boundary observations reject shortened or late erasure, including refusal paths."
             }
           ]
         },
@@ -7902,7 +7854,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "No wipe or explicit release",
             "Authority": "Policy input, not a target-file descriptor",
-            "Sandbox-gated": "Source-only; read receipt observed in L",
             "Reaches exec children": "No: new exec image",
             "Role": "P"
           },
@@ -7916,7 +7867,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ]
         },
@@ -7931,7 +7883,6 @@
             "Held across": "Later attempts/phases, until exit",
             "Release / teardown action": "No wipe; static storage teardown",
             "Authority": "Exact compile/capture inputs; no additional access",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: new exec image",
             "Role": "P"
           },
@@ -7944,8 +7895,9 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "symbol": "params_round_trip",
+              "form": "test",
+              "scope": "Named TARGET parameter reaches the compiled policy: the configured path attempt returns EPERM after successful apply; allocation/free details remain source-only."
             }
           ]
         },
@@ -7960,7 +7912,6 @@
             "Held across": "Until compile return, or parameter refusal",
             "Release / teardown action": "sandbox_free_params on success/failure paths after creation",
             "Authority": "Supplies named compiler inputs",
-            "Sandbox-gated": "Source-only; private allocation internals unobserved",
             "Reaches exec children": "No: freed before possible child spawn",
             "Role": "A"
           },
@@ -7973,10 +7924,12 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "symbol": "params_round_trip",
+              "form": "test",
+              "scope": "Named TARGET parameter reaches the compiled policy: the configured path attempt returns EPERM after successful apply; allocation/free details remain source-only."
             }
-          ]
+          ],
+          "note": "Private parameter-allocation internals remain unobserved."
         },
         {
           "id": "s26a",
@@ -7985,11 +7938,10 @@
           "facts": {
             "Inventory ID": "S26a",
             "Acquired by": "W: sandbox_compile_string",
-            "When": "Before compilation (compile boundary)",
+            "When": "On compilation return, before apply",
             "Held across": "Passed to capture/apply; allocation lifetime inside apply unknown",
             "Release / teardown action": "No explicit sandbox_free_profile; exit reclaims remaining process storage",
             "Authority": "Input to restriction application; not an applied policy by itself",
-            "Sandbox-gated": "Source-only, private object lifetime unknown",
             "Reaches exec children": "No: new exec image; applied restriction separate S28",
             "Role": "A"
           },
@@ -8003,9 +7955,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
-          ]
+          ],
+          "note": "Private compiled-object lifetime inside apply remains unknown."
         },
         {
           "id": "s26b",
@@ -8014,11 +7968,10 @@
           "facts": {
             "Inventory ID": "S26b",
             "Acquired by": "W: sandbox_compile_string out parameter",
-            "When": "Before compilation (compile boundary)",
+            "When": "On compilation return, before apply",
             "Held across": "Failure reporting only",
             "Release / teardown action": "W free when non-null and profile null",
             "Authority": "None; diagnostic bytes",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child on failed compile path",
             "Role": "P"
           },
@@ -8031,8 +7984,9 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "symbol": "compile_failure",
+              "form": "test",
+              "scope": "Malformed source publishes compile refusal without apply or attempts and exits cleanly; native error allocation/free is source-only."
             }
           ]
         },
@@ -8047,7 +8001,6 @@
             "Held across": "Later attempts/phases, until exit; host copies accepted receipt",
             "Release / teardown action": "No separate allocation/unmap; S18 teardown",
             "Authority": "Read own task memory via preexisting task port; publish receipt",
-            "Sandbox-gated": "Source-only, pre-apply",
             "Reaches exec children": "No: new image, evidence fd excluded",
             "Role": "P"
           },
@@ -8059,9 +8012,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "max_targets_reply_survives",
+              "form": "test",
+              "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
             }
           ]
         },
@@ -8076,7 +8030,6 @@
             "Held across": "All later attempts/phases, until exit on success",
             "Release / teardown action": "One-way, no undo",
             "Authority": "Restricts starting authority; extension may augment access",
-            "Sandbox-gated": "Source placement; L final application/clean completion, not deny coverage",
             "Reaches exec children": "Inherited sandbox constraints",
             "Role": "A"
           },
@@ -8090,7 +8043,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ]
         },
@@ -8105,7 +8059,6 @@
             "Held across": "Attempt only on ordinary cleanup path",
             "Release / teardown action": "close after best-effort one-byte read; return ignored",
             "Authority": "Read opened object",
-            "Sandbox-gated": "Source-only; no file probe rerun in pass 1",
             "Reaches exec children": "No: closed before later exec, which also excludes it",
             "Role": "O"
           },
@@ -8119,7 +8072,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ]
         },
@@ -8134,7 +8088,6 @@
             "Held across": "Attempt only on ordinary cleanup path",
             "Release / teardown action": "close after unchecked one-byte write",
             "Authority": "Write/truncate opened object; actual write result unpublished",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: later exec excludes it",
             "Role": "O"
           },
@@ -8146,9 +8099,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/run_effects/file_actions_have_exact_effects.sh",
+              "symbol": "file_actions_have_exact_effects",
+              "form": "test",
+              "scope": "Independent file bytes establish the open-write/truncation effect; the worker does not publish the write return."
             }
           ]
         },
@@ -8163,7 +8117,6 @@
             "Held across": "Attempt only on ordinary cleanup path",
             "Release / teardown action": "close, return ignored",
             "Authority": "Write existing object or create missing object",
-            "Sandbox-gated": "Source-only; existing-file checker inspected, not rerun",
             "Reaches exec children": "No: later exec excludes it",
             "Role": "O"
           },
@@ -8177,7 +8130,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "create_existing_file_preserves_contents",
-              "form": "test"
+              "form": "test",
+              "scope": "Pre-existing targets retain their bytes after create-open; this does not exercise absent-target creation."
             }
           ]
         },
@@ -8192,7 +8146,6 @@
             "Held across": "Later attempts/phases and beyond worker exit",
             "Release / teardown action": "No automatic unlink; later action/external actor may remove",
             "Authority": "Persistent filesystem effect, mode subject to umask",
-            "Sandbox-gated": "Source-only; open(O_CREAT) can create an absent target",
             "Reaches exec children": "Child can resolve it by path, not inherited fd",
             "Role": "O"
           },
@@ -8204,9 +8157,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "create_existing_file_preserves_contents",
-              "form": "test"
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "create_allow",
+              "form": "test",
+              "scope": "An initially absent target exists after the successful create attempt under allow-default; the worker also publishes its observed path."
             }
           ]
         },
@@ -8221,7 +8175,6 @@
             "Held across": "Attempt only on successful close; close failure retained",
             "Release / teardown action": "One close, result published; no retry",
             "Authority": "Read and identify fresh opened object",
-            "Sandbox-gated": "Source-only; extension checker inspected, not rerun",
             "Reaches exec children": "No: close-on-exec and child exclusion",
             "Role": "O"
           },
@@ -8235,7 +8188,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extensions",
-              "form": "test"
+              "form": "test",
+              "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion."
             }
           ]
         },
@@ -8250,7 +8204,6 @@
             "Held across": "Later attempts/phases, until exit after successful acquisition",
             "Release / teardown action": "No matching mach_port_deallocate, even when lookup fails",
             "Authority": "Bootstrap namespace request authority",
-            "Sandbox-gated": "Source-only; native failure remains possible",
             "Reaches exec children": "No explicit transfer; special bootstrap port inheritance is separate",
             "Role": "O, unintended retention"
           },
@@ -8260,13 +8213,8 @@
               "symbol": "attempt_mach_lookup"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "attempt_outcome_matrix_enforced",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No independent right-count control is cited for the retained bootstrap reference."
         },
         {
           "id": "s33b",
@@ -8279,7 +8227,6 @@
             "Held across": "Attempt on successful lookup",
             "Release / teardown action": "mach_port_deallocate(mach_task_self, svc), result ignored",
             "Authority": "Send to looked-up service",
-            "Sandbox-gated": "Source-only; no right-count control",
             "Reaches exec children": "No explicit port-transfer action",
             "Role": "O"
           },
@@ -8289,13 +8236,8 @@
               "symbol": "attempt_mach_lookup"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "attempt_outcome_matrix_enforced",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "No independent right-count control is cited for service-right release."
         },
         {
           "id": "s34a",
@@ -8308,7 +8250,6 @@
             "Held across": "One attempt",
             "Release / teardown action": "exec_resources_release, including partial setup/spawn failure",
             "Authority": "Read child output",
-            "Sandbox-gated": "Source-only; IC/CLI successful captures, no deny run here",
             "Reaches exec children": "No: explicit addclose and CLOEXEC_DEFAULT",
             "Role": "P"
           },
@@ -8322,12 +8263,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -8342,7 +8285,6 @@
             "Held across": "Until successful spawn in worker; child lifetime may extend",
             "Release / teardown action": "Worker closes after spawn; setup/spawn failure releases; child exit closes own refs",
             "Authority": "Child output channel",
-            "Sandbox-gated": "Source-only; IC/CLI observed streams",
             "Reaches exec children": "Yes, duplicated as 1/2; originals explicitly closed",
             "Role": "P"
           },
@@ -8356,12 +8298,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -8376,7 +8320,6 @@
             "Held across": "One attempt",
             "Release / teardown action": "exec_resources_release destroys initialized handle",
             "Authority": "Select child descriptors, including /dev/null",
-            "Sandbox-gated": "Source-only Apple malloc/realloc path",
             "Reaches exec children": "Handle no; action effects yes",
             "Role": "P"
           },
@@ -8386,18 +8329,8 @@
               "symbol": "exec_resources_acquire"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_pipes_per_attempt",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "contaminated_worker",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "The examined Apple source uses malloc/realloc; installed allocation behavior is unobserved."
         },
         {
           "id": "s35b",
@@ -8410,7 +8343,6 @@
             "Held across": "One attempt",
             "Release / teardown action": "exec_resources_release destroys initialized handle",
             "Authority": "Child fd isolation and process-group choice",
-            "Sandbox-gated": "Source-only Apple malloc",
             "Reaches exec children": "Handle no; flags/group effects yes",
             "Role": "P"
           },
@@ -8420,18 +8352,8 @@
               "symbol": "exec_resources_acquire"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_pipes_per_attempt",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "contaminated_worker",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "The examined Apple source uses malloc; installed allocation behavior is unobserved."
         },
         {
           "id": "s36a",
@@ -8444,7 +8366,6 @@
             "Held across": "Attempt normally; unconfirmed reap or worker death can leave child alive",
             "Release / teardown action": "Wait observation, conditional group kill, bounded nonblocking reap",
             "Authority": "Execute requested target under inherited sandbox",
-            "Sandbox-gated": "Native controls retain observation/request/reap facts; CLI controls independently observe leader and descendant lifetimes",
             "Reaches exec children": "This is the child; it can spawn descendants",
             "Role": "O"
           },
@@ -8458,27 +8379,32 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             },
             {
               "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
               "symbol": "closed_streams_leader_exit",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent peer identity/group observations establish same-group survival after ordinary completion, then fixture cleanup."
             },
             {
               "path": "tests/suites/runner_exec_lifecycle/run.sh",
               "symbol": "worker_dies_during_exec",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent child observations establish survival after worker death and retain fixture-owned cleanup."
             },
             {
-              "path": "tests/fixtures/worker_lifecycle/exec_control.c",
-              "symbol": "main",
-              "form": "control"
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_control_states",
+              "form": "test",
+              "scope": "Production exec code with controlled native returns checks collection, termination-request and leader-reap separation and native call order."
             }
           ]
         },
@@ -8493,7 +8419,6 @@
             "Held across": "As long as members remain, possibly beyond attempt/worker",
             "Release / teardown action": "No request on ordinary completion; exceptional group kill while leader ownership is known; no group-absence claim",
             "Authority": "Cleanup addressing for members that remain",
-            "Sandbox-gated": "Native request-result controls; CLI peers establish same-group survivors after ordinary completion and worker death",
             "Reaches exec children": "Yes to descendants unless they leave group",
             "Role": "P"
           },
@@ -8509,29 +8434,22 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_pipes_per_attempt",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "contaminated_worker",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
               "symbol": "closed_streams_leader_exit",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent peer identity/group observations establish same-group survival after ordinary completion, then fixture cleanup."
             },
             {
               "path": "tests/suites/runner_exec_lifecycle/run.sh",
               "symbol": "worker_dies_during_exec",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent child observations establish survival after worker death and retain fixture-owned cleanup."
             },
             {
-              "path": "tests/fixtures/worker_lifecycle/exec_control.c",
-              "symbol": "main",
-              "form": "control"
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_control_states",
+              "form": "test",
+              "scope": "Production exec code with controlled native returns checks collection, termination-request and leader-reap separation and native call order."
             }
           ]
         },
@@ -8546,7 +8464,6 @@
             "Held across": "Across attempts/phases; requested release is not proven revocation",
             "Release / teardown action": "Explicit release action once if submitted/eligible; no automatic exit-time release call; OS teardown",
             "Authority": "Native extension access represented by handle; exact kernel state unobserved",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No admitted exec+extension plan",
             "Role": "A + O"
           },
@@ -8560,7 +8477,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -8575,7 +8493,6 @@
             "Held across": "Through E initializer",
             "Release / teardown action": "E defer close; fd 3 duplicate lives in issuer",
             "Authority": "Selects channel from a high source; low-fd control preserves delivery",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: issuer sibling, duplicate close-on-exec",
             "Role": "A"
           },
@@ -8589,12 +8506,14 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -8609,7 +8528,6 @@
             "Held across": "Through E initializer",
             "Release / teardown action": "E defer destroy",
             "Authority": "Channel/stdio selection",
-            "Sandbox-gated": "Host before apply; failed init reaches fixture-contained invalid-handle use",
             "Reaches exec children": "No worker memory inheritance",
             "Role": "P"
           },
@@ -8623,14 +8541,17 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
-          ]
+          ],
+          "note": "Failed initialization reaches fixture-contained invalid-handle use in setup controls."
         },
         {
           "id": "n3",
@@ -8643,7 +8564,6 @@
             "Held across": "Through E initializer",
             "Release / teardown action": "E defer destroy",
             "Authority": "Issuer fd isolation",
-            "Sandbox-gated": "Host before apply; failed init reaches fixture-contained invalid-handle use",
             "Reaches exec children": "No worker memory inheritance",
             "Role": "P"
           },
@@ -8657,14 +8577,17 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             },
             {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
-          ]
+          ],
+          "note": "Failed initialization reaches fixture-contained invalid-handle use in setup controls."
         },
         {
           "id": "n4",
@@ -8677,7 +8600,6 @@
             "Held across": "Issuer lifetime",
             "Release / teardown action": "Issuer exit",
             "Authority": "Read EOF/write discard",
-            "Sandbox-gated": "Source-only, issuer outside specimen sandbox",
             "Reaches exec children": "No: issuer creates no child",
             "Role": "P"
           },
@@ -8687,13 +8609,8 @@
               "symbol": "ExtensionSession"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Issuer stdio file actions have source support only; extension boundary controls do not assert these endpoint identities."
         },
         {
           "id": "n5",
@@ -8706,7 +8623,6 @@
             "Held across": "Spawn call only",
             "Release / teardown action": "Helper defer free; Swift array lifetime",
             "Authority": "Transfer launch arguments, not token bytes",
-            "Sandbox-gated": "Host before apply; controlled allocation failure spawns empty/truncated argv",
             "Reaches exec children": "Arguments copied into new images, host pointers not inherited",
             "Role": "P; setup caveat"
           },
@@ -8718,16 +8634,13 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
-          ]
+          ],
+          "note": "Controlled strdup failure can dispatch empty or truncated argv."
         },
         {
           "id": "n6",
@@ -8740,7 +8653,6 @@
             "Held across": "Transfer/population scope; input objects may live through run",
             "Release / teardown action": "Swift scope/ARC, not worker teardown",
             "Authority": "Exact delivered inputs and nonce",
-            "Sandbox-gated": "Source-only; Swift allocation internals unobserved",
             "Reaches exec children": "No host memory inheritance",
             "Role": "P"
           },
@@ -8750,13 +8662,8 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Swift allocation internals and temporary-array lifetimes have source support only."
         },
         {
           "id": "n7",
@@ -8769,7 +8676,6 @@
             "Held across": "Through preparation; record survives into reply",
             "Release / teardown action": "Swift scope/ARC",
             "Authority": "Resolve token target before worker starts; metadata is host evidence",
-            "Sandbox-gated": "Source-only; no target fd held by PW call site",
             "Reaches exec children": "No",
             "Role": "A + E"
           },
@@ -8783,7 +8689,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -8798,7 +8705,6 @@
             "Held across": "Main frame until exit; timing changes across phases",
             "Release / teardown action": "Process exit (main never returns after successful apply)",
             "Authority": "Operate release/timing protocol; no new access handle",
-            "Sandbox-gated": "Source-only; stack mapping visible in L",
             "Reaches exec children": "No: new exec image",
             "Role": "P"
           },
@@ -8808,13 +8714,7 @@
               "symbol": "main"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "n9a",
@@ -8827,7 +8727,6 @@
             "Held across": "Call only",
             "Release / teardown action": "Return or process exit",
             "Authority": "None beyond existing pointers/rights",
-            "Sandbox-gated": "Source-only; native library internals unobserved",
             "Reaches exec children": "No: exec replaces stack",
             "Role": "P"
           },
@@ -8853,13 +8752,8 @@
               "symbol": "prepare_extension"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Native library internals remain unobserved."
         },
         {
           "id": "n9b",
@@ -8872,7 +8766,6 @@
             "Held across": "Call only",
             "Release / teardown action": "Return or process exit",
             "Authority": "Read own memory with existing task right",
-            "Sandbox-gated": "Source-only; qsort/CommonCrypto internals unobserved",
             "Reaches exec children": "No: exec replaces stack",
             "Role": "P"
           },
@@ -8882,13 +8775,8 @@
               "symbol": "pw_capture_profile"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "qsort/CommonCrypto internal allocation behavior remains unobserved."
         },
         {
           "id": "n10",
@@ -8901,7 +8789,6 @@
             "Held across": "Call/attempt only; selected observations copied into S18; sysctl value bytes and post-call length discarded",
             "Release / teardown action": "Return or process exit",
             "Authority": "Use already inventoried target/child handles; no separate authority",
-            "Sandbox-gated": "Source-only; compiler stack/page behavior unobserved",
             "Reaches exec children": "argv_local strings copied; stack not inherited",
             "Role": "O + P (working/observation storage)"
           },
@@ -8917,21 +8804,19 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
               "symbol": "check_capacity",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent call receipt requires the fixed supplied sysctl capacity; a shortened-capacity mutant is rejected."
             },
             {
               "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
               "symbol": "check_call_and_result",
-              "form": "test"
+              "form": "test",
+              "scope": "Substituted sysctl success/failure returns preserve rc/errno semantics despite changed out-parameter length."
             }
-          ]
+          ],
+          "note": "Compiler stack/page behavior remains unobserved; the sysctl checks cover supplied capacity and return handling."
         },
         {
           "id": "n11",
@@ -8944,7 +8829,6 @@
             "Held across": "Call, or nonreturning refusal frame until exit",
             "Release / teardown action": "Return/exit; not dynamically allocated by PW",
             "Authority": "None; diagnostic/control working storage",
-            "Sandbox-gated": "Source-only",
             "Reaches exec children": "No child spawned on these paths",
             "Role": "P"
           },
@@ -8954,13 +8838,7 @@
               "symbol": "wait_for_proceed"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "n12",
@@ -8973,7 +8851,6 @@
             "Held across": "Child lifetime",
             "Release / teardown action": "Child closes it or exits",
             "Authority": "Read EOF without exposing policy pipe",
-            "Sandbox-gated": "IC/CLI observed EOF; no independent gating probe here",
             "Reaches exec children": "Yes, explicit child fd 0",
             "Role": "P"
           },
@@ -8987,12 +8864,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -9007,7 +8886,6 @@
             "Held across": "Library-dependent; ordinary errno table is static, fallback buffer retained",
             "Release / teardown action": "Library/exit; no PW-owned handle",
             "Authority": "Diagnostic formatting; hidden allocation/locale behavior bounded only by source studied",
-            "Sandbox-gated": "Source-only Apple paths; installed-library internals unobserved",
             "Reaches exec children": "Library memory not carried across exec",
             "Role": "P"
           },
@@ -9033,13 +8911,8 @@
               "symbol": "run_attempt"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Installed libc allocation and locale internals remain unobserved."
         },
         {
           "id": "x1",
@@ -9052,7 +8925,6 @@
             "Held across": "Eligible phase and reply",
             "Release / teardown action": "Owning host/controller object lifetime",
             "Authority": "Live worker PID query through separate validator",
-            "Sandbox-gated": "Outside specimen worker; source-only",
             "Reaches exec children": "No worker-to-child transfer",
             "Role": "External evidence"
           },
@@ -9066,7 +8938,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "comparison_matrix",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
             }
           ],
           "note": "No transfer into worker; release ordinal is separate"
@@ -9082,7 +8955,6 @@
             "Held across": "Reply",
             "Release / teardown action": "Owning host/controller object lifetime",
             "Authority": "Join worker publications, query records and process observations",
-            "Sandbox-gated": "Outside specimen worker; source-only",
             "Reaches exec children": "No worker-to-child transfer",
             "Role": "External evidence"
           },
@@ -9096,7 +8968,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "comparison_matrix",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
             }
           ],
           "note": "Host-owned interpretation under evidence contract"
@@ -9112,7 +8985,6 @@
             "Held across": "Reply",
             "Release / teardown action": "Owning host/controller object lifetime",
             "Authority": "Later path/metadata observations under host authority",
-            "Sandbox-gated": "Outside specimen worker; source-only",
             "Reaches exec children": "No worker-to-child transfer",
             "Role": "External evidence"
           },
@@ -9126,7 +8998,8 @@
             {
               "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
               "symbol": "path_query_integrated",
-              "form": "test"
+              "form": "test",
+              "scope": "Integrated path-query controls check later host path resolution and its separation from the worker observation."
             }
           ]
         },
@@ -9141,7 +9014,6 @@
             "Held across": "Envelope",
             "Release / teardown action": "Owning host/controller object lifetime",
             "Authority": "External log collection and correlation",
-            "Sandbox-gated": "Outside specimen worker; source-only",
             "Reaches exec children": "No worker-to-child transfer",
             "Role": "External evidence"
           },
@@ -9155,7 +9027,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "worker_termination_and_log_correlation",
-              "form": "test"
+              "form": "test",
+              "scope": "Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available."
             }
           ],
           "note": "Candidate association, not worker-native cause"
@@ -9171,7 +9044,6 @@
             "Held across": "Reply and optional dossier",
             "Release / teardown action": "Owning host/controller object lifetime",
             "Authority": "Copy/hash admitted receipt from shared evidence",
-            "Sandbox-gated": "Outside specimen worker; source-only",
             "Reaches exec children": "No worker-to-child transfer",
             "Role": "External evidence"
           },
@@ -9184,8 +9056,9 @@
           "checks": [
             {
               "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "dossier_witness",
-              "form": "test"
+              "symbol": "max_targets_reply_survives",
+              "form": "test",
+              "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
             }
           ],
           "note": "Receipt and applied-policy evidence are distinct"
@@ -9206,9 +9079,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Independent mapping challenges distinguish the true evidence object; worker reporting and final reap remain intact."
             }
           ]
         },
@@ -9226,14 +9100,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
               "symbol": "check",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent object, descriptor-number reuse and complete-mapping teardown controls; successful worker reporting and reap remain intact."
             }
           ]
         },
@@ -9251,9 +9121,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Independent mapping challenges distinguish the true evidence object; worker reporting and final reap remain intact."
             }
           ]
         },
@@ -9273,13 +9144,8 @@
               "symbol": "map_region"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "launch_inventory",
-              "form": "test"
-            }
-          ]
+          "checks": [],
+          "note": "Source identifies the descriptor-to-mapping operation. L does not independently identify the evidence mapping object."
         },
         {
           "id": "W5",
@@ -9295,9 +9161,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9315,9 +9182,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9333,13 +9201,7 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "W8",
@@ -9355,9 +9217,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9375,9 +9238,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9393,13 +9257,7 @@
               "symbol": "runCWorker"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "W11",
@@ -9417,7 +9275,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ]
         },
@@ -9436,8 +9295,9 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "symbol": "params_round_trip",
+              "form": "test",
+              "scope": "Named TARGET parameter reaches the compiled policy: the configured path attempt returns EPERM after successful apply; allocation/free details remain source-only."
             }
           ]
         },
@@ -9456,8 +9316,9 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "symbol": "params_round_trip",
+              "form": "test",
+              "scope": "Named TARGET parameter reaches the compiled policy: the configured path attempt returns EPERM after successful apply; allocation/free details remain source-only."
             }
           ]
         },
@@ -9479,9 +9340,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "max_targets_reply_survives",
+              "form": "test",
+              "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
             }
           ]
         },
@@ -9501,12 +9363,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -9524,14 +9388,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "exec_pipes_per_attempt",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/runner_exec_inheritance/run.sh",
-              "symbol": "contaminated_worker",
-              "form": "test"
+              "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+              "symbol": "closed_streams_leader_exit",
+              "form": "test",
+              "scope": "Independent peer identity/group observations establish same-group survival after ordinary leader-plus-EOF completion, then fixture cleanup."
             }
           ]
         },
@@ -9549,9 +9409,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9567,13 +9428,7 @@
               "symbol": "ExtensionSession"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "W19",
@@ -9589,9 +9444,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9609,9 +9465,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9631,7 +9488,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9649,9 +9507,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9669,9 +9528,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9683,15 +9543,16 @@
           "label": "Host duplicates channel for worker delivery",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/ExtensionIssuer.swift",
-              "symbol": "ExtensionSession"
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "runCWorker"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9709,9 +9570,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test",
+              "scope": "Setup controls compare requested dup2 destinations with child descriptor metadata, check argv counts and instrumented cleanup; shared-object identity is not established by metadata."
             }
           ]
         },
@@ -9735,7 +9597,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9755,7 +9618,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9775,7 +9639,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9795,7 +9660,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9807,17 +9673,15 @@
           "label": "Worker borrows same bytes through its mapping",
           "sources": [
             {
-              "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
-              "symbol": "main"
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "prepare_extension"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_extension"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "extension_boundaries",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "W31",
@@ -9839,7 +9703,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9859,7 +9724,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ],
           "short": "apply restriction"
@@ -9876,13 +9742,7 @@
               "symbol": "attempt_mach_lookup"
             }
           ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "attempt_outcome_matrix_enforced",
-              "form": "test"
-            }
-          ]
+          "checks": []
         },
         {
           "id": "W34",
@@ -9898,9 +9758,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "create_existing_file_preserves_contents",
-              "form": "test"
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "create_allow",
+              "form": "test",
+              "scope": "An initially absent target exists after the successful create attempt under allow-default; the worker also publishes its observed path."
             }
           ]
         },
@@ -9920,12 +9781,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -9945,12 +9808,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -9970,7 +9835,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -9988,9 +9854,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "max_targets_reply_survives",
+              "form": "test",
+              "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
             }
           ]
         },
@@ -10010,7 +9877,8 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
-              "form": "test"
+              "form": "test",
+              "scope": "The direct C harness observes applied policy, terminal publication and a denied file-open attempt under bare deny-default; host Swift handling is outside this control."
             }
           ]
         },
@@ -10028,9 +9896,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/run_effects/file_actions_have_exact_effects.sh",
+              "symbol": "file_actions_have_exact_effects",
+              "form": "test",
+              "scope": "Independent file bytes establish the open-write/truncation effect; the worker does not publish the write return."
             }
           ]
         },
@@ -10050,7 +9919,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "create_existing_file_preserves_contents",
-              "form": "test"
+              "form": "test",
+              "scope": "Pre-existing targets retain their bytes after create-open; this does not exercise absent-target creation."
             }
           ]
         },
@@ -10070,7 +9940,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extensions",
-              "form": "test"
+              "form": "test",
+              "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion."
             }
           ]
         },
@@ -10088,9 +9959,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "attempt_outcome_matrix_enforced",
-              "form": "test"
+              "path": "tests/suites/runner_filter_local_name/run.sh",
+              "symbol": "prediction_unavailable_attempt_observed",
+              "form": "test",
+              "scope": "The live local-name specimen retains native lookup attempt status; no right-count or deallocation assertion."
             }
           ]
         },
@@ -10110,12 +9982,14 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -10135,7 +10009,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -10159,7 +10034,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
             }
           ]
         },
@@ -10177,9 +10053,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test",
+              "scope": "Controlled worker readiness, release/acknowledgement and exit/reap observations."
             }
           ]
         },
@@ -10197,14 +10074,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
               "symbol": "runCWorkerLifecycleTests",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled worker publications, ownership, acknowledgement reconciliation and confirmed reap; includes acknowledgement recovered after abnormal exit."
             }
           ]
         },
@@ -10217,19 +10090,25 @@
           "sources": [
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-              "symbol": "exec_resources_acquire"
+              "symbol": "attempt_exec_spawn"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "drain_one"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
-              "form": "test"
+              "form": "test",
+              "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."
             },
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent observer receives the canary descriptor/environment in the worker adapter and excludes them from exec children; checks child stdio and stdin EOF."
             }
           ]
         },
@@ -10255,14 +10134,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
-            },
-            {
               "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
               "symbol": "runCWorkerLifecycleTests",
-              "form": "test"
+              "form": "test",
+              "scope": "Controlled worker publications, ownership, acknowledgement reconciliation and confirmed reap; includes acknowledgement recovered after abnormal exit."
             }
           ],
           "note": "A final acquire after confirmed reap can recover an unseen acknowledgement while ownership remained unbroken; successful completion is not required and broken ownership cannot be repaired."
@@ -10283,7 +10158,8 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "comparison_matrix",
-              "form": "test"
+              "form": "test",
+              "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
             }
           ]
         },
@@ -10303,7 +10179,8 @@
             {
               "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
               "symbol": "path_query_integrated",
-              "form": "test"
+              "form": "test",
+              "scope": "Integrated path-query controls check later host path resolution and its separation from the worker observation."
             }
           ]
         },
@@ -10325,9 +10202,10 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_c_worker_harness/run.sh",
-              "symbol": "bare_deny_default",
-              "form": "test"
+              "path": "tests/suites/witness_contract/run.sh",
+              "symbol": "max_targets_reply_survives",
+              "form": "test",
+              "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
             }
           ]
         },
@@ -10339,15 +10217,26 @@
           "label": "Controller associates external log candidates with run evidence",
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
-              "symbol": "comparisonEvidence"
+              "path": "controller/src/run_flow.rs",
+              "symbol": "attach_sandbox_logs"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "finish_sandbox_log_capture"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "comparison_matrix",
-              "form": "test"
+              "symbol": "worker_termination_and_log_correlation",
+              "form": "test",
+              "scope": "Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available."
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "observer_windows_survive_association_serialization_and_consumer_recovery",
+              "form": "test",
+              "scope": "Constructed observer events acquire the expected candidate step through production association/serialization; invalid windows withhold candidates, including on signaled runs."
             }
           ]
         }

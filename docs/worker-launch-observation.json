@@ -1,0 +1,439 @@
+{
+  "observation_id": "L",
+  "run_id": "20261018T223601Z_85d8418b",
+  "run_path": "tests/out/runs/worker-doc-launch-20261018",
+  "source_revision": "f85c7b094d75bf72931cd4856cb4ad086da20cbe",
+  "runtime_implementation_commit": "a458b2876da794dd159848ae1bc02e0c65d15c62",
+  "command": "PW_TEST_OUT_DIR=tests/out/runs/worker-doc-launch-20261018 tests/run.sh --case runner_exec_inheritance/launch_inventory",
+  "raw_evidence_availability": "Gitignored local checkout; run is pinned in tests/RETAINED.json. Hashes below identify original files. Selected raw observations are copied here.",
+  "worker_source_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+  "app_inventory_equal_to": {
+    "path": "tests/out/runs/validator-selection-receipts-20261018/artifact-integrity/before.json",
+    "sha256": "67b45fc890e6986d615eb6caa1221a08e9d4abb7ba2235081174b6b59d9f0f84"
+  },
+  "source_files": {
+    "controller/tools/pw_probe_runner/pw_probe_runner.c": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4",
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "05dfa09522c37d9514a2f262d6e6308e377f5af8074a036a0008b431d99357ba",
+    "runner/Sources/PWRunnerCore/CWorker.swift": "13aad86ba0e3cf0fd33fed5eb31b87e3a95d4ef90069db2ebf876c64852fe2f9",
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": "074ffede77a7b828bd42749c292c71aa5f5804b917bb977d1c7d849fab174cfc",
+    "tests/suites/runner_exec_inheritance/launch_inventory.py": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+    "tests/suites/runner_exec_inheritance/run.sh": "2c83a8474ffd8f414e8c3fa18f1a09bd11992850eb95fc38009a0bb98aa4ee89",
+    "tests/lib/run_capture.py": "e01f76aebf1c07c3fe75c1f3bb3aed7c837fcc8a50207c2a20c697240c336a76"
+  },
+  "artifact_hashes": {
+    "tests/out/runs/worker-doc-launch-20261018/run.json": "7885b126cad93a768dd3daafd7ac60ee86b5c3b0c8bc749945904854c8263e41",
+    "tests/out/runs/worker-doc-launch-20261018/artifact-integrity/before.json": "67b45fc890e6986d615eb6caa1221a08e9d4abb7ba2235081174b6b59d9f0f84",
+    "tests/out/runs/worker-doc-launch-20261018/artifact-integrity/after.json": "67b45fc890e6986d615eb6caa1221a08e9d4abb7ba2235081174b6b59d9f0f84",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/worker-after.json": "f5fd55a32c5953aa5a3e919a18899c6619d7ec371ad6994825d5bc99dd5cd508",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/argv.stdout": "b71c603d19aa4983daf27c02be8544dceec842f8c40748616801d717025bd85a",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/ports.json": "fde30f726fb31836401c3b4cd1c035470c8e3de25b6eab0ae27209d9d6445886",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/mappings.stdout": "144cf187f0440edc80dc45e2f25677ceb9f92b70a0a59dbd2eb6bf49689e6c73",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/descriptors.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/environment.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/environment.stdout": "b71c603d19aa4983daf27c02be8544dceec842f8c40748616801d717025bd85a",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/mappings.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/descriptors.stdout": "6095b52858a604f1116680fbe63a0d3c0e8a0f6f42518e1bf71cbf6d8c5e77dd",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/capture.json": "5073f6ef1eedc37d1ece9678396dc19130fa510614b9f3d26c343e62f9cef4c9",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/argv.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/descriptors.json": "55261e4f4ba7ff56f7fcc12d1725110b38d26181cf3e4725fd5afb20b72e007d",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/mappings.json": "2942b18362ee378c1d15521b58afdb057d40751cfa5066e8f1b866cd0401548b",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/worker-after.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/processes-during.txt": "a874621f039b6fe07d53eac3277dc84c5f1da9f32699da5d117e13af108a5ce1",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/identity.json": "948b459c6ec024f6320c1e9c7c12319b815a9a596445b2f7fa7e54314525ac8e",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/processes-before.txt": "53746aa09ebdbb568244dcb2fbdf0a9b6d86955ebf6407950ec8bb7fd9cb5f7f",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/ports.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/identity.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/observations.json": "e681d8de1646051e17aa9c2b188ebb0487eca9566f2559f644680b0c6bb0d7b8",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/pw.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/argv.json": "383ab88d103466fd60c0c82743be15436680bd269324a84fff76cc6b0f98e7b4",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/ports.stderr": "094764607457bc2036758994fe6845a6b3fde95cdb1f9e0838cffa11f10be99c",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/identity.stdout": "c0c0dcd660b9e564cfbb80a8a15a96f19dd371aadbd535724ce00313bfa8cd3b",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/run.json": "7f2393745e8d6133280db3620e447aace0e07b220fa8e8dd29a069d81c02acda",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/environment.json": "9ecee226a95080dc7ae01e48eea23a131a347156ead73e9d8e7e2fab6e0aa106",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/specimen.json": "8691c310b69564f97cb8f704d5a2870dc5689d10460315835d025190d6bf603c",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/worker-after.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/worker-after.json": "3984ac1b9a082c45397912f58f752ed4e3b5acf18acdf39d16e292199341f12e",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/argv.stdout": "6d359836b99a9d800e09dde59c422b8f3656766d5aefaa3ae49dc7d2bf7ba8be",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/ports.json": "0f39ace90fd34258bbb1d5685195b1ee1e870dcf897ed1b4a192b386985f56e1",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/mappings.stdout": "f25b159ea37490fb3b9b71830f4f6cc80d1e7ce0df059c022cba17f57effebd8",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/descriptors.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/environment.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/environment.stdout": "6d359836b99a9d800e09dde59c422b8f3656766d5aefaa3ae49dc7d2bf7ba8be",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/mappings.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/descriptors.stdout": "45d8aa8a9aec98f0c1bc7b1bd44bdc62be115cc30a05d92d6aba0eaba92f1630",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/capture.json": "25d4c8f6f5023e1450bb522e9ce7bf23b82100dcc895899f49ed186ac0bf472d",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/argv.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/descriptors.json": "ba04cf5da74a93dac16bd06a47cea0efa002c4180d6b08617d664a6c18031bdd",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/mappings.json": "7652e86c2df9f87b20ce9b002080c3bcb811dabd1f38e7ccaff1709124083f4e",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/worker-after.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/processes-during.txt": "6fc097beec92ff6bd88ec1888aecdebeeb3935511ca5c5850d328f5ed6f970e8",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/identity.json": "9dd6026f7f5e3d3ef1a6971e27c25cacfba77c50288a010e27f6b786db379815",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/processes-before.txt": "de0b894edb3c5f40c18db93d40f660caad58818598164967c850eff10a17009f",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/ports.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/identity.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/observations.json": "4d01c9b2829f66bd3ec25ea5689733069cdd28859b67aaf7ce2eec3d8b670563",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/pw.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/argv.json": "e0012982ca9a2d24d058aa49d1c343b501c85b535619f28dd3e6d20149c9ca9a",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/ports.stderr": "094764607457bc2036758994fe6845a6b3fde95cdb1f9e0838cffa11f10be99c",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/identity.stdout": "7a10114362e75ae56c8e11a414735c69d40bc30d0b31e57d2243e5f5a0b5fdea",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/run.json": "86c69c9aed46b8b9f60908b6b73fec8f6e9620ab5da546f91d1e53a0e9733e42",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/environment.json": "83d96b3194d3feee7aed1de893a119ba1d87cd455009565203f639bca22b1bc8",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/specimen.json": "7fd2f10f553c09bb8df7e4b4dd2d176af5bb784efca086b4f515364c97d6cd81",
+    "tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/worker-after.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "boundaries": {
+    "pre_ready": {
+      "specimen": {
+        "schema_version": 5,
+        "specimen_id": "launch_inventory_pre_ready",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1)(allow default)"
+        },
+        "probe_plan": [],
+        "_test_overrides": {
+          "worker_pre_ready_hang_ms": 20000
+        }
+      },
+      "capture": {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+          "run",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/specimen.json",
+          "--no-log-capture",
+          "--timeout-ms",
+          "45000"
+        ],
+        "state": "exited",
+        "pid": 39279,
+        "started_at_unix_ns": 1792362963736854000,
+        "elapsed_seconds": 20.105624792,
+        "returncode": 0,
+        "exit_code": 0,
+        "term_signal": null,
+        "harness_timeout_seconds": null,
+        "cleanup_kill_requested": false,
+        "launch_error": null,
+        "json_error": null,
+        "cleanup_error": null
+      },
+      "observations": {
+        "boundary": "pre_ready",
+        "worker_pid": 39286,
+        "host_pid": 39283,
+        "observations": {
+          "identity": {
+            "argv": [
+              "/bin/ps",
+              "-ww",
+              "-p",
+              "39286,39283",
+              "-o",
+              "pid=,ppid=,uid=,gid=,lstart=,state=,wchan=,comm=,args="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.013323124999999991
+          },
+          "argv": {
+            "argv": [
+              "/bin/ps",
+              "-ww",
+              "-p",
+              "39286",
+              "-o",
+              "command="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.002334999999999976
+          },
+          "environment": {
+            "argv": [
+              "/bin/ps",
+              "-Eww",
+              "-p",
+              "39286",
+              "-o",
+              "command="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.0020824160000000314
+          },
+          "descriptors": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-p",
+              "39286"
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.007006583000000011
+          },
+          "mappings": {
+            "argv": [
+              "/usr/bin/vmmap",
+              "-w",
+              "39286"
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.9364921669999999
+          },
+          "ports": {
+            "argv": [
+              "/usr/bin/lsmp",
+              "-p",
+              "39286"
+            ],
+            "returncode": 1,
+            "timed_out": false,
+            "elapsed_seconds": 0.0033434999999999437
+          },
+          "snapshot_elapsed_seconds": 1.5968965419999999
+        },
+        "boundary_basis": "selected production sleep seam, source order and elapsed time; no shared-memory read"
+      },
+      "raw_descriptor_inventory": "COMMAND     PID    USER   FD     TYPE             DEVICE SIZE/OFF                NODE NAME\npw-probe- 39286 raccoon  cwd      DIR               1,17      704                   2 /\npw-probe- 39286 raccoon  txt      REG               1,17    89296            28820117 /Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\npw-probe- 39286 raccoon  txt      REG               1,17  2562000 1152921500312573256 /usr/lib/dyld\npw-probe- 39286 raccoon    0     PIPE  0xffba81742867adc    16384                     \npw-probe- 39286 raccoon    1u     CHR                3,2      0t0                 336 /dev/null\npw-probe- 39286 raccoon    2u     CHR                3,2      0t0                 336 /dev/null\npw-probe- 39286 raccoon    3u  PSXSHM                     3686400                     /pw_cw_39283\npw-probe- 39286 raccoon    4     PIPE 0xf182583d7efdd1c0    16384                     ->0x3372fc9c982581a9\n",
+      "raw_argv": "pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 0 --pre-ready-hang-ms 20000\n",
+      "raw_environment": "pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 0 --pre-ready-hang-ms 20000\n",
+      "raw_port_refusal": "warning: should run as root for best output (cross-ref to other tasks' ports).\ntask_for_pid() failed: (null) \n",
+      "worker_result": {
+        "pid": 39286,
+        "done_observed": true,
+        "reaped": true,
+        "exit_code": 0,
+        "ready_byte_received": false,
+        "poll_stop_reason": "done",
+        "collection_basis": "after_confirmed_reap",
+        "worker_evidence": {
+          "abi_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 26,
+            "bytes_received": 26
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "errno": 32,
+            "rc": -1
+          }
+        }
+      },
+      "reviewed_inventory": {
+        "numeric_descriptors": [
+          "0",
+          "1u",
+          "2u",
+          "3u",
+          "4"
+        ],
+        "cwd": "/",
+        "stdout_stderr": "read/write /dev/null",
+        "plain_and_environment_ps_identical": true,
+        "mappings_observer_rc": 0,
+        "ports_observer_rc": 1
+      }
+    },
+    "post_apply": {
+      "specimen": {
+        "schema_version": 5,
+        "specimen_id": "launch_inventory_post_apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1)(allow default)"
+        },
+        "probe_plan": [],
+        "_test_overrides": {
+          "worker_post_apply_hang_ms": 20000
+        }
+      },
+      "capture": {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+          "run",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-doc-launch-20261018/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/specimen.json",
+          "--no-log-capture",
+          "--timeout-ms",
+          "45000"
+        ],
+        "state": "exited",
+        "pid": 40853,
+        "started_at_unix_ns": 1792362983867450000,
+        "elapsed_seconds": 20.055568125,
+        "returncode": 0,
+        "exit_code": 0,
+        "term_signal": null,
+        "harness_timeout_seconds": null,
+        "cleanup_kill_requested": false,
+        "launch_error": null,
+        "json_error": null,
+        "cleanup_error": null
+      },
+      "observations": {
+        "boundary": "post_apply",
+        "worker_pid": 40859,
+        "host_pid": 40856,
+        "observations": {
+          "identity": {
+            "argv": [
+              "/bin/ps",
+              "-ww",
+              "-p",
+              "40859,40856",
+              "-o",
+              "pid=,ppid=,uid=,gid=,lstart=,state=,wchan=,comm=,args="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.011850666000000842
+          },
+          "argv": {
+            "argv": [
+              "/bin/ps",
+              "-ww",
+              "-p",
+              "40859",
+              "-o",
+              "command="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.0020880840000003786
+          },
+          "environment": {
+            "argv": [
+              "/bin/ps",
+              "-Eww",
+              "-p",
+              "40859",
+              "-o",
+              "command="
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.0019634590000023877
+          },
+          "descriptors": {
+            "argv": [
+              "/usr/sbin/lsof",
+              "-nP",
+              "-p",
+              "40859"
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.004195875000000626
+          },
+          "mappings": {
+            "argv": [
+              "/usr/bin/vmmap",
+              "-w",
+              "40859"
+            ],
+            "returncode": 0,
+            "timed_out": false,
+            "elapsed_seconds": 0.38199166699999765
+          },
+          "ports": {
+            "argv": [
+              "/usr/bin/lsmp",
+              "-p",
+              "40859"
+            ],
+            "returncode": 1,
+            "timed_out": false,
+            "elapsed_seconds": 0.0019527920000008692
+          },
+          "snapshot_elapsed_seconds": 1.0056160829999996
+        },
+        "boundary_basis": "selected production sleep seam, source order and elapsed time; no shared-memory read"
+      },
+      "raw_descriptor_inventory": "COMMAND     PID    USER   FD     TYPE             DEVICE SIZE/OFF                NODE NAME\npw-probe- 40859 raccoon  cwd      DIR               1,17      704                   2 /\npw-probe- 40859 raccoon  txt      REG               1,17    89296            28820117 /Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\npw-probe- 40859 raccoon  txt      REG               1,17  2562000 1152921500312573256 /usr/lib/dyld\npw-probe- 40859 raccoon    0     PIPE 0xfa885408aec46954    16384                     \npw-probe- 40859 raccoon    1u     CHR                3,2      0t0                 336 /dev/null\npw-probe- 40859 raccoon    2u     CHR                3,2      0t0                 336 /dev/null\npw-probe- 40859 raccoon    3u  PSXSHM                     3686400                     /pw_cw_40856\npw-probe- 40859 raccoon    4     PIPE 0xd57ff36b99dd33eb    16384                     \n",
+      "raw_argv": "pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 0 --post-apply-hang-ms 20000\n",
+      "raw_environment": "pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 0 --post-apply-hang-ms 20000\n",
+      "raw_port_refusal": "warning: should run as root for best output (cross-ref to other tasks' ports).\ntask_for_pid() failed: (null) \n",
+      "worker_result": {
+        "pid": 40859,
+        "done_observed": true,
+        "reaped": true,
+        "exit_code": 0,
+        "ready_byte_received": true,
+        "poll_stop_reason": "done",
+        "collection_basis": "after_confirmed_reap",
+        "worker_evidence": {
+          "abi_identity": "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 26,
+            "bytes_received": 26
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "reviewed_inventory": {
+        "numeric_descriptors": [
+          "0",
+          "1u",
+          "2u",
+          "3u",
+          "4"
+        ],
+        "cwd": "/",
+        "stdout_stderr": "read/write /dev/null",
+        "plain_and_environment_ps_identical": true,
+        "mappings_observer_rc": 0,
+        "ports_observer_rc": 1
+      }
+    }
+  },
+  "applicability": {
+    "configuration": "Two separate workers, empty probe plan, allow-default policy, no extensions, no validator queries. Existing pre-ready/post-apply sleeps select the observation windows.",
+    "boundary_basis": "Selected seam, source order and elapsed time; no live read of shared publication flags.",
+    "review": "Runtime sources match the accepted a458b28 implementation; this run reobserves launch contents after terminal, exec, descriptor, sysctl and validator refactors. App inventory matches the last accepted signed app.",
+    "limits": [
+      "The two captures do not measure within-process changes.",
+      "Descriptor and environment contents are observations extracted from raw captures; the test only requires successful mandatory captures and worker lifecycle assertions.",
+      "vmmap regions are not independently identified as the evidence object.",
+      "Port inspection refusal is not an empty right set.",
+      "No signal-mask, umask, resource-limit or extension-bearing-worker census.",
+      "No deny-policy acquisition control or universal inheritance claim."
+    ],
+    "reuse": "Review changed launch/worker/observer sources, selected controls and app identity before reusing these observations. Rerun when the relevant behavior or applicability cannot be established; a matching identity alone is insufficient."
+  },
+  "build_stamp": {
+    "commit": "6380645181bf87f1d0ac70ea2b3188378fc16761",
+    "describe": "v0.3.1-39-g6380645-dirty",
+    "number": "723",
+    "version": "0.3.1"
+  },
+  "host": {
+    "arch": "arm64",
+    "kernel_release": "25.6.0",
+    "macos_build": "25G241",
+    "macos_version": "26.7.1"
+  }
+}

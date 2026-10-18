@@ -392,7 +392,7 @@ class GeneratorContractTests(unittest.TestCase):
             graph['edge_facts'].reverse()
             region = gen.render_region(graph, 'ARCHITECTURE.md')
             for kind, leading in [('node', ['Id', 'Node', 'Kind']), ('edge', ['Id', 'From', 'To', 'Kind', 'Edge'])]:
-                checks = 'Cited check definitions' if graph['id'] == 'worker_capabilities' else 'Checks'
+                checks = 'Checks and assertion scope' if graph['id'] == 'worker_capabilities' else 'Checks'
                 expected = '| ' + ' | '.join(leading + graph[kind + '_facts'] + ['Sources', checks, 'Limits']) + ' |'
                 self.assertIn(expected, region)
                 collected = gen._fact_columns(graph[kind + 's'])

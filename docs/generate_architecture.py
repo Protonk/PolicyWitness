@@ -54,8 +54,12 @@ def unique_object(pairs):
 
 def _citation(owner, key, ref, root):
     expected = {"path", "symbol", "form"} if key == "checks" else {"path", "symbol"}
+    if key == "checks" and owner.startswith("worker_capabilities."):
+        expected.add("scope")
     if not isinstance(ref, dict) or set(ref) != expected:
         raise ValueError(f"{owner}: malformed {key} reference")
+    if "scope" in ref and (not isinstance(ref["scope"], str) or not ref["scope"].strip()):
+        raise ValueError(f"{owner}: empty assertion scope")
     citation(ref, root, check=key == "checks")
 
 
@@ -77,8 +81,8 @@ def _attrs(owner, attrs):
 
 def load_manifest(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 3:
-        raise ValueError("expected architecture manifest schema_version 3")
+    if set(data) != {"schema_version", "document", "styles", "graphs"} or data["schema_version"] != 4:
+        raise ValueError("expected architecture manifest schema_version 4")
     limits = generate_limits.load_limits(root / "docs/limits.json", root)
     known_limits = {row["id"] for row in limits}
     for text in strings(data):
@@ -214,7 +218,10 @@ def _citations(owner, item, root):
             raise ValueError(f"{owner}: {key} must be a list")
         for ref in item[key]:
             _citation(owner, key, ref, root)
-    require_test(owner, item["checks"])
+    # A source-only worker fact must not acquire an unrelated test citation just
+    # to fill a required cell. Nonempty lists still need an actual test/rule.
+    if item["checks"] or not owner.startswith("worker_capabilities."):
+        require_test(owner, item["checks"])
     if not item["sources"]:
         raise ValueError(f"{owner}: at least one source citation is required")
     if "note" in item and (not isinstance(item["note"], str) or not item["note"].strip()):
@@ -325,7 +332,8 @@ def reference(ref):
 
 
 def _citation_cell(refs):
-    return "; ".join(reference(ref) for ref in refs) if refs else "none"
+    return "; ".join(reference(ref) + (" — " + ref["scope"] if "scope" in ref else "")
+                     for ref in refs) if refs else "none"
 
 
 def _table(header, rows):
@@ -356,10 +364,12 @@ def render_region(graph, document_name, limits=None):
     generator = Path(GENERATOR_NAME).name
     if graph["id"] == "worker_capabilities":
         caption_scope = (
-            "Figure IDs correspond to the table IDs. Each row lists source references and cited "
-            "test or rule definitions. The generator checks source-symbol presence and resolves those definitions.")
+            "Figure IDs correspond to the table IDs. Sources support the implementation account. "
+            "Check citations state their assertion scope; remaining facts have source support only. "
+            "The generator checks source-symbol presence, resolves cited definitions and requires nonempty scope text; "
+            "the relevance of each assertion is reviewed, not mechanically established.")
         summary_scope = "; source-symbol presence and cited definitions checked"
-        checks_heading = "Cited check definitions"
+        checks_heading = "Checks and assertion scope"
     else:
         caption_scope = (
             "The ids in the figure are the ids in the tables below, and each row cites the source "
@@ -386,7 +396,7 @@ def render_region(graph, document_name, limits=None):
     for node in graph["nodes"]:
         row = [node["id"], node["label"], node["kind"]]
         row += [node["facts"].get(c, "") for c in columns]
-        row += [_citation_cell(node["sources"]), _citation_cell(node["checks"]), links[node["id"]]]
+        row += [_citation_cell(node["sources"]), _citation_cell(node["checks"]) if node["checks"] else "Source only; no assertion cited", links[node["id"]]]
         rows.append(row)
     parts.append(_table(["Id", "Node", "Kind", *columns, "Sources", checks_heading, "Limits"], rows))
     parts += ["", f"#### {edges_heading(graph)}", ""]
@@ -395,7 +405,7 @@ def render_region(graph, document_name, limits=None):
     for edge in graph["edges"]:
         row = [edge["id"], edge["from"], edge["to"], edge["kind"], edge["label"]]
         row += [edge.get("facts", {}).get(c, "") for c in columns]
-        row += [_citation_cell(edge["sources"]), _citation_cell(edge["checks"]), links[edge["id"]]]
+        row += [_citation_cell(edge["sources"]), _citation_cell(edge["checks"]) if edge["checks"] else "Source only; no assertion cited", links[edge["id"]]]
         rows.append(row)
     parts.append(_table(["Id", "From", "To", "Kind", "Edge", *columns, "Sources", checks_heading, "Limits"], rows))
     notes = [(n["id"], n["note"]) for n in graph["nodes"] if "note" in n]

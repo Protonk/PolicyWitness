@@ -101,6 +101,35 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         graph['clusters'][0]['label_position'] = 'top'
         self.assertIn('labelloc=t;', generator.render_dot(graph, data['styles'], 'ARCHITECTURE.md'))
 
+    def test_worker_source_only_support_and_scoped_assertions(self):
+        data = copy.deepcopy(self.manifest)
+        graph = next(g for g in data['graphs'] if g['id'] == 'worker_capabilities')
+        node = graph['nodes'][0]
+        node['checks'] = []
+        self.load(data)
+        self.assertIn('Source only; no assertion cited', generator.render_region(graph, 'WORKER.md'))
+        # A fixture-only list still cannot stand in for an assertion.
+        node['checks'] = [dict(path='tests/fixtures/worker_lifecycle/exec_control.c',
+                               symbol='main', form='control', scope='Fixture without an owning test')]
+        with self.assertRaisesRegex(ValueError, 'at least one test or rule'):
+            self.load(data)
+        node['checks'] = []
+        # This exception is confined to the worker account; it does not weaken
+        # the check requirement for the other architecture graphs.
+        data['graphs'][0]['nodes'][0]['checks'] = []
+        with self.assertRaisesRegex(ValueError, 'at least one test or rule'):
+            self.load(data)
+        for value in (None, '', '   '):
+            data = copy.deepcopy(self.manifest)
+            graph = next(g for g in data['graphs'] if g['id'] == 'worker_capabilities')
+            ref = next(n['checks'][0] for n in graph['nodes'] if n['checks'])
+            if value is None:
+                ref.pop('scope')
+            else:
+                ref['scope'] = value
+            with self.assertRaises(ValueError):
+                self.load(data)
+
     def test_every_id_is_in_its_generated_region(self):
         for graph in self.manifest['graphs']:
             text = (ROOT / generator.graph_document(self.manifest, graph)).read_text()

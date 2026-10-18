@@ -149,16 +149,20 @@ investigator ownership of another plan.
 
 ## Retained documentation workstream
 
-WA-02, WA-05, WA-06 and WA-09 stay together here. Preliminary source review is
-recorded in the coordination record; no schema or graph redesign is selected.
-Examine:
+WA-02, WA-05, WA-06 and WA-09 stay together here. The
+[documentation correction record](records/worker-documentation-corrections/report.md)
+addresses the five reported defects: compiler-return timing, owner citations,
+irrelevant checks, unidentified launch evidence and the mixed gating column.
+The worker inventory now permits source-only rows, scopes each retained check,
+and keeps acquisition placement separate from identified observations. Its
+internal documentation manifest is version 4; application contracts are unchanged.
+These corrections do not select a broader holder/object or role-model redesign.
+Remaining work includes:
 
-- Support attached to particular facts, including explicit source-only support
-  and relevant assertion citations, in place of mandatory per-row check filling.
-- Identifiable observation records and applicability review, including the
-  configuration and evidence behind observation L.
-- Separation of acquisition placement from policy-specific observations in the
-  current "Sandbox-gated" column.
+- Further review of fact-specific support as the account changes; the generator
+  checks citation definitions and scope presence, not assertion relevance.
+- Applicability review of observations beyond the newly identified L, without
+  treating a test definition as a record of its execution.
 - Resource holders, shared objects and multiple purposes in the map, together
   with correction of source ownership references.
 

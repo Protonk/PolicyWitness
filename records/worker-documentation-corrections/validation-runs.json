@@ -1,0 +1,138 @@
+[
+  {
+    "path": "tests/out/runs/worker-doc-corrections-20261018",
+    "run_id": "20261018T224032Z_78019c62",
+    "counts": {
+      "fail": 2,
+      "pass": 1,
+      "skip": 0,
+      "total": 3
+    },
+    "completion": {
+      "completed": 3,
+      "selected": 3,
+      "skipped": 0,
+      "unrun": 0
+    },
+    "harness_errors": [
+      {
+        "code": "suite_exit",
+        "invocation": 1,
+        "message": "case command exited with status 1",
+        "requested_suite": "source_drift"
+      },
+      {
+        "code": "suite_exit",
+        "invocation": 2,
+        "message": "case command exited with status 1",
+        "requested_suite": "source_drift"
+      }
+    ],
+    "case_results": [
+      {
+        "context": "standard",
+        "id": "source_drift/limits_documentation",
+        "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+        "state": "completed",
+        "status": "pass"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/architecture_documentation",
+        "reason": "architecture documentation controls failed",
+        "state": "completed",
+        "status": "fail"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/generator_contract",
+        "reason": "generator contract controls failed",
+        "state": "completed",
+        "status": "fail"
+      }
+    ],
+    "run_json_sha256": "6f667308ef24c6337f26a07137d5ecc97941f97166c2069760346f5c8f7d74e9"
+  },
+  {
+    "path": "tests/out/runs/worker-doc-corrections-final-20261018",
+    "run_id": "20261018T224517Z_38c3a586",
+    "counts": {
+      "fail": 0,
+      "pass": 3,
+      "skip": 0,
+      "total": 3
+    },
+    "completion": {
+      "completed": 3,
+      "selected": 3,
+      "skipped": 0,
+      "unrun": 0
+    },
+    "harness_errors": [],
+    "case_results": [
+      {
+        "context": "standard",
+        "id": "source_drift/limits_documentation",
+        "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+        "state": "completed",
+        "status": "pass"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/architecture_documentation",
+        "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+        "state": "completed",
+        "status": "pass"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/generator_contract",
+        "reason": "generator contracts and mutation controls pass",
+        "state": "completed",
+        "status": "pass"
+      }
+    ],
+    "run_json_sha256": "26cb683876941f54bc471934954bf5837d5b853c63b4946db023bad61eb5e8cc"
+  },
+  {
+    "path": "tests/out/runs/worker-doc-corrections-reviewed-20261018",
+    "run_id": "20261018T224844Z_c512fd20",
+    "counts": {
+      "fail": 0,
+      "pass": 3,
+      "skip": 0,
+      "total": 3
+    },
+    "completion": {
+      "completed": 3,
+      "selected": 3,
+      "skipped": 0,
+      "unrun": 0
+    },
+    "harness_errors": [],
+    "case_results": [
+      {
+        "context": "standard",
+        "id": "source_drift/limits_documentation",
+        "reason": "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass",
+        "state": "completed",
+        "status": "pass"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/architecture_documentation",
+        "reason": "architecture manifest, dot files, SVG stamps and document regions agree; citation and stale-copy controls pass",
+        "state": "completed",
+        "status": "pass"
+      },
+      {
+        "context": "standard",
+        "id": "source_drift/generator_contract",
+        "reason": "generator contracts and mutation controls pass",
+        "state": "completed",
+        "status": "pass"
+      }
+    ],
+    "run_json_sha256": "4a41efd2372ef76fdf2ac0158279910457ee07e1776bb37b80bb86d7e7487cea"
+  }
+]
