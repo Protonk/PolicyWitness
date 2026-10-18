@@ -46,3 +46,28 @@ both helper processes are live. Earlier file effects survive; unfinished exec
 fields remain absent and later effects are absent. The test owns helper cleanup
 and observes liveness before performing it. This guards missing-publication
 semantics without claiming that current worker death cleans up descendants.
+
+## Same-group descendant after normal completion
+
+The opt-in `closed_streams_leader_exit` case characterizes a current observation
+limit. It closes both helper processes' captured streams, asks the leader to
+exit without waiting for its child, and waits for the public CLI to finish.
+Before reading PW's JSON or releasing the fixture, the test requires the child
+to answer a ping with its original process identity and process group. It also
+observes the following file write. The reply must retain a cleanly completed
+exec attempt, the leader's zero exit status, and the successful later step.
+These facts do not establish that the process group is empty.
+
+The fixture then releases the surviving child and requires its kernel exit
+event. The same survivor check must reject that exited child. The test watches
+the independently identified worker as well, and removes staging only after
+helper/worker exits and CLI cleanup are confirmed. An incomplete rendezvous or
+unknown cleanup retains staging and a `cleanup.json` account; cleanup failures
+do not replace the original assertion or exception. `observations.json`, raw
+capture artifacts and before/after bytes keep the characterization distinct
+from the later cleanup intervention.
+
+This is characterization of current behavior, not a desired process-tree
+containment rule. Pair it with `closed_streams_continue` and
+`leader_exit_descendant`: those neighboring cases exercise stream closure and
+leader exit separately.

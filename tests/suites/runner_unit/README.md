@@ -185,3 +185,27 @@ child effect and cleanup evidence separately. The
 containment and the limits of descriptor metadata. This case requires Swift and
 clang and does not use the signed app; its sources, build log and receipts are
 retained under `artifacts/controls/`.
+
+## Host setup oracle sensitivity (opt-in)
+
+`host_setup_oracle_sensitivity` preserves and runs the unchanged setup recipe and
+checker against a baseline and three disposable host variants: the readiness
+pipe's read end replaces its write end, the worker's shared-memory argument names
+the ready descriptor, or evidence cleanup unmaps only one page. Every legacy
+receipt and checker result remains available. Supplemental copied-fixture
+instrumentation records the child's actual argv and `F_GETFL` access modes,
+and scans exact native `mach_vm_region` ranges before and after the owner's
+unmap. Each query retains its native result, returned range and object-name
+right deallocation. The complete acquisition supplies the positive control;
+full unmapping must leave no overlap with that range. A surviving owned suffix
+is re-confirmed across its complete extent and independently unmapped, with its
+cleanup return and subsequent absence retained before fixture exit. The legacy
+map counter is recorded before that fixture cleanup and is never repaired.
+
+The case requires the baseline to agree with those independent observations and
+the controlled counterexamples to survive the old oracle. A pass characterizes
+oracle blind spots; it does not establish product safety or fix those checks.
+Sources, exact substitutions, hashes, build logs, original receipts and separate
+observations are retained under `artifacts/controls/`. The additional observer
+calls and cleanup exist only in these copied fixtures; this case requires Swift
+and clang and does not use the signed app.

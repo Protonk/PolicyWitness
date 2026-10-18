@@ -47,6 +47,26 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### Worker resource challenge probes
+
+- **Cases:** `runner_unit/host_setup_oracle_sensitivity`,
+  `runner_exec_lifecycle/closed_streams_leader_exit`, and
+  `runner_exec_inheritance/closed_worker_stderr`.
+- **Purpose:** Characterize setup-checker sensitivity to deliberately wrong
+  disposable host copies, same-group descendant survival after normal exec
+  completion, and child stderr delivery with worker fd 2 closed. Passing means
+  the stated counterexample was observed; it is not a safety guarantee.
+- **Opt-in reason:** Exploratory native resource/failure observations and
+  multiple disposable Swift builds. Run outside the automation sandbox.
+- **Equipment:** Swift/clang for setup controls; signed app/clang for lifecycle;
+  signed app, embedded worker and clang for closed stderr. No service install.
+- **Artifacts:** Each canonical case's `artifacts/` retains inputs, observations
+  and cleanup. The original setup checker and production bytes are unchanged;
+  mutations exist only in disposable source copies.
+- **Details:** [Setup oracle](suites/runner_unit/README.md),
+  [lifecycle](suites/runner_exec_lifecycle/README.md), and
+  [inheritance](suites/runner_exec_inheritance/README.md).
+
 ### Production worker launch inventory
 
 - **Case:** `runner_exec_inheritance/launch_inventory`

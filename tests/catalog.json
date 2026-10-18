@@ -323,6 +323,19 @@
             "swift",
             "clang"
           ]
+        },
+        {
+          "id": "host_setup_oracle_sensitivity",
+          "description": "Characterize setup-oracle blind spots with disposable wrong-endpoint, wrong-argument and partial-unmap variants plus independent native observations",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/host_setup_oracle_sensitivity.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ],
+          "default": false
         }
       ]
     },
@@ -989,6 +1002,19 @@
         {
           "id": "worker_dies_during_exec",
           "description": "worker death preserves completed effects and leaves unpublished exec status unknown"
+        },
+        {
+          "id": "closed_streams_leader_exit",
+          "description": "Observe a same-group descendant surviving normal leader and stream completion, then independently release and confirm fixture cleanup",
+          "command": [
+            "bash",
+            "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ],
+          "default": false
         }
       ]
     },
@@ -1034,6 +1060,20 @@
           "depends_on": [
             "runner_exec_inheritance/contaminated_worker"
           ]
+        },
+        {
+          "id": "closed_worker_stderr",
+          "description": "Observe exec-child stderr with the unchanged worker launched with fd 2 closed, beside an open-stdio baseline",
+          "command": [
+            "bash",
+            "tests/suites/runner_exec_inheritance/closed_worker_stderr.sh"
+          ],
+          "requires": [
+            "app",
+            "worker",
+            "clang"
+          ],
+          "default": false
         }
       ]
     },
@@ -1849,7 +1889,10 @@
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
         "runner_c_worker_harness/native_clock",
-        "runner_exec_inheritance/launch_inventory"
+        "runner_exec_inheritance/launch_inventory",
+        "runner_unit/host_setup_oracle_sensitivity",
+        "runner_exec_lifecycle/closed_streams_leader_exit",
+        "runner_exec_inheritance/closed_worker_stderr"
       ]
     },
     "failure_boundaries": {

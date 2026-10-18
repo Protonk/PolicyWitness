@@ -81,3 +81,42 @@ outside this observation. See [opt-in guidance](../../OPT_IN_TESTS.md).
 Each boundary retains the exact specimen, CLI capture, process listings, each
 observer's argv/status/raw streams, and `observations.json`. The case takes
 about forty seconds and needs unsandboxed XPC and same-user process inspection.
+
+## Closed worker stderr (opt-in characterization)
+
+`tests/run.sh --case runner_exec_inheritance/closed_worker_stderr` compares two
+direct launches of the unchanged shipped worker. Both use the existing C ABI
+harness's three-step exec plan. A case-local adapter leaves all standard
+descriptors open for the baseline and closes only fd 2 before execing the worker
+for the challenge. Its final pre-exec observations require the policy, evidence,
+readiness and stdout descriptors to retain their identities, with fd 2 reporting
+`EBADF` in the challenge. The adapter closes its rendezvous socket before these
+observations and before exec; that socket cannot fill the worker's fd 2.
+An additional `fcntl` guard immediately before `execv`, after formatting and
+flushing the snapshot, refuses to enter the worker if fd 2 changed state.
+
+Each exec child checks fd 2 with `fcntl` and `fstat`, then records the native
+return and errno from a small stderr write. Those measurements precede any
+socket or file acquisition by the observer. The child then sends its receipt
+through a separate Unix socket, closes that socket, and emits the same receipt
+on stdout for collection by the real worker. The parent obtains peer PIDs from
+the kernel and watches their OS exit events. Assertions compare the independent
+receipts with completed worker slots, require successful application and phase
+release, and require the harness's actual `waitpid` reap with a clean worker
+exit. The disposable harness copy adds only an explicit field for that reap
+observation.
+
+This is a characterization of a failure: a passing baseline requires usable
+child stderr and the captured marker, while a passing challenge requires actual
+child fd-2 `EBADF` observations and a stderr write returning `-1/EBADF`. Missing
+stderr text alone cannot pass. It does not establish that ordinary XPC launches
+supply closed stderr, or that every descriptor arrangement has this result.
+
+Artifacts retain the original and adapted harness sources, ABI headers,
+observer source and configuration, compiled equipment, commands and hashes,
+worker hashes before/after, raw peer receipts, worker-entry snapshots, worker
+publications and cleanup observations. Connected peer ownership and OS exit
+events support failure cleanup; the observer also has its own native deadline
+after it becomes an exec child. Unconfirmed cleanup retains the temporary
+workspace and its `workspace-owner.json` record. This case needs the signed
+app, Python 3, the macOS C toolchain and unsandboxed local socket/process access.

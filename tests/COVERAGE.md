@@ -196,3 +196,19 @@ exactly-once effects, a bounded refusal, and a spaced zero-re-acquisition contro
 shared deadlines and preservation of the admitted client's time span.
 `runner_byoxpc/default_location` keeps default registry/plist resolution live;
 `shell_helpers/byoxpc_setup` checks private registry routing and durable cleanup.
+
+## Worker resource challenge observations
+
+The opt-in `runner_exec_lifecycle/closed_streams_leader_exit` case combines
+leader exit with closed output streams and checks whether a same-group
+child remains responsive after the completed reply. Independent fixture
+cleanup follows the survival observation. `runner_exec_inheritance/closed_worker_stderr`
+compares an ordinary direct-worker launch with worker fd 2 closed and observes
+child stderr usability. These characterize exercised starting states and lifetime
+limits; neither establishes ordinary XPC-host descriptor arrangements.
+
+`runner_unit/host_setup_oracle_sensitivity` measures whether the existing setup
+oracle rejects wrong direction/argument and partial-unmap variants. Supplemental
+native observations establish the controlled mistakes independently of the old
+oracle's accepted receipts. It does not alter the shipped host or upgrade the
+original setup controls into a complete protocol or mapping-absence proof.

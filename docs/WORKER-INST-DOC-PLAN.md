@@ -2,21 +2,26 @@
 
 ## Status
 
-Pass 4 is complete in this commit. Row 7's source-comment correction and
-regenerated identity are committed in `37be3d2`; row 19's setup verification is
-committed in `b3f358c`. The signed build and twelve covering cases passed, as
-did twenty-two setup observations, ten rejected checker controls, all six
-source-drift cases and every generator check. A second architecture generation
-wrote nothing. The evidence ledger and retained source snapshots identify the
-inputs and the limits of each result.
+Pass 5 round 1 is complete in this commit: three independent reviews,
+reconciliation and the focused probes described below. The user authorized
+this single enriched round after pass 4;
+future rounds remain undecided. Pass 6 is reserved for a fresh agent and has
+not started. The frozen review revision is
+`5124b4309b6f7b0041c55318312a9ee18f579868`; prompts are committed in `abb2e2d`.
+The [reconciliation](../records/worker-pass5-round1/reconciliation.md) preserves
+the independent reports, their boundaries and register destinations.
 
-Rows 1–22 are closed under their adjudicated scopes. The user authorized rows
-20–22's recommended dispositions before pass 4. Row 19 closes verification,
-not runtime hardening: new rows 23–24 retain the reproduced descriptor/setup
-failures and await separate adjudication. No runtime behavior was changed.
-The work stops here, before pass 5, for those decisions.
+Rows 10, 19 and 22 reopen for a newly identified descendant path, setup-oracle
+blind spots and a remaining test comment. Rows 25–28 record citation ownership,
+exec-child stderr delivery, compiler-output timing and extension-test cleanup.
+Rows 23–24 remain awaiting adjudication. No row closes in this round; the other
+pass 4 closures retain their adjudicated scope. Production behavior, the worker
+tour and its capability inventory remain unchanged pending these decisions.
 
-Pass 3 work is `fad2bb873142b5d20364a48f8dd2b0cf467796d8`; pass 2 work is
+Pass 4 source-comment work and regenerated identity are `37be3d2`, setup
+verification is `b3f358c`, and its documentation/evidence closeout is `5124b43`.
+Its historical validation remains in the pass 4 ledger. Pass 3 is
+`fad2bb873142b5d20364a48f8dd2b0cf467796d8`; pass 2 is
 `83f61f35a96d295f2a2a94aa29740664ec2971f6`. Pass 1 comparison and adjudication
 are committed in `f5e5136`: rows 15 and 16 were the two findings held outside
 the tree, and both were recovered. Pass 1 work remains in
@@ -26,7 +31,7 @@ the tree, and both were recovered. Pass 1 work remains in
 [WORKER.md](WORKER.md) owns the resource/authority account and generated map.
 Inventory facts remain in the manifest and prose remains authored, with no
 call-site completeness rule. Row 15's Mach reference fix remains separate
-scope. No push or release; passes 5 and 6 have not started.
+scope. No runtime fix, push or release is included in this round.
 
 ## What this plan produces
 
@@ -260,7 +265,7 @@ the checkpoint closed no row.
 | 7 | Source comments state retired or overbroad premises | Corrected source comments; non-comment token comparison unchanged; signed identity and twelve covering cases pass | closed | Source comment corrections authorized for pass 4, with identity regeneration/build/identity validation |
 | 8 | Ownership of private-extension limitation | Existing architecture paragraph and intended worker-tour location rechecked | closed | Adjudicated: WORKER.md owns it; ARCHITECTURE links there, in pass 3/integration |
 | 9 | Native release does not establish revocation; an after-release read is nevertheless observed | Checker accepts either after-release result and verifies bytes if successful; seed's “nothing observes” wording was too broad | closed | Keep accepted private-API scope from row 8 and correct the candidate sentence; no new universal revocation assertion |
-| 10 | Exec descendants can outlive the worker/run | Group targeting and possible unconfirmed reap verified; existing accepted descendant limit remains | closed | Adjudicated ownership move; preserve accepted scope and distinguish worker-death/unreaped-child paths |
+| 10 | Exec descendants can outlive the worker/run | Fresh CLI probe observes same-group descendant survival after clean reply and later effect; independent fixture release/exit follows | awaiting adjudication | Reopened: broaden the accepted descendant limit after the combined lifecycle probe; runtime cleanup changes remain separate |
 | 11 | Ambient worker state is only partly inventoried | L observes cwd, uid/gid, fds, argv/environment and VM regions; task-port census refused; signal mask/limits/private internal state unobserved | closed | Explain measured starting substrate; accept the explicitly bounded observation as a limitation; no empty-process claim |
 | 12 | Ignored SIGPIPE reaches exec children; extension-specific core-limit inheritance is unreachable in admitted plans | Spawn sets neither signal reset flag; `extensionMeaningFailure` refuses exec+extension; helper's own SIGPIPE ignore prevents independent signal evidence | closed | Explain signal inheritance, correct the seeded extension-to-exec claim, and reserve a signal observer for any requested stronger guarantee |
 | 13 | Extension requests can change worker core limits before apply | `prepare_extension` sets both limits to zero only after requested extension symbols resolve; local failure is published | closed | Explain request-dependent process context and native failure branches; no change recommended |
@@ -269,12 +274,16 @@ the checkpoint closed no row.
 | 16 | Compiled-object lifetime has no explicit PW destruction | `profile` goes to capture/apply and no `sandbox_free_profile` is declared/called; private apply ownership is unobserved | closed | Explain the call/ownership boundary; investigate API ownership before authorizing a free, which could otherwise be invalid |
 | 17 | Several resources cross the proposed role boundaries | Token mapping carries authority and protocol metadata; native extension acquisition occurs inside an attempt; shared working storage and signal state have multiple purposes | closed | Keep these resources outside single-role clusters, with named roles; do not force all inventory rows into one cluster |
 | 18 | Oversized issuer token erasure covers a bounded prefix | I computes bounded `strnlen`, rejects oversize, erases that length and frees; no full allocation extent is established | closed | Correct erasure scope and investigate safe full-buffer disposal before a fix; accepted-token path remains distinct |
-| 19 | Host/issuer launch setup does not check every acquisition/setup return | Twenty-two controlled setup observations and ten rejected checker controls; runtime decisions carried by rows 23–24 | closed | Strengthen verification in pass 4; production refusal/hardening requires a separate adjudication |
+| 19 | Host/issuer setup verification misses endpoint roles and mapping extents | Three deliberate host variants survive the old oracle; independent argv/access-mode and VM-range observations establish each counterexample | awaiting adjudication | Reopened: strengthen role/argument and full-extent verification; original observations retain their narrower scope |
 | 20 | Authority cluster and arrows can overstate supplied power | Map review finds ambient context in S16a and apply/entry-point edges whose original style suggested granting authority | closed | Adopted: keep S16a unclustered and distinguish preparation, exercising an API and imposing restriction |
 | 21 | Inventory resources can be disconnected from drawn observations | Native-size map review finds ambient state and working-storage nodes without incident edges; direct observation is narrower than resource existence | closed | Retain visible inventory nodes and describe the graph as selected relationships, not a proof that every resource is observed; consider focused views in later work |
-| 22 | Existing exec documentation upgrades bounded controls into general claims | Guide and harness README now distinguish observed setup from source-established placement | closed | Adopted documentation correction to measured setup behavior and source-established placement; no runtime change |
+| 22 | Existing exec documentation upgrades bounded controls into general claims | Pass 5 finds the same overclaim in the per-attempt test source comment after guide/README correction | awaiting adjudication | Reopened for the remaining test comment; correct assertion scope, with no runtime change |
 | 23 | Low worker descriptors can corrupt protocol endpoint delivery | Actual action overlap replaces evidence fd 3 with policy pipe; self-dup readiness fd 4 is absent in child receipt | awaiting adjudication | Recommend collision-safe endpoint preparation, including self-dup close-on-exec handling, in separate fix scope |
 | 24 | Identified setup errors can reach spawn or leave a shared-memory name | Injected action/strdup/unlink failures have native child/name observations; failed init reaches fixture-contained invalid-handle use | awaiting adjudication | Recommend explicit setup refusal and cleanup ownership for these paths; preserve reproductions and add fix-distinguishing controls when authorized |
+| 25 | Map citations point to different paths or owners | C1: optional parameters/capture/token cited to bare-deny; absent creation cited to existing-file control; logs cited to disabled capture and host comparison | awaiting adjudication | Correct owning symbols and relevant checks; preserve source-only labels unless actual behavior is credited |
+| 26 | Closed worker stderr can corrupt exec stderr delivery | Unchanged signed worker: three children report fd 2/write EBADF; three baseline children capture stderr successfully | awaiting adjudication | Explain the controlled starting-state limitation; authorize any collision-safe descriptor hardening separately |
+| 27 | Compiler outputs are dated before compilation | C3: S26a/S26b say before compilation though references return from sandbox_compile_string | awaiting adjudication | Correct acquisition period to the compiler-return boundary, without an allocator-timing claim |
+| 28 | Ordinary extension test removes staging on unknown child cleanup | T1: TemporaryDirectory unwinds after capture failure; RunCapture owns only CLI cleanup | awaiting adjudication | Give the test durable staging ownership and exit-gated cleanup, with failure-path controls |
 
 ### Row details
 
@@ -547,6 +556,24 @@ Pass 4 re-proof: the pass 3 after sentence remains the account under this adjudi
 
 Pass 4 validation: the re-proof and its scope match the implemented account; the fresh documentation checks in the pass 4 ledger passed. State: closed.
 
+Pass 5 round 1 reopening (I1): the current Known gap names a descendant
+that leaves the process group. `attempt_exec_spawn` also completes normally
+when the leader has exited and both streams reach EOF. Group termination is
+conditional on deadline/observation/local failure, so a same-group descendant
+can survive that successful completion. The existing `closed_streams_continue`
+case releases both peers; `leader_exit_descendant` leaves the streams open and
+reaches deadline cleanup. Neither combines both EOFs with early leader exit.
+The focused `runner_exec_lifecycle/closed_streams_leader_exit` probe observed
+peer liveness and unchanged group identity after the clean reply and a later
+file write. Fixture release then produced the child exit event, and the observer
+rejected the released child. Both neighboring lifecycle cases passed. The worker
+and both peers had independently observed exits before staging removal. PW-caused descendant exit before fixture release would
+refute the concrete prediction. Recommended: explain both normal-completion
+and escaped-group lifetimes; any changed cleanup semantics need separate
+adjudication. Earlier ownership-move authorization did not decide this new
+case. State: awaiting adjudication; first report and later observations remain
+separate in the pass 5 ledger.
+
 **Row 11.** First candidate: “The worker's ambient resources are
 uninventoried.” L establishes a bounded census: descriptors, cwd `/`, uid 501,
 gid 20, nonempty launch argv, no displayed environment additions, and readable
@@ -788,6 +815,35 @@ Pass 4 re-proof in WORKER.md: “Injected worker action-add failures allow a chi
 
 Pass 4 validation: the re-proof and its scope match the implemented account; the fresh documentation checks in the pass 4 ledger passed. State: closed. Verification commit `b3f358c` closes the authorized controls only. Runtime hardening decisions remain open in rows 23–24.
 
+Pass 5 round 1 reopening (T2/T3): the original controls characterize their
+faults, but they do not independently pin endpoint roles or complete mapping
+extents. `host_setup_controls.check` compares child descriptor metadata with
+whatever source the host requested and checks argc without argument values.
+Changing readiness to the pipe read end or changing `--shm-fd`'s argument can
+therefore evade those expectations. `setup_munmap` removes a whole base from
+its set after any successful unmap length; a partial unmap can report zero
+remaining mappings. Current production uses the full length: this is a test
+sensitivity finding, not a newly alleged production mapping leak.
+
+The new opt-in `runner_unit/host_setup_oracle_sensitivity` probe retains the
+unchanged checker and disposable mutations, with supplemental child access-mode
+and argv observations plus native full-range mapping checks before fixture
+cleanup.
+The corrected probe passed: all 22 legacy scenarios and ten rejected receipt
+controls passed for the baseline and each of three deliberate host variants.
+The child's actual fd-4 mode is read-only in the wrong-direction variant; its
+actual `--shm-fd` value is 4 in the wrong-argument variant. A one-page unmap
+leaves the suffix mapped (`mapped_bytes=3670016`) while the legacy counter
+reports zero; independent fixture cleanup then removes that suffix, confirmed
+by full-range VM queries.
+The failed first mincore-based observation is retained in the ledger. Rejection
+specifically for wrong direction/argument/remaining mapping would have refuted
+each proposed blind spot. Recommended: independently check endpoint
+roles, argument contents and acquired/unmapped extents, preserving the earlier
+fault observations. This round authorizes investigation probes only; further
+changes to the original oracle await adjudication. No runtime hardening is
+authorized. State: awaiting adjudication.
+
 **Row 20.** Map candidate: “The gold group contains deliberately supplied
 authority.” S16a also contains inherited credentials and ambient policy context.
 The source is host spawn and worker selection, not a complete measured authority
@@ -863,6 +919,18 @@ Pass 4 re-proof: the guide now says “Setup can fail at an earlier call; its re
 
 Pass 4 validation: the re-proof and its scope match the implemented account; the fresh documentation checks in the pass 4 ledger passed. State: closed.
 
+Pass 5 round 1 reopening (test worksheet): the comment immediately above
+`run_exec_pipes_per_attempt` in the harness script still says that the ceiling
+and successful spawns “prove that no exec step holds descriptors across another
+step's work.” The assertions at that case check a 64-descriptor ceiling and
+32 successful children, which also allow limited cross-attempt retention.
+The guide and README corrections remain accurate; this overlooked test comment
+repeats the old overclaim. Source review settles the mismatch, so no extra
+runtime probe is needed. Recommended: bring this comment to the already
+adjudicated distinction between peak usage and source-established placement.
+The prior scope named the guide and README, so this additional edit awaits
+adjudication. State: awaiting adjudication.
+
 **Row 23.** First candidate: “The host delivers its protocol endpoints even when
 standard input is closed.” The no-fault `worker-collision` case in
 `runner_unit/host_setup_controls` closes stdin and unused low descriptors in a
@@ -911,6 +979,208 @@ argument copies before spawn and make name/handle cleanup ownership explicit,
 with separate row-numbered fixes and controls distinguishing each correction
 from the retained reproduction. No runtime fix or regression waiver is
 adjudicated here. State: awaiting adjudication.
+
+**Row 25.** First challenged map claims: “Snapshot entries populate compiler
+parameters” (W12), “Capture reads returned compiled object” (W14), “Worker
+receives optional token descriptor” (W25), “Successful create-open can create
+absent file” (W34), and “Controller associates external log candidates with run
+evidence” (W55). C1 in the preserved claims report traces the exact cited inputs,
+branches and assertions. The bare-deny scenario has no parameter callback,
+capture request or extension and uses the C harness rather than the Swift host.
+The existing-file control seeds both targets; comparison_matrix disables logs.
+W24's duplicate belongs to `runCWorker`, W30's borrowed worker view to
+`prepare_extension`, W49's draining to `attempt_exec_spawn`/`drain_one`, and
+W55's log association to controller `attach_sandbox_logs` and its helpers.
+
+Mechanical citation checks resolve these references but cannot establish those
+paths. A traced selected-case path with assertions on the specific claimed
+boundary would refute a mismatch; a broad pass cannot. Existing parameter,
+capture, extension, absent-create and log controls supply more relevant starting
+points. Recommended: correct owner/check citations and review their actual
+assertions; keep source-only facts source-only. This source-supported finding
+needs no new native probe. No graph, prose or citation correction is authorized
+by this review round. State: awaiting adjudication.
+
+**Row 26.** First sentence: “The child receives explicit null-device stdin,
+captured stdout/stderr, an empty environment and a new process group.” C2 finds
+that `exec_resources_acquire` uses raw pipe descriptor numbers, duplicates them
+onto stdout/stderr and then adds closes for all originals. With worker fd 2
+closed, the first pipe read endpoint can be 2; its later close action can close
+the child's newly installed stderr. The host-to-worker collision in row 23 is
+a different boundary and does not prove this one.
+
+The `runner_exec_inheritance/closed_worker_stderr` probe preserves the
+shipped worker bytes and protocol endpoints and pairs an all-stdio-open baseline
+with closed worker fd 2. All three challenge children independently report
+fd-2 fcntl/fstat and stderr-write EBADF; all three baseline children write a
+marker that reaches captured stderr. The worker still publishes clean exec
+completion in both cases. Native child receipts match the completed slot
+payload; worker/child exits and harness reap are observed separately. A usable child stderr on the specified
+allocation/action path, or a verified invariant preventing that starting state,
+would refute the lead. Ordinary XPC startup using that state is not alleged.
+The source explains the likely pipe/action collision; individual native pipe
+allocations were not instrumented in this unchanged-worker probe. Recommended:
+explain the demonstrated starting-state limit and separately consider raising
+pipe sources above stdio before installing/closing endpoints, with a control
+that distinguishes the correction from this retained reproduction. No fix or
+claim edit is authorized here. State: awaiting adjudication.
+
+**Row 27.** First inventory cells: S26a's returned compiled profile and S26b's
+`compile_err` both say “Before compilation (compile boundary).”
+`sandbox_compile_string` returns these outputs after parameter preparation and
+before capture/apply. The plan's period ends at entry into compilation, so the
+current label dates returned resources too early. Bare-deny does not date native
+allocations or exercise the error-string branch. Recommended: describe acquisition
+at compilation/return before capture and apply. No claim about the exact private
+allocation instant is intended. Source settles the wording; no new execution is
+needed. No edit is made pending adjudication. State: awaiting adjudication.
+
+**Row 28.** First omission: the ordinary `witness_contract/extensions` test has
+no child-exit gate before its `TemporaryDirectory` deletes the target tree on
+capture failure. `check_extensions.run_suite` owns that context;
+`capture` can raise on timeout, unexpected status or invalid output before any
+reap assertion. `RunCapture.close` terminates/reaps the CLI only and assigns
+worker/issuer cleanup to its caller. BYOXPC uses separate session-owned staging
+and is outside this finding.
+
+T1 traces the source-supported deletion path. No live timeout/surviving-worker
+experiment ran in this round; the process consequence remains unobserved.
+A caller-level ownership/exit guard covering every exceptional path would refute
+the finding; a normal passing extension run would not. Recommended: durable
+staging ownership, independently justified cleanup or retained recovery state,
+and controls for exceptions before/after capture. An injected capture exception
+can discriminate directory retention first; a gated live timeout can separately
+establish process cleanup. No fix is authorized here. State: awaiting adjudication.
+
+### Pass 5 round 1 evidence ledger
+
+The user authorized one enriched challenge round, with any future rounds decided
+later and a fresh agent reserved for pass 6. Exact committed prompts and frozen
+first reports are preserved under
+[the round record](../records/worker-pass5-round1/reconciliation.md):
+[claims](../records/worker-pass5-round1/claims.md),
+[implementation](../records/worker-pass5-round1/implementation.md), its
+[pre-tour account](../records/worker-pass5-round1/implementation-initial.md), and
+[test skepticism](../records/worker-pass5-round1/tests.md).
+[Hashes](../records/worker-pass5-round1/first-reports.json) distinguish those
+immutable reports from later reproduction notes. None of the reviewers saw
+this plan, the conversation or sibling reports before preserving its first
+report. This does not consume the separate pass 6 audit.
+
+The coordinator reconciled source/assertion findings before assigning focused
+probes. Production source remains the frozen revision's bytes; the signed app
+is the pass 4 build 699. New opt-in characterizations live outside that app and
+all execution is serial through the public dispatcher. `source: null` in the
+retention index means the probe inputs were uncommitted, not that the retained
+worktree snapshot is absent. Each run's `acceptance/` holds its pre-execution
+base, patch, untracked files/hashes and console transcript. Raw evidence is
+local and gitignored, protected by `tests/RETAINED.json`.
+
+`PW_TEST_OUT_DIR=tests/out/runs/worker-p5-lifecycle tests/run.sh
+--case runner_exec_lifecycle/closed_streams_leader_exit
+--case runner_exec_lifecycle/closed_streams_continue
+--case runner_exec_lifecycle/leader_exit_descendant` passed all three cases.
+Run ID: `20261018T003351Z_e980508e`. The new allow-default specimen executes the
+existing tree fixture, then writes an independently seeded file. Both peers
+acknowledge stream closure; the leader exits before CLI completion. After the
+clean reply, child 77286 still answers a ping in original group 77285, with
+unchanged start identity, while the later file contains `x`. Only subsequent
+fixture release produces its exit event. The observer then rejects that exited
+child; independent worker/peer exits precede staging removal. `observations.json`,
+`cleanup.json`, `before.bin`, `after.bin`, specimen and envelope are under the
+new case's `artifacts/`. These observations establish the selected lifetime
+limit, not sandbox escape or general group containment.
+
+`PW_TEST_OUT_DIR=tests/out/runs/worker-p5-setup tests/run.sh
+--case runner_unit/host_setup_oracle_sensitivity` failed, run
+`20261018T003412Z_8809fc7e`. All four copies of the unchanged legacy recipe
+completed their 22 observations and ten rejected receipt controls. However,
+new supplemental `mincore` observations returned success even after the
+baseline's full unmap and the mutant's fixture cleanup, refuting the proposed
+ENOMEM-based absence oracle. This is a failed probe assumption, not a product
+mapping-leak observation. Its exact receipts/inputs remain retained; the
+replacement mapping observer needs its own fresh execution.
+
+`PW_TEST_OUT_DIR=tests/out/runs/worker-p5-stderr tests/run.sh
+--case runner_exec_inheritance/closed_worker_stderr` passed, run
+`20261018T004028Z_76840e42`. A retained direct-harness copy adds only an explicit
+actual-reap field. The case-local adapter verifies protocol descriptors before
+and after closing only worker fd 2, checks EBADF again immediately before exec,
+and runs the shipped signed worker unchanged. The allow-default direct plan
+executes three observer children in each paired starting state. Independent
+LOCAL_PEERPID receipts, child native fd/write observations and the completed
+worker payload agree: baseline stderr works; all closed-entry child stderr
+operations fail with EBADF and captured stderr is empty. Both workers apply,
+complete and exit cleanly. Kernel exit events for workers/children and actual
+harness reaping precede fixture staging deletion. `equipment/inputs.json`,
+`equipment/manifest.json`, per-case `peer-*.json`, `worker-entry.json`,
+`worker-result.json`, `capture.json` and `workspace-owner.json` retain the
+sources, observations and cleanup. Shipped worker hashes match before/after.
+This does not observe the worker's actual pipe-number allocation or ordinary
+XPC-host starting state.
+
+The corrected `runner_unit/host_setup_oracle_sensitivity` execution passed in
+`tests/out/runs/worker-p5-setup-final`, run `20261018T004103Z_c1a5b844`, using
+the same public selection with fresh output. It runs the old recipe/checker
+unchanged against a baseline and three deliberately changed disposable host
+copies: readiness `readyPipe[1]`→`readyPipe[0]`, `--shm-fd 3`→`4`, and full
+worker unmap→one native page. All four run the full 22 scenarios plus ten
+rejected legacy receipt controls: 88 observations and 40 rejection checks.
+These counts are repeated characterizations, not 88 independent guarantees.
+
+Supplemental child F_GETFL/argv observations establish the first two mistakes.
+The replacement mapping observer retains native `mach_vm_region` ranges before
+and after the real owner unmap, releases returned object-name rights, and
+independently reconstructs coverage in Python. The baseline's page-rounded
+acquisition has zero mapped bytes afterward. In the partial-unmap worker
+baseline, the suffix remains mapped (`mapped_bytes=3670016`) while the
+original counter says zero;
+the fixture re-confirms this suffix, unmaps it and observes zero overlap before
+exit. Each variant's `independent-observations.json`, full legacy receipts,
+`instrumentation.json` and copied inputs retain the evidence. Current production
+already supplies the full unmap extent. Passing this probe establishes the
+old oracle's blind spots, not a new product leak or corrected production oracle.
+
+All focused cases passed with independently observed cleanup. The failed
+mincore attempt remains failed and is superseded only for mapping-observation
+credit. Source-supported citation, timing, test-comment and ordinary-extension
+cleanup findings did not need native execution; a live extension-timeout
+consequence is explicitly untested. The extra test work changes no production
+source, publication protocol, release barrier or query eligibility, so it
+requires no worker identity change or new signed build.
+
+Architecture generation ran twice and wrote nothing both times. Architecture,
+build, contract, worker-identity and limits check modes passed. The full command
+`PW_TEST_OUT_DIR=tests/out/runs/worker-p5-drift tests/run.sh --suite source_drift`
+ran all six cases, run `20261018T004329Z_078ca64e`. The first five passed:
+runner source manifests, limits,
+contract versions, architecture documentation and build documentation.
+`generator_contract` rejected two numeric VM observations newly expressed as
+prose sizes. The failed run is retained; the same observed values are now
+written as their exact receipt field, `mapped_bytes=3670016`, preserving the
+counterexample without adding prose-baseline entries. The focused final
+`source_drift/generator_contract` run validates that correction and the finished
+Status/register/ledger. Its receipt is recorded below.
+
+The five passed cases retain their credit: their implementing code, generator
+inputs and relevant assertions are unchanged. Subsequent edits only format these
+plan measurements, wrap plan prose and add run receipts/retention entries. The
+prose-baseline checker is the affected check and is rerun; no case is described
+as a passing historical run after failure. Every accepted probe's new executing
+source files were also compared byte-for-byte with their pre-run snapshots;
+they still match. Existing shared helpers and fixtures are unchanged. Production,
+WORKER.md and the architecture manifest match the frozen revision, so the
+prior map rendering remains the same. These are applicability judgments plus
+byte checks, not a universal dependency proof.
+
+Final metadata check: `PW_TEST_OUT_DIR=tests/out/runs/worker-p5-final-metadata
+tests/run.sh --case source_drift/generator_contract` passed, run
+`20261018T004703Z_4fc71a10`. All six source-drift checks have passing
+applicable results across the full run and this affected-case rerun; the full
+run's historical status remains failed. All six managed runs from this round
+are retained, including both failed attempts. The only edits after this last
+check are this receipt and its retention entry. No baseline exception, production
+change, extra review round, pass 6 audit, push or release was performed.
 
 ### Pass 4 evidence ledger
 
