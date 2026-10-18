@@ -2,7 +2,17 @@
 
 ## Status
 
-The descriptive worker-language sweep is complete in this commit against
+Worker-language triage is complete in this commit against `5f878fe`. The
+[triage report](../records/worker-language-triage/report.md) and
+[decision ledger](../records/worker-language-triage/ledger.md) cover all 101 B1
+occurrences and the secondary guard roles in A1: 102 decision units stay
+settled, four stay pending three bounded RCAs, and eleven can go after the
+seven [WORKER-only repairs](../records/worker-language-triage/rewrite-candidates.md).
+All 205 primary A1 occurrences remain set aside. The candidates are unapplied;
+the worker account, machinery and register adjudications remain unchanged.
+This is a triage round, not pass 6.
+
+The descriptive worker-language sweep is complete in `5f878fe` against
 `2d63c983224907b109b4349d216c03471a8b1f0c`. The
 [report](../records/worker-language-sweep/report.md) and
 [inventory](../records/worker-language-sweep/inventory.md) classify WORKER.md

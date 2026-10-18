@@ -1,0 +1,310 @@
+{
+  "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+  "repairs": [
+    {
+      "id": "R01",
+      "title": "Name requested cleanup as an action",
+      "sweep_ids": [
+        "N004",
+        "N239"
+      ],
+      "rationale": "Released can look like an achieved outcome. State the kind of information in the heading itself; keep every recorded return/failure and actual lifetime fact.",
+      "edits": [
+        {
+          "owner": "docs/architecture.json",
+          "selector": "worker_capabilities.node_facts and every worker node facts key named Released",
+          "before": "Released",
+          "after": "Release / teardown action"
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 55,
+            "end_line": 56,
+            "quote": "Cleanup entries name calls; retained\nnative returns establish their observed outcomes where available."
+          },
+          "after": ""
+        },
+        {
+          "owner": "docs/architecture.json",
+          "selector": "graphs[id=worker_capabilities].items[id=s36b].facts[Released]",
+          "before": "Conditional group kill request, not an absence proof",
+          "after": "Conditional process-group kill request"
+        }
+      ],
+      "preserved": "All cleanup calls, retained results, ignored-return descriptions, process-exit/reference lifetimes, group lifetime and escaped-descendant facts remain. Rows 10/19 are not resolved by this repair.",
+      "guard_absent_read": "Reading a request under Release / teardown action supplies no completed-cleanup result. The group row still says members may remain beyond the attempt/worker; no absence of descendants follows.",
+      "verification": "Rename the owning key and node_facts declaration together; regenerate the worker table/map and check that every value except the named s36b edit survives. Review every cleanup-result cell for lost outcome data.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R02",
+      "title": "Describe cited definitions precisely",
+      "sweep_ids": [
+        "N005",
+        "N057"
+      ],
+      "rationale": "Remove the presentation-level suggestion that a named check verifies the whole resource row. State the actual mechanical operation in the caption and label the cited definitions as such.",
+      "edits": [
+        {
+          "owner": "docs/generate_architecture.py:render_region, worker_capabilities output only",
+          "selector": "WORKER caption, details summary, node/edge check-column labels",
+          "before": "Shared caption pairs implementing source/checks, followed by the assertion-coverage disclaimer; column label Checks.",
+          "after": "WORKER caption text after the figure/manifest/generator links: \"Figure IDs correspond to the table IDs. Each row lists source references and cited test or rule definitions. The generator checks source-symbol presence and resolves those definitions.\" Details summary: \"Worker capabilities: {node_count} nodes and {edge_count} edges; source symbols and cited definitions checked\". Node/edge column label: \"Cited check definitions\". Counts remain generated."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 238,
+            "end_line": 240,
+            "quote": "checks publication\nunder its bare-deny and full-region cases; that assertion scope belongs beside\nthe source account of preparation."
+          },
+          "after": "checks publication\nunder its bare-deny and full-region cases."
+        }
+      ],
+      "preserved": "Every source/check citation, every per-resource evidence qualifier, G10, generator_common.py guidance, and N053 source/assertion/execution distinction remain. Existing row-25 citation-ownership findings remain unresolved.",
+      "guard_absent_read": "A definition-resolution caption and Cited check definitions header describe locating definitions. They contain no assertion that a test ran or proved the row. The specific publication cases remain named in prose.",
+      "verification": "Use worker-specific rendering; compare every other generated document and figure byte-for-byte. Preserve G10 and the shared verification logic. Review the complete caption and table together; no new assertion-coverage or call-site-completeness enforcement is introduced.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R03",
+      "title": "State launch and fixture conditions at the observation",
+      "sweep_ids": [
+        "N019",
+        "N122"
+      ],
+      "rationale": "Name the production case and deliberate descriptor intervention before describing their outcomes, so the reader has the actual configuration rather than an ordinary-launch generalization to retract.",
+      "edits": [
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 293,
+            "end_line": 295,
+            "quote": "The recorded launch observation found matching\nplain and environment-displaying process output, inherited null-device standard\noutput/error, and the expected protocol endpoints."
+          },
+          "after": "The recorded production launch case used an empty allow-default specimen.\nIts observation found matching plain and environment-displaying process output,\ninherited null-device standard output/error, and the expected protocol endpoints."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 329,
+            "end_line": 330,
+            "quote": "With stdin closed\nin the low-descriptor control, evidence is allocated at fd 0."
+          },
+          "after": "The low-descriptor fixture deliberately closes stdin and low unused\ndescriptors before exercising launch setup. In that configuration, evidence is\nallocated at fd 0."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 335,
+            "end_line": 336,
+            "quote": "These controlled launches do not establish that an ordinary XPC\nhost starts with the same descriptor arrangement."
+          },
+          "after": ""
+        },
+        {
+          "owner": "docs/architecture.json",
+          "selector": "graphs[id=worker_capabilities].items[id=s14a].facts[Sandbox-gated]",
+          "before": "L presence only; no universal stdio rule",
+          "after": "L: inherited null-device stdout/stderr observed"
+        }
+      ],
+      "preserved": "Both ordinary and contaminated launch observations, the exact fd collision and missing-ready-endpoint outcomes, and the Known gap census remain. No universal launch invariant or additional observation is added.",
+      "guard_absent_read": "An ordinary host with stdin open has not been described by the deliberately modified fixture setup. The stdio cell is explicitly an L observation under the case named in prose.",
+      "verification": "Cross-check the fixture setup description and the retained L configuration; retain source facts about inheritance independently of the two observations.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R04",
+      "title": "Name adapter calls instead of general native uses",
+      "sweep_ids": [
+        "N017"
+      ],
+      "rationale": "The actual control-flow observation is through fixture adapters. Naming their concrete action removes the broader libc-behavior premise.",
+      "edits": [
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 325,
+            "end_line": 327,
+            "quote": "Failed handle initialization reaches later uses of the\ninvalid handle; fixture adapters contain those uses, so the controls establish\ncontinued host flow without claiming libc's behavior on that input."
+          },
+          "after": "After a failed handle initialization, the fixture adapters record subsequent\ninvalid-handle uses and return EINVAL. Their receipts record the host control\nflow through those adapter calls."
+        }
+      ],
+      "preserved": "Unchecked production setup and the other actual failure-flow observations remain. Fixture containment remains explicit. This does not close the reopened setup-verification finding.",
+      "guard_absent_read": "The described EINVAL comes from an adapter whose calls are named. Reading the paragraph supplies an adapter receipt, not an observed libc call on that invalid handle.",
+      "verification": "Match the fixture contract at its invalid-handle boundary; retain the existing link to host setup controls and its fixture contract.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R05",
+      "title": "Name the source of attempt status",
+      "sweep_ids": [
+        "N025",
+        "N216"
+      ],
+      "rationale": "Replace high-level success phrasing with the operation whose return determines attempt status; preserve independent filesystem observations beside it.",
+      "edits": [
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 353,
+            "end_line": 353,
+            "quote": "Opens read-only, attempts a one-byte read and close, and discards those latter returns. Published success is the open result, with an available descriptor-path observation."
+          },
+          "after": "Opens read-only. The open result determines the published attempt status. On successful open, records an available descriptor-path observation, attempts a one-byte read and close, and discards those latter returns."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 354,
+            "end_line": 354,
+            "quote": "Opens with `O_WRONLY \\| O_TRUNC`, then attempts to write `x` and close. Published success is the open result; the write and close returns are discarded."
+          },
+          "after": "Opens with `O_WRONLY \\| O_TRUNC`. The open result determines the published attempt status. On successful open, attempts to write `x` and close and discards their returns."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 361,
+            "end_line": 363,
+            "quote": "The source\nestablishes where each call occurs and which returns are discarded; those are\nseparate from an independently observed filesystem effect."
+          },
+          "after": ""
+        },
+        {
+          "owner": "docs/architecture.json",
+          "selector": "graphs[id=worker_capabilities].items[id=s31b].facts[Sandbox-gated]",
+          "before": "Source-only; creation not implied for existing target",
+          "after": "Source-only; conditional new-object acquisition at open(O_CREAT)"
+        }
+      ],
+      "preserved": "Native operations, status transformation, discarded returns, existing-target/no-truncation behavior, source-only evidence and the existing-file byte/identity control remain. Attempt status is not relabeled as a raw syscall return.",
+      "guard_absent_read": "An open can determine attempt status while a later write fails; the draft explicitly discards the write return. Existing-target behavior is still stated in the create row, and S31b is expressly conditional.",
+      "verification": "Review against the original action table and the attempt-channel contract. Retain every operation and returned/discarded-status distinction; no new filesystem-effect observation is claimed.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R06",
+      "title": "Use the concrete publication counterexample once",
+      "sweep_ids": [
+        "N051"
+      ],
+      "rationale": "The positive create-then-kill observation already supplies the counterexample. Make the event separation explicit at its introduction and remove the duplicate negative counterfactual from the later change table.",
+      "edits": [
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 466,
+            "end_line": 466,
+            "quote": "A native call and publication are distinct boundaries."
+          },
+          "after": "A native call can complete before the worker publishes the attempt slot."
+        },
+        {
+          "owner": "docs/WORKER.md authored prose",
+          "before": {
+            "path": "docs/WORKER.md",
+            "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+            "start_line": 510,
+            "end_line": 510,
+            "quote": "| Move reply assembly into the worker or use missing publication as proof of no effect | Couples reporting to specimen-controlled communication or substitutes absence of evidence |"
+          },
+          "after": "| Move reply assembly into the worker | Couples reporting to specimen-controlled communication |"
+        }
+      ],
+      "preserved": "N042, the independently observed created file with withheld result, payload eligibility, the evidence-contract link, and the reply-assembly design example remain.",
+      "guard_absent_read": "The reader sees a completed native effect followed by an unpublished result in a concrete case. That fact defeats the absent-publication inference without repeating it as a prohibited conclusion in the change table.",
+      "verification": "Read the complete native-observation section with the shortened table row. Preserve both sides of the independent counterexample and its control citation.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    },
+    {
+      "id": "R07",
+      "title": "Remove the unsupported object-identity edge",
+      "sweep_ids": [
+        "N299"
+      ],
+      "rationale": "The x3-to-s31b observation arrow visually associates later pathname metadata with the newly created object. W53 already carries the supported relation: attaching later path observations to the host record.",
+      "edits": [
+        {
+          "owner": "docs/architecture.json",
+          "selector": "worker_capabilities.edges[id=W50]",
+          "before": {
+            "id": "W50",
+            "from": "x3",
+            "to": "s31b",
+            "kind": "observes",
+            "label": "Later host path inspection may observe file effect",
+            "sources": [
+              {
+                "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+                "symbol": "enrichPathDiagnostics"
+              }
+            ],
+            "checks": [
+              {
+                "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
+                "symbol": "path_query_integrated",
+                "form": "test"
+              }
+            ]
+          },
+          "after": null
+        },
+        {
+          "owner": "docs/architecture.json",
+          "selector": "worker_capabilities.nodes[id=x3].note",
+          "before": "Path spelling alone is not object identity",
+          "after": null
+        },
+        {
+          "owner": "docs/architecture.json",
+          "selector": "worker_capabilities.edges[id=W53].label",
+          "before": "Host attaches later path observations",
+          "after": "Host attaches later target-path metadata"
+        }
+      ],
+      "preserved": "Keep S31b, all worker acquisition/effect edges, X3 and its source/check citations, W53 and the externally observed metadata. The independent create-effect control is unchanged. No resource is removed.",
+      "guard_absent_read": "If a pathname resolves to a replacement object before host inspection, the repaired graph still says exactly what occurred: later target-path metadata was attached. It draws no identity relationship to the worker-created object.",
+      "verification": "Regenerate the worker figure/table and inspect the complete graph: X3 joins the host record through W53; it no longer observes S31b. Confirm the worker-created resource/effect account and all other documents remain intact.",
+      "dependencies": [],
+      "status": "draft; not applied"
+    }
+  ],
+  "common_scope": "Drafts only. Apply through the owning manifest/generator for generated text. Resulting document/figure changes are confined to WORKER and worker-capabilities; shared rules and other documents remain unchanged.",
+  "future_checks": [
+    "python3 docs/generate_architecture.py",
+    "python3 docs/generate_architecture.py --check",
+    "PW_TEST_OUT_DIR=tests/out/runs/<fresh-name> tests/run.sh --case source_drift/architecture_documentation",
+    "Review generated WORKER plus DOT/SVG and prove all other generated destinations unchanged. Use targeted source_drift checks if renderer/contract verification changes."
+  ],
+  "runtime_scope": "No worker/native behavior, evidence contract, source identity, signing, build or runtime changes are part of these candidates."
+}

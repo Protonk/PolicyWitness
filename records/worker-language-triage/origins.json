@@ -1,0 +1,363 @@
+{
+  "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+  "origins": [
+    {
+      "id": "O01",
+      "title": "Evidence-basis annotations",
+      "status": "documented_basis",
+      "finding": "The plan explicitly requires per-resource observed/source-only/unknown scope. The generated qualifiers entered with the pass-2 graph in 83f61f3. They record how a claim is supported, rather than documenting a particular reader error. This establishes documentary provenance and a current purpose; it does not establish private author intent.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 100,
+          "end_line": 100,
+          "quote": "Mark source-only conclusions as such."
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 208,
+          "end_line": 208,
+          "quote": "| Sandbox-gated | Observed (cite the case), source-only, or unknown |"
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 1454,
+          "end_line": 1456,
+          "quote": "No ordinary file, Mach, extension, mutation-barrier or allocation\ncase was freshly executed for this pass. Source-only conclusions and inspected\ncheckers above are not credited as live observations."
+        }
+      ]
+    },
+    {
+      "id": "O02",
+      "title": "Bounded launch observation",
+      "status": "documented_basis",
+      "finding": "Row 11 and the launch-inventory contract identify what L observed and what it could not inspect. A complete starting-authority census was explicitly declined. These are settled observation boundaries; identifying the inference does not require completing the missing census.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 596,
+          "end_line": 598,
+          "quote": "The\npre-ready and post-apply specimens use distinct workers, so VM address or size\ndifferences are not within-process changes. No subtraction of them is claimed."
+        },
+        {
+          "path": "tests/suites/runner_exec_inheritance/README.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 78,
+          "end_line": 79,
+          "quote": "Signal state, resource limits and extension-bearing workers remain\noutside this observation."
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 600,
+          "end_line": 600,
+          "quote": "Adjudication: Explain the measured starting substrate and accept the explicitly bounded observation as a Known gap. No new isolation guarantee or runtime change is authorized."
+        }
+      ]
+    },
+    {
+      "id": "O03",
+      "title": "Published source versus installed native internals",
+      "status": "documented_basis",
+      "finding": "Row 6 traced and rejected blanket allocation claims. The pinned published sources are not an authenticated reconstruction of the installed libraries, and no allocation probe was credited. Retaining that distinction preserves useful source findings without promoting them to runtime observations.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 456,
+          "end_line": 459,
+          "quote": "These are published-source conclusions, not a match of\nApple's source release to every instruction in the installed shared cache;\nallocator, locale, lazy binding and private extension internals remain\nunobserved."
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 224,
+          "end_line": 227,
+          "quote": "Call-site completeness does not reach library internals, such as what\n`sandbox_compile_string`, the extension routines or libc formatting allocate.\nRecord the call and mark its internal behavior unobserved, unless a source or\nprobe establishes it."
+        }
+      ]
+    },
+    {
+      "id": "O04",
+      "title": "Private extension state and identity",
+      "status": "documented_basis",
+      "finding": "The limitation originated in the extension account in 1f7abc0 and moved to WORKER in pass 3 under row 8. Its present basis includes native results versus access observations, PW-buffer erasure versus private copies, and preparation-time target identity versus later opens. These origins explain the boundaries; they do not authorize changes to other documents or reopen the accepted limitation.",
+      "references": [
+        {
+          "path": "docs/ARCHITECTURE.md",
+          "revision": "1f7abc0",
+          "start_line": 515,
+          "end_line": 518,
+          "quote": "Known gap: private extension calls may allocate or retain internal state that PW\ncannot inspect. Erasure observations cover PW-owned transient buffers; successful\nnative results and phase progress do not establish kernel extension state,\nstable identity, effective permissions or access revocation."
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 506,
+          "end_line": 509,
+          "quote": "The existing architecture paragraph separates PW buffer erasure from\nprivate allocation/retention, kernel state, identity, permissions and\nrevocation. Existing adjudication remains: move ownership to WORKER.md in\npass 3 and link from ARCHITECTURE."
+        },
+        {
+          "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 188,
+          "end_line": 190,
+          "quote": "Resolution\nand metadata are host observations before issuance; neither establishes that a\nlater open reached the same object."
+        },
+        {
+          "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 203,
+          "end_line": 205,
+          "quote": "`host_buffer_erased`\nrecords clearing the host's mapping, not proof that every process or native\nlibrary has erased every copy."
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 534,
+          "end_line": 534,
+          "quote": "Adjudication: Retain the accepted private-API limitation under row 8 and explain the observed after-release read with its allowed outcomes. No universal revocation claim or native API change is authorized."
+        }
+      ]
+    },
+    {
+      "id": "O05",
+      "title": "Compiled-profile ownership overclaim",
+      "status": "documented_basis",
+      "finding": "Row 16 records the actual rejected sentence: retaining a pointer until exit was being expanded into an allocation-lifetime claim. The current guard marks the opaque apply boundary. Native ownership research is required before a future free, not before settling the editorial value of this boundary.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 719,
+          "end_line": 723,
+          "quote": "**Row 16.** First candidate: “The compiled profile is retained until worker\nexit.” That allocation-lifetime sentence exceeds the visible source:\n`sandbox_apply` is private and may have ownership behavior not established\nhere. What PW itself does is keep the returned pointer, optionally read the\nprofile, call apply and make no explicit free call."
+        }
+      ]
+    },
+    {
+      "id": "O06",
+      "title": "Spawn observation versus helper outcome",
+      "status": "documented_basis",
+      "finding": "The public exec account explicitly separates spawn, child disposition and helper-supplied evidence. This is a present external basis for the D2 distinction, not a claim that the guide caused the WORKER sentence.",
+      "references": [
+        {
+          "path": "docs/PolicyWitness.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 96,
+          "end_line": 96,
+          "quote": "The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result."
+        }
+      ]
+    },
+    {
+      "id": "O07",
+      "title": "Native completion versus publication",
+      "status": "documented_basis",
+      "finding": "The document supplies a concrete independent counterexample: the file exists while its result is withheld. Preserve that positive account and payload-admission rule. It can support removing the duplicate negative counterfactual from the change-examples table.",
+      "references": [
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 473,
+          "end_line": 475,
+          "quote": "independently observes the created file while requiring the reply to withhold\nthe unpublished result. Partially written payload remains outside the evidence\nthe host is entitled to decode."
+        }
+      ]
+    },
+    {
+      "id": "O08",
+      "title": "Ordering versus conditions at execution",
+      "status": "documented_basis",
+      "finding": "The release hold orders query collection before an action batch. The current guide expressly identifies earlier actions changing later conditions. This distinguishes temporal order from a shared state snapshot; it is a useful instrument limit even with precise ordering vocabulary.",
+      "references": [
+        {
+          "path": "docs/PolicyWitness.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 124,
+          "end_line": 124,
+          "quote": "Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot."
+        }
+      ]
+    },
+    {
+      "id": "O09",
+      "title": "Citation machinery and assertion coverage",
+      "status": "documented_basis",
+      "finding": "The renderer labels a column Checks and associates each row with implementing sources/checks, while the helper and G10 explicitly limit mechanical verification to definitions. A WORKER-specific caption/header repair can narrow that presentation. The shared helper comment and G10 remain settled rules for all their consumers.",
+      "references": [
+        {
+          "path": "docs/generator_common.py",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 3,
+          "end_line": 3,
+          "quote": "A definition is a place to look, never evidence that a test asserts a claim."
+        },
+        {
+          "path": "tests/suites/source_drift/README.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 155,
+          "end_line": 158,
+          "quote": "- **G10. Captions state the verified guarantee.** A generated caption or\n  summary says what the generator verified about citations, presence and\n  definition, and nothing stronger; it never says a test exercises, covers or\n  proves a row."
+        },
+        {
+          "path": "docs/generate_architecture.py",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 380,
+          "end_line": 380,
+          "quote": "parts.append(_table([\"Id\", \"Node\", \"Kind\", *columns, \"Sources\", \"Checks\", \"Limits\"], rows))"
+        }
+      ]
+    },
+    {
+      "id": "O10",
+      "title": "Explicit fixture intervention",
+      "status": "documented_basis",
+      "finding": "The fixture contract identifies both deliberate low-descriptor setup and containment of invalid native handles. These are concrete conditions that WORKER can state directly, allowing its two generalization disclaimers to go after repair.",
+      "references": [
+        {
+          "path": "tests/fixtures/host_setup/README.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 12,
+          "end_line": 14,
+          "quote": "The collision case closes stdin and low unused descriptors;\nthe checker requires the actual source/destination overlap and the child's wrong\nevidence endpoint, not merely a low-descriptor label."
+        },
+        {
+          "path": "tests/fixtures/host_setup/README.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 27,
+          "end_line": 29,
+          "quote": "A failed handle initialization leaves nil. Subsequent adapter calls record the\ninvalid use and return EINVAL instead of passing nil into libc; an attempted\nspawn with such a handle is likewise contained."
+        }
+      ]
+    },
+    {
+      "id": "O11",
+      "title": "Selected graph and resource-role account",
+      "status": "documented_basis",
+      "finding": "The worker graph is an explicitly authored set of resource relationships, and its white/mixed resources have positive multiple-role descriptions. The selection legend and mixed-role account help read that representation. Neither needs an inference RCA to remain useful.",
+      "references": [
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 45,
+          "end_line": 45,
+          "quote": "The edges select relationships among the inventoried resources."
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 32,
+          "end_line": 33,
+          "quote": "White nodes have multiple roles or form the ambient\nexecution substrate:"
+        },
+        {
+          "path": "docs/generate_architecture.py",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 289,
+          "end_line": 290,
+          "quote": "for edge in graph[\"edges\"]:\n        attrs = dict(styles[\"edge_kinds\"][edge[\"kind\"]])"
+        }
+      ]
+    },
+    {
+      "id": "O12",
+      "title": "File status and later pathname observations",
+      "status": "documented_basis",
+      "finding": "WORKER determines open_read/open_write attempt status from open and separately describes later host pathname observations. W50 points that later observation at the newly created object, while W53 already preserves the supported attachment of later observations. Local labels and that edge can be repaired without inventing object identity or changing another document.",
+      "references": [
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 354,
+          "end_line": 354,
+          "quote": "Published success is the open result; the write and close returns are discarded."
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 209,
+          "end_line": 209,
+          "quote": "Later host path inspection may observe file effect"
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 212,
+          "end_line": 212,
+          "quote": "Host attaches later path observations"
+        },
+        {
+          "path": "docs/PolicyWitness.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 104,
+          "end_line": 104,
+          "quote": "or that a path named the same object both times"
+        }
+      ]
+    },
+    {
+      "id": "O13",
+      "title": "Causal attribution and compiler receipt boundaries",
+      "status": "documented_basis",
+      "finding": "The repository witness principle and the worker tour distinguish native records, external correlation and pre-apply receipt capture. Their meaning survives any concise local label: association remains useful precisely with its causal boundary, and a compiler receipt remains useful with its application boundary.",
+      "references": [
+        {
+          "path": "AGENTS.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 33,
+          "end_line": 33,
+          "quote": "**No dishonest attribution**: never turn a permission-shaped failure into a sandbox-cause claim without supporting evidence, or claim agreement or disagreement between prediction and enforcement."
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 154,
+          "end_line": 154,
+          "quote": "Capture before apply; host decode after publication"
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "5f878fe0603b039ef1edf3119d448b65534e2e18",
+          "start_line": 214,
+          "end_line": 214,
+          "quote": "Controller associates external log candidates with run evidence"
+        }
+      ]
+    },
+    {
+      "id": "O14",
+      "title": "Unresolved specific inference behind three cautions",
+      "status": "specific_inference_unresolved",
+      "finding": "Git pickaxe located these phrases at the pass-2 graph introduction, but neither that insertion nor the targeted plan/contract reads identify the specific rationale for size-based object attribution, the undefined scope of exact child policy effects, or byte-erasure caveats on temporary frames. The RCA briefs distinguish plausible motivations from established provenance.",
+      "references": [
+        {
+          "path": "docs/architecture.json",
+          "revision": "83f61f3",
+          "start_line": 7574,
+          "end_line": 7574,
+          "quote": "\"Sandbox-gated\": \"L shared mappings observed; no mapping-identity attribution from size alone\""
+        },
+        {
+          "path": "docs/architecture.json",
+          "revision": "83f61f3",
+          "start_line": 7894,
+          "end_line": 7894,
+          "quote": "\"Reaches exec children\": \"Inherited sandbox constraints; exact child policy effects not inventoried here\""
+        },
+        {
+          "path": "docs/architecture.json",
+          "revision": "83f61f3",
+          "start_line": 8588,
+          "end_line": 8588,
+          "quote": "\"Released\": \"Return or process exit; no claim of byte erasure\""
+        }
+      ]
+    }
+  ],
+  "search_boundary": "Targeted WORKER/machinery, associated plan, git introduction history, owning contracts and relevant control documentation. No repository-wide search for negative language."
+}
