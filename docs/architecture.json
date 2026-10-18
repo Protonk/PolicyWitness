@@ -7139,7 +7139,7 @@
             "Inventory ID": "S12b",
             "Acquired by": "I: memcpy on bounded accepted token",
             "When": "Before compilation",
-            "Held across": "Until worker consume decision or ordinary departure; host erasure is independent; fatal interruption may bypass worker cleanup",
+            "Held across": "Until worker consume decision or ordinary departure after channel acceptance; earlier mapping/header refusals leave erasure to the host; host erasure is independent; fatal interruption may bypass worker cleanup",
             "Release / teardown action": "Worker full-buffer erasure in S22; independent host erasure in S8c",
             "Authority": "Transferable extension token",
             "Sandbox-gated": "Source-only",
