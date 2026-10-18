@@ -1,0 +1,19 @@
+{
+  "purpose": "Final-source configuration review; no execution observation",
+  "descriptor_commit": "0262dfea37cc7a04e65af5e0b10fe3f7ffac1b6f",
+  "sysctl_commit": "f6997588555f32d1b648abd082a0ae86e18b9976",
+  "sha256": {
+    "runner/Sources/PWRunnerCore/CWorker.swift": "8b1512b617efd510e94f731aab635b4d68988efc67e76e30c3d8466257c334f3",
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": "4edd214cbe889aedd3ad3b4dc61d6176bdc6bb878e009b4b6fe5662945d10724",
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": "333e9c7931e1c86a16f44e5e4749a8a4cd4d846b681aec43d917fa5d954b2599",
+    "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d",
+    "runner/Sources/PWRunnerCore/ValidatorClient.swift": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+    "runner/README.md": "5778e21b1315c4876c514ea294838909bae33597b51f5cc2e974274ff9a1cd4c",
+    "controller/src/dossier.rs": "116d76b558d6a7548e3bf911a4afbff9a259a13839c76ffab44bab4e163ae7d1",
+    "controller/src/app_layout.rs": "1694c340b653c2c3a7e23e28a29a645c7134a7ed4d26da6f42ae7e6eb5cf834d",
+    "controller/src/runner_manager.rs": "d4ac059f52f23b82239799551dec521bc6154a6462a15cc2ef3a2aec441294de",
+    "build.sh": "70a8c05a533962e33e94af26962b6512302d6054e26050305e371e19be66f40b",
+    "controller/tools/pw_probe_runner/pw_probe_runner.c": "53b4d8031ee688c0b1b497517dca4ddfd329b867c8d2ff86f233bd71803925e4",
+    "docs/limits.json": "704645c7dcf087ebcd2a31c142d6c4fffbfe1670f125271e0f00c8bd9b6408c6"
+  }
+}

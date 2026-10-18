@@ -2,8 +2,9 @@
 
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-07 in the [initial audit](../../../records/worker-pass6/initial-report.md).
-State: source inventory complete and reviewed; design staged behind exec and
-descriptor ownership decisions.
+State: source investigation complete and reviewed after the exec, descriptor
+and sysctl refactors. The validator-default compatibility choice is ready for
+user review; no configuration runtime change has been selected.
 
 The [source inventory](../../../records/worker-execution-configuration/source-inventory.md)
 traces all ten controls, selection/provenance and readers at `503156f`, with
@@ -13,6 +14,17 @@ provenance suffice for qualified observation records; override presence cannot
 classify effective instrumentation. Structured dynamic validator allowances,
 intervention observations and the default-validator fallback's selected-path
 account remain separate gaps. No mode, request split or schema is selected.
+
+The [post-refactor review](../../../records/worker-execution-configuration/post-refactor-review.md)
+and [reviewed source hashes](../../../records/worker-execution-configuration/reviewed-sources.json)
+refresh these conclusions against the accepted implementations. The remaining
+decision is whether to remove the implicit app-level validator fallback,
+aligning the host default with the supported bundle layout, or preserve that
+compatibility and add an honest host-resolved selection account. Removal is
+recommended; it changes manually arranged older layouts and awaits the user's
+choice. Explicit overrides remain separate. Dynamic validator allowances and
+native intervention observations are optional capabilities, with no present
+requirement to add them. Comment corrections can accompany the selected work.
 
 ## Starting point
 
