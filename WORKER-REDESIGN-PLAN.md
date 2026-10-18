@@ -1,0 +1,80 @@
+# Worker findings: design investigations
+
+## Status and purpose
+
+The investigation handoffs below are drafted. Assignment, dispatch method and
+supervision are undecided; none of these investigations has started. This parent
+tracks their scope, connections and eventual decisions. The preparing agent
+maintains this outline and retains the documentation workstream below.
+
+The question is whether a different design would remove the reason for a
+finding, and what that design would cost the instrument. A useful outcome can
+be a smaller refactor, a changed experimental contract, or a reason to retain
+the existing design and its limitation. Each investigation ends with evidence,
+alternatives and a recommendation for a user decision. Implementation follows
+that decision as separately scoped work.
+
+## Evidence and relationship to the worker tour
+
+The [initial audit](records/worker-pass6/initial-report.md) examined
+`475ac0b7a284b784a4a65e5673f71c7f17941a5b`. Its original text is preserved;
+the [handoff context](records/worker-pass6/handoff-context.md) records provenance,
+evidence availability, subsequent process cleanup and provisional connections
+to existing findings. Audit recommendations are inputs to investigation.
+
+The [worker documentation plan](docs/WORKER-INST-DOC-PLAN.md) retains its register
+and adjudications. These handoffs neither close its open rows nor authorize
+runtime repairs. Existing findings missed by this audit remain in that register.
+
+## Application investigations
+
+| Finding | Code-local plan | Decision to develop | State |
+| --- | --- | --- | --- |
+| WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Shorter host descriptor ownership versus explicit child inheritance controls | Draft; unassigned |
+| WA-04, WA-08 | [Terminal publication and cleanup](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Draft; unassigned |
+| WA-03 | [Exec supervision](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) | Completion semantics, cleanup ownership and the attainable containment boundary | Draft; unassigned |
+| WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Draft; unassigned |
+| WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Draft; unassigned |
+| WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Explicit bounded reading versus a different sysctl operation | Draft; unassigned |
+
+Recipients can orient in the repository and discuss the particular question
+with the user or a subsequently designated coordinator before targeted work.
+The daughter plans supply starting evidence and discriminating questions; they
+leave the investigation method and any prototype scope for that discussion.
+
+Terminal publication and exec supervision share lifecycle evidence, but worker
+exit and descendant cleanup are different guarantees. Execution configuration
+may affect how observations are described in the retained workstream. Descriptor
+ownership and token cleanup may change resource lifetimes in the tour. Record
+these consequences when recommending a design; they do not assign one
+investigator ownership of another plan.
+
+## Retained documentation workstream
+
+WA-02, WA-05, WA-06 and WA-09 stay together here. Work is not started. Examine:
+
+- Support attached to particular facts, including explicit source-only support
+  and relevant assertion citations, in place of mandatory per-row check filling.
+- Identifiable observation records and applicability review, including the
+  configuration and evidence behind observation L.
+- Separation of acquisition placement from policy-specific observations in the
+  current "Sandbox-gated" column.
+- Resource holders, shared objects and multiple purposes in the map, together
+  with correction of source ownership references.
+
+This workstream concerns how WORKER.md and its machinery represent the
+instrument. It makes no application redesign decision on behalf of a daughter
+investigation. Changes to the manifest's current per-resource model are
+proposals to examine, including their authoring and verification costs.
+
+## Return and maintenance
+
+For each investigation, record the source revision and evidence used, which
+part of the finding each alternative removes, remaining limitations, changes
+to the experimental question, and the smallest useful next decision. Separate
+source conclusions, observed results and hypotheses. Name any needed future
+regression controls and contract changes without treating them as completed.
+
+Update this outline with report locations and actual user decisions as they
+arrive. Preserve the initial audit; subsequent investigation reports and
+reconciliation are separate records linked from their associated plans.

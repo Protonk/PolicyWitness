@@ -2,7 +2,18 @@
 
 ## Status
 
-Worker-language resolution is complete with this commit. The
+The pass-6 initial audit is complete at its report stop, against `475ac0b`.
+The [preserved report](../records/worker-pass6/initial-report.md) retains the
+reader's findings and disclosed context exposure;
+[handoff context](../records/worker-pass6/handoff-context.md) records evidence
+availability and subsequent cleanup of the reported orphan. The
+[redesign parent plan](../WORKER-REDESIGN-PLAN.md) separates code-local
+application investigations from retained work on WORKER's evidence and map
+model. Those handoffs are drafted; assignment and supervision are undecided,
+and the investigations have not started. Register adjudications and closures
+are unchanged. The checkpoints below retain their earlier scope.
+
+Worker-language resolution completed after `143c8a4`. The
 [resolution report](../records/worker-language-resolution/report.md) records
 all fifteen final dispositions and the fresh pass-6 handoff. The
 [positive-reframing trial](../records/worker-language-resolution/positive-trial.md)
@@ -13,7 +24,8 @@ pending. Observation/lifetime repairs are `5e4f5d3`, citation presentation is
 `b1f5697`, and the graph relationship/layout repair is `143c8a4`. The final
 architecture-documentation and generator-contract cases pass, with semantic
 and visual review recorded in the report. The 102 settled guard units retain
-their meaning. Register adjudications are unchanged; pass 6 has not started.
+their meaning. At that checkpoint register adjudications were unchanged and
+pass 6 had not started.
 
 Worker-language triage is complete in `672374c` against `5f878fe`. The
 [triage report](../records/worker-language-triage/report.md) and
@@ -36,8 +48,8 @@ changes no underlying claim or register disposition and is not pass 6.
 Pass 5 round 1 is complete in `2d63c98`: three independent reviews,
 reconciliation and the focused probes described below. The user authorized
 this single enriched round after pass 4;
-future rounds remain undecided. Pass 6 is reserved for a fresh agent and has
-not started. The frozen review revision is
+future rounds remained undecided. Pass 6 was reserved for a fresh agent at that
+checkpoint. The frozen review revision is
 `5124b4309b6f7b0041c55318312a9ee18f579868`; prompts are committed in `abb2e2d`.
 The [reconciliation](../records/worker-pass5-round1/reconciliation.md) preserves
 the independent reports, their boundaries and register destinations.
