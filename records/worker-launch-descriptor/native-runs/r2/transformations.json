@@ -1,0 +1,37 @@
+[
+  {
+    "old": "let shmFD = shmName.withCString",
+    "new": "var shmFD = shmName.withCString",
+    "count": 1
+  },
+  {
+    "old": "return pw_cworker_shm_open_create(cName, 0o600)",
+    "new": "return probeShm(cName, 0o600)",
+    "count": 1
+  },
+  {
+    "old": "close(shmFD)",
+    "new": "_ = probeClose(shmFD)",
+    "count": 4
+  },
+  {
+    "old": "        _ = probeClose(shmFD)\n    }\n\n    // Zero the region.",
+    "new": "        if shmFD >= 0 { _ = probeClose(shmFD) }\n    }\n\n    // Zero the region.",
+    "count": 1
+  },
+  {
+    "old": "    _ = fcntl(shmFD, F_SETFD, 0)",
+    "new": "    if probeVariant != \"noclear\" { _ = fcntl(shmFD, F_SETFD, 0) }",
+    "count": 1
+  },
+  {
+    "old": "    storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)",
+    "new": "    storeRelease(rawBase, offset: PWShmLayout.preparedOffset, 1)\n    probePrepared(base)",
+    "count": 1
+  },
+  {
+    "old": "    // The transfer calls (clock, write, poll) are one injection point:",
+    "new": "    // Disposable ownership prototypes, selected only in this test executable.\n    probeChildSpawned(pid)\n    if probeVariant == \"close\" || probeVariant == \"naive\" {\n        _ = probeClose(shmFD)\n        if probeVariant == \"close\" { shmFD = -1 }\n    } else if probeVariant == \"cloexec\" {\n        precondition(fcntl(shmFD, F_SETFD, FD_CLOEXEC) == 0)\n    }\n    probeAfterSpawn(shmFD)\n    // The transfer calls (clock, write, poll) are one injection point:",
+    "count": 1
+  }
+]

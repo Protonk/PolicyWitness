@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/private/tmp/pw-launch-descriptor-20261018-r3/runner/.build/out/Products/Debug/PWRunnerCoreTests",
+    "/private/tmp/pw-launch-descriptor-20261018-r3/observer",
+    "naive",
+    "high"
+  ],
+  "returncode": 0
+}

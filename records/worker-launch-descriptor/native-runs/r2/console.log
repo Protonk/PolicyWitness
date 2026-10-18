@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 185, in <module>
+    if __name__=='__main__': run(Path(sys.argv[1]).resolve())
+                             ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 166, in run
+    check(r,variant,mode); receipts[label]=r
+    ~~~~~^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 59, in check
+    assert 'spawnFailed' in r['worker']['error']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

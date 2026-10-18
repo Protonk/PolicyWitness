@@ -1,0 +1,63 @@
+{
+  "baseline_run_id": "20261018T192430Z_884b74f5",
+  "case": "runner_exec_lifecycle/worker_dies_during_exec",
+  "baseline_observations": {
+    "pids": {
+      "P": 68165,
+      "C": 68170
+    },
+    "groups": {
+      "P": 68165,
+      "C": 68165
+    },
+    "exited": [],
+    "elapsed": 0.444195917
+  },
+  "checked_at_utc": "2026-10-18T19:30:52.369172+00:00",
+  "signals_sent": false,
+  "observations": {
+    "P": {
+      "pid": 68165,
+      "libproc_command": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-followup-baseline-20261018/suites/runner_exec_lifecycle/worker_dies_during_exec/artifacts/helper",
+        "--process",
+        "68165"
+      ],
+      "libproc_rc": 2,
+      "libproc_stdout": "",
+      "libproc_stderr": "exec_fixture: process 68165 unavailable (errno=3)\n",
+      "ps_command": [
+        "/bin/ps",
+        "-p",
+        "68165",
+        "-o",
+        "pid=,ppid=,pgid=,lstart=,comm="
+      ],
+      "ps_rc": 1,
+      "ps_stdout": "",
+      "ps_stderr": ""
+    },
+    "C": {
+      "pid": 68170,
+      "libproc_command": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-followup-baseline-20261018/suites/runner_exec_lifecycle/worker_dies_during_exec/artifacts/helper",
+        "--process",
+        "68170"
+      ],
+      "libproc_rc": 2,
+      "libproc_stdout": "",
+      "libproc_stderr": "exec_fixture: process 68170 unavailable (errno=3)\n",
+      "ps_command": [
+        "/bin/ps",
+        "-p",
+        "68170",
+        "-o",
+        "pid=,ppid=,pgid=,lstart=,comm="
+      ],
+      "ps_rc": 1,
+      "ps_stdout": "",
+      "ps_stderr": ""
+    }
+  },
+  "scope": "Later observation only; does not upgrade the original case cleanup assertions or establish when/how the helpers exited. Original helper start timestamps were not retained in that case."
+}

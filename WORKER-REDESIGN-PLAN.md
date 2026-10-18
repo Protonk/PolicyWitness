@@ -7,9 +7,13 @@ and coordinator synthesis. The terminal-exit refactor and phase qualification
 rule below are implemented, reviewed and accepted against the signed app; the
 [acceptance record](records/worker-terminal-lifetime/implementation-acceptance.md)
 retains the build, tests, test-oracle repairs and source snapshots.
-The other investigation handoffs remain drafted and unassigned. This parent
-tracks their scope, connections and eventual decisions; the coordinator retains
-the documentation workstream below.
+The descriptor, exec and sysctl investigations are complete and reviewed against
+`503156f`; their daughter plans link the reports and native evidence. Execution
+configuration has a reviewed source inventory. Their recommendations await user
+design decisions. The [coordination record](records/worker-redesign-followups/coordination.md)
+retains sequencing, baseline evidence and the coordinator's documentation review.
+Execution environment remains staged. No follow-up application refactor has
+been selected or implemented.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -34,17 +38,39 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 
 | Finding | Code-local plan | Decision to develop | State |
 | --- | --- | --- | --- |
-| WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Shorter host descriptor ownership versus explicit child inheritance controls | Draft; unassigned |
+| WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Shorter host descriptor ownership versus explicit child inheritance controls | Investigation reviewed; decision ready |
 | WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Implemented; signed acceptance passed |
-| WA-03 | [Exec supervision](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) | Completion semantics, cleanup ownership and the attainable containment boundary | Draft; unassigned |
-| WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Draft; unassigned |
-| WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Draft; unassigned |
-| WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Explicit bounded reading versus a different sysctl operation | Draft; unassigned |
+| WA-03 | [Exec supervision](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) | Completion semantics, cleanup ownership and the attainable containment boundary | Investigation reviewed; behavioral decision ready |
+| WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Source inventory reviewed; design staged |
+| WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Staged; not started |
+| WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Explicit bounded reading versus a different sysctl operation | Investigation reviewed; decision ready |
 
-Recipients can orient in the repository and discuss the particular question
-with the user or a subsequently designated coordinator before targeted work.
-The daughter plans supply starting evidence and discriminating questions; they
-leave the investigation method and any prototype scope for that discussion.
+The initial three follow-ups ran concurrently, with shared-checkout builds and
+process experiments serialized. Configuration source inventory followed as an
+agent slot became available. The coordinator reviewed sources, equipment,
+receipts and limitations; copied-source prototypes did not alter the app.
+
+The next decision checkpoints are:
+
+- Descriptor lifetime: close the host's evidence descriptor immediately after
+  successful worker spawn, relinquish its cleanup ownership and retain the
+  mapping. This is the recommended narrow refactor; broader inheritance and
+  low-descriptor collisions remain separate.
+- Exec: first decide whether ordinary leader-plus-EOF completion should end
+  same-group background work. A cleanup request before leader reap needs no
+  extra owner. An external group owner is feasible for cleanup after worker
+  loss, but adds authority and child-visible state and cannot contain escaped
+  descendants or establish group absence merely from a signal result.
+- Sysctl: retain the single non-null 4096-byte value read. Name and disclose
+  its capacity; decide separately whether to publish supplied capacity and raw
+  post-call `oldlen`. That value is neither required size nor bytes copied.
+
+Settle descriptor ownership before new supervisor launch wiring. Let the exec
+decision define any new completion/cleanup fields before configuration chooses
+a shared representation. Existing request, envelope and provenance can already
+support qualified document observation records. Environment work follows the
+requested/resolved/observed distinction and does not need to precede those
+records. These are recommendations, not adopted implementation decisions.
 
 The user selected terminal lifetime as the first investigation to bring to a
 design decision, before detailed exec-supervisor design. That decision is now
@@ -75,7 +101,9 @@ investigator ownership of another plan.
 
 ## Retained documentation workstream
 
-WA-02, WA-05, WA-06 and WA-09 stay together here. Work is not started. Examine:
+WA-02, WA-05, WA-06 and WA-09 stay together here. Preliminary source review is
+recorded in the coordination record; no schema or graph redesign is selected.
+Examine:
 
 - Support attached to particular facts, including explicit source-only support
   and relevant assertion citations, in place of mandatory per-row check filling.

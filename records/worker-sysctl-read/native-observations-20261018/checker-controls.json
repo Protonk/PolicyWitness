@@ -1,0 +1,14 @@
+[
+  {
+    "mutation": "capacity_as_returned_length",
+    "rejected_by": "returned length is not supplied capacity"
+  },
+  {
+    "mutation": "required_size_after_short_read",
+    "rejected_by": "returned length is not discovered required size"
+  },
+  {
+    "mutation": "zero_capacity_as_size_only",
+    "rejected_by": "zero capacity must not become size-only"
+  }
+]

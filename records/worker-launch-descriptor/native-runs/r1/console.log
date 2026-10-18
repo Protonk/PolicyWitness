@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 185, in <module>
+    if __name__=='__main__': run(Path(sys.argv[1]).resolve())
+                             ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 151, in run
+    command(out,'observer-build',['clang','-Wall','-Wextra','-Werror','-I'+str(ROOT/'controller/tools/pw_probe_runner'),'-DREAL_WORKER="'+str(worker)+'"',str(HERE/'observer.c'),'-o',str(observer)])
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/run.py", line 53, in command
+    raise AssertionError((label, p.returncode, str(out / (label + '.log'))))
+AssertionError: ('observer-build', 1, '/private/tmp/pw-launch-descriptor-20261018/observer-build.log')

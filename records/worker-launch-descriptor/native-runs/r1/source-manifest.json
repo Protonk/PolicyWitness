@@ -1,0 +1,25 @@
+{
+  "base_commit": "503156f0693dd8a22acf633efccdc93e300f2ebc",
+  "inputs": {
+    "runner/Sources/PWCWorkerShim/PWCWorkerShim.c": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+    "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+    "runner/Sources/PWRunnerCore/CWorker.swift": "0782f537dd581124816502d624fb64a706d5923755d325ca28b7d7386d890c3a",
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": "5e72b728267c36f5da98cec2877c83e5070b3e1f3c28e4f20c99b52c05b710c8",
+    "runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md": "4c9a2a0ca24519f5df1f147eb74c6c97684b58099af0bd353684cd8684cf33dd",
+    "runner/Sources/PWRunnerCore/ExtensionIssuer.swift": "12dfdc4b7a1509e158718e541d407bdbc88a33109518d9d72af8248665e891fc",
+    "runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md": "dc2e696807f0e75b1368a0eb896f14860f0c4bd1ae3ded7a1ef013190128cf3b",
+    "runner/Sources/PWRunnerCore/MonotonicDeadline.swift": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": "2bf4f795b8b68a40f0987b2558fa57f773061b7525989a84faa417a41b7c47cd",
+    "runner/Sources/PWRunnerCore/PWRunnerListener.swift": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+    "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d",
+    "runner/Sources/PWRunnerCore/PathUtils.swift": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+    "runner/Sources/PWRunnerCore/ProbeRunner.swift": "9114748ba2bfd1333b09cfab4cadf58600eed1fa399d211fc4418331c337dbd3",
+    "runner/Sources/PWRunnerCore/SandboxApply.swift": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+    "runner/Sources/PWRunnerCore/ValidatorClient.swift": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb",
+    "runner/Package.swift": "5e82260323be0f470dcc7032a7bc2b3f318904cac1afc8fc347924614eecfda7",
+    "controller/tools/pw_probe_runner/pw_extension_channel.h": "9452dbcd1a3505c62f70424673e391a70043e7f10b5ca1568c832aa795f14888",
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "037134f9a31a6e2b211ae3145614bc763fae932710a5a7527c92aa045e966e4c",
+    "controller/tools/pw_probe_runner/pw_profile_capture.h": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+    "controller/tools/pw_probe_runner/pw_worker_evidence.h": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65"
+  }
+}

@@ -1,0 +1,123 @@
+[
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "size",
+      "0"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"size\",\"buffer_is_null\":true,\"capacity_argument\":0,\"returned_length\":7,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "read",
+      "0"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":0,\"returned_length\":0,\"rc\":-1,\"errno_after_call\":12,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "read",
+      "1"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":1,\"returned_length\":0,\"rc\":-1,\"errno_after_call\":12,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "read",
+      "6"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":6,\"returned_length\":0,\"rc\":-1,\"errno_after_call\":12,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "read",
+      "7"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":7,\"returned_length\":7,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":7,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.osrelease",
+      "read",
+      "4096"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.osrelease\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":4096,\"returned_length\":7,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":7,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.proc.all",
+      "size",
+      "0"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.proc.all\",\"mode\":\"size\",\"buffer_is_null\":true,\"capacity_argument\":0,\"returned_length\":404352,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.proc.all",
+      "read",
+      "4096"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.proc.all\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":4096,\"returned_length\":0,\"rc\":-1,\"errno_after_call\":12,\"bytes_differing_from_sentinel\":3888,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.proc.all",
+      "read",
+      "404352"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.proc.all\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":404352,\"returned_length\":401112,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":401020,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.proc.all",
+      "size",
+      "0"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.proc.all\",\"mode\":\"size\",\"buffer_is_null\":true,\"capacity_argument\":0,\"returned_length\":404352,\"rc\":0,\"errno_after_call\":0,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/pw-sysctl-native-read",
+      "kern.pw_nonexistent_sysctl_control",
+      "read",
+      "4096"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"name\":\"kern.pw_nonexistent_sysctl_control\",\"mode\":\"read\",\"buffer_is_null\":false,\"capacity_argument\":4096,\"returned_length\":4096,\"rc\":-1,\"errno_after_call\":2,\"bytes_differing_from_sentinel\":0,\"canaries_ok\":true}\n",
+    "stderr": ""
+  }
+]

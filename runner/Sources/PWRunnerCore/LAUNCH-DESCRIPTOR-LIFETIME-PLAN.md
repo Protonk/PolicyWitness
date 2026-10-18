@@ -2,7 +2,16 @@
 
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-01 in the [initial audit](../../../records/worker-pass6/initial-report.md).
-State: drafted; investigation unassigned.
+State: investigation complete and reviewed; ownership decision ready, no
+production refactor selected.
+
+The [investigation report](../../../records/worker-launch-descriptor/investigation.md)
+records the source trace, fourteen native prototype scenarios, six rejected
+checker controls, exact equipment and failed-attempt accounting at `503156f`.
+It recommends closing the host descriptor after successful worker spawn with
+explicit ownership invalidation, retaining the mapping and current pre-spawn
+file actions. The baseline's writable same-object inheritance was established
+by independent challenge/readback against a separate identical decoy.
 
 ## Starting point
 

@@ -1,0 +1,178 @@
+{
+  "cases": [
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_unit/host_setup_controls.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "Native setup faults and actual descriptor collisions in disposable host sources, with independent child receipts and rejected checker controls",
+      "id": "runner_unit/host_setup_controls",
+      "report_suite": "runner_unit",
+      "requires": [
+        "swift",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_unit",
+      "test_id": "host_setup_controls"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/exec_fixture/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "fixture controls distinguish independent process trees, output/status, inherited resources, and invalid reports",
+      "id": "exec_fixture/controls",
+      "report_suite": "exec_fixture",
+      "requires": [
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "exec_fixture",
+      "test_id": "controls"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "timed-out process group stopped; output survived and the next write completed",
+      "id": "runner_exec_lifecycle/timeout_preserves_output_and_continues",
+      "report_suite": "runner_exec_lifecycle",
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_exec_lifecycle",
+      "test_id": "timeout_preserves_output_and_continues"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "pipe EOF does not kill a live helper",
+      "id": "runner_exec_lifecycle/closed_streams_continue",
+      "report_suite": "runner_exec_lifecycle",
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_exec_lifecycle",
+      "test_id": "closed_streams_continue"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "an exited leader does not suppress deadline cleanup of descendants",
+      "id": "runner_exec_lifecycle/leader_exit_descendant",
+      "report_suite": "runner_exec_lifecycle",
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_exec_lifecycle",
+      "test_id": "leader_exit_descendant"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/run.sh"
+      ],
+      "context": "standard",
+      "default": true,
+      "depends_on": [],
+      "description": "worker death preserves completed effects and leaves unpublished exec status unknown",
+      "id": "runner_exec_lifecycle/worker_dies_during_exec",
+      "report_suite": "runner_exec_lifecycle",
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_exec_lifecycle",
+      "test_id": "worker_dies_during_exec"
+    },
+    {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh"
+      ],
+      "context": "standard",
+      "default": false,
+      "depends_on": [],
+      "description": "Observe a same-group descendant surviving normal leader and stream completion, then independently release and confirm fixture cleanup",
+      "id": "runner_exec_lifecycle/closed_streams_leader_exit",
+      "report_suite": "runner_exec_lifecycle",
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "selection": "requested",
+      "skip_reasons": [],
+      "suite": "runner_exec_lifecycle",
+      "test_id": "closed_streams_leader_exit"
+    }
+  ],
+  "configuration": {
+    "app_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "out_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-followup-baseline-20261018",
+    "pw_bin": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "quiet": false
+  },
+  "containing_suites": {
+    "exec_fixture": [
+      "exec_fixture/controls"
+    ],
+    "opt_in": [
+      "runner_exec_lifecycle/closed_streams_leader_exit"
+    ],
+    "runner_exec_lifecycle": [
+      "runner_exec_lifecycle/timeout_preserves_output_and_continues",
+      "runner_exec_lifecycle/closed_streams_continue",
+      "runner_exec_lifecycle/leader_exit_descendant",
+      "runner_exec_lifecycle/worker_dies_during_exec",
+      "runner_exec_lifecycle/closed_streams_leader_exit"
+    ],
+    "runner_unit": [
+      "runner_unit/host_setup_controls"
+    ]
+  },
+  "schema_version": 1,
+  "selection": {
+    "cases": [
+      "runner_unit/host_setup_controls"
+    ],
+    "mode": "explicit",
+    "suites": [
+      "runner_exec_lifecycle",
+      "exec_fixture"
+    ]
+  }
+}

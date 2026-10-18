@@ -1,0 +1,33 @@
+{
+  "decoy_fd" : 128,
+  "events" : [
+    {
+      "event" : "create",
+      "fd" : 16
+    },
+    {
+      "event" : "decoy",
+      "fd" : 128
+    },
+    {
+      "errno" : 0,
+      "event" : "evidence_close",
+      "fd" : 16,
+      "rc" : 0
+    }
+  ],
+  "mode" : "spawn_failure",
+  "original_fd" : 16,
+  "original_open_after_return" : false,
+  "readbacks" : [
+
+  ],
+  "sentinel_fd" : -1,
+  "sentinel_open_after_return" : false,
+  "validator" : {
+
+  },
+  "worker" : {
+    "error" : "posix_spawn: No such file or directory"
+  }
+}

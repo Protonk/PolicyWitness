@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "clang",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-I/Users/raccoon/Desktop/Security/PolicyWitness/controller/tools/pw_probe_runner",
+    "-DREAL_WORKER=\"/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\"",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/observer.c",
+    "-o",
+    "/private/tmp/pw-launch-descriptor-20261018-r3/observer"
+  ],
+  "returncode": 0
+}

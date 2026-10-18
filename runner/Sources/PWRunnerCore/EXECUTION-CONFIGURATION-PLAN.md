@@ -2,7 +2,17 @@
 
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-07 in the [initial audit](../../../records/worker-pass6/initial-report.md).
-State: drafted; investigation unassigned.
+State: source inventory complete and reviewed; design staged behind exec and
+descriptor ownership decisions.
+
+The [source inventory](../../../records/worker-execution-configuration/source-inventory.md)
+traces all ten controls, selection/provenance and readers at `503156f`, with
+ordinary, effective, inert, unreached and refused examples. These are source
+branches, not newly executed runs. Existing retained requests, envelopes and
+provenance suffice for qualified observation records; override presence cannot
+classify effective instrumentation. Structured dynamic validator allowances,
+intervention observations and the default-validator fallback's selected-path
+account remain separate gaps. No mode, request split or schema is selected.
 
 ## Starting point
 

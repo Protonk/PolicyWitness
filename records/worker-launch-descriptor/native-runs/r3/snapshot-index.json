@@ -1,0 +1,30 @@
+{
+  "source/CWorker.instrumented.swift": {
+    "sha256": "69abe05c967629321a113606029dab8897f46b32d9d081987bc75328513acb85",
+    "object": "../../snapshots/69abe05c967629321a113606029dab8897f46b32d9d081987bc75328513acb85.swift"
+  },
+  "source/CWorker.original.swift": {
+    "sha256": "0782f537dd581124816502d624fb64a706d5923755d325ca28b7d7386d890c3a",
+    "object": "../../snapshots/0782f537dd581124816502d624fb64a706d5923755d325ca28b7d7386d890c3a.swift"
+  },
+  "source/Probe.swift": {
+    "sha256": "5cff6d261923cfa6b278e63f338d9e35bd57d11b05a24e37251a38bac01148f9",
+    "object": "../../snapshots/5cff6d261923cfa6b278e63f338d9e35bd57d11b05a24e37251a38bac01148f9.swift"
+  },
+  "source/observer.c": {
+    "sha256": "02d859126c653259ca430b6fa0806011f24c09f0a28139dad832c519ac7d405e",
+    "object": "../../snapshots/02d859126c653259ca430b6fa0806011f24c09f0a28139dad832c519ac7d405e.c"
+  },
+  "source/run.py": {
+    "sha256": "06a1bdf4897f1a84726e45dd463e0caea89bfa1118219e589cc7cf07a446fbc1",
+    "object": "../../snapshots/06a1bdf4897f1a84726e45dd463e0caea89bfa1118219e589cc7cf07a446fbc1.py"
+  },
+  "runner/Sources/PWRunnerCore/Probe.swift": {
+    "sha256": "9272301de31c87ce4dad755aa6e22b65234c7345a20979a51a2ec5a6575fb78c",
+    "object": "../../snapshots/9272301de31c87ce4dad755aa6e22b65234c7345a20979a51a2ec5a6575fb78c.swift"
+  },
+  "runner/Tests/PWRunnerCoreTests/main.swift": {
+    "sha256": "eb63470b61ef998587ff19f1a40ebb34767aaa5a12727adab97a9de05683d032",
+    "object": "../../snapshots/eb63470b61ef998587ff19f1a40ebb34767aaa5a12727adab97a9de05683d032.swift"
+  }
+}

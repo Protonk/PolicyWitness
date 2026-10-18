@@ -1,0 +1,86 @@
+[
+  {
+    "case": "baseline-extension_delivery",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": true
+  },
+  {
+    "case": "baseline-high",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": true
+  },
+  {
+    "case": "baseline-self",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": true
+  },
+  {
+    "case": "baseline-spawn_failure",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "cloexec-extension_delivery",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "cloexec-high",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "cloexec-self",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "cloexec-spawn_failure",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "close-extension_delivery",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "close-high",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "close-self",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "close-spawn_failure",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "naive-high",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  },
+  {
+    "case": "noclear-self",
+    "pid_chain_checked": true,
+    "no_unowned_cleanup": true,
+    "same_stat_access_shape_for_decoy": null
+  }
+]
