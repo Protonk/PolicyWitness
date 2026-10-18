@@ -62,7 +62,7 @@ their own lifetimes.
 *Figure: worker capabilities. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [worker-capabilities.dot](worker-capabilities.dot). Figure IDs correspond to the table IDs. Each row lists source references and cited test or rule definitions. The generator checks source-symbol presence and resolves those definitions.*
 
 <details>
-<summary>Worker capabilities: 83 nodes and 55 edges; source-symbol presence and cited definitions checked</summary>
+<summary>Worker capabilities: 83 nodes and 54 edges; source-symbol presence and cited definitions checked</summary>
 
 #### Worker capabilities nodes
 
@@ -205,10 +205,9 @@ their own lifetimes.
 | W47 | s3a | s13c | observes | Host reads worker readiness byte | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | W48 | s2 | s18 | observes | Host observes publication in same evidence object | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | W49 | s34a | s36a | observes | Worker drains child output | [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_pipes_per_attempt`](../tests/suites/runner_c_worker_harness/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |  |
-| W50 | x3 | s31b | observes | Later host path inspection may observe file effect | [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`path_query_integrated`](../tests/suites/witness_contract/opt_in/path_query_integrated.sh) |  |
 | W51 | s2 | x2 | joins | Host uses admitted publications | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift); [`comparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | W52 | x1 | x2 | joins | Host joins prediction records to attempt evidence | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`comparison_matrix`](../tests/suites/witness_contract/run.sh) |  |
-| W53 | x3 | x2 | joins | Host attaches later path observations | [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`path_query_integrated`](../tests/suites/witness_contract/opt_in/path_query_integrated.sh) |  |
+| W53 | x3 | x2 | joins | Host attaches later path-resolution results | [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`path_query_integrated`](../tests/suites/witness_contract/opt_in/path_query_integrated.sh) |  |
 | W54 | s27 | x5 | joins | Host decodes and copies receipt | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h); [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | W55 | x2 | x4 | joins | Controller associates external log candidates with run evidence | [`comparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`comparison_matrix`](../tests/suites/witness_contract/run.sh) |  |
 
@@ -216,7 +215,6 @@ Notes:
 
 - `x1`: No transfer into worker; release ordinal is separate
 - `x2`: Host-owned interpretation under evidence contract
-- `x3`: Path spelling alone is not object identity
 - `x4`: Candidate association, not worker-native cause
 - `x5`: Receipt and applied-policy evidence are distinct
 

@@ -7,9 +7,10 @@ Worker-language resolution is in progress. The
 compares all fifteen remaining units before the
 [bounded RCAs](../records/worker-language-resolution/rca.md). The resulting
 decisions are nine positive repairs and six elisions, with no editorial RCA
-pending. Observation, lifetime, source-scope and citation-presentation repairs
-are implemented; the path-observation graph repair and integrated validation
-remain. No register adjudication changes; pass 6 has not started.
+pending. All fifteen repairs are implemented. The path-observation map retains
+later host path results without an object-identity edge; its acquisition-cluster
+heading is repositioned for legibility. Integrated validation is in progress.
+No register adjudication changes; pass 6 has not started.
 
 Worker-language triage is complete in `672374c` against `5f878fe`. The
 [triage report](../records/worker-language-triage/report.md) and

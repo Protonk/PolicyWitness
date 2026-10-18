@@ -6459,7 +6459,7 @@
             "s33b",
             "s36a"
           ],
-          "label_position": "bottom"
+          "label_position": "top"
         },
         {
           "id": "external",
@@ -8958,8 +8958,7 @@
               "symbol": "path_query_integrated",
               "form": "test"
             }
-          ],
-          "note": "Path spelling alone is not object identity"
+          ]
         },
         {
           "id": "x4",
@@ -10055,26 +10054,6 @@
           ]
         },
         {
-          "id": "W50",
-          "from": "x3",
-          "to": "s31b",
-          "kind": "observes",
-          "label": "Later host path inspection may observe file effect",
-          "sources": [
-            {
-              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
-              "symbol": "enrichPathDiagnostics"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/opt_in/path_query_integrated.sh",
-              "symbol": "path_query_integrated",
-              "form": "test"
-            }
-          ]
-        },
-        {
           "id": "W51",
           "from": "s2",
           "to": "x2",
@@ -10123,7 +10102,7 @@
           "from": "x3",
           "to": "x2",
           "kind": "joins",
-          "label": "Host attaches later path observations",
+          "label": "Host attaches later path-resolution results",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",

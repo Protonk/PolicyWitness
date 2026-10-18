@@ -59,7 +59,7 @@ digraph worker_capabilities {
     }
     subgraph cluster_operation {
         label="Acquisitions by attempted operations"; style=dashed; color="#888888"; fontsize=10;
-        labelloc=b;
+        labelloc=t;
         s29;
         s30;
         s31a;
@@ -157,7 +157,7 @@ digraph worker_capabilities {
     n13 [shape="box", style="rounded,filled", fillcolor="#e8f0fe", color="#555555", label="Libc diagnostic state\nreachable after apply\nn13", URL="WORKER.md#worker-capabilities-nodes", tooltip="n13: Libc diagnostic state\nreachable after apply | N13; fail_from_errno, exec_setup_failed, attempt_exec_spawn, attempt_mach_lookup, run_attempt: snprintf, strerror; After apply within an attempt; Library-dependent; ordinary errno table is static, fallback buffer retained; Library/exit; no PW-owned handle; Diagnostic formatting; hidden allocation/locale behavior bounded only by source studied; Source-only Apple paths; installed-library internals unobserved; Library memory not carried across exec; P "];
     x1 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Validator predictions\nx1", URL="WORKER.md#worker-capabilities-nodes", tooltip="x1: Validator predictions | X1; planValidatorQueries; Query collection outside worker; Eligible phase and reply; Owning host/controller object lifetime; Live worker PID query through separate validator; Outside specimen worker; source-only; No worker-to-child transfer; External evidence No transfer into worker; release ordinal is separate"];
     x2 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Host disposition and\ncomparison\nx2", URL="WORKER.md#worker-capabilities-nodes", tooltip="x2: Host disposition and\ncomparison | X2; comparisonEvidence; After collection/publication; Reply; Owning host/controller object lifetime; Join worker publications, query records and process observations; Outside specimen worker; source-only; No worker-to-child transfer; External evidence Host-owned interpretation under evidence contract"];
-    x3 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Host path diagnostics\nx3", URL="WORKER.md#worker-capabilities-nodes", tooltip="x3: Host path diagnostics | X3; enrichPathDiagnostics; After attempt collection; Reply; Owning host/controller object lifetime; Later path/metadata observations under host authority; Outside specimen worker; source-only; No worker-to-child transfer; External evidence Path spelling alone is not object identity"];
+    x3 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Host path diagnostics\nx3", URL="WORKER.md#worker-capabilities-nodes", tooltip="x3: Host path diagnostics | X3; enrichPathDiagnostics; After attempt collection; Reply; Owning host/controller object lifetime; Later path/metadata observations under host authority; Outside specimen worker; source-only; No worker-to-child transfer; External evidence "];
     x4 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Controller denial-log\ncandidates\nx4", URL="WORKER.md#worker-capabilities-nodes", tooltip="x4: Controller denial-log\ncandidates | X4; attach_sandbox_logs; Outside worker; collector surrounds execution; Envelope; Owning host/controller object lifetime; External log collection and correlation; Outside specimen worker; source-only; No worker-to-child transfer; External evidence Candidate association, not worker-native cause"];
     x5 [shape="box", style="rounded,filled", fillcolor="#eee5f5", color="#555555", label="Compiler receipt in dossier\nx5", URL="WORKER.md#worker-capabilities-nodes", tooltip="x5: Compiler receipt in dossier | X5; decodeProfileCapture; Capture before apply; host decode after publication; Reply and optional dossier; Owning host/controller object lifetime; Copy/hash admitted receipt from shared evidence; Outside specimen worker; source-only; No worker-to-child transfer; External evidence Receipt and applied-policy evidence are distinct"];
     s1b -> s2 [color="#2f5597", style="solid", label="W1", URL="WORKER.md#worker-capabilities-edges", tooltip="W1: Host maps evidence descriptor |  "];
@@ -209,10 +209,9 @@ digraph worker_capabilities {
     s3a -> s13c [color="#70428c", style="dotted", label="W47", URL="WORKER.md#worker-capabilities-edges", tooltip="W47: Host reads worker readiness byte |  "];
     s2 -> s18 [color="#70428c", style="dotted", label="W48", URL="WORKER.md#worker-capabilities-edges", tooltip="W48: Host observes publication in same evidence object |  "];
     s34a -> s36a [color="#70428c", style="dotted", label="W49", URL="WORKER.md#worker-capabilities-edges", tooltip="W49: Worker drains child output |  "];
-    x3 -> s31b [color="#70428c", style="dotted", label="W50", URL="WORKER.md#worker-capabilities-edges", tooltip="W50: Later host path inspection may observe file effect |  "];
     s2 -> x2 [color="#70428c", style="dashed", label="W51", URL="WORKER.md#worker-capabilities-edges", tooltip="W51: Host uses admitted publications |  "];
     x1 -> x2 [color="#70428c", style="dashed", label="W52", URL="WORKER.md#worker-capabilities-edges", tooltip="W52: Host joins prediction records to attempt evidence |  "];
-    x3 -> x2 [color="#70428c", style="dashed", label="W53", URL="WORKER.md#worker-capabilities-edges", tooltip="W53: Host attaches later path observations |  "];
+    x3 -> x2 [color="#70428c", style="dashed", label="W53", URL="WORKER.md#worker-capabilities-edges", tooltip="W53: Host attaches later path-resolution results |  "];
     s27 -> x5 [color="#70428c", style="dashed", label="W54", URL="WORKER.md#worker-capabilities-edges", tooltip="W54: Host decodes and copies receipt |  "];
     x2 -> x4 [color="#70428c", style="dashed", label="W55", URL="WORKER.md#worker-capabilities-edges", tooltip="W55: Controller associates external log candidates with run evidence |  "];
 }
