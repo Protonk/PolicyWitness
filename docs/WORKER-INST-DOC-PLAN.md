@@ -2,15 +2,18 @@
 
 ## Status
 
-Worker-language resolution is in progress. The
+Worker-language resolution is complete with this commit. The
+[resolution report](../records/worker-language-resolution/report.md) records
+all fifteen final dispositions and the fresh pass-6 handoff. The
 [positive-reframing trial](../records/worker-language-resolution/positive-trial.md)
 compares all fifteen remaining units before the
 [bounded RCAs](../records/worker-language-resolution/rca.md). The resulting
 decisions are nine positive repairs and six elisions, with no editorial RCA
-pending. All fifteen repairs are implemented. The path-observation map retains
-later host path results without an object-identity edge; its acquisition-cluster
-heading is repositioned for legibility. Integrated validation is in progress.
-No register adjudication changes; pass 6 has not started.
+pending. Observation/lifetime repairs are `5e4f5d3`, citation presentation is
+`b1f5697`, and the graph relationship/layout repair is `143c8a4`. The final
+architecture-documentation and generator-contract cases pass, with semantic
+and visual review recorded in the report. The 102 settled guard units retain
+their meaning. Register adjudications are unchanged; pass 6 has not started.
 
 Worker-language triage is complete in `672374c` against `5f878fe`. The
 [triage report](../records/worker-language-triage/report.md) and
