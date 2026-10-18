@@ -354,18 +354,29 @@ def render_region(graph, document_name, limits=None):
     dot = f"{graph['file']}.dot"
     manifest = Path(MANIFEST_NAME).name
     generator = Path(GENERATOR_NAME).name
+    if graph["id"] == "worker_capabilities":
+        caption_scope = (
+            "Figure IDs correspond to the table IDs. Each row lists source references and cited "
+            "test or rule definitions. The generator checks source-symbol presence and resolves those definitions.")
+        summary_scope = "; source-symbol presence and cited definitions checked"
+        checks_heading = "Cited check definitions"
+    else:
+        caption_scope = (
+            "The ids in the figure are the ids in the tables below, and each row cites the source "
+            "symbol that implements it and the test or rule the manifest names for it. Symbol presence "
+            "and test definition are verified; whether a test asserts the row is not verified.")
+        summary_scope = (", with symbol presence and test definition verified; "
+                         "whether a test asserts the row is not verified")
+        checks_heading = "Checks"
     parts = [
         f"![{graph['title']}]({svg})",
         "",
         f"*Figure: {graph['title'].lower()}. Generated from [{manifest}]({manifest}) by "
-        f"[{generator}]({generator}); dot source in [{dot}]({dot}). The ids in the figure are the "
-        f"ids in the tables below, and each row cites the source symbol that implements it and the "
-        f"test or rule the manifest names for it. Symbol presence and test definition are verified; "
-        f"whether a test asserts the row is not verified.*",
+        f"[{generator}]({generator}); dot source in [{dot}]({dot}). {caption_scope}*",
         "",
         "<details>",
-        f"<summary>{graph['title']}: {len(graph['nodes'])} nodes and {len(graph['edges'])} edges, "
-        "with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>",
+        f"<summary>{graph['title']}: {len(graph['nodes'])} nodes and {len(graph['edges'])} edges"
+        f"{summary_scope}</summary>",
         "",
         f"#### {nodes_heading(graph)}",
         "",
@@ -377,7 +388,7 @@ def render_region(graph, document_name, limits=None):
         row += [node["facts"].get(c, "") for c in columns]
         row += [_citation_cell(node["sources"]), _citation_cell(node["checks"]), links[node["id"]]]
         rows.append(row)
-    parts.append(_table(["Id", "Node", "Kind", *columns, "Sources", "Checks", "Limits"], rows))
+    parts.append(_table(["Id", "Node", "Kind", *columns, "Sources", checks_heading, "Limits"], rows))
     parts += ["", f"#### {edges_heading(graph)}", ""]
     columns = graph["edge_facts"]
     rows = []
@@ -386,7 +397,7 @@ def render_region(graph, document_name, limits=None):
         row += [edge.get("facts", {}).get(c, "") for c in columns]
         row += [_citation_cell(edge["sources"]), _citation_cell(edge["checks"]), links[edge["id"]]]
         rows.append(row)
-    parts.append(_table(["Id", "From", "To", "Kind", "Edge", *columns, "Sources", "Checks", "Limits"], rows))
+    parts.append(_table(["Id", "From", "To", "Kind", "Edge", *columns, "Sources", checks_heading, "Limits"], rows))
     notes = [(n["id"], n["note"]) for n in graph["nodes"] if "note" in n]
     notes += [(e["id"], e["note"]) for e in graph["edges"] if "note" in e]
     if notes:

@@ -357,19 +357,29 @@ class GeneratorContractTests(unittest.TestCase):
     def test_captions_state_the_verified_guarantee(self):
         gen = module('architecture_caption', ROOT / 'docs/generate_architecture.py')
         data = gen.load_manifest(ROOT / gen.MANIFEST_NAME)
-        def verified(text):
-            return ('presence' in text and 'definition' in text and
-                    'whether a test asserts the row is not verified' in text and
-                    not re.search(r'\b(exercises|covers|proves)\b', text))
+        def verified(text, worker):
+            if worker:
+                scope = 'source-symbol presence' in text and 'definitions' in text
+            else:
+                scope = ('presence' in text and 'definition' in text and
+                         'whether a test asserts the row is not verified' in text)
+            return scope and not re.search(r'\b(exercises|covers|proves)\b|assertion coverage', text)
         for graph in data['graphs']:
             region = gen.render_region(graph, 'ARCHITECTURE.md')
             caption = next(line for line in region.splitlines() if line.startswith('*Figure:'))
             summary = next(line for line in region.splitlines() if line.startswith('<summary>'))
+            worker = graph['id'] == 'worker_capabilities'
             for text in (caption, summary):
-                self.assertTrue(verified(text))
-                self.assertFalse(verified(text.replace('whether a test asserts the row is not verified', '')))
-                for word in ('exercises', 'covers', 'proves'):
-                    self.assertFalse(verified(text + ' ' + word))
+                self.assertTrue(verified(text, worker))
+                # Each form must state the mechanical boundary. Removing either
+                # part of the positive form must fail just as removing the old
+                # explicit disclaimer does for the other graphs.
+                required = (('source-symbol presence', 'definitions') if worker else
+                            ('whether a test asserts the row is not verified',))
+                for phrase in required:
+                    self.assertFalse(verified(text.replace(phrase, ''), worker))
+                for word in ('exercises', 'covers', 'proves', 'assertion coverage verified'):
+                    self.assertFalse(verified(text + ' ' + word, worker))
 
     def test_fact_keys_are_declared_and_columns_follow_the_declaration(self):
         gen = module('architecture_columns', ROOT / 'docs/generate_architecture.py')

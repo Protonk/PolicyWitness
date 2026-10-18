@@ -59,14 +59,14 @@ their own lifetimes.
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH worker_capabilities -->
 ![Worker capabilities](worker-capabilities.svg)
 
-*Figure: worker capabilities. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [worker-capabilities.dot](worker-capabilities.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
+*Figure: worker capabilities. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [worker-capabilities.dot](worker-capabilities.dot). Figure IDs correspond to the table IDs. Each row lists source references and cited test or rule definitions. The generator checks source-symbol presence and resolves those definitions.*
 
 <details>
-<summary>Worker capabilities: 83 nodes and 55 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>Worker capabilities: 83 nodes and 55 edges; source-symbol presence and cited definitions checked</summary>
 
 #### Worker capabilities nodes
 
-| Id | Node | Kind | Inventory ID | Acquired by | When | Held across | Release / teardown action | Authority | Sandbox-gated | Reaches exec children | Role | Sources | Checks | Limits |
+| Id | Node | Kind | Inventory ID | Acquired by | When | Held across | Release / teardown action | Authority | Sandbox-gated | Reaches exec children | Role | Sources | Cited check definitions | Limits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | s1a | Evidence shared-memory object | reporting | S1a | H: pw_cworker_shm_open_create, ftruncate | Before compilation | Later phases; last mapping/reference may outlive worker | H requests immediate shm_unlink; injected failure leaves name after teardown | Shared writable input/publication storage | Source-only, host before apply | No explicit child reference; see S13b | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh); [`check`](../tests/suites/runner_unit/host_setup_controls.py) |  |
 | s1b | Host shmFD | reporting | S1b | H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return | Before compilation | Through driver result collection | H setup-failure close or final defer | Can map/resize the evidence object | Source-only, host before apply | Worker receives it; exec child excludes it | P | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh); [`check`](../tests/suites/runner_unit/host_setup_controls.py) |  |
@@ -154,7 +154,7 @@ their own lifetimes.
 
 #### Worker capabilities edges
 
-| Id | From | To | Kind | Edge | Sources | Checks | Limits |
+| Id | From | To | Kind | Edge | Sources | Cited check definitions | Limits |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | W1 | s1b | s2 | prepares | Host maps evidence descriptor | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
 | W2 | s1a | s1b | prepares | Host holds backing-object descriptor | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |
@@ -235,8 +235,7 @@ received descriptor before compilation. The mapping holds request data,
 publication payloads and atomic control fields. The host's mapping remains
 available during collection even when worker cleanup is unconfirmed. The
 [C harness](../tests/suites/runner_c_worker_harness/README.md) checks publication
-under its bare-deny and full-region cases; that assertion scope belongs beside
-the source account of preparation.
+under its bare-deny and full-region cases.
 
 The worker retains its evidence descriptor as well as the mapping. Its policy
 input and readiness descriptors also stay open until exit. Policy EOF ends
