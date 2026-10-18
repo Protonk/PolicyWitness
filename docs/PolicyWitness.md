@@ -837,6 +837,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | External runner respawn throttle (`byoxpc_throttle_interval`) | 1 second | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 | Aggregate phase collection allowance (`phase_collection_wait`) | 30,000 milliseconds | Cumulative monotonic time spent planning and collecting across all phases. The remaining allowance caps each validator I/O deadline. Cleanup and scheduling can overrun that deadline. After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts. | Fixed; `_test_overrides.validator_total_timeout_ms` can reduce it to at least 1 millisecond. |
 | Issuer collection wait (`extension_issuer_wait`) | 5,000 milliseconds | Monotonic host wait starting after successful issuer spawn, before worker creation. Target preparation and spawn precede this clock; phase collection and worker waits have not started. Expiry requests termination, records native publication and cleanup independently, and withholds delivery. Termination/reaping and scheduling can overrun this wait. | Fixed. |
+| Sysctl value-read destination (`sysctl_read_bytes`) | 4,096 bytes | Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry. Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient. | Fixed. |
 
 ### Queries and transport
 
@@ -1875,7 +1876,14 @@ combinations:
   and close observations and bounded content, as described in
   [fresh-read output](#extension-and-fresh-read-output).
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
-- `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
+- `("sysctl", "read")` — one post-apply `sysctlbyname` value read of
+  `target`, such as `kern.osrelease`, into a non-null
+  <!-- span limits.sysctl_read_bytes.value -->4,096<!-- /span -->-byte
+  stack buffer. There is no preliminary sizing call or retry. The worker
+  discards the returned value bytes and post-call length; the attempt
+  retains the existing PW status and errno. This bounded read does not
+  promise retrieval of an arbitrarily sized value, and failure does not
+  diagnose whether the destination was too small.
 - `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
   binary. `target` is the absolute path to the helper (becomes
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].

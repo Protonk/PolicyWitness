@@ -143,7 +143,8 @@ through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 
 `worker_lifecycle` includes worker progress/failure/diagnostic and closed-input
-controls plus production C-main native-call/mapping companions. See its README
+controls plus production C-main native-call/mapping companions and the
+bounded sysctl call-argument control. See its README
 for the attribution and cleanup boundaries.
 
 Validator transcript variants cover invalid UTF-8, incomplete predictions,

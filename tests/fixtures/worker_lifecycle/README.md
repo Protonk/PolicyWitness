@@ -140,6 +140,14 @@ an explicit call-policy review. Native fixture calls do not create real children
 The live process, stream and cleanup observations remain in
 [runner_exec_lifecycle](../../suites/runner_exec_lifecycle/README.md).
 
+[sysctl_control.c](sysctl_control.c) includes production `attempt_sysctl_read`
+with only `sysctlbyname` substituted. It records actual incoming call arguments
+and count, changes the length out-parameter on success and failure, and exposes
+the resulting slot status. It never applies a sandbox or makes a native sysctl
+call. The owning `runner_c_worker_harness/sysctl_read_capacity` case builds the
+baseline and a shortened-capacity producer variant and owns the independent
+capacity and limits-manifest assertions.
+
 The `.worker-limits` companion compiles the existing C default-value probe. The
 Swift budget inequality consumes its output directly; the independent native
 inventory check remains in `runner_abi_layout`. A short worker-expiry scenario

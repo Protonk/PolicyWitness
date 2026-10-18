@@ -67,6 +67,7 @@ SECTIONS = {
 
 VALUE_OWNERS = {
     'tests/suites/runner_abi_layout/limits.py',
+    'tests/suites/runner_c_worker_harness/check_sysctl.py',
     'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
     'controller/src/run_flow.rs', 'controller/src/log_capture.rs',
     'controller/src/bin/sbpl-check.rs', 'controller/src/bin/sandbox-log-observer.rs',

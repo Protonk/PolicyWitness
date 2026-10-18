@@ -2938,6 +2938,47 @@
       "behavior": "Production issuer/worker controls cover maximum payload, over-capacity or malformed framing, deadline, missing publication, native failure and independent cleanup/confinement."
     },
     {
+      "id": "sysctl_read_bytes",
+      "section": "execution",
+      "title": "Sysctl value-read destination",
+      "value": 4096,
+      "unit": "bytes",
+      "counting": "Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry.",
+      "effect": "Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient.",
+      "control": "Fixed.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "PW_SYSCTL_READ_BYTES"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "attempt_sysctl_read"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
+          "symbol": "check_manifest",
+          "kind": "value",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
+          "symbol": "check_capacity",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
+          "symbol": "check_call_and_result",
+          "kind": "path",
+          "form": "test"
+        }
+      ],
+      "behavior": "Compiled production-call substitution checks the actual incoming capacity and call shape independently, preserves success/failure status and errno, and rejects a shortened supplied-capacity mutation. The live sysctl filter case separately establishes public compatibility for its specimen."
+    },
+    {
       "id": "fresh_read_bytes",
       "section": "evidence",
       "title": "Fresh file-read prefix",

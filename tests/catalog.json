@@ -789,6 +789,13 @@
           "description": "Worker release barrier: max slots proceed"
         },
         {
+          "id": "sysctl_read_capacity",
+          "description": "Production sysctl read supplies one non-null 4096-byte destination, retains status and errno, and rejects a shortened-capacity mutation",
+          "requires": [
+            "clang"
+          ]
+        },
+        {
           "id": "clock_arithmetic",
           "description": "production continuous-time helpers: ceiling allowances, checked arithmetic, sample validation and setup refusal publications"
         },

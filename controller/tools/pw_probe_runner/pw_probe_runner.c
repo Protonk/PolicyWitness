@@ -745,8 +745,11 @@ static void attempt_mach_lookup(pw_shm_slot_t *slot) {
     slot->errno_val = 0;
 }
 
+/* One bounded value read; value bytes and post-call length are discarded. */
+#define PW_SYSCTL_READ_BYTES 4096
+
 static void attempt_sysctl_read(pw_shm_slot_t *slot) {
-    char buf[4096];
+    char buf[PW_SYSCTL_READ_BYTES];
     size_t len = sizeof(buf);
     if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {
         fail_from_errno(slot, "sysctlbyname");

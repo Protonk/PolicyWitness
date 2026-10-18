@@ -115,6 +115,23 @@ succeed, and both require every slot completed, `done` published within a
 second of the budget edge (`done_after_applied_ms`) and a clean worker exit.
 See `exec_attempt_budget` in `docs/LIMITS.md`.
 
+### Bounded sysctl read
+
+`sysctl_read_capacity` compiles the production `attempt_sysctl_read` with only
+`sysctlbyname` substituted by
+[sysctl_control.c](../../fixtures/worker_lifecycle/sysctl_control.c). Independent
+call receipts require one call, the submitted target, a non-null destination
+with literal 4096 input capacity, and no new value. The compiled receipts must
+also agree with the limits manifest. Success and ENOMEM failure change the
+length out-parameter but preserve the existing PW status and errno; a stale
+errno after success must not be reported. A producer mutation shortening the
+supplied capacity must fail the same literal-capacity assertion.
+
+This is a native-call boundary control without sandbox application. It does
+not measure kernel copy behavior or establish ENOMEM's cause. The
+[live sysctl filter suite](../runner_filter_sysctl_name/README.md) separately
+checks its specimen's denial-shaped result and unavailable prediction.
+
 ### Worker timing controls
 
 The worker times release waits and exec attempts in one continuous Mach time

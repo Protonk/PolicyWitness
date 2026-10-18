@@ -8869,9 +8869,9 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "N10",
-            "Acquired by": "run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds its sysctl result buffer on the stack",
+            "Acquired by": "run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds a sysctl value-read buffer of {limit:sysctl_read_bytes} on the stack",
             "When": "After apply within an attempt",
-            "Held across": "Call/attempt only; output copied into S18",
+            "Held across": "Call/attempt only; selected observations copied into S18; sysctl value bytes and post-call length discarded",
             "Release / teardown action": "Return or process exit",
             "Authority": "Use already inventoried target/child handles; no separate authority",
             "Sandbox-gated": "Source-only; compiler stack/page behavior unobserved",
@@ -8892,6 +8892,16 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
+              "symbol": "check_capacity",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/check_sysctl.py",
+              "symbol": "check_call_and_result",
               "form": "test"
             }
           ]

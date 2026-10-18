@@ -374,6 +374,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         # actual checked IDs. An arbitrary source reference cannot stand in.
         owners = {
             'tests/suites/runner_abi_layout/limits.py',
+            'tests/suites/runner_c_worker_harness/check_sysctl.py',
             'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
             'controller/src/run_flow.rs',
             'controller/src/log_capture.rs',

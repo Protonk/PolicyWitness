@@ -783,6 +783,17 @@ for scenario in proceed_never_set proceed_late_after_expiry proceed_before_appli
   run_proceed_control "$scenario"
 done
 
+if test_selected sysctl_read_capacity; then
+  test_begin runner_c_worker_harness sysctl_read_capacity
+  test_step control "observe the actual sysctl call capacity and reject a shortened-capacity mutation"
+  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_sysctl.py" \
+      "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "one non-null 4096-byte read, unchanged PW status/errno and rejected shortened capacity"
+  else
+    test_fail "sysctl call-boundary regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi
+
 if test_selected clock_arithmetic; then
   test_begin runner_c_worker_harness clock_arithmetic
   test_step build "compile production clock helpers with a controlled timebase and raw counter"

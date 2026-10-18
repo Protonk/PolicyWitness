@@ -22,7 +22,11 @@ The [descriptor refactor](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-REFACTOR
 is implemented, reviewed and accepted against the signed app; its
 [acceptance record](records/worker-launch-descriptor/implementation-acceptance.md)
 retains independent descriptor/object/reuse controls and the full default battery.
-Execution environment remains staged. Sysctl implementation remains pending.
+The [sysctl disclosure refactor](controller/tools/pw_probe_runner/SYSCTL-DISCLOSURE-REFACTOR-PLAN.md)
+is implemented, reviewed and accepted against the signed app; its
+[acceptance record](records/worker-sysctl-read/implementation-acceptance.md)
+retains the independent capacity control and full default battery. Execution
+environment remains staged.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -52,7 +56,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 | WA-03 | [Exec investigation](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) and [evidence refactor](controller/tools/pw_probe_runner/EXEC-EVIDENCE-REFACTOR-PLAN.md) | Separate collection, cleanup-request and reap facts; retain current cleanup policy | Evidence refactor implemented; signed acceptance passed; supervisor undecided |
 | WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Source inventory reviewed; design staged |
 | WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Staged; not started |
-| WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Preserve and disclose bounded reading; optional raw length metadata remains a separate choice | Bounded operation selected; implementation planning pending |
+| WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Preserve and disclose bounded reading; optional raw length metadata remains a separate choice | Naming/disclosure implemented; signed acceptance passed |
 
 The initial three follow-ups ran concurrently, with shared-checkout builds and
 process experiments serialized. Configuration source inventory followed as an
@@ -73,7 +77,8 @@ Selected directions and remaining decision checkpoints are:
   loss, but adds authority and child-visible state and cannot contain escaped
   descendants or establish group absence merely from a signal result.
 - Sysctl: the user selected retaining the single non-null 4096-byte value read
-  and naming/disclosing its capacity. Decide separately whether to publish
+  and naming/disclosing its capacity; this is implemented and accepted. Decide
+  separately whether to publish
   supplied capacity and raw post-call `oldlen`. That value is neither required
   size nor bytes copied.
 
