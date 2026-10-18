@@ -2,7 +2,9 @@
 
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-11 in the [initial audit](../../../records/worker-pass6/initial-report.md).
-State: investigation complete and reviewed; design decision ready.
+State: investigation complete and reviewed; the user selected preserving and
+disclosing the bounded read. Optional raw length metadata remains a separate
+choice. Implementation planning is pending.
 
 The [investigation report](../../../records/worker-sysctl-read/report.md)
 records eleven native observations, three rejected interpretation controls and
@@ -11,7 +13,7 @@ single bounded value read, naming and disclosing its 4096-byte capacity, and
 separately choosing optional capacity/raw post-call `oldlen` evidence. Native
 failure could leave `oldlen` zero despite destination writes, or unchanged from
 input capacity; it cannot serve as a required-size or copied-byte count. No
-production change or field/version decision has been selected.
+production change is implemented or new field/version decision selected.
 
 ## Starting point
 

@@ -3,13 +3,17 @@
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-03 in the [initial audit](../../../records/worker-pass6/initial-report.md),
 overlapping register row 10. State: investigation complete and reviewed;
-behavioral decision ready, no supervisor design selected.
+the [exec evidence refactor](EXEC-EVIDENCE-REFACTOR-PLAN.md) is specified for
+review. Ordinary-completion cleanup policy and a supervisor remain unselected.
 
 The [investigation report](../../../records/worker-exec-supervision/investigation.md)
 records current-source behavior, fresh lifecycle controls and a native external
-group-owner probe at `503156f`. The next decision is whether ordinary completion
-should end same-group background work. A pre-reap cleanup request is the smaller
-extension; cleanup after worker loss needs a surviving owner. The probe supports
+group-owner probe at `503156f`. The selected first refactor publishes separate
+collection, cleanup-request and leader-reap observations while preserving native
+behavior and existing aggregate status meanings. A later decision is whether
+ordinary completion should end same-group background work. A pre-reap cleanup
+request is the smaller extension; cleanup after worker loss needs a surviving
+owner. The probe supports
 the latter's limited feasibility while independently demonstrating escape and
 an inconclusive signal-zero probe. Neither alternative promises descendant
 containment. The report identifies a current documentation correction that is

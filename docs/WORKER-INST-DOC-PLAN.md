@@ -9,10 +9,11 @@ reader's findings and disclosed context exposure;
 availability and subsequent cleanup of the reported orphan. The
 [redesign parent plan](../WORKER-REDESIGN-PLAN.md) separates code-local
 application investigations from retained work on WORKER's evidence and map
-model. Terminal exit is implemented and accepted. Descriptor, exec and sysctl
-investigations are reviewed and ready for design decisions; configuration has a
-reviewed source inventory, and environment remains staged. The parent tracks
-their reports and preliminary documentation-model review. Register adjudications
+model. Terminal exit is implemented and accepted. Narrow descriptor and bounded
+sysctl directions are selected; an exec evidence refactor is specified for
+review while cleanup policy remains undecided. Configuration has a reviewed
+source inventory, and environment remains staged. The parent tracks the plans,
+reports and preliminary documentation-model review. Register adjudications
 and closures are unchanged. The checkpoints below retain their earlier scope.
 
 Worker-language resolution completed after `143c8a4`. The
