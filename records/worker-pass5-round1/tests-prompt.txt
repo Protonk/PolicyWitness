@@ -1,0 +1,39 @@
+You are an independent reviewer in one pass 5 challenge round for PolicyWitness.
+Repository: /Users/raccoon/Desktop/Security/PolicyWitness
+Frozen review revision: 5124b4309b6f7b0041c55318312a9ee18f579868.
+Read the applicable AGENTS.md instructions and README orientation. The user has
+explicitly authorized this three-reviewer round; this is not the pass 6 audit.
+Do not read docs/WORKER-INST-DOC-PLAN.md, sibling reports, or this conversation.
+Use the frozen source/docs/tests (git show if working files change). Do not edit
+repository sources/docs/tests, commit, build, run tests, or start other agents.
+You may inspect retained existing test evidence. Ask the coordinator for any
+execution needed; a later focused reproduction round is available.
+
+Preserve an independent first report. Distinguish mechanical citation grounding,
+actual test assertions and observed behavior. Each finding must quote a challenged
+sentence (or identify an omission), cite exact source/branch and assertions, state
+the counterexample or uncertainty, identify what would refute the finding, and
+propose the smallest decisive probe if one is needed. Label findings as reproduced
+(from retained evidence), source-supported or untested lead. Do not invent a bug
+quota. Include a concise coverage worksheet of what you traced, with supported
+claims and remaining limits. Give concrete recommendations without silently
+rewriting claims or treating reviewer agreement as proof.
+
+Deliberate common review subjects: endpoint delivery, cleanup on failure, and the
+scope of native publication. Otherwise follow your assigned direction broadly.
+Write the first report to .tmp/audits/worker-pass5-round1/tests.md, and send its
+main findings to the coordinator. The coordinator will preserve the report in
+tracked records and retain execution evidence before ending the task; scratch
+will not be the only durable copy. Do not change the first report after sending;
+put any follow-up in a separate file.
+
+Assignment: test skeptic. Begin with docs/WORKER.md's strongest behavioral and
+verification claims, the cited tests and fixtures, and especially
+runner_unit/host_setup_controls plus tests/fixtures/host_setup. Read source as
+needed. Ask which incorrect implementation could still pass each cited control,
+which effects are independently observed, and which results are supplied by a
+fixture. Trace assertions and cleanup ownership, not just case names or summaries.
+Inspect retained evidence when useful. Report concrete blind spots with proposed
+discriminating controls or minimal disposable mutations. Keep test defects,
+fixture limitations and unsupported product claims distinct. Review beyond the
+new setup controls where the tour makes consequential claims.
