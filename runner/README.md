@@ -41,6 +41,13 @@ runner children call the sandbox APIs. The host's source and shipped imports
 are checked by [source drift](../tests/suites/source_drift/README.md) and
 [artifact inspection](../tests/suites/preflight/README.md).
 
+The default validator path is always the service's
+`Contents/MacOS/sb_api_validator`; an explicit `validator_executable_path`
+override takes precedence. Selection does not check executability or imply
+launch. A reached native spawn reports a missing or non-executable helper at
+the selected path. An earlier refusal or a phase with no eligible queries
+creates no validator spawn failure.
+
 ## Run lifecycle
 
 1. Caller authorization gates the connection. The host shares one terminal
@@ -204,6 +211,9 @@ The optional request block changes inputs at production boundaries; the real
 drivers and classifier determine the result. Supplied controls are mirrored in
 `test_overrides` when available, subject to refusal sanitization. An echo does
 not establish that a boundary was reached or that its requested effect occurred.
+An empty or default-valued control can be inert. Early replies can omit the
+echo, so a missing echo cannot establish that no controls were submitted;
+retain the request for that fact.
 
 | Key | Request type | Default and effective behavior |
 | --- | --- | --- |
@@ -216,7 +226,7 @@ not establish that a boundary was reached or that its requested effect occurred.
 | `worker_post_apply_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after completed slots and before `done`; paired with a shorter sentinel allowance it can exercise timeout handling. |
 | `worker_post_apply_kill_signal` | integer signal number | Disabled when absent or nonpositive. Requests self-signalling after completed slots and before `done`; observed fatal delivery can exercise `runner_failed`. |
 | `worker_pre_ready_hang_ms` | integer milliseconds | Disabled when absent or nonpositive. Requests a native sleep after compilation/optional capture, before the ready byte; publication depends on the remaining host allowance. |
-| `worker_kill_before_publish_slot` | integer slot index | Disabled when absent or negative. Requests SIGKILL on the worker itself after that slot's native attempt returns and before its `completed` flag is stored; the host then holds the slot's started progress word and no published result. An observed death establishes the withheld result, not a policy cause. |
+| `worker_kill_before_publish_slot` | integer slot index | Disabled when absent or negative. If the slot is reached, requests SIGKILL on the worker after dispatch returns and before its `completed` flag is stored. Dispatch can refuse without making a native attempt. Observed started progress with no published result does not recover an unpublished native return or identify a signal's sender or policy cause. |
 
 Decoding accepts representable integers. The host floors deadline overrides in
 [`timeoutMsForCWorker`](Sources/PWRunnerCore/CWorkerOrchestrator.swift) and

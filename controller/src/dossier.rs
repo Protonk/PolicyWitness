@@ -1,6 +1,7 @@
-//! The specimen dossier: controller-collected facts about what the controller
-//! submitted and what ran it, gathered before invocation and retained on every
-//! `kind: "run"` envelope.
+//! The specimen dossier: controller-collected facts about the submitted
+//! specimen and selected runner/helper bytes, gathered before invocation and
+//! retained on every `kind: "run"` envelope. Selection does not establish launch
+//! or authenticate the process that executes.
 //!
 //! Nothing here embeds source or parameter values, proves worker compilation,
 //! or changes whether a request is admitted or the runner invoked. Collection

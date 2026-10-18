@@ -25,7 +25,7 @@ pub const SHIPPED_WORKER: ShippedBinary = ShippedBinary {
     rel_path: "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
     kind: "xpc-embedded-helper",
 };
-/// The bundle-local validator; production traffic never uses the app-level copy.
+/// The bundle-local validator used by default; an explicit override is separate.
 pub const SHIPPED_VALIDATOR: ShippedBinary = ShippedBinary {
     rel_path: "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
     kind: "xpc-embedded-helper",

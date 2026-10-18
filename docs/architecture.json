@@ -881,7 +881,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "fresh posix_spawn --batch <pid> per eligible phase; bounded NDJSON",
+          "label": "fresh posix_spawn --batch <pid> per eligible phase; bundle-local default or explicit override; bounded NDJSON",
           "short": "fresh collection per phase",
           "sources": [
             {
@@ -891,6 +891,14 @@
             {
               "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
               "symbol": "decodeValidatorFrames"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+              "symbol": "defaultValidatorExecutablePath"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "runSpecimen"
             }
           ],
           "checks": [
@@ -907,6 +915,16 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+              "symbol": "runValidatorSelectionTests",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+              "symbol": "runOrderingTests",
               "form": "test"
             }
           ]
@@ -6182,18 +6200,27 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "posix_spawn of the copy's own validator",
+          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
               "symbol": "defaultValidatorExecutablePath"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
+              "symbol": "runSpecimen"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/runner_byoxpc/run.sh",
               "symbol": "runner_install",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift",
+              "symbol": "runValidatorSelectionTests",
               "form": "test"
             }
           ]

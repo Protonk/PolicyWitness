@@ -26,8 +26,12 @@ retains independent descriptor/object/reuse controls and the full default batter
 The [sysctl disclosure refactor](controller/tools/pw_probe_runner/SYSCTL-DISCLOSURE-REFACTOR-PLAN.md)
 is implemented, reviewed and accepted against the signed app; its
 [acceptance record](records/worker-sysctl-read/implementation-acceptance.md)
-retains the independent capacity control and full default battery. Execution
-environment remains staged.
+retains the independent capacity control and full default battery. The
+[validator-default refactor](runner/Sources/PWRunnerCore/VALIDATOR-DEFAULT-REFACTOR-PLAN.md)
+is implemented, reviewed and accepted against the signed app; its
+[acceptance record](records/worker-validator-default/implementation-acceptance.md)
+retains default/override selection, native launch controls and the full default
+battery. Execution environment remains staged.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -55,7 +59,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 | WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Close host descriptor after successful worker spawn, retaining mapping and relinquishing descriptor ownership | Implemented; signed acceptance passed |
 | WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Implemented; signed acceptance passed |
 | WA-03 | [Exec investigation](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) and [evidence refactor](controller/tools/pw_probe_runner/EXEC-EVIDENCE-REFACTOR-PLAN.md) | Separate collection, cleanup-request and reap facts; retain current cleanup policy | Evidence refactor implemented; signed acceptance passed; supervisor undecided |
-| WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Final source review complete; validator-default compatibility choice awaits user |
+| WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Reviewed; selected validator-default refactor implemented and accepted; optional records deferred |
 | WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Staged; not started |
 | WA-11 | [Sysctl read contract](controller/tools/pw_probe_runner/SYSCTL-READ-PLAN.md) | Preserve and disclose bounded reading; optional raw length metadata remains a separate choice | Naming/disclosure implemented; signed acceptance passed |
 
@@ -83,11 +87,12 @@ Selected directions and remaining decision checkpoints are:
   That value is neither required
   size nor bytes copied.
 - Configuration: retain the existing request and shared production path.
-  The reviewed recommendation is to remove the implicit app-level validator
-  fallback, aligning default selection with the supported bundle-local helper.
-  That legacy-layout compatibility decision awaits the user. Optional dynamic
-  allowance and native intervention records remain deferred; neither completed
-  refactor creates a need for a configuration schema or mode split.
+  The user selected removal of the implicit app-level validator fallback; the
+  accepted refactor aligns default selection with the supported bundle-local
+  helper and preserves explicit overrides. Manually arranged older layouts no
+  longer receive fallback. Optional dynamic allowance and native intervention
+  records remain deferred; the completed refactors create no need for a
+  configuration schema or mode split.
 
 Settle descriptor implementation before new supervisor launch wiring. Let the
 implemented exec evidence supply the fact distinctions before configuration chooses

@@ -56,6 +56,14 @@ ordinary encode/roundtrip carries valid collection/request/reap evidence on all
   shared cases to Swift decoding/encoding, Rust receiver forwarding and Python
   consumer checks. CLI integration separately checks native Unicode realpath
   spelling through the signed app.
+- `ServiceAdmissionTests` separately checks validator selection inside nested
+  and standalone bundles, including absent/non-executable local files and
+  executable app-level decoys, then observes service default/override precedence.
+  `OrderingTests` retains actual selected-path/return-code spawn receipts and
+  encoded replies for missing and non-executable local defaults. Excluded-query
+  controls independently observe an attempted file creation with zero validator
+  launches; an earlier worker spawn refusal likewise creates no validator fact.
+  These controls use the existing lifecycle worker, not a sandboxed specimen.
 
 ## Success criteria
 

@@ -3,28 +3,33 @@
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-07 in the [initial audit](../../../records/worker-pass6/initial-report.md).
 State: source investigation complete and reviewed after the exec, descriptor
-and sysctl refactors. The validator-default compatibility choice is ready for
-user review; no configuration runtime change has been selected.
+and sysctl refactors. The user selected removal of the implicit app-level
+validator fallback; the narrow refactor is implemented, reviewed and accepted
+against the signed app.
 
 The [source inventory](../../../records/worker-execution-configuration/source-inventory.md)
 traces all ten controls, selection/provenance and readers at `503156f`, with
 ordinary, effective, inert, unreached and refused examples. These are source
 branches, not newly executed runs. Existing retained requests, envelopes and
 provenance suffice for qualified observation records; override presence cannot
-classify effective instrumentation. Structured dynamic validator allowances,
-intervention observations and the default-validator fallback's selected-path
-account remain separate gaps. No mode, request split or schema is selected.
+classify effective instrumentation. That inventory identified structured dynamic
+validator allowances, intervention observations and the default-validator
+fallback's selected-path account as separate gaps. No mode, request split or
+schema is selected.
 
 The [post-refactor review](../../../records/worker-execution-configuration/post-refactor-review.md)
 and [reviewed source hashes](../../../records/worker-execution-configuration/reviewed-sources.json)
-refresh these conclusions against the accepted implementations. The remaining
-decision is whether to remove the implicit app-level validator fallback,
-aligning the host default with the supported bundle layout, or preserve that
-compatibility and add an honest host-resolved selection account. Removal is
-recommended; it changes manually arranged older layouts and awaits the user's
-choice. Explicit overrides remain separate. Dynamic validator allowances and
-native intervention observations are optional capabilities, with no present
-requirement to add them. Comment corrections can accompany the selected work.
+refresh these conclusions against the accepted implementations. The user
+selected removal of the implicit app-level fallback, aligning the default with
+the supported bundle-local helper. The
+[implementation plan](VALIDATOR-DEFAULT-REFACTOR-PLAN.md) and
+[acceptance record](../../../records/worker-validator-default/implementation-acceptance.md)
+retain the selected scope, signed build, controls and full default battery.
+Manually arranged older layouts no longer receive fallback; explicit overrides
+retain precedence. Related comments now distinguish supplied controls, selected
+bytes and observed execution. Dynamic validator allowances and native
+intervention observations remain optional capabilities with no present
+requirement to add them. No mode, request split or schema was added.
 
 ## Starting point
 

@@ -75,3 +75,61 @@ func runServiceAdmissionTests(_ tk: TestKit) {
         }
     }
 }
+
+// Kept separate from the three admission cases used by their disposable
+// mutation control; these tests observe selection, not helper execution.
+func runValidatorSelectionTests(_ tk: TestKit) {
+    tk.group("service validator selection") {
+        tk.run("nested and standalone defaults stay local despite helper availability and app-level decoys") {
+            let fm = FileManager.default
+            let root = fm.temporaryDirectory.appendingPathComponent("pw-validator-selection-" + UUID().uuidString)
+            defer { try? fm.removeItem(at: root) }
+            let layouts = [
+                ("PolicyWitness.app/Contents/XPCServices/PWRunner.xpc", "PolicyWitness.app/Contents/MacOS/sb_api_validator"),
+                ("External/Services/PWRunner.xpc", "Contents/MacOS/sb_api_validator")
+            ]
+            for (serviceRelative, decoyRelative) in layouts {
+                let bundle = root.appendingPathComponent(serviceRelative)
+                let expected = root.path + "/" + serviceRelative + "/Contents/MacOS/sb_api_validator"
+                let decoy = root.appendingPathComponent(decoyRelative)
+                try fm.createDirectory(at: bundle.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+                try fm.createDirectory(at: decoy.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data("#!/bin/sh\nexit 77\n".utf8).write(to: decoy)
+                try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: decoy.path)
+                try expectTrue(fm.isExecutableFile(atPath: decoy.path), "positive executable app-level decoy")
+                for mode: Int? in [nil, 0o600, 0o755] {
+                    if let mode {
+                        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: URL(fileURLWithPath: expected))
+                        try fm.setAttributes([.posixPermissions: mode], ofItemAtPath: expected)
+                    }
+                    try expectEqual(fm.fileExists(atPath: expected), mode != nil)
+                    try expectEqual(fm.isExecutableFile(atPath: expected), mode == 0o755)
+                    try expectEqual(CWorkerOrchestrator.defaultValidatorExecutablePath(bundleURL: bundle), expected)
+                }
+            }
+        }
+        tk.run("service uses its actual bundle default unless an explicit override is supplied") {
+            let expectedDefault = Bundle.main.bundleURL.path + "/Contents/MacOS/sb_api_validator"
+            for override: String? in [nil, "/nonexistent/explicit-validator", ""] {
+                let parsed = PWRunnerRunSpec(specimen_id: "validator-selection",
+                    policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
+                    probe_plan: [], _test_overrides: override.map { PWRunnerTestOverrides(validator_executable_path: $0) })
+                var selected = [String](), replies = [Data](), exits = 0
+                let service = PWRunnerService(admission: PWRunnerAdmission(), scheduleExit: { exits += 1 },
+                    orchestrate: { request, hash, bundle, _, validator in
+                        selected.append(validator)
+                        return CWorkerOrchestrator.run(parsed: request, policyHash: hash, bundleId: bundle,
+                            workerExecutablePath: "/nonexistent/validator-selection-worker", validatorExecutablePath: validator)
+                    })
+                service.runSpecimen(try pwRunnerEncodeJSON(parsed), withReply: { replies.append($0) })
+                try expectEqual(selected, [override ?? expectedDefault])
+                try expectEqual(replies.count, 1)
+                try expectEqual(exits, 1)
+                let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: replies[0])
+                try expectEqual(reply.normalized_outcome, NormalizedOutcome.workerSpawnFailed)
+                try expectTrue(reply.phases.allSatisfy { $0.validator_subprocess == nil && $0.validator_spawn_failure == nil })
+                try expectEqual(reply.test_overrides?.validator_executable_path, override)
+            }
+        }
+    }
+}

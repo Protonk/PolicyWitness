@@ -551,42 +551,19 @@ struct PWRunnerPhase: Codable {
 
 // Test-only knobs that re-route narrow boundaries through real production
 // code so the test suite can reach failure outcomes without stubbing return
-// values. The underscore prefix on the wire field
-// (`PWRunnerRunSpec._test_overrides`) signals "not part of the public
-// contract"; readers can branch on its presence to flag a non-production
-// run. Any override consumed is mirrored back into
-// `PWRunnerRunResult.test_overrides` so the resulting envelope is
-// self-describing — a production run leaves `test_overrides` null.
+// values. `PWRunnerRunResult.test_overrides` mirrors supplied controls when
+// available, subject to refusal sanitization. Values can be inert or their
+// boundaries unreached; presence does not establish an effective intervention.
+// Early replies can omit the echo, so absence does not establish that the
+// request supplied no controls. Retain the request for that fact.
 //
 // Design rule for new keys: re-route a *condition* (a path, a deadline,
 // a hostile value), never fake a *result*. The classifier and the JSON
 // envelope assembly must still run for real; only their input is steered.
 //
-// Currently supported keys and the boundaries they re-route:
-//
-// | key                         | consumed at                                                   | drives outcome              |
-// | --------------------------- | ------------------------------------------------------------- | --------------------------- |
-// | `worker_executable_path`    | `posix_spawn` path in CWorker.spawn (pw-probe-runner)         | `worker_spawn_failed`       |
-// | `worker_timeout_ms`         | host-side deadline in CWorker.run (floored at 50ms)           | `runner_timeout`            |
-// | `validator_executable_path` | `posix_spawn` path in ValidatorClient.runValidator. Parallel  | `validator_spawn_failed`    |
-// |                             | to `worker_executable_path` for the validator child.          |                             |
-// | `worker_post_apply_hang_ms` | passed to pw-probe-runner as `--post-apply-hang-ms <N>`;      | `runner_timeout`            |
-// |                             | the C worker nanosleeps for N ms AFTER all slot results       |                             |
-// |                             | are durable but BEFORE writing the `done` sentinel, pushing   |                             |
-// |                             | host past its sentinel_timeout. Drives the runner_timeout     |                             |
-// |                             | suite.                                                        |                             |
-// | `worker_pre_ready_hang_ms` | sleep after compile/capture, before ready byte                 | ok with sufficient budget; |
-// |                             | (not evidence of a native compilation failure)                | runner_timeout if expired  |
-// | `worker_post_apply_kill_signal` | self-signal after applied/slots, before done               | runner_failed              |
-// |                             | Signal establishes disposition, not a sandbox cause.          |                            |
-// | `worker_kill_before_publish_slot` | SIGKILL on itself inside run_attempt() for that slot,   | runner_failed              |
-// |                             | after the native attempt returned and before the slot's       |                            |
-// |                             | `completed` store. The host holds a started progress word     |                            |
-// |                             | and no published result for that slot.                        |                            |
-//
-// See runner/AGENTS.md → "Testing `normalized_outcome` failure paths via
-// `_test_overrides`" for the full contract, the four-assertion test
-// recipe, and the rules for adding a new key.
+// runner/README.md's "Test seam: `_test_overrides`" is the key/boundary
+// reference, including host resolution and native argument admission. The
+// adjacent AGENTS.md gives the assertion recipe and rules for new controls.
 struct PWRunnerTestOverrides: Codable {
     var worker_executable_path: String?
     var worker_timeout_ms: Int?

@@ -610,9 +610,8 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     chmod +x "${svc_bundle}/Contents/MacOS/pw-probe-runner"
 
     # Embed sb_api_validator alongside pw-probe-runner for the same
-    # bundle-local resolution reason — BYOXPC runners live outside any
-    # app bundle, so the orchestrator's app-level fallback would miss.
-    # The orchestrator checks bundle-local first.
+    # bundle-local resolution reason. Built-in and BYOXPC hosts resolve
+    # their default validator directly inside their own service bundle.
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
 

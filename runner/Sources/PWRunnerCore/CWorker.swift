@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "53e40b215b0002c69e748f7706d9fd63fd750aef20e0ccfaace16bac7847d9f3"
-    static let abiIdentity: [UInt8] = [0x53, 0xe4, 0x0b, 0x21, 0x5b, 0x00, 0x02, 0xc6, 0x9e, 0x74, 0x8f, 0x77, 0x06, 0xd9, 0xfd, 0x63, 0xfd, 0x75, 0x0a, 0xef, 0x20, 0xe0, 0xcc, 0xfa, 0xac, 0xe1, 0x6b, 0xac, 0x78, 0x47, 0xd9, 0xf3]
+    static let abiIdentityHex = "4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8"
+    static let abiIdentity: [UInt8] = [0x4c, 0xb1, 0x9d, 0xb0, 0x43, 0x60, 0x68, 0x94, 0xac, 0xe2, 0xe9, 0x78, 0x43, 0x4f, 0x88, 0x05, 0xed, 0xf4, 0xc7, 0x92, 0x45, 0xf3, 0x58, 0x8c, 0xc6, 0x8a, 0x33, 0xb3, 0x6d, 0xec, 0xa9, 0xe8]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -330,29 +330,29 @@ struct CWorkerInput {
     var sentinelTimeoutMs: Int
     var exitGraceMs: Int
     /// Optional test-seam routed to pw-probe-runner as
-    /// `--post-apply-hang-ms <N>`. When > 0, the worker sleeps for
-    /// N ms after every slot is durable but before flipping `done`;
-    /// drives the host's `runner_timeout` outcome from a real
-    /// specimen. Production callers pass nil.
+    /// `--post-apply-hang-ms <N>` when positive. If native argument admission
+    /// and execution reach the post-phase seam, the worker requests an N ms
+    /// sleep before `done`. A shorter host allowance can expire meanwhile;
+    /// the request alone establishes neither a reached sleep nor a timeout.
     var postApplyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
-    /// `--post-apply-kill-signal <N>`. When > 0, the worker raises signal N
-    /// on itself after `applied` but before `done`, so the host observes a
-    /// termination signal with done unset: runner_failed, without a policy
-    /// cause. Production callers pass nil.
+    /// `--post-apply-kill-signal <N>` when positive. If admitted and reached,
+    /// the post-phase seam requests signal N on the worker before `done`.
+    /// Failed delivery or a nonfatal/ignored signal can return. A reaped fatal
+    /// signal establishes disposition, not its sender or a policy cause.
     var postApplyKillSignal: Int?
     /// Optional test-seam routed to pw-probe-runner as
-    /// `--pre-ready-hang-ms <N>`. When > 0, the worker sleeps N ms
-    /// after compilation/capture and before the ready byte. A sufficient
-    /// sentinel budget lets it survive a closed ready pipe (SIGPIPE ignored);
-    /// a shorter budget can expire before application. Production callers pass nil.
+    /// `--pre-ready-hang-ms <N>` when positive. If admitted and reached after
+    /// compilation/capture, it requests sleep before the ready byte. The
+    /// sentinel allowance can expire before application; a requested duration
+    /// is not an observation of the sleep's entry, return or elapsed time.
     var preReadyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
-    /// `--kill-before-publish-slot <N>`. When >= 0, the worker raises SIGKILL
-    /// on itself inside run_attempt() for slot N, after the native attempt
-    /// returned and before the slot's `completed` store. The host then holds
-    /// the started progress word for N and no published result: the control
-    /// for a native return without publication. Production callers pass nil.
+    /// `--kill-before-publish-slot <N>` when nonnegative. If admitted and that
+    /// slot is reached, run_attempt() requests SIGKILL after dispatch returns
+    /// and before publishing `completed`. Dispatch can refuse without a native
+    /// attempt. Observed started progress with no immutable result does not
+    /// recover an unpublished native return or identify the signal's sender.
     var killBeforePublishSlot: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--exec-child-deadline-ms <N>`. Overrides the worker's

@@ -89,6 +89,97 @@ func runOrderingGateControl(_ tk: TestKit) {
 }
 
 func runOrderingTests(_ tk: TestKit) {
+    tk.group("bundle-local validator launch boundaries") {
+        for (state, nativeCode): (String, Int32) in [("missing", ENOENT), ("non-executable", EACCES)] {
+            tk.run("\(state) local default reports only a reached native spawn refusal") {
+                let fm = FileManager.default
+                let root = fm.temporaryDirectory.appendingPathComponent("pw-validator-default-" + UUID().uuidString)
+                defer { try? fm.removeItem(at: root) }
+                let bundle = root.appendingPathComponent("PolicyWitness.app/Contents/XPCServices/PWRunner.xpc")
+                let expectedPath = root.path + "/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
+                let decoy = root.appendingPathComponent("PolicyWitness.app/Contents/MacOS/sb_api_validator")
+                try fm.createDirectory(at: bundle.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+                try fm.createDirectory(at: decoy.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data("#!/bin/sh\nexit 77\n".utf8).write(to: decoy)
+                try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: decoy.path)
+                try expectTrue(fm.isExecutableFile(atPath: decoy.path))
+                if state == "non-executable" {
+                    try Data("not executable".utf8).write(to: URL(fileURLWithPath: expectedPath))
+                    try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: expectedPath)
+                }
+                try expectEqual(fm.fileExists(atPath: expectedPath), state == "non-executable")
+                try expectFalse(fm.isExecutableFile(atPath: expectedPath))
+                let selected = CWorkerOrchestrator.defaultValidatorExecutablePath(bundleURL: bundle)
+                try expectEqual(selected, expectedPath)
+                let worker = try orderingFixturePath()
+                var calls = [[String: Any]]()
+                func run(_ step: PWRunnerProbeStep, workerPath: String, label: String) throws -> PWRunnerRunResult {
+                    calls.removeAll()
+                    let parsed = PWRunnerRunSpec(specimen_id: "validator-default-" + label,
+                        policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "proceed_wait"), probe_plan: [step])
+                    let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                        workerExecutablePath: workerPath, validatorExecutablePath: selected,
+                        validatorSpawn: { pid, path, actions, argv in
+                            let rc = nativeValidatorSpawn(pid, path, actions, argv)
+                            calls.append(["path": path, "return_code": rc])
+                            return rc
+                        })
+                    let encoded = pwRunnerReplyData(result)
+                    let receipt: [String: Any] = ["case": state + ":" + label, "selected_path": selected,
+                        "spawn_calls": calls, "reply": try JSONSerialization.jsonObject(with: encoded)]
+                    FileHandle.standardOutput.write(Data("validator-default-observation ".utf8) + (try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys])) + Data("\n".utf8))
+                    return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+                }
+
+                let reached = try run(orderingStep(), workerPath: worker, label: "reached")
+                try expectEqual(calls.count, 1)
+                try expectEqual(calls[0]["path"] as? String, expectedPath)
+                try expectEqual(calls[0]["return_code"] as? Int32, nativeCode)
+                try expectEqual(reached.normalized_outcome, NormalizedOutcome.validatorSpawnFailed)
+                try expectNil(reached.reporting_failure)
+                try expectEqual(reached.phases.count, 1)
+                try expectEqual(reached.phases[0].collection_status, "collected")
+                try expectNil(reached.phases[0].validator_subprocess)
+                try expectEqual(reached.phases[0].validator_spawn_failure?.operation, "posix_spawn")
+                try expectEqual(reached.phases[0].validator_spawn_failure?.executable_path, expectedPath)
+                try expectEqual(reached.phases[0].validator_spawn_failure?.return_code, nativeCode)
+                try expectEqual(reached.phases[0].ordering?.proceed_observed, true)
+                try expectEqual(reached.steps[0].attempt.outcome, AttemptOutcome.ok)
+                try expectEqual(reached.runner_subprocess?.reaped, true)
+
+                // A nonempty, independently observed attempt survives a phase
+                // with an excluded query; helper selection alone cannot fail it.
+                let effect = root.appendingPathComponent("no-query-effect")
+                let excluded = PWRunnerProbeStep(step_id: "s",
+                    sandbox_check: PWRunnerSandboxCheck(operation: "sysctl-read",
+                        filter: PWRunnerSandboxFilter(kind: "sysctl_name", value: "kern.osrelease")),
+                    attempt: PWRunnerAttempt(kind: "file", action: "create", target: effect.path))
+                let unneeded = try run(excluded, workerPath: worker, label: "no-eligible-query")
+                try expectTrue(calls.isEmpty)
+                try expectEqual(try String(contentsOf: effect, encoding: .utf8), "fixture-effect")
+                try expectEqual(unneeded.normalized_outcome, NormalizedOutcome.ok)
+                try expectNil(unneeded.reporting_failure)
+                try expectEqual(unneeded.phases.count, 1)
+                try expectEqual(unneeded.phases[0].collection_status, "not_needed")
+                try expectNil(unneeded.phases[0].validator_subprocess)
+                try expectNil(unneeded.phases[0].validator_spawn_failure)
+                try expectEqual(unneeded.steps[0].attempt.outcome, AttemptOutcome.ok)
+                try expectEqual(unneeded.steps[0].sandbox_check.outcome, SandboxCheckOutcome.predictionUnavailable)
+                try expectEqual(unneeded.runner_subprocess?.reaped, true)
+
+                let earlier = try run(orderingStep(), workerPath: root.appendingPathComponent("missing-worker").path,
+                    label: "worker-spawn-refusal")
+                try expectTrue(calls.isEmpty)
+                try expectEqual(earlier.normalized_outcome, NormalizedOutcome.workerSpawnFailed)
+                try expectNil(earlier.reporting_failure)
+                try expectNil(earlier.runner_subprocess)
+                try expectEqual(earlier.phases.count, 1)
+                try expectEqual(earlier.phases[0].collection_status, "not_reached")
+                try expectNil(earlier.phases[0].validator_subprocess)
+                try expectNil(earlier.phases[0].validator_spawn_failure)
+            }
+        }
+    }
     tk.group("release barrier: real host driver and independent lifecycle fixture") {
         runOrderingGateControl(tk)
         tk.run("proceed_wait_expire: collection held beyond expiry, late release retains verdict and cannot revive") {

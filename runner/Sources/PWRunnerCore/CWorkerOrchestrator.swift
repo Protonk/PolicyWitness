@@ -273,25 +273,11 @@ enum CWorkerOrchestrator {
             .path
     }
 
-    /// sb_api_validator is embedded both bundle-local (alongside
-    /// pw-probe-runner inside each XPC service) AND at the app's
-    /// top-level. The bundle-local copy is preferred so BYOXPC
-    /// runners — which live outside any app bundle — still find a
-    /// validator. The app-level path is the fallback for older
-    /// layouts where the bundle-local copy may be missing.
-    static func defaultValidatorExecutablePath() -> String {
-        let bundleURL = Bundle.main.bundleURL
-        let bundleLocal = bundleURL
-            .appendingPathComponent("Contents/MacOS/sb_api_validator")
-            .path
-        if FileManager.default.isExecutableFile(atPath: bundleLocal) {
-            return bundleLocal
-        }
-        let appURL = bundleURL
-            .deletingLastPathComponent()   // XPCServices/
-            .deletingLastPathComponent()   // Contents/
-            .deletingLastPathComponent()   // <app>.app/
-        return appURL
+    /// The validator belongs to this service bundle, including BYOXPC copies.
+    /// Resolution does not check availability: a reached spawn records its
+    /// native result, while phases without eligible queries do not launch it.
+    static func defaultValidatorExecutablePath(bundleURL: URL = Bundle.main.bundleURL) -> String {
+        bundleURL
             .appendingPathComponent("Contents/MacOS/sb_api_validator")
             .path
     }
