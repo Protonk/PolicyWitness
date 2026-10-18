@@ -1,0 +1,29 @@
+{
+  "build_directory": "/private/tmp/pw-terminal-lifetime-b_ejqqr7",
+  "scope": "ABI fixture and copied Swift host; no sandbox validation or signed-app acceptance",
+  "source_head": "51487f74da15de196d44c4ac571c7b322a2fe83b",
+  "source_sha256": {
+    "controller/tools/pw_probe_runner/pw_extension_channel.h": "72f5dbd6532f210f0c3f4f17ccb37e5c8455394ac130a752ff516d8a3a5abcd4",
+    "controller/tools/pw_probe_runner/pw_extension_issuer.c": "2df8a93cc83abb1818aac4c749fc4486d5d2cce6913278a0481deaac27abf4af",
+    "controller/tools/pw_probe_runner/pw_probe_runner.c": "207031fbeb74d4c34bb9b62299fd9d27aa6dbc3f3de15e7b910c3a3832ed091a",
+    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "2ca3888de46bd83cdedb491554f551cc7fee61d6b1d20d1aaa3feb36ed66c343",
+    "controller/tools/pw_probe_runner/pw_profile_capture.h": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+    "controller/tools/pw_probe_runner/pw_worker_evidence.h": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65",
+    "records/worker-terminal-lifetime/experiment-driver.swift": "4e1adc5c4810b6bf3ed1d8be5229be8af905a80e12eb5c62c1d611bad597b2a4",
+    "records/worker-terminal-lifetime/experiment-fixture.c": "1e7a0a7b4f9cfc83bd3117cb4f4cb31ad555afb165666b9cf50fb775695eeae1",
+    "records/worker-terminal-lifetime/run_experiment.py": "47e617e5720ca9e9c6cc4a682036cd1f3d6872f59e5986668c70aea4af2f8b5a",
+    "runner/Sources/PWCWorkerShim/PWCWorkerShim.c": "a42d03198bc0407fc3f071714ac13f0016afca97dc1d54dca53faca48d8e5a34",
+    "runner/Sources/PWCWorkerShim/include/PWCWorkerShim.h": "2fbb4151dc587447c50cce4206b65712e7b6e95ccc7504556c04fa9d74d98599",
+    "runner/Sources/PWRunnerCore/CWorker.swift": "b1aedaefe685ff316f87b94c41811dfa3503188347d662b0be43622655c640e9",
+    "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift": "5e72b728267c36f5da98cec2877c83e5070b3e1f3c28e4f20c99b52c05b710c8",
+    "runner/Sources/PWRunnerCore/ExtensionIssuer.swift": "12dfdc4b7a1509e158718e541d407bdbc88a33109518d9d72af8248665e891fc",
+    "runner/Sources/PWRunnerCore/MonotonicDeadline.swift": "afbaebc250873a2a5067cea683b3246bfeecac5263ce017fc879296dd2241064",
+    "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": "2bf4f795b8b68a40f0987b2558fa57f773061b7525989a84faa417a41b7c47cd",
+    "runner/Sources/PWRunnerCore/PWRunnerListener.swift": "ba6de887addb85872b7eed72612fe696a95d14b6dbfbe7a6cdfda28ff5989342",
+    "runner/Sources/PWRunnerCore/PWRunnerService.swift": "bf8e356a596053ac78af14de34f5b6da667bf34bdd5eceefd673662c1349348d",
+    "runner/Sources/PWRunnerCore/PathUtils.swift": "168b30f76ee20c3d6d3bbf8a5e296ebb4dfbde777bbde7016e2cd7241acb12d2",
+    "runner/Sources/PWRunnerCore/ProbeRunner.swift": "9114748ba2bfd1333b09cfab4cadf58600eed1fa399d211fc4418331c337dbd3",
+    "runner/Sources/PWRunnerCore/SandboxApply.swift": "6c6dfcd787dba603a66e824b43e935841aae3880b71924b466d02d91db2a92d5",
+    "runner/Sources/PWRunnerCore/ValidatorClient.swift": "3c3573da2f6ad4ad2283c38e6ec00deddbf6e7d1702b20ebfde9d53eea6168cb"
+  }
+}

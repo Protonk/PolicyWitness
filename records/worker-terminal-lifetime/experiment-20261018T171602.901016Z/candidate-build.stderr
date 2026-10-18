@@ -1,0 +1,18 @@
+warning: 'candidate': found 2 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /private/tmp/pw-terminal-lifetime-o6hrg152/candidate/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md
+    /private/tmp/pw-terminal-lifetime-o6hrg152/candidate/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md
+/private/tmp/pw-terminal-lifetime-o6hrg152/candidate/Sources/PWRunnerCore/PWRunnerAPI.swift:1952:123: warning: trailing closure in this context is confusable with the body of the statement; pass as a parenthesized argument to silence this warning
+1950 |         switch (final.state, final.answer) {
+1951 |         case ("supported", "signal"?):
+1952 |             if sub.reaped != true || sub.term_signal == nil || sub.exit_code != nil || final.value != sub.term_signal.map { .integer($0) } {
+     |                                                                                                                           `- warning: trailing closure in this context is confusable with the body of the statement; pass as a parenthesized argument to silence this warning
+1953 |                 problems.append("final_status: signal claim contradicts reaped/term_signal")
+1954 |             }
+
+/private/tmp/pw-terminal-lifetime-o6hrg152/candidate/Sources/PWRunnerCore/PWRunnerAPI.swift:1956:121: warning: trailing closure in this context is confusable with the body of the statement; pass as a parenthesized argument to silence this warning
+1954 |             }
+1955 |         case ("supported", "exit_code"?):
+1956 |             if sub.reaped != true || sub.exit_code == nil || sub.term_signal != nil || final.value != sub.exit_code.map { .integer($0) } {
+     |                                                                                                                         `- warning: trailing closure in this context is confusable with the body of the statement; pass as a parenthesized argument to silence this warning
+1957 |                 problems.append("final_status: exit_code claim contradicts reaped/exit_code")
+1958 |             }

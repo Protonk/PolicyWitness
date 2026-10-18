@@ -2,10 +2,13 @@
 
 ## Status and purpose
 
-The investigation handoffs below are drafted. Assignment, dispatch method and
-supervision are undecided; none of these investigations has started. This parent
-tracks their scope, connections and eventual decisions. The preparing agent
-maintains this outline and retains the documentation workstream below.
+The terminal-publication investigation has returned a recommendation, with
+independent review and coordinator synthesis; its user decision is pending.
+The user adopted the phase qualification rule below; runtime refactoring remains
+unapproved.
+The other investigation handoffs remain drafted and unassigned. This parent
+tracks their scope, connections and eventual decisions; the coordinator retains
+the documentation workstream below.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -31,7 +34,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 | Finding | Code-local plan | Decision to develop | State |
 | --- | --- | --- | --- |
 | WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Shorter host descriptor ownership versus explicit child inheritance controls | Draft; unassigned |
-| WA-04, WA-08 | [Terminal publication and cleanup](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Draft; unassigned |
+| WA-04, WA-08 | [Terminal publication and cleanup](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Ready for user decision; implementation not started |
 | WA-03 | [Exec supervision](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) | Completion semantics, cleanup ownership and the attainable containment boundary | Draft; unassigned |
 | WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Draft; unassigned |
 | WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Draft; unassigned |
@@ -41,6 +44,24 @@ Recipients can orient in the repository and discuss the particular question
 with the user or a subsequently designated coordinator before targeted work.
 The daughter plans supply starting evidence and discriminating questions; they
 leave the investigation method and any prototype scope for that discussion.
+
+The user selected terminal lifetime as the first investigation to bring to a
+design decision, before detailed exec-supervisor design. This authorizes source
+review and bounded investigation experiments, not a runtime refactor. Worker
+terminal completion and descendant cleanup remain separate guarantees.
+
+The [terminal-lifetime decision record](records/worker-terminal-lifetime/decision.md)
+recommends prompt native exit after terminal publication, paired with final
+acknowledgement reconciliation and ordinary accepted-token erasure. Four bounded
+fixture controls support the host race correction; production acceptance remains
+future work. Under the adopted rule, otherwise admissible query records qualify
+as live-specimen predictions only with an established phase collection/release/
+acknowledgement chain and unbroken ownership; other records remain native query
+observations without that qualification. This avoids per-query liveness
+reconstruction and makes active validator cancellation unnecessary for the
+terminal-exit decision. Raw observations after refusal may still change.
+The runtime refactor remains a recommendation; no audit or worker-documentation
+register row is closed by this investigation.
 
 Terminal publication and exec supervision share lifecycle evidence, but worker
 exit and descendant cleanup are different guarantees. Execution configuration

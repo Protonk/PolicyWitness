@@ -1,0 +1,65 @@
+[
+  {
+    "label": "fixture-build",
+    "argv": [
+      "/usr/bin/xcrun",
+      "--sdk",
+      "macosx",
+      "clang",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-I",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/controller/tools/pw_probe_runner",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-terminal-lifetime/experiment-fixture.c",
+      "-o",
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/fixture"
+    ]
+  },
+  {
+    "label": "baseline-build",
+    "argv": [
+      "/usr/bin/xcrun",
+      "swift",
+      "build",
+      "--package-path",
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/baseline",
+      "--disable-sandbox",
+      "--product",
+      "TerminalInvestigation"
+    ]
+  },
+  {
+    "label": "baseline-run",
+    "argv": [
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/baseline/.build/debug/TerminalInvestigation",
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/fixture",
+      "baseline",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-terminal-lifetime/experiment-20261018T171602.901016Z"
+    ]
+  },
+  {
+    "label": "candidate-build",
+    "argv": [
+      "/usr/bin/xcrun",
+      "swift",
+      "build",
+      "--package-path",
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/candidate",
+      "--disable-sandbox",
+      "--product",
+      "TerminalInvestigation"
+    ]
+  },
+  {
+    "label": "candidate-run",
+    "argv": [
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/candidate/.build/debug/TerminalInvestigation",
+      "/private/tmp/pw-terminal-lifetime-o6hrg152/fixture",
+      "candidate",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-terminal-lifetime/experiment-20261018T171602.901016Z"
+    ]
+  }
+]
