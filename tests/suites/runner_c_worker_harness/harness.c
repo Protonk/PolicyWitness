@@ -6,7 +6,7 @@
  *
  * Usage:
  *   harness <worker_path> <scenario>
- *     scenario: happy_default_allow | bare_deny_default | exit_byte_clean |
+ *     scenario: happy_default_allow | bare_deny_default | terminal_exit_without_request |
  *               max_slots_deny_default | sigkill_fallback
  *
  * The harness:
@@ -327,7 +327,7 @@ static scenario_t SCENARIOS[] = {
     { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "host_lost_while_waiting", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "proceed_without_host_release", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
 
     /* name, policy, step_count, request_exit, populate_slots, populate_params,
@@ -335,8 +335,9 @@ static scenario_t SCENARIOS[] = {
      * oversize_policy, temp_target */
     { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                0, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { .name = "terminal_empty_phase", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 0 },
+    { "terminal_exit_without_request",        SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
     { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
@@ -704,7 +705,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     snprintf(proceed_budget, sizeof(proceed_budget), "%d", scen->proceed_wait_ms ? scen->proceed_wait_ms : 60000);
     if (scen->proceed_at_prepare) atomic_store_explicit(&hdr->proceed, 1, memory_order_release);
     char attempt_budget[24], child_deadline[24];
-    char *worker_argv[16];
+    char *worker_argv[20];
     int worker_argc = 0;
     worker_argv[worker_argc++] = (char *)"pw-probe-runner";
     worker_argv[worker_argc++] = (char *)"--shm-fd";     worker_argv[worker_argc++] = (char *)"3";
@@ -720,6 +721,10 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         snprintf(child_deadline, sizeof(child_deadline), "%ld", scen->exec_child_deadline_ms);
         worker_argv[worker_argc++] = (char *)"--exec-child-deadline-ms";
         worker_argv[worker_argc++] = child_deadline;
+    }
+    if (strcmp(scen->name, "sigkill_fallback") == 0) {
+        worker_argv[worker_argc++] = (char *)"--post-apply-hang-ms";
+        worker_argv[worker_argc++] = (char *)"30000";
     }
     worker_argv[worker_argc] = NULL;
     pid_t pid;
@@ -842,9 +847,22 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         }
     }
 
-    /* Request exit unless the worker already self-exited (refusal path),
-     * or this scenario intentionally withholds the exit byte to exercise
-     * the host-side SIGKILL fallback. */
+    /* A late release still cannot revive a refusal after prompt exit. */
+    if (scen->proceed_after_expiry && !release_set) {
+        usleep((useconds_t)scen->proceed_delay_ms * 1000);
+        atomic_store_explicit(&hdr->proceed, 1, memory_order_release);
+        release_set = 1;
+        if (saw_applied) {
+            struct timespec now; clock_gettime(CLOCK_MONOTONIC, &now);
+            held_ms = (now.tv_sec - applied_time.tv_sec) * 1000
+                + (now.tv_nsec - applied_time.tv_nsec) / 1000000;
+        } else {
+            held_ms = -1; /* application was not sampled before reap */
+        }
+    }
+
+    /* Retain cancellation as an independent host action. Terminal completion
+     * never needs this store; no-request scenarios leave the word zero. */
     if (scen->request_exit && !worker_reaped) {
         atomic_store_explicit(&hdr->exit_requested, 1u, memory_order_release);
     }
@@ -866,6 +884,18 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
             waitpid(pid, &status, 0);
         }
     }
+
+    /* Publications can land between the final poll samples and reap. */
+    int final_applied = atomic_load_explicit(&hdr->applied, memory_order_acquire) == 1;
+    int final_done = atomic_load_explicit(&hdr->done, memory_order_acquire) == 1;
+    /* A retained application flag does not supply a missing start sample. */
+    if (final_done && saw_applied && done_after_applied_ms < 0) {
+        struct timespec now; clock_gettime(CLOCK_MONOTONIC, &now);
+        done_after_applied_ms = (now.tv_sec - applied_time.tv_sec) * 1000
+            + (now.tv_nsec - applied_time.tv_nsec) / 1000000;
+    }
+    saw_applied = final_applied;
+    saw_done = final_done;
 
     /* Emit result envelope. */
     printf("{");
@@ -894,6 +924,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     printf(",\"progress\":%u", atomic_load_explicit(&order_e->progress, memory_order_acquire));
     printf(",\"done\":%s", saw_done ? "true" : "false");
     printf(",\"sent_sigkill\":%s", sent_sigkill ? "true" : "false");
+    printf(",\"exit_requested\":%u", atomic_load_explicit(&hdr->exit_requested, memory_order_acquire));
     if (WIFEXITED(status)) {
         printf(",\"exit_code\":%d,\"term_signal\":null", WEXITSTATUS(status));
     } else if (WIFSIGNALED(status)) {

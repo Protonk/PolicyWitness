@@ -1,0 +1,1403 @@
+{
+  "base_commit": "b4e6ccf0010d4019c6665cf2e7681a7962853a79",
+  "default_cases": [
+    {
+      "id": "preflight/codesign.preflight",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/build_provenance_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/byoxpc_verification_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/release_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/release_deadline_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/release_publish_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "preflight/release_rotation_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "source_drift/runner_source_manifests_agree",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "source_drift/limits_documentation",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json",
+      "replaces_failed_result": true
+    },
+    {
+      "id": "source_drift/contract_versions",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "source_drift/architecture_documentation",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "source_drift/build_documentation",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "source_drift/generator_contract",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/finalizers",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/python_startup",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/script_groups",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/worker_setup",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/byoxpc_setup",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "shell_helpers/mutation_prerequisites",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "dispatcher/controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "dispatcher/accounting_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "dispatcher/cancellation_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "dispatcher/selection_controls",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json",
+      "replaces_failed_result": true
+    },
+    {
+      "id": "dispatcher/artifact_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "dispatcher/retention_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "unit/rust.unit",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "unit/rust.fmt",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "unit/rust.disposition_reds",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "unit/rust.observer_admission",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "unit/rust.byoxpc_reds",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "integration/cli.integration",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_unit/pwrunner_core_unit_executable",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json",
+      "replaces_failed_result": true
+    },
+    {
+      "id": "runner_unit/service_admission_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_unit/host_setup_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_apply_isolation_v2/deny_default_v2_worker_reply",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_apply_isolation_v3/deny_default_v3_worker_reply",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_worker_spawn_failed/posix_spawn_enoent_propagates_to_outcome",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_runner_timeout/host_kills_hung_worker",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_bad_request/missing_required_filter_value",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_bad_request/swift_decode_failure",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_bad_request/accepted_input_contract",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_filter_iokit_registry_entry_class/prediction_unavailable_attempt_observed",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_filter_iokit_user_client_class/prediction_unavailable_attempt_observed",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_filter_sysctl_name/checker_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_filter_sysctl_name/prediction_unavailable_attempt_observed",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_filter_local_name/prediction_unavailable_attempt_observed",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "validator_batch_mode/batch_ndjson_roundtrip",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "validator_batch_mode/predictions_do_not_report",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_validator_failure/transcript_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_validator_failure/validator_decode_failure_reports_degraded",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_validator_failure/validator_unavailable_reports_degraded",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_validator_failure/validator_killed_mid_stream",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_abi_layout/c_swift_layout_agreement",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/abi_mismatch_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/bare_deny_default",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/compile_failure",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/create_allow",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/terminal_erasure",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/terminal_exit_without_request",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/happy_default_allow",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/max_slots_deny_default",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/param_count_overflow_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/params_round_trip",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_overflow_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_nul_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_truncated_prefix",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_whole_submission",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_utf8_bytes",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_at_capacity",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_empty_expected",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_expectation_out_of_range_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_capacity_plus_one_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_overdelivered_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_empty_short_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/policy_zero_expected_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/prepared_unset_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/sigkill_fallback",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/step_count_overflow_refused",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/unlink_allow",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/unlink_deny",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/exec_pipes_per_attempt",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/exec_setup_post_apply_denied",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/exec_attempt_budget_remainder",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/exec_attempt_budget_sequence",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_never_set",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_late_after_expiry",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_before_applied",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_delayed_observed_quiescence",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_under_bare_deny_default",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_wait_budget_short",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_wait_budget_long",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_expiry_release_boundary",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_without_host_release",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/max_slots_proceed",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/clock_arithmetic",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/proceed_precedence",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_c_worker_harness/exec_control_states",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/access_failure_classified",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/bare_deny_default",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/duplicate_step_id_rejected",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/exec_attempt_args_and_stderr_round_trip",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/exec_attempt_stdout_truncation_marker",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/exec_attempt_with_baseline_succeeds",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/happy_default_allow",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/prediction_unavailable_pair",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/sandbox_check_path_unresolved_prediction_unavailable",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/sandbox_check_pid_matches_worker",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/sandbox_check_unsupported_operation_diagnostic",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/unsupported_attempt_rejected",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_use_c_worker/worker_timeout_ms_honored",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_mach_service_liveness/pwrunner_survives_mach_service_launch",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "sbpl_allowdeny_consistency/sbpl_allowdeny_v1",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_live_worker_identity/independent_worker_and_host_queries",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_dac/execute_permission_controls_spawn",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "exec_fixture/controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "run_capture/controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "run_effects/checker_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "run_effects/file_actions_have_exact_effects",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "run_effects/exec_helper_effect_is_real",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "run_effects/run_installs_nothing",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_lifecycle/timeout_preserves_output_and_continues",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_lifecycle/closed_streams_continue",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_lifecycle/leader_exit_descendant",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_lifecycle/worker_dies_during_exec",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_inheritance/cli",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_exec_inheritance/contaminated_worker",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_specimen_isolation/overlapping_runs_keep_evidence_separate",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "smoke/specimen_file_read_deny",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "smoke/specimen_file_read_deny_standard",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_e2e/comparison_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_e2e/native_comparison_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_e2e/checker_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_e2e/BBX-001",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_e2e/BBX-002",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/validation_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/core_strict_tmp",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/core_read_only",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/core_mach_simple",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/opt_vfs_tmp_only",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/opt_vfs_private_tmp_only",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/opt_vfs_both_paths",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/opt_metafilter_any",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "blackbox_menagerie/opt_bucket5_subpath",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/happy_path_baseline",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/attempt_outcome_matrix_enforced",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/bug_report_returns_attempts",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/bug_report_returns_verdicts",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/debuggable_mode_rejected",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/comparison_matrix",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/dossier_witness",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/create_existing_file_preserves_contents",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/queries_precede_attempts",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_termination_and_log_correlation",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/deny_capture_covers_the_run",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/log_capture_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/log_query_predicate_archive",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/instrumentation_field_rejected",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/shm_sentinel_under_deny_default",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/validator_spawn_failed_reports_degraded",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/validator_subprocess_populated",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_post_apply_hang_seam",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_attempt_in_flight_at_deadline",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_killed_before_slot_publication",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/prediction_target_is_independent_of_attempt_target",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/pre_apply_failure_reports_no_policy_verdict",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_progress_and_failure",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/worker_sparse_failure",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/unfamiliar_diagnostic_transport",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/queries_use_a_pre_attempt_interval",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/attempt_effects_wait_for_collection",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/query_interval_is_not_a_snapshot",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/external_mutation_between_query_and_attempt",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/max_steps_ordered",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/max_targets_reply_survives",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/max_exec_steps_spawn",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/deny_default_ordered",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/phases",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/extensions",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/extension_boundaries",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "witness_contract/extension_combinations",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/admission",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/validator_frames",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/validator_association",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/validator_overlong_request",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/fallback_helper",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/validator_removed_target",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "failure_boundaries/validator_control_characters",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "runner_outcome_validator_no_reply/validator_io_deadline_releases_worker",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    },
+    {
+      "id": "validator_bridge/protocol_controls",
+      "status": "pass",
+      "run_id": "20261018T183220Z_040bf851",
+      "source_snapshot": "acceptance-source.json",
+      "replaces_failed_result": false
+    }
+  ],
+  "opt_in_cases": [
+    {
+      "id": "runner_unit/reaped_ack_mutation",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json"
+    },
+    {
+      "id": "witness_contract/order_barrier_mutations",
+      "status": "pass",
+      "run_id": "20261018T184724Z_975e5373",
+      "source_snapshot": "acceptance-repair-source.json"
+    }
+  ],
+  "runs": [
+    {
+      "path": "tests/out/runs/terminal-exit-default-20261018",
+      "run_id": "20261018T183220Z_040bf851",
+      "ok": false,
+      "counts": {
+        "fail": 3,
+        "pass": 189,
+        "skip": 0,
+        "total": 192
+      },
+      "completion": {
+        "completed": 192,
+        "selected": 192,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "run_json_sha256": "22164a66553acf93eb1f340e4a9bc176f62eafbcb97a9038094ab3572159ee24",
+      "app_inventory_sha256": "b16b0cf14cc696a3c1b624610e94c176bde64707f6846bb6fffb822def36310e"
+    },
+    {
+      "path": "tests/out/runs/terminal-exit-repairs-20261018",
+      "run_id": "20261018T184724Z_975e5373",
+      "ok": true,
+      "counts": {
+        "fail": 0,
+        "pass": 7,
+        "skip": 0,
+        "total": 7
+      },
+      "completion": {
+        "completed": 7,
+        "selected": 7,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "run_json_sha256": "e1d35688c740d2c3354596f50556ed3760493baf17feebf5b57d45873bdd3daa",
+      "app_inventory_sha256": "b16b0cf14cc696a3c1b624610e94c176bde64707f6846bb6fffb822def36310e"
+    }
+  ]
+}

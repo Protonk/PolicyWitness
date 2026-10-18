@@ -3,12 +3,13 @@
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Findings: WA-04 and WA-08 in the
 [initial audit](../../../records/worker-pass6/initial-report.md).
-State: investigation complete; design adopted. Coordinated lifecycle and
-token-cleanup investigations received independent source review and coordinator
-synthesis. The [terminal-exit implementation plan](TERMINAL-EXIT-REFACTOR-PLAN.md)
-carries the adopted design and phase qualification rule. Production
-implementation is not started. The starting questions below retain the
-investigation's scope.
+State: investigation and implementation complete; acceptance passed. Coordinated
+lifecycle and token-cleanup investigations received independent source review
+and coordinator synthesis. The [terminal-exit implementation plan](TERMINAL-EXIT-REFACTOR-PLAN.md)
+carries the adopted design and phase qualification rule. The
+[implementation acceptance](../../../records/worker-terminal-lifetime/implementation-acceptance.md)
+records the reviewed production refactor and signed tests. The starting
+questions below retain the investigation's scope.
 
 ## Returned investigation
 

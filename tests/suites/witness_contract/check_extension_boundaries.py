@@ -96,7 +96,10 @@ def observations(mapping):
         worker_token_erased=bool(struct.unpack_from('I', mapping, 64)[0]),
         issuer_token_erased=bool(struct.unpack_from('I', mapping, 68)[0]),
         control_value=struct.unpack_from('I', mapping, 72)[0],
-        prefix_valid=bool(struct.unpack_from('I', mapping, 76)[0]))
+        prefix_valid=bool(struct.unpack_from('I', mapping, 76)[0]),
+        worker_tail_seeded=bool(struct.unpack_from('I', mapping, 80)[0]),
+        worker_erase_capacity=struct.unpack_from('I', mapping, 84)[0],
+        worker_erase_failures=struct.unpack_from('I', mapping, 88)[0])
 
 
 def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
@@ -271,6 +274,8 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             assert declaration['delivered_bytes'] == declaration['issuer']['token_length'], declaration
             assert events[0]['native_result'] != -1 and events[1]['native_result'] == 0
             assert observed['worker_argv_env_clean'] and observed['worker_token_erased']
+            assert observed['worker_tail_seeded'] and observed['worker_erase_capacity'] == TOKEN_CAPACITY
+            assert observed['worker_erase_failures'] == 0
         assert declaration['host_buffer_erased'], 'host did not report clearing its channel'
         return dict(case=name, ok=True, issuer_mode=issuer_mode, worker_mode=worker_mode)
     finally:

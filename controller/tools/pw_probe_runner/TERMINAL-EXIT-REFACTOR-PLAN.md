@@ -1,7 +1,9 @@
 # Worker terminal exit and ordinary token cleanup
 
-Status: design adopted; ready for implementation. Production implementation and
-acceptance are not started. This plan follows the completed
+Status: implemented, independently reviewed and accepted. The
+[implementation acceptance](../../../records/worker-terminal-lifetime/implementation-acceptance.md)
+records the signed build, default battery, repaired test oracles, mutation
+controls and retained evidence. This plan follows the completed
 [terminal-publication investigation](TERMINAL-PUBLICATION-PLAN.md) under the
 [worker redesign plan](../../../WORKER-REDESIGN-PLAN.md). The
 [decision record](../../../records/worker-terminal-lifetime/decision.md),

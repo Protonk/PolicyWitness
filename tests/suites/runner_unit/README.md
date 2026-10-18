@@ -209,3 +209,22 @@ Sources, exact substitutions, hashes, build logs, original receipts and separate
 observations are retained under `artifacts/controls/`. The additional observer
 calls and cleanup exist only in these copied fixtures; this case requires Swift
 and clang and does not use the signed app.
+
+
+## Confirmed-reap acknowledgement
+
+`CWorkerLifecycleTests` holds an ABI fixture until the host's native polling
+wait, after the last acknowledgement/done samples. Clean completion and fatal
+SIGTERM without `done` must both recover the previously unseen acknowledgement
+at confirmed reap, qualifying the collected query while preserving each run's
+actual disposition. An injected ownership error before acknowledgement keeps
+order unestablished even when later reap is confirmed. `PhaseProtocolTests`
+also checks that a later phase's ownership error leaves earlier established
+phase credit intact.
+
+The opt-in `reaped_ack_mutation` case copies the host and this bounded group,
+then removes only final reconciliation. Both clean and fatal controls must fail
+specifically at missing ownership credit; the broken-ownership control must
+still pass. It retains exact copied sources/hashes, build/run commands and logs,
+fixed/mutated host source and structured results. It requires Swift and clang,
+uses isolated build output and does not modify or use the inspected app.

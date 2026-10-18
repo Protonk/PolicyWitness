@@ -38,6 +38,7 @@ typedef struct {
 } observer_t;
 _Static_assert(offsetof(observer_t, token) == 128, "test observer token offset");
 static observer_t *observer;
+static pw_extension_channel_t *worker_channel_observation;
 static void *native_lookup(void *library, const char *name) { return dlsym(library, name); }
 static int native_unmap(void *p, size_t n) { return munmap(p, n); }
 
@@ -122,11 +123,18 @@ static int vector_excludes(char **values, const char *token) {
 static void controlled_erase(void *bytes, size_t length) {
     pw_extension_erase(bytes, length);
     int clear = 1;
-    for (size_t i = 0; i < length; ++i) if (((unsigned char *)bytes)[i]) clear = 0;
 #if defined(PW_CONTROL_ISSUER)
+    /* Issuer strings are separate allocations; length is their known bound. */
+    for (size_t i = 0; i < length; ++i) if (((unsigned char *)bytes)[i]) clear = 0;
     observer->issuer_token_erased = clear;
 #else
-    observer->worker_token_erased = clear;
+    /* Independently held mapped channel: neither the erase argument, the
+     * token's reported length nor its first NUL defines this scan's bound. */
+    if (!worker_channel_observation || bytes != worker_channel_observation->token) _exit(85);
+    for (size_t i = 0; i < sizeof(worker_channel_observation->token); ++i)
+        if ((unsigned char)worker_channel_observation->token[i]) clear = 0;
+    if (!clear) observer->reserved[4]++;
+    observer->worker_token_erased = clear && !observer->reserved[4];
 #endif
 }
 
@@ -253,6 +261,13 @@ static void *controlled_mmap(size_t length, int fd) {
     /* The host already validated and passed this channel; the worker's own
      * inspection must reject the mutated view it maps. */
     pw_extension_channel_t *channel = p;
+    worker_channel_observation = channel;
+    if (channel->token_length < sizeof(channel->token) - 1 && channel->token[channel->token_length] == 0) {
+        memset(channel->token + channel->token_length + 1, 0xa5,
+               sizeof(channel->token) - channel->token_length - 1);
+        observer->reserved[2] = channel->token[sizeof(channel->token) - 1] != 0;
+        observer->reserved[3] = sizeof(channel->token);
+    }
     switch (PW_CONTROL_MODE) {
     case 113: channel->magic ^= 1; break;
     case 114: atomic_store_explicit(&channel->completed, 0, memory_order_release); break;

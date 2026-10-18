@@ -823,7 +823,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
-| Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
+| Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Elapsed monotonic wait for an unreaped worker after the host stores an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
 | Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Sampled continuous time for each phase release after the worker arrives, converted once before application to a ceiling tick allowance. Continuous time includes system sleep. Expiry records the phase index and milliseconds and prevents its actions. An unusable sample, an earlier rejected sample or an unrepresentable plan exclusion records a local timing refusal with its reason instead; neither invents a native result or errno. Earlier published phase evidence remains. | Fixed. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Informative allowance between the validator budgets and worker release wait. No separate timeout or refusal occurs at this value. | Not enforced; no flag. |
 | Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum proposed `_test_overrides.validator_io_timeout_ms`. Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor. | Fixed. |
@@ -1560,9 +1560,16 @@ Read the channels' results, relations and order with these rules:
 
 <!-- BEGIN COPIED READING RULES -->
 
-1. The query channel's answer is `sandbox_check.outcome` when `result_source`
-   is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
-   was available and `sandbox_check.missing_reason` says why.
+1. The raw query answer is `sandbox_check.outcome` when `result_source`
+   is `validator` and the outcome is `allow` or `deny`; otherwise
+   `sandbox_check.missing_reason` explains the unavailable answer. An otherwise
+   eligible answer qualifies as a prediction about a live specimen only with
+   its phase's collection/release/acknowledgement chain, reflected by
+   `comparison.order: query_first`. Neither successful attempts nor a successful
+   run are required. Without that chain, retained native answers do not establish
+   whether the target was live during any particular query. A degraded
+   `runner_reporting_failed` reply certifies no per-step order, even when raw
+   ordering observations survive; every comparison is omitted.
 2. `attempt.missing_reason` explains an unavailable attempt channel.
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the

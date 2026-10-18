@@ -366,7 +366,7 @@
             "Started by": "the host",
             "Sandboxed": "yes; applies the specimen policy to itself",
             "Native sandbox API": "sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release",
-            "Lifetime": "one specimen; one application and all ordered phases"
+            "Lifetime": "one specimen; one application and all ordered phases; terminal publication exits without host permission"
           },
           "sources": [
             {
@@ -376,6 +376,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "sandbox_apply"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "publish_done_and_exit"
             }
           ],
           "checks": [
@@ -407,6 +411,11 @@
             {
               "path": "tests/suites/witness_contract/check_extension_combinations.py",
               "symbol": "check_row",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_exit_without_request",
               "form": "test"
             }
           ]
@@ -1849,6 +1858,14 @@
             {
               "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
               "symbol": "collectionEvidenceConsistent"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "publish_done_and_exit"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "observeAcknowledgement"
             }
           ],
           "checks": [
@@ -1891,8 +1908,19 @@
               "path": "runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift",
               "symbol": "runWorkerClockTests",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_exit_without_request",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
             }
-          ]
+          ],
+          "note": "Terminal publication erases accepted token storage, releases done and exits. The host retains its mapping and reconciles acknowledgement after confirmed reap only while ownership through acknowledgement remains established, including abnormal exit without done. Poll stop, deadline and disposition remain independent."
         },
         {
           "id": "B5",
@@ -2258,6 +2286,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "sandbox_extension_release"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "erase_accepted_token"
             }
           ],
           "checks": [
@@ -2275,8 +2307,14 @@
               "path": "tests/suites/witness_contract/check_extension_combinations.py",
               "symbol": "check_row",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_erasure",
+              "form": "test"
             }
-          ]
+          ],
+          "note": "Accepted token storage is erased on ordinary departures and before done; erasure does not invoke native release. Fatal interruption need not reach worker cleanup. Host erasure is a separate observation."
         },
         {
           "id": "B16",
@@ -6550,7 +6588,7 @@
             "Inventory ID": "S2",
             "Acquired by": "H: mmap, zero/populate/page-touch",
             "When": "Before compilation",
-            "Held across": "Through collection, even if worker cleanup unconfirmed",
+            "Held across": "Through collection, including after worker exit or unconfirmed cleanup",
             "Release / teardown action": "H defer munmap",
             "Authority": "Read worker publications; write input/release/exit request",
             "Sandbox-gated": "Source-only, host before apply",
@@ -6567,6 +6605,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
               "form": "test"
             }
           ]
@@ -6764,7 +6807,7 @@
             "Acquired by": "H: posix_spawn, nil attributes/envp",
             "When": "Before compilation",
             "Held across": "Until exit; unconfirmed cleanup may outlive driver",
-            "Release / teardown action": "W return/_exit, fatal signal or H termination; H waitpid observes reap",
+            "Release / teardown action": "Terminal publication: erase accepted token, release done, _exit; early return, cancellation, fatal signal or H termination; H waitpid observes reap",
             "Authority": "Executes specimen with inherited context and signed identity",
             "Sandbox-gated": "Source-only spawn; L observed two lifetimes",
             "Reaches exec children": "It parents exec children; not itself inherited",
@@ -6774,12 +6817,21 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
               "symbol": "runCWorker"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "publish_done_and_exit"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_exit_without_request",
               "form": "test"
             }
           ]
@@ -7087,8 +7139,8 @@
             "Inventory ID": "S12b",
             "Acquired by": "I: memcpy on bounded accepted token",
             "When": "Before compilation",
-            "Held across": "Through worker consume decision or host erase; failure branches differ",
-            "Release / teardown action": "Worker/host erasure; see S22 and",
+            "Held across": "Until worker consume decision or ordinary departure; host erasure is independent; fatal interruption may bypass worker cleanup",
+            "Release / teardown action": "Worker full-buffer erasure in S22; independent host erasure in S8c",
             "Authority": "Transferable extension token",
             "Sandbox-gated": "Source-only",
             "Reaches exec children": "No admitted exec+extension plan",
@@ -7098,12 +7150,21 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_extension_issuer.c",
               "symbol": "main"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "erase_accepted_token"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_erasure",
               "form": "test"
             }
           ]
@@ -7744,8 +7805,8 @@
             "Inventory ID": "S22",
             "Acquired by": "prepare_extension: length/NUL/header inspection",
             "When": "Before compilation",
-            "Held across": "Until consumption decision or normal loop completion; early exits differ",
-            "Release / teardown action": "attempt_extension or post-loop erase; host erase remains",
+            "Held across": "Until consume decision or ordinary departure after acceptance; fatal interruption may bypass cleanup",
+            "Release / teardown action": "Full-buffer erase before done, early return or cancellation exit; no native release; separate host erasure remains",
             "Authority": "Consumable bearer token; validation does not consume it",
             "Sandbox-gated": "Source-only",
             "Reaches exec children": "No admitted combination",
@@ -7755,12 +7816,25 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "prepare_extension"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "erase_accepted_token"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "publish_done_and_exit"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "terminal_erasure",
               "form": "test"
             }
           ]
@@ -10013,7 +10087,7 @@
           "from": "s2",
           "to": "s18",
           "kind": "observes",
-          "label": "Host observes publication in same evidence object",
+          "label": "Host observes publications in its retained evidence mapping, including after worker exit",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -10024,6 +10098,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
               "form": "test"
             }
           ]
@@ -10067,6 +10146,10 @@
             {
               "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
               "symbol": "comparisonEvidence"
+            },
+            {
+              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+              "symbol": "observeAcknowledgement"
             }
           ],
           "checks": [
@@ -10074,8 +10157,14 @@
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
               "form": "test"
+            },
+            {
+              "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+              "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
             }
-          ]
+          ],
+          "note": "A final acquire after confirmed reap can recover an unseen acknowledgement while ownership remained unbroken; successful completion is not required and broken ownership cannot be repaired."
         },
         {
           "id": "W52",

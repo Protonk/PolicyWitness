@@ -1,7 +1,8 @@
 /* Test-only ABI producer for host lifecycle controls. No policy is compiled or
  * applied. The input text selects a fixture scenario, not a production request
- * seam. Publish payloads with the real ABI protocol; wait for exit_requested
- * before abnormal exit so the host has definitely observed done. */
+ * seam. Publish payloads with the real ABI protocol. Most completed-report
+ * controls wait for exit_requested; reap_ack_* instead exit behind a native
+ * wait gate so acknowledgement cannot have appeared in the prior host sample. */
 #include "pw_probe_runner_abi.h"
 #include "pw_worker_evidence.h"
 #include <errno.h>
@@ -81,6 +82,35 @@ int main(void) {
             return total == strlen(prefix) + 200000 ? 24 : 95;
         }
         if (used == sizeof(mode) - 1) return 94;
+    }
+    if (!strncmp(mode, "reap_ack_", 9)) {
+        char *gate = strchr(mode, '|');
+        if (!gate || hdr->phase_count != 1 || hdr->step_count != 1) return 99;
+        *gate++ = 0;
+        int fatal = !strcmp(mode, "reap_ack_signal");
+        if (!fatal && strcmp(mode, "reap_ack_clean")) return 99;
+        alarm(5);
+        hdr->apply_rc = 0;
+        atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+        atomic_store_explicit(&hdr->phases[0].arrived, 1, memory_order_release);
+        if (write(4, "R", 1) != 1) return 97;
+        close(4);
+        while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != 1 || access(gate, F_OK)) usleep(1000);
+        atomic_store_explicit(&hdr->phases[0].acknowledged, 1, memory_order_release);
+        atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+        if (fatal) {
+            signal(SIGTERM, SIG_DFL);
+            kill(getpid(), SIGTERM);
+            _exit(98);
+        }
+        pw_shm_slot_t *slot = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+        slot->rc = 0;
+        slot->errno_val = 0;
+        atomic_store_explicit(&slot->completed, 1, memory_order_release);
+        atomic_store_explicit(&hdr->phases[0].completed, 1, memory_order_release);
+        pw_progress(pw_evidence(base), PW_OP_FINISHED, PW_PROGRESS_RETURNED, UINT32_MAX);
+        atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        _exit(0);
     }
     if (!strcmp(mode, "phase_invalid_previous")) {
         alarm(5);

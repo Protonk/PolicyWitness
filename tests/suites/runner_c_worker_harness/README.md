@@ -32,13 +32,12 @@ clock and native-call equipment; see [Worker timing controls](#worker-timing-con
    - still fires `applied` + `done`,
    - reports the kernel deny via the slot (`rc=1`, `errno` ∈
      {EPERM=1, EACCES=13}),
-   - clean-exits in response to `exit_requested` without SIGKILL.
+   - clean-exits with `exit_requested` left zero, without SIGKILL.
 
-3. **exit_byte_clean** — happy path again, but the assertion is
-   strictly on `sent_sigkill == false` and `exit_code == 0`. Pins
-   the exit-byte contract: the worker observes
-   `header.exit_requested == 1` from shared memory, calls `_exit(0)`,
-   and the harness reaps it before its grace timer fires.
+3. **terminal_exit_without_request** — normal completion and an empty final
+   phase publish `done` and clean-exit while the harness leaves
+   `exit_requested` zero. The independently retained mapping is readable after
+   reap. A bounded grace timer fails a worker that waits for exit permission.
 
 4. **max_slots_deny_default** — bare `(deny default)` with all 256
    slots populated as `PW_ATTEMPT_NONE`. Asserts that every slot
@@ -46,11 +45,10 @@ clock and native-call equipment; see [Worker timing controls](#worker-timing-con
    pins the multi-page ABI rather than only the first-slot smoke
    path.
 
-5. **sigkill_fallback** — happy path through `done`, then the harness
-   intentionally withholds `exit_requested`. Asserts that the host-side
-   grace timer sends SIGKILL and reaps the worker. Pins the SIGKILL
-   fallback path without needing a synthetic SBPL rule that denies
-   `_exit`.
+5. **sigkill_fallback** — a controlled post-apply hang after completed slots
+   and before `done`. The harness independently requests SIGKILL and reaps the
+   stalled worker. Withholding an exit request after `done` is covered by the
+   prompt-exit case above.
 
 6. **params_round_trip** — `(allow default)(deny file-read-data
    (subpath (param "TARGET")))` with `TARGET=/private/etc`. Asserts
@@ -305,9 +303,11 @@ The release controls exercise `proceed_never_set`, `proceed_late_after_expiry`,
 `proceed_before_applied`, `proceed_delayed_observed_quiescence`,
 `proceed_under_bare_deny_default`, `proceed_wait_budget_short`,
 `proceed_wait_budget_long`, `proceed_expiry_release_boundary`,
-`host_lost_while_waiting`, and `max_slots_proceed`. They poll every slot and
-attempt progress before release. Expiry forbids later attempts; the host-loss
-case owns final termination and establishes no worker self-exit guarantee.
+`proceed_without_host_release`, and `max_slots_proceed`. They poll every slot and
+attempt progress before release. Expiry forbids later attempts. The
+`proceed_without_host_release` case leaves both release and exit request unset,
+observes refusal and independently reaps clean exit without a cleanup kill.
+It models absent host stores; it does not kill a real XPC host.
 The clock substitution controls run in `runner_unit` against the real C
 producer companions. ABI mismatch remains a pre-application refusal.
 
@@ -327,3 +327,19 @@ waits and failed cleanup keep their native errors.
 Every reap must be nonblocking; absent status cannot become exit zero. No
 process or sandbox is created by this control; `runner_exec_lifecycle` supplies
 independent live-process evidence.
+
+
+`terminal_erasure` compiles the production worker with substituted native
+sandbox/extension calls and a gate immediately after its terminal `done`
+release-store. The parent retains a separate channel mapping, seeds nonzero
+padding through its last byte and checks the fixed capacity without using the
+erase argument or token length. Host erasure is withheld until observations
+finish. Ordinary early returns preserve their codes and absent publications;
+terminal refusal, cancellation, consumption, normal completion and pre-hang/
+signal cleanup retain their distinct evidence. Fatal interruption during
+consumption does not promise ordinary cleanup, and native release occurs only
+for an explicit release action. Rejected and absent channels remain safe.
+A shortened erase must fail the whole-buffer oracle. An erase moved after the
+store/gate must fail the independent boundary oracle despite a zero buffer after
+reap. These fixtures establish production control flow and memory observations,
+not kernel sandbox effects; signed-worker cases establish native terminal exit.

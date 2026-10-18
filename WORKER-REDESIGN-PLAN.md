@@ -3,9 +3,10 @@
 ## Status and purpose
 
 The terminal-publication investigation is complete, with independent review
-and coordinator synthesis. The terminal-exit design and phase qualification
-rule below are adopted; the implementation plan is ready and production
-implementation is not started.
+and coordinator synthesis. The terminal-exit refactor and phase qualification
+rule below are implemented, reviewed and accepted against the signed app; the
+[acceptance record](records/worker-terminal-lifetime/implementation-acceptance.md)
+retains the build, tests, test-oracle repairs and source snapshots.
 The other investigation handoffs remain drafted and unassigned. This parent
 tracks their scope, connections and eventual decisions; the coordinator retains
 the documentation workstream below.
@@ -34,7 +35,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 | Finding | Code-local plan | Decision to develop | State |
 | --- | --- | --- | --- |
 | WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Shorter host descriptor ownership versus explicit child inheritance controls | Draft; unassigned |
-| WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Design adopted; implementation not started |
+| WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Implemented; signed acceptance passed |
 | WA-03 | [Exec supervision](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) | Completion semantics, cleanup ownership and the attainable containment boundary | Draft; unassigned |
 | WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Draft; unassigned |
 | WA-10 | [Execution environment](controller/src/EXECUTION-ENVIRONMENT-PLAN.md) | Whether an application-level environment account improves the experiment | Draft; unassigned |
@@ -52,16 +53,18 @@ cleanup remain separate guarantees.
 
 The [terminal-lifetime decision record](records/worker-terminal-lifetime/decision.md)
 records prompt native exit after terminal publication, paired with final
-acknowledgement reconciliation and ordinary accepted-token erasure. Four bounded
-fixture controls support the host race correction; production acceptance remains
-future work. Under the adopted rule, otherwise admissible query records qualify
+acknowledgement reconciliation and ordinary accepted-token erasure. The initial
+bounded fixture controls are supplemented by signed production acceptance and
+deterministic erasure/acknowledgement mutation controls. Under the adopted rule,
+otherwise admissible query records qualify
 as live-specimen predictions only with an established phase collection/release/
 acknowledgement chain and unbroken ownership; other records remain native query
 observations without that qualification. This avoids per-query liveness
 reconstruction and makes active validator cancellation unnecessary for the
 terminal-exit decision. Raw observations after refusal may still change.
-The implementation plan carries this design into separately scoped production
-work; no audit or worker-documentation register row is closed by its adoption.
+The implementation plan's production scope is complete. The worker-documentation
+register retains its own adjudications; this acceptance does not close unrelated
+open findings or select a descendant-supervision design.
 
 Terminal publication and exec supervision share lifecycle evidence, but worker
 exit and descendant cleanup are different guarantees. Execution configuration

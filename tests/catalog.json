@@ -325,6 +325,19 @@
           ]
         },
         {
+          "id": "reaped_ack_mutation",
+          "description": "Unseen clean and fatal acknowledgements lose ordering credit when final reconciliation is removed; broken ownership stays unqualified",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/opt_in/reaped_ack_mutation.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ],
+          "default": false
+        },
+        {
           "id": "host_setup_oracle_sensitivity",
           "description": "Characterize setup-oracle blind spots with disposable wrong-endpoint, wrong-argument and partial-unmap variants plus independent native observations",
           "command": [
@@ -599,8 +612,15 @@
           "description": "Allowed create produces the independently observed target file"
         },
         {
-          "id": "exit_byte_clean",
-          "description": "worker _exit(0) in response to exit_requested, no SIGKILL needed"
+          "id": "terminal_erasure",
+          "description": "Independent full-capacity and done-boundary token erasure, preserved departures and rejected mutations",
+          "requires": [
+            "clang"
+          ]
+        },
+        {
+          "id": "terminal_exit_without_request",
+          "description": "worker exits after done without an exit request, including an empty phase"
         },
         {
           "id": "happy_default_allow",
@@ -672,7 +692,7 @@
         },
         {
           "id": "sigkill_fallback",
-          "description": "host SIGKILL fallback reaped worker after withheld exit byte"
+          "description": "host SIGKILL fallback reaps a worker stalled before done"
         },
         {
           "id": "step_count_overflow_refused",
@@ -735,8 +755,8 @@
           "description": "Worker release barrier: proceed expiry release boundary"
         },
         {
-          "id": "host_lost_while_waiting",
-          "description": "Worker release barrier: host lost while waiting"
+          "id": "proceed_without_host_release",
+          "description": "Worker refuses and exits without a host release or exit request; harness owns reap"
         },
         {
           "id": "max_slots_proceed",
@@ -1891,6 +1911,7 @@
         "runner_c_worker_harness/native_clock",
         "runner_exec_inheritance/launch_inventory",
         "runner_unit/host_setup_oracle_sensitivity",
+        "runner_unit/reaped_ack_mutation",
         "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr"
       ]

@@ -47,6 +47,19 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### Confirmed-reap acknowledgement mutation
+
+- **Case:** `runner_unit/reaped_ack_mutation`
+- **Purpose:** Remove final acknowledgement reconciliation in a disposable host
+  copy. Previously unseen clean and fatal acknowledgements must lose ordering
+  credit; prior ownership loss must remain unqualified.
+- **Opt-in reason:** Two isolated Swift package builds. Required when changing
+  confirmed-reap reconciliation or its race controls.
+- **Equipment:** Swift and clang; no signed app or service installation.
+- **Artifacts:** Exact source copies/hashes, build/run commands and logs, both
+  host variants, and structured passing/rejected results.
+- **Details:** [Confirmed-reap controls](suites/runner_unit/README.md#confirmed-reap-acknowledgement).
+
 ### Worker resource challenge probes
 
 - **Cases:** `runner_unit/host_setup_oracle_sensitivity`,

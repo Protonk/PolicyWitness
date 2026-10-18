@@ -14,6 +14,19 @@ the host or the owning test. Swift tests use real spawn/mapping/polling/cleanup;
 internal OS-call controls inject only otherwise unreliable kill/wait failures.
 They independently clean up their child after a simulated unconfirmed reap.
 
+`reap_ack_clean|<gate>` and `reap_ack_signal|<gate>` publish arrival, then wait
+for both host release and a test-owned file gate. The host wait control opens
+that gate only after its last acknowledgement/done samples, then observes an
+actual native reap before returning to the driver. The first mode completes
+its slot and phase, publishes `done` and exits 0; the second acknowledges then
+dies by SIGTERM without completing or publishing `done`. Both establish ordering
+only through the final confirmed-reap reconciliation. A third control returns
+poll EIO before opening the gate in cleanup, so acknowledgement and clean reap
+cannot restore broken ownership. The fixture's alarm and the test's bounded
+native wait independently fail stalled equipment; the owning test verifies
+ECHILD after driver reap and cleans up on failure. Constructed query records
+exercise the real comparison builder without claiming native sandbox evidence.
+
 The ready byte is sent after fixture publication for deterministic controls;
 real-worker readiness and deadline/grace behavior remain separate tests.
 
@@ -54,7 +67,7 @@ write and appends its native rc/errno there, proving the collection pipe closed
 before that late output. The test owns eventual termination and reaping.
 
 `transport_*` and `close_transport_beta` modes use the separate
-[`diagnostic transport inputs`](../diagnostic_transport/README.md). They publish
+[diagnostic transport inputs](../diagnostic_transport/README.md). They publish
 controlled unfamiliar records using the supported protocol, retain independent
 exit/EPIPE evidence, and provide absent/unpublished/invalid/version/text controls.
 

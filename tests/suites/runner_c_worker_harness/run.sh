@@ -169,7 +169,7 @@ assert r["ready_byte_received"], "pre-apply ready byte not received"
 assert r["applied"], f"applied sentinel never flipped: {r}"
 assert r["apply_rc"] == 0, f"sandbox_apply returned {r['apply_rc']}"
 assert r["done"], f"done sentinel never flipped: {r}"
-assert not r["sent_sigkill"], "harness had to SIGKILL the worker; clean exit byte failed"
+assert not r["sent_sigkill"], "harness had to SIGKILL the worker after terminal publication"
 assert r["exit_code"] == 0, f"worker exit_code != 0: {r}"
 assert r["term_signal"] is None, f"worker was signaled: {r}"
 
@@ -209,8 +209,9 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert r["ready_byte_received"], "pre-apply ready byte not received under (deny default)"
 assert r["applied"], f"applied sentinel never flipped — worker died pre-apply? {r}"
 assert r["apply_rc"] == 0, f"sandbox_apply returned {r['apply_rc']}"
+assert r["exit_requested"] == 0, r
 assert r["done"], f"done sentinel never flipped — this is the bug-report regression: {r}"
-assert not r["sent_sigkill"], "harness had to SIGKILL the worker; clean exit byte failed under (deny default)"
+assert not r["sent_sigkill"], "harness had to SIGKILL the worker after terminal publication under (deny default)"
 assert r["exit_code"] == 0, f"worker exit_code != 0: {r}"
 
 slots = r["slots"]
@@ -230,23 +231,30 @@ PY
   finish_from_assert_log "${arc}"
 }
 
-# ---- test_id: exit_byte_clean --------------------------------------------
+# ---- test_id: terminal_exit_without_request --------------------------------------------
 
-run_exit_byte_clean() {
-  run_harness_case "exit_byte_clean" "exit_byte_clean" \
-    "worker observes exit_requested in shm and _exit(0)s before harness SIGKILL" || return 0
+run_terminal_exit_without_request() {
+  run_harness_case "terminal_exit_without_request" "terminal_exit_without_request" \
+    "worker publishes done and independently exits with exit_requested left zero" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
-import json, sys
+  /usr/bin/python3 - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, subprocess, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 
-# Focused assertion: the exit byte was the reason the worker exited,
-# not the harness's SIGKILL grace timer.
-assert not r["sent_sigkill"], "harness had to SIGKILL — exit byte didn't work"
+# The host never grants exit permission; the published mapping survives reap.
+assert r["done"] and r["exit_requested"] == 0, r
+assert not r["sent_sigkill"], "terminal worker required a cleanup kill"
 assert r["exit_code"] == 0, f"worker did not _exit(0): {r}"
 assert r["term_signal"] is None, f"worker was signaled instead of _exit'ing: {r}"
-print("ok: worker _exit(0) in response to exit_requested, no SIGKILL needed")
+probe = subprocess.run([sys.argv[2], sys.argv[3], 'terminal_empty_phase'], capture_output=True, text=True, timeout=10)
+Path(sys.argv[1]).with_name('empty-phase.json').write_text(probe.stdout)
+Path(sys.argv[1]).with_name('empty-phase.stderr').write_text(probe.stderr)
+assert probe.returncode == 0, probe.stderr
+empty = json.loads(probe.stdout)
+assert empty['done'] and empty['exit_code'] == 0 and empty['term_signal'] is None, empty
+assert empty['exit_requested'] == 0 and not empty['sent_sigkill'] and empty['slots'] == [], empty
+print("ok: worker published done and exited without an exit request or cleanup kill")
 PY
   local arc=$?
   set -e
@@ -293,7 +301,7 @@ PY
 
 run_sigkill_fallback() {
   run_harness_case "sigkill_fallback" "sigkill_fallback" \
-    "host SIGKILL fallback reaps worker when clean exit byte is withheld" || return 0
+    "host SIGKILL fallback reaps a worker stalled before done" || return 0
   set +e
   /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
@@ -302,7 +310,7 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 
 assert r["ready_byte_received"], "pre-apply ready byte not received"
 assert r["applied"], f"applied sentinel never flipped: {r}"
-assert r["done"], f"done sentinel never flipped: {r}"
+assert not r["done"], f"controlled stall must precede done: {r}"
 assert r["sent_sigkill"], f"expected harness SIGKILL fallback, got clean exit: {r}"
 assert r["exit_code"] is None, f"worker should not have clean-exited: {r}"
 assert r["term_signal"] == 9, f"expected SIGKILL term_signal=9: {r}"
@@ -310,7 +318,7 @@ assert r["term_signal"] == 9, f"expected SIGKILL term_signal=9: {r}"
 slots = r["slots"]
 assert len(slots) == 1, f"expected 1 slot, got {len(slots)}"
 assert slots[0]["completed"] == 1, f"slot should complete before fallback kill: {slots[0]}"
-print("ok: host SIGKILL fallback reaped worker after withheld exit byte")
+print("ok: host SIGKILL fallback reaped worker from the controlled pre-done stall")
 PY
   local arc=$?
   set -e
@@ -455,9 +463,9 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert r["ready_byte_received"] is False, f"compile fails before the ready byte: {r}"
 assert r["applied"] is False, f"applied must stay false when compile fails: {r}"
 assert r["apply_rc"] == -1, f"apply_rc must be -1 on compile failure (got {r['apply_rc']}): {r}"
-# ...but the worker still flips done and honors the exit byte rather than dying.
+# ...but the worker still publishes done and exits cleanly.
 assert r["done"] is True, f"done must flip so the host stops polling: {r}"
-assert r["sent_sigkill"] is False, f"worker should clean-exit on the exit byte, not need SIGKILL: {r}"
+assert r["sent_sigkill"] is False, f"worker should exit after terminal publication without SIGKILL: {r}"
 assert r["exit_code"] == 0, f"worker should _exit(0) after reporting the compile failure: {r}"
 # No attempts ran.
 assert r["slots"][0]["completed"] == 0, f"no slot should run when compile fails: {r['slots'][0]}"
@@ -470,7 +478,7 @@ PY
 
 run_happy_default_allow
 run_bare_deny_default
-run_exit_byte_clean
+run_terminal_exit_without_request
 run_max_slots_deny_default
 run_sigkill_fallback
 run_params_round_trip
@@ -577,7 +585,7 @@ assert expected == written == header, f"a complete delivery must carry its own c
 assert r["policy_read_published"] == 1 and r["policy_bytes_received"] == expected, \
     f"the EOF receipt must equal the submission's count on a complete delivery: {r}"
 assert r["exit_code"] == 0 and r["term_signal"] is None and not r["sent_sigkill"], \
-    f"the worker must clean-exit on the exit byte: {r}"
+    f"the worker must exit cleanly after terminal publication: {r}"
 assert not (r["failure_published"] == 1 and r["failure"]["operation"] == 2), \
     f"no policy-read refusal may follow equal counts: {r}"
 s = r["slots"][0]
@@ -771,7 +779,7 @@ run_proceed_control() {
 for scenario in proceed_never_set proceed_late_after_expiry proceed_before_applied \
   proceed_delayed_observed_quiescence proceed_under_bare_deny_default \
   proceed_wait_budget_short proceed_wait_budget_long proceed_expiry_release_boundary \
-  host_lost_while_waiting max_slots_proceed; do
+  proceed_without_host_release max_slots_proceed; do
   run_proceed_control "$scenario"
 done
 
@@ -808,5 +816,16 @@ if test_selected exec_control_states; then
     test_pass "absolute budgets, independent EOF/exit, clock phases and cleanup evidence"
   else
     test_fail "exec control regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi
+
+if test_selected terminal_erasure; then
+  test_begin runner_c_worker_harness terminal_erasure
+  test_step control "observe full accepted buffers and the done-store boundary; reject shortened and reversed erasure"
+  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_terminal_erasure.py" \
+      "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "independent full-capacity and done-boundary erasure; ordinary exits preserved; both mutations rejected"
+  else
+    test_fail "terminal erasure control failed" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
   fi
 fi

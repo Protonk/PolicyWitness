@@ -169,8 +169,8 @@ private func clockPhases(_ suffix: String, first: PWRunnerProbeStep, gateDelayMs
     return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
 }
 
-/// The second phase never acknowledged: its prediction may survive, but its
-/// attempt is unavailable and no query order is established.
+/// The second phase never acknowledged: retain any native query observation,
+/// but its attempt is unavailable and no query order is established.
 private func expectSecondPhaseUnreleased(_ reply: PWRunnerRunResult, collected: Bool) throws {
     try expectTrue(reply.phases[1].arrival_observed)
     try expectFalse(reply.phases[1].completion_observed)
@@ -179,8 +179,23 @@ private func expectSecondPhaseUnreleased(_ reply: PWRunnerRunResult, collected: 
     try expectEqual(reply.steps[1].comparison?.order, "unestablished")
     if collected {
         try expectEqual(reply.phases[1].collection_status, "collected")
-        try expectEqual(reply.phases[1].validator_subprocess?.records?.map { $0.stepId }, ["later"])
-        try expectEqual(reply.steps[1].sandbox_check.outcome, "allow")
+        let records = reply.phases[1].validator_subprocess?.records ?? []
+        try expectEqual(records.map { $0.stepId }, ["later"])
+        guard let record = records.first, let nativeRC = record.rc else {
+            throw TestFailure(message: "collected native query record missing its return value")
+        }
+        // Refusal can exit the target before the shipped validator queries it.
+        // Preserve its actual native answer without choosing a live-target label.
+        try expectTrue(["allow", "deny", "error"].contains(record.outcome))
+        let query = reply.steps[1].sandbox_check
+        try expectEqual(query.result_source, "validator")
+        try expectEqual(query.outcome, record.outcome)
+        try expectEqual(query.rc, nativeRC)
+        try expectEqual(query.native_rc, nativeRC)
+        try expectEqual(query.errno, record.errnoVal)
+        try expectEqual(query.error, record.error)
+        try expectEqual(query.operation, record.operation)
+        try expectEqual(query.filter_value, record.filterValue)
     }
 }
 
@@ -274,7 +289,7 @@ func runWorkerClockTests(_ tk: TestKit) {
         for delay in [UInt32(0), 350] {
             let schedule = delay == 0 ? "prompt host" : "delayed host"
             let suffix = delay == 0 ? "" : "-delayed-host"
-            tk.run("phase 2's own backwards sample keeps its prediction (\(schedule))") {
+            tk.run("phase 2's own backwards sample retains its native query observation (\(schedule))") {
                 let reply = try clockPhases(".clock-phase2", first: accessProbe("first"), gateDelayMs: delay,
                                             name: "phase2-own-sample" + suffix)
                 let failure = reply.runner_subprocess?.worker_evidence?.failure

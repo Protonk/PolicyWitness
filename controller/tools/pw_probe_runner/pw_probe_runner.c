@@ -19,8 +19,7 @@
  *      expectation is refused, then an embedded NUL is refused. Only a
  *      source equal in length to the submission reaches libsandbox.
  *   4. sandbox_compile_string(). On failure: write apply_rc and
- *      done sentinel, then enter the spin loop (still report the
- *      failure cleanly).
+ *      done sentinel after token erasure, then exit cleanly.
  *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
  *   6. sandbox_apply(). Write apply_rc to header.
  *   7. Write applied sentinel (release ordering).
@@ -33,10 +32,9 @@
  *      Slot output writes use regular stores; the slot's `completed`
  *      flag is written with release ordering so the host's acquire-load
  *      of completed pairs with all preceding writes.
- *   9. Write done sentinel.
- *  10. Spin loop: poll exit_requested with acquire ordering, _exit(0)
- *      when set. The spin is bounded by
- *      the host's grace timer (SIGKILL fallback if _exit is denied).
+ *   9. Erase accepted token storage and publish the done sentinel.
+ *  10. _exit(0) without waiting for host permission. The host independently
+ *      observes reap and retains its grace/termination fallback.
  *
  * PW-owned extension reporting uses preallocated storage after sandbox_apply;
  * private native libraries may allocate. The result region is the only
@@ -1220,6 +1218,25 @@ static pw_extension_channel_t *extension_channel;
 static int64_t extension_handle = -1;
 static int consume_decided, release_decided;
 
+/* Ordinary cleanup erases the whole accepted channel, including unused bytes.
+ * This neither consumes nor releases native extension authority. */
+static void erase_accepted_token(void) {
+    if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+}
+
+/* Test-only observation at the actual release-store boundary. Production has
+ * no callback or request knob; the observer cannot run before publication. */
+#ifndef PW_TERMINAL_PUBLISHED
+#define PW_TERMINAL_PUBLISHED(hdr) ((void)0)
+#endif
+
+static _Noreturn void publish_done_and_exit(pw_shm_header_t *hdr) {
+    erase_accepted_token();
+    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+    PW_TERMINAL_PUBLISHED(hdr);
+    _exit(0);
+}
+
 /* Compile-time observation seam for controlled interruption tests. The shipped
  * worker has no callback or request knob. 1 is after the pre-call publication;
  * 2 is after native return and before any result payload/publication. */
@@ -1372,7 +1389,7 @@ static void attempt_extension(pw_shm_slot_t *slot, int release) {
         slot->native_result_valid = 1;
         if (!release && result != -1) extension_handle = result;
     }
-    if (!release && extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+    if (!release) erase_accepted_token();
 }
 
 /* A single bounded read on a fresh descriptor, with its own identity and close
@@ -1449,7 +1466,7 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
     atomic_store_explicit(&slot->completed, 1u, memory_order_release);
 }
 
-/* ---- post-done spin loop ------------------------------------------------- */
+/* ---- phase release wait ------------------------------------------------- */
 
 static inline void cpu_relax(void) {
 #if defined(__aarch64__) || defined(__arm64__)
@@ -1459,20 +1476,6 @@ static inline void cpu_relax(void) {
 #else
     atomic_signal_fence(memory_order_seq_cst);
 #endif
-}
-
-/* Post-apply teardown cannot rely on sleep/yield syscalls surviving
- * hostile profiles. Keep this loop CPU-only: an atomic load, a small
- * processor-relax backoff, and _exit(0) once the host flips the byte. */
-static _Noreturn void spin_for_exit(pw_shm_header_t *hdr) {
-    for (;;) {
-        if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) {
-            _exit(0);
-        }
-        for (uint32_t i = 0; i < 100000u; i++) {
-            cpu_relax();
-        }
-    }
 }
 
 /* Test-only gates around the sampled decision; the shipped worker compiles
@@ -1488,8 +1491,7 @@ static _Noreturn void proceed_refused(pw_shm_header_t *hdr, pw_shm_evidence_t *e
                                       uint32_t reason, const char *diagnostic) {
     pw_failure(e, PW_OP_PROCEED, PW_FAILURE_TIME_INVALID, PW_NATIVE_NONE, 0, 0, 0, phase_index, reason);
     pw_diagnostic(e, diagnostic);
-    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-    spin_for_exit(hdr);
+    publish_done_and_exit(hdr);
 }
 
 /* No allocation, sleep or I/O after apply. Expiry is decided by sampled
@@ -1538,7 +1540,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
         }
         uint32_t cancelled = atomic_load_explicit(&hdr->exit_requested, memory_order_acquire);
         PW_PROCEED_CANCEL_LOADED(phase_index);
-        if (cancelled != 0u) _exit(0);
+        if (cancelled != 0u) { erase_accepted_token(); _exit(0); }
         if (ordinal == phase_index + 1u) {
             timing->plan_deadline = extended;
             atomic_store_explicit(&phase->acknowledged, 1u, memory_order_release);
@@ -1548,8 +1550,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
         }
         for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
     }
-    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-    spin_for_exit(hdr);
+    publish_done_and_exit(hdr);
 }
 
 /* ---- main ---------------------------------------------------------------- */
@@ -1666,6 +1667,7 @@ int main(int argc, char **argv) {
                 hdr->param_count, PW_SHM_MAX_PARAMS);
         pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_PARAM_LIMIT, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, PW_SHM_MAX_PARAMS);
         pw_diagnostic(evidence, "parameter count exceeds shared-memory capacity");
+        erase_accepted_token();
         return 8;
     }
     /* Snapshot the host's expected policy length once; the comparison after
@@ -1681,6 +1683,7 @@ int main(int argc, char **argv) {
         pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_LENGTH_EXPECTATION, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX,
                    policy_bytes_expected);
         pw_diagnostic(evidence, "expected policy length exceeds the source capacity (expectation in detail)");
+        erase_accepted_token();
         return 10;
     }
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_RETURNED, UINT32_MAX);
@@ -1688,7 +1691,7 @@ int main(int argc, char **argv) {
     /* Clock setup follows the adjacent header/policy-read refusal convention:
      * a published failure and a distinct exit, with applied, done and apply_rc
      * untouched. It precedes every policy byte and the application. */
-    if (pw_timing_setup(&timing, evidence) != 0) return 12;
+    if (pw_timing_setup(&timing, evidence) != 0) { erase_accepted_token(); return 12; }
 
     uint32_t param_count = hdr->param_count;
     for (uint32_t i = 0; i < param_count; i++) {
@@ -1717,6 +1720,7 @@ int main(int argc, char **argv) {
         } else {
             fprintf(stderr, "pw-probe-runner: failed reading policy: %s\n", strerror(errno));
         }
+        erase_accepted_token();
         return 7;
     }
     /* EOF receipt: publish the count actually read before judging it, so the
@@ -1737,6 +1741,7 @@ int main(int argc, char **argv) {
         pw_diagnostic(evidence, "policy length at EOF differs from the host's expectation (received count in detail)");
         fprintf(stderr, "pw-probe-runner: policy delivered %zd bytes, host expected %u; refusing to compile\n",
                 plen, policy_bytes_expected);
+        erase_accepted_token();
         return 11;
     }
     /* The reader's own guard for the one native string that arrives with an
@@ -1751,6 +1756,7 @@ int main(int argc, char **argv) {
                        0, 0, 0, UINT32_MAX, (uint32_t)visible);
             pw_diagnostic(evidence, "policy contains an embedded NUL (byte offset in detail)");
             fprintf(stderr, "pw-probe-runner: policy contains an embedded NUL at byte %zu\n", visible);
+            erase_accepted_token();
             return 9;
         }
     }
@@ -1779,8 +1785,7 @@ int main(int argc, char **argv) {
             fprintf(stderr,
                     "pw-probe-runner: sandbox_create_params returned NULL\n");
             hdr->apply_rc = -1;
-            atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-            spin_for_exit(hdr);
+            publish_done_and_exit(hdr);
         }
         for (uint32_t i = 0; i < param_count; i++) {
             if (!memchr(params[i].key, 0, sizeof(params[i].key))
@@ -1789,8 +1794,7 @@ int main(int argc, char **argv) {
                 pw_diagnostic(evidence, "parameter is not NUL terminated");
                 sandbox_free_params(params_obj);
                 hdr->apply_rc = -1;
-                atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-                spin_for_exit(hdr);
+                publish_done_and_exit(hdr);
             }
             pw_progress(evidence, PW_OP_PARAM_SET, PW_PROGRESS_STARTED, i);
             int srv = sandbox_set_param(params_obj, params[i].key, params[i].value);
@@ -1803,8 +1807,7 @@ int main(int argc, char **argv) {
                         i, params[i].key, srv);
                 sandbox_free_params(params_obj);
                 hdr->apply_rc = -1;
-                atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-                spin_for_exit(hdr);
+                publish_done_and_exit(hdr);
             }
         }
     }
@@ -1828,8 +1831,7 @@ int main(int argc, char **argv) {
                 compile_err ? compile_err : "(no error string)");
         if (compile_err) free(compile_err);
         hdr->apply_rc = -1;
-        atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-        spin_for_exit(hdr);
+        publish_done_and_exit(hdr);
     }
 
     /* Capture the same object we are about to apply, before policy restrictions.
@@ -1893,10 +1895,8 @@ int main(int argc, char **argv) {
          * the entitlements this profile requires) so the host can report
          * it instead of a bare -1. */
         hdr->apply_errno = apply_errno;
-        /* apply failed — write done so the host stops polling, then
-         * spin until exit. apply_rc carries the cause. */
-        atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-        spin_for_exit(hdr);
+        /* apply_rc carries the cause; publish it before exiting. */
+        publish_done_and_exit(hdr);
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
 
@@ -1912,15 +1912,15 @@ int main(int argc, char **argv) {
         atomic_store_explicit(&phase->completed, 1u, memory_order_release);
     }
 
-    if (extension_channel) pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);
+    erase_accepted_token();
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a
      * maximally hostile policy — but the post-apply-hang test seam
      * is for tests running under cooperative policies (typically
      * allow-default with a long-enough host deadline that the hang
      * exceeds it). On an apply-default policy that survives slot
-     * execution at all, nanosleep will too. The post-done spin loop
-     * is unaffected; this fires before done flips, so a hung host
+     * execution at all, nanosleep will too. This fires before done
+     * flips, so the host
      * observes applied=1, done=0 — exactly the runner_timeout shape. */
     if (args.post_apply_hang_ms > 0) {
         long ns = args.post_apply_hang_ms * 1000000L;
@@ -1941,6 +1941,5 @@ int main(int argc, char **argv) {
     }
 
     pw_progress(evidence, PW_OP_FINISHED, PW_PROGRESS_RETURNED, UINT32_MAX);
-    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
-    spin_for_exit(hdr);
+    publish_done_and_exit(hdr);
 }

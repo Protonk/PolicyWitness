@@ -15,6 +15,10 @@ survive regardless of which observation determines the summary.
 In the table, A means an acquire observation of `applied`, D an acquire
 observation of `done`, and R the `apply_rc` status word. A publishes successful
 application; D publishes a terminal worker payload, including pre-apply failure.
+The worker erases accepted token storage before publishing D and exits without
+waiting for the host's exit request. The host retains its evidence mapping and
+observes process disposition independently. Cancellation and early returns do
+not add D or other publications absent from those paths.
 R is not a native apply result merely because of its name. Parameter allocation,
 parameter setting, the defensive parameter NUL check, and compilation can all
 write -1. `apply_errno` is populated only for an actual failed application, but
@@ -203,6 +207,14 @@ cleanup observations. `delivery_status` and `delivered_bytes` describe the worke
 published channel observation separately from issuance. `host_buffer_erased`
 records clearing the host's mapping, not proof that every process or native
 library has erased every copy.
+
+Ordinary worker departures after channel acceptance erase the full fixed token
+buffer. Terminal publication follows that erasure; cancellation and early returns
+preserve their existing publication boundaries. Fatal termination or interruption
+inside a native call need not reach cleanup. The worker retains its borrowed
+mapping until exit. Erasure does not call native extension release, which remains
+an explicit specimen action; the host's separate erasure observation cannot prove
+worker cleanup.
 
 A worker delivery failure publishes `delivery_status` as `channel_rejected` or
 `local_setup_failed` beside a `delivery_failure` account: `stage` names the
@@ -668,7 +680,7 @@ reporting obligations and registered test owners.
 | Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
 | `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
-| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
+| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
 | `witness_contract/worker_termination_and_log_correlation`; Rust `run_flow::tests`, `sandbox_log::tests`, observer parser tests | CLI ordinary denied writes, repeated attempts, independent read queries, self-signal, capture disabled/enabled and successful-run capture. Constructed captures pin PID, operation, target, ambiguity, window and availability semantics. Parser preserves missing identity and full paths without structured timestamps. | Implemented; optional real logs do not replace deterministic populated-event controls or establish a policy cause |
@@ -737,7 +749,7 @@ outputs are established only by that slot's `completed == 1`.
 | proceed wait starts; budget expires | Operation 11/code 8, budget milliseconds in detail, done; no acknowledgement or attempt, even after late release |
 | proceed sample below the origin or the last accepted sample | Operation 11/code 14/kind 0, reason 3 in detail, the stage in the diagnostic; done, no acknowledgement or attempts |
 | proceed after an earlier exec rejected a sample | Operation 11/code 14, reason 6 in detail, no new sample; the diagnostic names the first rejection's reason, stage, phase and slot; done, no acknowledgement |
-| release acknowledged; worker dies | Lifetime and eligible query order remain established; attempt evidence may be missing |
+| release acknowledged; worker dies | Lifetime and eligible query order remain established; an acknowledgement first acquired after confirmed reap also qualifies while ownership remained unbroken, even without done; attempt evidence may be missing |
 | attempt i starts but never completes | Progress may identify the started slot; no completed result or claim that it never ran |
 | failure published; diagnostic incomplete; cleanup fails | Failure status, diagnostic availability and host observations survive independently |
 | done published during exit grace | Final acquired payload/slots survive; earlier poll stop/deadline stays unchanged |
@@ -1195,9 +1207,12 @@ field in a reply does.
 | `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |
 
-The query's answer stays in `sandbox_check`: it is `outcome` when
+The raw query answer stays in `sandbox_check`: it is `outcome` when
 `result_source` is `validator` and the outcome is `allow` or `deny`; otherwise
-no prediction was available and `missing_reason` says why.
+`missing_reason` explains the unavailable answer. These labels classify native
+returns. An otherwise eligible answer qualifies as a prediction about a live
+specimen only with its phase's established chain, reflected by `query_first` in
+an ordinary reply. The chain does not require an attempt, phase or run to succeed.
 `phases[].ordering` carries the host's collection, release,
 acknowledgement and lifetime observations that `order` is derived from
 (`collection_closed_before_proceed`, `proceed_set`, `proceed_observed`,
@@ -1253,8 +1268,22 @@ previous phase completion and retained worker ownership. Loss or expiry during
 collection withholds release while preserving already collected records.
 `query_first` uses only the matching phase's validator records and ordering.
 Neither a previous phase's acknowledgement nor another phase's record can
-supply the missing chain. A later worker death does not erase an acknowledgement
-already observed while ownership was established.
+supply the missing chain. The same worker acknowledging after collection closes
+establishes that it lived through that collected interval. A later worker death
+does not erase an acknowledgement observed while ownership was established.
+After confirmed reap, final reconciliation can acquire an acknowledgement missed
+between earlier samples, even following fatal termination without `done`; it does
+not restore an ownership chain broken before acknowledgement. Reconciliation
+does not rewrite the poll stop reason or a previously observed deadline.
+
+If the worker refuses while collection continues, the synchronous collector keeps
+its existing deadlines and closure rules. Received allow/deny/error records
+remain raw observations; without the phase chain they do not qualify as live
+specimen predictions. Missing acknowledgement does not prove the target was dead
+during any particular query. No per-query liveness inference is required. A
+degraded `runner_reporting_failed` reply retains ordering only as diagnostic
+evidence and omits every comparison; consumers must not recover certified order
+from that retained chain.
 
 Phase completion and action completion are separate publications. A missing
 completion stays missing even if an action result exists; a later boundary
@@ -1349,9 +1378,16 @@ label.
 
 <!-- BEGIN SHARED READING RULES -->
 
-1. The query channel's answer is `sandbox_check.outcome` when `result_source`
-   is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
-   was available and `sandbox_check.missing_reason` says why.
+1. The raw query answer is `sandbox_check.outcome` when `result_source`
+   is `validator` and the outcome is `allow` or `deny`; otherwise
+   `sandbox_check.missing_reason` explains the unavailable answer. An otherwise
+   eligible answer qualifies as a prediction about a live specimen only with
+   its phase's collection/release/acknowledgement chain, reflected by
+   `comparison.order: query_first`. Neither successful attempts nor a successful
+   run are required. Without that chain, retained native answers do not establish
+   whether the target was live during any particular query. A degraded
+   `runner_reporting_failed` reply certifies no per-step order, even when raw
+   ordering observations survive; every comparison is omitted.
 2. `attempt.missing_reason` explains an unavailable attempt channel.
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the

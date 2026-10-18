@@ -25,6 +25,26 @@ def snapshot(path):
     return {str(p.relative_to(path)): p.read_bytes() for p in path.rglob('*') if p.is_file()}
 
 
+def opt_in_problem(full, selected):
+    """Declared opt-in membership and dependency expansion are different facts."""
+    cases = {case['id']: case for case in full}
+    members = {key for key, case in cases.items() if not case['default']}
+    requested = {case['id'] for case in selected if case['selection'] == 'requested'}
+    if requested != members:
+        return 'opt_in requested group differs from non-default catalog membership'
+    closure, pending = set(), list(members)
+    while pending:
+        key = pending.pop()
+        if key not in closure:
+            closure.add(key)
+            pending.extend(cases[key]['depends_on'])
+    if {case['id'] for case in selected} != closure:
+        return 'opt_in selection differs from its dependency closure'
+    if any(case['selection'] != ('requested' if case['id'] in members else 'dependency') for case in selected):
+        return 'opt_in dependency selection is mislabeled'
+    return None
+
+
 def main():
     out = Path(sys.argv[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -292,8 +312,28 @@ def main():
             'ordinary controls/contracts missing from the real default battery')
     full = real_list('--all')['cases']
     opt = real_list('--suite', 'opt_in')['cases']
-    require({c['id'] for c in opt} == {c['id'] for c in full if not c['default']},
-            'opt_in group differs from non-default catalog membership')
+    # Independent controls include a transitive default dependency. The old
+    # equality incorrectly treated every expanded dependency as opt-in membership.
+    membership_control = [
+        dict(id='optional', default=False, depends_on=['baseline']),
+        dict(id='baseline', default=True, depends_on=['equipment']),
+        dict(id='equipment', default=True, depends_on=[]),
+        dict(id='unrelated', default=True, depends_on=[]),
+    ]
+    valid_selection = [dict(id='optional', selection='requested'),
+                       dict(id='baseline', selection='dependency'),
+                       dict(id='equipment', selection='dependency')]
+    require(opt_in_problem(membership_control, valid_selection) is None,
+            'opt_in oracle rejected declared transitive dependencies')
+    for changed in [valid_selection[1:], valid_selection[:-1],
+                    valid_selection + [dict(id='unrelated', selection='dependency')],
+                    [valid_selection[0], dict(id='baseline', selection='requested'), valid_selection[2]],
+                    [valid_selection[0], dict(id='baseline', selection='unknown'), valid_selection[2]]]:
+        require(opt_in_problem(membership_control, changed) is not None,
+                'opt_in oracle accepted missing/extra membership or invalid dependency selection')
+    problem = opt_in_problem(full, opt)
+    require(problem is None, problem)
+
     joined = real_list('--suite', 'witness_contract', '--suite', 'runner_validator_failure')['cases']
     for leaf in ('validator_decode_failure_reports_degraded', 'validator_unavailable_reports_degraded'):
         require([c['id'] for c in joined if c['test_id'] == leaf] == [f'runner_validator_failure/{leaf}'],

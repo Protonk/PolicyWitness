@@ -242,6 +242,46 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             try expectFalse(out.phases[1].releaseSet || out.phases[1].acknowledged || out.phases[1].completed || out.phases[2].arrived)
             try expectEqual(out.slots.map { $0.completed }, [true, false, false])
         }
+        tk.run("second-phase ownership loss preserves the first phase's established ordering") {
+            let input = CWorkerInput(workerExecutablePath: phaseEquipment("pw-probe-runner"), policy: "(version 1)(allow default)",
+                slots: (0..<2).map { CWorkerSlotInput(stepId: "s\($0)", attemptKind: .fileAccess, target: "/etc/hosts") },
+                phases: (0..<2).map { CWorkerPhaseInput(firstSlot: $0, endSlot: $0 + 1) })
+            var secondCollectionClosed = false, faultInjected = false
+            var calls = ChildProcessCalls()
+            calls.wait = { pid, status, options in
+                if secondCollectionClosed && !faultInjected {
+                    faultInjected = true; errno = EIO; return -1
+                }
+                return Darwin.waitpid(pid, status, options)
+            }
+            let result = runCWorker(input, processCalls: calls, phaseBoundary: { _, index in
+                if index == 1 { secondCollectionClosed = true }
+            })
+            guard case .success(let out) = result else { throw TestFailure(message: "missing worker output") }
+            defer {
+                var status: Int32 = 0
+                var rc: pid_t
+                repeat { rc = Darwin.waitpid(out.workerPid, &status, WNOHANG) } while rc < 0 && errno == EINTR
+                if rc == 0 {
+                    _ = Darwin.kill(out.workerPid, SIGKILL)
+                    repeat { rc = Darwin.waitpid(out.workerPid, &status, 0) } while rc < 0 && errno == EINTR
+                }
+            }
+            try expectTrue(faultInjected && out.phases[0].ownershipEstablished)
+            try expectEqual(out.pollStopReason, "wait_error")
+            try expectEqual(out.waitErrors?.map { $0.errno }, [EIO])
+            try expectEqual(out.reaped, true)
+            try expectTrue(out.phases[0].completed && out.slots[0].completed)
+            try expectTrue(out.phases[1].arrived && out.phases[1].collectionClosed)
+            try expectFalse(out.phases[1].releaseSet || out.phases[1].acknowledged || out.phases[1].completed || out.phases[1].ownershipEstablished)
+            try expectFalse(out.slots[1].completed)
+            for index in 0..<2 {
+                let ordering = buildPhaseOrdering(out, index: index, input: input.phases[index], validatorOutput: nil, hasQueries: false)
+                try expectEqual(ordering.chainEstablished, index == 0)
+            }
+            try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome,
+                            NormalizedOutcome.runnerFailed)
+        }
         tk.run("arrival without prior completion cannot start another collection") {
             guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else { throw TestFailure(message: "missing worker fixture") }
             let input = CWorkerInput(workerExecutablePath: fixture, policy: "phase_invalid_previous",

@@ -72,21 +72,37 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
    from validated continuous-clock samples in one tick domain shared with its
    exec allowances; an unusable sample also refuses the phase before
    acknowledgement, and a late release cannot revive it.
-5. The host gathers completed slots, partial evidence and independent child
+5. Every terminal publication erases any accepted token buffer, releases `done`
+   and exits without awaiting host permission. Cancellation before acknowledgement
+   erases the buffer and exits without adding `done`, acknowledgement or failure.
+   The host retains cancellation, grace, termination and reaping. After a confirmed
+   reap it reconciles acknowledgements published between samples, including before
+   an abnormal exit, only while ownership through acknowledgement is established.
+6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
 The issuer's token channel is separate from the worker evidence mapping. The
 issuer and worker close inherited channel descriptors after mapping; neither
-arguments nor environment carry tokens. The worker erases its token bytes after
-the consumption decision or normal completion, and the host clears the mapping
-before reply assembly. Consume/release markers precede calls; immutable result
+arguments nor environment carry tokens. The worker erases the full accepted token
+buffer after the consumption decision, before the post-phase test seams, and on
+ordinary departures after preparation; terminal publication follows that erasure.
+Fatal termination or an interrupted native call need not reach worker cleanup.
+The host independently clears the mapping before reply assembly. Token erasure
+does not invoke native extension release; that remains a submitted action.
+Consume/release markers precede calls; immutable result
 publication is required before reporting a native return. Lifecycle actions
 share the ordered action capacity but do not create validator queries.
 
 Every validator query uses `SANDBOX_CHECK_NO_REPORT`, so predictions produce no
 denial records. `comparison.order=query_first` requires eligible native records,
-that phase's collection/release/acknowledgement chain and worker lifetime evidence;
-the presence of a paired query alone is insufficient. The
+that phase's collection/release/acknowledgement chain and worker lifetime evidence.
+The same worker acknowledging after collection closes establishes that it lived
+through the collected interval; successful attempts or a successful run are not
+required. Without that chain, raw validator allow/deny/error records remain
+observations but do not qualify as predictions about a live specimen. Refusal
+does not cancel the synchronous collector or determine which native calls saw an
+exited target. A degraded reporting-failure reply withholds all comparisons and
+certifies no per-step order, even when it retains raw ordering observations. The
 [ordering contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states)
 defines the claims and withheld states.
 

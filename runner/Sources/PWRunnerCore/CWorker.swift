@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "e1c88f81524813757e06ffe16ad512708557faad0b46e45b44b89b6815d2d145"
-    static let abiIdentity: [UInt8] = [0xe1, 0xc8, 0x8f, 0x81, 0x52, 0x48, 0x13, 0x75, 0x7e, 0x06, 0xff, 0xe1, 0x6a, 0xd5, 0x12, 0x70, 0x85, 0x57, 0xfa, 0xad, 0x0b, 0x46, 0xe4, 0x5b, 0x44, 0xb8, 0x9b, 0x68, 0x15, 0xd2, 0xd1, 0x45]
+    static let abiIdentityHex = "4dd8d75126025defa7b9719fb434d265b69f25b9d3bd6d9fd3836d1321f02976"
+    static let abiIdentity: [UInt8] = [0x4d, 0xd8, 0xd7, 0x51, 0x26, 0x02, 0x5d, 0xef, 0xa7, 0xb9, 0x71, 0x9f, 0xb4, 0x34, 0xd2, 0x65, 0xb6, 0x9f, 0x25, 0xb9, 0xd3, 0xbd, 0x6d, 0x9f, 0xd3, 0x83, 0x6d, 0x13, 0x21, 0xf0, 0x29, 0x76]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -1315,12 +1315,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 pollStopReason = "done"
                 break
             }
-            // Normal completion flips `done` (checked above) and then the
-            // worker spins until exit_requested, so it is still alive at
-            // this point. If waitpid reaps it here, it died without
-            // flipping done — there is nothing more to poll for; capture
-            // its status and let the classifier read the signal/exit as
-            // the source of truth.
+            // The worker may publish and exit between the samples above and
+            // this wait. Retain this actual stop reason; final reconciliation
+            // recovers immutable publications without inventing timely done.
             let elapsed = clock.elapsedNs()
             if elapsed.map({ $0 >= nextExitCheckNs }) ?? (passes % 25 == 1) {
                 nextExitCheckNs = (elapsed ?? 0) + 50_000_000
@@ -1351,7 +1348,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     let cleanupTrigger = PWDisposition.triggerForStop[pollStopReason] ?? pollStopReason
 
     // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
-    // reaped a worker that exited without flipping `done`. How the grace wait
+    // reaped the worker. How the grace wait
     // ended is recorded directly: a reap, a wait error, or exhaustion (which
     // is followed by the termination request), never inferred later.
     var graceEnd = "not_entered"
@@ -1380,6 +1377,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         process.terminate()
         if process.waitErrors.count > errorsBeforeTermination { ownershipUnbroken = false }
     }
+    // Acknowledgement may follow the last polling/grace sample and precede
+    // reap, including a fatal exit without done. Unbroken ownership through
+    // that publication establishes the phase's historical lifetime; the
+    // existing predicate cannot repair ownership lost before acknowledgement.
+    if process.status != nil { observeAcknowledgement() }
     // Collection basis: whether every read below follows a successful reap. A
     // reap observed later cannot upgrade it.
     let collectionBasis = process.status != nil ? "after_confirmed_reap" : "execution_may_continue"

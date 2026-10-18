@@ -808,7 +808,7 @@
       "title": "Worker exit grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Nominal wait for worker exit after an exit request.",
+      "counting": "Elapsed monotonic wait for an unreaped worker after the host stores an exit request.",
       "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
       "control": "Fixed.",
       "sources": [
@@ -831,7 +831,7 @@
           "form": "test"
         }
       ],
-      "behavior": "runCWorker measures the exit grace as elapsed monotonic time after storing exit_requested, then attempts SIGKILL and reaping; exit_grace_wait records the budget, elapsed time and how the wait ended. Deadline/cleanup paths use controlled children and a controlled clock; the production duration is source-inspected."
+      "behavior": "runCWorker measures the exit grace as elapsed monotonic time after storing exit_requested when the child is not already reaped, then attempts SIGKILL and reaping; exit_grace_wait records the budget, elapsed time and how the wait ended. Terminal worker publication exits without waiting for that request; cancellation and fallback cleanup remain. Deadline/cleanup paths use controlled children and a controlled clock; the production duration is source-inspected."
     },
     {
       "id": "worker_proceed_wait",
@@ -850,6 +850,10 @@
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
           "symbol": "wait_for_proceed"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "publish_done_and_exit"
         }
       ],
       "checks": [
@@ -888,9 +892,21 @@
           "symbol": "runWorkerClockTests",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "proceed_without_host_release",
+          "form": "test",
+          "kind": "path"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "terminal_erasure",
+          "form": "test",
+          "kind": "boundary"
         }
       ],
-      "behavior": "wait_for_proceed decides expiry from a validated continuous sample before consulting release or cancellation. A pre-expiry sample can be followed by delayed scheduling and a late acknowledgement, and a release stored before expiry can be refused by an expired next sample; cancellation wins only when its load observes it. A sample below the origin or the last accepted sample fails closed without another clock, and a rejection during an earlier exec refuses later phases without another read. Each phase's measured wait is added to the exec plan once, in ticks, at acknowledgement. Failure publishes done, then the exit-request spin can outlive a dead host. Deterministic precedence, race-gate, sample and exclusion controls establish the order; native controls exercise the clock under deny-default profiles on the recorded machine; actual system sleep is untested. Production duration is value-checked."
+      "behavior": "wait_for_proceed decides expiry from a validated continuous sample before consulting release or cancellation. A pre-expiry sample can be followed by delayed scheduling and a late acknowledgement, and a release stored before expiry can be refused by an expired next sample; cancellation wins only when its load observes it. A sample below the origin or the last accepted sample fails closed without another clock, and a rejection during an earlier exec refuses later phases without another read. Each phase's measured wait is added to the exec plan once, in ticks, at acknowledgement. Refusal erases an accepted token buffer, publishes done and exits without a host exit request; cancellation erases and exits without adding done, acknowledgement or failure. This bounds the sampled refusal path, not native calls, descendant lifetime or total cleanup. Deterministic precedence, race-gate, sample and exclusion controls establish the order; native controls exercise the clock under deny-default profiles on the recorded machine; actual system sleep is untested. Production duration is value-checked."
     },
     {
       "id": "validator_release_margin",

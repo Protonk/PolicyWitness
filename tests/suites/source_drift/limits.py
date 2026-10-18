@@ -90,8 +90,8 @@ class LimitsDocumentationTests(unittest.TestCase):
     def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):
         for filename, mutate, expect in [
             (generator.CONTRACT_NAME, lambda t: t.replace('| S01 | S | allow, read succeeds |', '| S01 | S | allow, read fails |', 1), 'allow, read succeeds'),
-            (generator.CONTRACT_NAME, lambda t: t.replace('1. The query channel', '1. The prediction channel', 1), 'The prediction channel'),
-            ('docs/PolicyWitness.md', lambda t: t.replace('1. The query channel', '1. The prediction channel', 1), 'The query channel'),
+            (generator.CONTRACT_NAME, lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The changed raw query answer'),
+            ('docs/PolicyWitness.md', lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The raw query answer'),
             (generator.CONTRACT_NAME, lambda t: t.replace(generator.MATRIX_END, ''), None),
             (generator.CONTRACT_NAME, lambda t: t.replace(generator.RULES_END, ''), None),
             ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_RULES_END, ''), None),
@@ -99,7 +99,10 @@ class LimitsDocumentationTests(unittest.TestCase):
             with self.subTest(filename=filename, mutation=mutate):
                 root = self.checkout()
                 path = root / filename
-                path.write_text(mutate(path.read_text()))
+                original = path.read_text()
+                mutated = mutate(original)
+                self.assertNotEqual(mutated, original, 'stale-copy mutation did not change its input')
+                path.write_text(mutated)
                 guide = root / 'docs/PolicyWitness.md'
                 contract = root / generator.CONTRACT_NAME
                 before = guide.read_bytes(), contract.read_bytes()

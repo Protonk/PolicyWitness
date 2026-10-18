@@ -1,0 +1,21 @@
+worker identity
+ok: worker identity 4dd8d75126025defa7b9719fb434d265b69f25b9d3bd6d9fd3836d1321f02976; all generated copies current
+exit_code: 0
+
+architecture
+ok: architecture manifest: 5 graphs, 175 nodes, 176 edges; dot files, svg stamps and document regions current
+exit_code: 0
+
+limits
+ok: 83 limits, 15 questions, 43 matrix rows; documents current
+exit_code: 0
+
+diff whitespace
+
+exit_code: 0
+
+changed-document links, source delta and retention
+ok: local links resolve in 18 changed Markdown files; retention index valid
+ok: only test-source snapshot delta is the reviewed prose-link formatting repair; runtime and test code unchanged
+{"final_document_sha256": {"tests/fixtures/worker_lifecycle/README.md": "3f087d7ce1fc77a959b34b1f6e3b55b1323d69525464018aab8fd4a5dc18f7ce"}}
+exit_code: 0

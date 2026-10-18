@@ -48,3 +48,22 @@ production ABI/source identity for transport, but the executable override and
 independent binary provenance identify the instrumentation. These substitutions
 establish boundary handling and publication, not policy effects of fabricated
 native return values. The ordinary signed experiment establishes native success.
+
+
+The worker erasure observer holds the mapped channel independently and scans
+`sizeof(channel->token)`, never the length passed to the erase function. It
+seeds nonzero bytes after the token's valid terminating NUL through the last
+buffer byte and retains only capacity/zeroization receipts. Issuer strings are
+separate allocations with their own bounded erasure observation.
+
+`terminal_control.c` uses synthetic token bytes and a parent-owned channel to
+exercise ordinary departures in the production C source. Its test-only gate
+holds the worker immediately after the actual `done` store, allowing the parent
+to acquire that publication and inspect the full channel before subsequent
+cleanup can run. The parent also scans after independent reap and erases only
+then. Anonymous mappings and immediately unlinked temporary files have no
+persistent token contents. Sandbox/extension calls are controlled; these tests
+establish cleanup and publication order, not native authority. The registered
+`runner_c_worker_harness/terminal_erasure` case retains original and mutated
+source/build logs and byte-free observations, and rejects shortened erasure and
+erasure moved after the publication boundary.

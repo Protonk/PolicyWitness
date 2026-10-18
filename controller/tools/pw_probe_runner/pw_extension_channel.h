@@ -12,7 +12,8 @@
 /* Host initializes magic/path. Issuer writes result, publishes completed last,
  * and exits. The host must reap the issuer before admitting token delivery.
  * Worker reads only a complete, bounded token and erases it after its consume
- * decision or on normal completion. The host erases the channel on every exit.
+ * decision and every ordinary departure. The host separately erases its channel
+ * on every exit. Fatal termination does not promise worker erasure.
  * Native call boundary is a separate publication, not proof of native entry. */
 typedef struct {
     uint32_t magic;

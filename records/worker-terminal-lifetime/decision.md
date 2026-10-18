@@ -1,10 +1,12 @@
 # Worker terminal lifetime: adopted decision
 
-Status: terminal-lifetime refactor and phase qualification rule adopted.
-Production code is unchanged. This record belongs to the
+Status: terminal-lifetime refactor and phase qualification rule implemented and
+accepted. This record belongs to the
 [terminal-publication investigation](../../controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md)
 and its [implementation plan](../../controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md).
-The source baseline is `51487f74da15de196d44c4ac571c7b322a2fe83b`.
+The investigation source baseline is `51487f74da15de196d44c4ac571c7b322a2fe83b`;
+the implementation plan links the separate production acceptance evidence.
+The decision and investigation account below retain their original context.
 
 ## Adopted design
 

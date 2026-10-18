@@ -8,7 +8,7 @@
  * After the worker's sandbox_apply() returns successfully it reads its
  * own inputs from the slots, runs each attempt as stack-only POSIX
  * code with preallocated PW-owned result storage, writes results to the same slots,
- * and spins until the host requests exit.
+ * erases accepted token bytes, publishes done, and exits without host permission.
  *
  * Both sides include THIS header so the layout cannot drift. A
  * compile-time _Static_assert at the bottom pins the slot/header
@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "e1c88f81524813757e06ffe16ad512708557faad0b46e45b44b89b6815d2d145"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xe1, 0xc8, 0x8f, 0x81, 0x52, 0x48, 0x13, 0x75, 0x7e, 0x06, 0xff, 0xe1, 0x6a, 0xd5, 0x12, 0x70, 0x85, 0x57, 0xfa, 0xad, 0x0b, 0x46, 0xe4, 0x5b, 0x44, 0xb8, 0x9b, 0x68, 0x15, 0xd2, 0xd1, 0x45};
+#define PW_WORKER_ABI_IDENTITY_HEX "4dd8d75126025defa7b9719fb434d265b69f25b9d3bd6d9fd3836d1321f02976"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4d, 0xd8, 0xd7, 0x51, 0x26, 0x02, 0x5d, 0xef, 0xa7, 0xb9, 0x71, 0x9f, 0xb4, 0x34, 0xd2, 0x65, 0xb6, 0x9f, 0x25, 0xb9, 0xd3, 0xbd, 0x6d, 0x9f, 0xd3, 0x83, 0x6d, 0x13, 0x21, 0xf0, 0x29, 0x76};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -165,12 +165,12 @@ _Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift")
  *                    worker is now under the policy and the validator
  *                    can safely query the worker_pid.
  *   done           — worker → host. Release-publishes a terminal payload:
- *                    either every populated slot completed after application,
- *                    OR a pre-apply failure wrote apply_rc. An acquire reader
- *                    must not infer successful application from done alone.
- *   exit_requested — host → worker. Set to 1 once the host has read
- *                    all needed results; worker polls this in the
- *                    post-done spin loop and _exit(0)s when observed.
+ *                    completed execution, a pre-apply failure, or a refusal
+ *                    while waiting for phase release. An acquire reader must
+ *                    not infer application or slot completion from done alone.
+ *   exit_requested — host → worker. Cancellation sampled before phase
+ *                    acknowledgement. It is not permission to exit after
+ *                    done; terminal publication is followed by _exit(0).
  *   apply_rc       — worker writes the sandbox_apply return code, OR -1 on
  *                    sandbox_create_params returning NULL, sandbox_set_param
  *                    failure, the defensive parameter NUL check, or compilation

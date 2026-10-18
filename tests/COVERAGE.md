@@ -114,6 +114,16 @@ through same-phase and cross-phase interruption. The ordinary driver combines
 timeout, failed termination, unconfirmed reap and rejected late output; its reply
 is replayed through Rust assembly and both independent Python readers.
 
+Terminal lifetime is covered by `runner_c_worker_harness/terminal_exit_without_request`
+(normal and empty-phase completion), `bare_deny_default`, and
+`proceed_without_host_release` (refusal), all with independent reap and no exit
+request or cleanup kill. `terminal_erasure` independently checks fixed-capacity
+and pre-publication token erasure with rejected shortened/reordered controls.
+`CWorkerLifecycleTests` qualifies unseen acknowledgement recovered only at clean
+or fatal reap; the latter retains abnormal disposition. The opt-in
+`runner_unit/reaped_ack_mutation` pins sensitivity to removed reconciliation.
+
+
 ## Attempt outcome coverage matrix
 
 Host lifecycle observations have separate driver/encoding coverage in
