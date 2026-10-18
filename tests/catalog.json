@@ -325,6 +325,19 @@
           ]
         },
         {
+          "id": "exec_reader_mutations",
+          "description": "Disposable Swift source defects expose unpublished exec payload and invent cleanup absence; unchanged reader assertions reject both",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/opt_in/exec_reader_mutations.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ],
+          "default": false
+        },
+        {
           "id": "reaped_ack_mutation",
           "description": "Unseen clean and fatal acknowledgements lose ordering credit when final reconciliation is removed; broken ownership stays unqualified",
           "command": [
@@ -1912,6 +1925,7 @@
         "runner_exec_inheritance/launch_inventory",
         "runner_unit/host_setup_oracle_sensitivity",
         "runner_unit/reaped_ack_mutation",
+        "runner_unit/exec_reader_mutations",
         "runner_exec_lifecycle/closed_streams_leader_exit",
         "runner_exec_inheritance/closed_worker_stderr"
       ]

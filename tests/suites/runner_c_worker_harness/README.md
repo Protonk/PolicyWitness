@@ -324,7 +324,35 @@ reason; and a child-deadline overflow refuses only its attempt, leaving the
 clock usable. A subsequent rejected sample records its own stage, phase and
 slot as the first sticky origin, preserved through later refusals. Interrupted
 waits and failed cleanup keep their native errors.
-Every reap must be nonblocking; absent status cannot become exit zero. No
+Every reap must be nonblocking; absent status cannot become exit zero.
+
+The control's native-call ledger is independent of the output payload. It
+captures actual clock, wait, poll, read and signal calls in order, including
+arguments, meaningful returns/errno/status and stream identity. The reviewed
+[call-policy golden](../../fixtures/worker_lifecycle/exec_call_policy.json)
+records hashes/counts for 58 attempts against the pre-refactor producer and
+identifies the exact source, fixture and header bytes used. Descriptor numbers
+are normalized by pipe role; all other recorded values and order remain in the
+digest. A candidate must preserve this call policy. Do not refresh the golden
+from a changed candidate merely to make it pass.
+
+New branch controls independently check collection snapshots, both stream
+errors and error revents, read precedence over error revents, recovered
+interruptions, child/plan deadlines, no request versus successful/failed/ESRCH
+group requests, separate successful/failed leader fallback, and ownership loss
+without signalling. Reap controls separate native errors (including native
+ETIMEDOUT), local expiry, final EINTR, successful signalling without a reap, and
+clock faults with successful or missing status. Existing aggregate error
+precedence remains separately asserted. Pre-spawn failure exposes no payload.
+
+Six disposable producer mutations must fail their designated unchanged native
+assertions: replacing the collection snapshot with final reap, treating ESRCH
+as successful signalling, replacing the fallback result with the group result,
+publishing child status after a pending wait, treating error revents as native
+poll errno, and treating a local reap deadline as native wait errno. Each
+variant retains its exact source/header/fixture copies and hashes, compiler
+command, stdout/stderr and return status. The fixed control creates no child,
+so it does not exercise process effects or publication through a real host. No
 process or sandbox is created by this control; `runner_exec_lifecycle` supplies
 independent live-process evidence.
 

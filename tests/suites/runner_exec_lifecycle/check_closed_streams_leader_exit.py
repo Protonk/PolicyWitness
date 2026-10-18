@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 from contract import REQUEST_SCHEMA
 from run_capture import RunCapture
+from exec_observation import assert_observation
 
 
 def write_json(path, value):
@@ -215,6 +216,9 @@ def main():
         assert attempt['lifecycle']['summary'] == 'completed', attempt
         assert attempt['child_pid'] == pids['P'] and attempt['child_exit_code'] == 0, attempt
         assert attempt['child_term_signal'] == 0 and not attempt.get('error'), attempt
+        assert_observation(attempt, pids['P'], stop='leader_exit_and_eof', leader_observed=True,
+                           stdout_eof=True, stderr_eof=True, cleanup_requested=False, exit_code=0)
+        assert last['attempt'].get('exec_observation') is None
         assert attempt['stdout'] == 'exec_fixture: hello from helper\n', attempt
         assert middle['comparison']['observation_basis'] == 'spawned_child', middle
         assert last['attempt']['outcome'] == 'ok' and last['attempt']['result_source'] == 'worker', last

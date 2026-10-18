@@ -12,7 +12,10 @@ rejecting contradictory evidence while preserving failed collection states.
 and real stream cutoff with retained complete evidence. The maximal reply
 fixture accounts for all phases and bounded validator records through the
 production encoder; it is a conservative constructed bound, not a reachable
-native transcript.
+native transcript. A separately encoded allowance counts every exec-observation
+optional member at its maximum representation on every slot; a second full
+ordinary encode/roundtrip carries valid collection/request/reap evidence on all
+256 exec slots. The retained client output budget is unchanged.
 
 ## Invariants
 
@@ -31,6 +34,14 @@ native transcript.
 - The fast CWorker per-exec deadline diagnostic remains here; process-group
   cleanup, output retention, and plan continuation are covered through the
   public CLI by `runner_exec_lifecycle`.
+- `ExecObservationTests` uses the shared constructed
+  `tests/fixtures/contract/exec_observation.json` cases for typed decoding,
+  ordinary-reply refusal and degraded evidence retention. The same cases run
+  through Rust disposition admission and the independent Python consumer.
+  Missing metadata stays unknown; successful signalling with unconfirmed reap
+  remains valid. ABI fixture modes separately pin publication gating and
+  reporting failure for malformed present payloads. `CWorkerTests` checks the
+  signed producer's ordinary, nonzero, deadline and pre-spawn results.
 - Exec-child environment and descriptor isolation are covered by
   `runner_exec_inheritance`, with explicit child observations and controlled
   worker launch resources.
@@ -228,3 +239,19 @@ specifically at missing ownership credit; the broken-ownership control must
 still pass. It retains exact copied sources/hashes, build/run commands and logs,
 fixed/mutated host source and structured results. It requires Swift and clang,
 uses isolated build output and does not modify or use the inspected app.
+
+## Exec reader mutations
+
+The opt-in `exec_reader_mutations` case copies the Swift package and runs only
+`ExecObservationTests`. The baseline must pass all three controls. One source
+variant bypasses the actual completed-slot gate: the self-killed ABI fixture's
+fully written exec metadata must trip the existing absence assertion. Another
+variant supplies a fabricated ordinary exec account when metadata is missing;
+the assertion uses the original wire fixture to establish absence and rejects
+the invented `not_requested` record. The copied package retains the source
+identity solely to reach these oracles; the inspected app is unchanged.
+
+The controls retain copied sources and hashes, actual compiler/run commands,
+logs and exact designated failures. The native fixture is compiled against the
+same copied ABI identity and owns no exec descendants. These controls establish
+host interpretation, not sandbox behavior or successful process cleanup.

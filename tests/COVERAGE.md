@@ -222,3 +222,15 @@ oracle rejects wrong direction/argument and partial-unmap variants. Supplemental
 native observations establish the controlled mistakes independently of the old
 oracle's accepted receipts. It does not alter the shipped host or upgrade the
 original setup controls into a complete protocol or mapping-absence proof.
+
+### Exec collection, requests and leader reap
+
+`ExecObservationTests` and the shared `contract/exec_observation.json` corpus
+exercise optional evidence, native integer bounds, branch consistency and
+legacy leader-status agreement through Swift, Rust and the independent Python
+consumer. A successful signal with unconfirmed reap remains valid; missing
+metadata creates no cleanup fact. Ordinary malformed replies degrade and
+withhold comparisons. The opt-in `runner_unit/exec_reader_mutations` executes
+source defects that bypass publication or invent metadata, requiring failures
+at the original independent assertions. Signed `CWorkerTests` and
+`runner_exec_lifecycle` separately exercise actual producer/transport paths.

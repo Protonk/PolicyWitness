@@ -27,6 +27,14 @@ native wait independently fail stalled equipment; the owning test verifies
 ECHILD after driver reap and cleans up on failure. Constructed query records
 exercise the real comparison builder without claiming native sandbox evidence.
 
+`exec_payload_valid` publishes a constructed complete exec account.
+`exec_payload_unpublished` fills the same account and output, then self-kills
+before the slot completion store. The host must withhold both new and old
+payload fields. `exec_payload_bad_marker` and `exec_payload_bad_enum` publish
+malformed present metadata; the ordinary reply must degrade and withhold
+comparisons. These modes use a fictional child PID to test ABI interpretation;
+production native-call and live-exec controls establish actual observations.
+
 The ready byte is sent after fixture publication for deterministic controls;
 real-worker readiness and deadline/grace behavior remain separate tests.
 
@@ -121,7 +129,16 @@ timebase and counter and run in `runner_c_worker_harness`:
 [clock_control.c](clock_control.c) (`clock_arithmetic`),
 [proceed_control.c](proceed_control.c) (`proceed_precedence`) and
 [exec_control.c](exec_control.c) (`exec_control_states`), each with its own
-build script.
+build script. The exec case additionally runs six disposable bad-payload
+producer variants through the unchanged assertions. Its native-call ledger
+records actual boundary order, arguments, return values and meaningful
+errno/status independently of the slot payload. The reviewed
+[exec_call_policy.json](exec_call_policy.json) records the pre-refactor producer
+source and fixture/header hashes plus normalized ledger digests/counts. The
+candidate must preserve these 58 call sequences; changing the golden requires
+an explicit call-policy review. Native fixture calls do not create real children.
+The live process, stream and cleanup observations remain in
+[runner_exec_lifecycle](../../suites/runner_exec_lifecycle/README.md).
 
 The `.worker-limits` companion compiles the existing C default-value probe. The
 Swift budget inequality consumes its output directly; the independent native

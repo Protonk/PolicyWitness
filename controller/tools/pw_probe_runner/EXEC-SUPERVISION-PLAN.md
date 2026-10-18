@@ -3,8 +3,9 @@
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-03 in the [initial audit](../../../records/worker-pass6/initial-report.md),
 overlapping register row 10. State: investigation complete and reviewed;
-the [exec evidence refactor](EXEC-EVIDENCE-REFACTOR-PLAN.md) is specified for
-review. Ordinary-completion cleanup policy and a supervisor remain unselected.
+the [exec evidence refactor](EXEC-EVIDENCE-REFACTOR-PLAN.md) is implemented with
+[signed acceptance](../../../records/worker-exec-evidence/implementation-acceptance.md).
+Ordinary-completion cleanup policy and a supervisor remain unselected.
 
 The [investigation report](../../../records/worker-exec-supervision/investigation.md)
 records current-source behavior, fresh lifecycle controls and a native external
@@ -16,8 +17,8 @@ request is the smaller extension; cleanup after worker loss needs a surviving
 owner. The probe supports
 the latter's limited feasibility while independently demonstrating escape and
 an inconclusive signal-zero probe. Neither alternative promises descendant
-containment. The report identifies a current documentation correction that is
-needed regardless of the behavioral choice.
+containment. The evidence refactor also corrects the current documentation's
+account of ordinary-completion and worker-death survivors.
 
 ## Starting point
 

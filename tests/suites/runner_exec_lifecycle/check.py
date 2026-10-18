@@ -11,6 +11,7 @@ from control import TreeControl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
 from run_capture import RunCapture
+from exec_observation import assert_observation, checker_controls
 
 
 def main():
@@ -74,6 +75,14 @@ def main():
             assert attempt['outcome'] == 'exec_failed' and attempt['rc'] == -1
             assert attempt['child_term_signal'] == 9 and attempt['child_exit_code'] == -1
             assert 'deadline' in attempt['error']
+            assert_observation(attempt, pids['P'], stop='deadline', leader_observed=False,
+                               stdout_eof=False, stderr_eof=False, cleanup_requested=True,
+                               term_signal=9)
+            assert following['attempt'].get('exec_observation') is None
+            controls = checker_controls(attempt, pids['P'], stop='deadline', leader_observed=False,
+                                        stdout_eof=False, stderr_eof=False, cleanup_requested=True,
+                                        term_signal=9)
+            (out / 'exec-checker-controls.json').write_text(json.dumps(controls, indent=2))
             assert attempt['stdout'] == 'exec_fixture: hello from helper\n'
             assert attempt['stderr'] == stderr_marker + '\n'
             assert hang['sandbox_check']['outcome'] == 'allow'

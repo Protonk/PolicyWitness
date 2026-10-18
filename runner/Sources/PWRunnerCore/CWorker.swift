@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "4dd8d75126025defa7b9719fb434d265b69f25b9d3bd6d9fd3836d1321f02976"
-    static let abiIdentity: [UInt8] = [0x4d, 0xd8, 0xd7, 0x51, 0x26, 0x02, 0x5d, 0xef, 0xa7, 0xb9, 0x71, 0x9f, 0xb4, 0x34, 0xd2, 0x65, 0xb6, 0x9f, 0x25, 0xb9, 0xd3, 0xbd, 0x6d, 0x9f, 0xd3, 0x83, 0x6d, 0x13, 0x21, 0xf0, 0x29, 0x76]
+    static let abiIdentityHex = "4a0d8ebf41f767dd07869a93082735442b750266b61acac8e0d1e624f6feeeb2"
+    static let abiIdentity: [UInt8] = [0x4a, 0x0d, 0x8e, 0xbf, 0x41, 0xf7, 0x67, 0xdd, 0x07, 0x86, 0x9a, 0x93, 0x08, 0x27, 0x35, 0x44, 0x2b, 0x75, 0x02, 0x66, 0xb6, 0x1a, 0xca, 0xc8, 0xe0, 0xd1, 0xe6, 0x24, 0xf6, 0xfe, 0xee, 0xb2]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -193,6 +193,34 @@ enum PWShmLayout {
     static let slotAccessUidOffset: Int = 6064
     static let slotAccessGidOffset: Int = 6068
     static let slotAccessBytesOffset: Int = 6072
+    static let slotExecValidOffset: Int = 6136
+    static let slotExecCollectionStopOffset: Int = 6140
+    static let slotExecLeaderExitObservedOffset: Int = 6144
+    static let slotExecStdoutEofOffset: Int = 6148
+    static let slotExecStderrEofOffset: Int = 6152
+    static let slotExecDeadlineKindOffset: Int = 6156
+    static let slotExecWaitidErrnoOffset: Int = 6160
+    static let slotExecPollErrnoOffset: Int = 6164
+    static let slotExecStdoutReadErrnoOffset: Int = 6168
+    static let slotExecStderrReadErrnoOffset: Int = 6172
+    static let slotExecStdoutPollReventsOffset: Int = 6176
+    static let slotExecStderrPollReventsOffset: Int = 6180
+    static let slotExecCollectionClockFaultOffset: Int = 6184
+    static let slotExecCleanupStateOffset: Int = 6188
+    static let slotExecGroupTargetOffset: Int = 6192
+    static let slotExecGroupSignalOffset: Int = 6196
+    static let slotExecGroupRcOffset: Int = 6200
+    static let slotExecGroupErrnoOffset: Int = 6204
+    static let slotExecFallbackPresentOffset: Int = 6208
+    static let slotExecFallbackTargetOffset: Int = 6212
+    static let slotExecFallbackSignalOffset: Int = 6216
+    static let slotExecFallbackRcOffset: Int = 6220
+    static let slotExecFallbackErrnoOffset: Int = 6224
+    static let slotExecReapStopOffset: Int = 6228
+    static let slotExecReapWaitRcOffset: Int = 6232
+    static let slotExecReapWaitErrnoOffset: Int = 6236
+    static let slotExecReapStatusOffset: Int = 6240
+    static let slotExecReapClockFaultOffset: Int = 6244
 
     // Param field offsets (from the param's base).
     static let paramKeyMax: Int    = 128
@@ -379,6 +407,8 @@ struct CWorkerSlotResult {
     var nativeErrno: Int32? = nil
     var unavailableCode: UInt32? = nil
     var freshRead: PWRunnerFreshRead? = nil
+    var execObservation: PWExecObservation? = nil
+    var execObservationProblem: String? = nil
     var stepId: String
     var rc: Int32
     var errnoVal: Int32
@@ -1436,12 +1466,15 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         let childStderr: String? = isExec ? readString(slotBase, offset: PWShmLayout.slotChildStderrOffset,
                                                        max: PWShmLayout.childOutputBytes) : nil
 
+        let execAccount = isExec ? decodeExecObservation(slotBase, childPid: childPid ?? 0) : (nil, nil)
+
         slotResults.append(CWorkerSlotResult(
             callBoundary: loadAcquire(slotBase, offset: PWShmLayout.slotCallBoundaryOffset) == 1,
             nativeResult: readI32(slotBase, offset: PWShmLayout.slotNativeResultValidOffset) == 1 ? readI64(slotBase, offset: PWShmLayout.slotNativeResultOffset) : nil,
             nativeErrno: readI32(slotBase, offset: PWShmLayout.slotNativeResultValidOffset) == 1 ? readI32(slotBase, offset: PWShmLayout.slotNativeErrnoOffset) : nil,
             unavailableCode: [.extensionConsume, .extensionRelease].contains(input.slots[i].attemptKind) ? UInt32(bitPattern: readI32(slotBase, offset: PWShmLayout.slotUnavailableCodeOffset)) : nil,
             freshRead: input.slots[i].attemptKind == .fileReadFresh ? decodeFreshRead(slotBase) : nil,
+            execObservation: execAccount.0, execObservationProblem: execAccount.1,
             stepId: stepId,
             rc: rc,
             errnoVal: errnoVal,
@@ -1604,6 +1637,56 @@ func withCStringArrayCopy<R>(_ strings: [String],
 func readI64(_ base: UnsafePointer<UInt8>, offset: Int) -> Int64 {
     UnsafeRawPointer(base.advanced(by: offset)).load(as: Int64.self)
 }
+/// Caller has acquired slot.completed. Do not invoke this for interrupted slots.
+func decodeExecObservation(_ base: UnsafePointer<UInt8>, childPid: Int32) -> (PWExecObservation?, String?) {
+    let marker = readI32(base, offset: PWShmLayout.slotExecValidOffset)
+    if marker == 0 { return (nil, nil) }
+    func bad(_ detail: String) -> (PWExecObservation?, String?) { (nil, "malformed completed exec payload: " + detail) }
+    guard marker == 1, childPid > 0 else { return bad("valid marker or child PID") }
+    func word(_ offset: Int) -> Int32 { readI32(base, offset: offset) }
+    func optional(_ offset: Int) -> Int32? { let v = word(offset); return v == 0 ? nil : v }
+    func fault(_ offset: Int) -> UInt32? { let v = UInt32(bitPattern: word(offset)); return v == 0 ? nil : v }
+    let stop = word(PWShmLayout.slotExecCollectionStopOffset)
+    let cleanup = word(PWShmLayout.slotExecCleanupStateOffset)
+    let reap = word(PWShmLayout.slotExecReapStopOffset)
+    let deadline = word(PWShmLayout.slotExecDeadlineKindOffset)
+    let observed = word(PWShmLayout.slotExecLeaderExitObservedOffset)
+    let stdout = word(PWShmLayout.slotExecStdoutEofOffset), stderr = word(PWShmLayout.slotExecStderrEofOffset)
+    let fallback = word(PWShmLayout.slotExecFallbackPresentOffset)
+    guard (1...4).contains(stop), (1...3).contains(cleanup), (1...6).contains(reap),
+          (0...2).contains(deadline), [0, 1].contains(observed), [0, 1].contains(stdout),
+          [0, 1].contains(stderr), [0, 1].contains(fallback) else { return bad("unknown enum or boolean") }
+    if cleanup != 3 && [PWShmLayout.slotExecGroupTargetOffset, PWShmLayout.slotExecGroupSignalOffset,
+                        PWShmLayout.slotExecGroupRcOffset, PWShmLayout.slotExecGroupErrnoOffset].contains(where: { word($0) != 0 }) {
+        return bad("group fields without request")
+    }
+    if fallback == 0 && [PWShmLayout.slotExecFallbackTargetOffset, PWShmLayout.slotExecFallbackSignalOffset,
+                        PWShmLayout.slotExecFallbackRcOffset, PWShmLayout.slotExecFallbackErrnoOffset].contains(where: { word($0) != 0 }) {
+        return bad("fallback fields without call")
+    }
+    let waitRC = word(PWShmLayout.slotExecReapWaitRcOffset)
+    if waitRC != childPid && word(PWShmLayout.slotExecReapStatusOffset) != 0 { return bad("status without child wait return") }
+    if waitRC != -1 && word(PWShmLayout.slotExecReapWaitErrnoOffset) != 0 { return bad("errno without failed wait") }
+    func request(_ target: Int, _ signal: Int, _ rc: Int, _ error: Int) -> PWExecSignalRequest {
+        PWExecSignalRequest(target: word(target), signal: word(signal), rc: word(rc), errno: word(rc) == -1 ? word(error) : optional(error))
+    }
+    let collection = PWExecCollectionObservation(
+        stop_reason: ["leader_exit_and_eof", "deadline", "observation_error", "clock_fault"][Int(stop - 1)],
+        leader_exit_observed: observed == 1,
+        stdout: PWExecStreamObservation(eof: stdout == 1, read_errno: optional(PWShmLayout.slotExecStdoutReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStdoutPollReventsOffset)),
+        stderr: PWExecStreamObservation(eof: stderr == 1, read_errno: optional(PWShmLayout.slotExecStderrReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStderrPollReventsOffset)),
+        deadline_kind: deadline == 0 ? nil : ["child", "plan"][Int(deadline - 1)],
+        waitid_errno: optional(PWShmLayout.slotExecWaitidErrnoOffset), poll_errno: optional(PWShmLayout.slotExecPollErrnoOffset),
+        clock_fault: fault(PWShmLayout.slotExecCollectionClockFaultOffset))
+    let cleanupValue = PWExecCleanupObservation(state: ["not_requested", "ownership_unconfirmed", "requested"][Int(cleanup - 1)],
+        group_request: cleanup == 3 ? request(PWShmLayout.slotExecGroupTargetOffset, PWShmLayout.slotExecGroupSignalOffset, PWShmLayout.slotExecGroupRcOffset, PWShmLayout.slotExecGroupErrnoOffset) : nil,
+        leader_fallback: fallback == 1 ? request(PWShmLayout.slotExecFallbackTargetOffset, PWShmLayout.slotExecFallbackSignalOffset, PWShmLayout.slotExecFallbackRcOffset, PWShmLayout.slotExecFallbackErrnoOffset) : nil)
+    let reapValue = PWExecReapObservation(stop_reason: ["reaped", "wait_error", "ownership_unconfirmed", "group_request_failed", "clock_fault", "deadline"][Int(reap - 1)],
+        last_wait: PWExecWaitObservation(rc: waitRC, errno: waitRC == -1 ? word(PWShmLayout.slotExecReapWaitErrnoOffset) : nil,
+            status: waitRC == childPid ? word(PWShmLayout.slotExecReapStatusOffset) : nil), clock_fault: fault(PWShmLayout.slotExecReapClockFaultOffset))
+    return (PWExecObservation(collection: collection, cleanup: cleanupValue, reap: reapValue), nil)
+}
+
 func decodeFreshRead(_ base: UnsafePointer<UInt8>) -> PWRunnerFreshRead {
     func i(_ offset: Int) -> Int32 { readI32(base, offset: offset) }
     let opened = i(PWShmLayout.slotAccessOpenRcOffset)

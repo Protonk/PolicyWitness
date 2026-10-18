@@ -502,6 +502,12 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectTrue((s.childPid ?? 0) > 0, "child_pid should be > 0 on successful spawn")
             try expectEqual(s.childExitCode, Int32(0))
             try expectEqual(s.childTermSignal, Int32(0))
+            try expectNil(s.execObservationProblem)
+            try expectEqual(s.execObservation?.collection.stop_reason, "leader_exit_and_eof")
+            try expectEqual(s.execObservation?.collection.stdout.eof, true)
+            try expectEqual(s.execObservation?.collection.stderr.eof, true)
+            try expectEqual(s.execObservation?.cleanup.state, "not_requested")
+            try expectEqual(s.execObservation?.reap.last_wait.rc, s.childPid)
         }
 
         // ---- exec attempt: non-zero exit (/usr/bin/false) -----------------------
@@ -530,6 +536,12 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectTrue((s.childPid ?? 0) > 0, "spawn should succeed; only the child exited non-zero")
             try expectEqual(s.childExitCode, Int32(1))
             try expectEqual(s.childTermSignal, Int32(0))
+            try expectNil(s.execObservationProblem)
+            try expectEqual(s.execObservation?.collection.stop_reason, "leader_exit_and_eof")
+            try expectEqual(s.execObservation?.collection.stdout.eof, true)
+            try expectEqual(s.execObservation?.collection.stderr.eof, true)
+            try expectEqual(s.execObservation?.cleanup.state, "not_requested")
+            try expectEqual(s.execObservation?.reap.last_wait.rc, s.childPid)
         }
 
         // ---- exec attempt: target missing -----------------------------------
@@ -562,6 +574,8 @@ func runCWorkerTests(_ tk: TestKit) {
                             "child_pid must be 0 when spawn failed — comparisonEvidence keys on this")
             try expectEqual(s.childExitCode, Int32(-1),
                             "child_exit_code stays at -1 sentinel when no child ran")
+            try expectNil(s.execObservation)
+            try expectNil(s.execObservationProblem)
         }
 
         // ---- exec attempt: spawn blocked by sandbox -------------------------
@@ -729,6 +743,12 @@ func runCWorkerTests(_ tk: TestKit) {
                 "deadline kill should arrive as SIGKILL on the child")
             try expectEqual(s.childExitCode, Int32(-1),
                 "child_exit_code sentinel when signaled")
+            try expectNil(s.execObservationProblem)
+            try expectEqual(s.execObservation?.collection.stop_reason, "deadline")
+            try expectEqual(s.execObservation?.collection.deadline_kind, "child")
+            try expectEqual(s.execObservation?.cleanup.group_request?.target, -(s.childPid ?? 0))
+            try expectEqual(s.execObservation?.cleanup.group_request?.signal, SIGKILL)
+            try expectEqual(s.execObservation?.reap.last_wait.rc, s.childPid)
             try expectNotNil(s.error)
             try expectTrue((s.error ?? "").contains("deadline"),
                 "error should mention the deadline; got \(s.error ?? "nil")")

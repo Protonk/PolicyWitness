@@ -14,9 +14,10 @@ events for both processes before releasing or cleaning up the fixture.
 The run must finish within a generous outer bound around the public
 10-second exec deadline (8–25 seconds), while the fixture itself has a
 45-second backstop. JSON must retain stdout and a fresh stderr marker,
-report the observed leader as killed by the deadline, and keep that failure
-out of sandbox-denial attribution (an `other_failure` observation beside the
-allow answer). The next step must appear
+report the leader's observed SIGKILL status separately from the group request,
+and keep the successful spawn observation beside the allow answer. Neither
+the signal number nor a matching request establishes who sent the observed
+signal; the later failure does not become sandbox-denial attribution. The next step must appear
 as successful and actually change the target's bytes. The whole specimen
 must succeed with complete evidence.
 
@@ -44,8 +45,23 @@ group member at the deadline while preserving the leader's actual exit code.
 `worker_dies_during_exec` terminates the independently identified worker while
 both helper processes are live. Earlier file effects survive; unfinished exec
 fields remain absent and later effects are absent. The test owns helper cleanup
-and observes liveness before performing it. This guards missing-publication
-semantics without claiming that current worker death cleans up descendants.
+and observes each original process identity and liveness before performing it.
+It retains independent final helper and worker exit events in `cleanup.json`;
+staging is removed only after those exits and CLI closure are confirmed. An
+incomplete rendezvous or unconfirmed cleanup retains staging. This guards
+missing-publication semantics without claiming that current worker death
+cleans up descendants.
+
+Each completed live exec reply carries `exec_observation`. The suite checks
+collection stop/leader/EOF facts, a separate group request or no-request state,
+and the leader's actual final wait/status. A deadline snapshot remains open
+streams/leader-not-observed even after cleanup has reaped it; the exited-leader
+case retains the observed exit with open streams. Normal completion reports no
+request, including the survivor case below. The killed worker's unpublished slot
+exposes no object. File attempts also omit it. The deadline checker accepts the
+live result and rejects six independently altered documents promoting cleanup,
+EOF or pending waits into stronger facts; their rejection receipt is retained.
+All process/effect observations precede JSON interpretation.
 
 ## Same-group descendant after normal completion
 

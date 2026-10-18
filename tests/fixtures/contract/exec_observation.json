@@ -1,0 +1,3719 @@
+{
+  "description": "Constructed native observations for independent reader acceptance and rejection; not process effects.",
+  "valid": [
+    {
+      "name": "ordinary",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "old_producer_absent",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "null_unknown",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": null
+      }
+    },
+    {
+      "name": "deadline_kill_and_reap",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "esrch_not_success",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 3
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "clean_exit_group_failure_fallback_success",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 1
+      }
+    },
+    {
+      "name": "separate_failed_fallback",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 3
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 1
+      }
+    },
+    {
+      "name": "successful_signal_unconfirmed_reap",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "deadline",
+            "last_wait": {
+              "rc": 0
+            }
+          }
+        },
+        "errno": 60
+      }
+    },
+    {
+      "name": "native_timeout",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "wait_error",
+            "last_wait": {
+              "rc": -1,
+              "errno": 60
+            }
+          }
+        },
+        "errno": 60
+      }
+    },
+    {
+      "name": "interrupted_local_deadline",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "deadline",
+            "last_wait": {
+              "rc": -1,
+              "errno": 4
+            }
+          }
+        },
+        "errno": 60
+      }
+    },
+    {
+      "name": "reaped_with_unfamiliar_clock_fault",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            },
+            "clock_fault": 4294967295
+          }
+        }
+      }
+    },
+    {
+      "name": "two_read_errors",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "read_errno": 5
+            },
+            "stderr": {
+              "eof": false,
+              "read_errno": 9
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 9
+      }
+    },
+    {
+      "name": "two_stream_revents",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "poll_revents": 8
+            },
+            "stderr": {
+              "eof": false,
+              "poll_revents": 32
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 5
+      }
+    },
+    {
+      "name": "native_poll_error",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": false
+            },
+            "stderr": {
+              "eof": false
+            },
+            "poll_errno": 5
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 5
+      }
+    },
+    {
+      "name": "ownership_lost_clock_fault",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": false
+            },
+            "stderr": {
+              "eof": false
+            },
+            "waitid_errno": 10
+          },
+          "cleanup": {
+            "state": "ownership_unconfirmed"
+          },
+          "reap": {
+            "stop_reason": "ownership_unconfirmed",
+            "last_wait": {
+              "rc": 0
+            },
+            "clock_fault": 5
+          }
+        },
+        "errno": 10
+      }
+    },
+    {
+      "name": "local_faults",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "clock_fault",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": false
+            },
+            "stderr": {
+              "eof": false
+            },
+            "clock_fault": 7
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "clock_fault",
+            "last_wait": {
+              "rc": 0
+            },
+            "clock_fault": 9
+          }
+        }
+      }
+    },
+    {
+      "name": "plan_deadline",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "plan"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "failed_group_pending",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "group_request_failed",
+            "last_wait": {
+              "rc": 0
+            }
+          }
+        },
+        "errno": 1
+      }
+    },
+    {
+      "name": "signed_short_revents",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "poll_revents": -32760
+            },
+            "stderr": {
+              "eof": false,
+              "poll_revents": 32
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 5
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "object_type",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": []
+      }
+    },
+    {
+      "name": "unknown_stop",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "finished",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "no_leader",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "bool_integer",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": 1
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "missing_eof",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": null
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "wrong_kind",
+      "attempt": {
+        "requested_kind": "file",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "synthetic",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "synthetic",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "unpublished",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "started_without_result",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "zero_pid",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 0,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "pid_overflow",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 2147483648,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "status_mismatch",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "missing_status",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "wait_other_pid",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 42,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "clock_zero",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            },
+            "clock_fault": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "clock_overflow",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            },
+            "clock_fault": 4294967296
+          }
+        }
+      }
+    },
+    {
+      "name": "clock_bool",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            },
+            "clock_fault": true
+          }
+        }
+      }
+    },
+    {
+      "name": "ordinary_deadline",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "ordinary_errno",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": true
+            },
+            "poll_errno": 5
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "group_positive",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "group_wrong_pid",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4243,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "wrong_signal",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 15,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "signal_bool",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": true,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "stale_errno",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0,
+              "errno": 5
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "rc_outside",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 1
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "no_deadline_kind",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": null
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "invented_fallback",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "status_without_reap",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "deadline",
+            "last_wait": {
+              "rc": 0,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "pending_native_errno",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "deadline",
+            "last_wait": {
+              "rc": 0,
+              "errno": 60
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "reaped_without_return",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "synthetic_timeout_as_errno",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "deadline",
+            "last_wait": {
+              "rc": 0,
+              "errno": 60
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "missing_fallback",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": null
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fallback_group_substitution",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "failed_group_errno_zero",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 0
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "failed_group_errno_missing",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": null
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "fallback_errno_stale",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0,
+              "errno": 3
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "wait_errno_zero",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "deadline",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "wait_error",
+            "last_wait": {
+              "rc": -1,
+              "errno": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "waitid_after_exit",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false
+            },
+            "stderr": {
+              "eof": false
+            },
+            "waitid_errno": 10
+          },
+          "cleanup": {
+            "state": "ownership_unconfirmed"
+          },
+          "reap": {
+            "stop_reason": "ownership_unconfirmed",
+            "last_wait": {
+              "rc": 0
+            },
+            "clock_fault": 5
+          }
+        }
+      }
+    },
+    {
+      "name": "revents_made_errno",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "poll_revents": 8
+            },
+            "stderr": {
+              "eof": false,
+              "poll_revents": 32
+            },
+            "poll_errno": 5
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "revents_read_priority",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "poll_revents": 9
+            },
+            "stderr": {
+              "eof": false,
+              "poll_revents": 32
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "read_retryable",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "read_errno": 35
+            },
+            "stderr": {
+              "eof": false,
+              "read_errno": 9
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "read_eof",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "read_errno": 5
+            },
+            "stderr": {
+              "eof": false,
+              "read_errno": 9
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "errno_overflow",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "read_errno": 2147483648
+            },
+            "stderr": {
+              "eof": false,
+              "read_errno": 9
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "snapshot_replaced_from_reap",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": -1,
+        "child_term_signal": 9,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": false,
+            "stdout": {
+              "eof": true
+            },
+            "stderr": {
+              "eof": false
+            },
+            "deadline_kind": "child"
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 9
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "revents_below_native_short",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": -1,
+        "outcome": "exec_failed",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "observation_error",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": false,
+              "poll_revents": -65528
+            },
+            "stderr": {
+              "eof": false,
+              "poll_revents": 32
+            }
+          },
+          "cleanup": {
+            "state": "requested",
+            "group_request": {
+              "target": -4242,
+              "signal": 9,
+              "rc": -1,
+              "errno": 1
+            },
+            "leader_fallback": {
+              "target": 4242,
+              "signal": 9,
+              "rc": 0
+            }
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "errno": 5
+      }
+    }
+  ]
+}

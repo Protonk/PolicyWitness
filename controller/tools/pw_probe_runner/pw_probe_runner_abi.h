@@ -45,8 +45,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "4dd8d75126025defa7b9719fb434d265b69f25b9d3bd6d9fd3836d1321f02976"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4d, 0xd8, 0xd7, 0x51, 0x26, 0x02, 0x5d, 0xef, 0xa7, 0xb9, 0x71, 0x9f, 0xb4, 0x34, 0xd2, 0x65, 0xb6, 0x9f, 0x25, 0xb9, 0xd3, 0xbd, 0x6d, 0x9f, 0xd3, 0x83, 0x6d, 0x13, 0x21, 0xf0, 0x29, 0x76};
+#define PW_WORKER_ABI_IDENTITY_HEX "4a0d8ebf41f767dd07869a93082735442b750266b61acac8e0d1e624f6feeeb2"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x4a, 0x0d, 0x8e, 0xbf, 0x41, 0xf7, 0x67, 0xdd, 0x07, 0x86, 0x9a, 0x93, 0x08, 0x27, 0x35, 0x44, 0x2b, 0x75, 0x02, 0x66, 0xb6, 0x1a, 0xca, 0xc8, 0xe0, 0xd1, 0xe6, 0x24, 0xf6, 0xfe, 0xee, 0xb2};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -295,6 +295,24 @@ enum {
     PW_TIME_REASON_DEADLINE_OVERFLOW = 5, PW_TIME_REASON_PRIOR_CLOCK_FAULT = 6
 };
 
+/* Completed exec evidence codes. Zero is absence, never an observation.
+ * These fields are immutable only after the slot's completed publication. */
+enum {
+    PW_EXEC_COLLECTION_COMPLETE = 1, PW_EXEC_COLLECTION_DEADLINE = 2,
+    PW_EXEC_COLLECTION_ERROR = 3, PW_EXEC_COLLECTION_CLOCK_FAULT = 4
+};
+enum { PW_EXEC_DEADLINE_CHILD = 1, PW_EXEC_DEADLINE_PLAN = 2 };
+enum {
+    PW_EXEC_CLEANUP_NOT_REQUESTED = 1, PW_EXEC_CLEANUP_OWNERSHIP_UNCONFIRMED = 2,
+    PW_EXEC_CLEANUP_REQUESTED = 3
+};
+enum {
+    PW_EXEC_REAP_REAPED = 1, PW_EXEC_REAP_WAIT_ERROR = 2,
+    PW_EXEC_REAP_OWNERSHIP_UNCONFIRMED = 3, PW_EXEC_REAP_GROUP_REQUEST_FAILED = 4,
+    PW_EXEC_REAP_CLOCK_FAULT = 5, PW_EXEC_REAP_DEADLINE = 6
+};
+#define PW_SHM_EXEC_EVIDENCE_BYTES 112u
+
 /* Worker-owned publication contract is specified in
  * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract".
  * All payloads immutable after
@@ -378,6 +396,26 @@ typedef struct {
     uint32_t access_uid, access_gid;
     uint8_t access_bytes[PW_SHM_FRESH_READ_BYTES];
 
+
+    /* Optional post-spawn exec evidence carved from reserved bytes. Valid is
+     * exactly 1 after assembly; completed remains the sole read gate. Errno,
+     * revents and clock-reason zero mean absent. Request state and fallback
+     * presence distinguish an unmade call from a successful zero return.
+     * Reap status is meaningful only when wait_rc equals child_pid. */
+    uint32_t exec_valid;
+    uint32_t exec_collection_stop, exec_leader_exit_observed;
+    uint32_t exec_stdout_eof, exec_stderr_eof, exec_deadline_kind;
+    int32_t exec_waitid_errno, exec_poll_errno;
+    int32_t exec_stdout_read_errno, exec_stderr_read_errno;
+    int32_t exec_stdout_poll_revents, exec_stderr_poll_revents;
+    uint32_t exec_collection_clock_fault, exec_cleanup_state;
+    int32_t exec_group_target, exec_group_signal, exec_group_rc, exec_group_errno;
+    uint32_t exec_fallback_present;
+    int32_t exec_fallback_target, exec_fallback_signal, exec_fallback_rc, exec_fallback_errno;
+    uint32_t exec_reap_stop;
+    int32_t exec_reap_wait_rc, exec_reap_wait_errno, exec_reap_status;
+    uint32_t exec_reap_clock_fault;
+
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
      * A future field that pushes past this budget breaks the
      * _Static_assert below at compile time. */
@@ -397,8 +435,13 @@ typedef struct {
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stdout */
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
                       - sizeof(_Atomic uint32_t)
-                      - 156u];
+                      - 156u - PW_SHM_EXEC_EVIDENCE_BYTES];
 } pw_shm_slot_t;
+
+_Static_assert(offsetof(pw_shm_slot_t, exec_valid) == 6136,
+               "exec evidence must consume only the prior slot reserve");
+_Static_assert(offsetof(pw_shm_slot_t, reserved) - offsetof(pw_shm_slot_t, exec_valid)
+               == PW_SHM_EXEC_EVIDENCE_BYTES, "exec evidence field budget");
 
 /*
  * SBPL params delivered to the worker. Host populates [0..param_count)

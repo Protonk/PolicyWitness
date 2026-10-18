@@ -26,6 +26,12 @@ deterministic, and checked into the repo so tests are hermetic.
   validator records to all three readers, including scalar types, integer
   bounds, independent cleanup and mixed-type association issues. Its patches
   apply to the retained issuer-abnormal capture; they are constructed controls.
+  `exec_observation.json` supplies independent collection, signal-request and
+  final-wait combinations to Swift ordinary-reply decoding/encoding, Rust
+  disposition admission and Python consumer controls. Cases include unknown
+  metadata, successful signalling without reap, native versus local errors,
+  signed stream masks, malformed types/ranges and conflicting branches. These
+  constructed facts are not native process observations.
   `path_diagnostics.json` contains independent compact path states,
   Unicode byte distinctions and malformed representations shared by Swift
   encoding/decoding, Rust forwarding and Python consumer checks.

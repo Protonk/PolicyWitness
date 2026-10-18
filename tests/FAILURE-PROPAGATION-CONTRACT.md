@@ -1536,6 +1536,53 @@ Acceptance selects every registered canonical case in [the catalog](catalog.json
 including opt-ins and both runner contexts; required skips or unrun cases
 prevent completion.
 
+## Exec collection and cleanup evidence
+
+`steps[].attempt.exec_observation` is optional additive evidence. Missing/null
+means unavailable, including valid old-producer replies; it never supplies a
+negative cleanup, EOF or reap observation. A present object requires a published
+worker `exec/spawn` result and positive child PID. Pre-spawn failures, synthetic
+results, non-exec attempts and unpublished slots supply none. Slot completion
+and lifecycle `completed` describe result publication, not process completion.
+
+`collection` freezes the actual stop branch, `waitid(... WNOWAIT)` leader
+observation and each stream's read-zero EOF before cleanup. Terminal waitid,
+poll and independent stream read errors remain native errors; poll error flags
+remain revents, and timing faults remain nonzero local numeric reason codes.
+Actual deadline stops name the selected child/plan cutoff. Reap cannot rewrite
+this snapshot. `leader_exit_and_eof` requires all three positive observations
+and no terminal collection error/fault.
+
+`cleanup` records termination requests only. `not_requested` and
+`ownership_unconfirmed` have no call record. `requested` has the actual negative
+group target, SIGKILL, native rc and failure errno. Failed group calls other than
+`ESRCH` retain their independent positive-target fallback call. Return zero,
+`ESRCH`, no call and a successful fallback are distinct facts; none establishes
+group absence. Descriptor/handle cleanup is not included.
+
+`reap` records the final nonblocking wait and actual stop branch. Only a return
+of the owned leader permits raw status and the corresponding decoded legacy
+exit/signal. A zero return has no errno or status. A failed final wait retains
+its errno, including EINTR if a later local guard ends the loop. Native wait
+ETIMEDOUT and a local deadline are distinct. A reap-clock fault remains visible
+beside an immediate successful reap or a native wait error; unfamiliar bounded
+nonzero clock reasons stay numeric. Successful signalling with unconfirmed reap
+is valid evidence, not grounds to invent status or reject a reply.
+
+Ordinary Swift reply integrity, Rust admitted-reply checks and the independent
+Python consumer validate present types/ranges, branches, targets, wait/status
+relationships and publication. Malformed present evidence cannot silently become
+absence or a clean default. Degraded reporting-failure replies retain diagnostic
+evidence under their existing rules, withholding comparisons. The new object
+never supplies a comparison, ordering or run-disposition conclusion.
+
+The native source controls use their independent call ledger to check actual
+arguments/returns and preserved wait/signal/clock order. Production C-to-Swift
+and encoded-reader controls exercise publication and transport; live process
+controls use independent peers/exit observations and separately owned fixture
+cleanup. See the [field account](../docs/PolicyWitness.md#structured-exec-observations)
+and [native controls](suites/runner_c_worker_harness/README.md#worker-timing-controls).
+
 Exec attempt observation distinguishes stream EOF, leader exit, termination
 requests and confirmed reaping. A deadline remains an attempt failure even when
 the leader exited naturally while another group member retained the pipes;
@@ -1544,3 +1591,8 @@ errors do not manufacture a child exit or sandbox denial. If the worker dies
 before the slot is published, incomplete exec fields remain unavailable even
 when an independent observer saw a live child. Supporting earlier spawn facts
 in the reply requires a separate publication contract.
+
+Ordinary completion requests no termination. Same-group descendants that close
+their streams can survive later work and worker exit; worker loss can interrupt
+exceptional cleanup or precede child publication. Descendants that leave the
+group can escape requests. The host supervises the worker, not these descendants.

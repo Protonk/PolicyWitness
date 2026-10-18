@@ -1,6 +1,9 @@
 # Exec observation and cleanup evidence
 
-Status: implementation specified; awaiting review, not implemented. This plan
+Status: implemented, reviewed and accepted against the signed app. The
+[acceptance record](../../../records/worker-exec-evidence/implementation-acceptance.md)
+retains source snapshots, native-policy controls, reader mutations, full default
+coverage and the repaired selection check. This plan
 implements the evidence separation selected after the
 [exec investigation](EXEC-SUPERVISION-PLAN.md), under the
 [worker redesign plan](../../../WORKER-REDESIGN-PLAN.md). The

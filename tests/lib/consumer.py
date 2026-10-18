@@ -319,6 +319,113 @@ def validate_shape(value, path, shape, errors):
 # Validation
 # ---------------------------------------------------------------------------
 
+def validate_exec_observation(attempt):
+    """Validate optional worker observations without inventing facts from absence."""
+    value = attempt.get('exec_observation')
+    if value is None:
+        return []
+    def fail(reason):
+        return ['exec observation: ' + reason]
+    def integer(value, minimum=-(2**31), maximum=2**31-1):
+        return type(value) is int and minimum <= value <= maximum
+    def optional_positive(value):
+        return value is None or integer(value, 1)
+    pid = attempt.get('child_pid')
+    if not (isinstance(value, dict) and integer(pid, 1)
+            and attempt.get('requested_kind') == 'exec' and attempt.get('requested_action') == 'spawn'
+            and attempt.get('result_source') == 'worker'
+            and isinstance(attempt.get('lifecycle'), dict) and attempt['lifecycle'].get('summary') == 'completed'):
+        return fail('requires a published worker exec with positive child PID')
+    c, k, r = (value.get(name) for name in ('collection', 'cleanup', 'reap'))
+    if not all(isinstance(v, dict) for v in (c, k, r)):
+        return fail('required sections are not objects')
+    out, err, wait = c.get('stdout'), c.get('stderr'), r.get('last_wait')
+    if not all(isinstance(v, dict) for v in (out, err, wait)) or type(c.get('leader_exit_observed')) is not bool:
+        return fail('missing collection streams, leader observation or last wait')
+    for stream in (out, err):
+        read, events = stream.get('read_errno'), stream.get('poll_revents')
+        if not (type(stream.get('eof')) is bool and optional_positive(read) and read not in (4, 35)
+                and (events is None or integer(events, -32768, 32767) and events & 0x28 and not events & 0x11)
+                and not (stream['eof'] and (read is not None or events is not None))
+                and not (read is not None and events is not None)):
+            return fail('invalid stream observation')
+    wi, po = c.get('waitid_errno'), c.get('poll_errno')
+    if not (optional_positive(wi) and optional_positive(po) and wi != 4 and po != 4):
+        return fail('invalid terminal collection errno')
+    for fault in (c.get('clock_fault'), r.get('clock_fault')):
+        if fault is not None and not integer(fault, 1, 2**32-1):
+            return fail('invalid local clock reason')
+    stream_error = any(s.get(n) is not None for s in (out, err) for n in ('read_errno', 'poll_revents'))
+    errors = wi is not None or po is not None or stream_error
+    if wi is not None and c['leader_exit_observed']:
+        return fail('waitid failure after already observed leader exit')
+    if wi is not None and (po is not None or stream_error) or po is not None and stream_error:
+        return fail('incompatible collection call branches')
+    stop, fault, deadline = c.get('stop_reason'), c.get('clock_fault'), c.get('deadline_kind')
+    if stop == 'leader_exit_and_eof':
+        valid = c['leader_exit_observed'] and out['eof'] and err['eof'] and not errors and fault is None and deadline is None
+    elif stop == 'deadline':
+        valid = deadline in ('child', 'plan') and not errors and fault is None
+    elif stop == 'observation_error':
+        valid = errors and fault is None and deadline is None
+    elif stop == 'clock_fault':
+        valid = fault is not None and not errors and deadline is None
+    else:
+        valid = False
+    if not valid:
+        return fail('collection stop contradicts observations')
+    def signal_valid(request, target):
+        return (isinstance(request, dict) and integer(request.get('target')) and request['target'] == target
+                and integer(request.get('signal')) and request['signal'] == 9
+                and integer(request.get('rc')) and request['rc'] in (-1, 0)
+                and (integer(request.get('errno'), 1) if request['rc'] == -1 else request.get('errno') is None))
+    state, group, fallback = k.get('state'), k.get('group_request'), k.get('leader_fallback')
+    if state == 'not_requested':
+        valid = stop == 'leader_exit_and_eof' and group is None and fallback is None
+    elif state == 'ownership_unconfirmed':
+        valid = wi is not None and group is None and fallback is None
+    elif state == 'requested':
+        valid = stop != 'leader_exit_and_eof' and wi is None and signal_valid(group, -pid)
+        if valid:
+            expected = group['rc'] == -1 and group.get('errno') != 3
+            valid = expected == (fallback is not None) and (fallback is None or signal_valid(fallback, pid))
+    else:
+        valid = False
+    if not valid:
+        return fail('cleanup request contradicts native call roles')
+    rc, errno, status = wait.get('rc'), wait.get('errno'), wait.get('status')
+    if not (integer(rc) and rc in (-1, 0, pid)
+            and (integer(errno, 1) if rc == -1 else errno is None)
+            and ((rc == pid and integer(status)) or (rc != pid and status is None))):
+        return fail('invalid final wait observation')
+    if status is not None:
+        bits = status & 0x7f
+        exit_code, signal = ((status >> 8) & 0xff if bits == 0 else -1), (bits if bits not in (0, 127) else 0)
+    else:
+        exit_code, signal = -1, 0
+    if (not integer(attempt.get('child_exit_code')) or not integer(attempt.get('child_term_signal'))
+            or attempt['child_exit_code'] != exit_code or attempt['child_term_signal'] != signal):
+        return fail('legacy leader status does not match confirmed wait')
+    failed_group = isinstance(group, dict) and group.get('rc') == -1 and group.get('errno') != 3
+    stop = r.get('stop_reason')
+    if stop == 'reaped':
+        valid = rc == pid
+    elif stop == 'wait_error':
+        valid = rc == -1 and errno != 4
+    elif stop in ('ownership_unconfirmed', 'group_request_failed', 'clock_fault', 'deadline'):
+        valid = rc == 0 or (rc == -1 and errno == 4)
+        if stop == 'ownership_unconfirmed':
+            valid = valid and state == 'ownership_unconfirmed'
+        elif stop == 'group_request_failed':
+            valid = valid and state != 'ownership_unconfirmed' and failed_group
+        else:
+            valid = valid and state != 'ownership_unconfirmed' and not failed_group
+            valid = valid and ((stop == 'clock_fault') == (r.get('clock_fault') is not None))
+    else:
+        valid = False
+    return [] if valid else fail('reap stop contradicts final wait or branch priority')
+
+
 def _validate_step(runner, step, failed_reporting):
     errors = []
     sid = step.get('step_id')
@@ -338,6 +445,8 @@ def _validate_step(runner, step, failed_reporting):
     if attempt.get('errno') is not None and type(attempt.get('errno')) is not int:
         errors.append(f'{sid}: invalid attempt.errno')
     errors.extend(f'{sid}: {error}' for error in validate_fresh_read(attempt))
+    if not failed_reporting:
+        errors.extend(f'{sid}: {error}' for error in validate_exec_observation(attempt))
     if not isinstance(query.get('operation'), str) or not isinstance(query.get('filter_kind'), str):
         errors.append(f'{sid}: missing sandbox_check.operation or filter_kind')
     if query.get('outcome') == 'prediction_unavailable' and query.get('rc') != -1:

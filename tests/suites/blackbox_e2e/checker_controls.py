@@ -21,7 +21,7 @@ CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from blackbox import envelope_skeleton
-from consumer import denials, lifecycle, select, steps, validate
+from consumer import denials, lifecycle, select, steps, validate, validate_exec_observation
 from lifecycle_adapter import read_lifecycle
 from lifecycle_oracle import check_record
 from path_diagnostics_contract import check_cases
@@ -169,6 +169,20 @@ def policy_check_controls(run):
         document = copy.deepcopy(base)
         document['data']['policy_check'] = {'status': status, 'envelope': None}
         check('without_reply_' + status, document)
+
+
+def exec_observation_controls(artifacts):
+    cases = json.loads((ROOT / 'tests/fixtures/contract/exec_observation.json').read_text())
+    receipts = []
+    for section in ('valid', 'invalid'):
+        for case in cases[section]:
+            errors = validate_exec_observation(case['attempt'])
+            assert bool(errors) == (section == 'invalid'), (section, case['name'], errors)
+            if case['name'] in ('old_producer_absent', 'null_unknown'):
+                # Validating absence must not manufacture a negative cleanup fact.
+                assert case['attempt'].get('exec_observation') is None
+            receipts.append({'case': case['name'], 'accepted': not errors, 'errors': errors})
+    (artifacts / 'exec-observation-reader-controls.json').write_text(json.dumps(receipts, indent=2) + '\n')
 
 
 def consumer_controls(artifacts, current):
@@ -698,6 +712,7 @@ def main():
 
     check("valid", baseline)
     consumer_controls(artifacts, baseline)
+    exec_observation_controls(artifacts)
     mutation_order_controls(artifacts, baseline)
     client_output_control(artifacts)
     cleanup_witness_controls(artifacts)

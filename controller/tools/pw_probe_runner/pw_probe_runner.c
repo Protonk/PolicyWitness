@@ -926,6 +926,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
     slot->child_term_signal  = 0;
     slot->child_stdout[0]    = '\0';
     slot->child_stderr[0]    = '\0';
+    memset(&slot->exec_valid, 0, PW_SHM_EXEC_EVIDENCE_BYTES);
 
     /* Attempt budget admission. Refusal is per-step evidence with no spawn
      * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
@@ -1044,6 +1045,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
             if (waitid(P_PID, (id_t)child, &info, WEXITED | WNOHANG | WNOWAIT) != 0) {
                 if (errno == EINTR) continue; /* still subject to the deadline */
                 observation_errno = errno; observation_call = "waitid";
+                slot->exec_waitid_errno = observation_errno;
                 ownership_known = 0; break;
             }
             child_exited = info.si_pid == child;
@@ -1070,7 +1072,11 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
         int poll_ms = left_ms > 10 ? 10 : (int)left_ms;
         int pr = poll(pfds, npfds, poll_ms);
         if (pr < 0 && errno == EINTR) continue;
-        if (pr < 0) { observation_errno = errno; observation_call = "poll"; break; }
+        if (pr < 0) {
+            observation_errno = errno; observation_call = "poll";
+            slot->exec_poll_errno = observation_errno;
+            break;
+        }
         if (pr == 0) continue;
         int indices[] = {stdout_idx, stderr_idx};
         for (int stream = 0; stream < 2; stream++) {
@@ -1086,12 +1092,28 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
                 if (n == 0) *open = 0;
                 else if (n < 0 && errno != EINTR && errno != EAGAIN) {
                     observation_errno = errno; observation_call = "read";
+                    if (stream) slot->exec_stderr_read_errno = observation_errno;
+                    else slot->exec_stdout_read_errno = observation_errno;
                 }
             } else if (pfds[index].revents & (POLLERR | POLLNVAL)) {
                 observation_errno = EIO; observation_call = "poll stream";
+                if (stream) slot->exec_stderr_poll_revents = pfds[index].revents;
+                else slot->exec_stdout_poll_revents = pfds[index].revents;
             }
         }
     }
+
+    /* Freeze collection before any cleanup or reap. EOF records only a read
+     * returning zero; closing descriptors later cannot change this snapshot. */
+    slot->exec_collection_stop = local_fault ? PW_EXEC_COLLECTION_CLOCK_FAULT
+        : observation_errno ? PW_EXEC_COLLECTION_ERROR
+        : deadline_expired ? PW_EXEC_COLLECTION_DEADLINE : PW_EXEC_COLLECTION_COMPLETE;
+    slot->exec_leader_exit_observed = child_exited;
+    slot->exec_stdout_eof = !stdout_open;
+    slot->exec_stderr_eof = !stderr_open;
+    slot->exec_deadline_kind = deadline_expired
+        ? (deadline_clamped ? PW_EXEC_DEADLINE_PLAN : PW_EXEC_DEADLINE_CHILD) : 0;
+    slot->exec_collection_clock_fault = local_fault;
 
     /* Append truncation marker when content overflowed the buffer.
      * The marker eats the tail of the buffer so the resulting string
@@ -1119,11 +1141,26 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
     slot->child_stderr[stderr_n] = '\0';
 
     int cleanup_errno = 0;
+    slot->exec_cleanup_state = (deadline_expired || observation_errno || local_fault)
+        ? PW_EXEC_CLEANUP_OWNERSHIP_UNCONFIRMED : PW_EXEC_CLEANUP_NOT_REQUESTED;
     if ((deadline_expired || observation_errno || local_fault) && ownership_known) {
-        if (kill(-child_pgid, SIGKILL) != 0 && errno != ESRCH) {
-            cleanup_errno = errno;
+        slot->exec_cleanup_state = PW_EXEC_CLEANUP_REQUESTED;
+        slot->exec_group_target = -child_pgid;
+        slot->exec_group_signal = SIGKILL;
+        int group_rc = kill(-child_pgid, SIGKILL);
+        int group_errno = group_rc != 0 ? errno : 0;
+        slot->exec_group_rc = group_rc;
+        slot->exec_group_errno = group_errno;
+        if (group_rc != 0 && group_errno != ESRCH) {
+            cleanup_errno = group_errno;
             /* A leader-only fallback cannot prove group cleanup. */
-            (void)kill(child, SIGKILL);
+            slot->exec_fallback_present = 1;
+            slot->exec_fallback_target = child;
+            slot->exec_fallback_signal = SIGKILL;
+            int fallback_rc = kill(child, SIGKILL);
+            int fallback_errno = fallback_rc != 0 ? errno : 0;
+            slot->exec_fallback_rc = fallback_rc;
+            slot->exec_fallback_errno = fallback_errno;
         }
     }
 
@@ -1139,17 +1176,41 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
     if (!reap_fault) reap_fault = pw_ticks_add(now, timing->reap_ticks, &reap_deadline);
     for (;;) {
         reaped = waitpid(child, &status, WNOHANG);
-        if (reaped == child) break;
-        if (reaped < 0 && errno != EINTR) { reap_errno = errno; break; }
-        if (!ownership_known || cleanup_errno) break; /* pending, not a native wait failure */
-        if (reap_fault) break;
+        int wait_errno = reaped < 0 ? errno : 0;
+        slot->exec_reap_wait_rc = reaped;
+        slot->exec_reap_wait_errno = wait_errno;
+        if (reaped == child) {
+            slot->exec_reap_status = status;
+            slot->exec_reap_stop = PW_EXEC_REAP_REAPED;
+            break;
+        }
+        if (reaped < 0 && wait_errno != EINTR) {
+            reap_errno = wait_errno;
+            slot->exec_reap_stop = PW_EXEC_REAP_WAIT_ERROR;
+            break;
+        }
+        if (!ownership_known || cleanup_errno) {
+            /* Pending, not a native wait failure. Preserve the guard order. */
+            slot->exec_reap_stop = !ownership_known ? PW_EXEC_REAP_OWNERSHIP_UNCONFIRMED
+                                                   : PW_EXEC_REAP_GROUP_REQUEST_FAILED;
+            break;
+        }
+        if (reap_fault) { slot->exec_reap_stop = PW_EXEC_REAP_CLOCK_FAULT; break; }
         reap_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_REAP, phase, index, &now);
-        if (reap_fault) break;
-        if (now >= reap_deadline) { reap_errno = ETIMEDOUT; break; }
+        if (reap_fault) { slot->exec_reap_stop = PW_EXEC_REAP_CLOCK_FAULT; break; }
+        if (now >= reap_deadline) {
+            reap_errno = ETIMEDOUT;
+            slot->exec_reap_stop = PW_EXEC_REAP_DEADLINE;
+            break;
+        }
         (void)poll(NULL, 0, 1);
     }
+    slot->exec_reap_clock_fault = reap_fault;
 
     exec_resources_release(r);
+    /* This is payload validity, not publication. run_attempt release-stores
+     * completed only after the legacy result has also been assembled. */
+    slot->exec_valid = 1;
 
     if (reaped == child) {
         if (WIFEXITED(status)) slot->child_exit_code = WEXITSTATUS(status);

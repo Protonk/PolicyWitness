@@ -478,6 +478,7 @@
       "child_term_signal" : "number",
       "errno" : "number",
       "error" : "string",
+      "exec_observation" : "object",
       "fresh_read" : "object",
       "lifecycle" : "object",
       "missing_reason" : "string",
@@ -491,6 +492,58 @@
       "result_source" : "string",
       "stderr" : "string",
       "stdout" : "string"
+    },
+    "reply.steps[].attempt.exec_observation" : {
+      "cleanup" : "object",
+      "collection" : "object",
+      "reap" : "object"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup" : {
+      "group_request" : "object",
+      "leader_fallback" : "object",
+      "state" : "string"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup.group_request" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number",
+      "target" : "number"
+    },
+    "reply.steps[].attempt.exec_observation.cleanup.leader_fallback" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number",
+      "target" : "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection" : {
+      "clock_fault" : "number",
+      "deadline_kind" : "string",
+      "leader_exit_observed" : "boolean",
+      "poll_errno" : "number",
+      "stderr" : "object",
+      "stdout" : "object",
+      "stop_reason" : "string",
+      "waitid_errno" : "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection.stderr" : {
+      "eof" : "boolean",
+      "poll_revents" : "number",
+      "read_errno" : "number"
+    },
+    "reply.steps[].attempt.exec_observation.collection.stdout" : {
+      "eof" : "boolean",
+      "poll_revents" : "number",
+      "read_errno" : "number"
+    },
+    "reply.steps[].attempt.exec_observation.reap" : {
+      "clock_fault" : "number",
+      "last_wait" : "object",
+      "stop_reason" : "string"
+    },
+    "reply.steps[].attempt.exec_observation.reap.last_wait" : {
+      "errno" : "number",
+      "rc" : "number",
+      "status" : "number"
     },
     "reply.steps[].attempt.fresh_read" : {
       "close_errno" : "number",

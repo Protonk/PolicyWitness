@@ -112,6 +112,36 @@ int main(void) {
         atomic_store_explicit(&hdr->done, 1, memory_order_release);
         _exit(0);
     }
+    if (!strncmp(mode, "exec_payload_", 13)) {
+        alarm(5);
+        if (write(4, "R", 1) != 1) return 97;
+        close(4);
+        hdr->apply_rc = 0;
+        atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+        atomic_store_explicit(&hdr->phases[0].arrived, 1, memory_order_release);
+        while (atomic_load_explicit(&hdr->proceed, memory_order_acquire) != 1) usleep(1000);
+        atomic_store_explicit(&hdr->phases[0].acknowledged, 1, memory_order_release);
+        atomic_store_explicit(&hdr->proceed_observed, 1, memory_order_release);
+        pw_shm_slot_t *slot = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+        slot->child_pid = 4242; slot->child_exit_code = 0; slot->child_term_signal = 0;
+        strcpy(slot->child_stdout, "unpublished output must stay hidden");
+        slot->exec_collection_stop = PW_EXEC_COLLECTION_COMPLETE;
+        slot->exec_leader_exit_observed = 1; slot->exec_stdout_eof = 1; slot->exec_stderr_eof = 1;
+        slot->exec_cleanup_state = PW_EXEC_CLEANUP_NOT_REQUESTED;
+        slot->exec_reap_stop = PW_EXEC_REAP_REAPED;
+        slot->exec_reap_wait_rc = 4242; slot->exec_reap_status = 0;
+        slot->exec_valid = 1;
+        if (!strcmp(mode, "exec_payload_unpublished")) {
+            kill(getpid(), SIGKILL); _exit(98);
+        }
+        if (!strcmp(mode, "exec_payload_bad_marker")) slot->exec_valid = 2;
+        if (!strcmp(mode, "exec_payload_bad_enum")) slot->exec_collection_stop = 77;
+        atomic_store_explicit(&slot->completed, 1, memory_order_release);
+        atomic_store_explicit(&hdr->phases[0].completed, 1, memory_order_release);
+        pw_progress(pw_evidence(base), PW_OP_FINISHED, PW_PROGRESS_RETURNED, UINT32_MAX);
+        atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        _exit(0);
+    }
     if (!strcmp(mode, "phase_invalid_previous")) {
         alarm(5);
         if (write(4, "R", 1) != 1) return 97;

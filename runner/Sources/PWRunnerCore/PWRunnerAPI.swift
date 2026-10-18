@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 // PWRunner is a single-purpose, ephemeral XPC runner. The XPC service host
 // stays unsandboxed; a short-lived worker self-applies a seatbelt profile,
@@ -1187,6 +1188,136 @@ struct PWRunnerSandboxCheckResult: Codable {
     }
 }
 
+/// Bounded observations from the completed exec slot. Collection is frozen before
+/// termination requests; final wait facts concern only the owned leader.
+struct PWExecStreamObservation: Codable {
+    var eof: Bool
+    var read_errno: Int32? = nil
+    var poll_revents: Int32? = nil
+}
+struct PWExecCollectionObservation: Codable {
+    var stop_reason: String
+    var leader_exit_observed: Bool
+    var stdout: PWExecStreamObservation
+    var stderr: PWExecStreamObservation
+    var deadline_kind: String? = nil
+    var waitid_errno: Int32? = nil
+    var poll_errno: Int32? = nil
+    var clock_fault: UInt32? = nil
+}
+struct PWExecSignalRequest: Codable {
+    var target: Int32
+    var signal: Int32
+    var rc: Int32
+    var errno: Int32? = nil
+}
+struct PWExecCleanupObservation: Codable {
+    var state: String
+    var group_request: PWExecSignalRequest? = nil
+    var leader_fallback: PWExecSignalRequest? = nil
+}
+struct PWExecWaitObservation: Codable {
+    var rc: Int32
+    var errno: Int32? = nil
+    var status: Int32? = nil
+}
+struct PWExecReapObservation: Codable {
+    var stop_reason: String
+    var last_wait: PWExecWaitObservation
+    var clock_fault: UInt32? = nil
+}
+struct PWExecObservation: Codable {
+    var collection: PWExecCollectionObservation
+    var cleanup: PWExecCleanupObservation
+    var reap: PWExecReapObservation
+}
+
+extension PWRunnerAttemptResult {
+    func execObservationEvidenceProblem() -> String? {
+        if let execObservationDecodeProblem { return execObservationDecodeProblem }
+        guard let value = exec_observation else { return nil } // absence remains unknown
+        guard requested_kind == "exec", requested_action == "spawn", result_source == "worker",
+              let pid = child_pid, pid > 0, pid <= Int(Int32.max),
+              lifecycle?.summary == "completed" else { return "exec observation requires a published worker exec and positive child PID" }
+        let c = value.collection, k = value.cleanup, r = value.reap, w = value.reap.last_wait
+        func positive(_ n: Int32?) -> Bool { n == nil || n! > 0 }
+        func streamValid(_ stream: PWExecStreamObservation) -> Bool {
+            positive(stream.read_errno) && stream.read_errno != EINTR && stream.read_errno != EAGAIN
+                && (stream.poll_revents == nil || (stream.poll_revents! >= Int32(Int16.min) && stream.poll_revents! <= Int32(Int16.max)
+                    && (stream.poll_revents! & 0x28) != 0 && (stream.poll_revents! & 0x11) == 0))
+                && !(stream.eof && (stream.read_errno != nil || stream.poll_revents != nil))
+                && !(stream.read_errno != nil && stream.poll_revents != nil)
+        }
+        guard positive(c.waitid_errno), positive(c.poll_errno), c.waitid_errno != EINTR, c.poll_errno != EINTR,
+              streamValid(c.stdout), streamValid(c.stderr), c.clock_fault != 0, r.clock_fault != 0 else {
+            return "invalid exec collection scalar or stream observation"
+        }
+        let errors = c.waitid_errno != nil || c.poll_errno != nil || c.stdout.read_errno != nil
+            || c.stderr.read_errno != nil || c.stdout.poll_revents != nil || c.stderr.poll_revents != nil
+        if c.waitid_errno != nil && c.leader_exit_observed { return "waitid failure after previously observed leader exit" }
+        if c.waitid_errno != nil && (c.poll_errno != nil || c.stdout.read_errno != nil || c.stderr.read_errno != nil
+            || c.stdout.poll_revents != nil || c.stderr.poll_revents != nil) { return "waitid failure cannot share a later poll observation" }
+        if c.poll_errno != nil && (c.stdout.read_errno != nil || c.stderr.read_errno != nil
+            || c.stdout.poll_revents != nil || c.stderr.poll_revents != nil) { return "poll failure cannot share stream observations" }
+        switch c.stop_reason {
+        case "leader_exit_and_eof":
+            guard c.leader_exit_observed, c.stdout.eof, c.stderr.eof, !errors, c.clock_fault == nil, c.deadline_kind == nil else { return "ordinary collection lacks leader exit and EOF" }
+        case "deadline":
+            guard ["child", "plan"].contains(c.deadline_kind ?? ""), !errors, c.clock_fault == nil else { return "invalid exec deadline observation" }
+        case "observation_error":
+            guard errors, c.clock_fault == nil, c.deadline_kind == nil else { return "exec observation error lacks a native observation" }
+        case "clock_fault":
+            guard c.clock_fault != nil, !errors, c.deadline_kind == nil else { return "exec clock stop lacks its local fault" }
+        default: return "unknown exec collection stop"
+        }
+        func signalValid(_ request: PWExecSignalRequest, target: Int32) -> Bool {
+            request.target == target && request.signal == SIGKILL && [-1, 0].contains(request.rc)
+                && (request.rc == -1 ? request.errno != nil && request.errno! > 0 : request.errno == nil)
+        }
+        switch k.state {
+        case "not_requested":
+            guard c.stop_reason == "leader_exit_and_eof", k.group_request == nil, k.leader_fallback == nil else { return "no cleanup request contradicts collection stop" }
+        case "ownership_unconfirmed":
+            guard c.waitid_errno != nil, k.group_request == nil, k.leader_fallback == nil else { return "withheld cleanup lacks ownership failure" }
+        case "requested":
+            guard c.stop_reason != "leader_exit_and_eof", c.waitid_errno == nil,
+                  let g = k.group_request, signalValid(g, target: -Int32(pid)) else { return "invalid exec group request" }
+            let fallbackExpected = g.rc == -1 && g.errno != ESRCH
+            guard fallbackExpected == (k.leader_fallback != nil) else { return "exec fallback disagrees with group result" }
+            if let f = k.leader_fallback, !signalValid(f, target: Int32(pid)) { return "invalid exec leader fallback" }
+        default: return "unknown exec cleanup state"
+        }
+        guard w.rc == -1 || w.rc == 0 || w.rc == Int32(pid),
+              (w.rc == -1 ? w.errno != nil && w.errno! > 0 : w.errno == nil),
+              (w.rc == Int32(pid)) == (w.status != nil) else { return "invalid exec last wait observation" }
+        if let status = w.status {
+            let bits = status & 0x7f
+            let exit = bits == 0 ? Int((status >> 8) & 0xff) : -1
+            let signal = bits != 0 && bits != 0x7f ? Int(bits) : 0
+            guard child_exit_code == exit, child_term_signal == signal else { return "exec wait status disagrees with leader fields" }
+        } else if child_exit_code != -1 || child_term_signal != 0 { return "exec leader status lacks confirmed wait" }
+        let failedGroup = k.group_request.map { $0.rc == -1 && $0.errno != ESRCH } ?? false
+        switch r.stop_reason {
+        case "reaped":
+            guard w.rc == Int32(pid) else { return "exec reap lacks leader return" }
+        case "wait_error":
+            guard w.rc == -1, w.errno != EINTR else { return "exec wait error lacks terminal errno" }
+        case "ownership_unconfirmed", "group_request_failed", "clock_fault", "deadline":
+            guard w.rc == 0 || (w.rc == -1 && w.errno == EINTR) else { return "local reap stop cannot replace native wait result" }
+            if r.stop_reason == "ownership_unconfirmed" {
+                guard k.state == "ownership_unconfirmed" else { return "reap ownership stop lacks ownership failure" }
+            } else if r.stop_reason == "group_request_failed" {
+                guard k.state != "ownership_unconfirmed", failedGroup else { return "reap group stop lacks failed request" }
+            } else {
+                guard k.state != "ownership_unconfirmed", !failedGroup else { return "reap stop changes ownership/group branch priority" }
+                guard (r.stop_reason == "clock_fault") == (r.clock_fault != nil) else { return "reap local fault disagrees with stop" }
+            }
+        default: return "unknown exec reap stop"
+        }
+        return nil
+    }
+}
+
 struct PWRunnerAttemptResult: Codable {
     /// Submitted intent, not proof that the named native operation ran. See
     /// the "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
@@ -1200,6 +1331,9 @@ struct PWRunnerAttemptResult: Codable {
     var lifecycle: PWAttemptLifecycle? = nil
     /// PW's attempt status, not a raw syscall return.
     var fresh_read: PWRunnerFreshRead? = nil
+    var exec_observation: PWExecObservation? = nil
+    // Host-local corruption diagnostic, checked by ordinary-reply encoding.
+    var execObservationDecodeProblem: String? = nil
     var rc: Int
     var errno: Int?
     var outcome: String
@@ -1218,8 +1352,8 @@ struct PWRunnerAttemptResult: Codable {
     /// establish reaping. Unconfirmed status keeps exit -1 / signal 0.
     /// Attempt rc may fail independently of a natural leader exit.
     /// `child_pid == 0` means
-    /// spawn failed before producing a child (sandbox blocked spawn,
-    /// target missing, etc.) — `errno` carries the spawn errno in
+    /// spawn/setup did not produce a child; this alone does not identify
+    /// the cause. `errno` carries the applicable native error in
     /// that case. comparisonEvidence reads `child_pid` to distinguish
     /// spawn failure from a child non-zero exit. EPERM/EACCES without
     /// a child remain ambiguous: execute permissions can also prevent
@@ -1242,7 +1376,8 @@ struct PWRunnerAttemptResult: Codable {
         child_exit_code: Int? = nil,
         child_term_signal: Int? = nil,
         stdout: String? = nil,
-        stderr: String? = nil
+        stderr: String? = nil,
+        exec_observation: PWExecObservation? = nil
     ) {
         self.rc = rc
         self.errno = errno
@@ -1256,12 +1391,13 @@ struct PWRunnerAttemptResult: Codable {
         self.child_term_signal = child_term_signal
         self.stdout = stdout
         self.stderr = stderr
+        self.exec_observation = exec_observation
     }
 
     enum CodingKeys: String, CodingKey {
         case requested_kind, requested_action
         case result_source, missing_reason, lifecycle
-        case rc, fresh_read
+        case rc, fresh_read, exec_observation
         case errno
         case outcome
         case error
@@ -1283,6 +1419,7 @@ struct PWRunnerAttemptResult: Codable {
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
         try container.encodeIfPresent(fresh_read, forKey: .fresh_read)
+        try container.encodeIfPresent(exec_observation, forKey: .exec_observation)
         try container.encode(rc, forKey: .rc)
         if let errno {
             try container.encode(errno, forKey: .errno)
@@ -1322,6 +1459,7 @@ struct PWRunnerAttemptResult: Codable {
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
         fresh_read = try container.decodeIfPresent(PWRunnerFreshRead.self, forKey: .fresh_read)
+        exec_observation = try container.decodeIfPresent(PWExecObservation.self, forKey: .exec_observation)
         rc = try container.decode(Int.self, forKey: .rc)
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
         outcome = try container.decode(String.self, forKey: .outcome)
@@ -2488,6 +2626,13 @@ struct PWRunnerRunResult: Codable {
         phases = try c.decode([PWRunnerPhaseResult].self, forKey: .phases)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
+        if reporting_failure == nil {
+            for step in steps {
+                if let problem = step.attempt.execObservationEvidenceProblem() {
+                    throw DecodingError.dataCorruptedError(forKey: .steps, in: c, debugDescription: problem)
+                }
+            }
+        }
         if reporting_failure == nil, let problem = policyReadProblem(self) {
             throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
                 debugDescription: "policy read receipt contradicts its basis: \(problem)")
@@ -2572,6 +2717,9 @@ struct PWRunnerRunResult: Codable {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath, debugDescription: issue))
             }
             for step in steps {
+                if let issue = step.attempt.execObservationEvidenceProblem() {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
+                }
                 if let issue = step.attempt.freshReadEvidenceProblem() {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath, debugDescription: issue))
                 }

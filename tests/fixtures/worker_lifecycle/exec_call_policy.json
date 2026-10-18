@@ -1,0 +1,976 @@
+{
+  "source_commit": "5034d254a9817b65afa5262399eed7c95234ff17",
+  "source_path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+  "native_call_policy": "Each digest covers ordered boundary calls, actual arguments/returns, meaningful errno/status, clock values and descriptor identity normalized by pipe role.",
+  "attempts": [
+    {
+      "case": "timing_regression",
+      "attempt": 0,
+      "count": 315,
+      "counts": {
+        "clock": 105,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 100,
+        "poll": 100,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "289918e47473feb7fc2ae89ec433d8feb4201bd311ee945cdff5c3b962207cd4"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 1,
+      "count": 285,
+      "counts": {
+        "clock": 95,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 90,
+        "poll": 90,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "068513812dfbd90b7fa6d7163727b7d0a3b7be3a5ec21073b4e3f68daba2e7e8"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 2,
+      "count": 255,
+      "counts": {
+        "clock": 85,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 80,
+        "poll": 80,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "765829a61981a06ae543d0900b8136666fd9b6365df228a1c7ea1c2e888ddfe6"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 3,
+      "count": 225,
+      "counts": {
+        "clock": 75,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 70,
+        "poll": 70,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "41eb220d2b988925f3be0a0cbd45cb289e3e64e54c7173e6294e53f1abcee122"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 4,
+      "count": 195,
+      "counts": {
+        "clock": 65,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 60,
+        "poll": 60,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "1a8099718a9080ceb65e9cea7d6aa280812921c4e7fcdf9ed59eadcf629f6ccd"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 5,
+      "count": 165,
+      "counts": {
+        "clock": 55,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 50,
+        "poll": 50,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "138f2fee772703ede61a65c2c4328931443b794550b4b2a000609ee49a6dfcf6"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 6,
+      "count": 135,
+      "counts": {
+        "clock": 45,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 40,
+        "poll": 40,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "ced5e82f5d1b1a5fa45db6f44f6e456c2a180249c231b0ebbbd72e5be768d60a"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 7,
+      "count": 105,
+      "counts": {
+        "clock": 35,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 30,
+        "poll": 30,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "619a7e36b4c27a9602df4a71d3648a731955f3ba285addbf47b3471fd1680488"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 8,
+      "count": 75,
+      "counts": {
+        "clock": 25,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 20,
+        "poll": 20,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "4f703c29d5d6eeb76c92136c514c68160a60ad00f057fa4e0939b90a45fa8d53"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 9,
+      "count": 45,
+      "counts": {
+        "clock": 15,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 10,
+        "poll": 10,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "cb3578c36833e9d9cc88b5e04da786348b79ba5e1a11c774564cad36249f7b24"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 10,
+      "count": 15,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "a2d87a32baef5eafe27198758161af5c1ae897616cbaaafc4c88c9cf1c9f349d"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 11,
+      "count": 15,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "f7e3c863ea068d348a03ce083796acd9b4796eebdd0d3a9162dfd675428329b4"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 12,
+      "count": 45,
+      "counts": {
+        "clock": 15,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 10,
+        "poll": 10,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "cb3578c36833e9d9cc88b5e04da786348b79ba5e1a11c774564cad36249f7b24"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 13,
+      "count": 165,
+      "counts": {
+        "clock": 55,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 50,
+        "poll": 50,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "d6941f7dbec0c699532674ad3825b8ca635be6dd4051508b1be3fc957ef2d0c7"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 14,
+      "count": 255,
+      "counts": {
+        "clock": 85,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 80,
+        "poll": 80,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "a0edb83dbe7e46687aed02c24766260f4bb7c653ddd97d6fd2872a07cb32bcf7"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 15,
+      "count": 3,
+      "counts": {
+        "clock": 2,
+        "timebase": 1
+      },
+      "sha256": "b8cc9937174f4705d374f46110254d2ddbcffeb573ba7c87b2526821e59c7bdd"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 16,
+      "count": 18,
+      "counts": {
+        "clock": 6,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "a3b928ed856647db6fcaa75f0fe8e8a39add0816c2d7d3b59338aed62616eaef"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 17,
+      "count": 112,
+      "counts": {
+        "clock": 36,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 32,
+        "poll": 31,
+        "revents": 2,
+        "read": 2,
+        "waitpid": 1
+      },
+      "sha256": "769c6911e681030d5b621cb287eb617a2cad0c5433b537b0bf7395bb70e71bc3"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 18,
+      "count": 226,
+      "counts": {
+        "clock": 105,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 11,
+        "poll": 100,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "2b8a02441e8ca718ea626c35203be7babc829c99518d3765156c4ebba82634fe"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 19,
+      "count": 3,
+      "counts": {
+        "clock": 2,
+        "timebase": 1
+      },
+      "sha256": "a8392b3d6b192cbbbc6652cd785b52731924bb7bd8bb91f928eec226715d32ea"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 20,
+      "count": 13,
+      "counts": {
+        "clock": 3,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "ed152917725e6af71a61d885a323c207630455afe8a6bc1cf7319f7bc941fdbc"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 21,
+      "count": 13,
+      "counts": {
+        "clock": 3,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "ed152917725e6af71a61d885a323c207630455afe8a6bc1cf7319f7bc941fdbc"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 22,
+      "count": 82,
+      "counts": {
+        "clock": 26,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 22,
+        "poll": 21,
+        "revents": 2,
+        "read": 2,
+        "waitpid": 1
+      },
+      "sha256": "466ea19d36ea10759512d331a953cbdbf8152ce582245c26b916f3828371f311"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 23,
+      "count": 315,
+      "counts": {
+        "clock": 105,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 100,
+        "poll": 100,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "d0044aeeb45aa8a31c5f7beec3b919cd533472f5f8925110167c85b86c641c2f"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 24,
+      "count": 14,
+      "counts": {
+        "clock": 3,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 2,
+        "waitpid": 1
+      },
+      "sha256": "431104bb2d831fa688efb40fef0cf949f5b0e2b9467a4b1173adc1e7b30d5766"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 25,
+      "count": 14,
+      "counts": {
+        "clock": 4,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "83738d450a5915bed81eb973b111770aaab2ac36f883c00336557ed517c55f66"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 26,
+      "count": 2015,
+      "counts": {
+        "clock": 1005,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1000,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "db11072f59d0eea6c34b05cc01499992b97592ee57fcb0e0a68cac00b637c7cd"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 27,
+      "count": 17,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "05f7be8195b4432930a91a6fa904cdac5267eab1522c01a66df7be66f0e3291d"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 28,
+      "count": 316,
+      "counts": {
+        "clock": 105,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 100,
+        "poll": 100,
+        "kill": 2,
+        "waitpid": 1
+      },
+      "sha256": "a582be2d5205f62312b9c04906a7916151094ece50818e258bc9e483dcd6201b"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 29,
+      "count": 15,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "waitpid": 1
+      },
+      "sha256": "f0f64ae2f79d4e7aec3a32cc694b749072fcb003b9a84da42d66ecd9368cce94"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 30,
+      "count": 315,
+      "counts": {
+        "clock": 105,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 100,
+        "poll": 100,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "54405ceb75f0a27ed12a5e094a00549f155ce811fc7365444e480c927eaffb7b"
+    },
+    {
+      "case": "timing_regression",
+      "attempt": 31,
+      "count": 3316,
+      "counts": {
+        "clock": 1106,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 100,
+        "poll": 1100,
+        "kill": 1,
+        "waitpid": 1001
+      },
+      "sha256": "7cabe10723c748c86dc4e84ab06a271ed2e10fb5ae70a82d44b2937571492e3e"
+    },
+    {
+      "case": "ordinary",
+      "attempt": 32,
+      "count": 21,
+      "counts": {
+        "clock": 6,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "read": 2,
+        "waitpid": 1
+      },
+      "sha256": "ac8113a043b7d0dcf23004a85f5cab7e931d5f2330ef1f5f65999ca5e2ef84af"
+    },
+    {
+      "case": "eof_live_leader",
+      "attempt": 33,
+      "count": 34,
+      "counts": {
+        "clock": 10,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 5,
+        "poll": 5,
+        "revents": 2,
+        "read": 2,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "6a6a163209d3026e3d3281a43a6b45c8cb85ac40babc7fb040c094b348e14a08"
+    },
+    {
+      "case": "exited_leader_open_stream",
+      "attempt": 34,
+      "count": 24,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "266ddc4089b8bb741ea2c463b834063f6eb78ad45dae0b210dc890e1533fdc44"
+    },
+    {
+      "case": "child_deadline",
+      "attempt": 35,
+      "count": 21,
+      "counts": {
+        "clock": 7,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 2,
+        "poll": 2,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "ec1ee250142e44cc81acb3b4105229c913167f8b19c2bee4c0d256380c906260"
+    },
+    {
+      "case": "exit_between_collection_and_reap",
+      "attempt": 36,
+      "count": 27,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "0006d77071e776111316da2a66ffc8c4f3d6c464478c7e15decdf41ac2057956"
+    },
+    {
+      "case": "group_esrch",
+      "attempt": 37,
+      "count": 24,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "17d3f169f9873eb98b51ef74ba4acd66368c63e401c25a6064503f707634673a"
+    },
+    {
+      "case": "group_failure_fallback_success_clean_leader",
+      "attempt": 38,
+      "count": 25,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 4,
+        "kill": 2,
+        "waitpid": 1
+      },
+      "sha256": "f8d07f41dc1095eb185ed63d20f112334e552d7573193ddd1ef76c1f6041857d"
+    },
+    {
+      "case": "group_failure_fallback_failure_clean_leader",
+      "attempt": 39,
+      "count": 25,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 4,
+        "kill": 2,
+        "waitpid": 1
+      },
+      "sha256": "ce8028151b96173dd6e9042037a37f051244e48417e181186d16f7393063c218"
+    },
+    {
+      "case": "group_failure_pending_reap",
+      "attempt": 40,
+      "count": 28,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 2,
+        "waitpid": 1
+      },
+      "sha256": "58be4e075b49e76d0eb09e75e750c85cad0d51092e48554fef72906036c9dae8"
+    },
+    {
+      "case": "ownership_unconfirmed",
+      "attempt": 41,
+      "count": 15,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "waitpid": 1
+      },
+      "sha256": "f0f64ae2f79d4e7aec3a32cc694b749072fcb003b9a84da42d66ecd9368cce94"
+    },
+    {
+      "case": "signal_success_pending_reap",
+      "attempt": 42,
+      "count": 3028,
+      "counts": {
+        "clock": 1010,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 1004,
+        "kill": 1,
+        "waitpid": 1001
+      },
+      "sha256": "42443b24c42aca7baa31cb087916162a4fcfe8ae7a0cc2193924f9068868108d"
+    },
+    {
+      "case": "native_wait_error",
+      "attempt": 43,
+      "count": 27,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "6e27d71cd57b44172a8844f55e7172f65e846d7cce6e31004fd70b218df83b39"
+    },
+    {
+      "case": "native_wait_etimedout",
+      "attempt": 44,
+      "count": 27,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "38a3d82a58c67258faf36a4a9d70ab79061f25cb35a22ca9676856531fe7b2c7"
+    },
+    {
+      "case": "final_eintr_local_deadline",
+      "attempt": 45,
+      "count": 3028,
+      "counts": {
+        "clock": 1010,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 1004,
+        "kill": 1,
+        "waitpid": 1001
+      },
+      "sha256": "6ac5fb9ccaecbc6e5753aef5bcabd502467a3f2ae9345f58010ed34ea885689f"
+    },
+    {
+      "case": "reap_clock_fault_with_status",
+      "attempt": 46,
+      "count": 21,
+      "counts": {
+        "clock": 6,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "read": 2,
+        "waitpid": 1
+      },
+      "sha256": "7201056da8f9f9755ca96736adfb04becf1d3f7b2dec7ea09f9601ce87b9203b"
+    },
+    {
+      "case": "reap_clock_fault_pending",
+      "attempt": 47,
+      "count": 27,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "7c91c4d54f9142dea0bd264b1ca0824fe3a4480a00a74bc0285574ef5ffdae67"
+    },
+    {
+      "case": "reap_clock_fault_native_error",
+      "attempt": 48,
+      "count": 27,
+      "counts": {
+        "clock": 9,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 4,
+        "poll": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "19fd206471519c90404ae6d0ce796be597a293a4ef070110c3be74cfecd1dce7"
+    },
+    {
+      "case": "collection_clock_fault",
+      "attempt": 49,
+      "count": 13,
+      "counts": {
+        "clock": 3,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "ed152917725e6af71a61d885a323c207630455afe8a6bc1cf7319f7bc941fdbc"
+    },
+    {
+      "case": "collection_arithmetic_fault",
+      "attempt": 50,
+      "count": 14,
+      "counts": {
+        "clock": 4,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "83738d450a5915bed81eb973b111770aaab2ac36f883c00336557ed517c55f66"
+    },
+    {
+      "case": "terminal_poll_error",
+      "attempt": 51,
+      "count": 17,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "4eb5fd692225877c12040c2e7e1fce137b972cad624fb6b12e3fe933aff9a57d"
+    },
+    {
+      "case": "both_stream_reads_fail",
+      "attempt": 52,
+      "count": 21,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "read": 2,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "700abf770e83ce0ed6040e6bbfe779ef503fc9f7a8962731c9c1418b5e9ef590"
+    },
+    {
+      "case": "both_stream_revents_fail",
+      "attempt": 53,
+      "count": 19,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "2c1c6bec1ea62b4ff38b3111f84da50a2a7a626bc30a91e3f5081b10f2970b80"
+    },
+    {
+      "case": "read_and_revents_fail",
+      "attempt": 54,
+      "count": 20,
+      "counts": {
+        "clock": 5,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "read": 1,
+        "kill": 1,
+        "waitpid": 1
+      },
+      "sha256": "0d8a419f0e90f2292013726be9aa002faba11fc3c4b6ca9aadf4f166f5b943fe"
+    },
+    {
+      "case": "read_priority_over_error_revents",
+      "attempt": 55,
+      "count": 21,
+      "counts": {
+        "clock": 6,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 1,
+        "poll": 1,
+        "revents": 2,
+        "read": 2,
+        "waitpid": 1
+      },
+      "sha256": "b591a951f29c8365694f387e1de3c5d4cde7f2594fe0ca51bf3f846b121021ad"
+    },
+    {
+      "case": "recovered_interruptions",
+      "attempt": 56,
+      "count": 41,
+      "counts": {
+        "clock": 13,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4,
+        "waitid": 3,
+        "poll": 6,
+        "revents": 4,
+        "read": 4,
+        "waitpid": 3
+      },
+      "sha256": "7b176596c81801afb9a7b12b65f69fdadb7befb63ef6be49dafef102360e005d"
+    },
+    {
+      "case": "spawn_failure",
+      "attempt": 57,
+      "count": 10,
+      "counts": {
+        "clock": 2,
+        "timebase": 1,
+        "pipe": 2,
+        "spawn": 1,
+        "close": 4
+      },
+      "sha256": "abe28d73386d4688534387fba212fbd42e5654784b0f9a8c67116a0a98301174"
+    }
+  ],
+  "baseline_source_sha256": {
+    "exec_control.c": "adc11fd2f3e1daf2638c752221b8da97a6a102aaab8fbcc1c42401a93ebb6da5",
+    "pw_extension_channel.h": "9452dbcd1a3505c62f70424673e391a70043e7f10b5ca1568c832aa795f14888",
+    "pw_probe_runner.c": "d5da6044a569c805538c0092b1a780b0208a2e1932822e9eea3c1cc138b45e0e",
+    "pw_probe_runner_abi.h": "94ebbebdd2768461f8102516617176600418929ce5ae1808440e213f3d951d4a",
+    "pw_profile_capture.h": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+    "pw_worker_evidence.h": "ab50768e3f5bd84a32525a73a748557998eca7a02a7818c11e37ef6dff392c65"
+  },
+  "regeneration": "Build exec_control.c with PW_EXEC_LEDGER_BASELINE=1 and the named pre-refactor source; canonicalize its complete boundary-call output with check_exec_evidence.canonical_ledger. Never replace this oracle from the candidate producer without an explicit policy review."
+}

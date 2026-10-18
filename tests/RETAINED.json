@@ -1256,6 +1256,90 @@
       "reason": "Sysctl-read investigation compatibility baseline: two cases passed against the unchanged signed app; native capacity observations retained separately.",
       "source": "503156f0693dd8a22acf633efccdc93e300f2ebc",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-abi-r1",
+      "run_id": "20261018T201559Z_919787bc",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/exec-evidence-abi-r2",
+      "run_id": "20261018T201612Z_d7359f73",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/exec-evidence-default-20261018",
+      "run_id": "20261018T202431Z_b7bfe1f3",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-extra-20261018",
+      "run_id": "20261018T204257Z_26f62044",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-native-r1",
+      "run_id": "20261018T201433Z_acbcf013",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-native-r2",
+      "run_id": "20261018T201446Z_8dc4b628",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-native-r3",
+      "run_id": "20261018T201508Z_b485a6ec",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-reader-controls-20261018",
+      "run_id": "20261018T201920Z_0d5cbe50",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-reader-rust-repair-20261018",
+      "run_id": "20261018T202004Z_e9d1b19c",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/exec-evidence-swift-readers-20261018",
+      "run_id": "20261018T202202Z_966fed0c",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-swift-shape-reviewed-20261018",
+      "run_id": "20261018T202308Z_45c665c0",
+      "reason": "Exec evidence implementation: retain development or signed acceptance results, including failures and replacement credits.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/exec-evidence-owning-suites-20261018",
+      "run_id": "20261018T204609Z_5655aba9",
+      "reason": "Exec evidence implementation: complete remaining runner/worker owning-suite opt-ins required for new Swift test-file coverage.",
+      "source": null,
+      "app_inventory": null
     }
   ]
 }

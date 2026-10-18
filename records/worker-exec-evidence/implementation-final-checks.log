@@ -1,0 +1,29 @@
+worker identity
+ok: worker identity 4a0d8ebf41f767dd07869a93082735442b750266b61acac8e0d1e624f6feeeb2; all generated copies current
+
+exit_code: 0
+
+architecture
+ok: architecture manifest: 5 graphs, 175 nodes, 176 edges; dot files, svg stamps and document regions current
+
+exit_code: 0
+
+limits
+ok: 83 limits, 15 questions, 43 matrix rows; documents current
+
+exit_code: 0
+
+contract versions
+ok: request schema 5, response schema 23, controller envelope 7; all generated copies current
+
+exit_code: 0
+
+diff whitespace
+
+
+exit_code: 0
+
+changed-document links, source delta and retention
+ok: local links resolve in 18 changed Markdown files; retention index valid
+ok: all accepted source hashes match; later changes are plans/records/retention only
+exit_code: 0

@@ -1209,6 +1209,208 @@ fn extension_account_issues(runner: &Value) -> Vec<Value> {
     issues
 }
 
+// Optional bounded exec evidence. Absence carries no negative cleanup fact.
+fn exec_observation_problem(attempt: &Value) -> Option<&'static str> {
+    let value = &attempt["exec_observation"];
+    if value.is_null() {
+        return None;
+    }
+    let i32_value = |v: &Value| {
+        v.as_i64()
+            .filter(|n| (i32::MIN as i64..=i32::MAX as i64).contains(n))
+    };
+    let positive = |v: &Value| v.is_null() || i32_value(v).is_some_and(|n| n > 0);
+    let pid = match i32_value(&attempt["child_pid"]) {
+        Some(pid) if pid > 0 => pid,
+        _ => return Some("exec observation requires positive native child PID"),
+    };
+    if !value.is_object()
+        || attempt["requested_kind"] != "exec"
+        || attempt["requested_action"] != "spawn"
+        || attempt["result_source"] != "worker"
+        || attempt["lifecycle"]["summary"] != "completed"
+    {
+        return Some("exec observation requires published worker exec");
+    }
+    let c = &value["collection"];
+    let k = &value["cleanup"];
+    let r = &value["reap"];
+    let out = &c["stdout"];
+    let err = &c["stderr"];
+    let wait = &r["last_wait"];
+    if ![c, k, r, out, err, wait].iter().all(|v| v.is_object())
+        || !c["leader_exit_observed"].is_boolean()
+    {
+        return Some("exec observation lacks typed sections");
+    }
+    for stream in [out, err] {
+        let read = &stream["read_errno"];
+        let events = &stream["poll_revents"];
+        let event_ok = events.is_null()
+            || i32_value(events)
+                .is_some_and(|n| n >= -32768 && n <= 32767 && n & 0x28 != 0 && n & 0x11 == 0);
+        if !stream["eof"].is_boolean()
+            || !positive(read)
+            || matches!(read.as_i64(), Some(4 | 35))
+            || !event_ok
+            || (stream["eof"] == true && (!read.is_null() || !events.is_null()))
+            || (!read.is_null() && !events.is_null())
+        {
+            return Some("invalid exec stream observation");
+        }
+    }
+    let wi = &c["waitid_errno"];
+    let po = &c["poll_errno"];
+    if !positive(wi) || !positive(po) || wi == 4 || po == 4 {
+        return Some("invalid exec collection errno");
+    }
+    for fault in [&c["clock_fault"], &r["clock_fault"]] {
+        if !fault.is_null()
+            && !fault
+                .as_u64()
+                .is_some_and(|n| n > 0 && n <= u32::MAX as u64)
+        {
+            return Some("invalid exec clock reason");
+        }
+    }
+    let stream_error = [out, err]
+        .iter()
+        .any(|s| !s["read_errno"].is_null() || !s["poll_revents"].is_null());
+    let errors = !wi.is_null() || !po.is_null() || stream_error;
+    if !wi.is_null() && c["leader_exit_observed"] == true {
+        return Some("waitid failure after already observed leader exit");
+    }
+    if (!wi.is_null() && (!po.is_null() || stream_error)) || (!po.is_null() && stream_error) {
+        return Some("incompatible exec collection branches");
+    }
+    let collection_stop = c["stop_reason"].as_str();
+    let fault = &c["clock_fault"];
+    let deadline = &c["deadline_kind"];
+    let collection_valid = match collection_stop {
+        Some("leader_exit_and_eof") => {
+            c["leader_exit_observed"] == true
+                && out["eof"] == true
+                && err["eof"] == true
+                && !errors
+                && fault.is_null()
+                && deadline.is_null()
+        }
+        Some("deadline") => {
+            matches!(deadline.as_str(), Some("child" | "plan")) && !errors && fault.is_null()
+        }
+        Some("observation_error") => errors && fault.is_null() && deadline.is_null(),
+        Some("clock_fault") => !fault.is_null() && !errors && deadline.is_null(),
+        _ => false,
+    };
+    if !collection_valid {
+        return Some("exec collection stop contradicts observations");
+    }
+    let signal_valid = |request: &Value, target: i64| {
+        request.is_object()
+            && i32_value(&request["target"]) == Some(target)
+            && i32_value(&request["signal"]) == Some(9)
+            && match i32_value(&request["rc"]) {
+                Some(-1) => i32_value(&request["errno"]).is_some_and(|n| n > 0),
+                Some(0) => request["errno"].is_null(),
+                _ => false,
+            }
+    };
+    let group = &k["group_request"];
+    let fallback = &k["leader_fallback"];
+    let state = k["state"].as_str();
+    let cleanup_valid = match state {
+        Some("not_requested") => {
+            collection_stop == Some("leader_exit_and_eof") && group.is_null() && fallback.is_null()
+        }
+        Some("ownership_unconfirmed") => !wi.is_null() && group.is_null() && fallback.is_null(),
+        Some("requested") => {
+            let expected = group["rc"] == -1 && group["errno"] != 3;
+            collection_stop != Some("leader_exit_and_eof")
+                && wi.is_null()
+                && signal_valid(group, -pid)
+                && expected == !fallback.is_null()
+                && (fallback.is_null() || signal_valid(fallback, pid))
+        }
+        _ => false,
+    };
+    if !cleanup_valid {
+        return Some("exec cleanup contradicts native call roles");
+    }
+    let rc = i32_value(&wait["rc"]);
+    let errno = &wait["errno"];
+    let status = &wait["status"];
+    if !matches!(rc, Some(-1 | 0)) && rc != Some(pid) {
+        return Some("invalid exec wait return");
+    }
+    if !(if rc == Some(-1) {
+        i32_value(errno).is_some_and(|n| n > 0)
+    } else {
+        errno.is_null()
+    }) || !(if rc == Some(pid) {
+        i32_value(status).is_some()
+    } else {
+        status.is_null()
+    }) {
+        return Some("exec wait errno or status lacks supporting return");
+    }
+    let (exit_code, signal) = match i32_value(status) {
+        Some(status) => {
+            let bits = status & 0x7f;
+            (
+                if bits == 0 { (status >> 8) & 0xff } else { -1 },
+                if bits != 0 && bits != 127 { bits } else { 0 },
+            )
+        }
+        None => (-1, 0),
+    };
+    if i32_value(&attempt["child_exit_code"]) != Some(exit_code)
+        || i32_value(&attempt["child_term_signal"]) != Some(signal)
+    {
+        return Some("exec legacy leader status disagrees with confirmed wait");
+    }
+    let failed_group = group["rc"] == -1 && group["errno"] != 3;
+    let reap_valid = match r["stop_reason"].as_str() {
+        Some("reaped") => rc == Some(pid),
+        Some("wait_error") => rc == Some(-1) && errno != 4,
+        Some(
+            stop @ ("ownership_unconfirmed" | "group_request_failed" | "clock_fault" | "deadline"),
+        ) => {
+            (rc == Some(0) || (rc == Some(-1) && errno == 4))
+                && match stop {
+                    "ownership_unconfirmed" => state == Some("ownership_unconfirmed"),
+                    "group_request_failed" => {
+                        state != Some("ownership_unconfirmed") && failed_group
+                    }
+                    _ => {
+                        state != Some("ownership_unconfirmed")
+                            && !failed_group
+                            && ((stop == "clock_fault") == !r["clock_fault"].is_null())
+                    }
+                }
+        }
+        _ => false,
+    };
+    if !reap_valid {
+        return Some("exec reap stop contradicts final wait or branch priority");
+    }
+    None
+}
+
+fn exec_observation_issues(runner: &Value) -> Vec<Value> {
+    if runner["reporting_failure"].is_object() {
+        return vec![];
+    }
+    runner["steps"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|step| {
+            exec_observation_problem(&step["attempt"])
+                .map(|detail| integrity_issue("exec_observation", detail.into()))
+        })
+        .collect()
+}
+
 fn phase_collection_issues(runner: &Value) -> Vec<Value> {
     if runner["reporting_failure"].is_object() {
         return vec![]; // Degraded replies preserve conflicting observations.
@@ -1490,6 +1692,7 @@ pub(crate) fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDi
     if let Some(runner) = runner {
         let mut native_issues = extension_account_issues(runner);
         native_issues.extend(phase_collection_issues(runner));
+        native_issues.extend(exec_observation_issues(runner));
         if !native_issues.is_empty() {
             projection.disposition = "withheld";
             projection.cause = Some("unknown");
@@ -1513,6 +1716,40 @@ mod tests {
 
     fn diagnostics(runner: &Value) -> RunnerExecutionDiagnostics {
         execution_diagnostics(Some(runner))
+    }
+
+    #[test]
+    fn exec_observations_preserve_independent_facts_and_refuse_malformed_combinations() {
+        let cases: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/contract/exec_observation.json"
+        ))
+        .unwrap();
+        for section in ["valid", "invalid"] {
+            for case in cases[section].as_array().unwrap() {
+                let attempt = &case["attempt"];
+                let issue = exec_observation_problem(attempt);
+                assert_eq!(
+                    issue.is_none(),
+                    section == "valid",
+                    "{}: {:?}",
+                    case["name"],
+                    issue
+                );
+                let mut runner = worker("ok", None);
+                runner["steps"] = json!([{ "step_id": "exec", "attempt": attempt.clone() }]);
+                let issues = exec_observation_issues(&runner);
+                assert_eq!(issues.is_empty(), section == "valid", "{}", case["name"]);
+                if section == "invalid" {
+                    let diagnostics = execution_diagnostics(Some(&runner));
+                    assert_eq!(diagnostics.disposition_integrity, Some("invalid"));
+                    assert_eq!(diagnostics.process_disposition, "withheld");
+                }
+                // A degraded reply retains contradictory facts under its existing
+                // rules; the new object cannot recover comparison claims.
+                runner["reporting_failure"] = json!({"origin":"runner_host"});
+                assert!(exec_observation_issues(&runner).is_empty());
+            }
+        }
     }
 
     #[test]

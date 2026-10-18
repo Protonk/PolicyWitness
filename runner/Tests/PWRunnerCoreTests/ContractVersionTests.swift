@@ -198,6 +198,7 @@ func replyShapeDocuments() throws -> [[String: Any]] {
         documents.append(try shapeObject(pwRunnerEncodeJSON(reply)))
     }
     documents += try extensionShapeDocuments()
+    documents += try execObservationShapeDocuments()
     return documents
 }
 

@@ -47,6 +47,19 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### Exec reader publication and absence mutations
+
+- **Case:** `runner_unit/exec_reader_mutations`
+- **Purpose:** Bypass the completed-slot gate or invent an exec account when
+  metadata is absent in disposable Swift host sources. Unchanged reader
+  assertions must reject exposed unpublished facts and invented cleanup absence.
+- **Opt-in reason:** Three isolated Swift package compilations. Required when
+  changing exec payload publication or compatible absence handling.
+- **Equipment:** Swift and clang; no signed app or service installation.
+- **Artifacts:** Exact source copies/hashes, native fixture, command logs and
+  structured baseline/rejection receipts naming each failed assertion.
+- **Details:** [Exec reader mutations](suites/runner_unit/README.md#exec-reader-mutations).
+
 ### Confirmed-reap acknowledgement mutation
 
 - **Case:** `runner_unit/reaped_ack_mutation`

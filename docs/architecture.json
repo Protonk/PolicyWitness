@@ -430,7 +430,7 @@
             "Started by": "the worker",
             "Sandboxed": "inherit the worker's sandbox",
             "Native sandbox API": "none of PolicyWitness's",
-            "Lifetime": "the worker's waits are bounded by the exec deadline and the attempt budget; a descendant that leaves the child's process group is not contained"
+            "Lifetime": "the worker bounds collection and leader reap; ordinary completion and worker death can leave same-group descendants alive; escaped descendants are not contained"
           },
           "sources": [
             {
@@ -452,6 +452,21 @@
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+              "symbol": "closed_streams_leader_exit",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/run.sh",
+              "symbol": "worker_dies_during_exec",
+              "form": "test"
+            },
+            {
+              "path": "tests/fixtures/worker_lifecycle/exec_control.c",
+              "symbol": "main",
+              "form": "control"
             }
           ]
         },
@@ -8389,10 +8404,10 @@
             "Inventory ID": "S36a",
             "Acquired by": "attempt_exec_spawn: posix_spawn",
             "When": "After apply within an attempt",
-            "Held across": "Attempt normally; unconfirmed reap may outlive it",
+            "Held across": "Attempt normally; unconfirmed reap or worker death can leave child alive",
             "Release / teardown action": "Wait observation, conditional group kill, bounded nonblocking reap",
             "Authority": "Execute requested target under inherited sandbox",
-            "Sandbox-gated": "IC/CLI observed spawn/exit; source-only failure lifetimes",
+            "Sandbox-gated": "Native controls retain observation/request/reap facts; CLI controls independently observe leader and descendant lifetimes",
             "Reaches exec children": "This is the child; it can spawn descendants",
             "Role": "O"
           },
@@ -8412,6 +8427,21 @@
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+              "symbol": "closed_streams_leader_exit",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/run.sh",
+              "symbol": "worker_dies_during_exec",
+              "form": "test"
+            },
+            {
+              "path": "tests/fixtures/worker_lifecycle/exec_control.c",
+              "symbol": "main",
+              "form": "control"
             }
           ]
         },
@@ -8424,9 +8454,9 @@
             "Acquired by": "Exec spawn attributes SETPGROUP, pgroup 0",
             "When": "After apply within an attempt",
             "Held across": "As long as members remain, possibly beyond attempt/worker",
-            "Release / teardown action": "Conditional process-group kill request",
+            "Release / teardown action": "No request on ordinary completion; exceptional group kill while leader ownership is known; no group-absence claim",
             "Authority": "Cleanup addressing for members that remain",
-            "Sandbox-gated": "Source-only; lifecycle cases inspected, not rerun",
+            "Sandbox-gated": "Native request-result controls; CLI peers establish same-group survivors after ordinary completion and worker death",
             "Reaches exec children": "Yes to descendants unless they leave group",
             "Role": "P"
           },
@@ -8434,6 +8464,10 @@
             {
               "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
               "symbol": "exec_resources_acquire"
+            },
+            {
+              "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+              "symbol": "attempt_exec_spawn"
             }
           ],
           "checks": [
@@ -8446,6 +8480,21 @@
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "contaminated_worker",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/closed_streams_leader_exit.sh",
+              "symbol": "closed_streams_leader_exit",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_exec_lifecycle/run.sh",
+              "symbol": "worker_dies_during_exec",
+              "form": "test"
+            },
+            {
+              "path": "tests/fixtures/worker_lifecycle/exec_control.c",
+              "symbol": "main",
+              "form": "control"
             }
           ]
         },

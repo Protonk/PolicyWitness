@@ -172,6 +172,18 @@ under `attempt.fresh_read`; `open_read` remains open-only.
 not the outcome, says whether an operation began. Missing subprocess records or lifecycle fields establish neither
 successful execution nor cleanup.
 
+For a completed `exec/spawn` result after successful spawn,
+`attempt.exec_observation` carries the pre-cleanup collection snapshot, actual
+group/fallback termination requests and final nonblocking leader wait. The
+worker records these in reserved slot storage, sets payload validity only after
+assembly, and publishes them through the existing slot completion release/acquire
+boundary. The decoder never salvages an unpublished payload. Malformed present
+payloads use the reporting-integrity failure path; absent metadata is compatible
+and establishes no cleanup fact. Legacy aggregate attempt status and spawned-child
+comparison precedence remain separate from this evidence. The
+[exec field account](../docs/PolicyWitness.md#structured-exec-observations) defines
+all conditional fields and residual descendant lifetime limits.
+
 Readers and encoders require the current response version. If ordinary reply
 encoding fails, the service returns `runner_reporting_failed`, preserving
 available observations and withholding comparisons. If that also fails,

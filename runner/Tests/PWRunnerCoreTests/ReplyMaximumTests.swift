@@ -7,7 +7,7 @@ import Foundation
 // per byte), the largest worker diagnostic, and the largest slash-heavy
 // compiled-profile receipt. The runner client's retention budget is derived from
 // this number, and the live max-target workload must stay under it. Separately
-// encoded spawn-failure, extension and fresh-read components are added without subtracting
+// encoded spawn-failure, extension, fresh-read and exec-observation components are added without subtracting
 // ordinary fields they replace. This union is deliberately not a reachable reply.
 //
 // Every string key the fixture carries must be classified below as fixed
@@ -43,7 +43,7 @@ private let stringPolicy: [String: Int?] = [
     "original_normalized_outcome": nil, "unavailable_reason": nil,
     "detail": nil, "observations": nil, "rule": nil, "original_error": 8191,
     "extension_class": nil, "preparation_status": nil, "issuance_status": nil, "delivery_status": nil,
-    "cleanup_stage": nil, "stop": nil,
+    "cleanup_stage": nil, "stop": nil, "stop_reason": nil, "deadline_kind": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "phase_id": requestLabelMaxBytes, "action_ids": PWShmLayout.stepIdMax - 1,
@@ -230,6 +230,56 @@ private func extensionReplyAllowance() throws -> Int {
     return native.count + PWShmLayout.maxSteps * freshMember.count + overrideMember.count
 }
 
+/// Every optional exec member and widest native scalars, with the longest
+/// permitted vocabulary values. Mutually exclusive observations intentionally
+/// coexist to upper-bound representation; this is not a reachable transcript.
+/// Object braces overcount the comma joining the member into an attempt.
+private func execReplyAllowance() throws -> Int {
+    let stream = PWExecStreamObservation(eof: false, read_errno: Int32.max, poll_revents: Int32.max)
+    let value = PWExecObservation(
+        collection: PWExecCollectionObservation(stop_reason: "leader_exit_and_eof", leader_exit_observed: false,
+            stdout: stream, stderr: stream, deadline_kind: "child", waitid_errno: Int32.max,
+            poll_errno: Int32.max, clock_fault: UInt32.max),
+        cleanup: PWExecCleanupObservation(state: "ownership_unconfirmed",
+            group_request: PWExecSignalRequest(target: Int32.min, signal: 9, rc: -1, errno: Int32.max),
+            leader_fallback: PWExecSignalRequest(target: Int32.max, signal: 9, rc: -1, errno: Int32.max)),
+        reap: PWExecReapObservation(stop_reason: "ownership_unconfirmed",
+            last_wait: PWExecWaitObservation(rc: Int32.max, errno: Int32.max, status: Int32.min),
+            clock_fault: UInt32.max))
+    return PWShmLayout.maxSteps * (try pwRunnerEncodeJSON(["exec_observation": value])).count
+}
+
+/// Valid evidence on all 256 exec slots goes through the full ordinary reply
+/// decoder and encoder as well as the union size account above. No native
+/// transcript can contain every optional branch at once; this variant retains
+/// two collection errors, failed group/fallback calls and wait/clock faults.
+private func encodeAllExecReply(_ original: PWRunnerRunResult) throws -> Data {
+    var reply = original
+    for index in reply.steps.indices {
+        var attempt = reply.steps[index].attempt
+        attempt.requested_kind = "exec"; attempt.requested_action = "spawn"
+        attempt.child_pid = Int(Int32.max); attempt.child_exit_code = -1; attempt.child_term_signal = 0
+        attempt.rc = -1; attempt.errno = Int(Int32.max); attempt.outcome = "exec_failed"
+        attempt.exec_observation = PWExecObservation(
+            collection: PWExecCollectionObservation(stop_reason: "observation_error", leader_exit_observed: false,
+                stdout: PWExecStreamObservation(eof: false, read_errno: Int32.max),
+                stderr: PWExecStreamObservation(eof: false, read_errno: Int32.max)),
+            cleanup: PWExecCleanupObservation(state: "requested",
+                group_request: PWExecSignalRequest(target: -Int32.max, signal: 9, rc: -1, errno: Int32.max),
+                leader_fallback: PWExecSignalRequest(target: Int32.max, signal: 9, rc: -1, errno: Int32.max)),
+            reap: PWExecReapObservation(stop_reason: "wait_error",
+                last_wait: PWExecWaitObservation(rc: -1, errno: Int32.max), clock_fault: UInt32.max))
+        try expectTrue(attempt.execObservationEvidenceProblem() == nil)
+        reply.steps[index].attempt = attempt
+        reply.steps[index].comparison?.observation_basis = "spawned_child"
+        reply.steps[index].comparison?.operation_relation = "different"
+    }
+    let encoded = try pwRunnerEncodeJSON(reply)
+    let roundTrip = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+    try expectEqual(roundTrip.steps.filter { $0.attempt.exec_observation != nil }.count, PWShmLayout.maxSteps)
+    return encoded
+}
+
 /// Ordinary full-reply encoding plus conservative, separately encoded additions.
 func maximalReplyEncodedSize() throws -> Int {
     let fixture = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
@@ -299,7 +349,10 @@ func maximalReplyEncodedSize() throws -> Int {
     // Remove one of the member object's two braces: inserting the member in
     // a nonempty phase adds one comma instead. All key/value bytes stay counted.
     let spawnAllowance = PWRunnerPhase.maximumCount * (try pwRunnerEncodeJSON(spawn).count - 1)
-    return try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + spawnAllowance
+    let bound = try pwRunnerEncodeJSON(decoded).count + extensionReplyAllowance() + spawnAllowance + execReplyAllowance()
+    let execBytes = try encodeAllExecReply(decoded)
+    try expectTrue(execBytes.count <= bound, "every-slot valid exec reply exceeds conservative representation bound")
+    return bound
 }
 
 private struct Manifest: Decodable {

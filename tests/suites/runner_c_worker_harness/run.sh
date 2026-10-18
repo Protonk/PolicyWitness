@@ -809,13 +809,12 @@ fi
 
 if test_selected exec_control_states; then
   test_begin runner_c_worker_harness exec_control_states
-  test_step build "compile production exec control flow with deterministic native-call equipment"
-  CONTROL="${PW_TEST_ARTIFACTS}/exec-control"
-  test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build_exec_control.sh" "${CONTROL}"
-  if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
-    test_pass "absolute budgets, independent EOF/exit, clock phases and cleanup evidence"
+  test_step control "compare independent native call ledger and reject six exec evidence mutations"
+  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_exec_evidence.py" \
+      "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "native call policy preserved; collection, cleanup requests and reap independently recorded; six mutations rejected"
   else
-    test_fail "exec control regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+    test_fail "exec evidence control regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
   fi
 fi
 

@@ -843,7 +843,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 52,419,240 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 52,595,368 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -1071,14 +1071,17 @@ observations are diagnostic; this reply certifies no per-step order. If serializ
 Optional subprocess objects may be omitted or null. A null `errno` on a step
 requires key presence. Outcome mappings below use execution evidence.
 
-The `exec` attempt kind adds five optional per-step fields under
+The `exec` attempt kind adds optional per-step fields under
 `steps[].attempt` — `child_pid`, `child_exit_code`,
-`child_term_signal`, `stdout`, `stderr` — populated only for
+`child_term_signal`, `stdout`, `stderr`, `exec_observation` — populated only for
 `("exec", "spawn")` attempts. These are optional fields;
 consumers that branch on `attempt.outcome == "exec_failed"` see the
 three child fields exactly when an exec attempt's slot was filled, and
 `stdout`/`stderr` only when that stream produced bytes. Other attempt kinds omit
-these keys.
+these keys. `exec_observation` is available only for a completed worker result
+whose spawn produced a child. Its absence or null means structured exec evidence
+is unavailable, including valid replies from producers without this field; it
+establishes no cleanup, EOF or reap fact. See [Structured exec observations](#structured-exec-observations).
 
 ### Top-level fields
 
@@ -1438,7 +1441,7 @@ defines producer and reader validation.
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, filter_kind, filter_value, filter_type_id, errno, error, result_source, native_rc, missing_reason?, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, fresh_read?, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr? }`
+- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, fresh_read?, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr?, exec_observation? }`
 - `steps[].comparison`: `{ observation, observation_basis, operation_relation, target_relation, order, limitations }` — see [Top-level fields](#top-level-fields) and [Reading a comparison record](#reading-a-comparison-record).
 
 Notes:
@@ -1890,9 +1893,9 @@ combinations:
 
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
-  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are permission-shaped failures (`observation: permission_failure`) whose cause the record does not assign. A helper non-zero exit with `child_pid>0` still establishes successful spawning (`observation: succeeded`, basis `spawned_child`); the child's own result is in `rc` and `child_exit_code`. |
-  | `child_exit_code` | child clean-exited | `-1` — signaled, no child ran, or final status unconfirmed | |
-  | `child_term_signal` | child killed by a signal | `0` — clean-exited, no child ran, or final status unconfirmed | |
+  | `child_pid` | spawn produced a child; user-code entry is not established | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are permission-shaped failures (`observation: permission_failure`) whose cause the record does not assign. A helper non-zero exit with `child_pid>0` still establishes successful spawning (`observation: succeeded`, basis `spawned_child`); leader status is in `child_exit_code`/`child_term_signal`, while `rc` retains aggregate attempt status. |
+  | `child_exit_code` | confirmed reap reported natural leader exit | `-1` — signaled, no child ran, or final status unconfirmed | |
+  | `child_term_signal` | confirmed reap reported a signal | `0` — clean-exited, no child ran, or final status unconfirmed | |
   | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | |
   | `rc` | always populated | (n/a) | Helper's exit code after successful observation; `-1` on spawn, deadline, observation or cleanup failure. Consult `child_exit_code` for the leader's independently observed exit. |
   | `outcome` | always populated | (n/a) | `"ok"` when spawn and observation completed successfully and the leader exited 0; `"exec_failed"` also covers deadline and cleanup errors. Neither a successful leader reap nor pipe EOF proves descendant cleanup. |
@@ -1920,6 +1923,49 @@ Other attempt combinations refuse the whole specimen before worker or validator
 creation. A non-null `args` field is accepted only for `exec/spawn`, including
 when the array is empty. Query and attempt scopes can differ; recognized queries with
 unavailable predictions still permit supported attempts.
+
+### Structured exec observations
+
+`steps[].attempt.exec_observation` separates the worker's collection snapshot,
+termination requests and final leader wait. Slot publication and
+`lifecycle.summary: completed` mean the result became immutable, including a
+failed result. They do not mean that processes or descendants finished.
+The added object does not change `rc`, `errno`, `outcome`, the run disposition,
+or the comparison's `spawned_child` meaning.
+
+The object is optional. A present object requires all three sections below.
+Pre-spawn failures, synthetic results and non-exec attempts omit it. A worker
+that dies before slot publication supplies none of it, even if it wrote a PID
+or payload bytes. Missing or null metadata remains unknown.
+
+| Section | Fields and meanings |
+| --- | --- |
+| `collection` | `stop_reason` is `leader_exit_and_eof`, `deadline`, `observation_error` or `clock_fault`. `leader_exit_observed` records `waitid(... WNOWAIT)` observing the leader. Required `stdout.eof` and `stderr.eof` record reads returning zero. This snapshot precedes all cleanup and final reap; later observations cannot revise it. |
+| Collection details | A deadline has `deadline_kind: child` or `plan`. Optional `waitid_errno`, `poll_errno`, and each stream's `read_errno` retain terminal native errors; recovered interruptions are excluded. Each stream's optional `poll_revents` retains the actual error flag mask, rather than a fabricated native errno. Optional `clock_fault` is a nonzero numeric worker time-reason code, not errno. Both streams' failures can coexist. |
+| `cleanup` | `state` is `not_requested`, `ownership_unconfirmed` or `requested`. Only `requested` has `group_request: {target, signal, rc, errno?}`. The target is the actual negative process-group ID. A failed group request other than `ESRCH` has a separate `leader_fallback` with the actual positive leader target and independent return. Successful calls omit errno. `ESRCH` remains a failed native request, distinct from return zero. |
+| `reap` | `stop_reason` is `reaped`, `wait_error`, `ownership_unconfirmed`, `group_request_failed`, `clock_fault` or `deadline`. Required `last_wait` retains the final `waitpid(... WNOHANG)` return: leader PID, zero or -1; errno is present only for -1. Raw `status` is present only when that call returned the leader. Optional `clock_fault` can coexist with a successful reap or native error. |
+
+The existing child exit/signal fields decode that same confirmed raw status.
+Pending or failed waits have no status. A local reap-grace expiry has no native
+wait errno unless the last call itself failed; a native `ETIMEDOUT` is instead a
+`wait_error`. A final `EINTR` can coexist with a subsequent local stop. Clock
+reason codes are bounded nonzero integers; an unfamiliar code remains a raw
+reason without an inferred interpretation.
+
+A successful signal is a termination request, not an observed exit. Neither
+signal return, `ESRCH`, leader status, stream EOF nor an omitted fallback proves
+group absence or complete descendant cleanup. The cleanup section covers
+process-termination calls only; it is not an account of descriptor closes or
+spawn-handle destruction. Observed leader signal status does not identify its
+sender. A missing fallback in a present record means this path made no fallback
+call; absent metadata makes no such negative claim.
+
+Ordinary collection ends at leader exit plus both EOFs and requests no
+termination. Same-group descendants can remain alive after closing their
+streams, including during later steps and after worker exit. Worker death can
+also leave descendants alive. Exceptional cleanup targets the owned group;
+descendants that leave it are not contained. The host supervises the worker,
+not the exec descendants.
 
 ## Operating
 

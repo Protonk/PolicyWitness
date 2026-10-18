@@ -149,6 +149,35 @@ int main(void) {
     printf("offsetof.pw_shm_slot_t.access_gid=%zu\n", offsetof(pw_shm_slot_t, access_gid));
     printf("offsetof.pw_shm_slot_t.access_bytes=%zu\n", offsetof(pw_shm_slot_t, access_bytes));
 
+    printf("offsetof.pw_shm_slot_t.exec_valid=%zu\n", offsetof(pw_shm_slot_t, exec_valid));
+    printf("offsetof.pw_shm_slot_t.exec_collection_stop=%zu\n", offsetof(pw_shm_slot_t, exec_collection_stop));
+    printf("offsetof.pw_shm_slot_t.exec_leader_exit_observed=%zu\n", offsetof(pw_shm_slot_t, exec_leader_exit_observed));
+    printf("offsetof.pw_shm_slot_t.exec_stdout_eof=%zu\n", offsetof(pw_shm_slot_t, exec_stdout_eof));
+    printf("offsetof.pw_shm_slot_t.exec_stderr_eof=%zu\n", offsetof(pw_shm_slot_t, exec_stderr_eof));
+    printf("offsetof.pw_shm_slot_t.exec_deadline_kind=%zu\n", offsetof(pw_shm_slot_t, exec_deadline_kind));
+    printf("offsetof.pw_shm_slot_t.exec_waitid_errno=%zu\n", offsetof(pw_shm_slot_t, exec_waitid_errno));
+    printf("offsetof.pw_shm_slot_t.exec_poll_errno=%zu\n", offsetof(pw_shm_slot_t, exec_poll_errno));
+    printf("offsetof.pw_shm_slot_t.exec_stdout_read_errno=%zu\n", offsetof(pw_shm_slot_t, exec_stdout_read_errno));
+    printf("offsetof.pw_shm_slot_t.exec_stderr_read_errno=%zu\n", offsetof(pw_shm_slot_t, exec_stderr_read_errno));
+    printf("offsetof.pw_shm_slot_t.exec_stdout_poll_revents=%zu\n", offsetof(pw_shm_slot_t, exec_stdout_poll_revents));
+    printf("offsetof.pw_shm_slot_t.exec_stderr_poll_revents=%zu\n", offsetof(pw_shm_slot_t, exec_stderr_poll_revents));
+    printf("offsetof.pw_shm_slot_t.exec_collection_clock_fault=%zu\n", offsetof(pw_shm_slot_t, exec_collection_clock_fault));
+    printf("offsetof.pw_shm_slot_t.exec_cleanup_state=%zu\n", offsetof(pw_shm_slot_t, exec_cleanup_state));
+    printf("offsetof.pw_shm_slot_t.exec_group_target=%zu\n", offsetof(pw_shm_slot_t, exec_group_target));
+    printf("offsetof.pw_shm_slot_t.exec_group_signal=%zu\n", offsetof(pw_shm_slot_t, exec_group_signal));
+    printf("offsetof.pw_shm_slot_t.exec_group_rc=%zu\n", offsetof(pw_shm_slot_t, exec_group_rc));
+    printf("offsetof.pw_shm_slot_t.exec_group_errno=%zu\n", offsetof(pw_shm_slot_t, exec_group_errno));
+    printf("offsetof.pw_shm_slot_t.exec_fallback_present=%zu\n", offsetof(pw_shm_slot_t, exec_fallback_present));
+    printf("offsetof.pw_shm_slot_t.exec_fallback_target=%zu\n", offsetof(pw_shm_slot_t, exec_fallback_target));
+    printf("offsetof.pw_shm_slot_t.exec_fallback_signal=%zu\n", offsetof(pw_shm_slot_t, exec_fallback_signal));
+    printf("offsetof.pw_shm_slot_t.exec_fallback_rc=%zu\n", offsetof(pw_shm_slot_t, exec_fallback_rc));
+    printf("offsetof.pw_shm_slot_t.exec_fallback_errno=%zu\n", offsetof(pw_shm_slot_t, exec_fallback_errno));
+    printf("offsetof.pw_shm_slot_t.exec_reap_stop=%zu\n", offsetof(pw_shm_slot_t, exec_reap_stop));
+    printf("offsetof.pw_shm_slot_t.exec_reap_wait_rc=%zu\n", offsetof(pw_shm_slot_t, exec_reap_wait_rc));
+    printf("offsetof.pw_shm_slot_t.exec_reap_wait_errno=%zu\n", offsetof(pw_shm_slot_t, exec_reap_wait_errno));
+    printf("offsetof.pw_shm_slot_t.exec_reap_status=%zu\n", offsetof(pw_shm_slot_t, exec_reap_status));
+    printf("offsetof.pw_shm_slot_t.exec_reap_clock_fault=%zu\n", offsetof(pw_shm_slot_t, exec_reap_clock_fault));
+
     /* Param field offsets. */
     printf("offsetof.pw_shm_param_t.key=%zu\n",   offsetof(pw_shm_param_t, key));
     printf("offsetof.pw_shm_param_t.value=%zu\n", offsetof(pw_shm_param_t, value));

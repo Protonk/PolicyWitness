@@ -898,6 +898,8 @@ func buildAttemptResult(
         stderr: s.childStderr
     )
     result.fresh_read = s.freshRead
+    result.exec_observation = s.execObservation
+    result.execObservationDecodeProblem = s.execObservationProblem
     return result
 }
 
