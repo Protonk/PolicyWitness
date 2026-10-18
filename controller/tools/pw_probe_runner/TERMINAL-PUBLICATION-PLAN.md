@@ -3,27 +3,28 @@
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Findings: WA-04 and WA-08 in the
 [initial audit](../../../records/worker-pass6/initial-report.md).
-State: ready for user design decision. Coordinated lifecycle and token-cleanup
-investigations received independent source review and coordinator synthesis.
-The user adopted phase qualification through the established collection/release/
-acknowledgement chain and unbroken ownership. The runtime refactor remains
-unapproved; implementation is not started.
+State: investigation complete; design adopted. Coordinated lifecycle and
+token-cleanup investigations received independent source review and coordinator
+synthesis. The [terminal-exit implementation plan](TERMINAL-EXIT-REFACTOR-PLAN.md)
+carries the adopted design and phase qualification rule. Production
+implementation is not started. The starting questions below retain the
+investigation's scope.
 
 ## Returned investigation
 
-- [Decision and recommended implementation boundary](../../../records/worker-terminal-lifetime/decision.md).
+- [Adopted decision and implementation boundary](../../../records/worker-terminal-lifetime/decision.md).
 - [Lifecycle source trace and bounded experiment](../../../records/worker-terminal-lifetime/lifecycle-investigation.md).
 - [Ordinary token cleanup and alternatives](../../../records/worker-terminal-lifetime/token-cleanup-investigation.md).
 
-The recommendation is to replace post-publication waiting with native exit,
-pair it with final acknowledgement reconciliation after confirmed reap, and
-cover ordinary accepted-token erasure while preserving each departure's
+The adopted design replaces post-publication waiting with native exit,
+pairs it with final acknowledgement reconciliation after confirmed reap, and
+covers ordinary accepted-token erasure while preserving each departure's
 publication and exit meaning. A worker refusing during validator collection
 may now exit before remaining queries. Actual records survive as unqualified
 native observations when the phase chain is absent; no per-query liveness
 reconstruction or active validator cancellation is required for this design.
 Preserve the existing guards against late release and invented ordering.
-The user has not yet approved this refactor.
+Implementation and acceptance follow the separate implementation plan.
 
 ## Starting point
 

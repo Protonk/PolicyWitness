@@ -1,15 +1,16 @@
-# Worker terminal lifetime: proposed decision
+# Worker terminal lifetime: adopted decision
 
-Status: phase qualification rule adopted; terminal-lifetime refactor decision
-pending. Production code is unchanged. This record belongs to the
-[terminal-publication investigation](../../controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md).
+Status: terminal-lifetime refactor and phase qualification rule adopted.
+Production code is unchanged. This record belongs to the
+[terminal-publication investigation](../../controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md)
+and its [implementation plan](../../controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md).
 The source baseline is `51487f74da15de196d44c4ac571c7b322a2fe83b`.
 
-## Recommendation
+## Adopted design
 
-Authorize a narrow refactor in which a worker reaching an existing terminal
-publication erases its accepted token bytes, publishes the same terminal
-evidence, and calls `_exit(0)` without waiting for host permission. Include the
+A worker reaching an existing terminal publication will erase its accepted
+token bytes, publish the same terminal evidence, and call `_exit(0)` without
+waiting for host permission. Include the
 host acknowledgement reconciliation needed for a worker that publishes and
 exits between polling observations. Cover ordinary token cleanup in the same
 implementation, while preserving the distinct meanings of each departure path.
@@ -109,7 +110,7 @@ Withhold release/order when the required chain is absent. The existing
 [death-during-collection control](../../runner/Tests/PWRunnerCoreTests/OrderingTests.swift)
 already avoids assuming a particular native answer for a dead target.
 
-This tradeoff is part of the proposed decision. It should be covered explicitly
+This tradeoff is part of the adopted decision. It should be covered explicitly
 in implementation validation, rather than describing the refactor as
 observationally identical.
 
@@ -148,7 +149,7 @@ native wait subsequently reporting `ECHILD`; no cleanup kill or watchdog fired.
 The initial sandboxed build failed on Swift module-cache access. The same command
 passed after the prescribed escalated retry; both attempts' logs are retained.
 
-After approval, implementation acceptance needs production-source and signed-app
+Implementation acceptance needs production-source and signed-app
 controls for normal completion, failures, restrictive profiles, final empty
 phases, refusal during collection, late publication after deadlines, ownership
 loss and ordinary token erasure. Host-loss controls need an independent cleanup
@@ -160,10 +161,12 @@ native answer for an exited target.
 The required `witness_contract/order_barrier_mutations` control applies because
 ordering eligibility and the worker wait paths are affected.
 
-Existing wire fields supply the phase qualification condition; no new per-query
-liveness field is proposed. Keep raw field meanings intact, and apply the wire
-contract's version rules if making the qualification rule explicit changes a
-reader requirement. Field-shape stability alone does not settle that question.
+Existing wire fields and the ordinary-reply `query_first` predicate already
+supply the phase qualification condition. Preserve their meanings and reading
+rules; no new field, classifier or version bump is part of the implementation.
+On reporting-failure replies, retained ordering remains diagnostic and absent
+comparisons must not be reconstructed into qualification. The implementation
+plan specifies these producer/reader boundaries and their regression controls.
 Regenerate worker identity, update lifecycle/resource documentation through its
 owning inputs, and review affected producers and independent readers during
 implementation. These are future acceptance requirements, not completed checks.
