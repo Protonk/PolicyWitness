@@ -1,0 +1,31 @@
+[
+  {
+    "url": "https://developer.apple.com/forums/thread/678819",
+    "title": "On File System Permissions",
+    "publisher": "Apple Developer Technical Support",
+    "reviewed_on": "2026-10-18",
+    "page_revision": "2026-09-18",
+    "scope": "Platform guidance: privacy mediation, responsible-code attribution, persistent/process-specific grants and test-state disturbance; not an observation of the PolicyWitness launch chain."
+  },
+  {
+    "url": "https://support.apple.com/guide/security/controlling-app-access-to-files-secddd1d86a6/web",
+    "title": "Controlling app access to files in macOS",
+    "publisher": "Apple Platform Security",
+    "reviewed_on": "2026-10-18",
+    "scope": "General consent protection for named file locations; not a permission census or diagnosis of retained stalls."
+  },
+  {
+    "url": "https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/access.2.html",
+    "title": "access(2)",
+    "publisher": "Apple Documentation Archive",
+    "reviewed_on": "2026-10-18",
+    "scope": "Historical API contract distinguishes real-user access checks from performing an operation; no fresh OS behavior asserted."
+  },
+  {
+    "url": "https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/posix_spawn.2.html",
+    "title": "posix_spawn(2)",
+    "publisher": "Apple Documentation Archive",
+    "reviewed_on": "2026-10-18",
+    "scope": "Documented default/exceptional process-state inheritance; not a measurement of current worker credentials."
+  }
+]

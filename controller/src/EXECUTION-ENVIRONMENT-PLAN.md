@@ -2,7 +2,26 @@
 
 [Parent and handoff scope](../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-10 in the [initial audit](../../records/worker-pass6/initial-report.md).
-State: drafted; investigation unassigned.
+State: source/evidence investigation complete and independently reviewed at
+`a458b2876da794dd159848ae1bc02e0c65d15c62`; recommendation ready for user review.
+
+The [investigation report](../../records/worker-execution-environment/investigation.md)
+recommends retaining the current application model and naming privacy consent
+mediation in the worker account's authored starting-authority prose. It separates
+selected provenance, actual process observations and unknown external state.
+No application refactor, environment schema, automatic permission probe or reset
+is recommended. No new execution experiment or machine-setting change was made.
+
+Actual worker credentials remain a useful optional capability for comparisons
+across runner scopes. Existing test-owned observers can investigate a concrete
+need first; permanent worker publication becomes worthwhile if ordinary runs
+must retain those facts without an inspection hold. Controller, issuer and file
+owner identities cannot substitute for worker measurements. The
+[source snapshot](../../records/worker-execution-environment/reviewed-sources.json)
+and [prior-evidence account](../../records/worker-execution-environment/reviewed-evidence.json)
+preserve the basis and limits of this recommendation. Runtime or documentation
+implementation remains a separate decision; this status does not close the
+parent's documentation register.
 
 ## Starting point
 

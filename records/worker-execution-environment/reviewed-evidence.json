@@ -1,0 +1,55 @@
+{
+  "reviewed_at": "2026-10-18T22:15:11.490249+00:00",
+  "review_source_commit": "a458b2876da794dd159848ae1bc02e0c65d15c62",
+  "evidence_run_id": "20261018T215123Z_e8874e1f",
+  "evidence_run_path": "tests/out/runs/validator-selection-default-20261018",
+  "new_experiments": false,
+  "scope": "Read-only review of previously retained observations; these cases do not establish worker credentials, TCC attribution or an effective-permissions census. Source/build provenance remains the original validator-default acceptance record. Raw run files are gitignored and local, with an existing retention pin.",
+  "cases": [
+    {
+      "id": "runner_live_worker_identity/independent_worker_and_host_queries",
+      "status": "pass"
+    },
+    {
+      "id": "runner_exec_dac/execute_permission_controls_spawn",
+      "status": "pass"
+    },
+    {
+      "id": "runner_exec_inheritance/cli",
+      "status": "pass"
+    },
+    {
+      "id": "runner_exec_inheritance/contaminated_worker",
+      "status": "pass"
+    },
+    {
+      "id": "witness_contract/dossier_witness",
+      "status": "pass"
+    }
+  ],
+  "files": {
+    "tests/out/runs/validator-selection-default-20261018/run.json": "7a217b632345617d67909f3fd696def3296396309ea4b861504767d784f00cc0",
+    "tests/out/runs/validator-selection-default-20261018/artifact-integrity/before.json": "67b45fc890e6986d615eb6caa1221a08e9d4abb7ba2235081174b6b59d9f0f84",
+    "tests/out/runs/validator-selection-default-20261018/suites/witness_contract/dossier_witness/artifacts/ordinary/run.json": "a50d3c6c1ab8d5eb0feb8b38401e2ebd24dbf07a963014113cbbc928c1185a1f",
+    "tests/out/runs/validator-selection-default-20261018/suites/witness_contract/dossier_witness/artifacts/ordinary/specimen.json": "673b733c5a8eacd6f2826d663bd080c8fc83469d21a2e7de2b81cb29b330ae4c",
+    "tests/out/runs/validator-selection-default-20261018/suites/witness_contract/dossier_witness/artifacts/assertions.log": "3e2eb499c60b446cd524335c3f3cd1ae0795d8dcd51c44a6b9110d8790f9ad0c",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_inheritance/cli/artifacts/observations.json": "e2e2323c664ae5346cc876bc1a600e1eec329b920005cffef5d26a3e8c42bc76",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_inheritance/cli/artifacts/specimen.json": "cababefecdf4ee4a5b42d564ac3e65d5e851a654f0c8458ccef1819c479a8e44",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_inheritance/contaminated_worker/artifacts/observations.json": "e823d524c966602c9710773650287c3b3c73f862c6e509512385e29ae3945f5b",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_inheritance/contaminated_worker/artifacts/harness.jsonl": "597aa6eaa44a35340de1568c77155a96bed700196d44d1060c56dc30b2e7cccb",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_live_worker_identity/independent_worker_and_host_queries/artifacts/observer.json": "d6774276fd5d470664c2fd8c10222af8776091fc1803a0522b6204a1f5047269",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_live_worker_identity/independent_worker_and_host_queries/artifacts/specimen.json": "733d5341eb1c1dab1916a4b7126e367d0c8dc35f6ad84a0adc1a15153b33f653",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_dac/execute_permission_controls_spawn/artifacts/nonexecutable.direct.json": "894f81bea13ae2af97e413b6fa2d283a0bff781b3b79732717290c35db722daf",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_dac/execute_permission_controls_spawn/artifacts/executable.direct.json": "5c680d1423d823e9fd680aab49addaca2c0551edb3d773ad3c54ab8c10b4ec4a",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_dac/execute_permission_controls_spawn/artifacts/nonexecutable/run.json": "ae706a8e8d94dd712671f7df076e6bf2b2e9624dae5ec939d94d80c97d20231e",
+    "tests/out/runs/validator-selection-default-20261018/suites/runner_exec_dac/execute_permission_controls_spawn/artifacts/executable/run.json": "61f267c99c28bf55b7764001662fd008e3b9f6a10492c0f20d22e0393ccdcc2f"
+  },
+  "historical_reports": {
+    "scope": "Read for prior observation boundaries only; 2026-10-06 reports on macOS14.8.9 and older app435, not replication or proof of TCC causality. Their raw receipts were not revalidated for this investigation.",
+    "files": {
+      "records/BYOXPC-ENTITLEMENT-BEHAVIOR.md": "c483ae1674cea4df60f653c48bdae6bff628a02489937e364163b71982c53da6",
+      "records/archive/BYOXPC-ENVIRONMENT-OBSERVABILITY.md": "b6b84dd2629bd9a4f8fc5cbc42a0286b9d3916e29a14a0959dbc2dfbb110ae44",
+      "records/archive/BYOXPC-CONSUMER-PROBES.md": "b39565e78935bb5a44e75f1a7141e3ed88788310a35240926b6137702d7cad23"
+    }
+  }
+}
