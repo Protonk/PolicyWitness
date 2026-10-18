@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "4a0d8ebf41f767dd07869a93082735442b750266b61acac8e0d1e624f6feeeb2"
-    static let abiIdentity: [UInt8] = [0x4a, 0x0d, 0x8e, 0xbf, 0x41, 0xf7, 0x67, 0xdd, 0x07, 0x86, 0x9a, 0x93, 0x08, 0x27, 0x35, 0x44, 0x2b, 0x75, 0x02, 0x66, 0xb6, 0x1a, 0xca, 0xc8, 0xe0, 0xd1, 0xe6, 0x24, 0xf6, 0xfe, 0xee, 0xb2]
+    static let abiIdentityHex = "c61a48d78974584cbf9e5b0113c6c24a17e3ef9b968f841821f2a0794216648f"
+    static let abiIdentity: [UInt8] = [0xc6, 0x1a, 0x48, 0xd7, 0x89, 0x74, 0x58, 0x4c, 0xbf, 0x9e, 0x5b, 0x01, 0x13, 0xc6, 0xc2, 0x4a, 0x17, 0xe3, 0xef, 0x9b, 0x96, 0x8f, 0x84, 0x18, 0x21, 0xf2, 0xa0, 0x79, 0x42, 0x16, 0x64, 0x8f]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -977,9 +977,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         close(shmFD)
         return .failure(.shmSetupFailed("mmap: \(why)"))
     }
+    var ownsShmFD = true
     defer {
         _ = munmap(base, PWShmLayout.regionBytes)
-        close(shmFD)
+        if ownsShmFD { close(shmFD) }
     }
 
     // Zero the region. The worker checks ABI identity + prepared so a
@@ -1174,6 +1175,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // deadline and the writer share the supplied clock, and production keeps
     // the Darwin defaults.
     let transferDeadline = MonotonicDeadline(milliseconds: input.policyTransferTimeoutMs, clock: transferCalls.clock)
+    // The child now owns its evidence endpoint. Retain only our mapping, so
+    // later validators cannot inherit the host's writable descriptor. Retire
+    // close ownership first: a reused number must never reach deferred close.
+    ownsShmFD = false
+    close(shmFD)
     // Close parent-side ends that the child now owns.
     close(policyPipe[0])
     close(readyPipe[1])

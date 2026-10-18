@@ -6569,11 +6569,11 @@
             "Inventory ID": "S1b",
             "Acquired by": "H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return",
             "When": "Before compilation",
-            "Held across": "Through driver result collection",
-            "Release / teardown action": "H setup-failure close or final defer",
+            "Held across": "Through successful worker spawn; host mapping remains through collection",
+            "Release / teardown action": "H setup/spawn-failure close, or ownership relinquished and close after transfer deadline starts on successful spawn",
             "Authority": "Can map/resize the evidence object",
             "Sandbox-gated": "Source-only, host before apply",
-            "Reaches exec children": "Worker receives it; exec child excludes it",
+            "Reaches exec children": "Worker receives it; later validators cannot inherit the closed host reference; exec child excludes worker evidence descriptors",
             "Role": "P"
           },
           "sources": [
@@ -6592,6 +6592,11 @@
               "path": "tests/suites/runner_unit/host_setup_controls.py",
               "symbol": "check",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
+              "form": "test"
             }
           ]
         },
@@ -6603,7 +6608,7 @@
             "Inventory ID": "S2",
             "Acquired by": "H: mmap, zero/populate/page-touch",
             "When": "Before compilation",
-            "Held across": "Through collection, including after worker exit or unconfirmed cleanup",
+            "Held across": "Beyond host descriptor close, through collection including after worker exit or unconfirmed cleanup",
             "Release / teardown action": "H defer munmap",
             "Authority": "Read worker publications; write input/release/exit request",
             "Sandbox-gated": "Source-only, host before apply",
@@ -6625,6 +6630,11 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
               "symbol": "runCWorkerLifecycleTests",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -7381,7 +7391,7 @@
             "Inventory ID": "S14c",
             "Acquired by": "H clears FD_CLOEXEC and duplicates to 3 without closing source",
             "When": "Before compilation",
-            "Held across": "Until exit if original number survives file actions",
+            "Held across": "Until worker exit if original number survives file actions; closing the host descriptor does not remove this child reference",
             "Release / teardown action": "No generic W sweep; exit",
             "Authority": "Same evidence object as S13b, not a second object",
             "Sandbox-gated": "Source-only possibility; L saw no extra alias",
@@ -9170,7 +9180,7 @@
           "from": "s1a",
           "to": "s1b",
           "kind": "prepares",
-          "label": "Host holds backing-object descriptor",
+          "label": "Host holds backing-object descriptor through worker launch",
           "sources": [
             {
               "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -9181,6 +9191,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/launch_descriptor_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]

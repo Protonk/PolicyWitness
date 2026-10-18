@@ -77,6 +77,9 @@ deterministic, and checked into the repo so tests are hermetic.
   [README](path_query/README.md). It does not implement PW's phase protocol.
 - `host_setup/`: disposable Swift host copies with native setup substitutions and
   an independent child descriptor observer; see its [README](host_setup/README.md).
+- `launch_descriptor/`: copied host drivers with independent evidence/decoy
+  write challenges, exact descriptor reuse and native mapping teardown
+  observations; see its [README](launch_descriptor/README.md).
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
 - `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,

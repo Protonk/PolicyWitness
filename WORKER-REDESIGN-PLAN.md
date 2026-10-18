@@ -18,8 +18,11 @@ observations without changing cleanup policy. Its
 retains the native call-policy controls, reader mutations and passing case credits.
 The [coordination record](records/worker-redesign-followups/coordination.md)
 retains sequencing, baseline evidence and the coordinator's documentation review.
-Execution environment remains staged. Descriptor and sysctl implementation
-planning remain pending.
+The [descriptor refactor](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-REFACTOR-PLAN.md)
+is implemented, reviewed and accepted against the signed app; its
+[acceptance record](records/worker-launch-descriptor/implementation-acceptance.md)
+retains independent descriptor/object/reuse controls and the full default battery.
+Execution environment remains staged. Sysctl implementation remains pending.
 
 The question is whether a different design would remove the reason for a
 finding, and what that design would cost the instrument. A useful outcome can
@@ -44,7 +47,7 @@ runtime repairs. Existing findings missed by this audit remain in that register.
 
 | Finding | Code-local plan | Decision to develop | State |
 | --- | --- | --- | --- |
-| WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Close host descriptor after successful worker spawn, retaining mapping and relinquishing descriptor ownership | Narrow refactor selected; implementation planning pending |
+| WA-01 | [Launch descriptor lifetime](runner/Sources/PWRunnerCore/LAUNCH-DESCRIPTOR-LIFETIME-PLAN.md) | Close host descriptor after successful worker spawn, retaining mapping and relinquishing descriptor ownership | Implemented; signed acceptance passed |
 | WA-04, WA-08 | [Terminal investigation](controller/tools/pw_probe_runner/TERMINAL-PUBLICATION-PLAN.md) and [implementation plan](controller/tools/pw_probe_runner/TERMINAL-EXIT-REFACTOR-PLAN.md) | Publication followed by exit, ordinary terminal cleanup and token possession | Implemented; signed acceptance passed |
 | WA-03 | [Exec investigation](controller/tools/pw_probe_runner/EXEC-SUPERVISION-PLAN.md) and [evidence refactor](controller/tools/pw_probe_runner/EXEC-EVIDENCE-REFACTOR-PLAN.md) | Separate collection, cleanup-request and reap facts; retain current cleanup policy | Evidence refactor implemented; signed acceptance passed; supervisor undecided |
 | WA-07 | [Execution configuration](runner/Sources/PWRunnerCore/EXECUTION-CONFIGURATION-PLAN.md) | How requested controls, resolved configuration and observed interventions should relate | Source inventory reviewed; design staged |
@@ -60,8 +63,8 @@ Selected directions and remaining decision checkpoints are:
 
 - Descriptor lifetime: close the host's evidence descriptor immediately after
   successful worker spawn, relinquish its cleanup ownership and retain the
-  mapping. The user selected this narrow refactor; broader inheritance and
-  low-descriptor collisions remain separate.
+  mapping. This narrow refactor is implemented and accepted; broader inheritance
+  and low-descriptor collisions remain separate.
 - Exec: separate observation, cleanup-request and reap evidence is implemented,
   preserving legacy aggregate status and current behavior. Decide separately
   whether ordinary leader-plus-EOF completion should end same-group

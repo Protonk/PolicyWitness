@@ -81,6 +81,14 @@ are checked by [source drift](../tests/suites/source_drift/README.md) and
 6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
+The host evidence descriptor lasts only through worker launch. After successful
+spawn, the host starts the existing policy-transfer deadline, relinquishes close
+ownership and closes the descriptor before policy delivery. Setup and spawn
+refusals retain their original cleanup. The host mapping remains through final
+evidence collection and teardown; later validators cannot inherit the closed
+host reference. Worker descriptors already installed by spawn, including any
+surviving original-number alias, keep their separate lifetime.
+
 The issuer's token channel is separate from the worker evidence mapping. The
 issuer and worker close inherited channel descriptors after mapping; neither
 arguments nor environment carry tokens. The worker erases the full accepted token

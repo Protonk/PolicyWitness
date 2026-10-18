@@ -325,6 +325,19 @@
           ]
         },
         {
+          "id": "launch_descriptor_controls",
+          "description": "Independent true-object/decoy challenges, exact descriptor reuse and setup refusals establish the host evidence descriptor's launch-only ownership",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/launch_descriptor_controls.sh"
+          ],
+          "requires": [
+            "app",
+            "swift",
+            "clang"
+          ]
+        },
+        {
           "id": "exec_reader_mutations",
           "description": "Disposable Swift source defects expose unpublished exec payload and invent cleanup absence; unchanged reader assertions reject both",
           "command": [

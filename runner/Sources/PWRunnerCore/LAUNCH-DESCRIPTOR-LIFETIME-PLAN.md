@@ -2,9 +2,11 @@
 
 [Parent and handoff scope](../../../WORKER-REDESIGN-PLAN.md).
 Finding: WA-01 in the [initial audit](../../../records/worker-pass6/initial-report.md).
-State: investigation complete and reviewed; the user selected close-after-spawn
-with explicit ownership invalidation and retained mapping. Implementation
-planning is pending; no production change is implemented.
+State: investigation complete and reviewed. The selected close-after-spawn
+refactor is implemented with explicit ownership invalidation and a retained
+mapping. The [implementation plan](LAUNCH-DESCRIPTOR-REFACTOR-PLAN.md) and
+[acceptance record](../../../records/worker-launch-descriptor/implementation-acceptance.md)
+retain the scope, signed build and passing acceptance evidence.
 
 The [investigation report](../../../records/worker-launch-descriptor/investigation.md)
 records the source trace, fourteen native prototype scenarios, six rejected

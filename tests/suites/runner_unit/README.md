@@ -197,6 +197,25 @@ containment and the limits of descriptor metadata. This case requires Swift and
 clang and does not use the signed app; its sources, build log and receipts are
 retained under `artifacts/controls/`.
 
+## Host launch descriptor ownership
+
+`launch_descriptor_controls` runs copied current host/validator drivers against
+the selected signed worker. An independent observer challenges unused cells
+through inherited writable mappings; host readback distinguishes the actual
+evidence object from an identical writable decoy. Exact descriptor-number reuse
+must survive driver teardown. Native spawn refusal and substituted earlier
+setup failures retain one close and independent complete-range unmap observations.
+High descriptors, self-duplication at fd 3 and separate fd 5 delivery preserve
+worker entry endpoints, publications, release acknowledgement and confirmed reap.
+
+Disposable source controls restore the old descriptor lifetime, retain a stale
+deferred owner or omit the pre-spawn close-on-exec clear. The fixed candidate
+assertions must reject each at its designated observation. Altered receipts
+separately pin checker sensitivity. The [fixture contract](../../fixtures/launch_descriptor/README.md)
+describes source transformations, object identity, cleanup and claim limits.
+The case requires Swift, clang and a signed app; exact source copies, command
+logs, receipts and rejected controls remain under `artifacts/controls/`.
+
 ## Host setup oracle sensitivity (opt-in)
 
 `host_setup_oracle_sensitivity` preserves and runs the unchanged setup recipe and
