@@ -2,15 +2,24 @@
 
 ## Status
 
-Worker-language triage is complete in this commit against `5f878fe`. The
+Worker-language resolution is in progress. The
+[positive-reframing trial](../records/worker-language-resolution/positive-trial.md)
+compares all fifteen remaining units before the
+[bounded RCAs](../records/worker-language-resolution/rca.md). The resulting
+decisions are nine positive repairs and six elisions, with no editorial RCA
+pending. Observation, lifetime and source-scope repairs are implemented;
+citation presentation, the path-observation graph repair and integrated
+validation remain. No register adjudication changes; pass 6 has not started.
+
+Worker-language triage is complete in `672374c` against `5f878fe`. The
 [triage report](../records/worker-language-triage/report.md) and
 [decision ledger](../records/worker-language-triage/ledger.md) cover all 101 B1
 occurrences and the secondary guard roles in A1: 102 decision units stay
 settled, four stay pending three bounded RCAs, and eleven can go after the
 seven [WORKER-only repairs](../records/worker-language-triage/rewrite-candidates.md).
-All 205 primary A1 occurrences remain set aside. The candidates are unapplied;
-the worker account, machinery and register adjudications remain unchanged.
-This is a triage round, not pass 6.
+All 205 primary A1 occurrences remain set aside. That checkpoint left the
+candidates unapplied and changed no underlying claim or register adjudication.
+The resolution round above carries the subsequent work; neither round is pass 6.
 
 The descriptive worker-language sweep is complete in `5f878fe` against
 `2d63c983224907b109b4349d216c03471a8b1f0c`. The
@@ -32,9 +41,10 @@ the independent reports, their boundaries and register destinations.
 Rows 10, 19 and 22 reopen for a newly identified descendant path, setup-oracle
 blind spots and a remaining test comment. Rows 25–28 record citation ownership,
 exec-child stderr delivery, compiler-output timing and extension-test cleanup.
-Rows 23–24 remain awaiting adjudication. No row closes in this round; the other
-pass 4 closures retain their adjudicated scope. Production behavior, the worker
-tour and its capability inventory remain unchanged pending these decisions.
+Rows 23–24 remain awaiting adjudication. No row closed in pass 5 round 1; the
+other pass 4 closures retain their adjudicated scope. Production behavior
+remains unchanged. The language resolution above revises the worker account
+without resolving these implementation and verification findings.
 
 Pass 4 source-comment work and regenerated identity are `37be3d2`, setup
 verification is `b3f358c`, and its documentation/evidence closeout is `5124b43`.

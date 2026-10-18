@@ -1,0 +1,308 @@
+{
+  "source_revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+  "prerequisite": {
+    "records/worker-language-resolution/positive-trial.md": "332657b4ddbcf56bb06712be1ff97b4ce07ac2594a834890a1b1bf5f089d2ba4",
+    "records/worker-language-resolution/positive-trial.json": "f58e651181122900d3fb613990b5863a359241cdd818511012c0045c77f7c8e4"
+  },
+  "scope": "Three bounded read-only RCAs after frozen positive trial; no new runtime tests, probes, native-platform research, repairs, register adjudication or pass 6.",
+  "provenance_correction": {
+    "first_inventory_commit": "90fcb1b9a1e48a1e41725e9faca3095297ee493c",
+    "manifest_transfer_commit": "83f61f35a96d295f2a2a94aa29740664ec2971f6",
+    "history_locations": [
+      {
+        "path": "docs/WORKER-INST-DOC-PLAN.md",
+        "revision": "90fcb1b",
+        "line_start": 295,
+        "line_end": 295,
+        "quote": "| S18 | Worker evidence `base` mapping | `map_region`: `fstat`, `mmap(MAP_SHARED)` | A | Later attempts/phases, until exit | No explicit W unmap; exit | Read requests, publish results, observe release/exit | L shared mappings observed; no mapping-identity attribution from size alone | No: exec replaces mappings and excludes fd 3 | P |"
+      },
+      {
+        "path": "docs/WORKER-INST-DOC-PLAN.md",
+        "revision": "90fcb1b",
+        "line_start": 306,
+        "line_end": 306,
+        "quote": "| S28 | Applied sandbox policy | W: `sandbox_apply(profile)` | B closing boundary | All later attempts/phases, until exit on success | One-way, no undo | Restricts starting authority; extension may augment access | Source placement; L final application/clean completion, not deny coverage | Inherited sandbox constraints; exact child policy effects not inventoried here | A |"
+      },
+      {
+        "path": "docs/WORKER-INST-DOC-PLAN.md",
+        "revision": "90fcb1b",
+        "line_start": 329,
+        "line_end": 330,
+        "quote": "| N9a | Worker temporary pre-compile call frames | `parse_args`, `map_region`, `read_all_from_fd`, `pw_timing_setup`, `prepare_extension` | A | Call only | Return or process exit; no claim of byte erasure | None beyond existing pointers/rights | Source-only; native library internals unobserved | No: exec replaces stack | P |\n| N9b | Capture hash/view/digest/sorting call frames | `pw_capture_profile`, `pw_consumed_params_digest`, `pw_read_memory` | B | Call only | Return or process exit; no claim of byte erasure | Read own memory with existing task right | Source-only; qsort/CommonCrypto internals unobserved | No: exec replaces stack | P |"
+      }
+    ],
+    "note": "Prior triage found manifest introduction; all four clauses already existed in pass 1. Historical author motive remains unestablished."
+  },
+  "retained_evidence": {
+    "path": "tests/out/runs/worker-p1-launch-final",
+    "gitignored_local_only": true,
+    "run_id": "20261017T215334Z_b7815087",
+    "production_commit": "6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6",
+    "build_source": {
+      "build_number": "692",
+      "commit": "6fd44fb15397678d29f0f96bfee2b1abbe4bbbb6",
+      "describe": "v0.3.1-8-g6fd44fb",
+      "dirty": false,
+      "worker_identity": "33890392b9337f128a06b89b7d831192e5e8d809f0a5f41613e8745c2d9c9eb9"
+    },
+    "observer_scope": "Pass 1 working-tree observer and catalog; exact source copies retained. Other production sources match the committed signed build.",
+    "source_scope_sha256": "cc84cb96a4cc03f193e6224585c635de6835b8823bdee17b8f42070725dd5ce1",
+    "raw_files": [
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/mappings.stdout",
+        "sha256": "95b4deb1bb00427bb1c867912c42dea907b5144b2158caca049f799d7233fe73"
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/descriptors.stdout",
+        "sha256": "47469875e200eda07f974954704de9869eb765f364a9b9a387918c2598ec5465"
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/pre_ready/observations.json",
+        "sha256": "7deb8606488c303fd70e999b38e7c51b8188361684d7d675e46865cfc84ce316"
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/mappings.stdout",
+        "sha256": "ed9661362054aed3c01041f4f8734d98f7fa8ef3e13bca96513219768a86212b"
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/descriptors.stdout",
+        "sha256": "528165d57839777c65532f3f9135e4861afa5d5909a15dc5003636dd42803c06"
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/suites/runner_exec_inheritance/launch_inventory/artifacts/post_apply/observations.json",
+        "sha256": "eb2eb646c764fcef70955fcc62d22be9e32281c7ae2bee8964d0df1db6cac860"
+      }
+    ],
+    "provenance_checks": [
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/pass1-evidence/source-snapshot/tests/suites/runner_exec_inheritance/launch_inventory.py",
+        "sha256": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+        "recorded_sha256": "9a13021119d7b132c13fe9f70b6b8024d45f95ee40e9d102e8b6e4f09d45d0c4",
+        "matches_recorded": true
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/pass1-evidence/source-snapshot/controller/tools/pw_probe_runner/pw_probe_runner.c",
+        "sha256": "56ce7e9c250cca5f99deeabb3c9ce2fe21d096a7ae0b7b5fe67190416129e418",
+        "recorded_sha256": "56ce7e9c250cca5f99deeabb3c9ce2fe21d096a7ae0b7b5fe67190416129e418",
+        "matches_recorded": true,
+        "matches_production_commit": true
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/pass1-evidence/source-snapshot/controller/tools/pw_probe_runner/pw_profile_capture.h",
+        "sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+        "recorded_sha256": "d598ae17258d4544b422bd000a8c17fd155ff32a54e86d30ccc02ff85d2591b8",
+        "matches_recorded": true,
+        "matches_production_commit": true
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/pass1-evidence/provenance.json",
+        "sha256": "bf4b726ca338123f625522141b8e43e467c0ad5c38e0c768cb156c8c7329619a",
+        "recorded_sha256": "bf4b726ca338123f625522141b8e43e467c0ad5c38e0c768cb156c8c7329619a",
+        "matches_recorded": true
+      },
+      {
+        "path": "tests/out/runs/worker-p1-launch-final/pass1-evidence/manifest.json",
+        "sha256": "98dda95c400c3af584e803bb977c8e4028ba75eb8160693714b5b5283fb32f13",
+        "recorded_sha256": "98dda95c400c3af584e803bb977c8e4028ba75eb8160693714b5b5283fb32f13",
+        "matches_recorded": true
+      }
+    ],
+    "new_runtime_credit": false
+  },
+  "jobs": [
+    {
+      "id": "Q01",
+      "units": [
+        "N164"
+      ],
+      "bounded_search_complete": true,
+      "missing_items": [],
+      "finding": "Each unnamed writable vmmap region is 3600K; lsof names fd 3 evidence PSXSHM at 3686400 bytes. The observer never associates region with object. Matching size supplies a possible inference, not an observed mistaken attribution or proven author motive. Distinct workers prohibit within-process subtraction; row-19 fixture VM observations remain separate.",
+      "references": [
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 108,
+          "line_end": 110,
+          "quote": "| s16f | Executable/library mappings, runtime heaps and threads | mixed | S16f | Loader/runtime creates new image at H spawn; later library calls | Before compilation initially; later internal changes unknown | Until exit or library release | Native runtime; no PW census/teardown | Executable code, storage and runtime service access | L vmmap inventory; per-allocation origin and gating unknown | Not the same mappings/threads: exec loads a new image | none | [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) |  |\n| s17 | Worker ignored SIGPIPE disposition | mixed | S17 | W: signal(SIGPIPE, SIG_IGN) | Before compilation | All attempts/phases, until exit | No reset | Survive broken ready-pipe write; also changes exec-child behavior | Source-only; L pre-ready final EPIPE survived | Yes: no SETSIGDEF; no dedicated live signal control | P + effect on O | [`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |\n| s18 | Worker evidence base mapping | reporting | S18 | map_region: fstat, mmap(MAP_SHARED) | Before compilation | Later attempts/phases, until exit | No explicit W unmap; exit | Read requests, publish results, observe release/exit | L shared mappings observed; no mapping-identity attribution from size alone | No: exec replaces mappings and excludes fd 3 | P | [`map_region`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`launch_inventory`](../tests/suites/runner_exec_inheritance/run.sh) |  |"
+        },
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 595,
+          "line_end": 608,
+          "quote": "**Row 11.** First candidate: \u201cThe worker's ambient resources are\nuninventoried.\u201d L establishes a bounded census: descriptors, cwd `/`, uid 501,\ngid 20, nonempty launch argv, no displayed environment additions, and readable\nVM maps showing executable/library mappings, malloc regions, shared regions\nand one listed main stack. It does not assign every VM region to a PW call,\nprove an exhaustive thread census, or observe all effective authority.\n`lsmp -p` returned 1 with `task_for_pid` failure for both signed workers;\nno root escalation or modified signature was used to expand that boundary.\nSignal masks, limits, exact Mach rights and library internal state remain\nunknown. Recommended: explain the received substrate and, if accepted, record\nthe observation boundary as a Known gap. A readable independent right census\nwould extend the observation, not retroactively make this one complete. The\npre-ready and post-apply specimens use distinct workers, so VM address or size\ndifferences are not within-process changes. No subtraction of them is claimed."
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 563,
+          "line_end": 583,
+          "quote": "static void *map_region(int shm_fd) {\n    struct stat st;\n    if (fstat(shm_fd, &st) != 0) {\n        fprintf(stderr, \"pw-probe-runner: fstat(shm_fd=%d): %s\\n\", shm_fd, strerror(errno));\n        return NULL;\n    }\n    if ((size_t)st.st_size < PW_SHM_REGION_BYTES) {\n        fprintf(stderr,\n                \"pw-probe-runner: shm_fd region too small: got %lld bytes, need %zu\\n\",\n                (long long)st.st_size, (size_t)PW_SHM_REGION_BYTES);\n        return NULL;\n    }\n    void *base = mmap(NULL, PW_SHM_REGION_BYTES, PROT_READ | PROT_WRITE,\n                      MAP_SHARED, shm_fd, 0);\n    if (base == MAP_FAILED) {\n        fprintf(stderr, \"pw-probe-runner: mmap: %s\\n\", strerror(errno));\n        return NULL;\n    }\n    return base;\n}\n"
+        },
+        {
+          "path": "tests/suites/runner_exec_inheritance/launch_inventory.py",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 78,
+          "line_end": 99,
+          "quote": "        # Allow startup to reach the selected sleep. Boundary attribution is\n        # source + selected seam + timing, not a read of worker shared memory.\n        time.sleep(.5)\n        for name, argv in [\n            ('identity', ['/bin/ps', '-ww', '-p', f'{pid},{host}', '-o',\n                          'pid=,ppid=,uid=,gid=,lstart=,state=,wchan=,comm=,args=']),\n            ('argv', ['/bin/ps', '-ww', '-p', str(pid), '-o', 'command=']),\n            ('environment', ['/bin/ps', '-Eww', '-p', str(pid), '-o', 'command=']),\n            ('descriptors', ['/usr/sbin/lsof', '-nP', '-p', str(pid)]),\n            ('mappings', ['/usr/bin/vmmap', '-w', str(pid)]),\n            ('ports', ['/usr/bin/lsmp', '-p', str(pid)]),\n        ]:\n            observations[name], _ = command(out, name, argv)\n        observations['snapshot_elapsed_seconds'] = time.monotonic() - started\n        # Wait for normal production cleanup even if an observation failed.\n        rc = run.wait(timeout=35)\n    envelope = run.load_json()\n    runner = envelope['data']['runner_result']\n    (out / 'observations.json').write_text(json.dumps(dict(\n        boundary=boundary, worker_pid=pid, host_pid=host, observations=observations,\n        boundary_basis='selected production sleep seam, source order and elapsed time; no shared-memory read',\n    ), indent=2) + '\\n')"
+        }
+      ],
+      "repair_condition": "Replace the whole S18 scope cell; retain S16f L inventory and ambient-context account. Deleting only the caution while retaining per-resource L credit is insufficient."
+    },
+    {
+      "id": "Q02",
+      "units": [
+        "N203"
+      ],
+      "bounded_search_complete": true,
+      "missing_items": [],
+      "finding": "No inspected passage defines exact child policy effects, claims parent/child effective-access identity or promises an exhaustive helper-operation inventory. The column concerns inheritance; inherited constraints and separately recorded helper evidence meet its purpose. Native inheritance remains an existing assertion, not a new universal permission guarantee.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 219,
+          "line_end": 219,
+          "quote": "| Reaches exec children | Yes, no or unknown, with the inheritance rule that decides it; the [inheritance suite](../tests/suites/runner_exec_inheritance/README.md) observes environment and descriptors only |"
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 121,
+          "line_end": 121,
+          "quote": "| s28 | Applied sandbox policy | authority | S28 | W: sandbox_apply(profile) | Between compilation and apply closing boundary | All later attempts/phases, until exit on success | One-way, no undo | Restricts starting authority; extension may augment access | Source placement; L final application/clean completion, not deny coverage | Inherited sandbox constraints; exact child policy effects not inventoried here | A | [`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 273,
+          "line_end": 282,
+          "quote": "A worker starts with the authority and restrictions of its credentials, signed\nimage and inherited context. Built-in workers carry empty entitlements; external\nrunners supply a separately signed worker, whose read-back entitlements are\nchecked against the specimen's required keys by\n[`enforce_required_entitlements`](../controller/src/runner_select.rs).\nThe [external-runner guide](PolicyWitness.md#external-runners-byoxpc) and\n[signing reference](SIGNING.md#evidence-artifacts) own that selection and identity\naccount. Applying SBPL adds the specimen restriction to this starting state.\nExplicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)\nchange the submitted policy and are recorded as such."
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 380,
+          "line_end": 389,
+          "quote": "The [per-attempt resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt)\nexercise a descriptor ceiling and a bare-deny setup path. The ceiling checks\nreuse across attempts; the denying case observes setup reaching spawn for its\nprofile and environment. Source establishes post-apply placement. The child\nreceives explicit null-device stdin, captured stdout/stderr, an empty environment\nand a new process group. PW drains output and observes the leader under the\n[execution budgets](LIMITS.md#execution-budgets). A nonzero child exit after\nsuccessful spawn still supplies spawn evidence; the\n[exec action contract](PolicyWitness.md#attempt-kinds-the-runner-implements)\nkeeps spawn, child exit and cleanup meanings separate."
+        },
+        {
+          "path": "docs/PolicyWitness.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 96,
+          "line_end": 96,
+          "quote": "Yes \u2014 via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result. The per-operation authoring burden lives with the caller \u2014 PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for."
+        },
+        {
+          "path": "tests/suites/run_effects/README.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 27,
+          "line_end": 30,
+          "quote": "- A helper spawned under `(deny default)` plus `exec_baseline` with one\n  `file-write*` allow creates its marker with the fixture's exact bytes at\n  mode 0600. Without the allow the helper still runs (a child PID is reported)\n  and exits 3 with a `--write` diagnostic, and the marker does not exist."
+        },
+        {
+          "path": "runner/augments/README.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 41,
+          "line_end": 72,
+          "quote": "## exec_baseline composition limits\n\n`exec_baseline.sb` grants `(allow file-read*)` unconditionally.\nBecause augments are last-match-wins, this overrides any\ncaller-authored `(deny file-read* ...)` rule that came earlier.\nThe practical consequence: **specimens that probe file-read\ndenial cannot be composed with `exec_baseline`**. Two examples:\n\n- Caller writes `(version 1)(deny default)(deny file-read*\n  (subpath \"/secrets\"))` and opts into `exec_baseline`. The\n  augment's broad `(allow file-read*)` is appended after both\n  denies. A `sandbox_check` for `file-read-data /secrets/foo`\n  returns `allow`, and an `open(/secrets/foo, O_RDONLY)`\n  succeeds. The caller's deny is silently no-op'd. If the\n  intent was to test that the deny holds, the test is invalid\n  under this augment.\n\n- Caller writes `(version 1)(allow default)(deny file-read*)`\n  intending an \"allow everything except reads\" baseline. With\n  `exec_baseline` appended, every read is allowed. The caller's\n  deny is dead.\n\nFor these cases the caller should either (a) drop the augment\nand inline the spawn-support rules into their own source with\nthe narrower file-read scope they want, or (b) skip the\nfile-read denial probes and use the augment only for the exec\nattempt.\n\n`(allow process-exec*)` and `(allow process-fork)` have the same\noverride property but the affected surface is much smaller (only\nexec/spawn) and isn't typically probed for denial in the same\nspecimen."
+        }
+      ],
+      "repair_condition": "Keep inherited constraints, apply-before-exec order and distinct helper/native results; elide undefined coverage qualifier only."
+    },
+    {
+      "id": "Q03",
+      "units": [
+        "N266",
+        "N270"
+      ],
+      "bounded_search_complete": true,
+      "missing_items": [],
+      "finding": "N9 rows retain automatic working storage in the inventory. Examined erasure requirements concern token allocations/channel views and explicit erase paths. Frame temporaries, static input/parameters, capture output and native internals remain distinct; no whole-frame wipe requirement or observer was found in this bounded search.",
+      "references": [
+        {
+          "path": "docs/WORKER-INST-DOC-PLAN.md",
+          "revision": "90fcb1b",
+          "line_start": 708,
+          "line_end": 713,
+          "quote": "- The worker image, main frame and temporary call frames are storage received\n  or reused, not new mappings created for each C local. N8\u2013N11 describe those\n  views so stack use and capture hashing/sorting do not disappear from the\n  inventory. Library-internal state remains explicitly outside call-site\n  completeness. The validator, host evidence readers and log collector will\n  supply pass 2's external-evidence nodes; they are not worker acquisitions."
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 143,
+          "line_end": 146,
+          "quote": "| n8 | Worker main-frame arguments, timing state and capture nonce | reporting | N8 | W local declarations, pw_clock_start, nonce memcpy | Before compilation | Main frame until exit; timing changes across phases | Process exit (main never returns after successful apply) | Operate release/timing protocol; no new access handle | Source-only; stack mapping visible in L | No: new exec image | P | [`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |\n| n9a | Worker temporary pre-compile call frames | reporting | N9a | parse_args, map_region, read_all_from_fd, pw_timing_setup, prepare_extension | Before compilation | Call only | Return or process exit; no claim of byte erasure | None beyond existing pointers/rights | Source-only; native library internals unobserved | No: exec replaces stack | P | [`parse_args`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`map_region`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`read_all_from_fd`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`pw_timing_setup`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |\n| n9b | Capture hash/view/digest/sorting call frames | reporting | N9b | pw_capture_profile, pw_consumed_params_digest, pw_read_memory | Between compilation and apply | Call only | Return or process exit; no claim of byte erasure | Read own memory with existing task right | Source-only; qsort/CommonCrypto internals unobserved | No: exec replaces stack | P | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |\n| n10 | Attempt-local stack buffers, argv pointers, polls, wait status and metadata | mixed | N10 | run_attempt and each attempt_*, capture_observed_path, drain_one, exec_resources_acquire; attempt_sysctl_read holds its sysctl result buffer on the stack | After apply within an attempt | Call/attempt only; output copied into S18 | Return or process exit | Use already inventoried target/child handles; no separate authority | Source-only; compiler stack/page behavior unobserved | argv_local strings copied; stack not inherited | O + P (working/observation storage) | [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`bare_deny_default`](../tests/suites/runner_c_worker_harness/run.sh) |  |"
+        },
+        {
+          "path": "docs/WORKER.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 434,
+          "line_end": 456,
+          "quote": "Worker erasure occurs when preparation rejects a mapped channel, after the\nconsume decision on paths reaching that cleanup, and after normal completion of\nthe phase loop. Compile/apply/parameter failures, proceed refusal, cancellation\nand interruption inside a native call can bypass the final loop erasure. The\naccepted mapping remains until exit. The host separately erases its channel\nbefore reply preparation and again at session destruction; its observation\nbelongs to the host. In issuer [`main`](../controller/tools/pw_probe_runner/pw_extension_issuer.c),\nbounded length inspection governs copying and erasure before free. An oversized\ntoken is rejected and that inspected prefix is erased; the allocation extent\nbeyond the bound is unobserved.\n\nFresh reads obtain a new descriptor at each requested action, so before-consume,\nduring-use and after-release reads each test fresh acquisition at that point.\nThe worker publishes the native release result and any subsequent requested\nread observations. The [extension checks](../tests/suites/witness_contract/check_extensions.py)\naccept either result for the after-release read and verify returned content\nwhen successful. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)\ndefines the limits of native results and local publication.\n\nKnown gap: private extension calls may allocate or retain internal state that PW\ncannot inspect. Erasure observations cover PW-owned transient buffers; successful\nnative results and phase progress do not establish kernel extension state,\nstable identity, effective permissions or access revocation."
+        },
+        {
+          "path": "tests/FAILURE-PROPAGATION-CONTRACT.md",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 203,
+          "line_end": 205,
+          "quote": "published channel observation separately from issuance. `host_buffer_erased`\nrecords clearing the host's mapping, not proof that every process or native\nlibrary has erased every copy."
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_profile_capture.h",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 24,
+          "line_end": 90,
+          "quote": "static void pw_digest_u32(CC_SHA256_CTX *ctx, uint32_t n) {\n    unsigned char le[4] = {n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255};\n    CC_SHA256_Update(ctx, le, sizeof(le));\n}\nstatic int pw_digest_order(const void *a, const void *b) { return memcmp(a, b, 32); }\n\n/* Order-independent dictionary identity: SHA256(LE32 count || sorted pair\n * digests), each pair SHA256(LE32 keyBytes || key || LE32 valueBytes || value).\n * Actual C strings passed to sandbox_set_param supply the bytes, not a caller's\n * JSON digest. The worker passes a private snapshot to both setter and capture. */\nstatic int pw_consumed_params_digest(const pw_shm_param_t *params, uint32_t count,\n                                     unsigned char out[32]) {\n    if (count > PW_SHM_MAX_PARAMS) return 0;\n    unsigned char pairs[PW_SHM_MAX_PARAMS][32];\n    for (uint32_t i = 0; i < count; i++) {\n        size_t k = strnlen(params[i].key, PW_SHM_PARAM_KEY_MAX);\n        size_t v = strnlen(params[i].value, PW_SHM_PARAM_VALUE_MAX);\n        if (k == PW_SHM_PARAM_KEY_MAX || v == PW_SHM_PARAM_VALUE_MAX) return 0;\n        CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx);\n        pw_digest_u32(&ctx, (uint32_t)k); CC_SHA256_Update(&ctx, params[i].key, (CC_LONG)k);\n        pw_digest_u32(&ctx, (uint32_t)v); CC_SHA256_Update(&ctx, params[i].value, (CC_LONG)v);\n        CC_SHA256_Final(pairs[i], &ctx);\n    }\n    qsort(pairs, count, 32, pw_digest_order);\n    CC_SHA256_CTX ctx; CC_SHA256_Init(&ctx); pw_digest_u32(&ctx, count);\n    CC_SHA256_Update(&ctx, pairs, count * 32); CC_SHA256_Final(out, &ctx);\n    return 1;\n}\n\nstatic int pw_read_memory(const void *src, void *dst, size_t length) {\n    mach_vm_size_t copied = 0;\n    return src && length && mach_vm_read_overwrite(mach_task_self(),\n        (mach_vm_address_t)src, length, (mach_vm_address_t)dst, &copied) == KERN_SUCCESS\n        && copied == length;\n}\n\nstatic void pw_capture_profile(pw_shm_capture_t *out, unsigned char *payload,\n                               const void *profile, const char *source, size_t source_length,\n                               const pw_shm_param_t *params, uint32_t count,\n                               const unsigned char nonce[PW_SHM_CAPTURE_NONCE_BYTES]) {\n    memcpy(out->request_nonce, nonce, PW_SHM_CAPTURE_NONCE_BYTES);\n    out->worker_pid = (uint32_t)getpid();\n    out->source_length = (uint32_t)source_length;\n    out->param_count = count;\n    out->status = 4;\n    if (source_length > UINT32_MAX || !pw_consumed_params_digest(params, count, out->params_sha256))\n        goto finished;\n    CC_SHA256(source, (CC_LONG)source_length, out->source_sha256);\n    pw_compiler_profile_t view;\n    out->status = 3;\n    if (!pw_read_memory(profile, &view, sizeof(view))) goto finished;\n    out->status = 2;\n    /* Only the single-profile compile result (type 0) is qualified. Bundles,\n     * empty results and oversized payloads are explicit unavailable captures. */\n    if (view.profile_type != 0 || view.reserved != 0 || !view.bytecode_length\n            || view.bytecode_length > PW_SHM_CAPTURE_BYTES || !view.bytecode)\n        goto finished;\n    out->status = 3;\n    if (!pw_read_memory(view.bytecode, payload, view.bytecode_length)) goto finished;\n    out->profile_type = view.profile_type;\n    out->bytecode_length = (uint32_t)view.bytecode_length;\n    CC_SHA256(payload, out->bytecode_length, out->bytecode_sha256);\n    out->status = 1;\nfinished:\n    atomic_store_explicit(&out->completed, 1u, memory_order_release);\n}\n#endif"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "revision": "672374c38b2b728719510300ced1090f1e0e35ef",
+          "line_start": 1329,
+          "line_end": 1343,
+          "quote": "        uint32_t n = extension_channel->token_length;\n        if (n == 0 || n >= PW_EXTENSION_TOKEN_BYTES || extension_channel->token[n] != 0 ||\n            memchr(extension_channel->token, 0, n) != NULL) {\n            status = PW_DELIVERY_CHANNEL_REJECTED; stage = PW_DELIVERY_STAGE_CHANNEL_TOKEN; goto reject_mapping;\n        }\n        hdr->extension_delivered_bytes = n;\n        status = PW_DELIVERY_DELIVERED;\n        goto publish;\n    reject_mapping:\n        pw_extension_erase(extension_channel->token, PW_EXTENSION_TOKEN_BYTES);\n        errno = 0;\n        if (munmap(extension_channel, PW_EXTENSION_CHANNEL_BYTES)) { cleanup_stage = PW_DELIVERY_STAGE_UNMAP; cleanup_errno = errno; }\n        extension_channel = NULL;\n    }\npublish:"
+        }
+      ],
+      "repair_condition": "Use R01 Release / teardown action heading; each frame cell becomes Return or process exit. Header resolves disposal-outcome ambiguity; ownership/requirement review supplies basis for omitting erasure topic. Preserve actual token-erasure/early-exit/private-copy boundaries."
+    }
+  ],
+  "dispositions": [
+    {
+      "unit": "N164",
+      "job": "Q01",
+      "verdict": "positive rewrite",
+      "target": "s18:Sandbox-gated",
+      "before": "L shared mappings observed; no mapping-identity attribution from size alone",
+      "after": "Source-only; mapped before compilation",
+      "pending": false
+    },
+    {
+      "unit": "N203",
+      "job": "Q02",
+      "verdict": "elide",
+      "target": "s28:Reaches exec children",
+      "before": "Inherited sandbox constraints; exact child policy effects not inventoried here",
+      "after": "Inherited sandbox constraints",
+      "pending": false
+    },
+    {
+      "unit": "N266",
+      "job": "Q03",
+      "verdict": "elide after R01",
+      "target": "n9a:Release / teardown action",
+      "before": "Return or process exit; no claim of byte erasure",
+      "after": "Return or process exit",
+      "pending": false
+    },
+    {
+      "unit": "N270",
+      "job": "Q03",
+      "verdict": "elide after R01",
+      "target": "n9b:Release / teardown action",
+      "before": "Return or process exit; no claim of byte erasure",
+      "after": "Return or process exit",
+      "pending": false
+    }
+  ]
+}
