@@ -6483,7 +6483,7 @@
             "Acquired by": "H: pw_cworker_shm_open_create, ftruncate",
             "When": "Before compilation",
             "Held across": "Later phases; last mapping/reference may outlive worker",
-            "Released": "H requests immediate shm_unlink; object survives references",
+            "Released": "H requests immediate shm_unlink; injected failure leaves name after teardown",
             "Authority": "Shared writable input/publication storage",
             "Sandbox-gated": "Source-only, host before apply",
             "Reaches exec children": "No explicit child reference; see S13b",
@@ -6500,6 +6500,11 @@
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test"
             }
           ]
         },
@@ -6509,7 +6514,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "S1b",
-            "Acquired by": "H: pw_cworker_shm_open_create; clears FD_CLOEXEC",
+            "Acquired by": "H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return",
             "When": "Before compilation",
             "Held across": "Through driver result collection",
             "Released": "H setup-failure close or final defer",
@@ -6528,6 +6533,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -6688,7 +6698,7 @@
             "Held across": "Through driver return",
             "Released": "H defer close",
             "Authority": "Duplicate authority-bearing channel",
-            "Sandbox-gated": "Source-only, host before apply",
+            "Sandbox-gated": "Host before apply; controlled failed endpoint action still spawns",
             "Reaches exec children": "Worker fd 5; exec/extension combination refused",
             "Role": "A"
           },
@@ -6702,6 +6712,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -6717,7 +6732,7 @@
             "Held across": "Through driver return",
             "Released": "H defer destroy",
             "Authority": "Prescribes worker descriptor table",
-            "Sandbox-gated": "Source-only; Apple malloc implementation",
+            "Sandbox-gated": "Host before apply; controlled init/add failures reach later uses or spawn",
             "Reaches exec children": "Handle no; actions determine worker state",
             "Role": "P; setup caveat"
           },
@@ -6731,6 +6746,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -6773,7 +6793,7 @@
             "Acquired by": "E: pw_cworker_shm_open_create, ftruncate",
             "When": "Before compilation",
             "Held across": "Issuer then worker; through session",
-            "Released": "E requests shm_unlink; last reference controls destruction",
+            "Released": "E requests shm_unlink; injected failure leaves name after teardown",
             "Authority": "Holds transferable token and issuer metadata",
             "Sandbox-gated": "Source-only, outside worker sandbox",
             "Reaches exec children": "No admitted exec+extension plan",
@@ -6789,6 +6809,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -7118,7 +7143,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "S13b",
-            "Acquired by": "H adddup2(shmFD, 3); W parse_args",
+            "Acquired by": "H requests adddup2(shmFD, 3); low-fd collision can substitute policy pipe",
             "When": "Before compilation",
             "Held across": "Later attempts and phases, until exit",
             "Released": "No W close; exit",
@@ -7138,6 +7163,11 @@
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test"
             }
           ]
         },
@@ -7147,7 +7177,7 @@
           "kind": "reporting",
           "facts": {
             "Inventory ID": "S13c",
-            "Acquired by": "H adddup2(readyPipe[1], 4); W parse_args",
+            "Acquired by": "H requests adddup2(readyPipe[1], 4); self-dup control leaves fd absent",
             "When": "Before compilation",
             "Held across": "Later attempts and phases, until exit",
             "Released": "No W close; exit",
@@ -7167,6 +7197,11 @@
               "path": "tests/suites/runner_exec_inheritance/run.sh",
               "symbol": "launch_inventory",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test"
             }
           ]
         },
@@ -7176,7 +7211,7 @@
           "kind": "authority",
           "facts": {
             "Inventory ID": "S13d",
-            "Acquired by": "H adddup2(tokenFD, 5); W parse_args",
+            "Acquired by": "H requests adddup2(tokenFD, 5); failed action can still spawn",
             "When": "Before compilation",
             "Held across": "Through extension preparation",
             "Released": "prepare_extension closes once; early main refusals leave to exit",
@@ -7195,6 +7230,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -8374,7 +8414,7 @@
             "When": "Before compilation",
             "Held across": "Through E initializer",
             "Released": "E defer close; fd 3 duplicate lives in issuer",
-            "Authority": "Collision-free delivery of token channel",
+            "Authority": "Selects channel from a high source; low-fd control preserves delivery",
             "Sandbox-gated": "Source-only",
             "Reaches exec children": "No: issuer sibling, duplicate close-on-exec",
             "Role": "A"
@@ -8390,6 +8430,11 @@
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
               "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
+              "form": "test"
             }
           ]
         },
@@ -8404,7 +8449,7 @@
             "Held across": "Through E initializer",
             "Released": "E defer destroy",
             "Authority": "Channel/stdio selection",
-            "Sandbox-gated": "Source-only; unchecked init result",
+            "Sandbox-gated": "Host before apply; failed init reaches fixture-contained invalid-handle use",
             "Reaches exec children": "No worker memory inheritance",
             "Role": "P"
           },
@@ -8418,6 +8463,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -8433,7 +8483,7 @@
             "Held across": "Through E initializer",
             "Released": "E defer destroy",
             "Authority": "Issuer fd isolation",
-            "Sandbox-gated": "Source-only; unchecked init result",
+            "Sandbox-gated": "Host before apply; failed init reaches fixture-contained invalid-handle use",
             "Reaches exec children": "No worker memory inheritance",
             "Role": "P"
           },
@@ -8447,6 +8497,11 @@
             {
               "path": "tests/suites/witness_contract/run.sh",
               "symbol": "extension_boundaries",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]
@@ -8491,7 +8546,7 @@
             "Held across": "Spawn call only",
             "Released": "Helper defer free; Swift array lifetime",
             "Authority": "Transfer launch arguments, not token bytes",
-            "Sandbox-gated": "Source-only; allocation failures not explicitly refused",
+            "Sandbox-gated": "Host before apply; controlled allocation failure spawns empty/truncated argv",
             "Reaches exec children": "Arguments copied into new images, host pointers not inherited",
             "Role": "P; setup caveat"
           },
@@ -8505,6 +8560,11 @@
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/runner_unit/host_setup_controls.py",
+              "symbol": "check",
               "form": "test"
             }
           ]

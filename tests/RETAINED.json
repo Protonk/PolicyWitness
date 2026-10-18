@@ -1130,6 +1130,62 @@
       "reason": "Worker pass 3 full source-drift validation: all six cases passed, including gap-index mutations for all three tours; exact tested base and worktree patch retained.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-setup-1",
+      "run_id": "20261018T000006Z_c0121363",
+      "reason": "Pass 4 setup instrumentation rejected an incorrect fcntl substitution count; diagnostic failure, not credited.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-setup-2",
+      "run_id": "20261018T000018Z_2a2899e9",
+      "reason": "Pass 4 setup fixture compilation rejected variadic shm_open from Swift; diagnostic failure, not credited.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-setup-3",
+      "run_id": "20261018T000046Z_5400cfd0",
+      "reason": "Pass 4 setup checker rejected the indistinguishable null-device token source; prior native observations retained, superseded for credit.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-setup-4",
+      "run_id": "20261018T000144Z_fbf16779",
+      "reason": "Pass 4 setup controls passed before adding an independent post-cleanup shared-memory absence check; superseded by setup-final.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-setup-final",
+      "run_id": "20261018T000428Z_baa4b43b",
+      "reason": "Pass 4 row 19: 22 controlled native setup observations and 10 rejected checker controls passed. Disposable host copies and child receipts reproduce endpoint collision, unchecked action/argv failures and named-memory retention. acceptance holds input snapshot; runtime hardening unadjudicated.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-source",
+      "run_id": "20261018T000217Z_76c677ee",
+      "reason": "Pass 4 row 7: all 12 identity/publication/exec/SIGPIPE covering cases passed against signed build 699. Production changes are comments and regenerated identity only (37be3d2); acceptance holds build logs and token comparison. No release.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/worker-p4-drift",
+      "run_id": "20261018T000624Z_d03cc617",
+      "reason": "Pass 4 final documentation validation: all six source-drift cases passed. acceptance holds base commit, tested worktree patch and untracked fixture inputs. Later Status, closure and retention entries are bookkeeping, checked again before commit.",
+      "source": null,
+      "app_inventory": null
+    },
+    {
+      "path": "runs/worker-p4-final-metadata",
+      "run_id": "20261018T001142Z_eadf456b",
+      "reason": "Pass 4 final Status, row closures, ledger and guide wording passed generator/prose contract controls. acceptance holds the tested source patch; the subsequent run receipt and retention entry are bookkeeping.",
+      "source": null,
+      "app_inventory": null
     }
   ]
 }

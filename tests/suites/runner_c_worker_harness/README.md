@@ -88,18 +88,21 @@ while enforcing write permission.
 `exec_pipes_per_attempt` sets the soft and hard descriptor limits to 64 and
 runs a plan that imports `system.sb`, reads `/etc/hosts`, spawns 32
 `/usr/bin/true` children and reads again. Held open together, 32 pipe pairs
-would need 128 descriptors, so every child exiting cleanly proves that the
-worker creates each attempt's pipes and spawn handles inside the attempt,
-after apply, and releases them before the slot completes. Both reads and the
-import must succeed under the same ceiling.
+would need 128 descriptors, so every child exiting cleanly rules out holding
+all those pipe pairs at once in this run. Both reads and the import must
+succeed under the same ceiling. Source placement in
+[`exec_resources_acquire`](../../../controller/tools/pw_probe_runner/pw_probe_runner.c)
+establishes acquisition within the attempt after apply; the ceiling alone does
+not establish placement or spawn-handle lifetime. The
+[worker tour](../../../docs/WORKER.md#acquisitions-inside-attempts) separates
+these claims.
 
 `exec_setup_post_apply_denied` runs one exec slot under bare `(deny default)`.
-The post-apply pipe and spawn-handle setup must succeed and the attempt must
-fail at `posix_spawn` itself: `child_pid=0`, `rc=-1`, `errno` ∈ {EPERM,
-EACCES} and an error naming `posix_spawn` rather than `pipe()` or a
-spawn-handle call. A setup-attributed failure here would mean a macOS revision
-has started gating that surface; the C worker's exec attempt machinery comment
-says what to do then.
+For this control's inputs and environment, setup must reach `posix_spawn`:
+`child_pid=0`, `rc=-1`, `errno` ∈ {EPERM, EACCES} and an error naming
+`posix_spawn` rather than `pipe()` or a spawn-handle call. An earlier failure
+requires investigation of its boundary and native error; this control alone
+cannot attribute it to a changed sandbox rule or exclude resource exhaustion.
 
 ### Exec attempt budget
 

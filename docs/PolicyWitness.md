@@ -1871,10 +1871,13 @@ combinations:
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].
   The worker creates each child's stdout/stderr pipes and spawn handles
   inside the attempt, after the sandbox applies, and releases them before
-  the step completes. None of that setup is a sandbox operation, so under
-  an unaugmented `(deny default)` the denied call is `posix_spawn` itself
-  (see [Augments](#augments) → `exec_baseline` for the policy that lets a
-  spawn succeed). It bounds each child by the deadlines under
+  the step completes. The bare-deny control observes successful setup followed
+  by a permission-shaped failure at `posix_spawn` for its tested inputs and
+  environment. Setup can fail at an earlier call; its recorded boundary and
+  native error do not establish a sandbox cause. The
+  [worker tour](WORKER.md#acquisitions-inside-attempts) distinguishes these
+  observations from source-established placement. The worker bounds each child
+  by the deadlines under
   [Execution budgets](#execution-budgets), drains both streams while the
   child runs, reaps it, and surfaces these fields under `attempt`:
 
@@ -1887,7 +1890,6 @@ combinations:
   | `rc` | always populated | (n/a) | Helper's exit code after successful observation; `-1` on spawn, deadline, observation or cleanup failure. Consult `child_exit_code` for the leader's independently observed exit. |
   | `outcome` | always populated | (n/a) | `"ok"` when spawn and observation completed successfully and the leader exited 0; `"exec_failed"` also covers deadline and cleanup errors. Neither a successful leader reap nor pipe EOF proves descendant cleanup. |
 
-  A minimal `(deny default)` policy will block `posix_spawn` itself.
   Callers who want exec attempts to succeed under a deny-by-default
   policy opt into `policy.augments: ["exec_baseline"]` (see
   [Augments](#augments)) — three `(allow ...)` rules are sufficient
