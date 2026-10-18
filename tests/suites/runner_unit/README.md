@@ -171,3 +171,17 @@ The live stale/future phase-release controls also check failure-detail units:
 wait expiry reports its millisecond budget, while a rejected future release
 reports the observed ordinal. Constructed unknown failure codes retain raw
 detail without acquiring either interpretation.
+
+## Host setup failures and descriptor collisions
+
+`host_setup_controls` compiles disposable copies of the host sources with
+selected native boundaries replaced by test adapters. It retains ordinary and
+injected-failure runs, actual low-descriptor collisions, independent child
+receipts and cleanup observations. Passing controls characterize both checked
+refusals and paths that still spawn after setup failure; they do not certify
+universal setup refusal. Rejected checker controls require the intervention,
+child effect and cleanup evidence separately. The
+[fixture contract](../../fixtures/host_setup/README.md) describes invalid-handle
+containment and the limits of descriptor metadata. This case requires Swift and
+clang and does not use the signed app; its sources, build log and receipts are
+retained under `artifacts/controls/`.

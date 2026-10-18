@@ -311,6 +311,18 @@
           "requires": [
             "swift"
           ]
+        },
+        {
+          "id": "host_setup_controls",
+          "description": "Native setup faults and actual descriptor collisions in disposable host sources, with independent child receipts and rejected checker controls",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/host_setup_controls.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ]
         }
       ]
     },

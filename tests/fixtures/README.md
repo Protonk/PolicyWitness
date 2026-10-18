@@ -69,6 +69,8 @@ deterministic, and checked into the repo so tests are hermetic.
 - `path_query/`: independent signed native target for direct shipped-validator
   queries, path resolution and file-operation observations; see its
   [README](path_query/README.md). It does not implement PW's phase protocol.
+- `host_setup/`: disposable Swift host copies with native setup substitutions and
+  an independent child descriptor observer; see its [README](host_setup/README.md).
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
 - `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,
