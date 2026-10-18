@@ -1,7 +1,0 @@
-{
-  "worker": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
-  "worker_sha256": "4fbcb109af574da3966f7a5c0ef2bf4653ae8cbfc0be642de5771b3eb582f6a0",
-  "observer_sha256": "0b32080cacbd106c78dd4a8c0286b16ccccc34238e6f1d67bce95fa52c904a30",
-  "host_sha256": "367c5822878ed11e131d62a9972206e977b506e339bad97158f5e41e5fa97c5d",
-  "uname": "Darwin raccoons-MacBook-Air.local 25.6.0 Darwin Kernel Version 25.6.0: Tue Aug 18 17:49:54 PDT 2026; root:xnu-12377.161.15.700.19~2/RELEASE_ARM64_T8142 arm64"
-}

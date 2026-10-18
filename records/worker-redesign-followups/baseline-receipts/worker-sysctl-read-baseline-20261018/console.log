@@ -1,9 +1,0 @@
-==> [selection] runner_filter_sysctl_name/checker_controls
-==> [runner_filter_sysctl_name/checker_controls] start
-==> [runner_filter_sysctl_name/checker_controls] unavailable predictions must retain step identity and attempt checks
-==> [runner_filter_sysctl_name/checker_controls] pass: all four filter adapters accept valid evidence and reject broken channels
-==> [selection] runner_filter_sysctl_name/prediction_unavailable_attempt_observed
-==> [runner_filter_sysctl_name/prediction_unavailable_attempt_observed] start
-==> [runner_filter_sysctl_name/prediction_unavailable_attempt_observed] sysctl-name probe — prediction unavailable, attempt observed
-==> [runner_filter_sysctl_name/prediction_unavailable_attempt_observed] pass: sysctl_name: prediction_unavailable surfaced; sysctl attempt observed
-Test run summary: /Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/worker-sysctl-read-baseline-20261018/run.json

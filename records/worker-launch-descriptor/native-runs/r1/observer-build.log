@@ -1,7 +1,0 @@
-/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/observer.c:50:17: error: call to undeclared function 'atomic_store_explicit'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
-   50 |                 atomic_store_explicit(cell, o->token, memory_order_release);
-      |                 ^
-/Users/raccoon/Desktop/Security/PolicyWitness/records/worker-launch-descriptor/equipment/observer.c:50:55: error: use of undeclared identifier 'memory_order_release'
-   50 |                 atomic_store_explicit(cell, o->token, memory_order_release);
-      |                                                       ^~~~~~~~~~~~~~~~~~~~
-2 errors generated.

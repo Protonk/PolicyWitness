@@ -1,2 +1,0 @@
-CWorker.swift before collection-basis snapshot:
-+    if process.status != nil { observeAcknowledgement() }
