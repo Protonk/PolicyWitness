@@ -2,7 +2,15 @@
 
 ## Status
 
-Pass 5 round 1 is complete in this commit: three independent reviews,
+The descriptive worker-language sweep is complete in this commit against
+`2d63c983224907b109b4349d216c03471a8b1f0c`. The
+[report](../records/worker-language-sweep/report.md) and
+[inventory](../records/worker-language-sweep/inventory.md) classify WORKER.md
+and its direct machinery as 205 A1 occurrences and 101 B1 occurrences
+(44 C2, 57 D2), with scope exclusions and mixed roles preserved. The sweep
+changes no underlying claim or register disposition and is not pass 6.
+
+Pass 5 round 1 is complete in `2d63c98`: three independent reviews,
 reconciliation and the focused probes described below. The user authorized
 this single enriched round after pass 4;
 future rounds remain undecided. Pass 6 is reserved for a fresh agent and has

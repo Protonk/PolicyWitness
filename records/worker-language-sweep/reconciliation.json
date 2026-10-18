@@ -1,0 +1,1882 @@
+{
+  "revision": "2d63c983224907b109b4349d216c03471a8b1f0c",
+  "method": "Coordinator reviewed independent decisions and preserves first/follow-up/reviewer artifacts unchanged. Any coordinator overrides are recorded separately.",
+  "resolutions": [
+    {
+      "id": "N003",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "An edge-type legend explains how to read drawn edges; it does not say every observation path is drawn. The proposed trigger changes a type legend into a completeness promise without specific wording making that promise."
+    },
+    {
+      "id": "N004",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The Released column presents named cleanup calls as release facts, giving an exact local invitation to treat a requested call as an achieved cleanup outcome. This supports the cleanup part only. The gating-scope clause needs its own narrower analysis; the process-exit/reference lifetime sentences are A1."
+    },
+    {
+      "id": "N005",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The resource-specific table pairs mapping/preparation facts with bare_deny_default, supplying an organizational invitation to treat the named test as asserting every preparation fact. This is assertion coverage, not proof that a test was executed. The leading cleanup-lifetime fragment is A1 context."
+    },
+    {
+      "id": "N009",
+      "action": "revise",
+      "fields": [
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "D2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "No local statement describes the private apply routine transferring ownership or destroying the profile. A missing explicit PW destruction call is an actual absence, not a positive claim about what private apply does."
+    },
+    {
+      "id": "N012",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The normal launch observation, followed by the contaminated configuration, is the relevant local comparison. Freshness alone says nothing about a particular descriptor/environment arrangement. The actual configuration observations are A1 secondary propositions."
+    },
+    {
+      "id": "N014",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The adjoining affirmative signal-inheritance account and link to inheritance controls can invite reading the observer as independently establishing the worker-to-child signal state. The guard explains why its own ignored SIGPIPE defeats that reading."
+    },
+    {
+      "id": "N017",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive report that failed initialization reaches later invalid-handle uses is the exact premise that could be read as an observation of libc accepting or rejecting that input. The adapters qualification prevents that extension; the other failure-flow observations remain A1."
+    },
+    {
+      "id": "N019",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The specific low-descriptor launch observations, not the word fresh, invite generalization to an ordinary launch."
+    },
+    {
+      "id": "N020",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Fresh worker denotes one process per specimen and is immediately paired with already-present libraries/process context. Neither freshness nor the listed endpoint/environment observations promise a full signal, Mach-right, private-runtime or effective-authority census. Some individual observation-generalization clauses have narrower C2 counterparts (N012/N122); do not let those establish C2 for the whole census claim."
+    },
+    {
+      "id": "N025",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The action table positively describes opened/written/created resources and labels a published success. That specific status/effect presentation can invite treating source call descriptions or status as independently witnessed filesystem effects. The caption alone was too broad."
+    },
+    {
+      "id": "N026",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive Apple-source allocation and fallback-buffer claims provide exact local triggers. Fixed PW buffers alone would not invite every claimed allocator/locale/binding inference. The allocation/source-versus-installed distinction is well supported; detailed locale/binding state still has weaker local prompting."
+    },
+    {
+      "id": "N027",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "A named descriptor-ceiling and bare-deny path is an actual positive control account. It can be generalized to all profiles/environments or all setup properties; the guard scopes the result to the case and separates source placement."
+    },
+    {
+      "id": "N028",
+      "action": "revise",
+      "fields": [
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Null stdin, captured output and leader observation do not invite the exact inference that a nonzero child exit negates successful spawn. The proposed trigger discusses lifecycle setup, whereas the guard distinguishes the result of spawning from the result of the spawned program. A conventional process-success conflation is hypothetical external context."
+    },
+    {
+      "id": "N032",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The source says a bootstrap reference is retained, but does not claim a live right count. A generic cited test/definition is not a positive measurement claim. The exact inference that a native right-count measurement occurred lacks a local trigger."
+    },
+    {
+      "id": "N038",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "D2"
+    },
+    {
+      "id": "N039",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The before/during/after-release fresh-read sequence is a concrete local invitation to interpret the final read as a required revocation check; accepting either result blocks exactly that reading."
+    },
+    {
+      "id": "N040",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The release/read sequence supports revocation and permission overreading; the static extension handle/native state wording supports handle-to-kernel-state overreading. Neither by itself supports every stable-identity or private-allocation claim. Preserve the mixed unit visibly: revocation/state parts have C2 triggers; stable identity/private allocation need separate trigger decisions rather than inheriting the bucket automatically."
+    },
+    {
+      "id": "N042",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Completed-slot publication and host decoding are concrete local premises for the absent-publication/absent-effect mistake. The created-file observation refutes that inference; payload eligibility itself is also A1 protocol behavior."
+    },
+    {
+      "id": "N043",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Use the immediate affirmative claim about existing storage and the concentration of PW dynamic acquisitions, not the generic earlier static-buffer inventory. The exact possible overreading extends PW call-site acquisition behavior into native/library internals."
+    },
+    {
+      "id": "N044",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Closing collection before worker release establishes ordering, and directly invites an overstrong stable-snapshot reading across later attempts."
+    },
+    {
+      "id": "N045",
+      "action": "revise",
+      "fields": [
+        "secondary_role"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The quoted proposition describes an actual worker resource, interface, lifecycle, implementation restriction or absence. Its negative wording is not by itself an interpretive guard."
+    },
+    {
+      "id": "N051",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The completed-publication protocol supplies the exact local premise for treating an absent report as no effect. Moving assembly into the worker is a separate A1 design counterfactual already visible in the unit."
+    },
+    {
+      "id": "N052",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive query-before-release arrangement is an exact local trigger for a stable-snapshot overreading. The counterfactual about removing the hold is separately A1 implementation/experiment behavior."
+    },
+    {
+      "id": "N053",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The resource-row source/check pairing is exactly the structure whose stronger semantic-coverage interpretation this passage limits. The source-review completeness sentence is broader and should retain its own scope."
+    },
+    {
+      "id": "N054",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The gap-index summary inherits N020\u2019s census boundary, not a new trigger. Freshness does not assert complete instrumentation, isolation or effective-authority measurement."
+    },
+    {
+      "id": "N056",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The relevant local material is the extension state-carrying handle and erasure account, not unrelated fixed-capacity policy/input storage. These invite overextending PW-visible state and erasure to private state. Private allocation extent is still a distinct weaker part."
+    },
+    {
+      "id": "N057",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The concrete per-row source/check pairing can be overread as verified semantic assertion coverage; the guard expressly limits that stronger inference. No claim about historical origin follows."
+    },
+    {
+      "id": "N058",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N060",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N063",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N066",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N069",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N071",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N072",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N074",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The cell asserts actual placement and a failure path that still spawns. It does not state an evidential non-entailment; controlled is context for that actual worker-launch behavior."
+    },
+    {
+      "id": "N076",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The cell states actual failed-initialization/action behavior reaching later uses or worker spawn. Column placement does not convert the behavior proposition into a guard."
+    },
+    {
+      "id": "N078",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N081",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N083",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N085",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N087",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N089",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N090",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N091",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N092",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N093",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N094",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N095",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N096",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N097",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N098",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "D2"
+    },
+    {
+      "id": "N099",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead. If scope were broadened, callable-symbol availability versus entitlement grant also deserves an A1/B1 clause review; the gold authority cluster could invite that inference. The present exclusion does not settle that broader classification.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N100",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N101",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N102",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N103",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N104",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N105",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N106",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N108",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N110",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The allow-default production observation is an exact local positive premise for this endpoint\u2019s unknown gating limitation. Presence is not a broader usability/gating observation. The header alone was insufficient."
+    },
+    {
+      "id": "N113",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The allow-default production observation is an exact local positive premise for this endpoint\u2019s unknown gating limitation. Presence is not a broader usability/gating observation. The header alone was insufficient."
+    },
+    {
+      "id": "N116",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The allow-default production observation is an exact local positive premise for this endpoint\u2019s unknown gating limitation. Presence is not a broader usability/gating observation. The header alone was insufficient."
+    },
+    {
+      "id": "N120",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N122",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The null-device production launch observation is the precise configuration that might be mistaken for a universal stdio arrangement."
+    },
+    {
+      "id": "N126",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "This cell positively reports a demonstrated worker inheritance capability and an ordinary launch with no extra fd. The contrast may have B1 implications, but the two observations are actual worker-behavior propositions."
+    },
+    {
+      "id": "N130",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N135",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The cell gives positive corroborating observations for the worker environment account. It does not itself state the generalized limit supplied by N136; retain that separate guard rather than duplicate it here."
+    },
+    {
+      "id": "N136",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive source account that the examined exec path constructs an empty environment is a specific local invitation to generalize beyond the examined path/configuration; freshness was not relevant."
+    },
+    {
+      "id": "N138",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The explicit read-back entitlement checks are a particular measured/checked part of starting authority that can be overread as a full effective-authority measurement. The local trigger covers that entitlement-to-authority extension, not every ambient-context uncertainty."
+    },
+    {
+      "id": "N141",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N144",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N147",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N149",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N152",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N155",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N157",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Fixed request/result storage has no specific relation to the set of initial Mach rights or their inheritance. No other local complete-right-set assertion was identified."
+    },
+    {
+      "id": "N158",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The independently affirmative vmmap inventory observation is a concrete premise for overreading per-allocation origin/gating. Only that positive clause is used as trigger; the unknown clause is the guard."
+    },
+    {
+      "id": "N161",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N164",
+      "action": "revise",
+      "fields": [
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The document reports shared mappings but gives no mapping-size observation or rule assigning identity by size. General shared-mapping discussion is only a shared topic for the exact size-to-identity inference."
+    },
+    {
+      "id": "N167",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N171",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N174",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N177",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N180",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N184",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N188",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N190",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N191",
+      "action": "revise",
+      "fields": [
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "D2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The compiled object is passed to apply, but no affirmative private ownership/lifetime change is specified. Source placement and missing explicit free do not identify that private transition."
+    },
+    {
+      "id": "N195",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N198",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N201",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive final-application/clean-completion observation is an exact premise for overreading deny coverage. It is separate from the not-deny-coverage guard even though both occur in one cell."
+    },
+    {
+      "id": "N203",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Executing under inherited sandbox constraints does not name exact child-policy effects or assert they have been inventoried. The proposed trigger is the same topic rather than an effect-census claim."
+    },
+    {
+      "id": "N204",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N208",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N212",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N216",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The action/resource name create and published open/create status are concrete wording that can invite existence-of-new-object inference. The source-only qualifier is a separate evidence-scope role."
+    },
+    {
+      "id": "N219",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N223",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N226",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N229",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive successful-capture observation is the exact observed behavior that cannot be generalized to denial coverage. The header alone does not establish this relation."
+    },
+    {
+      "id": "N231",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N232",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The explicit examined-Apple allocation claim supplies a more exact trigger than the gating header or static-storage account."
+    },
+    {
+      "id": "N234",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The explicit examined-Apple allocation claim supplies a more exact trigger than the gating header or static-storage account."
+    },
+    {
+      "id": "N236",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The success-path spawn/exit observation can be overextended to failure lifetimes; this is narrower and more concrete than the column heading."
+    },
+    {
+      "id": "N238",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N239",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Exceptional group cleanup is an affirmative worker operation that can be mistaken for observed absence of every process. This is an exact local cleanup-to-absence inference."
+    },
+    {
+      "id": "N240",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N241",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The specific release/read sequence directly invites release-as-revocation interpretation."
+    },
+    {
+      "id": "N243",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The resource label conjoins the static handle and native extension state, creating a specific local invitation to identify observed handle state with exact kernel state."
+    },
+    {
+      "id": "N245",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N249",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N250",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Retain only under the explicit Reaches exec children column reading: this is a negative transfer boundary for worker exec children, explained by the issuer\u2019s lack of children. As a free-standing proposition solely about issuer child creation it would be out of scope. The column supplies the worker relation; it is not a general supporting-apparatus exemption."
+    },
+    {
+      "id": "N251",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Empty/truncated worker argv after allocation failure is actual worker-launch behavior. Source placement is also actual; the header adds no B1 inference."
+    },
+    {
+      "id": "N252",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "N255",
+      "action": "exclude",
+      "reason": "This occurrence concerns the issuer/host\u2019s own allocation, handle, cleanup, source/observation provenance or internal state. It does not itself assert what the worker receives, holds, does, can inherit or cannot access. Membership in the worker-capability map does not turn it into a worker proposition. Keep it as explicit excluded supporting-apparatus context; do not force it into B1 instead.",
+      "original_bucket": "B1",
+      "original_split": "C2"
+    },
+    {
+      "id": "N258",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "No target fd held by the call site is an actual acquisition absence relevant to what target authority reaches the worker. Source-only is a secondary provenance qualifier needing a separate B1 unit if counted."
+    },
+    {
+      "id": "N260",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N264",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N266",
+      "action": "revise",
+      "fields": [
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "D2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The table says a frame returns or the process exits; it does not positively describe wiping those frame bytes. Released as a resource-lifetime heading is insufficient for the exact byte-erasure inference."
+    },
+    {
+      "id": "N268",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N270",
+      "action": "revise",
+      "fields": [
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "D2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Capture/hash frame lifetime is described, but no positive wiping operation or byte-erasure guarantee is supplied for these automatic frames."
+    },
+    {
+      "id": "N272",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N276",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "The cited 'Sandbox-gated' header names the subject of this cell; it does not assert that this resource was empirically gated, that its test was run, or that private/live state was measured. A same-row check citation can invite an assertion-coverage reading (N057), but is not by itself the exact live-observation claim limited here. No independent affirmative local trigger for this cell's narrower source/observation limit was identified."
+    },
+    {
+      "id": "N279",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive EOF observation is a concrete outcome that may be mistaken for an independent gating probe. The initial header was not a claim of such a probe."
+    },
+    {
+      "id": "N281",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Concrete positive claims about examined formatting/error-string implementation provide a source-to-installed-behavior trigger. Fixed destinations alone would not establish that exact inference."
+    },
+    {
+      "id": "N283",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "Concrete positive claims about examined formatting/error-string implementation provide a source-to-installed-behavior trigger. Fixed destinations alone would not establish that exact inference."
+    },
+    {
+      "id": "N285",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Outside specimen worker is an actual provenance/interface boundary. Source-only is a distinct secondary B1/D2 epistemic qualifier; the combined cell should not be treated as entirely B1 merely because it is in Sandbox-gated."
+    },
+    {
+      "id": "N287",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Outside specimen worker is an actual provenance/interface boundary. Source-only is a distinct secondary B1/D2 epistemic qualifier; the combined cell should not be treated as entirely B1 merely because it is in Sandbox-gated."
+    },
+    {
+      "id": "N289",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Outside specimen worker is an actual provenance/interface boundary. Source-only is a distinct secondary B1/D2 epistemic qualifier; the combined cell should not be treated as entirely B1 merely because it is in Sandbox-gated."
+    },
+    {
+      "id": "N291",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Outside specimen worker is an actual provenance/interface boundary. Source-only is a distinct secondary B1/D2 epistemic qualifier; the combined cell should not be treated as entirely B1 merely because it is in Sandbox-gated."
+    },
+    {
+      "id": "N293",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "Outside specimen worker is an actual provenance/interface boundary. Source-only is a distinct secondary B1/D2 epistemic qualifier; the combined cell should not be treated as entirely B1 merely because it is in Sandbox-gated."
+    },
+    {
+      "id": "N299",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The drawn/table relationship maps later host path inspection to the newly created object. That is a more specific local invitation to object-identity overreading than generic path/metadata words."
+    },
+    {
+      "id": "N300",
+      "action": "revise",
+      "fields": [
+        "split",
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "D2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "There is a missed local trigger: the graph identifies denial-log candidates and joins them with run comparison evidence. This specific association can invite causal attribution; it is more than a generic occurrence of evidence vocabulary. It does not prove historical origin."
+    },
+    {
+      "id": "N301",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The source-to-capture-to-application sequence gives an exact local relation that can be compressed into receipt-equals-applied-policy evidence. Merely saying the host validates a receipt was a weaker trigger."
+    },
+    {
+      "id": "N304",
+      "action": "revise",
+      "fields": [
+        "bucket",
+        "split",
+        "trigger",
+        "inference_blocked",
+        "secondary_role"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The quoted text positively assigns multiple roles to particular worker resources. It is primarily a proposition about the resources and the representation chosen for them; the collector\u2019s exclusivity inference is a plausible secondary role, not an explicit primary guard."
+    },
+    {
+      "id": "N305",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The concrete per-row source/check pairing can be overread as verified semantic assertion coverage; the guard expressly limits that stronger inference. No claim about historical origin follows."
+    },
+    {
+      "id": "N306",
+      "action": "revise",
+      "fields": [
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The concrete per-row source/check pairing can be overread as verified semantic assertion coverage; the guard expressly limits that stronger inference. No claim about historical origin follows."
+    },
+    {
+      "id": "N307",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Freshness says which specimen owns the process, not that all its Mach rights were inspected. The initial-rights row explicitly names other rights without enumerating them."
+    },
+    {
+      "id": "N308",
+      "action": "revise",
+      "fields": [
+        "confidence",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "C2",
+      "reason": "The positive claim about changed exec-child behavior and the recorded EPIPE survival can be overread as a dedicated child-signal observation. The guard rejects that exact leap; the generic caption was not required."
+    },
+    {
+      "id": "N309",
+      "action": "revise",
+      "fields": [
+        "split",
+        "trigger",
+        "inference_blocked"
+      ],
+      "original_bucket": "B1",
+      "original_split": "C2",
+      "final_bucket": "B1",
+      "final_split": "D2",
+      "reason": "Already-present executable/library mappings and a fresh process do not assert no later internal change or complete acquisition timing. The generic freshness trigger misses the exact timing inference."
+    },
+    {
+      "id": "F001",
+      "action": "include_followup",
+      "reason": "Coverage follow-up occurrence, retained after scope review."
+    },
+    {
+      "id": "F002",
+      "action": "exclude",
+      "reason": "The native issuer allocation is not worker storage. Its bounded erase/free behavior and oversized-tail caveat do not themselves assert a worker behavior, delivered-resource boundary or worker evidence limit. The related original N038 has the same scope issue.",
+      "original_bucket": "A1",
+      "original_split": null
+    },
+    {
+      "id": "F003",
+      "action": "include_followup",
+      "reason": "Coverage follow-up occurrence, retained after scope review."
+    },
+    {
+      "id": "F004",
+      "action": "revise",
+      "fields": [
+        "confidence"
+      ],
+      "original_bucket": "A1",
+      "original_split": null,
+      "final_bucket": "A1",
+      "final_split": null,
+      "reason": "The worker\u2019s own bounded parameter copy is an actual implementation/resource constraint."
+    },
+    {
+      "id": "F004",
+      "action": "include_followup",
+      "reason": "Coverage follow-up occurrence, retained after scope review."
+    },
+    {
+      "id": "F005",
+      "action": "include_followup",
+      "reason": "Coverage follow-up occurrence, retained after scope review."
+    },
+    {
+      "id": "F006",
+      "action": "exclude",
+      "reason": "Issuer stdin/stdout/stderr EOF/discard behavior is solely issuer behavior; it describes neither worker stdio nor a worker transfer boundary. It is supporting-apparatus context, not A1 about the worker.",
+      "original_bucket": "A1",
+      "original_split": null
+    }
+  ]
+}

@@ -1,0 +1,1464 @@
+{
+  "revision": "2d63c983224907b109b4349d216c03471a8b1f0c",
+  "note": "Mechanical candidate list, not classification or completeness evidence.",
+  "rows": [
+    {
+      "kind": "nodes",
+      "id": "s1a",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s1a",
+      "field": "Reaches exec children",
+      "value": "No explicit child reference; see S13b"
+    },
+    {
+      "kind": "nodes",
+      "id": "s1b",
+      "field": "Acquired by",
+      "value": "H: pw_cworker_shm_open_create; requests FD_CLOEXEC clear without checking return"
+    },
+    {
+      "kind": "nodes",
+      "id": "s1b",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s2",
+      "field": "Held across",
+      "value": "Through collection, even if worker cleanup unconfirmed"
+    },
+    {
+      "kind": "nodes",
+      "id": "s2",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s2",
+      "field": "Reaches exec children",
+      "value": "No: exec replaces address space"
+    },
+    {
+      "kind": "nodes",
+      "id": "s3a",
+      "field": "Held across",
+      "value": "Readiness wait only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s3a",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s3a",
+      "field": "Reaches exec children",
+      "value": "No: close-on-exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "s3b",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s4a",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s4b",
+      "field": "Held across",
+      "value": "Through bounded policy transfer"
+    },
+    {
+      "kind": "nodes",
+      "id": "s4b",
+      "field": "Sandbox-gated",
+      "value": "Source-only, host before apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s4b",
+      "field": "Reaches exec children",
+      "value": "No: close-on-exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "s6",
+      "field": "Reaches exec children",
+      "value": "Handle no; actions determine worker state"
+    },
+    {
+      "kind": "nodes",
+      "id": "s7",
+      "field": "Held across",
+      "value": "Until exit; unconfirmed cleanup may outlive driver"
+    },
+    {
+      "kind": "nodes",
+      "id": "s7",
+      "field": "Sandbox-gated",
+      "value": "Source-only spawn; L observed two lifetimes"
+    },
+    {
+      "kind": "nodes",
+      "id": "s7",
+      "field": "Reaches exec children",
+      "value": "It parents exec children; not itself inherited"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8a",
+      "field": "Sandbox-gated",
+      "value": "Source-only, outside worker sandbox"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8a",
+      "field": "Reaches exec children",
+      "value": "No admitted exec+extension plan"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8b",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8b",
+      "field": "Reaches exec children",
+      "value": "No: close-on-exec except explicit delivery dup"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8c",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s8c",
+      "field": "Reaches exec children",
+      "value": "No: address space replaced"
+    },
+    {
+      "kind": "nodes",
+      "id": "s9",
+      "field": "Sandbox-gated",
+      "value": "Source-only; no live issuer case rerun in pass 1"
+    },
+    {
+      "kind": "nodes",
+      "id": "s9",
+      "field": "Reaches exec children",
+      "value": "No: sibling, reaped before worker delivery"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10a",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10a",
+      "field": "Reaches exec children",
+      "value": "No: issuer creates no exec child"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10b",
+      "field": "Released",
+      "value": "Normal munmap; malformed header exits without explicit unmap"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10b",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10b",
+      "field": "Reaches exec children",
+      "value": "No child"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10c",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s10c",
+      "field": "Reaches exec children",
+      "value": "No child"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11a",
+      "field": "Held across",
+      "value": "Until exit; no explicit dlclose"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11a",
+      "field": "Released",
+      "value": "Loader/process teardown; internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11a",
+      "field": "Authority",
+      "value": "Makes private issuance API callable, not an entitlement grant"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11a",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11a",
+      "field": "Reaches exec children",
+      "value": "No child"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11b",
+      "field": "Released",
+      "value": "Automatic values end with I; no independent handle release"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11b",
+      "field": "Authority",
+      "value": "API entry points; consume/release are checked, not invoked"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11b",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s11b",
+      "field": "Reaches exec children",
+      "value": "No child"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12a",
+      "field": "Held across",
+      "value": "Copy/reject decision only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12a",
+      "field": "Released",
+      "value": "I bounded erase then free; oversized tail caveat"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12a",
+      "field": "Sandbox-gated",
+      "value": "Source-only; private internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12a",
+      "field": "Reaches exec children",
+      "value": "No: issuer storage not inherited"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12b",
+      "field": "Acquired by",
+      "value": "I: memcpy on bounded accepted token"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12b",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s12b",
+      "field": "Reaches exec children",
+      "value": "No admitted exec+extension plan"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13a",
+      "field": "Released",
+      "value": "No W close; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13a",
+      "field": "Sandbox-gated",
+      "value": "L observed pre/post presence; gating unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13a",
+      "field": "Reaches exec children",
+      "value": "No: child addopen replaces stdin"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13b",
+      "field": "Released",
+      "value": "No W close; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13b",
+      "field": "Sandbox-gated",
+      "value": "L observed pre/post presence; gating unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13b",
+      "field": "Reaches exec children",
+      "value": "No: child CLOEXEC_DEFAULT"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13c",
+      "field": "Acquired by",
+      "value": "H requests adddup2(readyPipe[1], 4); self-dup control leaves fd absent"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13c",
+      "field": "Released",
+      "value": "No W close; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13c",
+      "field": "Sandbox-gated",
+      "value": "L observed pre/post presence; gating unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13c",
+      "field": "Reaches exec children",
+      "value": "No: child CLOEXEC_DEFAULT"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13d",
+      "field": "Sandbox-gated",
+      "value": "Source-only; close failure published on prepared path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s13d",
+      "field": "Reaches exec children",
+      "value": "No admitted exec+extension plan; child flags would exclude it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14a",
+      "field": "Acquired by",
+      "value": "H spawn, without replacement file actions"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14a",
+      "field": "Released",
+      "value": "Exit; no explicit W close"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14a",
+      "field": "Sandbox-gated",
+      "value": "L presence only; no universal stdio rule"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14a",
+      "field": "Reaches exec children",
+      "value": "No: exec-child capture pipes replace 1/2"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14b",
+      "field": "Acquired by",
+      "value": "H spawn without CLOEXEC_DEFAULT"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14b",
+      "field": "Released",
+      "value": "No generic W sweep; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14b",
+      "field": "Sandbox-gated",
+      "value": "IC demonstrates inheritance; L saw no extra numeric fd"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14b",
+      "field": "Reaches exec children",
+      "value": "No: exec-child CLOEXEC_DEFAULT; IC/CLI observed isolation"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14c",
+      "field": "Acquired by",
+      "value": "H clears FD_CLOEXEC and duplicates to 3 without closing source"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14c",
+      "field": "Released",
+      "value": "No generic W sweep; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14c",
+      "field": "Authority",
+      "value": "Same evidence object as S13b, not a second object"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14c",
+      "field": "Sandbox-gated",
+      "value": "Source-only possibility; L saw no extra alias"
+    },
+    {
+      "kind": "nodes",
+      "id": "s14c",
+      "field": "Reaches exec children",
+      "value": "No: exec-child CLOEXEC_DEFAULT"
+    },
+    {
+      "kind": "nodes",
+      "id": "s15",
+      "field": "Authority",
+      "value": "No entries observed; potential environment-dependent behavior is source-scoped"
+    },
+    {
+      "kind": "nodes",
+      "id": "s15",
+      "field": "Reaches exec children",
+      "value": "No: explicit {NULL} child env; IC/CLI"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16a",
+      "field": "Released",
+      "value": "Exit, not a PW reset"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16a",
+      "field": "Sandbox-gated",
+      "value": "Source + signed manifest; effective authority not fully measured"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16g",
+      "field": "Acquired by",
+      "value": "Received at H spawn; no PW reset"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16g",
+      "field": "Sandbox-gated",
+      "value": "L cwd /; gating unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16g",
+      "field": "Reaches exec children",
+      "value": "Yes, no chdir action"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16h",
+      "field": "Acquired by",
+      "value": "Received at H spawn; no PW reset"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16h",
+      "field": "Sandbox-gated",
+      "value": "Source-only inheritance; live value unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16h",
+      "field": "Reaches exec children",
+      "value": "Yes, no umask action"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16c",
+      "field": "Sandbox-gated",
+      "value": "Unknown live values"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16i",
+      "field": "Released",
+      "value": "W changes SIGPIPE only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16i",
+      "field": "Sandbox-gated",
+      "value": "Source-only; no signal census"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16j",
+      "field": "Released",
+      "value": "No PW reset"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16j",
+      "field": "Sandbox-gated",
+      "value": "Source-only; live mask unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16j",
+      "field": "Reaches exec children",
+      "value": "Yes, no SETSIGMASK"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16e",
+      "field": "Released",
+      "value": "No PW general release; full live right census unavailable"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16e",
+      "field": "Sandbox-gated",
+      "value": "L lsmp refused; exact set unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16e",
+      "field": "Reaches exec children",
+      "value": "Special-port inheritance/native exec rules; exact set unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16f",
+      "field": "When",
+      "value": "Before compilation initially; later internal changes unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16f",
+      "field": "Released",
+      "value": "Native runtime; no PW census/teardown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16f",
+      "field": "Sandbox-gated",
+      "value": "L vmmap inventory; per-allocation origin and gating unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s16f",
+      "field": "Reaches exec children",
+      "value": "Not the same mappings/threads: exec loads a new image"
+    },
+    {
+      "kind": "nodes",
+      "id": "s17",
+      "field": "Released",
+      "value": "No reset"
+    },
+    {
+      "kind": "nodes",
+      "id": "s17",
+      "field": "Sandbox-gated",
+      "value": "Source-only; L pre-ready final EPIPE survived"
+    },
+    {
+      "kind": "nodes",
+      "id": "s17",
+      "field": "Reaches exec children",
+      "value": "Yes: no SETSIGDEF; no dedicated live signal control"
+    },
+    {
+      "kind": "nodes",
+      "id": "s18",
+      "field": "Released",
+      "value": "No explicit W unmap; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s18",
+      "field": "Sandbox-gated",
+      "value": "L shared mappings observed; no mapping-identity attribution from size alone"
+    },
+    {
+      "kind": "nodes",
+      "id": "s18",
+      "field": "Reaches exec children",
+      "value": "No: exec replaces mappings and excludes fd 3"
+    },
+    {
+      "kind": "nodes",
+      "id": "s19",
+      "field": "Released",
+      "value": "Static storage at exit; no dynamic handle acquired here"
+    },
+    {
+      "kind": "nodes",
+      "id": "s19",
+      "field": "Authority",
+      "value": "Callable native consume/release, no pre-apply consumption"
+    },
+    {
+      "kind": "nodes",
+      "id": "s19",
+      "field": "Sandbox-gated",
+      "value": "Source-only; library internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "s19",
+      "field": "Reaches exec children",
+      "value": "No admitted combination; pointer storage not inherited across exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "s20",
+      "field": "Released",
+      "value": "No reset; exit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s20",
+      "field": "Sandbox-gated",
+      "value": "Source-only, request-dependent"
+    },
+    {
+      "kind": "nodes",
+      "id": "s20",
+      "field": "Reaches exec children",
+      "value": "No admitted exec with extension; hypothetical ABI child would inherit"
+    },
+    {
+      "kind": "nodes",
+      "id": "s21",
+      "field": "Released",
+      "value": "Rejected mapping: erase/munmap; accepted: no explicit unmap"
+    },
+    {
+      "kind": "nodes",
+      "id": "s21",
+      "field": "Sandbox-gated",
+      "value": "Source-only; rejection unmap failure recorded"
+    },
+    {
+      "kind": "nodes",
+      "id": "s21",
+      "field": "Reaches exec children",
+      "value": "No admitted combination; address space replaced on exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "s22",
+      "field": "Authority",
+      "value": "Consumable bearer token; validation does not consume it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s22",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s22",
+      "field": "Reaches exec children",
+      "value": "No admitted combination"
+    },
+    {
+      "kind": "nodes",
+      "id": "s22",
+      "field": "label",
+      "value": "Accepted token view in S21\n(alias of S12b, no copy)"
+    },
+    {
+      "kind": "nodes",
+      "id": "s23",
+      "field": "Released",
+      "value": "No wipe or explicit release"
+    },
+    {
+      "kind": "nodes",
+      "id": "s23",
+      "field": "Authority",
+      "value": "Policy input, not a target-file descriptor"
+    },
+    {
+      "kind": "nodes",
+      "id": "s23",
+      "field": "Sandbox-gated",
+      "value": "Source-only; read receipt observed in L"
+    },
+    {
+      "kind": "nodes",
+      "id": "s23",
+      "field": "Reaches exec children",
+      "value": "No: new exec image"
+    },
+    {
+      "kind": "nodes",
+      "id": "s24",
+      "field": "Acquired by",
+      "value": "W: memcpy from bounded shared parameters"
+    },
+    {
+      "kind": "nodes",
+      "id": "s24",
+      "field": "Released",
+      "value": "No wipe; static storage teardown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s24",
+      "field": "Authority",
+      "value": "Exact compile/capture inputs; no additional access"
+    },
+    {
+      "kind": "nodes",
+      "id": "s24",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s24",
+      "field": "Reaches exec children",
+      "value": "No: new exec image"
+    },
+    {
+      "kind": "nodes",
+      "id": "s25",
+      "field": "Sandbox-gated",
+      "value": "Source-only; private allocation internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "s25",
+      "field": "Reaches exec children",
+      "value": "No: freed before possible child spawn"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26a",
+      "field": "Held across",
+      "value": "Passed to capture/apply; allocation lifetime inside apply unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26a",
+      "field": "Released",
+      "value": "No explicit sandbox_free_profile; exit reclaims remaining process storage"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26a",
+      "field": "Authority",
+      "value": "Input to restriction application; not an applied policy by itself"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26a",
+      "field": "Sandbox-gated",
+      "value": "Source-only, private object lifetime unknown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26a",
+      "field": "Reaches exec children",
+      "value": "No: new exec image; applied restriction separate S28"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26b",
+      "field": "Held across",
+      "value": "Failure reporting only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26b",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s26b",
+      "field": "Reaches exec children",
+      "value": "No child on failed compile path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s27",
+      "field": "Released",
+      "value": "No separate allocation/unmap; S18 teardown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s27",
+      "field": "Sandbox-gated",
+      "value": "Source-only, pre-apply"
+    },
+    {
+      "kind": "nodes",
+      "id": "s27",
+      "field": "Reaches exec children",
+      "value": "No: new image, evidence fd excluded"
+    },
+    {
+      "kind": "nodes",
+      "id": "s28",
+      "field": "Released",
+      "value": "One-way, no undo"
+    },
+    {
+      "kind": "nodes",
+      "id": "s28",
+      "field": "Sandbox-gated",
+      "value": "Source placement; L final application/clean completion, not deny coverage"
+    },
+    {
+      "kind": "nodes",
+      "id": "s28",
+      "field": "Reaches exec children",
+      "value": "Inherited sandbox constraints; exact child policy effects not inventoried here"
+    },
+    {
+      "kind": "nodes",
+      "id": "s29",
+      "field": "Held across",
+      "value": "Attempt only on ordinary cleanup path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s29",
+      "field": "Sandbox-gated",
+      "value": "Source-only; no file probe rerun in pass 1"
+    },
+    {
+      "kind": "nodes",
+      "id": "s29",
+      "field": "Reaches exec children",
+      "value": "No: closed before later exec, which also excludes it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s30",
+      "field": "Held across",
+      "value": "Attempt only on ordinary cleanup path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s30",
+      "field": "Released",
+      "value": "close after unchecked one-byte write"
+    },
+    {
+      "kind": "nodes",
+      "id": "s30",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s30",
+      "field": "Reaches exec children",
+      "value": "No: later exec excludes it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31a",
+      "field": "Held across",
+      "value": "Attempt only on ordinary cleanup path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31a",
+      "field": "Sandbox-gated",
+      "value": "Source-only; existing-file checker inspected, not rerun"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31a",
+      "field": "Reaches exec children",
+      "value": "No: later exec excludes it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31b",
+      "field": "Released",
+      "value": "No automatic unlink; later action/external actor may remove"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31b",
+      "field": "Sandbox-gated",
+      "value": "Source-only; creation not implied for existing target"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31b",
+      "field": "Reaches exec children",
+      "value": "Child can resolve it by path, not inherited fd"
+    },
+    {
+      "kind": "nodes",
+      "id": "s31b",
+      "field": "label",
+      "value": "Newly created filesystem\nobject, if absent"
+    },
+    {
+      "kind": "nodes",
+      "id": "s32",
+      "field": "Held across",
+      "value": "Attempt only on successful close; close failure retained"
+    },
+    {
+      "kind": "nodes",
+      "id": "s32",
+      "field": "Released",
+      "value": "One close, result published; no retry"
+    },
+    {
+      "kind": "nodes",
+      "id": "s32",
+      "field": "Sandbox-gated",
+      "value": "Source-only; extension checker inspected, not rerun"
+    },
+    {
+      "kind": "nodes",
+      "id": "s32",
+      "field": "Reaches exec children",
+      "value": "No: close-on-exec and child exclusion"
+    },
+    {
+      "kind": "nodes",
+      "id": "s33a",
+      "field": "Released",
+      "value": "No matching mach_port_deallocate, even when lookup fails"
+    },
+    {
+      "kind": "nodes",
+      "id": "s33a",
+      "field": "Sandbox-gated",
+      "value": "Source-only; native failure remains possible"
+    },
+    {
+      "kind": "nodes",
+      "id": "s33a",
+      "field": "Reaches exec children",
+      "value": "No explicit transfer; special bootstrap port inheritance is separate"
+    },
+    {
+      "kind": "nodes",
+      "id": "s33b",
+      "field": "Sandbox-gated",
+      "value": "Source-only; no right-count control"
+    },
+    {
+      "kind": "nodes",
+      "id": "s33b",
+      "field": "Reaches exec children",
+      "value": "No explicit port-transfer action"
+    },
+    {
+      "kind": "nodes",
+      "id": "s34a",
+      "field": "Sandbox-gated",
+      "value": "Source-only; IC/CLI successful captures, no deny run here"
+    },
+    {
+      "kind": "nodes",
+      "id": "s34a",
+      "field": "Reaches exec children",
+      "value": "No: explicit addclose and CLOEXEC_DEFAULT"
+    },
+    {
+      "kind": "nodes",
+      "id": "s34b",
+      "field": "Sandbox-gated",
+      "value": "Source-only; IC/CLI observed streams"
+    },
+    {
+      "kind": "nodes",
+      "id": "s35a",
+      "field": "Sandbox-gated",
+      "value": "Source-only Apple malloc/realloc path"
+    },
+    {
+      "kind": "nodes",
+      "id": "s35a",
+      "field": "Reaches exec children",
+      "value": "Handle no; action effects yes"
+    },
+    {
+      "kind": "nodes",
+      "id": "s35b",
+      "field": "Sandbox-gated",
+      "value": "Source-only Apple malloc"
+    },
+    {
+      "kind": "nodes",
+      "id": "s35b",
+      "field": "Reaches exec children",
+      "value": "Handle no; flags/group effects yes"
+    },
+    {
+      "kind": "nodes",
+      "id": "s36a",
+      "field": "Held across",
+      "value": "Attempt normally; unconfirmed reap may outlive it"
+    },
+    {
+      "kind": "nodes",
+      "id": "s36a",
+      "field": "Released",
+      "value": "Wait observation, conditional group kill, bounded nonblocking reap"
+    },
+    {
+      "kind": "nodes",
+      "id": "s36a",
+      "field": "Sandbox-gated",
+      "value": "IC/CLI observed spawn/exit; source-only failure lifetimes"
+    },
+    {
+      "kind": "nodes",
+      "id": "s36b",
+      "field": "Released",
+      "value": "Conditional group kill request, not an absence proof"
+    },
+    {
+      "kind": "nodes",
+      "id": "s36b",
+      "field": "Sandbox-gated",
+      "value": "Source-only; lifecycle cases inspected, not rerun"
+    },
+    {
+      "kind": "nodes",
+      "id": "s37",
+      "field": "Held across",
+      "value": "Across attempts/phases; requested release is not proven revocation"
+    },
+    {
+      "kind": "nodes",
+      "id": "s37",
+      "field": "Released",
+      "value": "Explicit release action once if submitted/eligible; no automatic exit-time release call; OS teardown"
+    },
+    {
+      "kind": "nodes",
+      "id": "s37",
+      "field": "Authority",
+      "value": "Native extension access represented by handle; exact kernel state unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "s37",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "s37",
+      "field": "Reaches exec children",
+      "value": "No admitted exec+extension plan"
+    },
+    {
+      "kind": "nodes",
+      "id": "n1",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "n1",
+      "field": "Reaches exec children",
+      "value": "No: issuer sibling, duplicate close-on-exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "n2",
+      "field": "Reaches exec children",
+      "value": "No worker memory inheritance"
+    },
+    {
+      "kind": "nodes",
+      "id": "n3",
+      "field": "Reaches exec children",
+      "value": "No worker memory inheritance"
+    },
+    {
+      "kind": "nodes",
+      "id": "n4",
+      "field": "Authority",
+      "value": "Read EOF/write discard"
+    },
+    {
+      "kind": "nodes",
+      "id": "n4",
+      "field": "Sandbox-gated",
+      "value": "Source-only, issuer outside specimen sandbox"
+    },
+    {
+      "kind": "nodes",
+      "id": "n4",
+      "field": "Reaches exec children",
+      "value": "No: issuer creates no child"
+    },
+    {
+      "kind": "nodes",
+      "id": "n5",
+      "field": "Held across",
+      "value": "Spawn call only"
+    },
+    {
+      "kind": "nodes",
+      "id": "n5",
+      "field": "Authority",
+      "value": "Transfer launch arguments, not token bytes"
+    },
+    {
+      "kind": "nodes",
+      "id": "n5",
+      "field": "Reaches exec children",
+      "value": "Arguments copied into new images, host pointers not inherited"
+    },
+    {
+      "kind": "nodes",
+      "id": "n6",
+      "field": "Released",
+      "value": "Swift scope/ARC, not worker teardown"
+    },
+    {
+      "kind": "nodes",
+      "id": "n6",
+      "field": "Sandbox-gated",
+      "value": "Source-only; Swift allocation internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "n6",
+      "field": "Reaches exec children",
+      "value": "No host memory inheritance"
+    },
+    {
+      "kind": "nodes",
+      "id": "n7",
+      "field": "Sandbox-gated",
+      "value": "Source-only; no target fd held by PW call site"
+    },
+    {
+      "kind": "nodes",
+      "id": "n7",
+      "field": "Reaches exec children",
+      "value": "No"
+    },
+    {
+      "kind": "nodes",
+      "id": "n8",
+      "field": "Released",
+      "value": "Process exit (main never returns after successful apply)"
+    },
+    {
+      "kind": "nodes",
+      "id": "n8",
+      "field": "Authority",
+      "value": "Operate release/timing protocol; no new access handle"
+    },
+    {
+      "kind": "nodes",
+      "id": "n8",
+      "field": "Sandbox-gated",
+      "value": "Source-only; stack mapping visible in L"
+    },
+    {
+      "kind": "nodes",
+      "id": "n8",
+      "field": "Reaches exec children",
+      "value": "No: new exec image"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9a",
+      "field": "Held across",
+      "value": "Call only"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9a",
+      "field": "Released",
+      "value": "Return or process exit; no claim of byte erasure"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9a",
+      "field": "Sandbox-gated",
+      "value": "Source-only; native library internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9a",
+      "field": "Reaches exec children",
+      "value": "No: exec replaces stack"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9b",
+      "field": "Held across",
+      "value": "Call only"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9b",
+      "field": "Released",
+      "value": "Return or process exit; no claim of byte erasure"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9b",
+      "field": "Sandbox-gated",
+      "value": "Source-only; qsort/CommonCrypto internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "n9b",
+      "field": "Reaches exec children",
+      "value": "No: exec replaces stack"
+    },
+    {
+      "kind": "nodes",
+      "id": "n10",
+      "field": "Held across",
+      "value": "Call/attempt only; output copied into S18"
+    },
+    {
+      "kind": "nodes",
+      "id": "n10",
+      "field": "Authority",
+      "value": "Use already inventoried target/child handles; no separate authority"
+    },
+    {
+      "kind": "nodes",
+      "id": "n10",
+      "field": "Sandbox-gated",
+      "value": "Source-only; compiler stack/page behavior unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "n10",
+      "field": "Reaches exec children",
+      "value": "argv_local strings copied; stack not inherited"
+    },
+    {
+      "kind": "nodes",
+      "id": "n11",
+      "field": "When",
+      "value": "After apply outside an attempt"
+    },
+    {
+      "kind": "nodes",
+      "id": "n11",
+      "field": "Released",
+      "value": "Return/exit; not dynamically allocated by PW"
+    },
+    {
+      "kind": "nodes",
+      "id": "n11",
+      "field": "Sandbox-gated",
+      "value": "Source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "n11",
+      "field": "Reaches exec children",
+      "value": "No child spawned on these paths"
+    },
+    {
+      "kind": "nodes",
+      "id": "n11",
+      "field": "label",
+      "value": "Post-apply outside-attempt\nautomatic diagnostics and\nseam timespec"
+    },
+    {
+      "kind": "nodes",
+      "id": "n12",
+      "field": "Authority",
+      "value": "Read EOF without exposing policy pipe"
+    },
+    {
+      "kind": "nodes",
+      "id": "n12",
+      "field": "Sandbox-gated",
+      "value": "IC/CLI observed EOF; no independent gating probe here"
+    },
+    {
+      "kind": "nodes",
+      "id": "n13",
+      "field": "Released",
+      "value": "Library/exit; no PW-owned handle"
+    },
+    {
+      "kind": "nodes",
+      "id": "n13",
+      "field": "Authority",
+      "value": "Diagnostic formatting; hidden allocation/locale behavior bounded only by source studied"
+    },
+    {
+      "kind": "nodes",
+      "id": "n13",
+      "field": "Sandbox-gated",
+      "value": "Source-only Apple paths; installed-library internals unobserved"
+    },
+    {
+      "kind": "nodes",
+      "id": "n13",
+      "field": "Reaches exec children",
+      "value": "Library memory not carried across exec"
+    },
+    {
+      "kind": "nodes",
+      "id": "x1",
+      "field": "When",
+      "value": "Query collection outside worker"
+    },
+    {
+      "kind": "nodes",
+      "id": "x1",
+      "field": "Sandbox-gated",
+      "value": "Outside specimen worker; source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "x1",
+      "field": "Reaches exec children",
+      "value": "No worker-to-child transfer"
+    },
+    {
+      "kind": "nodes",
+      "id": "x1",
+      "field": "note",
+      "value": "No transfer into worker; release ordinal is separate"
+    },
+    {
+      "kind": "nodes",
+      "id": "x2",
+      "field": "Sandbox-gated",
+      "value": "Outside specimen worker; source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "x2",
+      "field": "Reaches exec children",
+      "value": "No worker-to-child transfer"
+    },
+    {
+      "kind": "nodes",
+      "id": "x3",
+      "field": "Sandbox-gated",
+      "value": "Outside specimen worker; source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "x3",
+      "field": "Reaches exec children",
+      "value": "No worker-to-child transfer"
+    },
+    {
+      "kind": "nodes",
+      "id": "x3",
+      "field": "note",
+      "value": "Path spelling alone is not object identity"
+    },
+    {
+      "kind": "nodes",
+      "id": "x4",
+      "field": "When",
+      "value": "Outside worker; collector surrounds execution"
+    },
+    {
+      "kind": "nodes",
+      "id": "x4",
+      "field": "Sandbox-gated",
+      "value": "Outside specimen worker; source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "x4",
+      "field": "Reaches exec children",
+      "value": "No worker-to-child transfer"
+    },
+    {
+      "kind": "nodes",
+      "id": "x4",
+      "field": "note",
+      "value": "Candidate association, not worker-native cause"
+    },
+    {
+      "kind": "nodes",
+      "id": "x5",
+      "field": "Sandbox-gated",
+      "value": "Outside specimen worker; source-only"
+    },
+    {
+      "kind": "nodes",
+      "id": "x5",
+      "field": "Reaches exec children",
+      "value": "No worker-to-child transfer"
+    },
+    {
+      "kind": "edges",
+      "id": "W34",
+      "field": "label",
+      "value": "Successful create-open can create absent file"
+    },
+    {
+      "kind": "edges",
+      "id": "W40",
+      "field": "label",
+      "value": "Publishes open status; write return discarded"
+    },
+    {
+      "kind": "edges",
+      "id": "W43",
+      "field": "label",
+      "value": "Publishes lookup status, not retained port authority"
+    }
+  ]
+}

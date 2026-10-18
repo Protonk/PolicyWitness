@@ -1,0 +1,88 @@
+Task: descriptive sweep of worker-related negative/limiting language in PolicyWitness.
+Repository: /Users/raccoon/Desktop/Security/PolicyWitness
+Frozen revision: 2d63c983224907b109b4349d216c03471a8b1f0c.
+Read README.md and applicable AGENTS.md. Use frozen tracked content (git show if
+working files differ). Do not read the work plan, prior investigation records,
+or other agents' reports as a source of classifications. This is a descriptive
+language inventory authorized by the user, not pass 6, a truth audit, an editorial
+repair, or a new adjudication. Do not edit existing source/docs/tests, run builds
+or runtime tests, commit, or spawn agents.
+
+Scope: read all of docs/WORKER.md, including its generated inventory/map labels.
+Then search the tracked repository for worker-related negative/limiting prose:
+current docs/READMEs/contracts/AGENTS, explanatory source comments and user-facing
+explanations, plus owning manifest descriptions. Follow references and read
+surrounding context; keyword matches alone are not an inventory. Search beyond
+literal "not": no/never/without/only/doesn't/cannot/unobserved/unknown/absent,
+limits on evidence, scope qualifications, rhetorical contrasts and absence claims.
+Exclude historical plans/records, generated binary/SVG/DOT renderings, lockfiles,
+build/dist/output/scratch copies, raw fixtures/assertions/string enum values,
+and unrelated host/controller/build/test facts with no worker-related proposition.
+Keep generated WORKER inventory clauses, linking owning manifest facts where
+practical. Do not double-count a copied manifest/generated clause as a new
+proposition; record duplicate occurrences. Distinct authored occurrences elsewhere
+may be separate entries linked by a family/duplicate_of note. Explicitly list
+coverage, exclusions and uncertainty; do not claim an exhaustive semantic census
+from a regex search. Historical records may be excluded as a group, with reason.
+
+Taxonomy adopted by user:
+A1 = a proposition about the worker itself: its actual behavior, resources,
+authority, interfaces, lifecycle or implementation choices, including actual
+absence. Classify the proposition rather than its grammatical subject.
+B1 = an interpretive guard: limits an inference from worker behavior/evidence
+into another claim (e.g. sandbox causality, private kernel state, effective
+permissions, test coverage or generalization). Do not put every negative-looking
+non-worker sentence in B1; unrelated propositions are out of scope.
+Split mixed sentences into atomic propositions or record a secondary role and
+explain why one primary classification was chosen. Primary classes must remain
+exclusive for counting, while mixed roles remain visible.
+Every B1 also gets:
+C2 = identify specific wording, a figure, or organization in WORKER.md that could
+invite the exact inference being blocked. Cite and quote that trigger; do not use
+the guard itself as circular justification. A mere shared topic is insufficient.
+D2 = no identifiable local WORKER.md trigger. Record a known external source or
+treat the proposed external origin as explicitly hypothesized/unknown. "Could
+come from elsewhere" does not override an identifiable local trigger: C2 wins
+when both are present. These labels describe textual motivation, not historical
+causation or whether the guard is needed. Uncertain assignments keep confidence
+and rationale; do not invent a third primary bucket.
+
+Examples for definitions only, not quotations to collect:
+"The worker does not classify agreement" -> A1.
+"A successful worker operation does not establish why the sandbox allowed it"
+-> B1, then C2 only with a specific local inviting claim, otherwise D2.
+
+Deliver immutable first classification to
+.tmp/audits/worker-language-sweep/first-inventory.json and first-report.md.
+Coordinator will preserve them durably under records before ending the task.
+JSON format:
+{
+ "revision": "...", "scope": {...},
+ "entries": [{
+  "id":"N001", "layer":"worker_authored|worker_generated|repository",
+  "path":"...", "start_line":1, "end_line":2,
+  "quote":"EXACT contiguous substring of the stated frozen line range",
+  "context":"exact surrounding paragraph/table-row text or a concise contextual account",
+  "proposition":"atomic proposition in your words",
+  "bucket":"A1|B1", "secondary_role":"... or null",
+  "rationale":"...", "confidence":"high|medium|low",
+  "inference_blocked":"... or null",
+  "split":"C2|D2|null",
+  "trigger":{"path":"docs/WORKER.md", "start_line":1,"end_line":2,"quote":"exact substring","rationale":"why this invites that inference"} or null,
+  "external_origin":{"status":"identified|hypothesized|unknown", "references":[{"path":"...","start_line":1,"end_line":2,"quote":"exact substring"}], "rationale":"..."} or null,
+  "duplicates":[{"path":"...","start_line":1,"end_line":2,"quote":"exact substring"}],
+  "notes":"..."
+ }],
+ "coverage":[{"path_or_group":"...","method":"full read|search and contextual review|excluded","notes":"..."}],
+ "excluded_examples":[{"path":"...","start_line":1,"end_line":2,"quote":"exact substring","reason":"..."}]
+}
+Each entry must have the fields above, use null where inapplicable. Preserve exact
+quotes (including spelling; do not silently paraphrase quoted material). Line
+ranges refer to the frozen revision. You may quote a short exact clause from a
+long generated row and put its meaning in context, rather than repeat the whole
+row. Record all substantive WORKER candidates or explicit exclusions; don't
+inflate counts by inventing negative statements from ordinary positive prose.
+Report counts by layer and bucket, recurrent families, ambiguities and limits.
+No removal/move/rewrite recommendations. Freeze the first inventory/report before
+sending; any later corrections belong in a separate follow-up. Send readiness
+and major descriptive observations when complete.

@@ -1,0 +1,52 @@
+Task: challenge the descriptive worker-language classification, especially C2.
+Repository: /Users/raccoon/Desktop/Security/PolicyWitness
+Frozen revision: 2d63c983224907b109b4349d216c03471a8b1f0c.
+Read README.md and applicable AGENTS.md. Read all of docs/WORKER.md at that
+revision first. Do not read docs/WORKER-INST-DOC-PLAN.md or historical records;
+this is not pass 6 or a truth/editing/adjudication audit. No existing source,
+documentation or test edits, builds, runtime tests, commits or other agents.
+
+The collector is preparing an immutable first-inventory.json and first-report.md
+under .tmp/audits/worker-language-sweep. Do not read them until the coordinator
+confirms they are frozen. You may prepare by reading WORKER and identifying
+positive assertions/figure conventions that could invite mistaken inferences.
+Send a brief ready message when this preparation is complete. The coordinator
+will then send the frozen inventory for the actual review.
+
+User-approved taxonomy:
+A1: a proposition about actual worker behavior, resources, authority, interfaces,
+lifecycle or implementation choices, including actual absence.
+B1: a guard against an inference from worker behavior/evidence into another claim
+(sandbox cause, private state, effective permissions, test coverage, generality).
+Classify propositions rather than grammatical subjects. Mixed sentences can be
+split; secondary roles and uncertainty remain visible.
+Every B1 is also C2 or D2:
+C2 needs specific wording, a figure or organization in WORKER.md that invites
+that exact inference. The guard itself is not its own trigger. Shared topic
+alone is insufficient. C2 wins if a concrete local trigger and an external origin
+both exist.
+D2 has no identifiable local trigger; external source is identified with evidence
+or explicitly hypothetical/unknown. This does not establish historical origin.
+Confidence is allowed without inventing another primary bucket. These classes
+are descriptive, not decisions about placement, deletion or truth.
+
+Review every proposed C2 trigger, then all D2 assignments for missed local
+triggers. Spot-check A1/B1 boundaries and whole-WORKER coverage, especially
+mixed clauses. For each disagreement provide entry ID, original/final suggested
+classification, exact source/trigger quote with frozen path and line range,
+reason and confidence. Distinguish changes in confidence from changes in bucket.
+Record positive confirmations too, so the coordinator can tell which rows were
+reviewed. Do not assume the collector's assignment is true; avoid treating
+ubiquitous evidence words or absence of an X claim as a local positive trigger.
+
+Deliver separate .tmp/audits/worker-language-sweep/trigger-review.json and
+trigger-review.md after the frozen-inventory handoff. JSON:
+{"revision":"...", "reviewed_ids":[...], "decisions":[
+ {"id":"N...", "assessment":"agree|change|uncertain",
+  "bucket":"A1|B1", "split":"C2|D2|null", "confidence":"high|medium|low",
+  "rationale":"...",
+  "trigger":{"path":"docs/WORKER.md","start_line":1,"end_line":2,
+             "quote":"exact substring","rationale":"..."} or null}
+], "coverage_notes":[...], "omissions":[...]}.
+No editorial recommendations. Original first inventory stays immutable;
+coordinator reconciles differences and preserves all reports durably.
