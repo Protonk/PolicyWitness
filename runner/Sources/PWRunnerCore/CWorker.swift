@@ -17,8 +17,8 @@ import CryptoKit
  *   2. Memset the header to zero, populate ABI identity, step_count,
  *      param_count; populate slot inputs from the request; populate
  *      param keys/values from policy.params.
- *   3. Pre-touch every page so the worker's post-apply writes never
- *      depend on lazy allocation.
+ *   3. Touch each page in the host mapping; this does not establish
+ *      worker page residency or eliminate post-apply faults.
  *   4. Release-store `prepared = 1`.
  *   5. Create ready + policy pipes. Mark parent-side ends FD_CLOEXEC.
  *   6. posix_spawn pw-probe-runner with FDs dup'd to 0/3/4.
@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "33890392b9337f128a06b89b7d831192e5e8d809f0a5f41613e8745c2d9c9eb9"
-    static let abiIdentity: [UInt8] = [0x33, 0x89, 0x03, 0x92, 0xb9, 0x33, 0x7f, 0x12, 0x8a, 0x06, 0xb8, 0x9b, 0x7d, 0x83, 0x11, 0x92, 0xe5, 0xe8, 0xd8, 0x09, 0xf0, 0xa5, 0xf4, 0x16, 0x13, 0xe8, 0x74, 0x5c, 0x2d, 0x9c, 0x9e, 0xb9]
+    static let abiIdentityHex = "e1c88f81524813757e06ffe16ad512708557faad0b46e45b44b89b6815d2d145"
+    static let abiIdentity: [UInt8] = [0xe1, 0xc8, 0x8f, 0x81, 0x52, 0x48, 0x13, 0x75, 0x7e, 0x06, 0xff, 0xe1, 0x6a, 0xd5, 0x12, 0x70, 0x85, 0x57, 0xfa, 0xad, 0x0b, 0x46, 0xe4, 0x5b, 0x44, 0xb8, 0x9b, 0x68, 0x15, 0xd2, 0xd1, 0x45]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -1026,8 +1026,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                     value: p.value, max: PWShmLayout.paramValueMax)
     }
 
-    // ---- Pre-touch every page. R8 requires this so post-apply writes
-    // don't fault into the kernel's lazy-allocation path.
+    // ---- Touch pages in the host mapping. The worker maps independently;
+    // host touching does not prove its page residency or absence of faults.
     let pageSize: Int = {
         let v = sysconf(_SC_PAGESIZE)
         return v > 0 ? Int(v) : 4096

@@ -10,8 +10,8 @@
  *      Mach timebase and every configured allowance in continuous ticks; a
  *      refusal publishes its failure and exits 12 before any policy byte.
  *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
- *      into a stack-fixed buffer. This is the LAST allocation
- *      attempt before sandbox_apply(). The pipe carries no framing, so
+ *      into a fixed static buffer. Native parameter creation and
+ *      compilation follow. The pipe carries no framing, so
  *      the header's policy_bytes_expected (checked against the buffer
  *      capacity in step 2) is what tells a prefix cut at EOF apart from
  *      a complete shorter submission: the count read at EOF is
@@ -26,8 +26,8 @@
  *   7. Write applied sentinel (release ordering).
  *   8. For each populated slot: run the requested attempt. An exec
  *      attempt creates its pipes and spawn handles here, after apply,
- *      and releases them before its slot completes; none of that setup
- *      is sandbox-gated (see the exec attempt machinery comment). Exec
+ *      and releases them before its slot completes. Setup failures
+ *      retain their own call boundary (see below). Exec
  *      children are bounded per step by the exec deadline and per plan
  *      by the exec attempt budget (see PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT).
  *      Slot output writes use regular stores; the slot's `completed`
@@ -295,8 +295,8 @@ static int pw_timing_setup(pw_timing_t *timing, pw_shm_evidence_t *e) {
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
- * Same approach the existing Swift loader uses via dlsym; the C
- * worker links dynamically per R5 ("no static-link gymnastics").
+ * The C worker dynamically links these entry points; optional extension
+ * entry points are resolved separately with dlsym before application.
  *
  * The second arg of sandbox_compile_string is an OPAQUE SandboxParams
  * pointer (from sandbox_create_params), NOT a string — passing a
@@ -622,11 +622,12 @@ static int write_ready_byte(int fd) {
     }
 }
 
-/* ---- attempt implementations (R6) --------------------------------------- */
+/* ---- attempt implementations -------------------------------------------- */
 
 /*
- * Per R6: each attempt is stack-only POSIX (or mach) code, ~25 LOC.
- * No allocations post-apply. Outputs are written to the slot fields
+ * Attempts acquire their own resources after apply, including exec pipes
+ * and native spawn-handle storage. Diagnostic and other native-library
+ * internals are not constrained to stack storage. Outputs reach slot fields
  * before run_attempt() releases the slot's `completed` flag.
  *
  * observed_path uses fcntl(F_GETPATH) on the file FD while it is
@@ -687,7 +688,7 @@ static void attempt_file_open_write(pw_shm_slot_t *slot) {
 }
 
 static void attempt_file_create(pw_shm_slot_t *slot) {
-    /* Matches the Swift worker: O_WRONLY | O_CREAT without O_EXCL,
+    /* O_WRONLY | O_CREAT without O_EXCL,
      * mode 0600. A pre-existing file is opened for write but not
      * truncated; semantics callers depend on. */
     int fd = open(slot->target, O_WRONLY | O_CREAT, 0600);
@@ -711,9 +712,7 @@ static void attempt_file_unlink(pw_shm_slot_t *slot) {
 }
 
 static void attempt_file_access(pw_shm_slot_t *slot) {
-    /* R_OK: check the kernel would permit a read open without
-     * actually opening. New to the C worker — the Swift worker
-     * doesn't ship this kind. */
+    /* R_OK requests an access check; it does not open or read the target. */
     if (access(slot->target, R_OK) != 0) {
         fail_from_errno(slot, "access(R_OK)");
         return;
@@ -768,24 +767,17 @@ static void attempt_sysctl_read(pw_shm_slot_t *slot) {
  * no exec step holds descriptors across compilation, application or
  * another step's attempt, and a plan needs no descriptor budget.
  *
- * None of that setup is sandbox-gated. pipe(2), read/write on a pipe,
- * dup2 and the posix_spawn_file_actions/posix_spawnattr calls are not
- * Sandbox operations: inside a profile that denies default plus
- * system*, ipc*, file*, process* and mach*, every one of them succeeds
- * and only posix_spawn returns EPERM (measured on Darwin 23.6). So the
- * attribution contract holds without pre-apply preparation: under an
- * unaugmented (deny default) policy the failure MUST be posix_spawn
- * itself (child_pid == 0, errno in {EPERM, EACCES}, error names
- * "posix_spawn"). The harness case `exec_setup_post_apply_denied` and
- * `tests/suites/runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly`
- * pin that contract. A setup failure attributed to pipe() or a spawn
- * handle under (deny default) would mean a macOS revision started
- * gating this surface; the answer is then a documented augment or a
- * smaller capture surface, not pre-apply resource acquisition.
+ * The Darwin 23.6 measurement reached posix_spawn after successful setup
+ * under the tested denying profile. The harness case
+ * `exec_setup_post_apply_denied` and public case
+ * `runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly` require
+ * that boundary for their inputs. They do not establish that every native
+ * implementation or resource condition permits setup.
  *
- * A setup failure reports its own call and errno. It is resource
- * exhaustion evidence (EMFILE, ENFILE, ENOMEM), never a sandbox
- * attribution, and it claims no spawn.
+ * A setup failure records its call and errno and claims no spawn. Neither
+ * a permission-shaped return nor a resource-shaped return identifies a
+ * sandbox cause. Source placement keeps this setup inside the experiment;
+ * the descriptor-ceiling control tests reuse, not placement by itself.
  */
 typedef struct {
     int stdout_rfd;                 /* parent's read end; -1 when closed */
@@ -1563,17 +1555,12 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e,
 /* ---- main ---------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
-    /* Ignore SIGPIPE process-wide. The witness worker must never be
-     * killed by a write to a pipe the host has closed — its fate is the
-     * policy-under-test's to decide, and a host-side pipe teardown must
-     * not forge a fatal-signal exit (which the host reads as the source
-     * of truth for sandbox denial). In particular the pre-apply
-     * `write_ready_byte` is best-effort: if the host has already closed
-     * --ready-fd (e.g. a slow `sandbox_compile_string` overran the
-     * host's ready-byte deadline), the write must return EPIPE and let
-     * the worker proceed to sandbox_apply + the shm sentinel path,
-     * rather than dying of SIGPIPE before apply ever runs. Every write()
-     * in this worker already checks its return value. */
+    /* Ignore SIGPIPE so a closed host pipe can produce EPIPE instead of
+     * terminating the worker before shared-memory publication. In particular,
+     * write_ready_byte records its return and lets application proceed when
+     * the host has closed --ready-fd. A fatal signal is a termination
+     * observation, not proof of sandbox denial. Return handling is local to
+     * each call; open_write discards its one-byte write result. */
     signal(SIGPIPE, SIG_IGN);
 
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
