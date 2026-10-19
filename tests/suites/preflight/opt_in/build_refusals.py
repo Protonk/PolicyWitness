@@ -127,7 +127,7 @@ def copy(source, path):
 
 
 def replace(source, path):
-    """A new file renamed over the path: never a write through a Cargo output's hard link to its cached unit."""
+    """A new file with the current time renamed over the path, never a write into the existing file."""
     return {'op': 'replace', 'from': str(source), 'path': str(path)}
 
 
@@ -2241,8 +2241,8 @@ def control_output_target_mismatch(co, variant):
     it again. A native output replaced after the compile (universal for the last output; a one-slice fat container of an
     arm64 executable for the worker, which the identity check would otherwise run) refuses before assembly. Cargo copies
     each output from its cached unit on every build, so a replaced output alone is restored by the next one; the x86_64
-    bytes therefore replace the cached unit as well, as a corrupted cache would, while the truncated file replaces only
-    the output. A copy
+    bytes therefore replace the cached unit as well, as a corrupted cache would, newer than its compile so that Cargo
+    judges it current, while the truncated file replaces only the output. A copy
     replaced in the assembled bundle, with an unlisted universal file added beside it, refuses before any signature.
     The standalone observer replaced after the app seal refuses before it is signed, and the sealed bundle's code
     replaced after that refuses before the ZIP is written."""

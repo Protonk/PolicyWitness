@@ -109,10 +109,10 @@ def act(action):
         shutil.copy2(action['from'], path)
         path.chmod(0o755)
     elif op == 'replace':
-        # A new file renamed over the path, never a write through its inode: Cargo's uplifted executable is a hard link of
-        # its deps file, and a copy over it would rewrite the cached unit Cargo relinks when the output goes missing.
+        # A new file with the current time renamed over the path: nothing else that links to the old file changes, and a
+        # tool that compares times (Cargo judging a cached unit) sees it as newly written, not as the source's age.
         temporary = path.with_name(path.name + '.pw-replace')
-        shutil.copy2(action['from'], temporary)
+        shutil.copyfile(action['from'], temporary)
         temporary.chmod(0o755)
         os.replace(temporary, path)
     elif op == 'chmod':

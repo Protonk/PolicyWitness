@@ -287,8 +287,8 @@ Offline release controls also exercise the release procedure's decision points.
   replacements or a replaced codesign argument list at the selected boundary.
 - `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts
   and a stderr canary, passing the claim's lock descriptors to the real tool;
-  configured hooks remove, move, copy over, replace with a new file (never
-  writing through a Cargo output's link to its cached unit), truncate,
+  configured hooks remove, move, copy over, replace with a new file carrying
+  the current time, truncate,
   rewrite, replace with a symlink or change the mode of a file, append
   arguments to the real tool's command, edit Cargo's artifact report, kill or
   signal the build's shell, the lock owner or the wrapper itself, start a
