@@ -2064,11 +2064,11 @@ func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub:
     if let final = record.questions["final_status"] {
         switch (final.state, final.answer) {
         case ("supported", "signal"?):
-            if sub.reaped != true || sub.term_signal == nil || sub.exit_code != nil || final.value != sub.term_signal.map { .integer($0) } {
+            if sub.reaped != true || sub.term_signal == nil || sub.exit_code != nil || final.value != sub.term_signal.map({ .integer($0) }) {
                 problems.append("final_status: signal claim contradicts reaped/term_signal")
             }
         case ("supported", "exit_code"?):
-            if sub.reaped != true || sub.exit_code == nil || sub.term_signal != nil || final.value != sub.exit_code.map { .integer($0) } {
+            if sub.reaped != true || sub.exit_code == nil || sub.term_signal != nil || final.value != sub.exit_code.map({ .integer($0) }) {
                 problems.append("final_status: exit_code claim contradicts reaped/exit_code")
             }
         case ("supported", _): break
