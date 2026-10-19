@@ -2,16 +2,16 @@
 
 ## Problem and intended result
 
-On this machine, the first exec of a newly written executable file costs
-roughly 100–900 ms. That cost lands after `posix_spawn` returns and before the
-child's `main` runs. `runValidator` in
+On this machine, the first exec of a newly built executable file can take
+several hundred milliseconds, while later execs of the same file are fast.
+`runValidator` in
 [ValidatorClient.swift](runner/Sources/PWRunnerCore/ValidatorClient.swift)
-creates its I/O deadline immediately after a successful spawn, so a cold
-validator spends part of its collection window just starting. When the deadline
-arrives, the loop stops without reading anything still waiting in the pipe. A
-short window can therefore close before a newly built validator has produced
-its record. A case that needs that record then fails without exercising its
-intended condition.
+creates its I/O deadline immediately after a successful spawn. When the
+over-budget case ran a cold validator, the startup cost was charged to that
+window (see Evidence). When the deadline arrives, the loop stops without
+reading anything still waiting in the pipe. A short window can therefore close
+before a newly built validator has produced its record. A case that needs that
+record then fails without exercising its intended condition.
 
 The lifecycle fixture builder currently prevents this with a warm-up that
 executes each output once before any test runs. The warm-up is advisory. It
@@ -26,7 +26,9 @@ Intended result:
    on it.
 2. Cases that need a validator record before a short deadline start that
    deadline only after the fixture validator has reached `main`. A cold or
-   delayed start can no longer consume the window.
+   delayed start can no longer consume the window. This depends on the cost
+   landing before `main`, which Phase 2's checkpoint establishes before any
+   other case is converted.
 3. Cases whose short allowance is incidental get a generous one. The
    aggregate-exhaustion case can no longer pass without the phase-0 record it
    claims to preserve.
@@ -47,15 +49,22 @@ The baseline is commit `242bb36`.
 
 | Observation | Source |
 | --- | --- |
-| Before the warm-up, the over-budget case failed five runs out of five under the dispatcher. It passed against an already-executed fixture. | Message of commit `158a802` |
+| Before the warm-up, the over-budget case failed five runs out of five under the dispatcher, with first execs of 180–400 ms. It passed against an already-executed fixture. The message quotes AMFI's "no CMS blob" line followed by syspolicyd's first-launch evaluation. It infers that the evaluation happens before the process starts but does not measure this. | Message of commit `158a802`. The unified log no longer reaches that date, so the message is the only surviving record of those log lines. |
 | Since the warm-up was added, all 72 retained results of that case are `ok`. | `pwrunner_core_tests.log` under `tests/out/runs/*/suites/runner_unit/pwrunner_core_unit_executable/artifacts/` |
-| 206 retained fixture build logs record 2,812 warm-up execs: mean 232 ms, maximum 938 ms, 19 at or above 500 ms, and no timeouts. The `.validator` companion alone: mean 224 ms, maximum 781 ms. | `warm` lines in retained fixture build logs under `tests/out/runs/` |
+| 206 retained fixture build logs record 2,812 warm-up execs: mean 232 ms, maximum 938 ms, 19 at or above 500 ms, and no timeouts. The `.validator` companion alone: mean 224 ms, maximum 781 ms. | `warm` lines in the build logs under `tests/out/runs/` |
 | Every warm-up status was identical across those logs. Base worker, `.identity-mismatch` and `.validator` exited 90. `.issuer` exited 92. `.worker-limits` exited 0. Every production-main companion exited 2 (usage refusal with no arguments). | Same logs |
-| For a never-executed ad hoc child, `posix_spawn` returned in about 0.2 ms, and the child's first statement in `main` ran 110–183 ms later. Repeated execs of the same file reached `main` in about 1 ms. | 2026-10-19 probe: a parent timestamped the monotonic clock around `posix_spawn`, and the child recorded the same clock as its first statement |
-| Byte-identical copies of the signed shipped `pw-probe-runner` and `sb_api_validator` took 568 ms and 293 ms on first exec, then about 6 ms on later execs. Warm state belongs to the file, not to its bytes or its signature. | Same date, copies outside the app |
 
+The retained runs are gitignored and local to this checkout. Phase 1 keeps the
+`warm` lines, so every fixture build log will go on recording the cold cost.
 These costs are context, not acceptance thresholds. Nothing here should become
 a fast-enough-to-be-warm assertion.
+
+Two questions have no retained evidence behind them:
+
+- **Where the cost lands relative to `main`.** Phase 2 depends on the answer,
+  and its checkpoint provides it.
+- **Whether a copy, extraction or re-signing of a signed file starts cold.**
+  No decision here depends on the answer.
 
 ## Findings and scope
 
@@ -74,11 +83,18 @@ a fast-enough-to-be-warm assertion.
 
 ### Start the deadline after the child runs instead of controlling the clock
 
-The startup cost lands between the spawn returning and `main`. A receipt the
-fixture validator writes as its first action in `main` therefore marks the
-point after which the deadline can safely start. If the test's spawn function
+If the startup cost lands between the spawn returning and `main`, a receipt
+the fixture validator writes as its first action in `main` marks the point
+after which the deadline can safely start. If the test's spawn function
 returns only after that receipt exists, `runValidator` starts its unchanged
 deadline with the child already running.
+
+The receipt is written after dyld has run, so it excludes any cost before
+`main`, whatever the cause. The design does not need to attribute the cost to
+Gatekeeper. Its premise is tested directly: the checkpoint runs a cold copy of
+the validator with and without the gate before any other case is converted.
+If the gated cold run fails, the premise is wrong, and the clock-control
+alternative described below becomes the path.
 
 The spawn seam already exists at every level these cases use. Through it, they
 keep the real collector, the real deadline, real pipes and the real fixture
@@ -102,20 +118,21 @@ the clock and read substitutions can still be added on top of this change.
 
 ### Do not execute shipped executables during the build or at dispatch
 
-No observed failure involves a cold shipped binary. Executing the signed
-outputs during the build would warm only the files in `dist/`. Release
-acceptance extracts a fresh copy, which starts cold no matter what the build
-did.
+No observed failure involves a cold shipped binary. `PWRunner` has no harmless
+direct entry point: unrecognized arguments fall through to the XPC listener,
+and adding an entry point changes production. A user's machine has never
+executed these files, so their cold first exec is the real first-run behavior,
+whatever this machine has cached.
 
-Executing them at the dispatcher's `worker` requirement check would warm the
-extracted copy. But release acceptance's two cases are the only test of the
-cold first run a user actually gets, and warming would hide it. `PWRunner` also
-has no harmless direct entry point: unrecognized arguments fall through to the
-XPC listener, and adding an entry point changes production.
+Release acceptance (`tests/lib/release_accept.py`) extracts the ZIP and runs
+`smoke/specimen_file_read_deny` and `witness_contract/happy_path_baseline`
+against the extracted app. Executing the binaries first, during the build or
+at dispatch, would make those runs less like a user's first run, not more.
 
-The cold-start margin of a shipped worker (568 ms measured, against a 1,000 ms
-readiness wait) is a property of production's first run. A readiness timeout
-or XPC failure traced to a cold shipped binary is a production finding about
+This decision does not depend on whether this machine treats a copied or
+extracted signed file as cold. The cold cost of a shipped worker relative to
+the 1,000 ms readiness wait is likewise unmeasured. A readiness timeout or XPC
+failure traced to a cold shipped binary is a production finding about
 `readyByteTimeoutMs`, to be investigated as such, not masked by preparation.
 
 ## Phase 1: check the lifecycle fixture warm-up
@@ -227,6 +244,7 @@ only with the lifecycle validator, never with the shipped `sb_api_validator`.
 | --- | --- | --- |
 | `validator collection may outlast the worker budget...` | Internal `CWorkerOrchestrator.run` overload with the gated spawn. `validator_io_timeout_ms` 150 → 500. | `proceed_expire:50`. Worker failure (operation 11, detail 50), unset release, synthetic attempt, `unestablished` order, one retained record with a `deadline` stop, and reply encoding. The echo assertion is updated to 500. |
 | Same case, delayed start (new) | Same arrangement with a 1,000 ms start delay. | Every assertion above, plus `delay_ms=1000` in the receipt and a spawn-to-receipt time of at least 1,000 ms, so an ignored delay cannot pass. |
+| Same case, cold copy (new) | Copy `.validator` to a fresh path, `/tmp/pw-cold-validator-<UUID>`, and pass it as the validator. Gated spawn, 500 ms. Remove the copy afterwards. | Every assertion of the base case. Print the spawn-to-receipt time in the case log, but assert no bound on it: the OS may stop charging new files, and the delayed variant already guards the gate. |
 | `validator_io_timeout_ms returns partial prediction...` | Internal overload with the gated spawn. Override 50 → 500. | The error text and echo follow the new value. Worker release, `query_first` and a successful attempt. |
 | `surviving validator cannot publish...` | `runValidator(..., spawn:)` with the gated spawn. Allowance 100 → 500. | Failed termination, the native `EPIPE` receipt after return, one verdict, the worker's effect, `query_first`. |
 | `validator_cleanup_unconfirmed_releases_worker` variants | No gate. Allowance 100 → 5,000. Collection ends at EOF, so only the cap changes. | `eof` stop, unreaped child, one verdict, `unconfirmed` disposition, effect, `query_first`. |
@@ -237,20 +255,43 @@ Leave the other ordering cases unchanged.
 
 ### Checkpoint before converting the remaining cases
 
-Convert the over-budget case first, then observe three runs:
+Convert the over-budget case first, keeping its original 150 ms value for these
+runs. Each cold run uses its own fresh copy of `.validator`, made as in the
+cold-copy variant. "Ungated" means the spawn returns immediately while still
+passing any delay argument.
 
-1. Gated, no delay: passes.
-2. Gated, 1,000 ms delay: passes, with the record retained.
-3. Ungated, 1,000 ms delay (the spawn returns immediately, but the delay
-   argument is still passed): fails for the missing record. Retain this as
-   checkpoint evidence. Do not add it as a permanent case, because it pins an
-   incidental property of production: that the deadline starts at spawn
-   return.
+1. Ungated, cold copy: fails for the missing record. This reproduces the
+   failure recorded in `158a802` and shows that the cold cost reaches the
+   collection window.
+2. Gated, cold copy: passes with the record retained. Its spawn-to-receipt
+   time shows the cost being absorbed before the receipt.
+3. Gated, warm fixture, no delay: passes.
+4. Gated, 1,000 ms delay: passes with the record retained.
+5. Ungated, 1,000 ms delay: fails for the missing record.
 
-If the third run passes, the delay is not landing inside the window and the
-gate's effect is not demonstrated. Stop and reassess before converting the
-other cases. Do not widen production allowances or replace replies with
-constructed records.
+Run 2 answers whether the cost lands before `main`. If it fails, the cost lands
+after the receipt and this design cannot remove the race. Stop Phase 2 and take
+up the clock-control design described under Choices.
+
+If run 1 passes, that copy's cold cost did not reach the window, and runs 1
+and 2 establish nothing about the cost's location. Record the result, try
+further fresh copies, and report every attempt. Do not proceed on a pair that
+does not discriminate.
+
+If run 5 passes, the delay is not landing inside the window and the gate's
+effect is not demonstrated. Stop and reassess.
+
+When log access works (it needs an unsandboxed shell), capture syspolicyd and
+AMFI lines from the unified log covering runs 1 and 2. The timing result does
+not depend on them.
+
+Then widen to 500 ms and convert the remaining cases. Retain the runs, and put
+their outcomes, spawn-to-receipt times and any log lines in the Phase 2 commit
+message, so the evidence survives with the change. Runs 1 and 5 are checkpoint
+evidence only. Do not add them as permanent cases, because they pin an
+incidental property of production: that the deadline starts at spawn return.
+Do not widen production allowances or replace replies with constructed
+records.
 
 ### Phase-2 documentation
 
@@ -260,7 +301,9 @@ constructed records.
   validator modes.
 - Describe in the [runner_unit README](tests/suites/runner_unit/README.md)
   which cases start collection after the receipt, and that the receipt is
-  equipment, not evidence of a PolicyWitness deadline.
+  equipment, not evidence of a PolicyWitness deadline. Note that the cold-copy
+  variant prints its spawn-to-receipt time. READMEs describe current
+  behavior; the checkpoint measurements belong in the commit message.
 - Update `tests/FAILURE-PROPAGATION-CONTRACT.md` only where it describes how
   M08 or the aggregate case controls timing.
 
@@ -285,6 +328,9 @@ No request, reply or envelope meaning changes.
   They remain possible if post-start races are observed later.
 - **Production allowances, the shipped-binary first run, and preparation of
   shipped executables.** See Choices.
+- **How macOS keys first-exec state, and whether copies, extractions,
+  re-signing, network reachability or reboots change it.** No decision here
+  depends on these.
 - **BYOXPC, installation, host retirement and retries.**
 
 ## Verification and completion
@@ -296,7 +342,7 @@ case IDs in the catalog before running, and select opt-ins explicitly.
 | Checkpoint | Required checks |
 | --- | --- |
 | Phase 1 | The Phase-1 runs and controls above. |
-| Phase-2 checkpoint | `runner_unit/pwrunner_core_unit_executable` with the three over-budget runs. |
+| Phase-2 checkpoint | `runner_unit/pwrunner_core_unit_executable` with the five over-budget runs. |
 | Phase-2 integrated | Default `runner_unit` cases and the three fixture-building `witness_contract` cases. `python3 docs/generate_worker_identity.py --check` must show no identity input changed. |
 | Final | Full `source_drift` and the default battery against the current signed app. |
 
@@ -307,9 +353,11 @@ failures.
 
 Phase 2 is complete when all of these hold:
 
-- The six gated cases record a start receipt naming their spawned PID.
-- The delayed variant passes with its delay observed.
-- The ungated checkpoint run failed for the missing record.
+- The seven gated cases record a start receipt naming their spawned PID.
+- The delayed variant passes with its delay observed, and the cold-copy
+  variant passes and prints its spawn-to-receipt time.
+- In the checkpoint, the gated cold run passed and both ungated runs failed
+  for the missing record. The Phase 2 commit message records those results.
 - The EOF variants and the aggregate case carry their new allowances and
   assertions.
 - All selected checks pass.
