@@ -24,7 +24,8 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from generator_common import citation, require_test, format_value, render_spans, span_problems, heading_anchors
+from generator_common import citation, require_test, format_value, render_spans, span_problems
+import markdown_reader
 
 ROOT = Path(__file__).resolve().parents[1]
 START = "<!-- BEGIN GENERATED LIMITS -->"
@@ -359,7 +360,7 @@ def validate_guide(text, limits):
     # Headings in this guide use ATX syntax. Match the punctuation-stripped
     # anchors used by its Markdown links, including duplicate-heading suffixes.
     prose = "\n".join(prose_lines(text))
-    anchors = heading_anchors(prose)
+    anchors = set(markdown_reader.parse(text).anchors)
     if "limits" not in anchors:
         raise ValueError("guide is missing its Limits heading")
     for target in re.findall(r"\]\((#[^)]+)\)", prose):

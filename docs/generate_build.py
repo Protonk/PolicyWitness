@@ -59,6 +59,7 @@ sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, require_test, DURATION_SIZE_RE, strings, format_value, render_spans, span_problems
 import generate_architecture as arch
+import markdown_reader
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/build.json"
@@ -750,21 +751,22 @@ def bundle_paths(manifest, model, root):
 
 
 def readme_inventory(text):
-    section = re.search(r"^## Build and bundle\n(.*?)^## ", text, re.S | re.M)
-    if not section:
+    """The bundle paths README.md lists: bullets nested under the app, opening with a code span."""
+    document = markdown_reader.parse(text, "README.md")
+    section = document.section("Build and bundle", level=2)
+    if section is None:
         raise ParseError("README.md: no 'Build and bundle' section")
     paths, services, service = [], [], None
-    for line in section.group(1).splitlines():
-        match = re.match(r"^(\s*)- `([^`]+)`", line)
-        if not match:
+    for entry in document.items:
+        item = entry.first.leading_code if entry.first and section.holds(entry.lines) else None
+        if item is None:
             continue
-        indent, item = len(match.group(1)), match.group(2)
-        if indent == 2 and item.endswith(".xpc"):
+        if entry.depth == 1 and item.endswith(".xpc"):
             service = item
             services.append(item)
-        elif indent == 2 and item.startswith("Contents/MacOS/"):
+        elif entry.depth == 1 and item.startswith("Contents/MacOS/"):
             paths.append(item)
-        elif indent == 4 and item.startswith("Contents/MacOS/") and service:
+        elif entry.depth == 2 and item.startswith("Contents/MacOS/") and service:
             paths.append(f"{service}/{item}")
     return sorted(paths), services
 
@@ -847,7 +849,7 @@ def render_dot(manifest):
         label = re.sub(r"\$\([^)]+\)", "…", label)
         refusals = len(step["refusals"])
         attrs = {"label": f"{step['id']}\n{label}" + (f"\n{refusals} refusal(s)" if refusals else ""),
-                 "URL": f"{document}#{arch.anchor('One build in time')}",
+                 "URL": f"{document}#{markdown_reader.slug('One build in time')}",
                  "tooltip": f"{step['id']}: reads {step['reads']}; writes {step['writes']}"}
         if step["variants"] == ["full"]:
             attrs["fillcolor"] = "#e8f0fe"

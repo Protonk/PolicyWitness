@@ -96,6 +96,31 @@ class Inline:
     def code(self):
         return [token.content for token in self.children if token.type == 'code_inline']
 
+    def _lead(self):
+        # Emphasis processing can leave an empty text token before the first span.
+        return [token for token in self.children if not (token.type == 'text' and not token.content)]
+
+    @property
+    def leading_code(self):
+        """The content of a code span that opens this run, or None."""
+        lead = self._lead()
+        return lead[0].content if lead and lead[0].type == 'code_inline' else None
+
+    @property
+    def leading_strong(self):
+        """The text of a strong span that opens this run, or None."""
+        lead = self._lead()
+        if not lead or lead[0].type != 'strong_open':
+            return None
+        end = next(i for i, token in enumerate(lead) if token.type == 'strong_close')
+        return plain(lead[1:end])
+
+    @property
+    def leading_link(self):
+        """The link that opens this run, or None."""
+        lead = self._lead()
+        return _links(self)[0] if lead and lead[0].type == 'link_open' else None
+
 
 @dataclass(frozen=True)
 class Link:
@@ -129,6 +154,7 @@ class Block:
 
 @dataclass(frozen=True)
 class ListItem:
+    """A list item in document order; `depth` is 0 in a top-level list."""
     ordered: bool
     number: str
     depth: int
@@ -175,7 +201,7 @@ class Document:
             self.anchors.append(anchor)
 
     def _read(self):
-        lists, items, row, rows, header = [], [], None, None, None
+        lists, items, order, row, rows, header = [], [], [], None, None, None
         heading, table, quotes = None, None, 0
         for token in self.tokens:
             kind = token.type
@@ -188,9 +214,10 @@ class Document:
             elif kind == 'blockquote_close':
                 quotes -= 1
             elif kind == 'list_item_open':
-                items.append([lists[-1], token.info, len(lists) - 1, tuple(token.map), None])
+                items.append(len(order))
+                order.append([lists[-1], token.info, len(lists) - 1, tuple(token.map), None])
             elif kind == 'list_item_close':
-                self.items.append(ListItem(*items.pop()))
+                items.pop()
             elif kind == 'heading_open':
                 heading = token
             elif kind == 'table_open':
@@ -219,12 +246,13 @@ class Document:
                                                  heading.markup.startswith('#'), inline))
                 elif row is not None:
                     row.append(inline)
-                elif items and items[-1][4] is None:
-                    items[-1][4] = inline
+                elif items and order[items[-1]][4] is None:
+                    order[items[-1]][4] = inline
             elif kind == 'heading_close':
                 heading = None
             if kind == 'tr_close':
                 row = None
+        self.items = [ListItem(*item) for item in order]
 
     def _refuse_unrecognized_comments(self):
         for inline in self.inlines:
@@ -236,6 +264,10 @@ class Document:
     def line_of(self, offset):
         """The zero-based line holding a character offset."""
         return bisect_right(self._starts, offset) - 1
+
+    def offset(self, line):
+        """The character offset where a zero-based line starts; the text's length past the end."""
+        return self._starts[line] if line < len(self._starts) else len(self.text)
 
     @property
     def prose_lines(self):

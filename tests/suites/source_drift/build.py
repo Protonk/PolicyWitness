@@ -11,6 +11,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_build', ROOT / 'docs/generate_build.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -39,7 +41,8 @@ class BuildDocumentationTests(unittest.TestCase):
                  'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, generator.BASELINE_NAME,
                  self.manifest['document'], 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
                  'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
-                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py'}
+                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py',
+                 *markdown_reader.source_files()}
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         paths |= self.cited()
         for name in paths:
@@ -153,14 +156,10 @@ class BuildDocumentationTests(unittest.TestCase):
 
     def test_figure_labels_links_and_paths_render_as_claimed(self):
         """Labels break on real newlines, every node links to an existing heading, and the edges follow each variant's path."""
-        import importlib.util as util
-        spec_common = util.spec_from_file_location('generator_common_figure', ROOT / 'docs/generator_common.py')
-        common = util.module_from_spec(spec_common)
-        spec_common.loader.exec_module(common)
         dot_text = generator.render_dot(self.manifest)
         svg = self.figures[1].read_text(errors='replace')
         self.assertNotIn('\\n', svg, 'a literal backslash-n reached the rendered figure')
-        anchors = common.heading_anchors(self.document.read_text())
+        anchors = markdown_reader.read(self.document).anchors
         for anchor in set(re.findall(r'URL="BUILD\.md#([^"]+)"', dot_text)):
             self.assertIn(anchor, anchors)
         self.assertIn('assemble -> embed_client [color=', dot_text)

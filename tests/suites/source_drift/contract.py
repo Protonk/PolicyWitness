@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import abi_golden
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_contract', ROOT / 'docs/generate_contract.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -31,7 +33,7 @@ architecture_spec.loader.exec_module(architecture_generator)
 ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'Info.plist', 'PolicyWitness.entitlements',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
-LIMITS_FILES = ENTRY_FILES | {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
+LIMITS_FILES = ENTRY_FILES | {*markdown_reader.source_files(), 'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
                 'docs/QUESTIONS.md', 'docs/ARCHITECTURE.md', 'docs/REQUEST-GRAMMAR.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
                 'tests/fixtures/comparison/matrix.json'}
 # The build's environment: the knobs and an inherited lock claim never leak into a control build.
@@ -46,7 +48,7 @@ def limits_references():
 def build_references():
     """Everything the build generator's check reads: its manifest, script inputs, inventories, baseline, copies and every cited file."""
     manifest = json.loads((ROOT / 'docs/build.json').read_text())
-    paths = {'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
+    paths = {*markdown_reader.source_files(), 'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
              'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
              'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
              'tests/lib/build_provenance.py', 'tests/lib/checkout_lock.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py',
@@ -60,7 +62,8 @@ def build_references():
 def architecture_references():
     """Everything the architecture check reads: the manifest, its generator, the document, the figures and every cited file."""
     manifest = json.loads((ROOT / 'docs/architecture.json').read_text())
-    paths = {'docs/architecture.json', 'docs/generate_architecture.py', *architecture_generator.SPAN_DOCUMENTS}
+    paths = {'docs/architecture.json', 'docs/generate_architecture.py', *architecture_generator.SPAN_DOCUMENTS,
+             *markdown_reader.source_files()}
     for graph in manifest['graphs']:
         document = graph.get('document', manifest['document'])
         paths.add(document)

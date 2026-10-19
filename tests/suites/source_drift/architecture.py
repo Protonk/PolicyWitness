@@ -10,6 +10,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_architecture', ROOT / 'docs/generate_architecture.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -27,7 +29,8 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix='pw-architecture-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
-        paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document']}
+        paths = {'docs/generator_common.py', 'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, self.manifest['document'],
+                 *markdown_reader.source_files()}
         paths.update(generator.SPAN_DOCUMENTS)
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         paths.update({'docs/generate_limits.py', 'docs/limits.json'})

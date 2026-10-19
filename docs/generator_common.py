@@ -7,6 +7,11 @@ from functools import lru_cache
 import json
 import re
 from pathlib import Path
+import sys
+
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import markdown_reader  # noqa: E402
 
 
 @lru_cache(maxsize=128)
@@ -63,7 +68,7 @@ def citation(ref, root, *, check=False, forbidden=()):
     if relative.as_posix() in forbidden:
         raise ValueError(f'self-citation: {path}')
     text = (root / relative).read_text(errors='replace')
-    if symbol not in text:
+    if not (markdown_symbol(text, symbol, path) if relative.suffix == '.md' else symbol in text):
         raise ValueError(f'missing symbol {symbol!r} in {path}')
     if not check:
         return
@@ -127,6 +132,14 @@ def strings(value):
         yield value
 
 
+def markdown_symbol(text, symbol, name):
+    """A Markdown citation names a region marker, a heading or a code span in a heading."""
+    document = markdown_reader.parse(text, name)
+    if symbol.startswith(('BEGIN ', 'END ')):
+        return any(f'<!-- {symbol}' in block.content for block in document.blocks if block.kind == 'html')
+    return any(symbol == heading.text or symbol in heading.inline.code for heading in document.headings)
+
+
 def format_value(value, unit=None):
     if unit is None:
         return f'{value:,}'
@@ -169,6 +182,14 @@ def authored_spans(text):
     markers = [m for m in re.finditer(r'<!--\s*(?:span\b|/span\b)', text) if authored(m.start())]
     if len(markers) != 2 * len(matches) or any('<!--' in m[2] for m in matches):
         raise ValueError('malformed authored span')
+    # A line that begins with a marker starts an HTML block, which GitHub renders
+    # outside its paragraph without Markdown formatting.
+    document = markdown_reader.parse(text)
+    blocks = [(document.offset(b.lines[0]), document.offset(b.lines[1])) for b in document.blocks if b.kind == 'html']
+    for marker in markers:
+        if any(a <= marker.start() < b for a, b in blocks):
+            raise ValueError(f'span marker in an HTML block at line {document.line_of(marker.start()) + 1}; '
+                             'start the line with a word')
     # A document may state one value in more than one sentence; each span renders.
     return matches
 
@@ -192,17 +213,3 @@ def render_spans(text, prefix, values):
         if match[1].split('.', 1)[0] == prefix:
             text = text[:match.start(2)] + values[match[1].split('.', 1)[1]] + text[match.end(2):]
     return text
-
-
-def heading_anchors(prose):
-    """ATX heading anchors, with punctuation stripping and duplicate suffixes."""
-    anchors = set()
-    prose = re.sub(r'<!--.*?-->', '', prose, flags=re.S)
-    for heading in re.findall(r'^#{1,6}\s+(.+?)\s*#*\s*$', prose, re.M):
-        base = re.sub(r'[^\w -]', '', heading.lower()).replace(' ', '-')
-        anchor, suffix = base, 0
-        while anchor in anchors:
-            suffix += 1
-            anchor = f'{base}-{suffix}'
-        anchors.add(anchor)
-    return anchors

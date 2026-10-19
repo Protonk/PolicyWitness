@@ -30,6 +30,7 @@ sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, require_test, DURATION_SIZE_RE, LIMIT_RE, strings, format_value, render_spans, span_problems
 import generate_limits
+import markdown_reader
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_NAME = "docs/architecture.json"
@@ -234,10 +235,6 @@ def esc(text):
     return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
-def anchor(text):
-    return re.sub(r"[^a-z0-9 -]", "", text.lower()).strip().replace(" ", "-")
-
-
 def nodes_heading(graph):
     return f"{graph['title']} nodes"
 
@@ -277,8 +274,8 @@ def render_dot(graph, styles, document_name, limits=None):
     )
     lines.append('    node [fontname="Helvetica", fontsize=10];')
     lines.append('    edge [fontname="Helvetica", fontsize=9];')
-    node_url = f"{document_name}#{anchor(nodes_heading(graph))}"
-    edge_url = f"{document_name}#{anchor(edges_heading(graph))}"
+    node_url = f"{document_name}#{markdown_reader.slug(nodes_heading(graph))}"
+    edge_url = f"{document_name}#{markdown_reader.slug(edges_heading(graph))}"
     for cluster in graph["clusters"]:
         lines.append(f"    subgraph cluster_{cluster['id']} {{")
         lines.append(f'        label="{esc(cluster["label"])}"; style=dashed; color="#888888"; fontsize=10;')
@@ -354,7 +351,7 @@ def _fact_columns(items):
 
 def render_region(graph, document_name, limits=None):
     limits = limits if limits is not None else generate_limits.load_limits(ROOT / "docs/limits.json")
-    sections = {row["id"]: anchor(generate_limits.SECTIONS[row["section"]]) for row in limits}
+    sections = {row["id"]: markdown_reader.slug(generate_limits.SECTIONS[row["section"]]) for row in limits}
     links = {item["id"]: "; ".join(f"[`{ident}`](LIMITS.md#{sections[ident]})" for ident in limit_ids(item))
              for item in graph["nodes"] + graph["edges"]}
     graph = resolve_graph(graph, limits)

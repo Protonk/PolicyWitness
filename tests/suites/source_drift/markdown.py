@@ -115,8 +115,14 @@ class BlockTests(unittest.TestCase):
         text = '1. Step\n\n     - nested after a blank line\n       continued\n'
         self.assertEqual(prose(text), ['1. Step', '     - nested after a blank line', '       continued'])
         document = parse(text)
-        self.assertEqual([(i.ordered, i.depth, i.first.text) for i in document.items],
-                         [(False, 1, 'nested after a blank line continued'), (True, 0, 'Step')])
+        self.assertEqual([(i.ordered, i.number, i.depth, i.first.text) for i in document.items],
+                         [(True, '1', 0, 'Step'), (False, '', 1, 'nested after a blank line continued')])
+
+    def test_leading_code_strong_and_link(self):
+        document = parse('- `a` b\n- **Label**: text\n- [x](#y): z\n- plain `c`\n')
+        self.assertEqual([(i.first.leading_code, i.first.leading_strong,
+                           i.first.leading_link and i.first.leading_link.target) for i in document.items],
+                         [('a', None, None), (None, 'Label', None), (None, None, '#y'), (None, None, None)])
 
 
 class CommentTests(unittest.TestCase):

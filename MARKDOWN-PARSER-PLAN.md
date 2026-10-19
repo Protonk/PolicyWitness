@@ -366,8 +366,9 @@ standalone guide's autolink refusal over autolink tokens.
    and new readings side by side over every document the caller reads. Compare
    prose lines and the links, headings, anchors, sections and cells found, and
    review every difference. Record the reviewed differences in the commit
-   message and in a verification record under `records/`, linked only from
-   this plan. Expected differences: region marker lines become non-prose
+   message and in the
+   [verification record](records/MARKDOWN-PARSER-VERIFICATION.md), linked
+   only from this plan. Expected differences: region marker lines become non-prose
    (they contain no links), and the augments nested list is prose. After
    step 1, no span marker begins a line, so span lines stay prose. The
    comparison scaffolding calls the old functions as they stand at the

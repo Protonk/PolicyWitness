@@ -13,6 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 spec = importlib.util.spec_from_file_location('generate_limits', ROOT / 'docs/generate_limits.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
@@ -38,7 +40,7 @@ class LimitsDocumentationTests(unittest.TestCase):
                  'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'Info.plist',
                  'PolicyWitness.entitlements', 'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                  *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb')),
-                 generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS}
+                 generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS, *markdown_reader.source_files()}
         for row in self.manifest['limits']:
             paths.update(ref['path'] for key in ['sources', 'checks'] for ref in row[key])
         for name in paths:

@@ -10,6 +10,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 GENERATORS = ('contract', 'worker_identity', 'limits', 'architecture', 'build')
 
 
@@ -143,7 +145,7 @@ def broken_links(paths):
                 broken.append(f'{path}: missing file {target}')
                 continue
             if separator:
-                if not destination.is_file() or unquote(anchor) not in common.heading_anchors(prose_text(destination.read_text())):
+                if not destination.is_file() or unquote(anchor) not in markdown_reader.read(destination).anchors:
                     broken.append(f'{path}: missing heading {target}')
             # A backticked label is a symbol the target must hold: a code file holds it as
             # text, and a Markdown document holds it as the id or term the link names.
@@ -491,7 +493,7 @@ class GeneratorContractTests(unittest.TestCase):
         root = self.checkout()
         source = root / 'docs/LIMITS.md'
         source.write_text(source.read_text().replace('<!-- BEGIN SHARED LIMITS -->',
-            '<!-- BEGIN SHARED LIMITS -->\n<!-- span limits.host_exit_delay.value_unit -->stale<!-- /span -->'))
+            '<!-- BEGIN SHARED LIMITS -->\nThe delay is <!-- span limits.host_exit_delay.value_unit -->stale<!-- /span -->'))
         result = self.command(root, 'limits')
         self.assertEqual(result.returncode, 0, result.stderr)
         expected = '<!-- span limits.host_exit_delay.value_unit -->50 milliseconds<!-- /span -->'
@@ -514,6 +516,36 @@ class GeneratorContractTests(unittest.TestCase):
         self.assertIn('stale LIMITS.md', result.stderr)
         self.assertEqual(self.command(root, 'limits').returncode, 0)
         self.assertNotIn('<!-- span limits.host_exit_delay.value -->', source.read_text())
+
+    def test_a_span_marker_that_begins_a_line_is_refused(self):
+        # The marker would start an HTML block, which GitHub renders outside its paragraph.
+        root = self.checkout()
+        path = root / 'docs/LIMITS.md'
+        opening = '  of <!-- span limits.step_id.value -->'
+        self.assertEqual(path.read_text().count(opening), 1)
+        path.write_text(path.read_text().replace(opening, '  of\n  <!-- span limits.step_id.value -->'))
+        before = self.snapshot(root)
+        for args in [('--check',), ()]:
+            result = self.command(root, 'limits', *args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('span marker in an HTML block at line', result.stderr)
+            self.assertEqual(self.snapshot(root), before)
+
+    def test_markdown_citations_name_headings_heading_code_or_markers(self):
+        common = module('markdown_citations', ROOT / 'docs/generator_common.py')
+        directory = tempfile.TemporaryDirectory(prefix='pw-citations-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / 'doc.md').write_text(
+            '## Real heading\n\n## Test seam: `_seam`\n\n<!-- BEGIN GENERATED THING -->\n<!-- END GENERATED THING -->\n\n'
+            '<!--\n## Commented heading\n-->\n\n```text\n## Fenced heading\n<!-- BEGIN GENERATED FENCED -->\n```\n\n'
+            'Prose names Prose heading and `BEGIN GENERATED PROSE`.\n')
+        for symbol in ('Real heading', '_seam', 'BEGIN GENERATED THING'):
+            common.citation({'path': 'doc.md', 'symbol': symbol}, root)
+        for symbol in ('Commented heading', 'Fenced heading', 'BEGIN GENERATED FENCED', 'Prose heading',
+                       'BEGIN GENERATED PROSE'):
+            with self.subTest(symbol=symbol), self.assertRaisesRegex(ValueError, 'missing symbol'):
+                common.citation({'path': 'doc.md', 'symbol': symbol}, root)
 
     def test_every_span_prefix_has_one_registered_owner(self):
         common = module('prefix_checks', ROOT / 'docs/generator_common.py')
@@ -711,7 +743,7 @@ class GeneratorContractTests(unittest.TestCase):
                         self.assertFalse(max(a, left) < min(b, right), (path, owner, name))
                     owners.setdefault(path, []).append((name, a, b))
         self.assertFalse(set(owners) & set(whole_files))
-        authored = common.authored_spans('<!-- span unknown.value -->1<!-- /span -->')
+        authored = common.authored_spans('Value <!-- span unknown.value -->1<!-- /span -->')
         self.assertTrue(any(m[1].split('.', 1)[0] not in {'architecture', 'limits', 'build'} for m in authored))
 
 
