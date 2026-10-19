@@ -16,9 +16,78 @@ editorially. Paragraph equality does not establish correctness.
 
 This is an implementation plan. It does not authorize implementing the
 [retention proposal](tests/RETENTION-PLAN.md), altering runtime behavior, changing
-protocol versions, cleaning evidence, or repackaging releases. Follow the
+protocol versions, cleaning evidence, or repackaging releases. The branch-build
+investigation below includes focused infrastructure fixes supported by its
+findings. Follow the
 [planning guidance](CONTRIBUTING.md#planning-a-change) and
 [test working rules](tests/AGENTS.md) when executing it.
+
+## Branch workflow and build infrastructure
+
+Carry out this revision on `doc-rework`, an explicit exception to the usual
+integration on `main`. The branch starts from `a7cf758`; this plan amendment is
+its first commit. Keep implementation and related infrastructure fixes on that
+branch so the complete diff and the sequence of decisions can be reviewed
+across commits. Preserve the review history rather than squashing or rewriting
+it during the work. Integration into `main` follows review of the branch.
+
+Use small, coherent commits: independent prose and heading-link edits; the
+coupled warning/checker/control/graph change; any demonstrated build compatibility
+fixes with their controls; and final editorial corrections and verification
+findings. Keep a heading rename with its incoming links, and keep a changed
+checker with its tests, documentation and generated citations. The requirement
+for coherent changes does not require the entire revision to be one commit.
+
+Use this branch to establish whether the build infrastructure works away from
+`main` or `master`, including under a previously unused branch name. Initial
+inspection found that [build.sh](build.sh) derives its stamp from `HEAD`,
+`git describe` and commit count, while
+[release_preflight.py](tests/lib/release_preflight.py) checks cleanliness, tags
+and release ancestry. These paths do not explicitly require a particular branch
+name; source inspection alone does not establish that the complete workflow is
+independent of the branch name.
+
+1. At the clean branch baseline, record the commit, branch name, describe string,
+   toolchain, signing identity and cache state. Run the documented
+   `make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'` with the
+   configured identity, following the [build guide](docs/BUILD.md). Preserve
+   the command receipt, observed refusals and resulting source/provenance stamp.
+   Inspect the resulting app through the test dispatcher. Select
+   `preflight/build_provenance_controls` and `preflight/signed_artifact_controls`
+   after checking their equipment with `--list`.
+2. Repeat the build at the committed editorial candidate and exercise both
+   ordinary cache reuse and `PW_FRESH_BUILD=1`. Verify that the embedded commit,
+   describe string, dirty flag and build number identify the branch's tested
+   source state. Do not substitute `main`'s tip or a previously built app when
+   crediting these results. Keep build/test receipts distinct for each source
+   state and configuration.
+3. Exercise branch-name variation in a disposable Git fixture using the same
+   commit and tags under a conventional branch name and a newly created or
+   renamed branch. Hold source, checkout path, toolchain and cache state fixed
+   for the comparison. Compare stamp derivation and preflight decisions; if a
+   real build fails only on `doc-rework`, use this comparison to isolate the
+   relevant operation before changing it. Never rename or reset the shared
+   `main` branch to create this control. A second worktree needs its own valid
+   build directories; a checkout-path refusal is not a branch-name failure.
+4. Inspect release preflight findings separately from development build
+   compatibility. An untagged development commit's release refusal is expected;
+   `--report` returning zero does not mean release preflight passed. Use local
+   fixture tags for tagged controls. Preserve release eligibility, signing,
+   provenance and cleanup guarantees; this experiment does not publish, notarize
+   or create a release tag in the working repository.
+5. Record observed branch assumptions, failures, successful comparisons and
+   remaining coverage limits in the branch's verification account. Make focused
+   fixes in separate commits, with a reproducing control in the owning build or
+   preflight tests. Update `docs/build.json` and regenerate its outputs when
+   build behavior changes. Choose additional verification from the changed
+   boundary, then rerun the failed operation and its branch-name comparison.
+   If no incompatibility is observed, report that result without inventing a
+   branch-specific workaround.
+
+The build experiments generate fresh evidence under the existing ownership and
+retention rules. They do not expand the editorial target inventory to include
+build output or retained test copies. Keep the branch available for review with
+the commit range, tested revisions and any unresolved infrastructure findings.
 
 ## Source inventory and ownership
 
@@ -372,17 +441,19 @@ All generator freshness checks still apply.
 
 ## Execution and verification
 
-1. **Establish the source boundary.** Record HEAD and working-tree status,
+1. **Establish the source boundary.** Confirm `doc-rework`, record HEAD and
+   working-tree status, and complete the branch-build baseline above. Then
    reconcile the appendix with tracked and separately classified untracked
    source Markdown, and preserve unrelated edits. Record symlink targets and
    existing local-link failures before editing. In a checkout receiving
    concurrent changes, recheck the source delta before crediting results;
    `tests/.checkout.lock` serializes executions, not editing.
-2. **Make the coherent source change.** Apply the prose and heading edits,
+2. **Make coherent source commits.** Apply the prose and heading edits,
    replace the warning rule and its controls, update suite documentation and
-   architecture citations, then regenerate the architecture account. Keep
-   these changes together so no committed intermediate state advertises the
-   old equality requirement with the new checker.
+   architecture citations, then regenerate the architecture account. Follow
+   the commit grouping above: keep the coupled warning change together so no
+   committed intermediate state advertises the old equality requirement with
+   the new checker, while preserving independent changes as separate commits.
 3. **Review editorial meaning.** Compare each rewritten passage with its
    source. Check direct instructions, real end-user uses, historical fidelity,
    all five sandbox hazards, the unchanged retry, signature-verification
@@ -426,15 +497,20 @@ All generator freshness checks still apply.
    `architecture_documentation`, `build_documentation` and `generator_contract`.
    Inspect rejected controls as well as passes. Keep command receipts and source
    provenance under existing retention rules; this plan does not change them.
-8. **Review and commit the bounded diff.** Reconcile concurrent changes and
+8. **Verify the branch candidate and review the commit series.** Complete the
+   candidate build experiments and any focused infrastructure verification
+   described above. Reconcile concurrent changes and
    newly added documentation once more. Verify symlink modes/targets,
    `git diff --check`, generated-source agreement, test accounting and the final
-   search classification. Stage only the implementation's source changes.
-   Report the tested source state and any later changes that limit its coverage.
+   search classification. Stage only changes belonging to this work and retain
+   the separate commits on `doc-rework`. Report the base-to-tip diff, commit
+   sequence, tested source states and any later changes that limit coverage.
 
-The suite includes fixture builds and Swift discovery even though this change
-does not require a signed-app battery. If automation sandbox restrictions cause
-the documented discovery, signing, XPC or log failures, request escalation and
+The editorial suite includes fixture builds and Swift discovery; the branch
+investigation additionally requires signed builds and selected artifact and
+provenance controls. A full runtime battery is required only if the resulting
+infrastructure changes affect boundaries that need it. If sandbox restrictions
+cause the documented discovery, signing, XPC or log failures, request escalation and
 rerun the same failing command once outside that sandbox with the inspected
 artifact unchanged, following the existing working guidance. Never unlink the
 checkout lock or alter outputs to force a pass.
@@ -447,16 +523,20 @@ checks cannot assess advice. The main mechanical risks are a section parser
 accepting unrelated text, stale heading links, and generated citations naming a
 removed function; the negative controls and generator contract address them.
 
-Shared-main edits can change the inventory or checker inputs during work.
-Reconcile those changes and rerun the affected checks; do not claim a prior
-result covers a later source state. Keep disposable mutation copies out of the
-editorial acceptance universe even when they contain the old prose.
+Concurrent edits on `doc-rework`, or later integration from `main`, can change
+the inventory or checker inputs during work. Reconcile those changes and rerun
+the affected checks; do not claim a prior result covers a later source state.
+Keep disposable mutation copies out of the editorial acceptance universe even
+when they contain the old prose. Record the branch point independently of a
+moving `main` tip so the reviewed commit range stays unambiguous.
 
-No consequential choice remains open: independent local guidance, the structural
-route rule, source-only acceptance and generator ownership are the selected
-approach. Reconsider only if source changes invalidate an identified dependency
-or an observed control demonstrates that the proposed check accepts a missing
-section or route. Routine wording and line wrapping need no new approval.
+The editorial decisions are settled: independent local guidance, the structural
+route rule, source-only acceptance and generator ownership. The branch-build
+experiment must establish whether additional infrastructure changes are needed;
+record that finding before claiming branch compatibility. Reconsider an
+editorial dependency if source changes invalidate it or a control demonstrates
+that the proposed check accepts a missing section or route. Routine wording and
+line wrapping need no new approval.
 
 ## Appendix: canonical editorial targets
 
