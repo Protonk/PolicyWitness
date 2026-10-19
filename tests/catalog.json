@@ -135,6 +135,10 @@
         {
           "id": "generator_contract",
           "description": "Uniform generator ownership, citation and prose contracts with mutation controls"
+        },
+        {
+          "id": "markdown_reader",
+          "description": "Markdown reader controls, vendored parser bytes and the parser import boundary"
         }
       ]
     },

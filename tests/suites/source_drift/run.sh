@@ -92,3 +92,14 @@ if test_selected "${PW_TEST_ID}"; then
   fi
   test_pass "generator contracts and mutation controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
+
+PW_TEST_ID="markdown_reader"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step markdown "check what the Markdown reader reports, the vendored parser's bytes and the parser's importers"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/markdown.log"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/markdown.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "Markdown reader controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "the reader reports CommonMark structure from the vendored wheels' bytes and is the parser's only importer" "{\"log\":\"${RUN_LOG}\"}"
+fi

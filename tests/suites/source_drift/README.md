@@ -245,6 +245,26 @@ Refused commands must leave the checkout unchanged. Guide staging is tested
 as a whole-file output, including idempotence; SVG rendering failure is checked
 before any output publication.
 
+### Markdown reader
+
+[`docs/markdown_reader.py`](../../../docs/markdown_reader.py) is the only code
+that imports the vendored markdown-it-py 3.0.0 and mdurl 0.1.2 in
+[`tests/lib/vendor/`](../../lib/vendor/README.md). It loads them only from that
+directory and refuses another copy or version. It also keeps `linkify_it`
+from loading, because markdown-it-py 3.0.0 constructs it whenever it can be
+imported. The parser uses the CommonMark preset with tables and without
+`text_join`, so escapes and entity references stay distinguishable from
+literal text. The reader refuses an inline comment containing `--`: CommonMark
+0.30, which the pinned parser implements, reads such a comment as text, while
+GitHub hides it.
+
+The `markdown_reader` case in [markdown.py](markdown.py) holds the reader to
+hand-written expectations for fences, indented code, list content, comments,
+links and images, headings and sections, anchors, tables and line ranges. It
+runs the import guard against stand-in packages and a changed version,
+compares every vendored file with its wheel's `RECORD` digest and refuses an
+import of either package anywhere else.
+
 ## Success criteria
 
 - The check script exits 0 and prints a one-line summary of how many
@@ -284,6 +304,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
 - `<run>/suites/source_drift/build_documentation/artifacts/build-rules.log` and `build.log`
 - `<run>/suites/source_drift/generator_contract/artifacts/generators.log`
+- `<run>/suites/source_drift/markdown_reader/artifacts/markdown.log`
 
 ## Run
 

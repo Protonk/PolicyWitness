@@ -1,0 +1,328 @@
+"""Controls for the Markdown reader: what the vendored parser reports, how it is
+loaded, that the vendored files are the wheels' bytes and that nothing else
+imports the parser.
+
+Expected values are written by hand from CommonMark and from GitHub's rendering;
+none is computed by the reader under test.
+"""
+import ast
+import base64
+import csv
+import hashlib
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader as reader  # noqa: E402
+
+
+PARSER_MODULES = ('markdown_it', 'mdurl')
+
+
+def vendor_problems(root=ROOT):
+    """Each vendored parser file must have its wheel's RECORD digest, with nothing added or missing."""
+    vendor = root / 'tests/lib/vendor'
+    records = sorted(vendor.glob('*.RECORD'))
+    problems = [] if records else [f'no wheel RECORD beside {vendor}']
+    for record in records:
+        dist = record.name[:-len('.RECORD')] + '.dist-info/'
+        rows = list(csv.reader(record.read_text().splitlines()))
+        packages = {path.split('/')[0] for path, _, _ in rows if not path.startswith(dist)}
+        listed = {path: digest for path, digest, _ in rows if not path.startswith(dist)}
+        # A wheel's licenses live in its dist-info; the vendored copy keeps them in the package.
+        listed.update({f'{package}/{path[len(dist):]}': digest for path, digest, _ in rows
+                       if path.startswith(dist + 'LICENSE') for package in packages})
+        present = {path.relative_to(vendor).as_posix() for package in packages for path in (vendor / package).rglob('*')
+                   if path.is_file() and '__pycache__' not in path.parts}
+        for path in sorted(set(listed) - present):
+            problems.append(f'{record.name}: missing vendored file {path}')
+        for path in sorted(present - set(listed)):
+            problems.append(f'{record.name}: vendored file {path} is not in the wheel')
+        for path in sorted(set(listed) & present):
+            digest = base64.urlsafe_b64encode(hashlib.sha256((vendor / path).read_bytes()).digest()).rstrip(b'=')
+            if listed[path] != 'sha256=' + digest.decode():
+                problems.append(f'{record.name}: vendored file {path} differs from the wheel')
+    return problems
+
+
+def import_problems(root, paths):
+    """Only the reader may import the parser."""
+    problems = []
+    for name in paths:
+        if name == 'docs/markdown_reader.py' or name.startswith('tests/lib/vendor/'):
+            continue
+        tree = ast.parse((root / name).read_text(), name)
+        for node in ast.walk(tree):
+            modules = ([alias.name for alias in node.names] if isinstance(node, ast.Import)
+                       else [node.module or ''] if isinstance(node, ast.ImportFrom) else [])
+            if any(module.split('.')[0] in PARSER_MODULES for module in modules):
+                problems.append(f'{name}:{node.lineno}: imports the Markdown parser; use docs/markdown_reader.py')
+    return problems
+
+
+def tracked_python(root=ROOT):
+    listed = subprocess.run(['git', 'ls-files', '*.py'], cwd=root, capture_output=True, text=True, check=True)
+    return listed.stdout.split()
+
+
+def parse(text):
+    return reader.Document(textwrap.dedent(text))
+
+
+def prose(text):
+    document = parse(text)
+    return [document.text.split('\n')[line] for line in sorted(document.prose_lines)]
+
+
+class BlockTests(unittest.TestCase):
+    def test_fences_close_only_on_the_same_marker_at_least_as_long(self):
+        document = parse('''\
+            ````text
+            ```
+            hidden
+            ````
+            ~~~
+            also hidden
+            ~~~
+            seen
+            ''')
+        self.assertEqual([(b.info, b.lines) for b in document.fences()], [('text', (0, 4)), ('', (4, 7))])
+        self.assertEqual(prose(document.text), ['seen'])
+
+    def test_a_backtick_in_the_info_string_does_not_open_a_backtick_fence(self):
+        self.assertEqual(prose('```a`b\nseen\n'), ['```a`b', 'seen'])
+
+    def test_a_fence_inside_a_list_item_is_a_fence(self):
+        document = parse('- item\n\n  ```sh\n  hidden\n  ```\n')
+        self.assertEqual([(b.info, b.content) for b in document.fences()], [('sh', 'hidden\n')])
+        self.assertEqual(prose(document.text), ['- item'])
+
+    def test_indentation_opens_code_only_where_no_paragraph_continues(self):
+        self.assertEqual(prose('para\n    continued\n'), ['para', '    continued'])
+        self.assertEqual(prose('para\n\n    code\n'), ['para'])
+        self.assertEqual(prose('# Heading\n    code\n'), ['# Heading'])
+        self.assertEqual([b.kind for b in parse('# Heading\n    code\n').blocks], ['code'])
+
+    def test_list_content_after_a_blank_line_is_prose(self):
+        # The shape of the nested list under step 3 of runner/augments/README.md.
+        text = '1. Step\n\n     - nested after a blank line\n       continued\n'
+        self.assertEqual(prose(text), ['1. Step', '     - nested after a blank line', '       continued'])
+        document = parse(text)
+        self.assertEqual([(i.ordered, i.depth, i.first.text) for i in document.items],
+                         [(False, 1, 'nested after a blank line continued'), (True, 0, 'Step')])
+
+
+class CommentTests(unittest.TestCase):
+    def test_comments_are_not_prose(self):
+        document = parse('text <!-- inline [a](a.md) --> after\n\n<!--\n[b](b.md)\n-->\n\n<!-- one line -->\n')
+        self.assertEqual(document.links, [])
+        self.assertEqual(prose(document.text), ['text <!-- inline [a](a.md) --> after'])
+        self.assertEqual([(b.kind, b.lines) for b in document.blocks], [('html', (2, 5)), ('html', (6, 7))])
+
+    def test_an_inline_comment_containing_two_hyphens_is_refused(self):
+        # CommonMark 0.30 reads it as text; GitHub hides it.
+        for text in ('text <!-- a -- b --> after\n', '![alt <!-- a -- b -->](x.png)\n'):
+            with self.subTest(text=text), self.assertRaisesRegex(reader.Refused, 'remove the "--"'):
+                parse(text)
+
+    def test_escaped_entity_and_code_comment_openers_are_text(self):
+        document = parse('a \\<!-- b &lt;!-- c `<!--` d\n')
+        self.assertEqual(document.inlines[0].text, 'a <!-- b <!-- c <!-- d')
+        self.assertEqual(document.inlines[0].code, ['<!--'])
+
+    def test_a_comment_that_begins_a_line_ends_the_paragraph(self):
+        # GitHub renders the second line as raw HTML outside the paragraph.
+        document = parse('one\n<!-- span a -->5<!-- /span --> two\nthree\n')
+        self.assertEqual([(b.kind, b.lines) for b in document.blocks], [('html', (1, 2))])
+        self.assertEqual(prose(document.text), ['one', 'three'])
+
+
+class LinkTests(unittest.TestCase):
+    def links(self, text):
+        return [(l.target, l.label, l.code_label, l.image, l.autolink) for l in parse(text).links]
+
+    def test_labels_may_hold_code_and_wrap_but_not_cross_a_blank_line(self):
+        self.assertEqual(self.links('[`a.py`](a.py) [wrapped\nlabel](b.md#c)\n'),
+                         [('a.py', 'a.py', 'a.py', False, False), ('b.md#c', 'wrapped label', None, False, False)])
+        self.assertEqual(self.links('[split\n\nlabel](b.md)\n'), [])
+
+    def test_images_escapes_code_and_autolinks(self):
+        self.assertEqual(self.links('![alt](p.png) \\[x](y.md) `[c](d.md)` <https://example.com/a>\n'),
+                         [('p.png', 'alt', None, True, False),
+                          ('https://example.com/a', 'https://example.com/a', None, False, True)])
+
+    def test_destinations_are_decoded(self):
+        self.assertEqual(self.links('[a](<two words.md>) [b](a\\_b.py#frag)\n'),
+                         [('two words.md', 'a', None, False, False), ('a_b.py#frag', 'b', None, False, False)])
+
+    def test_reference_definitions_are_reported(self):
+        document = parse('[x][ref]\n\n[ref]: target.md\n')
+        self.assertEqual(list(document.references), ['REF'])
+        self.assertEqual(parse('[x][undefined]\n').links, [])
+
+
+class HeadingTests(unittest.TestCase):
+    def test_levels_text_and_where_headings_are_not(self):
+        document = parse('''\
+            Title
+            =====
+
+            Sub
+            ---
+
+            ## ATX `code` [link](u.md) ##
+
+            ```
+            ## fenced
+            ```
+
+            <!--
+            ## commented
+            -->
+
+                ## indented
+            ''')
+        self.assertEqual([(h.level, h.text, h.line, h.atx) for h in document.headings],
+                         [(1, 'Title', 0, False), (2, 'Sub', 3, False), (2, 'ATX code link', 6, True)])
+
+    def test_sections_end_at_the_same_or_a_higher_level(self):
+        document = parse('# A\n## B\ntext\n### C\nmore\n## D\n# E\n')
+        self.assertEqual(document.section('B').lines, (1, 5))
+        self.assertEqual(document.section('A').lines, (0, 6))
+        self.assertIsNone(document.section('Z'))
+        with self.assertRaises(reader.Refused):
+            parse('## B\n## B\n').section('B')
+
+    def test_anchors_keep_underscores_and_number_duplicates(self):
+        document = parse('## Test seam: `_test_overrides`\n## Repeated\n## Repeated\n## Ünïcode\n')
+        self.assertEqual(document.anchors,
+                         ['test-seam-_test_overrides', 'repeated', 'repeated-1', 'ünïcode'])
+        self.assertEqual(reader.slug('One build in time'), 'one-build-in-time')
+
+
+class TableTests(unittest.TestCase):
+    def test_cells_hold_inline_content(self):
+        document = parse('| A | B |\n| --- | --- |\n| `a\\|b` | [l](t.md) |\n| x | y |\n')
+        table, = document.tables
+        self.assertEqual([c.text for c in table.header], ['A', 'B'])
+        self.assertEqual([[c.text for c in row] for row in table.rows], [['a|b', 'l'], ['x', 'y']])
+        self.assertEqual(table.rows[0][0].code, ['a|b'])
+        self.assertEqual(table.rows[1][0].lines, (3, 4))
+
+    def test_a_table_in_a_comment_or_fence_is_not_a_table(self):
+        self.assertEqual(parse('<!--\n| A |\n| --- |\n| x |\n-->\n\n```\n| A |\n| --- |\n```\n').tables, [])
+
+
+class LineTests(unittest.TestCase):
+    def test_lines_and_offsets(self):
+        document = parse('a\n\nb\nc\n')
+        self.assertEqual([i.lines for i in document.inlines], [(0, 1), (2, 4)])
+        self.assertEqual([document.line_of(o) for o in (0, 1, 2, 3, 5)], [0, 0, 1, 2, 3])
+
+
+class VendorTests(unittest.TestCase):
+    def test_vendored_files_are_the_wheels_bytes(self):
+        self.assertEqual(vendor_problems(), [])
+
+    def test_a_changed_added_or_missing_vendored_file_is_named(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-vendor-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in reader.source_files():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, root / name)
+        vendor = root / 'tests/lib/vendor'
+        changed = vendor / 'markdown_it/rules_inline/html_inline.py'
+        changed.write_text(changed.read_text() + '\n')
+        (vendor / 'mdurl/extra.py').write_text('')
+        (vendor / 'markdown_it/LICENSE.markdown-it').unlink()
+        self.assertEqual(vendor_problems(root), [
+            'markdown_it_py-3.0.0.RECORD: missing vendored file markdown_it/LICENSE.markdown-it',
+            'markdown_it_py-3.0.0.RECORD: vendored file markdown_it/rules_inline/html_inline.py differs from the wheel',
+            'mdurl-0.1.2.RECORD: vendored file mdurl/extra.py is not in the wheel',
+        ])
+
+    def test_only_the_reader_imports_the_parser(self):
+        self.assertEqual(import_problems(ROOT, tracked_python()), [])
+
+    def test_another_importer_is_named(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-importer-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / 'a.py').write_text('import os\nimport markdown_it.main\n')
+        (root / 'b.py').write_text('from mdurl import decode\n')
+        (root / 'c.py').write_text('"""import markdown_it"""\n# from mdurl import x\nname = "markdown_it"\n')
+        self.assertEqual(import_problems(root, ['a.py', 'b.py', 'c.py']), [
+            'a.py:2: imports the Markdown parser; use docs/markdown_reader.py',
+            'b.py:1: imports the Markdown parser; use docs/markdown_reader.py',
+        ])
+
+
+class ImportGuardTests(unittest.TestCase):
+    """The parser loads only from the vendored copies, and linkify_it never loads."""
+
+    def run_reader(self, root, env=None, before=''):
+        script = (before + 'import sys; sys.path.insert(0, sys.argv[1]); import markdown_reader; '
+                  'print(markdown_reader.parse("x").inlines[0].text)')
+        return subprocess.run([sys.executable, '-B', '-c', script, str(root / 'docs')], capture_output=True, text=True,
+                              env=dict(os.environ, **(env or {})), timeout=60)
+
+    def checkout(self, vendored=True):
+        directory = tempfile.TemporaryDirectory(prefix='pw-markdown-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in reader.source_files() if vendored else ['docs/markdown_reader.py']:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, root / name)
+        return root
+
+    def stand_in(self, name, body):
+        directory = tempfile.TemporaryDirectory(prefix='pw-stand-in-')
+        self.addCleanup(directory.cleanup)
+        package = Path(directory.name) / name
+        package.mkdir()
+        (package / '__init__.py').write_text(body)
+        return directory.name
+
+    def test_the_vendored_copy_loads(self):
+        result = self.run_reader(self.checkout())
+        self.assertEqual((result.returncode, result.stdout), (0, 'x\n'), result.stderr)
+
+    def test_a_missing_vendored_copy_is_refused(self):
+        path = self.stand_in('markdown_it', '__version__ = "3.0.0"\nclass MarkdownIt: pass\n')
+        result = self.run_reader(self.checkout(vendored=False), {'PYTHONPATH': path})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('the vendored markdown_it is missing from', result.stderr)
+
+    def test_a_copy_already_imported_from_elsewhere_is_refused(self):
+        path = self.stand_in('markdown_it', '__version__ = "3.0.0"\nclass MarkdownIt: pass\n')
+        result = self.run_reader(self.checkout(), {'PYTHONPATH': path}, before='import markdown_it; ')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(f'markdown_it loaded from {path}', result.stderr)
+
+    def test_another_version_is_refused(self):
+        root = self.checkout()
+        init = root / 'tests/lib/vendor/markdown_it/__init__.py'
+        init.write_text(init.read_text().replace('__version__ = "3.0.0"', '__version__ = "3.0.1"'))
+        result = self.run_reader(root)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('markdown-it-py 3.0.1 loaded; 3.0.0 is vendored', result.stderr)
+
+    def test_an_installed_linkify_it_is_never_imported(self):
+        marker = Path(tempfile.mkdtemp(prefix='pw-linkify-')) / 'imported'
+        self.addCleanup(shutil.rmtree, marker.parent)
+        path = self.stand_in('linkify_it', f'open({str(marker)!r}, "w").close()\nraise SystemExit("linkify_it imported")\n')
+        result = self.run_reader(self.checkout(), {'PYTHONPATH': path})
+        self.assertEqual((result.returncode, result.stdout), (0, 'x\n'), result.stderr)
+        self.assertFalse(marker.exists())
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
