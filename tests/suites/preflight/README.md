@@ -13,9 +13,17 @@ Offline release controls also exercise the release procedure's decision points.
   effective settings that agree with the outputs), name every shipped
   executable once with a valid path, carry no controller hash, agree with the
   manifest and the bytes on every other hash, with each executable's load
-  commands on its UUID, platform, minimum, SDK and linker tools, and with
+  commands on its UUID, platform, minimum, SDK and linker tools, with its
+  architectures and container as the bytes carry them, and with
   `codesign -dvv`'s display of each nested signature it claims; a record for
   another build with the same inventory is refused.
+- Requires the output target, from the bytes: every required executable,
+  whatever the manifest claims, and every other Mach-O the bundle carries,
+  found by header, must be a thin `arm64` Mach-O for macOS (`lipo -archs`
+  naming exactly `arm64`, a thin header, the macOS platform in its load
+  commands). dSYM companions are debug data and are not inspected as code.
+  The fault is reported as `output_target`, independently of signature,
+  manifest and record faults.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
   `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
   symbol lookup. The [host-source check](../source_drift/README.md) covers
@@ -51,7 +59,13 @@ Offline release controls also exercise the release procedure's decision points.
   deployment target or required observation, a malformed request, a linker
   tool version alone, a signature claim, and the hash, inventory and SDK
   faults), refreshes the manifest and re-signs each copy so every signature
-  verifies, and requires exactly the codes each fault produces. No copy is
+  verifies, and requires exactly the codes each fault produces. For the output
+  target it substitutes real x86_64 and universal Mach-O signed with the
+  identity, with every signature verifying and every manifest and record hash
+  consistent: an x86_64 helper whose record still claims the target must
+  produce exactly `output_target` and `provenance_metadata`, the same helper
+  described truthfully by its record exactly `output_target` and
+  `provenance`, and an unlisted universal library exactly `output_target`. No copy is
   launched; cleanup removes only the temporary directory and checks the source
   inventory.
 - `byoxpc_verification_controls` uses never-launched signed copies and isolated
@@ -116,7 +130,25 @@ Offline release controls also exercise the release procedure's decision points.
   archive load commands and signature claims are compared with the ZIP's
   executable bytes. Applying every opt-in mutation in memory checks its
   anchors in the default battery; the opt-in run establishes that the
-  mutated guards actually fail their controls.
+  mutated guards actually fail their controls. The output target check is
+  exercised on real fixtures linked with the selected SDK (thin arm64, x86_64
+  and arm64e executables, a universal and a one-slice fat file, an arm64 Mac
+  Catalyst executable, truncated, empty, text and fat-magic files) whose
+  headers and load commands the control reads itself first; observations and
+  decisions are compared separately, failed and inconsistent `lipo` reports
+  refuse, the bundle scan finds renamed and unlisted code by header while a
+  dSYM companion is skipped by file type and not by path, the build gate
+  records each stage and names only the departing output, and copies of the
+  check with the container rule removed, the predicate reduced to arm64
+  membership, names matched as substrings or the platform rule removed each
+  accept a fixture the control refuses. Stamps carry the configured output
+  target and refuse another or an older stamp before any probe; fresh removal
+  replaces both Cargo release areas and keeps other profiles and triples;
+  judgments bind to the output triple's release area; target rules are
+  attributed to the output triple, not the compiler's host; a lower-precedence
+  target default is recorded as overridden; version 2 records require the
+  output target and are compared with the bytes, and an archived version 1
+  record is read as version 1 only when the reader asks for it.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS
@@ -126,7 +158,10 @@ Offline release controls also exercise the release procedure's decision points.
   commands the control reads before substituting it), sign `sbpl-check` ad hoc, or sign that helper, the service
   seal or the app seal with `--timestamp=none`. Both full and partial builds
   must refuse wrong minima and wrong SDKs before assembly while preserving
-  previous distribution bytes. The ad hoc and timestamp-less signatures must
+  previous distribution bytes. A Cargo output replaced by a thin x86_64 and a
+  native output by a universal Mach-O, each with the plist's minimum and the
+  selected SDK, must be refused by the output target check alone, naming the
+  output, before assembly; the minimum and SDK faults must not reach it. The ad hoc and timestamp-less signatures must
   pass deep verification and then fail the signer check, naming the artifact,
   before the standalone observer is signed, the guide is staged or the ZIP is
   created; the control inspects each such signature independently before
@@ -161,7 +196,17 @@ Offline release controls also exercise the release procedure's decision points.
   were forwarded and which flags they carried. The same case runs the
   fresh-mode state sequence with interruptions, the canary, replaced-output,
   lock-lifetime, Cargo oracle, Cargo selection and make-entrypoint controls
-  described in the opt-in registry. Copies of the script with a guard removed or moved past its
+  described in the opt-in registry. For the output target: outputs outside it
+  substituted at each of the five checked boundaries (after Cargo, including
+  a corrupted cached unit refused again on reuse; after the native compile,
+  the worker before it is run; in the assembled bundle with an unlisted file,
+  before any signature; at the standalone observer; before the ZIP); a stamp
+  naming another target or predating the contract; an x86_64 Meson host
+  through a cross file, and, in the partial variant, an arm64 cross build that
+  packages (Meson sets up no Swift target in a cross configuration); Cargo's report
+  naming another path; an x86_64 target default overridden; the package guard
+  on direct Cargo builds for other targets with its weakenings; and, where
+  Rosetta is present, the whole build run by a translated shell. Copies of the script with a guard removed or moved past its
   operation, and of the session helper with path admission disabled, must
   fail the matching control. Opt-in, with the same toolchain and identity requirements
   as the guard controls.
@@ -242,8 +287,10 @@ Offline release controls also exercise the release procedure's decision points.
   replacements or a replaced codesign argument list at the selected boundary.
 - `tests/fixtures/build_refusals/tools.py`: real-tool delegation with receipts
   and a stderr canary, passing the claim's lock descriptors to the real tool;
-  configured hooks remove, move, copy, truncate, rewrite, replace with a
-  symlink or change the mode of a file, edit Cargo's artifact report, kill or
+  configured hooks remove, move, copy over, replace with a new file (never
+  writing through a Cargo output's link to its cached unit), truncate,
+  rewrite, replace with a symlink or change the mode of a file, append
+  arguments to the real tool's command, edit Cargo's artifact report, kill or
   signal the build's shell, the lock owner or the wrapper itself, start a
   protected holder beyond the wrapper or record whether the lock is free
   beside one call, or answer a version query.

@@ -98,7 +98,16 @@ helper, broken signature, validly resealed stale manifest, omitted/duplicate
 entries, malformed manifest, a helper escaping the app through a symlink, and
 an intact bundle whose XPC host executable imports `_sandbox_check` (the host
 invariance check, through `nm -u` on a compiled control binary; the valid
-bundle's host is a compiled binary with no such import).
+bundle's host is a compiled binary with no such import). For the output
+target, with every signature, manifest hash and record hash consistent: an
+x86_64 helper the record describes truthfully must produce exactly the
+inspector's `output_target` error and the record's own `provenance` refusal;
+a one-slice fat container of the same arm64 stub, whose load commands match
+while the record still claims a thin file, exactly `output_target` and
+`provenance_metadata`; unlisted universal code under `Contents/Resources`,
+found by its header, exactly `output_target`; and the dSYM companion of an
+x86_64 executable beside a helper leaves the bundle valid, since debug data is
+not code.
 App and worker cases must remain unrun while the independent offline case runs.
 Mutations during passing, failing, and crashing commands must produce precise
 final diffs covering bytes, modes, additions, deletions, and symlinks.
@@ -117,9 +126,13 @@ stubs, and the ad hoc signature facts their linker signatures carry, which
 the inspector compares with `codesign -dvv`), around a compiled XPC host stub: the suite wrapper builds
 the clean stub and the control stubs once per run with
 `tests/fixtures/dispatcher/build.sh` into the case artifacts and names them in
-`PW_DISPATCHER_HOST_FIXTURE` (`<name>`, `<name>.imports-sandbox`, and the worker
-stubs `<name>.imports-clock` and `<name>.continuous-clock`); only
-`check_artifacts.py` uses the control stubs. Its worker clock scenarios lay a
+`PW_DISPATCHER_HOST_FIXTURE` (`<name>`, `<name>.imports-sandbox`, the worker
+stubs `<name>.imports-clock` and `<name>.continuous-clock`, and the stand-ins
+outside the output target `<name>.x86_64`, `<name>.universal`,
+`<name>.one-slice-fat` and `<name>.x86_64.dSYM`); only `check_artifacts.py`
+uses the control stubs. Every stub is compiled for its architecture
+explicitly, the non-arm64 ones signed ad hoc as the linker signs arm64
+output, so the fixture record's signature facts hold for each. Its worker clock scenarios lay a
 real `clock_gettime` import at the worker path only, which inspection must
 reject while the bundle stays sealed; a permitted `mach_continuous_time`
 import, which must pass with that symbol in the retained import list; and

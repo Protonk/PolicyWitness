@@ -516,7 +516,7 @@ of which belongs in the bundle. The provenance record the build embeds
 (`Contents/Resources/Evidence/provenance.json`, described under
 [evidence artifacts](../docs/SIGNING.md#evidence-artifacts)) is the bounded
 counterpart: the selected tools' reports, the configuration, each build
-directory's state and the shipped outputs' load commands and hashes, with
+directory's state and the shipped outputs' load commands, architectures and hashes, with
 Cargo's reuse judgment per target. A receipt can explain a difference the
 record only names; the record can be recovered from an accepted release,
 which a receipt cannot.

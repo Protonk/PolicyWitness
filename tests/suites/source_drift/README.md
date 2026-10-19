@@ -344,7 +344,12 @@ and each must be named by its rule. The per-option Meson control poisons
 every asserted option in turn and requires the next regeneration to refuse it
 by name; a bypass control removes one assertion from a disposable copy of
 `meson.build` and shows that option's control failing while the rule names
-the option. Agreement is textual: it does not establish that a refusal fires
+the option. The output-target control gives Meson an x86_64 macOS host
+through a cross file and requires setup to refuse it by name, builds an arm64
+cross configuration to thin arm64 outputs, refuses at the regeneration of a
+copy configured for x86_64 before the assertion existed and before anything
+compiles, and shows the setup succeeding and the rule naming the missing row
+when the assertion is removed, and naming a changed host requirement. Agreement is textual: it does not establish that a refusal fires
 or precedes the operation it protects; the manifest's behavioral and helper
 citations and the baseline carry that distinction, and release preflight
 refuses a grown baseline.

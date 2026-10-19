@@ -17,14 +17,14 @@
         },
         {
           "id": "build_provenance_controls",
-          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, requests survive the Python shim and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns",
+          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, requests survive the Python shim and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail",
           "requires": [
             "clang"
           ]
         },
         {
           "id": "signed_artifact_controls",
-          "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence",
+          "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence; validly signed x86_64 and universal code fails for architecture, with a contradicting record a separate fault",
           "default": false,
           "requires": [
             "app",
@@ -33,7 +33,7 @@
         },
         {
           "id": "build_guard_controls",
-          "description": "Wrong Cargo and native minima and wrong-SDK outputs stop before assembly; an ad hoc helper and a helper, service or app seal without a secure timestamp pass deep verification but stop before packaging, in both build variants",
+          "description": "Wrong Cargo and native minima, wrong-SDK outputs and outputs outside the arm64 output target stop before assembly, each by its own check; an ad hoc helper and a helper, service or app seal without a secure timestamp pass deep verification but stop before packaging, in both build variants",
           "default": false,
           "requires": [
             "app",
@@ -46,7 +46,7 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard, translated-shell builds where Rosetta is present and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
           "default": false,
           "requires": [
             "app",
@@ -202,7 +202,7 @@
         },
         {
           "id": "artifact_controls",
-          "description": "Reject invalid artifacts before app-dependent cases and detect mutation after passing or failing tests"
+          "description": "Reject invalid artifacts, executables outside the arm64 output target included, before app-dependent cases and detect mutation after passing or failing tests"
         },
         {
           "id": "retention_controls",

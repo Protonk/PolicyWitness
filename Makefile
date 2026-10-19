@@ -23,7 +23,7 @@
 #                            build.sh selects nothing and verifies the signatures it
 #                            makes against the Developer ID chain after sealing.
 #   PW_FRESH_BUILD           Build knob, 0 when unset: 1 replaces builddir/ and
-#                            controller/target/release/ before compiling. notarize
+#                            both Cargo release areas before compiling. notarize
 #                            and release enforce 1 and refuse any other value.
 #   NOTARY_KEYCHAIN_PROFILE  notarytool keychain profile; notarize and release need it.
 #   DIST_DIR                 Where the app, ZIP, guide, evidence/ and archive/ land,

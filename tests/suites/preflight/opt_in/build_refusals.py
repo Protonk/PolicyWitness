@@ -2224,13 +2224,25 @@ def reported_fresh(co, name):
     return None
 
 
+def cached_unit(path):
+    """The deps file a Cargo output was uplifted from: the one unit file of that target with the output's bytes."""
+    stem, digest = path.name.replace('-', '_'), artifact.digest(path)
+    units = [p for p in sorted((path.parent / 'deps').iterdir())
+             if re.fullmatch(re.escape(stem) + r'-[0-9a-f]{16}', p.name) and artifact.digest(p) == digest]
+    assert len(units) == 1, (path, units)
+    return units[0]
+
+
 def control_output_target_mismatch(co, variant):
     """Outputs outside the output target are refused at each boundary a check guards, before the operation it protects, by
     the check of the bytes, never by the minimum, SDK or identity checks (each substitute carries the plist's minimum
     and the selected SDK). A Cargo output replaced after Cargo reported it (x86_64, then a truncated arm64 file) refuses
     before Meson; because Cargo judges the replaced file current and keeps it, the next build without any fault refuses
     it again. A native output replaced after the compile (universal for the last output; a one-slice fat container of an
-    arm64 executable for the worker, which the identity check would otherwise run) refuses before assembly. A copy
+    arm64 executable for the worker, which the identity check would otherwise run) refuses before assembly. Cargo copies
+    each output from its cached unit on every build, so a replaced output alone is restored by the next one; the x86_64
+    bytes therefore replace the cached unit as well, as a corrupted cache would, while the truncated file replaces only
+    the output. A copy
     replaced in the assembled bundle, with an unlisted universal file added beside it, refuses before any signature.
     The standalone observer replaced after the app seal refuses before it is signed, and the sealed bundle's code
     replaced after that refuses before the ZIP is written."""
@@ -2248,8 +2260,10 @@ def control_output_target_mismatch(co, variant):
     for label, fixture, binary, reason in (('x86_64', 'x86_64', 'sbpl-check', 'architecture x86_64, not exactly arm64'),
                                            ('truncated', 'truncated', 'policy-witness', 'no readable LC_BUILD_VERSION platform')):
         target = co.target / binary
+        unit = cached_unit(target) if label == 'x86_64' else None
+        actions = [replace(co.forbidden(fixture), path) for path in ((unit, target) if unit else (target,))]
         build = co.build(f'output_target_mismatch-cargo-{label}', variant,
-                         hooks=[hook(f'replace-{binary}', 'cargo', [replace(co.forbidden(fixture), target)], first='build')])
+                         hooks=[hook(f'replace-{binary}', 'cargo', actions, first='build')])
         try:
             refused_by_target(build, f'{target}: {reason}')
             assert 'Building Rust controller + tools' in build.stdout
@@ -2260,14 +2274,17 @@ def control_output_target_mismatch(co, variant):
             preserved(build)
             assert len(build.session['output_check']['cargo']['problems']) == 1, build.session['output_check']
             if label == 'x86_64':
-                # Reuse is no bypass: Cargo keeps the replaced file as current, and the next build's check refuses it again.
+                # Reuse is no bypass: Cargo judges the replaced unit current, copies it out again, and the next build's
+                # check refuses it again.
                 again = co.build('output_target_mismatch-cargo-reused', variant)
                 refused_by_target(again, f'{target}: {reason}')
                 assert reported_fresh(co, binary) is True, 'Cargo rebuilt the output; reuse was not exercised'
                 no_calls(again, 'meson', 'ninja', 'codesign', 'cp')
                 preserved(again)
         finally:
-            target.unlink(missing_ok=True)  # Cargo relinks its cached unit, untouched by the rename, when the output is missing
+            if unit is not None:
+                unit.unlink(missing_ok=True)  # the cached unit itself was replaced: Cargo compiles it again
+            target.unlink(missing_ok=True)  # otherwise Cargo copies its untouched unit out again
     # Native outputs, after the compile, before assembly and before the worker is run for its identity.
     last = co.builddir / ('PWRunner' if variant == 'full' else 'pw-extension-issuer')
     worker = co.builddir / 'pw-probe-runner'
@@ -2388,7 +2405,9 @@ def control_meson_target(co, variant):
     anything compiles and before a stamp is published: here a cross file naming an x86_64 macOS host, appended by the tool
     wrapper to the script's own `meson setup`, which is the host a Meson running translated selects by default. A cross
     file naming the arm64 macOS host is a cross build and is not refused for being one: that build packages arm64
-    outputs. A fresh native build restores the directory."""
+    outputs. It runs in the partial variant only, because Meson 1.12.1 sets up no Swift target in any cross
+    configuration; the source_drift Meson control covers the same assertion directly. A fresh native build restores the
+    directory."""
     cross = {}
     for family in ('x86_64', 'aarch64'):
         cross[family] = co.work / f'cross-{family}.ini'
@@ -2403,12 +2422,13 @@ def control_meson_target(co, variant):
     assert not (co.root / STAMP).exists(), 'a refused setup published a stamp'
     no_calls(refused, 'codesign', 'cp')
     preserved(refused)
-    crossed = co.build('meson_target-arm64-cross', variant, fresh='1',
-                       hooks=[hook('cross-arm64', 'meson', append=['--cross-file', str(cross['aarch64'])], first='setup')])
-    passing(co, crossed, variant)
-    fired_once(crossed, 'cross-arm64')
-    assert 'Build type: cross build' in crossed.stdout, crossed.stdout[-3000:]
-    assert crossed.session['meson_machines']['host'] == dict(system='darwin', cpu_family='aarch64')
+    if variant == 'partial':
+        crossed = co.build('meson_target-arm64-cross', variant, fresh='1',
+                           hooks=[hook('cross-arm64', 'meson', append=['--cross-file', str(cross['aarch64'])], first='setup')])
+        passing(co, crossed, variant)
+        fired_once(crossed, 'cross-arm64')
+        assert 'Build type: cross build' in crossed.stdout, crossed.stdout[-3000:]
+        assert crossed.session['meson_machines']['host'] == dict(system='darwin', cpu_family='aarch64')
     restored = co.build('meson_target-native-fresh', variant, fresh='1')
     passing(co, restored, variant)
     assert 'Build type: native build' in restored.stdout

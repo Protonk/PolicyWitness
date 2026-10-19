@@ -16,7 +16,8 @@ archives.
 ## Why the build is shaped this way
 
 Three ideas shape the script. The app is a coherent signed specimen: one
-bundle, assembled from compilers the script drives itself, signed from the
+bundle of macOS code for Apple Silicon, every executable in it a thin arm64
+Mach-O, assembled from compilers the script drives itself, signed from the
 inside out with one explicitly named identity, and carrying a manifest of the
 bytes that were signed and a record of the tools, configuration and build
 directories behind them. The host and the worker share an exact source
@@ -30,8 +31,9 @@ checkout lock is taken before the first check, the cache paths are admitted
 before the session or any cache is written, the documentation and identity
 checks run before any compile, a reused build directory is validated against
 its stamp before any compile or reconfiguration, each compile is followed by
-its own checks before anything is copied, every bundle copy precedes every
-signature, and the signatures precede the ZIP.
+its own checks before anything is copied, the assembled bundle's code is
+checked against the output target before the first signature, every bundle
+copy precedes every signature, and the signatures precede the ZIP.
 
 What a refusal leaves behind depends on where it fires. A refusal before
 assembly leaves the previous distribution outputs untouched; the build
@@ -42,7 +44,8 @@ partial app and no ZIP; a refusal after the seal leaves a sealed app that
 failed verification, the signer check, the observer's signature or packaging,
 and no ZIP or a partial one. The test inspector checks the app's signatures,
 its inventory and evidence, including signer consistency for the listed
-executables and the provenance record against the manifest and the bytes
+executables and the provenance record against the manifest and the bytes, and
+the output target of every executable it carries
 ([`inspect`](../tests/lib/artifact.py)).
 
 Known gap: a failure signing the standalone observer, staging the guide or
@@ -88,9 +91,9 @@ names no runner. Use it only for iteration; the script still writes its ZIP
 under the release name.
 
 Fresh mode. With `PW_FRESH_BUILD=1` the script admits its inputs, tools and
-identity as usual, then replaces `builddir/` and `controller/target/release/`
-in the `fresh` step and requires Cargo to report rebuilding every shipped
-target; the `fresh` row runs only then, which the figure draws as a dotted
+identity as usual, then replaces `builddir/`, `controller/target/release/`
+and `controller/target/aarch64-apple-darwin/release/` in the `fresh` step and
+requires Cargo to report rebuilding every shipped target; the `fresh` row runs only then, which the figure draws as a dotted
 node beside the direct edge of the incremental path. In incremental mode
 (`PW_FRESH_BUILD` unset or `0`) the `builddir` step validates the
 directory's stamp instead, and the `fresh` step does not run. The two are
@@ -202,6 +205,36 @@ The build depends on these inputs and working state, in the order it meets them.
   the same value for the native compile and link
   ([`macos_minimum`](../meson.build)); the two agree because a build in which
   they disagree refuses.
+- **The output target.** Every executable the build delivers is a thin arm64
+  Mach-O for macOS ([output_target.py](../tests/lib/output_target.py)): one
+  architecture, `arm64` exactly (not `arm64e`, and not a universal file that
+  includes it), in a thin file rather than a fat container, with the macOS
+  platform in its `LC_BUILD_VERSION`. The macOS minimum and the SDK stay
+  separate requirements beside it. Each toolchain is told the target rather
+  than left to its default: Cargo gets `--target aarch64-apple-darwin`, and
+  the controller package's build script ([build.rs](../controller/build.rs))
+  refuses any other Cargo `TARGET`, which also stops a direct
+  `cargo build --target x86_64-apple-darwin`; `meson.build` asserts that
+  Meson's host machine, where the products run, is arm64 macOS, and passes
+  `-arch arm64` to every C compile and link and `arm64-apple-macosx<minimum>`
+  as the Swift target. Meson's build machine, where it and the compilers run,
+  is not constrained, so a cross file naming the arm64 macOS host is
+  accepted; a Meson running translated on x86_64 configures an x86_64 host by
+  default and is refused by that assertion, as a target-configuration error
+  and not as a refusal of translation. Then the bytes are checked, never
+  executed, at every boundary they could change: each Cargo and Meson output
+  after its compile and before its minimum is read (so before the worker is
+  run for its identity), every Mach-O the assembled bundle carries, found by
+  header and not by the names copied in, before the first signature, the
+  standalone observer before it is signed, and the sealed bundle again before
+  the ZIP is written. A reused output is checked on every build like a new
+  one; nothing is thinned or repaired. A dSYM companion is debug data and is
+  not checked as code. The target describes the products only: no check
+  observes or constrains the machine or processes that run the build, and the
+  record makes no claim about translation. The build does run the built
+  worker to compare its identity, so a builder that cannot execute arm64 code
+  cannot complete the signed pipeline even when its compilers produce arm64
+  outputs.
 - **The SDK and the developer directory.** `xcrun --sdk macosx` selects the
   SDK once, under whatever `DEVELOPER_DIR` names, unless the caller's
   `SDKROOT` names an SDK, which `xcrun` resolves instead. The caller's
@@ -221,8 +254,9 @@ The build depends on these inputs and working state, in the order it meets them.
 - **The two build directories.** Before the session or either cache is
   written or inspected, the `stamp` step's helper admits every component of
   `builddir/`, `controller/target/` and its `release/` below the checkout, and
-  the session destination: each directory must be a real directory of this
-  user, or absent, and the session an absent path or a regular file of this
+  the session destination, and below `controller/target/` the output
+  triple's `aarch64-apple-darwin/` and its `release/`: each directory must be
+  a real directory of this user, or absent, and the session an absent path or a regular file of this
   user with one link. A symlink, another user's directory or a non-directory
   refuses as `cache_path_unsafe` with nothing written or removed, and a
   missing `controller/target/` is created only beneath the admitted
@@ -233,10 +267,13 @@ The build depends on these inputs and working state, in the order it meets them.
   refused before Cargo; so is one whose toolchain stamp is missing, malformed
   or describes other tools than the ones selected now, as
   [cache compatibility](#cache-compatibility-replacement-and-recovery) says.
-  Cargo's is pinned with `--target-dir`, its intermediate release state must
-  lie under that directory, and Cargo is asked to report the executables it
-  produced and whether it reused each one, so an output placed elsewhere by a
-  target triple or a Cargo setting is refused before any copy.
+  Cargo's is pinned with `--target-dir` and its output triple with
+  `--target`: the shipped executables land under
+  `controller/target/aarch64-apple-darwin/release/`, while build scripts and
+  procedural macros stay under `controller/target/release/`. Its intermediate
+  release state must lie under that directory, and Cargo is asked to report
+  the executables it produced and whether it reused each one, so an
+  executable reported at another path is refused before any copy.
 - **The signing identity.** `IDENTITY` must name an identity that `security
   find-identity` lists; nothing is auto-selected, and the keychain listing is
   checked before Cargo because an empty listing is also what a sandboxed
@@ -277,12 +314,20 @@ The build depends on these inputs and working state, in the order it meets them.
   by Cargo's precedence (`CARGO_ENCODED_RUSTFLAGS`, `RUSTFLAGS`, matching
   target rules, `build.rustflags`), with target rules using `cfg()` left
   unresolved, and compared with Cargo's own record of the effective flags.
+  Target rules match the output triple the command passes, never the host
+  the compiler reports for itself; with an explicit target, Cargo applies
+  them to the shipped units only. `CARGO_BUILD_TARGET` and `build.target`
+  name a target only when the command names none: the explicit `--target`
+  overrides them, and the record lists them as overridden, never applied
+  and never refused.
   The build also asks Cargo for its effective intermediate directory and
   refuses one outside the pinned target directory, or a report that names
   none, before any mutation. A plain `cargo build` outside the script
   carries none of this; on the toolchain this was observed with, it produced
   executables for an older macOS than the plist declares, which the minimum
-  check would refuse.
+  check would refuse. Its target, though, is the package's own rule: on a
+  host other than Apple Silicon, or with another `--target`, the build script
+  stops it.
 - **The output directory.** `DIST_DIR`, `dist/` by default; a custom one
   also receives copies of the tracked `dist/` README and AGENTS files. Its
   trust and that of the build directories are in the table.
@@ -301,14 +346,22 @@ A configured `builddir/` carries `builddir/pw-toolchain.json`, its toolchain
 stamp, published atomically right after a successful `meson setup` from the
 compilers Meson actually selected: the developer directory, the SDK's path,
 version and build, each configured compiler command with the identity it
-reports when probed in the directory's context, and the selected Rust
-compiler with its wrappers. Its scope is the Meson configuration and the
-compatibility inputs observed at setup; it says nothing about how outputs
-Cargo retained were produced. A failed setup publishes nothing.
+reports when probed in the directory's context, the selected Rust compiler
+with its wrappers, and the output target the directory is configured for:
+Meson's host machine, the architecture each target selects with its
+effective arguments (`-arch` at C compile and executable link, the Swift
+`-target`), read from Meson's introspection and never from the default a
+compiler's version output names, and the Cargo output triple. Its scope is
+the Meson configuration and the compatibility inputs observed at setup; it
+says nothing about how outputs Cargo retained were produced. Meson's
+introspection does not list a Swift target's link arguments, so the Swift
+target is recorded from the compile. A failed setup publishes nothing.
 
 On reuse, the `builddir` step reads the stamp, checks that it names this
-checkout and the compiler commands the directory records, probes those same
-commands now, together with `xcrun`, the developer directory and the Rust
+checkout, compares its output target with the required one, refusing a
+directory configured for another target as `builddir_target_mismatch`
+before any probe, checks that it names the compiler commands and the output
+target the directory records, probes those same commands now, together with `xcrun`, the developer directory and the Rust
 compiler, and compares every applicable field. A field that differs refuses
 as `builddir_toolchain_changed`, naming the field, both values and the
 remedy; a field that cannot be observed on either side refuses as well,
@@ -316,8 +369,11 @@ because two failed observations never establish equality. A configured
 directory with a missing, malformed or unsupported stamp, a stamp beside an
 unconfigured directory, or a stamp that does not describe the directory, is
 refused rather than adopted: the build never writes today's values over
-unknown state. A directory configured before stamps existed therefore needs
-one explicit fresh build. Unchanged reuse leaves the stamp byte-for-byte
+unknown state. A directory configured before stamps existed, or stamped
+before the output target joined the stamp (schema 1), therefore needs one
+explicit fresh build; an old stamp is never relabelled as describing arm64
+outputs. After compiling, the stamp must still describe the output target
+the directory is configured for, since a regeneration can change it. Unchanged reuse leaves the stamp byte-for-byte
 intact. Enabling the XPC pieces on a directory configured without them is an
 ordinary configuration change: the compile's regeneration discovers the Swift
 compiler, and after a successful compile the stamp is extended with that
@@ -330,21 +386,22 @@ publication leaves a configured, unstamped directory, which the next
 incremental build refuses until fresh mode replaces it. A build killed after
 publication, or one whose compile failed, leaves a stamped directory that the
 next incremental build validates and compiles again. The two caches survive
-independently: removing `controller/target/release/` alone makes the next
-build rebuild every Cargo target under a validated stamp, and removing
+independently: removing `controller/target/aarch64-apple-darwin/release/`
+alone makes the next build rebuild every shipped Cargo target under a
+validated stamp, and removing
 `builddir/` alone makes it set up and stamp the directory anew while Cargo
 reuses its outputs.
 
 Fresh mode replaces the caches explicitly. After the tracked inputs, the
-tools and the identity are admitted, the `fresh` step removes `builddir/` and
-`controller/target/release/` and nothing else. Its helper admits both again,
-before either is removed: every path component below the checkout must be a
+tools and the identity are admitted, the `fresh` step removes `builddir/`,
+`controller/target/release/` and `controller/target/aarch64-apple-darwin/release/`
+and nothing else. Its helper admits all three again, before any is removed: every path component below the checkout must be a
 real directory owned by the current user, or absent, so a symlink placed even
 after an earlier step's admission refuses before anything is removed. Each
 removal goes through the directory admitted, never following a link inside
 it, and rechecks that the path still names that directory before it starts
 and before the last `rmdir`; a removal that fails part way refuses too.
-Cargo's other profiles, its registry downloads, compiler caches elsewhere,
+Cargo's other profiles and other target triples, its registry downloads, compiler caches elsewhere,
 `CACHEDIR.TAG`, the session file and the previous distribution outputs stay.
 The record names each directory's replacement, and Cargo must then report
 rebuilding every shipped target; a reused output refuses before Meson runs.
@@ -567,8 +624,9 @@ its policy assertions, so they need the unsandboxed shell.
 
 Statuses. The script's own refusals exit 2. A refusal that a check or a tool
 produces propagates that tool's status: 1 for a stale generated copy, a
-source list that differs from the tree, a changed toolchain, a disagreeing
-SDK, a reused target in fresh mode, a redirected Cargo directory, a failed
+source list that differs from the tree, a changed toolchain, a directory
+configured for another output target, an output outside the output target,
+a disagreeing SDK, a reused target in fresh mode, a redirected Cargo directory, a failed
 removal or a worker reporting another identity; 2 when a check could not
 read or observe what it needed, including a busy lock, an unverified lock
 claim, a missing or invalid stamp, an unobservable required field, an
@@ -589,7 +647,12 @@ lists the asserted options in `meson.build`'s order, the grounding rule
 compares both, and the per-option control still poisons each option in turn
 and requires the next regeneration to refuse it by name; a mutation control
 removes one assertion and shows that option's control failing. Fewer rows
-did not remove any assertion.
+did not remove any assertion. The output-target assertion is one more row,
+carrying the host machine it requires instead of options; the grounding
+rule compares its message and that host with `meson.build`, a control
+refuses an x86_64 host at setup and at the regeneration of a directory
+configured before the assertion existed, and a mutation that removes it
+shows the control failing.
 
 Coverage. Each row's coverage column says what produces the refusal in a test:
 a control that drives the build and observes the message and the operation it
@@ -609,7 +672,10 @@ before assembly; one output or every shipped output whose `LC_BUILD_VERSION`
 names another SDK version, linked with the selected SDK and stamped by the
 linker's `-platform_version` (a controlled metadata mismatch, not a compile
 against a second SDK), which the SDK comparison must name before assembly; a
-helper
+Cargo output replaced by a thin x86_64 and a native output by a universal
+Mach-O, each with the plist's minimum and the selected SDK, which only the
+output target check must name before assembly (the minimum and SDK faults
+must not reach it either); a helper
 signed ad hoc; and a helper, the service seal or the app seal signed with
 `--timestamp=none`, which deep verification accepts and the signer check
 must name and refuse before observer signing, guide staging or ZIP creation,
@@ -641,7 +707,21 @@ version, a Meson directory departing from the policy, a source that does not
 compile, a worker replaced by one reporting another identity, an input or
 output removed by a wrapper after one named call, a Mach-O truncated as
 codesign reaches it, the session gone before evidence, a sealed resource or
-the record changed after the seal. The forwarding wrappers run the real
+the record changed after the seal. For the output target: a Cargo output
+replaced after Cargo reported it, by x86_64 bytes written into the cached
+unit (refused, and refused again when the next build reuses it) and by a
+truncated file; a native output replaced by a universal file and the worker
+by a one-slice fat container, refused before the worker is run; a copy
+replaced in the assembled bundle with an unlisted universal file beside it,
+refused before any signature; the standalone observer replaced after the
+seal and the sealed bundle's code after the observer's signature; a stamp
+naming another target or predating the output target contract; a cross
+file giving `meson setup` an x86_64 host, and one giving the arm64 host,
+which builds and packages in the partial variant (Meson itself sets up no
+Swift target in a cross configuration); Cargo's report naming another path; an x86_64
+target default overridden by the explicit target; the package guard on a
+direct Cargo build for other targets; and, where Rosetta is present, the
+whole build run by a translated shell. The forwarding wrappers run the real
 compilers and record every invocation, distinguishing compilations from
 version probes, and the effective flags the record reports per output are
 compared with the compilations the wrapper received. The same control runs
@@ -684,8 +764,10 @@ probes of both directories show to differ, and recovers fresh.
 ## What Meson owns and what the script owns
 
 [meson.build](../meson.build) owns the native compile: source lists, module
-names and flags, the supported macOS passed at compile and at link, and the
-fixed policy for the targets in the [shipped inventory](../README.md#build-and-bundle).
+names and flags, the supported macOS passed at compile and at link, the
+output target (the assertion that the host machine is arm64 macOS, and the
+architecture passed explicitly at every compile and link), and the fixed
+policy for the targets in the [shipped inventory](../README.md#build-and-bundle).
 The C shim is linked into the host. Both
 `meson.build` and `meson.options` are host/worker identity inputs. The policy is
 an enumerated list of options asserted as effective values
@@ -764,6 +846,33 @@ SDKROOT="$(DEVELOPER_DIR=/Library/Developer/CommandLineTools xcrun --sdk macosx 
 meson setup builddir-clt
 ```
 
+Selecting the target is separate from choosing how Meson runs. The setup
+above configures the machine it runs on as the host; a Meson running
+translated on x86_64 therefore configures an x86_64 host and `meson.build`
+refuses it at setup. To configure for Apple Silicon from such an
+environment, name the arm64 macOS host in a cross file, which `meson.build`
+accepts as a cross build; `build.sh` itself performs only the native setup.
+Meson 1.12.1 sets up no Swift target in any cross configuration (it stops
+with an internal error naming a missing `swift_COMPILER` rule, as a minimal
+Swift project shows too), so a cross configuration builds the C targets,
+`-Dxpc=false`, and not the XPC pieces.
+
+```ini
+[binaries]
+c = 'cc'
+swift = 'swiftc'
+
+[host_machine]
+system = 'darwin'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+```
+
+```sh
+meson setup builddir-arm64 --cross-file arm64-macos.ini -Dinspection=true -Dxpc=false
+```
+
 If unstamped state occupies `builddir/` after such work, the next
 `PW_FRESH_BUILD=1` build replaces it. Swift discovery uses swiftc's default
 module cache, while the targets use the build directory's own. The
@@ -787,9 +896,12 @@ without regeneration is refused before signing, and the built worker must
 report the generated identity, since a worker compiled from other identity
 inputs and an unchanged generated constant can agree with the tree. The build
 assumes a stable checkout throughout execution. Every Cargo and Meson
-executable carried the plist's minimum and the selected SDK's version, and
-the configured source lists and closure matched the tree, before assembly
-began.
+executable was a thin arm64 Mach-O for macOS and carried the plist's minimum
+and the selected SDK's version, and the configured source lists and closure
+matched the tree, before assembly began; every Mach-O in the assembled
+bundle, the bundle mains included, was checked against the output target
+again before the first signature. The standalone observer is checked again
+at its own signing, and the sealed bundle again before the ZIP.
 
 <!-- BEGIN GENERATED BUILD SIGNING -->
 <details>
@@ -815,8 +927,9 @@ with `--force --options runtime --timestamp`, so the timestamp service must be
 reachable; the evidence manifest and the provenance record are written between
 the service seal and the app seal, so the app seal covers them. The dSYM
 bundles beside the Swift executables, including their DWARF files, are sealed
-as resources. The standalone observer under `controller/target/release` is
-signed in place for direct use outside the bundle.
+as resources. The standalone observer under
+`controller/target/aarch64-apple-darwin/release` is signed in place for
+direct use outside the bundle.
 
 The list and the inventory. [`sign_macho`](../build.sh) refuses a missing or
 non-Mach-O target before codesign runs: the list names exactly the executables
@@ -868,7 +981,9 @@ writing; the symbols file; and the provenance record, assembled from the build
 session the script kept through its steps. The record holds the source stamp
 and the hashes of the build's input files, the selected tools with what they
 reported about themselves, the configuration and the state of each build
-directory, every shipped Mach-O's load commands with its hash as signed and
+directory, the fixed output target and Meson's host and build machines, every
+shipped Mach-O's load commands, architectures and container with its hash as
+signed and
 Cargo's reuse judgment and fingerprint observation for the Cargo targets, and
 the facts of each nested signature, and the caller's requests beside the
 effective deployment target and SDK Cargo gives the compiler. The evidence

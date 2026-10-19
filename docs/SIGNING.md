@@ -59,7 +59,7 @@ runner; nothing reads the record at run time.
 
 ### The provenance record
 
-`provenance.json` (`schema_version` 1) is the tools' report about one build:
+`provenance.json` (`schema_version` 2) is the tools' report about one build:
 what was selected, what the tools said about themselves, what the build
 directories looked like and what bytes shipped. It does not establish
 reproducibility, compiler correctness, that particular bytes executed, or an
@@ -82,7 +82,9 @@ exhaustive account of private runtime dependencies, and it says so in its
   (redacted) with their includes, the source of the compiler and of each
   wrapper and the lower sources each overrides, the `[env]` names with whether
   each applied (never their values), the launcher (a rustup proxy with its
-  toolchain, or Cargo itself), and the compiler's inputs in Cargo's child
+  toolchain, or Cargo itself), the output triple the command passes with
+  `--target` and the lower-precedence defaults (`CARGO_BUILD_TARGET`,
+  `build.target`) it overrides, and the compiler's inputs in Cargo's child
   environment (`SDKROOT`, `MACOSX_DEPLOYMENT_TARGET`, `DEVELOPER_DIR`,
   `RUSTUP_TOOLCHAIN`, and whether `[env]` replaced `PATH` or `RUSTUP_HOME`);
   the command, probed without its wrappers in that environment and in the
@@ -97,16 +99,24 @@ exhaustive account of private runtime dependencies, and it says so in its
   set (with its exact value, an empty one included) or unset as the caller
   left it before any Python ran, `DEVELOPER_DIR` and
   `MACOSX_DEPLOYMENT_TARGET` with their values, and only the set or unset
-  state of `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`; the effective
+  state of `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`; the fixed
+  `output_target` (system `macos`, platform `1`, architecture `arm64`, a
+  `thin` container and the Cargo triple `aarch64-apple-darwin`), a statement
+  about the products that makes no claim about the machine or processes that
+  built them; Meson's host and build machines as Meson reports them, the host
+  being the platform the native products are configured for and the build
+  machine a toolchain fact that is not constrained; the effective
   `deployment_target` and `sdkroot`, as Cargo's resolved environment gives
   them to the compiler, which must equal the plist's minimum, every output's
   minimum and the selected SDK's path; each build directory's state (`created`
   or `reused`, whether fresh mode replaced it, and what happened to the
-  stamp), fresh mode's replacement report and Cargo's admitted directories;
+  stamp), Cargo's host release area and its output triple's release area
+  apart, fresh mode's replacement report and Cargo's admitted directories;
   and a projection of the toolchain stamp with its scope.
 - `outputs`: for every shipped Mach-O, its bundle-relative path, UUID,
   platform, minimum and SDK from `LC_BUILD_VERSION` with the linker tool
-  versions; its hash as signed, except the controller, whose entry says why
+  versions, its architectures as `lipo -archs` names them and its container
+  (`thin` or `fat`) as its header declares it; its hash as signed, except the controller, whose entry says why
   the hash is absent; the nested signature's leaf, team, runtime flag,
   Developer ID chain and timestamp presence; and, for the Cargo targets,
   Cargo's own judgment, a literal boolean (`fresh: true` means Cargo reused
@@ -124,8 +134,9 @@ exhaustive account of private runtime dependencies, and it says so in its
   release record, not here.
 
 Field policy. A required observation (the SDK, the developer directory, the
-compilers' identities, the Rust compiler, each output's load commands and
-hash) that fails stops the build. An optional one (Xcode's version, a
+compilers' identities, the Rust compiler, each output's load commands,
+architectures, container and hash) that fails stops the build, and so does an
+output outside the output target. An optional one (Xcode's version, a
 fingerprint for a reused unit, a wrapper's identity) is recorded as unknown
 with a bounded failure entry naming its kind, status and byte counts, never
 the tool's output, and never compares equal to anything. Every probe has a
@@ -146,20 +157,31 @@ required field present and not null, exact booleans, strings and integers,
 bounded strings and lists, the full build's or the partial build's compilers
 and outputs, only the documented observation statuses and the unknowns the
 field policy permits, no undefined top-level field, signing entries
-that repeat the outputs' signature facts, and effective settings that agree
-with the outputs. The evidence step refuses to write a record it rejects; the
+that repeat the outputs' signature facts, effective settings that agree
+with the outputs, and every output and Meson's host machine described as the
+output target. The evidence step refuses to write a record it rejects; the
 inspector applies it and then compares every claimed load-command field,
 linker tools included, with the bytes and each nested signature claim with
 `codesign -dvv`'s display; the release-archive reader applies it to the
 accepted ZIP's record and binds each nested output's hash to that ZIP's
 member. It copies the named executables to a temporary directory to compare
-their load commands and signature displays too; it never executes them.
+their load commands, architectures, containers and signature displays too;
+it never executes them. The declared output target satisfies nothing on its
+own: both readers compare each output's claims with its bytes, and the
+inspector checks the bytes of every executable whatever the record says.
 Both readers enforce the helper's [`RECORD_LIMIT`](../tests/lib/build_provenance.py) before parsing. Cargo profiles,
 Meson options, toolchain-stamp projections and fresh-mode replacement
 observations have typed fields; fresh-mode observations must agree with the
 knob, directory states and per-target rebuild judgments.
 A record from before this validator that leaves
 a required field null is refused, not reinterpreted.
+
+Versions. The validator describes each schema version separately. A build
+writes version 2, the inspector accepts only version 2, and archiving a new
+release requires it. Verifying an archived release reads the record that
+release's own build sealed: a version 1 record is validated and compared with
+its ZIP as version 1 describes it, without the output target fields it never
+carried, and nothing is supplied to it or rewritten.
 
 What the hashes mean. A newly calculated output hash identifies the bytes the
 record captured; it does not authenticate their compilation history. A cached
@@ -212,8 +234,9 @@ full default battery against the stapled app into
 `tests/out/runs/release-<version>-default`, then `tests/lib/release_archive.py`,
 which archives the accepted release under `dist/archive/v<version>/`. The
 release build is fresh: `notarize` passes `PW_FRESH_BUILD=1` to its recursive
-`make build`, so `builddir/` and `controller/target/release/` are replaced
-and Cargo rebuilds every shipped target, and a caller's conflicting
+`make build`, so `builddir/`, `controller/target/release/` and
+`controller/target/aarch64-apple-darwin/release/` are replaced and Cargo
+rebuilds every shipped target, and a caller's conflicting
 `PW_FRESH_BUILD` value, in the environment or on the make command line, is
 refused before anything builds rather than overridden silently. Archiving
 stages the ZIP, guide, checksums, original command receipts, notes, the

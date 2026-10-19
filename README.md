@@ -38,8 +38,9 @@ the install recipe and the signing constraints.
 Download a notarized release from
 [GitHub Releases](https://github.com/Protonk/PolicyWitness/releases), or build
 one as described under [Build and bundle](#build-and-bundle). Releases and builds target
-macOS 26, the version this repository is tested on; `Info.plist` and
-`meson.build` declare that minimum together. Run it from a normal
+macOS 26 on Apple Silicon, the platform this repository is tested on: every
+executable in the app is a thin arm64 Mach-O, so it does not run on an Intel
+Mac. `Info.plist` and `meson.build` declare the minimum together. Run it from a normal
 Terminal; a sandboxed automation harness can refuse the XPC lookup.
 
 ```sh
@@ -79,8 +80,13 @@ observed.
 
 ## Build and bundle
 
-Building PolicyWitness requires Rust with Cargo, Xcode Command Line Tools
-(or Xcode), and Meson and Ninja on `PATH` (`brew install meson ninja`).
+Building PolicyWitness requires Rust with Cargo and its `aarch64-apple-darwin`
+target (the default on Apple Silicon), Xcode Command Line Tools (or Xcode),
+and Meson and Ninja on `PATH` (`brew install meson ninja`). The build checks
+every executable it produces against that one output target, thin arm64
+macOS code; it does not check which machine runs it, but it does run the
+built worker to compare its identity, so a builder that cannot run arm64
+code cannot complete the signed build.
 The Developer ID Application signing identity must already be in your
 login keychain. From the repository root:
 
@@ -91,8 +97,8 @@ make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 The build writes `dist/PolicyWitness.app`, a ZIP ready for notarization at
 `dist/PolicyWitness.zip`, and the standalone user guide at
 `dist/PolicyWitness.md`. It reuses `builddir/` and `controller/target/`
-under the toolchain recorded when they were set up; `PW_FRESH_BUILD=1`
-replaces both before compiling, and a changed compiler or SDK is refused
+under the toolchain and output target recorded when they were set up;
+`PW_FRESH_BUILD=1` replaces their build state before compiling, and a changed compiler or SDK is refused
 until then. A build holds the checkout's test lock, so a build and a test
 battery in one checkout run one at a time.
 

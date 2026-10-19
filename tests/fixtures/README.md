@@ -129,10 +129,14 @@ the cancellation checker reuses its kernel process-exit observer.
 (`host_clean.c`, `host_imports_sandbox.c`, `worker_imports_clock.c`,
 `worker_continuous_clock.c` and `controller_stub.c`, built by `build.sh` once
 per suite run and named in `PW_DISPATCHER_HOST_FIXTURE`; a worker stub can
-replace the clean stub at the worker path only) and
+replace the clean stub at the worker path only; every stub is compiled for
+arm64 explicitly, and `build.sh` also builds x86_64, universal, one-slice fat
+and x86_64 dSYM stand-ins outside the output target, the non-arm64 ones signed
+ad hoc as the linker signs arm64 output) and
 writes a complete full-build provenance record it authors: nominal toolchain
 values, the stand-ins' hashes and load commands read with its own `otool`
-parse, and the ad hoc signature facts their linker signatures carry, which the
+parse, their architectures and container from `lipo -archs` and their own
+header magic, and the ad hoc signature facts their signatures carry, which the
 inspector compares with `codesign -dvv`. `retention_case.py` can also start a
 grandchild beyond itself that passes on, or drops, the checkout lock
 descriptors, for the dispatcher's lock-lifetime control;

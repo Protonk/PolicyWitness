@@ -5,9 +5,12 @@ one fault injected by a tool wrapper: a Cargo or Meson output replaced by a
 real Mach-O built for another macOS minimum, one or every shipped output
 replaced by a Mach-O whose LC_BUILD_VERSION names another SDK version (linked
 with the selected SDK, the version stamped by the linker's -platform_version,
-so one installed SDK suffices), a helper signed ad hoc, or a helper, the XPC seal or the app seal signed without a secure
+so one installed SDK suffices), a Cargo output replaced by a thin x86_64 or a
+native output by a universal arm64/x86_64 Mach-O carrying the plist's minimum
+and the selected SDK, a helper signed ad hoc, or a helper, the XPC seal or the app seal signed without a secure
 timestamp (`--timestamp=none`; merely omitting the flag is not a reliable
-fault). The script's own checks make every refusal; the scenario asserts the
+fault). The output target check and the minimum and SDK checks each refuse
+only their own fault: no scenario credits one check with another's refusal. The script's own checks make every refusal; the scenario asserts the
 diagnostic, the status, the banners before and after, the signatures that
 were and were not made, the preserved or absent outputs, and inspects a
 timestamp-less signature independently before crediting the refusal.
@@ -137,10 +140,22 @@ def test_build_guards(out, identity):
         (out / 'wrong-sdk.load-commands').write_text(load_commands)
         assert stamped_minimum == minimum and build_provenance.normalize_version(stamped) == build_provenance.normalize_version(stamped_sdk), (stamped_minimum, stamped)
         assert build_provenance.normalize_version(stamped) != build_provenance.normalize_version(selected_sdk)
+        # Outputs outside the target that every other check would pass: the plist's minimum, the selected SDK.
+        wrong_arch = {}
+        for name, flags in (('x86_64', ['-arch', 'x86_64']), ('universal', ['-arch', 'arm64', '-arch', 'x86_64'])):
+            wrong_arch[name] = work / f'wrong-arch-{name}'
+            status, _, stderr = command(out / f'compile-wrong-arch-{name}',
+                ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', *flags, f'-mmacosx-version-min={minimum}', source, '-o', wrong_arch[name]],
+                cwd=work, env=base_env)
+            assert status == 0, stderr
+            listed = subprocess.check_output(['/usr/bin/lipo', '-archs', str(wrong_arch[name])], text=True).split()
+            assert sorted(listed) == sorted(flags[1::2]), (name, listed)
         save(out / 'equipment.json', dict(selected_sdk=selected_sdk, stamped_sdk=stamped_sdk, minimum=minimum, wrong_minimum=wrong_minimum,
-                                          note='the wrong-SDK fixture is linked with the selected SDK and a distinct LC_BUILD_VERSION sdk'))
+                                          wrong_architectures={name: str(path) for name, path in wrong_arch.items()},
+                                          note='the wrong-SDK fixture is linked with the selected SDK and a distinct LC_BUILD_VERSION sdk; '
+                                               'the wrong-architecture fixtures carry the minimum and the selected SDK'))
 
-        cargo_outputs = [root / 'controller/target/release' / name for name in ('policy-witness', 'sandbox-log-observer', 'sbpl-check')]
+        cargo_outputs = [root / build_provenance.TRIPLE_RELEASE / name for name in ('policy-witness', 'sandbox-log-observer', 'sbpl-check')]
         for variant, xpc in (('full', '1'), ('partial', '0')):
             meson_outputs = [root / 'builddir' / name for name in ('sb_api_validator', 'pw-probe-runner', 'pw-extension-issuer')]
             if xpc == '1':
@@ -148,7 +163,7 @@ def test_build_guards(out, identity):
             # The final loop members catch a check accidentally limited to the
             # first output, as well as a removed check or one moved past assembly.
             last = {'cargo': cargo_outputs[-1], 'meson': meson_outputs[-1]}
-            faults = ['cargo', 'meson', 'sdk_cargo', 'sdk_all', 'signer', 'timestamp_helper', 'timestamp_app']
+            faults = ['cargo', 'meson', 'sdk_cargo', 'sdk_all', 'arch_cargo', 'arch_native', 'signer', 'timestamp_helper', 'timestamp_app']
             if xpc == '1':
                 faults.insert(6, 'timestamp_seal')
             faults.append('none')
@@ -173,6 +188,10 @@ def test_build_guards(out, identity):
                                                    targets=[str(last[fault])], source=str(wrong_binary))]
                 elif fault == 'sdk_cargo':
                     config['replacements'] = [dict(tool='cargo', first='build', targets=[str(cargo_outputs[-1])], source=str(wrong_sdk_binary))]
+                elif fault == 'arch_cargo':
+                    config['replacements'] = [dict(tool='cargo', first='build', targets=[str(cargo_outputs[-1])], source=str(wrong_arch['x86_64']))]
+                elif fault == 'arch_native':
+                    config['replacements'] = [dict(tool='meson', first='compile', targets=[str(meson_outputs[-1])], source=str(wrong_arch['universal']))]
                 elif fault == 'sdk_all':
                     config['replacements'] = [dict(tool='cargo', first='build', targets=list(map(str, cargo_outputs)), source=str(wrong_sdk_binary)),
                                               dict(tool='meson', first='compile', targets=list(map(str, meson_outputs)), source=str(wrong_sdk_binary))]
@@ -199,7 +218,25 @@ def test_build_guards(out, identity):
                     expected_injections = {'none': 0, 'cargo': 1, 'meson': 1, 'sdk_cargo': 1, 'sdk_all': len(cargo_outputs) + len(meson_outputs)}.get(fault, 1)
                     assert len(injected) == expected_injections, (fault, injected)
                     signed = [r['args'][-1] for r in receipts if r['tool'] == 'codesign' and '--force' in r['args']]
-                    if fault in ('cargo', 'meson'):
+                    target_refusal = 'outputs are not thin arm64 Mach-O executables for macOS'
+                    if fault not in ('arch_cargo', 'arch_native'):
+                        assert target_refusal not in stderr, (name, 'the output target check refused another check\'s fault')
+                    if fault in ('arch_cargo', 'arch_native'):
+                        # Only the bytes' architecture is wrong: the output check refuses, naming the output, before assembly.
+                        path = cargo_outputs[-1] if fault == 'arch_cargo' else meson_outputs[-1]
+                        reason = 'architecture x86_64, not exactly arm64' if fault == 'arch_cargo' else 'a fat container with 2 slice(s)'
+                        assert status == 1, (name, status, stderr[-4000:])
+                        assert f'{target_refusal}:' in stderr and f'{path}: {reason}' in stderr, stderr[-4000:]
+                        for unrelated in ('is built for macOS', 'disagree with the selected SDK'):
+                            assert unrelated not in stderr, (name, unrelated)
+                        assert 'Assembling app bundle' not in stdout, stdout
+                        assert inventory(dist) == before, 'an output target refusal changed previous distribution output'
+                        assert not any(r['tool'] == 'codesign' for r in receipts), receipts
+                        if fault == 'arch_cargo':
+                            assert not any(r['tool'] == 'meson' and r['args'][:1] != ['--version'] for r in receipts), receipts
+                        else:
+                            assert 'Checking the configured native source lists' in stdout, stdout
+                    elif fault in ('cargo', 'meson'):
                         assert status == 2, (name, status, stderr[-4000:])
                         assert f'{last[fault]} is built for macOS {wrong_minimum}; Info.plist declares {minimum}' in stderr, stderr
                         assert 'Assembling app bundle' not in stdout, stdout
@@ -245,7 +282,7 @@ def test_build_guards(out, identity):
                                 assert banner not in stdout, stdout
                             assert not (dist / 'PolicyWitness.zip').exists()
                             assert not (dist / 'PolicyWitness.md').exists()
-                            assert str(root / 'controller/target/release/sandbox-log-observer') not in signed, signed
+                            assert str(root / build_provenance.TRIPLE_RELEASE / 'sandbox-log-observer') not in signed, signed
                         else:
                             assert status == 0, (name, status, stderr[-4000:])
                             assert 'DONE:' in stdout
@@ -267,7 +304,7 @@ def test_build_guards(out, identity):
                                     backup.unlink()
                         shutil.rmtree(backups)
                     assert (root / 'build.sh').read_bytes() == script, 'control changed the build script'
-    assert len(scenarios) == 17, scenarios
+    assert len(scenarios) == 21, scenarios
     print(f'{len(scenarios)} build ordering controls passed')
 
 

@@ -143,10 +143,14 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Case:** `preflight/signed_artifact_controls`
 - **Location:** `tests/suites/preflight/check_signed_artifacts.py`
 - **Purpose:** Verify that real signature damage fails inspection and validly
-  re-signing a copied runner cannot conceal a stale embedded manifest.
+  re-signing a copied runner cannot conceal a stale embedded manifest, and that
+  real x86_64 and universal Mach-O signed with the identity, with consistent
+  manifest and record hashes, fail for architecture, with a record that
+  contradicts the bytes visible as a separate fault.
 - **Resource dependency:** Built app and matching Developer ID. Uses disposable
   copies under `/private/tmp`; never launches or modifies the selected source app.
-- **When to run:** After changing artifact inspection, inventory, or signing setup.
+- **When to run:** After changing artifact inspection, inventory, the output
+  target check, or signing setup.
 
 ### build guard controls
 
@@ -161,7 +165,11 @@ selection, deduplication, configuration validation, and complete accounting.
   service seal or the app seal signed with `--timestamp=none` (omitting the
   flag is not a reliable fault). Assert the diagnostics, statuses, the
   signatures made (inspected independently) and preserved or absent outputs,
-  alongside successful full and partial builds.
+  alongside successful full and partial builds. A Cargo output replaced by a
+  thin x86_64 and a native output by a universal Mach-O, each carrying the
+  plist's minimum and the selected SDK, must be named and refused by the output
+  target check alone before assembly; the minimum and SDK faults must not reach
+  it.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains
   with one installed macOS SDK. Builds run offline in a disposable checkout under
@@ -169,8 +177,8 @@ selection, deduplication, configuration validation, and complete accounting.
   unsandboxed shell. No app is launched.
 - **Opt-in reason:** Runs multiple builds and signs both variants with keychain
   access. The source checkout's caches and distribution are untouched.
-- **When to run:** After changing the minimum, SDK or signing checks or their
-  placement relative to compilation, assembly and packaging.
+- **When to run:** After changing the minimum, SDK, output target or signing
+  checks or their placement relative to compilation, assembly and packaging.
 - **Artifacts:** `<run>/suites/preflight/build_guard_controls/artifacts/` holds
   each build's raw output, status, tool and injection receipts, the wrong-SDK
   equipment, signature displays and output hashes.
@@ -217,9 +225,24 @@ selection, deduplication, configuration validation, and complete accounting.
   directory and child environment Cargo used to be the predicted ones; a
   selection sequence drives the script with retained caches through an
   included compiler selection, a change to only that file, a forced `[env]`
-  `PATH`, and flag precedence. Mutated copies of the script with
-  a guard removed or moved past its operation, and of the session helper
-  with path admission disabled, must fail their control.
+  `PATH`, an x86_64 target default overridden by the explicit target, and
+  flag precedence with the output triple's target rules. For the output
+  target, outputs outside it are substituted at each checked boundary (after
+  Cargo, with a corrupted cached unit refused again on reuse; after the native
+  compile, before the worker runs; in the assembled bundle beside an unlisted
+  universal file, before any signature; at the standalone observer; before
+  the ZIP), a stamp names another target or predates the contract, a cross
+  file gives `meson setup` an x86_64 host and, in the partial variant, another
+  the arm64 host, which builds and packages (Meson 1.12.1 sets up no Swift
+  target in a cross configuration), the controller package's target guard is driven by
+  direct Cargo builds for x86_64 and iOS with `--keep-going` (whose standard
+  libraries this machine lacks, a recorded limit) and its removal or
+  weakening shown to fail, and, where Rosetta is present, the whole build runs
+  in a translated shell. Mutated copies of the script with
+  a guard removed or moved past its operation, of the session helper
+  with path admission disabled, of the output check with its predicate
+  reduced to arm64 membership, and of `meson.build` without its output-target
+  assertion, must fail their control.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
@@ -228,8 +251,9 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Opt-in reason:** Runs many builds, several of them fresh, and signs with
   keychain access. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
-  boundaries, the stamp, fresh mode, path admission, the lock, its handoff or
-  launch boundaries, the request capture or the generated refusal table.
+  boundaries, the stamp, fresh mode, path admission, the output target, the
+  lock, its handoff or launch boundaries, the request capture or the generated
+  refusal table.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
   each build's raw output, status, tool and forwarding-wrapper receipts with
   the hooks that fired and the lock descriptor each compiler held, the
