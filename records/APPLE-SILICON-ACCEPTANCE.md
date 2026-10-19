@@ -15,6 +15,10 @@ are not credited and are described, not linked.
 
 ## Conclusions
 
+Review subsequently found two gaps in the checks, described under
+[Review repairs](#review-repairs). The candidate and runs below remain the
+original evidence; they do not establish acceptance of those repairs.
+
 The output target is enforced where the plan asked, and every claim below
 rests on a credited run of the final source, `9c6ee31`:
 
@@ -214,3 +218,41 @@ found the remaining control faults before each credited run.
   records the Swift target from the compile arguments.
 - Native-build enforcement, runtime checks and external-runner admission are
   unchanged.
+
+## Review repairs
+
+Commit `c84e2de` repairs two gaps reproduced during review:
+
+- The assembled and packaging checks discovered code only by its header, so
+  they skipped a required executable replaced with text or truncated before
+  its magic was recognizable. Both now check the variant's required paths
+  alongside the scan for additional code. Controls cover every required path
+  in both variants, with text, empty, two-byte and missing files; the build
+  refusal controls inject these faults before the first signature and after
+  signature verification, before the ZIP.
+- The scan excluded only thin dSYM files. It now excludes fat dSYM containers
+  only when every bounded, nonoverlapping slice has a complete `MH_DSYM`
+  header matching its table entry. Real universal, one-slice fat and fat64
+  debug fixtures pass; mixed code/debug and malformed containers remain
+  subject to rejection. The signed artifact control adds a universal dSYM
+  resource to a re-signed app and requires inspection to pass.
+
+`tests/out/runs/apple-silicon-repair-offline-1`
+(`20261019T040908Z_3b0d9ae0`) passed all three selected cases:
+`preflight/build_provenance_controls` (45 tests),
+`source_drift/build_documentation` and `dispatcher/artifact_controls`.
+It ran the working tree later committed as `c84e2de`, except for a subsequent
+docstring-only clarification in `output_target.header`. Reusing this result
+for the repair is a reviewed applicability judgment: that wording changes no
+executed behavior. The retention entry leaves `source` null rather than
+claiming that this was a clean committed run. Build-generation and
+worker-identity checks also passed; no worker-identity input changed.
+
+Integrated acceptance of the repairs is pending. The fresh signed build was
+requested twice, but automatic approval review failed with "Selected model
+is at capacity" before either command executed. This was an approval-service
+failure, not a build failure or an unsafe-action finding. The existing
+`9c6ee31` candidate was not replaced. Resume with a fresh signed build, the
+default battery, and the `signed_artifact_controls`, `build_guard_controls`
+and `build_refusal_controls` opt-ins; record the new candidate and run IDs
+before crediting the repairs as fully accepted.
