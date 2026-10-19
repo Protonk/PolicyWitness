@@ -189,9 +189,26 @@ def shared_rules(contract_document):
     """The reading rules the failure contract owns, verbatim, for the guide's copy."""
     begin, finish = block_bounds(contract_document, RULES_START, RULES_END)
     shared = contract_document[begin + len(RULES_START):finish - len(RULES_END)].strip()
-    if not re.search(r"^1\. ", shared, re.MULTILINE) or re.search(r"^#", shared, re.MULTILINE):
+    document = markdown_reader.parse(shared, "shared reading rules")
+    if not numbered(document) or document.headings:
         raise ValueError("shared reading rules must be one numbered list without headings")
     return shared
+
+
+def numbered(document):
+    """Whether the document holds a top-level list numbered from 1."""
+    return any(item.ordered and item.number == "1" and item.depth == 0 for item in document.items)
+
+
+def demoted(text, what):
+    """Level-two headings become level three: the lines the parser reports as headings, nothing else."""
+    lines = text.split("\n")
+    for heading in markdown_reader.parse(text, what).headings:
+        if heading.level == 2:
+            if not heading.atx or not lines[heading.line].startswith("## "):
+                raise ValueError(f"{what}: write the heading {heading.text!r} as an unindented '## ' line")
+            lines[heading.line] = "#" + lines[heading.line]
+    return "\n".join(lines)
 
 
 def update_guide_rules(text, contract_document):
@@ -203,7 +220,8 @@ def update_guide_extension_statuses(text, contract_document):
     """Copy the contract-owned issuance/delivery account without reinterpretation."""
     begin, finish = block_bounds(contract_document, EXTENSION_START, EXTENSION_END)
     shared = contract_document[begin + len(EXTENSION_START):finish - len(EXTENSION_END)].strip()
-    if not all(header in shared for header in ("| Issuance status |", "| Delivery status |")):
+    headers = {table.header[0].text for table in markdown_reader.parse(shared, "shared extension statuses").tables}
+    if not {"Issuance status", "Delivery status"} <= headers:
         raise ValueError("shared extension statuses must contain issuance and delivery tables")
     require_standalone(shared, "extension statuses")
     return replace_block(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END,
@@ -286,7 +304,7 @@ def update_guide(text, limits_document):
     shared = limits_document[begin + len(SHARED_START):finish - len(SHARED_END)].strip()
     # The source uses level-two headings; nest them under the guide's Limits
     # heading. All explanatory prose and table contents are copied verbatim.
-    shared = re.sub(r"^## ", "### ", shared, flags=re.MULTILINE)
+    shared = demoted(shared, "shared limits")
     return replace_block(text, GUIDE_START, GUIDE_END,
                          GUIDE_START + "\n\n" + shared + "\n\n" + GUIDE_END)
 
@@ -294,13 +312,21 @@ def update_guide(text, limits_document):
 def shared_questions(questions_document):
     begin, finish = block_bounds(questions_document, QUESTIONS_START, QUESTIONS_END)
     shared = questions_document[begin + len(QUESTIONS_START):finish - len(QUESTIONS_END)].strip()
-    headings = re.findall(r"^#+ ", "\n".join(prose_lines(shared)), re.MULTILINE)
-    if not headings or any(heading != "## " for heading in headings):
+    headings = markdown_reader.parse(shared, "shared questions").headings
+    if not headings or any(heading.level != 2 for heading in headings):
         raise ValueError("shared questions must use level-two headings only")
     # Questions nest under the guide's Questions heading, and links into the
     # guide become internal links in the copy. Everything else is verbatim.
-    shared = re.sub(r"^## ", "### ", shared, flags=re.MULTILINE)
-    return shared.replace(f"]({GUIDE_NAME}#", "](#")
+    shared = demoted(shared, "shared questions")
+    copied = shared.replace(f"]({GUIDE_NAME}#", "](#")
+    # The replacement must have changed links and nothing else.
+    before, after = markdown_reader.parse(shared), markdown_reader.parse(copied)
+    expected = [link.target[len(GUIDE_NAME):] if link.target.startswith(GUIDE_NAME + "#") else link.target
+                for link in before.links]
+    if ([link.target for link in after.links] != expected or [i.code for i in after.inlines] != [i.code for i in before.inlines]
+            or after.blocks != before.blocks):
+        raise ValueError(f"shared questions may name {GUIDE_NAME}# only in links")
+    return copied
 
 
 def update_guide_questions(text, questions_document):
@@ -309,15 +335,16 @@ def update_guide_questions(text, questions_document):
                          + "\n\n" + GUIDE_QUESTIONS_END)
 
 
-def require_standalone(prose, what):
+def require_standalone(text, what):
     # The copied sections use inline links only, and must need no companion
-    # files or web pages. Reject reference links/definitions rather than
-    # assuming they can be resolved in a standalone release asset.
-    if re.search(r"\]\s*\[|^\s*\[[^]\n]+\]:|<https?://", prose, re.MULTILINE):
+    # files or web pages. Reject reference definitions and autolinks rather
+    # than assuming they can be resolved in a standalone release asset.
+    document = markdown_reader.parse(text, what)
+    if document.references or any(link.autolink for link in document.links):
         raise ValueError(f"{what} must use inline internal links only")
-    for target in re.findall(r"\]\(([^)]+)\)", prose):
-        if not target.startswith("#"):
-            raise ValueError(f"{what} depend on another document: {target}")
+    for link in document.links:
+        if not link.target.startswith("#"):
+            raise ValueError(f"{what} depend on another document: {link.target}")
 
 
 def prose_lines(text):
@@ -339,33 +366,35 @@ def validate_guide(text, limits):
     """Check the standalone text; never resolve links against repository files."""
     begin, finish = block_bounds(text, GUIDE_START, GUIDE_END)
     copied = text[begin + len(GUIDE_START):finish - len(GUIDE_END)]
+    # Each limit's row opens with its title and the id as a code span.
+    rows = [row[0] for table in markdown_reader.parse(copied, "copied limits").tables for row in table.rows if row]
     for item in limits:
-        if copied.count(f"(`{item['id']}`)") != 1:
+        if sum(item["id"] in cell.code for cell in rows) != 1:
             raise ValueError(f"guide must contain exactly one limits row: {item['id']}")
-    require_standalone("\n".join(prose_lines(copied)), "copied limits")
+    require_standalone(copied, "copied limits")
     begin, finish = block_bounds(text, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END)
-    questions = "\n".join(prose_lines(text[begin + len(GUIDE_QUESTIONS_START):finish - len(GUIDE_QUESTIONS_END)]))
-    if not re.search(r"^### ", questions, re.MULTILINE):
+    questions = text[begin + len(GUIDE_QUESTIONS_START):finish - len(GUIDE_QUESTIONS_END)]
+    if not any(heading.level == 3 for heading in markdown_reader.parse(questions, "copied questions").headings):
         raise ValueError("guide must contain at least one copied question")
     require_standalone(questions, "copied questions")
     begin, finish = block_bounds(text, GUIDE_RULES_START, GUIDE_RULES_END)
-    rules = "\n".join(prose_lines(text[begin + len(GUIDE_RULES_START):finish - len(GUIDE_RULES_END)]))
-    if not re.search(r"^1\. ", rules, re.MULTILINE):
+    rules = text[begin + len(GUIDE_RULES_START):finish - len(GUIDE_RULES_END)]
+    if not numbered(markdown_reader.parse(rules, "copied reading rules")):
         raise ValueError("guide must contain the copied reading rules")
     require_standalone(rules, "copied reading rules")
     begin, finish = block_bounds(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END)
     statuses = text[begin + len(GUIDE_EXTENSION_START):finish - len(GUIDE_EXTENSION_END)]
     require_standalone(statuses, "copied extension statuses")
 
-    # Headings in this guide use ATX syntax. Match the punctuation-stripped
-    # anchors used by its Markdown links, including duplicate-heading suffixes.
-    prose = "\n".join(prose_lines(text))
-    anchors = set(markdown_reader.parse(text).anchors)
+    # Match the anchors GitHub gives the guide's headings, including
+    # duplicate-heading suffixes, against its internal links.
+    document = markdown_reader.parse(text, GUIDE_NAME)
+    anchors = set(document.anchors)
     if "limits" not in anchors:
         raise ValueError("guide is missing its Limits heading")
-    for target in re.findall(r"\]\((#[^)]+)\)", prose):
-        if target[1:] not in anchors:
-            raise ValueError(f"guide has an unresolved internal link: {target}")
+    for link in document.links:
+        if link.target.startswith("#") and not link.image and link.target[1:] not in anchors:
+            raise ValueError(f"guide has an unresolved internal link: {link.target}")
 
 
 def main():
@@ -403,7 +432,7 @@ def main():
             update_guide(render_spans(guide_before, "limits", span_values(limits)), after), questions), contract_after)
         guide_after = update_guide_extension_statuses(guide_after, contract_after)
         validate_guide(guide_after, limits)
-        question_count = len(re.findall(r"^### ", shared_questions(questions), re.MULTILINE))
+        question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
         if args.check or args.stage_guide is not None:
             stale = [name for name, old, new in [
                 ("LIMITS.md", before, after), (CONTRACT_NAME, contract_before, contract_after),

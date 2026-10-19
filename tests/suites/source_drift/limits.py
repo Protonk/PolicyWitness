@@ -71,23 +71,30 @@ class LimitsDocumentationTests(unittest.TestCase):
     def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
         rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
         self.assertEqual(self.contract, generator.update_contract(self.contract, rows))
-        table = self.contract.split(generator.MATRIX_START)[1].split(generator.MATRIX_END)[0]
-        body = [line for line in table.strip().splitlines() if line.startswith('| ') and not line.startswith('| Row') and not line.startswith('| ---')]
-        self.assertEqual([line.split(' | ')[0][2:] for line in body], [row['id'] for row in rows])
-        for row, line in zip(rows, body):
-            cells = line.strip('| ').split(' | ')
-            self.assertEqual(cells[1:3], [row['specimen'], row['scenario']], row['id'])
-            self.assertEqual(cells[3], f"`{row['query']}`", row['id'])
-            self.assertEqual(cells[-1], row['control'], row['id'])
-            limitations = ', '.join(f'`{x}`' for x in row['comparison']['limitations']) or '—'
-            self.assertEqual(cells[9], limitations, row['id'])
+        region = self.contract.split(generator.MATRIX_START)[1].split(generator.MATRIX_END)[0]
+        table, = markdown_reader.parse(region).tables
+        self.assertEqual([cells[0].text for cells in table.rows], [row['id'] for row in rows])
+
+        def shown(cell):
+            return cell.text, cell.code
+
+        def expected(markup):
+            inline = markdown_reader.parse(markup).inlines[0]
+            return inline.text, inline.code
+        for row, cells in zip(rows, table.rows):
+            self.assertEqual([shown(c) for c in cells[1:3]], [expected(row['specimen']), expected(row['scenario'])], row['id'])
+            self.assertEqual(shown(cells[3]), (row['query'], [row['query']]), row['id'])
+            self.assertEqual(shown(cells[-1]), expected(row['control']), row['id'])
+            limitations = row['comparison']['limitations']
+            self.assertEqual(shown(cells[9]), (', '.join(limitations), limitations) if limitations else ('—', []), row['id'])
 
     def test_reading_rules_are_one_text_copied_from_the_contract(self):
         shared = self.contract.split(generator.RULES_START)[1].split(generator.RULES_END)[0].strip()
         copied = self.guide.split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0].strip()
         self.assertEqual(copied, shared)
-        self.assertEqual(len(re.findall(r'^\d+\. ', shared, re.MULTILINE)), 14)
-        self.assertNotIn('](', shared)
+        document = markdown_reader.parse(shared)
+        self.assertEqual(sum(item.ordered and item.depth == 0 for item in document.items), 14)
+        self.assertEqual(document.links, [])
 
     def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):
         for filename, mutate, expect in [
@@ -130,12 +137,15 @@ class LimitsDocumentationTests(unittest.TestCase):
         shared = self.contract.split(generator.EXTENSION_START)[1].split(generator.EXTENSION_END)[0].strip()
         copied = self.guide.split(generator.GUIDE_EXTENSION_START)[1].split(generator.GUIDE_EXTENSION_END)[0].strip()
         self.assertEqual(copied, shared)
-        issuance, delivery = shared.split('| Delivery status |')
-        self.assertEqual(set(re.findall(r'^\| `([^`]+)` \|', issuance, re.MULTILINE)), {
+        tables = {table.header[0].text: table for table in markdown_reader.parse(shared).tables}
+
+        def statuses(table):
+            return {cells[0].text for cells in table.rows if cells[0].code == [cells[0].text]}
+        self.assertEqual(statuses(tables['Issuance status']), {
             'not_started', 'issuer_unavailable', 'channel_setup_failed', 'spawn_failed',
             'issuer_timeout', 'issuer_wait_error', 'issuer_result_missing', 'issuer_abnormal_exit',
             'native_api_unavailable', 'native_refusal', 'token_oversized', 'invalid_transport', 'issued'})
-        self.assertEqual(set(re.findall(r'^\| `([^`]+)` \|', delivery, re.MULTILINE)), {
+        self.assertEqual(statuses(tables['Delivery status']), {
             'not_observed', 'delivered', 'token_unavailable', 'channel_rejected', 'native_api_unavailable',
             'local_setup_failed'})
 
@@ -190,8 +200,9 @@ class LimitsDocumentationTests(unittest.TestCase):
         expected = '\n'.join('#' + line if line.startswith('## ') else line
                              for line in shared.splitlines())
         self.assertEqual(copied, expected)
+        first = [cells[0] for table in markdown_reader.parse(copied).tables for cells in table.rows]
         for row in self.manifest['limits']:
-            self.assertEqual(copied.count('(`' + row['id'] + '`)'), 1, row['id'])
+            self.assertEqual(sum(row['id'] in cell.code for cell in first), 1, row['id'])
         self.assertNotIn('Grounding and coverage', copied)
         self.assertNotIn('Maintaining this document', copied)
 
@@ -201,11 +212,11 @@ class LimitsDocumentationTests(unittest.TestCase):
         expected = '\n'.join('#' + line if line.startswith('## ') else line
                              for line in shared.splitlines())
         self.assertEqual(copied, expected.replace('](PolicyWitness.md#', '](#'))
-        questions = re.findall(r'^## ', shared, re.MULTILINE)
+        questions = [h for h in markdown_reader.parse(shared).headings if h.level == 2]
         self.assertTrue(questions)
-        self.assertEqual(len(re.findall(r'^### ', copied, re.MULTILINE)), len(questions))
-        self.assertNotIn('](PolicyWitness.md', copied)
-        self.assertNotIn('](LIMITS.md', copied)
+        copy = markdown_reader.parse(copied)
+        self.assertEqual(sum(h.level == 3 for h in copy.headings), len(questions))
+        self.assertFalse([link.target for link in copy.links if link.target.startswith(('PolicyWitness.md', 'LIMITS.md'))])
         self.assertIn('## Questions\n\n' + generator.GUIDE_QUESTIONS_START, self.guide)
 
     def test_generation_updates_values_and_shared_prose_then_is_idempotent(self):
@@ -272,6 +283,52 @@ class LimitsDocumentationTests(unittest.TestCase):
                     self.assertTrue('stale' in result.stderr or 'ordered block' in result.stderr, result.stderr)
                     self.assertEqual((source.read_bytes(), guide.read_bytes(), questions.read_bytes()), before)
                     self.assertEqual(destination.read_text(), 'previous release guide')
+
+    def test_constructs_in_comments_or_code_satisfy_no_structural_check(self):
+        tables = ('| Issuance status | Meaning |\n| --- | --- |\n| `issued` | x |\n\n'
+                  '| Delivery status | Meaning |\n| --- | --- |\n| `delivered` | y |\n')
+        guide = f'{generator.GUIDE_EXTENSION_START}\n{generator.GUIDE_EXTENSION_END}'
+
+        def contract(body):
+            return f'{generator.EXTENSION_START}\n{body}\n{generator.EXTENSION_END}'
+        generator.update_guide_extension_statuses(guide, contract(tables))
+        for body in ('<!--\n' + tables + '-->', '```text\n' + tables + '```', '`| Issuance status |` `| Delivery status |`'):
+            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'issuance and delivery tables'):
+                generator.update_guide_extension_statuses(guide, contract(body))
+
+        def rules(body):
+            return f'{generator.RULES_START}\n{body}\n{generator.RULES_END}'
+        generator.shared_rules(rules('1. First.\n2. Second.\n\n```sh\n# a shell comment, not a heading\n```'))
+        for body in ('```text\n1. Fenced.\n```', '<!--\n1. Commented.\n-->', '1. First.\n\n## A heading'):
+            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'one numbered list without headings'):
+                generator.shared_rules(rules(body))
+
+        # A limit's only row moved into a comment or fence is missing; a quoted copy beside the real row is not a second row.
+        limits = self.load(self.manifest)
+        begin = self.guide.index(generator.GUIDE_START)
+        row = next(line for line in self.guide[begin:].splitlines() if '(`policy_source`)' in line)
+        end = self.guide.index(generator.GUIDE_END)
+        for wrapped in ('<!--\n' + row + '\n-->', '```text\n' + row + '\n```'):
+            moved = self.guide.replace(row + '\n', '', 1)
+            moved = moved[:end - len(row) - 1] + '\n' + wrapped + '\n' + moved[end - len(row) - 1:]
+            with self.subTest(wrapped=wrapped), self.assertRaisesRegex(ValueError, 'exactly one limits row: policy_source'):
+                generator.validate_guide(moved, limits)
+        quoted = self.guide[:end] + '\n```text\n' + row + '\n```\n' + self.guide[end:]
+        generator.validate_guide(quoted, limits)
+
+        generator.require_standalone('See `[x](other.md)`, `<https://example.com>` and [y](#y).', 'example')
+        for text in ('[x](other.md)', '[x][r]\n\n[r]: #y', '<https://example.com>', '![i](i.png)'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                generator.require_standalone(text, 'example')
+
+        def questions(body):
+            return f'{generator.QUESTIONS_START}\n{body}\n{generator.QUESTIONS_END}'
+        copied = generator.shared_questions(questions('## One?\n\nSee [it](PolicyWitness.md#limits).\n\n```text\n## fenced\n```'))
+        self.assertEqual(copied, '### One?\n\nSee [it](#limits).\n\n```text\n## fenced\n```')
+        for body, message in (('One?\n----\n\nAnswer.', "unindented '## ' line"),
+                              ('## One?\n\nSee `](PolicyWitness.md#limits)`.', 'only in links')):
+            with self.subTest(body=body), self.assertRaisesRegex(ValueError, message):
+                generator.shared_questions(questions(body))
 
     def test_staged_guide_is_exact_and_standalone(self):
         root = self.checkout()

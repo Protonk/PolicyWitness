@@ -45,3 +45,23 @@ control's purpose changed. New controls: a generator refuses a span marker
 that begins a line and leaves the checkout unchanged; a Markdown citation is
 refused when its symbol appears only in prose, a comment or a fence.
 `source_drift` passed (`markdown-switch-anchors-2-20261019`).
+
+## The limits generator and its tests
+
+| Reading | Compared over | Differences | Review |
+| --- | --- | --- | --- |
+| `shared_rules`, `shared_questions`, `update_guide`, `update_guide_questions`, `update_guide_rules`, `update_guide_extension_statuses` | The current contract, questions, limits document and guide | None | Each returns the same text as the parent commit's version. |
+| `validate_guide` | The current guide | None | Both versions accept it. |
+| The copied-question count in `main` | `docs/QUESTIONS.md` | None | 15 in both. |
+
+Heading demotion now rewrites only the lines the parser reports as level-two
+headings, and the guide-link rewrite is refused if it changes anything but link
+targets. Reference definitions and autolinks are refused through the parser's
+tokens; unresolved `[x][y]` text is no longer refused. The `limits.py`
+assertions about table rows, numbered items, headings and links now read through
+the reader; the expected demotion stays an independent oracle. New controls:
+tables, numbered lists and limit rows shown only in a comment, a fence or inline
+code satisfy no check; a quoted copy of a limit row beside the real one is not
+a second row; link examples in inline code do not count against a standalone
+section; fenced `## ` lines are not demoted. `source_drift` passed
+(`markdown-switch-limits-20261019`).
