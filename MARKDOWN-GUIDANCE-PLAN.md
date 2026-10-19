@@ -2,12 +2,26 @@
 
 ## Intended result and boundary
 
-Revise maintained Markdown to remove the actor labels specified in the
-[editorial brief](policywitness-markdown-guidance-editorial-plan.md), using direct
-instructions and descriptions of requirements. Preserve commands, technical
-identifiers, end-user distinctions, observations and limits on attribution.
-Replacing a named addressee with another collective noun does not satisfy this
-change.
+Revise maintained Markdown to remove the standalone singular and plural actor
+labels matched by `(?i)\bagents?\b`, including possessives and closely related
+actor-label uses. This applies to all in-scope prose, including instructions,
+headings, explanatory link text, quotations and historical narrative. Use direct
+instructions and descriptions of requirements; do not replace the named
+addressee with another collective noun such as contributors, maintainers,
+operators, developers, participants, assistants, models or humans. Rewrite
+paragraphs naturally rather than turning every sentence into “you should.”
+
+Retain “users” for actual end users of the application. Preserve commands,
+technical identifiers, observations and limits on attribution. An automation
+harness denotes an execution environment, not a generic addressee. Required
+filenames, paths, APIs, platform terms and the search expression above are
+technical literals; preserve them and their routing. The acceptance condition
+is no remaining matching prose outside the bounded verbatim before excerpts
+defined below. A literal's formatting alone does not establish an exemption.
+
+This plan contains the editorial requirements and execution decisions needed
+to carry out the revision. The original prompt is no longer required reading
+and may be retired as described under source ownership below.
 
 Replace synchronized sandbox-warning paragraphs with independent guidance
 suited to each workflow. Keep a mechanical check for the presence of the
@@ -25,9 +39,9 @@ findings. Follow the
 ## Branch workflow and build infrastructure
 
 Carry out this revision on `doc-rework`, an explicit exception to the usual
-integration on `main`. The branch starts from `a7cf758`; this plan amendment is
-its first commit. Keep implementation and related infrastructure fixes on that
-branch so the complete diff and the sequence of decisions can be reviewed
+integration on `main`. The branch starts from `a7cf758`. Keep implementation and
+related infrastructure fixes on that branch so the complete diff and sequence
+of decisions can be reviewed
 across commits. Preserve the review history rather than squashing or rewriting
 it during the work. Integration into `main` follows review of the branch.
 
@@ -94,8 +108,9 @@ the commit range, tested revisions and any unresolved infrastructure findings.
 The inventory below was taken at `3354935`. Git lists 116 tracked Markdown
 paths: 111 canonical targets, four symlink aliases and the excluded
 `CONTRIBUTING.md`. This new plan adds one canonical target. The only nonignored
-untracked Markdown at inventory time was the editorial brief, which is an
-instruction input and remains excluded after it is committed.
+untracked Markdown at inventory time was the original prompt. It remains
+outside the editorial target list while present and may be deleted without
+removing any of the 112 canonical targets.
 
 Use the explicit 112-path target list in the appendix. At execution start and
 before final verification, reconcile it with:
@@ -123,13 +138,31 @@ make an editorial search pass. Tracked `.tmp/AGENTS.md`, `dist/AGENTS.md` and
 | Historical records | All 19 tracked Markdown paths under `records/`, including its guidance and archive, were searched. No applicable actor-label prose was found. Preserve historical findings and technical names; do not invent revisions merely to touch this category. |
 | Remaining source documents | All appendix entries remain acceptance targets, even where the initial scan found no prose to change. That includes existing plans, suite and fixture READMEs, and this plan outside its bounded before excerpts. |
 | Symlink aliases | `CLAUDE.md` → `AGENTS.md`, `controller/CLAUDE.md` → `controller/AGENTS.md`, `runner/CLAUDE.md` → `runner/AGENTS.md`, `tests/CLAUDE.md` → `tests/AGENTS.md`. Edit the owning files once and preserve the symlinks. |
-| Explicit exclusions | `CONTRIBUTING.md` and `policywitness-markdown-guidance-editorial-plan.md`. These are readable inputs, not editorial targets. |
+| Protected input | `CONTRIBUTING.md` may be read but must not be edited or deleted by this revision. |
+| Superseded prompt | `policywitness-markdown-guidance-editorial-plan.md` is excluded from editorial targets while present and may be deleted under the retirement procedure below. |
 
 The initial expected Markdown changes are in eight existing files:
 `AGENTS.md`, `controller/AGENTS.md`, `runner/AGENTS.md`, `tests/AGENTS.md`,
 `docs/ARCHITECTURE.md`, `docs/BUILD.md`, `docs/LIMITS.md` and
 `tests/suites/source_drift/README.md`. Reconcile concurrent source additions
 without assuming every target requires an edit.
+
+### Retire the original prompt
+
+Deletion of `policywitness-markdown-guidance-editorial-plan.md` is permitted as
+a separate commit on `doc-rework`. The requirements now live in this plan;
+do not retain a placeholder file or copy the prompt into another source
+document. Its committed contents remain recoverable from Git history.
+
+Before deleting it, search tracked source files and explicitly selected new
+documentation for references to its path. Remove links that would become broken
+and redirect any remaining instructional dependency to this plan. Plain path
+mentions identifying the retired file, including this procedure, may remain.
+Do not scan or edit retained output to remove historical copies or references.
+After deletion, verify that the file is absent from the working tree and index,
+that no live documentation link or execution instruction requires it, and that
+the canonical target inventory and remaining local links still pass validation.
+Deletion is optional; this planning amendment does not itself remove the file.
 
 ## Editorial decisions and examples
 
@@ -454,13 +487,15 @@ All generator freshness checks still apply.
    the commit grouping above: keep the coupled warning change together so no
    committed intermediate state advertises the old equality requirement with
    the new checker, while preserving independent changes as separate commits.
+   If retiring the original prompt, use its separate deletion and link checks
+   described above.
 3. **Review editorial meaning.** Compare each rewritten passage with its
    source. Check direct instructions, real end-user uses, historical fidelity,
    all five sandbox hazards, the unchanged retry, signature-verification
    qualification, XPC/fallback limits and unavailable log evidence. A clean
    word search or a structural pass alone cannot establish these properties.
 4. **Search only the recorded targets.** Run a case-insensitive whole-word
-   search for the brief's singular/plural labels, including possessives, and
+   search using `(?i)\bagents?\b`, including possessives, and
    a broader substring search to catch related actor uses. Read every match in
    context. Classify remaining matches as literal technical identifiers or
    exact bounded before evidence; no unexplained prose occurrences may remain.
