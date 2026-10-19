@@ -145,8 +145,8 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     for name in ["ready_wait", "sentinel_wait", "exit_grace_wait"] { subprocess[name] = maximalWait }
     reply["runner_subprocess"] = subprocess
 
-    let phases = reply["phases"] as! [[String: Any]]
-    let validator = phases[0]["validator_subprocess"] as! [String: Any]
+    var phases = reply["phases"] as! [[String: Any]]
+    var validator = phases[0]["validator_subprocess"] as! [String: Any]
     validator["exit_grace_wait"] = maximalWait
     validator["read_error"] = maximal(1023)
     validator["io_error"] = maximal(1023)
@@ -308,8 +308,8 @@ func maximalReplyEncodedSize() throws -> Int {
     }
     subprocess["disposition"] = disposition
     reply["runner_subprocess"] = subprocess
-    var phases = reply["phases"] as! [[String: Any]]
-    var validator = phases[0]["validator_subprocess"] as! [String: Any]
+    let phases = reply["phases"] as! [[String: Any]]
+    let validator = phases[0]["validator_subprocess"] as! [String: Any]
     var record = try maximalRecord()
     for (field, bound) in ValidatorReplyLimits.stringBytes { record[field] = maximal(bound) }
     record["raw_line"] = maximal(ValidatorReplyLimits.frameBytes)
