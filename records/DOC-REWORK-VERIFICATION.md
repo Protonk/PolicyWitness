@@ -29,6 +29,14 @@ Its run ID is `20261019T201847Z_cbd7e783`. The inspected app remained unchanged.
 
 ## Editorial verification
 
+The first complete acceptance run passed all 66 selected cases, including all
+465 Swift unit tests, but its test builds exposed two additional warning types:
+
+| Observation | Cause and resolution | Validation |
+| --- | --- | --- |
+| Eight clock-fixture variants warned that `phase2_start` was unused. | Move its static declaration into the `PW_CLOCK_EXPIRE_SECOND_PHASE` branch, the only variant that uses it. Its zero initialization and lifetime stay unchanged. | A focused rerun of the Swift unit case rebuilds every lifecycle companion and exercises both gated clock companions. |
+| The reply-maximum Swift test declared `phases` and `validator` with `var` although neither was mutated. | Use `let` for these two values; keep the mutable per-phase copies and the maximum-reply assertions unchanged. | The same focused rerun recompiles the Swift test and repeats its assertions. |
+
 The initial 112 canonical source documents were inventoried independently of
 retained output. This record is the additional source target. The original
 prompt was retired after its requirements became self-contained in the plan.

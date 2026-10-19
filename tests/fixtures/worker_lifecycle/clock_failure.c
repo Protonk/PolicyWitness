@@ -32,7 +32,7 @@ static kern_return_t pw_controlled_timebase(mach_timebase_info_t info);
 #undef main
 #endif
 
-static uint64_t origin_raw, offset, phase2_start;
+static uint64_t origin_raw, offset;
 static unsigned reads[PW_CLOCK_EXEC_REAP + 1];
 
 #ifdef PW_CLOCK_PHASE_GATE
@@ -100,6 +100,7 @@ static uint64_t pw_controlled_read(int stage) {
         return origin_raw - 1;
     }
 #elif defined(PW_CLOCK_EXPIRE_SECOND_PHASE)
+    static uint64_t phase2_start;
     if (stage == PW_CLOCK_PROCEED_START && reads[stage] == 2) phase2_start = raw;
     if (stage == PW_CLOCK_PROCEED_OBSERVE && phase2_start && !offset) {
         await_collection();

@@ -145,8 +145,8 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     for name in ["ready_wait", "sentinel_wait", "exit_grace_wait"] { subprocess[name] = maximalWait }
     reply["runner_subprocess"] = subprocess
 
-    var phases = reply["phases"] as! [[String: Any]]
-    var validator = phases[0]["validator_subprocess"] as! [String: Any]
+    let phases = reply["phases"] as! [[String: Any]]
+    let validator = phases[0]["validator_subprocess"] as! [String: Any]
     validator["exit_grace_wait"] = maximalWait
     validator["read_error"] = maximal(1023)
     validator["io_error"] = maximal(1023)
