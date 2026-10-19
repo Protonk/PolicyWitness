@@ -1,403 +1,319 @@
-# Prepare executables before testing and establish ordering through observations
+# Check fixture preparation and start short validator deadlines after the child runs
 
 ## Problem and intended result
 
-Fresh executable startup can consume the short allowance that a test uses to
-arrange a sequence. In `runner_unit`, the over-budget validator case asks a
-fixture worker to expire after 50 ms and gives a separate validator 150 ms to
-publish a record and time out. It needs that record to test preservation of
-predictions after worker expiry. A validator delayed before publishing can
-therefore fail the test without exercising its intended condition.
+On this machine, the first exec of a newly written executable file costs
+roughly 100–900 ms. That cost lands after `posix_spawn` returns and before the
+child's `main` runs. `runValidator` in
+[ValidatorClient.swift](runner/Sources/PWRunnerCore/ValidatorClient.swift)
+creates its I/O deadline immediately after a successful spawn, so a cold
+validator spends part of its collection window just starting. When the deadline
+arrives, the loop stops without reading anything still waiting in the pipe. A
+short window can therefore close before a newly built validator has produced
+its record. A case that needs that record then fails without exercising its
+intended condition.
 
-Make successful executable preparation an explicit prerequisite, then replace
-these timing arrangements with observed readiness, test-owned gates and
-controlled clock samples. A failed preparation must stop at preparation. An
-ordering failure must identify the violated sequence or missing observation.
-Neither is repaired by automatically repeating a specimen or a suite.
+The lifecycle fixture builder currently prevents this with a warm-up that
+executes each output once before any test runs. The warm-up is advisory. It
+prints statuses but does not fail on an unexpected status or a timeout, so a
+broken preparation reaches the Swift tests. The short-deadline cases stay
+correct only while the warm-up keeps working.
 
-Implement this in two phases. Phase 1 makes fixture preparation mandatory and
-executes the final signed shipped binaries through harmless entry points before
-packaging. Phase 2 is an implementation sequence: source inspection establishes
-that the selected assertions can use real worker/validator processes and real
-transport while controlling when the relevant conditions occur. A separate
-open-ended investigation is not required. The first phase-2 checkpoint must
-demonstrate that design before converting the remaining selected cases.
+Intended result:
 
-The implementation baseline is commit `3271e29`. Review covered source and
-contracts, without builds, test execution or measurements of Gatekeeper. The
-reported approximately 200 ms startup cost is motivation, not an acceptance
-threshold or an established cause for any particular failure.
+1. Fixture preparation is checked. An unexpected status, a timeout or a launch
+   failure stops the builder, and its callers stop before the tests that depend
+   on it.
+2. Cases that need a validator record before a short deadline start that
+   deadline only after the fixture validator has reached `main`. A cold or
+   delayed start can no longer consume the window.
+3. Cases whose short allowance is incidental get a generous one. The
+   aggregate-exhaustion case can no longer pass without the phase-0 record it
+   claims to preserve.
+
+Neither kind of failure is repaired by repeating a specimen or a suite.
+
+The two phases are independent. Phase 2 does not rely on Phase 1's warm-up.
+Phase 1 stays useful without Phase 2 because of the worker readiness wait
+described under Findings. Changes are confined to the lifecycle fixture, the
+Swift unit tests and their documentation. No production source, no
+worker-identity input (`runner/Sources`, `controller/tools/pw_probe_runner`,
+the root `build.sh`, Meson files, `runner/Package.swift`) and no signed build
+output changes. The current signed app remains a valid test target.
+
+The baseline is commit `242bb36`.
+
+## Evidence
+
+| Observation | Source |
+| --- | --- |
+| Before the warm-up, the over-budget case failed five runs out of five under the dispatcher. It passed against an already-executed fixture. | Message of commit `158a802` |
+| Since the warm-up was added, all 72 retained results of that case are `ok`. | `pwrunner_core_tests.log` under `tests/out/runs/*/suites/runner_unit/pwrunner_core_unit_executable/artifacts/` |
+| 206 retained fixture build logs record 2,812 warm-up execs: mean 232 ms, maximum 938 ms, 19 at or above 500 ms, and no timeouts. The `.validator` companion alone: mean 224 ms, maximum 781 ms. | `warm` lines in retained fixture build logs under `tests/out/runs/` |
+| Every warm-up status was identical across those logs. Base worker, `.identity-mismatch` and `.validator` exited 90. `.issuer` exited 92. `.worker-limits` exited 0. Every production-main companion exited 2 (usage refusal with no arguments). | Same logs |
+| For a never-executed ad hoc child, `posix_spawn` returned in about 0.2 ms, and the child's first statement in `main` ran 110–183 ms later. Repeated execs of the same file reached `main` in about 1 ms. | 2026-10-19 probe: a parent timestamped the monotonic clock around `posix_spawn`, and the child recorded the same clock as its first statement |
+| Byte-identical copies of the signed shipped `pw-probe-runner` and `sb_api_validator` took 568 ms and 293 ms on first exec, then about 6 ms on later execs. Warm state belongs to the file, not to its bytes or its signature. | Same date, copies outside the app |
+
+These costs are context, not acceptance thresholds. Nothing here should become
+a fast-enough-to-be-warm assertion.
 
 ## Findings and scope
 
 | Location | Finding and consequence |
 | --- | --- |
-| [Lifecycle builder](tests/fixtures/worker_lifecycle/build.sh), final Python block | Already executes the base fixture and a glob of companions. It prints statuses, including `timeout`, without failing on them. A failed preparation can reach Swift tests. The glob also confuses executable inventory with any adjacent files. |
-| [Unit wrapper](tests/suites/runner_unit/run.sh) | Fixture construction precedes `swift run`; `test_build_fixture` propagates builder failure. This is the existing admission point to strengthen. |
-| [Ordering tests](runner/Tests/PWRunnerCoreTests/OrderingTests.swift), `validator collection may outlast the worker budget without reviving attempts` | The 150 ms case uses the lifecycle worker and `.validator`, not the shipped worker/validator. Preparing the app alone cannot fix its fixture startup. The adjacent 50 ms partial-prediction case has the same record-before-deadline assumption. |
-| [Validator driver](runner/Sources/PWRunnerCore/ValidatorClient.swift), `runValidator` | Starts its I/O deadline after successful spawn, before duplex collection. Startup after spawn can consume that allowance. It retains bytes, closes the collection pipe, then decodes and performs child cleanup. Child `fflush` alone does not establish that this host retained a complete record. |
-| [Deadline helper](runner/Sources/PWRunnerCore/MonotonicDeadline.swift) | Already accepts a clock closure. The collector does not expose that closure through its internal driver overload. |
-| [Orchestrator](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), internal `run` overload | Already permits native validator spawn and child-process substitutions. Its aggregate collection accounting calls `MonotonicDeadline.now` directly. Narrow internal clock/read substitutions can preserve the actual translation, transport, classification and assembly. |
-| [Worker driver](runner/Sources/PWRunnerCore/CWorker.swift), phase callback and guarded release | Calls collection synchronously and rechecks worker completion and ownership before publishing release. Production workers exit after terminal publication; the host reconciles acknowledgements after confirmed reap while preserving ownership requirements. The callback interval can be held until independent fixture observations establish expiry. |
-| [Lifecycle worker](tests/fixtures/worker_lifecycle/worker.c) and [validator](tests/fixtures/worker_lifecycle/validator.c) | Already have independent waiting/acknowledgement/attempt/expiry receipts and a late-write gate that observes `EPIPE`. Extend this equipment rather than fabricating a production reply. |
-| [Build](build.sh), final signing, verification and packaging | Enforces required executable inventories and thin arm64 macOS outputs, checks the worker's identity before signing and verifies signatures afterward, but does not execute the final signed inventory. Preserve the output checks through packaging when adding preparation; a pre-signing execution is not a receipt for the final signed executable. |
-| [Host entry point](runner/Services/PWRunner/main.swift) and [listener selection](runner/Sources/PWRunnerCore/PWRunnerListener.swift) | Direct execution currently constructs a listener; unrecognized arguments fall back to the XPC-service launch path. A blanket no-argument or `--help` invocation is unsafe until a harmless exit path is implemented. |
+| [Lifecycle builder](tests/fixtures/worker_lifecycle/build.sh), final Python block | Executes `${OUTPUT}` and the glob `${OUTPUT}.*` with no arguments, stdin at EOF and a 30-second timeout. A launch failure raises and stops the script under `set -e`. An unexpected status or a timeout is printed and ignored. The glob would also execute an adjacent file the builder did not produce. The comment justifies the warm-up by the 150 ms case. |
+| [Worker driver](runner/Sources/PWRunnerCore/CWorker.swift), `readyByteTimeoutMs` | The ready-byte wait is 1,000 ms for every worker, including the lifecycle fixtures. The 938 ms maximum cold start leaves little margin. This, not the 150 ms case, is why the warm-up stays mandatory after Phase 2. |
+| [Fixture helper](tests/lib/case.sh), `test_build_fixture` | Fails the case when the builder exits nonzero. Callers: `runner_unit/run.sh` (before `swift run`), and in `witness_contract`, `unfamiliar_diagnostic_transport.sh`, `worker_sparse_failure.sh`, `worker_progress_and_failure.sh` and `opt_in/mutations.sh`. A nonzero builder already stops all of them, so they need no change. |
+| [Validator driver](runner/Sources/PWRunnerCore/ValidatorClient.swift), `runValidator` | Creates its `MonotonicDeadline` after the spawn returns. Accepts `spawn: ValidatorSpawnCall`, which defaults to `nativeValidatorSpawn`: `posix_spawn` with the driver's file actions and argv `sb_api_validator --batch <pid>`. |
+| [Orchestrator](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), internal `run` overload | Already passes `validatorSpawn` to every phase's `runValidator`. The aggregate start is sampled before the spawn and the end after collection, so time spent waiting inside the spawn is debited from the aggregate exactly as startup is now. The per-phase timeout is fixed before the spawn. |
+| [Lifecycle validator](tests/fixtures/worker_lifecycle/validator.c) | `main(void)` ignores argv and arms `alarm(10)`. It reads stdin to EOF before writing its record (except in `close_input` mode). With `io_hang` it keeps stdout open, so collection ends at the deadline. |
+| [OrderingTests](runner/Tests/PWRunnerCoreTests/OrderingTests.swift) | Three cases need a record before a deadline that starts at the spawn: `validator collection may outlast the worker budget...` (150 ms, public overload), `validator_io_timeout_ms returns partial prediction...` (50 ms, public overload) and `surviving validator cannot publish...` (100 ms, calls `runValidator` directly). The three `validator_cleanup_unconfirmed_releases_worker` variants end at EOF. Their 100 ms allowance is only a cap, but a cold start can reach it first. |
+| [PhaseProtocolTests](runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) | `aggregate collection exhaustion...` gives phase 0 about 29 ms. It asserts the phase-0 `deadline` stop but not the phase-0 record, so after a slow start it passes with nothing tested. `M08` uses 100 ms and asserts the phase-0 record. It already passes a `validatorSpawn` closure that opens the late-write gate before the second spawn. `phaseRun` accepts `spawn:`. |
 
-Phase 2 covers the release-gate control, the two short validator-deadline
-ordering cases, collection-closure/late-output controls in `OrderingTests`, and
-the aggregate-exhaustion and M08 cases in
-[PhaseProtocolTests](runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift).
-These share the record-before-cutoff issue and the collector being changed.
+## Choices
 
-Keep dedicated timing coverage: `CWorkerClockTests`, native
-`runner_c_worker_harness/clock_arithmetic` and `proceed_precedence`, exec deadline
-controls, and genuine live deadline observations. This plan does not redesign
-production allowances or clock domains, change what startup time is charged to,
-or promise that every timing-sensitive test in the repository becomes invariant
-under arbitrary machine load. The phase-2 sample controls in
-[WorkerClockTests](runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift) and
-[clock_failure.c](tests/fixtures/worker_lifecycle/clock_failure.c) already use
-`ready`, `collection-open` and `injected` receipts with independent watchdogs.
-Their handshake establishes ordering under prompt and delayed authorization.
-Preserve these controls outside this conversion.
+### Start the deadline after the child runs instead of controlling the clock
 
-BYOXPC collisions, installation, host retirement and retries are outside this
-plan. Preparation must not install a runner, connect to XPC, apply a specimen,
-read unified logs, issue extension tokens or modify OS security settings.
+The startup cost lands between the spawn returning and `main`. A receipt the
+fixture validator writes as its first action in `main` therefore marks the
+point after which the deadline can safely start. If the test's spawn function
+returns only after that receipt exists, `runValidator` starts its unchanged
+deadline with the child already running.
 
-## Phase 1: make preparation a required stage
+The spawn seam already exists at every level these cases use. Through it, they
+keep the real collector, the real deadline, real pipes and the real fixture
+processes. No production change is needed, and the cases keep exercising
+production's real-time deadline, so no replacement deadline coverage is
+needed.
 
-### 1. Implement one bounded execution-preparation helper
+The alternative was to add clock and read substitutions to `runValidator` and
+the orchestrator's aggregate accounting, and to drive worker expiry and
+validator output through test gates. That would make these orderings hold by
+construction, independent of machine load. It would also change production
+code paths, add fixture modes, and need new deadline-semantics tests to replace
+what real clocks currently exercise.
 
-Add `tests/lib/prepare_executables.py`, shared by the lifecycle builder and the
-signed build. Give it two explicit inventories: lifecycle outputs selected by
-their builder, and shipped outputs selected by the full/partial build variant.
-Use named recipes with fixed arguments and expected exit statuses. Do not find
-executables with a glob or silently omit an absent declared output.
+What this plan gives up: once the child is running, it still has to read its
+requests to EOF and write its record against a real deadline. That is a few
+milliseconds of work in a 500 ms window. The margin is large but not
+guaranteed under arbitrary load, which is the same standard every other short
+real-time window in the suite accepts. If post-start races are observed later,
+the clock and read substitutions can still be added on top of this change.
 
-Reuse the bounded subprocess supervision in
-[build_provenance.py](tests/lib/build_provenance.py): `probe`, `terminate_group`
-and `group_gone`. Keep the existing provenance probe's success/failure semantics.
-The preparation adapter may accept a normally completed `nonzero_exit` result
-only when its positive status is the recipe's expected status, and accept an
-`empty_output` result only for an explicitly output-free, expected-zero recipe.
-It must never reinterpret timeout, overflow, signal termination, launch failure
-or uncertain cleanup as successful preparation. No general supervisor rewrite
-or provenance schema change is needed.
+### Do not execute shipped executables during the build or at dispatch
 
-For each execution:
+No observed failure involves a cold shipped binary. Executing the signed
+outputs during the build would warm only the files in `dist/`. Release
+acceptance extracts a fresh copy, which starts cold no matter what the build
+did.
 
-1. Admit the expected regular executable and record its absolute path, arguments
-   and SHA-256. Run that path in a fresh process with stdin at EOF, both output
-   streams captured within bounds, and all nonstandard descriptors closed.
-2. Allow 30 seconds for preparation, independent of specimen/test allowances.
-   Keep the supervisor's bounded termination and reap procedure. Record elapsed
-   time diagnostically; there is no fast-enough-to-be-warm assertion.
-3. Require the recipe's exit status and any stated output check. Record actual
-   status, stream sizes, bounded failure metadata and cleanup observation. Keep
-   the supervisor's existing rule against storing raw failed-tool output. Reject
-   changed executable bytes between admission and completion.
-4. Persist a receipt on success or failure. Stop the caller on failure; do not
-   retry execution or continue into the timing-sensitive consumer. A receipt
-   states that an execution completed, not that macOS will cache it indefinitely.
+Executing them at the dispatcher's `worker` requirement check would warm the
+extracted copy. But release acceptance's two cases are the only test of the
+cold first run a user actually gets, and warming would hide it. `PWRunner` also
+has no harmless direct entry point: unrecognized arguments fall through to the
+XPC listener, and adding an entry point changes production.
 
-Keep preparation receipts outside executable inventories and sealed bundles.
-Lifecycle receipts belong beside the fixture under a distinct non-executable
-name. Build receipts belong in a fresh `DIST_DIR/preparation/<attempt>/`
-directory, bound to the actual final executable hashes. Preserve failed receipts;
-do not introduce a cached receipt that authorizes skipping preparation after a
-rebuild, copy or re-signing. Build preparation runs once per build invocation.
+The cold-start margin of a shipped worker (568 ms measured, against a 1,000 ms
+readiness wait) is a property of production's first run. A readiness timeout
+or XPC failure traced to a cold shipped binary is a production finding about
+`readyByteTimeoutMs`, to be investigated as such, not masked by preparation.
 
-### 2. Replace the lifecycle builder's advisory warm-up
+## Phase 1: check the lifecycle fixture warm-up
 
-Have `tests/fixtures/worker_lifecycle/build.sh` accumulate the precise outputs
-it actually builds and pass those recipes to the helper. The current recipes
-can be settled from source without a benchmark:
+### 1. Make the builder's warm-up fail closed
 
-| Fixture | Invocation | Expected normal exit |
-| --- | --- | --- |
-| Base worker and `.identity-mismatch` | No arguments, FD 3 closed | 90, before mapping or reading policy |
-| `.validator` | No arguments, stdin at EOF | 90, before any verdict |
-| `.issuer` | No arguments, FD 3 closed | 92, before channel mapping or issuance |
-| `.worker-limits` | No arguments | 0, with its existing default-value output |
-| Production-main companions: apply/parameter failures, map/read failures and every clock companion | `--version` | 0, with the worker identity/version line; this exits before their controlled native failures |
+In `tests/fixtures/worker_lifecycle/build.sh`, record each output and its
+expected status where it is compiled. For example, a small shell function
+could run the compile command and append the output path and status to two
+arrays. A new companion then cannot be compiled without entering the
+inventory. Pass the arrays to the Python block in place of the glob.
 
-The issuer's setup failure status 90 remains a preparation failure. The builder
-must add every new companion to this inventory at its compilation site. Update
-the [fixture README](tests/fixtures/worker_lifecycle/README.md), fixture catalog
-and [runner_unit README](tests/suites/runner_unit/README.md) to describe the
-prerequisite and receipt, removing the claim that warm-up asserts nothing.
-
-Keep `runner_unit/run.sh` using `test_build_fixture`; a failed helper must make
-the builder nonzero, preserve its log and receipt, and prevent `swift run` and
-reader replay. Verify the same behavior for direct fixture-builder callers,
-including the ordering mutation equipment. Do not require a successful fixture
-preparation to imply that the fixture's later behavioral scenarios will pass.
-
-### 3. Exercise final signed shipped executables before packaging
-
-Add an exact standalone `PWRunner --help` invocation that prints usage and exits
-zero before constructing either listener. Extend the pure listener/entry-mode
-selection and its `ListenerConfigTests` coverage together. Preserve existing
-no-argument and `--mach-service <name>` behavior, including current fallback
-behavior for other argument lists. No specimen field or XPC method is added.
-Describe the helper entry point in `runner/README.md`.
-
-After app sealing, deep verification, signer checks and the final standalone
-observer signing, add a required preparation banner/helper call before guide
-staging and ZIP creation. Preserve the existing output-target checks for Cargo
-and native outputs, the assembled app, the standalone observer and packaging.
-Use the final destination paths:
-
-| Shipped executable | Harmless invocation | Expected exit |
-| --- | --- | --- |
-| `Contents/MacOS/policy-witness` | `--version`, validate the version envelope | 0 |
-| `Contents/MacOS/pw-runner-client` | `run --help` | 0 |
-| Embedded `sandbox-log-observer` | `--help` | 0 |
-| Embedded `sbpl-check` | `--help` | 0 |
-| Each service's `PWRunner` | New standalone `--help` | 0 |
-| Each service's `pw-probe-runner` | `--version`, check generated identity | 0 |
-| Each service's `sb_api_validator` | No arguments; usage refusal before querying a PID | 2 |
-| Each service's `pw-extension-issuer` | No arguments, FD 3 closed | 92 |
-| Standalone observer at `${SANDBOX_LOG_OBSERVER_BIN}` (`controller/target/aarch64-apple-darwin/release/sandbox-log-observer`) | `--help`, after its separate signing | 0 |
-
-In `BUILD_XPC=0`, require only the executables actually shipped in that variant
-and the standalone observer. The native worker/validator built as intermediates
-are not embedded in that variant. Do not launch a full XPC service as a
-substitute for the host's harmless entry point.
-
-Record the app's file inventory before and after preparation and require equal
-content hashes, then verify the sealed app again before guide staging. Retain
-the final packaging output-target check immediately before ZIP creation,
-including its required-output inventory. Do not rewrite embedded evidence to
-add a post-seal observation. Preparation receipts are local execution
-observations; signatures, notarization and release acceptance keep their separate
-meanings. Downloaded/copied/re-signed artifacts can be cold again.
-
-Update these dependencies in the same step:
-
-- `build.sh`, `docs/build.json`, and the build generator's step, invocation and
-  refusal controls; run `docs/generate_build.py` to regenerate the account and
-  diagrams. The new preparation refusal must be represented in the manifest.
-- `docs/BUILD.md` narrative and `README.md` build description; `dist/README.md`
-  for the new local receipt directory. Explain that a failed late build may leave
-  a valid sealed app but cannot produce this invocation's completed package.
-- Build input admission/inventory checks for the new helper. Regenerate worker
-  identity before every checkpoint build: `build.sh` and runner sources are
-  digest inputs even though this work does not change the ABI layout.
-- `tests/suites/preflight` and `tests/suites/source_drift` build controls, described
-  below. Review architecture citations for the direct help exit; it does not
-  create a new specimen process or channel. Change generated architecture inputs
-  only if the account actually needs to describe a changed boundary.
-
-### Phase-1 checks and completion condition
-
-Register `shell_helpers/executable_preparation` as a default, app-independent
-case with Python and clang prerequisites. Exercise actual child processes and
-the real helper with: expected zero/nonzero exits; unexpected zero/nonzero;
-signal exit; missing executable; output overflow; a held child that exceeds the
-helper allowance; a descendant retaining a pipe; and a control observing closed
-FD 3. Use shorter allowances through the helper's Python test boundary for fault
-controls, retaining the production 30-second allowance. Observe eventual child
-cleanup independently. A stale adjacent receipt/text file must never be executed.
-
-The wrapper controls must prove a preparation failure prevents the later Swift
-command, using a marker from that command, and retains the specific failure.
-A positive sibling must reach that marker. Add a rejection control that disables
-failure propagation and require the wrapper oracle to catch it.
-
-Extend the existing opt-in `preflight/build_guard_controls` and
-`preflight/build_refusal_controls` rather than crediting a helper unit check as
-build integration. In a disposable checkout, make one legitimately signed helper
-return an unexpected status or hang only on its preparation invocation. Keep
-identity/version, required-output inventories, thin arm64 macOS checks and earlier
-build guards valid so the intended boundary is reached. Observe that verification
-and signing precede preparation, and that preparation failure prevents guide/ZIP
-completion. Successful full and partial siblings must prepare exactly their
-inventories. A control removing the build's helper call must fail the independent
-receipt/inventory oracle. Move the existing packaging fault injections in
-[build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py) past preparation
-and the final seal verification so they still exercise the packaging output-target
-guard. Preserve real signing receipts and app hashes; do not tamper with the
-inspected source app.
-
-Phase 1 is complete when both the fixture wrapper and signed build enforce the
-prerequisite, final signed paths have successful receipts, failure controls stop
-at the intended stage, and generated build/identity checks agree. Existing tests
-remain meaningful if they fail after this stage; preparation is not permission
-to dismiss or retry their failures.
-
-## Phase 2: replace scheduling assumptions with causal controls
-
-### 4. Add the narrow collector substitutions and prove the main sequence
-
-Expose a small internal collector-call value through the existing
-`runValidator` overload: a clock closure and a read closure, defaulting to
-`MonotonicDeadline.now` and `Darwin.read`. Route the existing deadline through
-that clock and the existing stdout read through that read closure. The test
-read closure must delegate to the real syscall unchanged, preserve its return
-and errno, and copy only the actual positive-length bytes into bounded test
-observation storage. Leave native polling, writes, retained-byte bounds,
-decoding, collection closure and cleanup in production code.
-
-Thread per-phase collector calls through `CWorkerOrchestrator`'s existing
-internal overload. Also supply an internal aggregate-collection clock closure,
-defaulting to `MonotonicDeadline.now`, for its start/planning/end samples. Tests
-may share an explicitly controlled clock between those two boundaries; production
-continues to use its existing clock and starts/debits budgets at the same points.
-Preserve production terminal exit, the guarded release and acknowledgement
-reconciliation after confirmed reap. Do not expose these substitutions through
-request JSON or add an outcome-forcing override.
-
-Extend the independent lifecycle equipment with a gate-driven expiry mode.
-It publishes arrival and a `waiting` receipt, waits for its own `.expire` gate,
-then publishes the same fixture expiry evidence and `done`, followed by an
-`expired` receipt. Keep this explicitly labelled as a constructed worker
-publication for host interpretation, not a measurement of a native 50 ms wait.
-Keep the ordinary release/acknowledgement/action path operative until expiry;
-the gate controls the expiry condition only. An early host release must still
-produce observable early acknowledgement/action, and expiry remains terminal
-even if release is stored afterward. The ordinary `proceed_wait` mode supports
-the successful sibling. Add a validator mode that can announce readiness and
-wait for an `.emit` gate before writing its real complete record and holding
-stdout open. Carry unique gate nonces through the existing fixture input tokens
-and validator operation token, with short owned paths and no global environment
-switch or production resource acquisition.
-
-For the replacement over-budget assertion, establish this sequence:
-
-1. The production host observes worker arrival and starts its real validator
-   collection. The worker remains unreleased; the test observes its `waiting`
-   receipt. Use a unique absent file target for the worker's possible action.
-2. Let the validator write through its actual stdout pipe. The read wrapper
-   observes the complete expected NDJSON line across arbitrary read fragments;
-   identifying a child-side ready or flush receipt is insufficient. The collector
-   retains those real bytes through its unchanged read path.
-3. On the next collector clock sample, after that read has returned and retention
-   has occurred, open the worker's expiry gate and wait for the independent
-   `expired` receipt. Then advance the controlled clock to the collector's
-   deadline. The clock stays within budget until the required observations exist.
-4. The collector closes through its actual deadline branch, retains the real
-   record, and returns to the host. The host's existing completion and ownership
-   rechecks must withhold release. Assert no acknowledgement or completed attempt,
-   absence of the independent file effect, retained prediction, worker-failure
-   precedence, `comparison.order == unestablished`, and successful full reply encoding.
-5. A sibling without worker expiry must close collection at the controlled
-   deadline, release and acknowledge, create the file, and retain the partial
-   prediction and its eligible ordering chain.
-
-Make all gates fail within an independent real monotonic watchdog. Fixture
-alarms and watchdog intervention are equipment failures, never evidence of a
-PolicyWitness deadline. On every exception, unblock gates as necessary and
-terminate/reap only children the case owns. Account for early spawn/read/parse
-failures without waiting forever for a receipt that cannot arrive. Keep process
-cleanup clocks separate from the frozen collection clock.
-
-Before wider conversion, run a deterministic regression variant delaying the
-validator's record by 500 ms after readiness. This delay is a test perturbation,
-not the ordering oracle and not an emulation of Gatekeeper internals. The old
-150 ms arrangement must fail for its missing record; the new sequence must pass
-with actual retained bytes, expiry and absent effect. Also run the new sequence
-without the delay. Do not credit a passing case whose record was synthesized.
-
-If this checkpoint cannot retain real bytes and traverse the original closure
-and release checks, stop phase-2 expansion and retain its failed evidence.
-Reassess the proposed internal boundary; do not widen production deadlines or
-replace replies with constructed successes. Phase 1 remains independently useful.
-
-### 5. Convert the related ordering assertions
-
-Use explicit case ownership rather than a global test clock or shared gate.
-
-| Existing assertion | Replacement and preserved observation |
+| Output | Expected exit with no arguments |
 | --- | --- |
-| `runOrderingGateControl`: 100 ms delayed semaphore before checking the held receipt | Add a fixture checkpoint request/receipt while the callback is held. The child must perform an acquire observation of release and report it before the callback returns. Wait for either that checkpoint or early acknowledgement/attempt receipts, rejecting the latter immediately. Use the fixture's file-create action and require its actual effect after callback return. This gives the child an observed opportunity to run without assuming it ran during a sleep. |
-| `proceed_wait_expire` and the over-budget case | Use the explicit expiry gate and wait for its publication receipt before ending collection. Keep worker failure, withheld release and retained evidence assertions. |
-| `validator_io_timeout_ms returns partial prediction...` | Retain the requested override and echo checks. Advance the collector clock only after the real record is retained, then observe release and the file effect. |
-| `surviving validator cannot publish after collection closes...` | Retain a record, expire collection through controlled time, keep the real failed-kill observation, and open the late-write gate only after return. Require the child's native `EPIPE` receipt and the worker's effect. |
-| EOF-with-live-validator cleanup variants | Use their real EOF and explicit child hold, with a generous ordinary collection allowance. No short I/O deadline is needed to establish EOF or failed cleanup. Retain independent reaping. |
-| `aggregate collection exhaustion...` | Use controlled aggregate and collector clocks with an observed first record. Debit the first collection deliberately to exhaustion. Assert later validator spawns never occur, later attempts still execute, and earlier records are not borrowed. |
-| `M08: timeout, failed cleanup and late output...` | Use controlled first-phase collection expiry after receipt of its record. Keep phase-two launch as the late-write gate, real `EPIPE`, independent file bytes, phase associations, failed cleanup, matrix comparison and cross-reader replay. |
+| `${OUTPUT}` and `.identity-mismatch` | 90 |
+| `.validator` | 90 (stdin at EOF) |
+| `.issuer` | 92 |
+| `.worker-limits` | 0 |
+| `.apply-failure`, `.params-CREATE`, `.params-SET`, `.map-failure`, `.read-failure` and every `.clock-*` companion | 2 (usage refusal) |
 
-For cases proving ordering, use generous real watchdog/fixture-lifetime bounds
-and existing normal host allowances instead of incidental 100/200 ms sentinel
-deadlines. Keep short allowances only where expiry is the behavior being tested.
-An absence assertion must follow an observed child checkpoint or terminal
-publication; checking immediately after spawn would allow a broken implementation
-to pass simply because the child had not run yet.
+These are the statuses recorded in every retained log. Keep the invocation (no
+arguments, stdin at EOF, output discarded, only the standard descriptors open)
+and the 30-second timeout.
 
-Update the mutation driver that imports `runOrderingGateControl` together with
-its oracle in
-[mutations.py](tests/suites/witness_contract/opt_in/mutations.py). Its current
-diagnostic/receipt expectations depend on the old held-receipt format. Preserve
-the requirement that the early-release mutant is rejected for independent early
-publication/effect evidence, not a compilation failure, timeout or identity
-mismatch. Preserve the existing real-worker bypass and eligibility controls.
+Execute every listed output and print each line as now. Treat an unexpected
+status, a timeout or a launch error as a failure, but record it and continue,
+so that a single log identifies every failure. After the last output, exit
+nonzero if any execution failed. Do not retry. Elapsed time stays diagnostic.
 
-### 6. Keep deadline correctness independently tested
+Rewrite the block's comment to give the actual reason: first-exec cost lands
+between spawn and `main`, and the fixture workers face the 1,000 ms readiness
+wait, so tests must not be the first to execute a fixture. Update the warm-up
+paragraph in the [fixture README](tests/fixtures/worker_lifecycle/README.md),
+removing "The warm-up asserts nothing", and the corresponding sentence in the
+[runner_unit README](tests/suites/runner_unit/README.md).
 
-Add focused validator deadline cases using the same narrow clock/read boundary.
-They must establish that the original allowance is not renewed by partial input,
-partial output or interruptions, that exact expiry closes collection, that an
-unavailable clock or sample below its starting value retains the existing
-`clock_error` meaning, and that a complete earlier record survives closure while
-an incomplete tail does not gain verdict status. Do not expand the deadline
-helper's clock-validity rules in this change. Use actual pipe reads for retention
-assertions; simple controlled clock tests can cover arithmetic separately.
+### Phase-1 checks
 
-Retain one native-clock live collector timeout against a fixture that remains
-open and does not promise a prefix record. Give it a generous outside watchdog;
-assert the driver's deadline stop, observed termination/reaping and no fabricated
-verdict. This establishes that production still uses an effective real deadline
-without requiring a newly started child to publish within 150 ms. Keep existing
-host-clock, native proceed and exec-deadline coverage; the new gate-driven worker
-fixture does not establish the production worker's timeout arithmetic.
+Run, with a fresh `PW_TEST_OUT_DIR`, the default `runner_unit` cases, the
+three default `witness_contract` cases that build the fixture, and
+`witness_contract/order_barrier_mutations` explicitly. The last is the only
+caller the default battery does not exercise. Each build log must list all
+nineteen outputs with their expected statuses.
 
-Use rejected controls to protect the new assertions: advance expiry before a
-complete read, drop the complete record, release despite observed worker expiry,
-return success without the worker effect, and accept late validator output after
-collection closes. Each must fail the corresponding independent assertion.
-Exercise the existing host early-release mutation after the checkpoint change.
-Do not use a shared production classifier as the test oracle for these facts.
+In a second worktree with `PW_APP_DIR` set to the current signed app, make
+these one-time controls and record them with the change. Do not add a
+permanent case for them:
 
-### Phase-2 documentation, verification and completion
+- Change one expected status. The builder must exit nonzero with that
+  output's mismatch line. `runner_unit/pwrunner_core_unit_executable` must
+  fail without starting `swift run`: no Swift test log may be produced.
+- List an output that does not exist. The builder must still report every
+  other output, then exit nonzero.
+- Lower the timeout and list an output that sleeps past it. The builder must
+  report `timeout` for it and exit nonzero, and no child may outlive the
+  builder.
 
-Update the lifecycle and runner-unit READMEs, fixture catalog, coverage account
-and affected assertions in `tests/FAILURE-PROPAGATION-CONTRACT.md` together.
-Describe which observations come from actual children and which clock samples or
-worker publications are controlled. Retain M08 and any newly retained main-case
-replies through the Swift encoder and the existing Rust/Python replay pattern;
-register the replay in the wrapper so it actually runs. Update the mutation
-description in `tests/OPT_IN_TESTS.md` and its suite README if receipts change.
-No request, reply or envelope version change is intended: meanings and wire
-fields stay the same. Regenerate worker identity for changed runner sources;
-new native production source files would also require Meson inventory changes.
+Phase 1 is complete when the builder fails closed on all three controls,
+every caller stops on a builder failure, and the positive runs pass.
 
-Run verification through `tests/run.sh`, with a fresh `PW_TEST_OUT_DIR` per
-checkpoint and retained inputs/receipts. Use `--list` to inspect selections;
-do not use a suite selector that unintentionally includes unrelated opt-ins.
+## Phase 2: start short validator deadlines after the fixture validator runs
 
-| Checkpoint | Required checks and what they establish |
+### 2. Give the fixture validator an optional start receipt
+
+Change `validator.c` to `main(int argc, char **argv)`. When `argc` is at least
+4, `argv[3]` names a receipt path supplied by the test, and an optional
+`argv[4]` gives a start delay in milliseconds (0–5,000). Immediately after
+`alarm(10)`, the validator sleeps for the delay, then creates `argv[3]` with
+`O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW`, writes
+`started pid=<getpid()> delay_ms=<n>`, and closes it. On any failure it exits
+95. In every other respect its behavior is unchanged.
+
+The driver's argv has three elements, so the warm-up and every
+production-shaped spawn are unaffected. The delay is a test perturbation
+standing for time between spawn return and the child's query loop. It does not
+emulate Gatekeeper.
+
+### 3. Add a gated spawn function for the tests
+
+Add one helper in the test target, shared by `OrderingTests` and
+`PhaseProtocolTests`. It returns a `ValidatorSpawnCall` and keeps test-owned
+state: receipt paths, spawned PIDs, elapsed times and equipment failures.
+
+For each call, the helper:
+
+1. Chooses an absent path `/tmp/pw-validator-started-<UUID>`.
+2. Copies the driver's argv elements, appends the receipt path (and the delay,
+   when the case configures one), and calls `nativeValidatorSpawn` with the
+   driver's executable path and file actions unchanged.
+3. Returns a nonzero result unchanged.
+4. Otherwise, waits under a real monotonic watchdog of 5 seconds (below the
+   fixture's 10-second alarm) until the receipt exists and names the spawned
+   PID.
+5. Records the time from spawn return to receipt, then returns 0.
+
+If the watchdog expires, the helper records an equipment failure naming the
+PID and returns 0, so the production collector keeps ownership of the child's
+collection and cleanup. Each case checks the helper's failures first and
+reports them as equipment failures, distinct from its behavioral assertions.
+
+The helper never reaps or signals a child. Existing cleanup ownership is
+unchanged: `cleanupOrderingChild`, the `ChildProcessCalls` substitutions and
+M08's deferred reaping. Receipt paths are removed on exit. The helper is used
+only with the lifecycle validator, never with the shipped `sb_api_validator`.
+
+### 4. Apply it to the dependent cases
+
+| Case | Change | Preserved |
+| --- | --- | --- |
+| `validator collection may outlast the worker budget...` | Internal `CWorkerOrchestrator.run` overload with the gated spawn. `validator_io_timeout_ms` 150 → 500. | `proceed_expire:50`. Worker failure (operation 11, detail 50), unset release, synthetic attempt, `unestablished` order, one retained record with a `deadline` stop, and reply encoding. The echo assertion is updated to 500. |
+| Same case, delayed start (new) | Same arrangement with a 1,000 ms start delay. | Every assertion above, plus `delay_ms=1000` in the receipt and a spawn-to-receipt time of at least 1,000 ms, so an ignored delay cannot pass. |
+| `validator_io_timeout_ms returns partial prediction...` | Internal overload with the gated spawn. Override 50 → 500. | The error text and echo follow the new value. Worker release, `query_first` and a successful attempt. |
+| `surviving validator cannot publish...` | `runValidator(..., spawn:)` with the gated spawn. Allowance 100 → 500. | Failed termination, the native `EPIPE` receipt after return, one verdict, the worker's effect, `query_first`. |
+| `validator_cleanup_unconfirmed_releases_worker` variants | No gate. Allowance 100 → 5,000. Collection ends at EOF, so only the cap changes. | `eof` stop, unreaped child, one verdict, `unconfirmed` disposition, effect, `query_first`. |
+| `aggregate collection exhaustion...` | `phaseRun(spawn:)` with the gated spawn. `validator_total_timeout_ms` 30 → 500 and `validator_io_timeout_ms` 100 → 1,000, so the aggregate stays the binding limit. Add an assertion that phase 0's records are exactly `["s0"]`. | Phase-0 `deadline` stop, phase-1 `budget_exhausted` with no subprocess, worker-sourced attempts, and `unestablished` order for step 1. |
+| `M08` | Its existing closure keeps opening the late-write gate before later spawns, then calls the gated spawn and records the PID. `validator_io_timeout_ms` 100 → 500. | Every current assertion, the matrix row and cross-reader replay. Phase 1 still ends at EOF. |
+
+Leave the other ordering cases unchanged.
+
+### Checkpoint before converting the remaining cases
+
+Convert the over-budget case first, then observe three runs:
+
+1. Gated, no delay: passes.
+2. Gated, 1,000 ms delay: passes, with the record retained.
+3. Ungated, 1,000 ms delay (the spawn returns immediately, but the delay
+   argument is still passed): fails for the missing record. Retain this as
+   checkpoint evidence. Do not add it as a permanent case, because it pins an
+   incidental property of production: that the deadline starts at spawn
+   return.
+
+If the third run passes, the delay is not landing inside the window and the
+gate's effect is not demonstrated. Stop and reassess before converting the
+other cases. Do not widen production allowances or replace replies with
+constructed records.
+
+### Phase-2 documentation
+
+- Describe the start receipt and delay arguments in the validator section of
+  the [fixture README](tests/fixtures/worker_lifecycle/README.md), with a
+  one-line entry in the [fixture catalog](tests/fixtures/README.md) if it lists
+  validator modes.
+- Describe in the [runner_unit README](tests/suites/runner_unit/README.md)
+  which cases start collection after the receipt, and that the receipt is
+  equipment, not evidence of a PolicyWitness deadline.
+- Update `tests/FAILURE-PROPAGATION-CONTRACT.md` only where it describes how
+  M08 or the aggregate case controls timing.
+
+No request, reply or envelope meaning changes.
+
+## Out of scope
+
+- **`runOrderingGateControl`'s 100 ms sleep.** This is an absence-sensitivity
+  weakness in the barrier mutation control, not a startup race: an early
+  release can go unseen if the child has not run within the sleep. A child
+  checkpoint reported before the callback returns would fix it. That change
+  touches the mutation driver, its oracle and `tests/OPT_IN_TESTS.md`, and
+  requires rerunning `witness_contract/order_barrier_mutations`, so it is a
+  separate change.
+- **`proceed_wait_expire`.** It already waits for the worker's `expired`
+  receipt and has no startup race.
+- **The `orderingWorker` 200 ms sentinel.** The sentinel starts after
+  readiness, with the worker already running, so no startup cost is charged to
+  it.
+- **Collector and orchestrator clock or read substitutions, gate-driven worker
+  expiry, and a validator emit gate.** These are not needed for this problem.
+  They remain possible if post-start races are observed later.
+- **Production allowances, the shipped-binary first run, and preparation of
+  shipped executables.** See Choices.
+- **BYOXPC, installation, host retirement and retries.**
+
+## Verification and completion
+
+Use `tests/run.sh` with a fresh `PW_TEST_OUT_DIR=tests/out/runs/<name>` for
+each checkpoint, and inspect selections with `--list` first. Confirm canonical
+case IDs in the catalog before running, and select opt-ins explicitly.
+
+| Checkpoint | Required checks |
 | --- | --- |
-| Phase-1 helper/wrapper | New `shell_helpers/executable_preparation`, existing `shell_helpers/controls` and `script_groups`: real preparation failures stop consumers, positive siblings continue, and receipts/cleanup survive. |
-| Phase-1 build | Signed full build and disposable partial-build sibling; `source_drift/build_documentation`, `source_drift/generator_contract`, `source_drift/runner_source_manifests_agree`, and `python3 docs/generate_worker_identity.py --check`; `preflight/build_guard_controls`, `preflight/build_refusal_controls` and `preflight/codesign.preflight`. Prove final-byte execution and packaging refusal through the actual build. |
-| Phase-2 main-case checkpoint | `runner_unit/pwrunner_core_unit_executable` including delayed/undelayed variants and rejected controls. Prove the intended sequence with real transport and effects before converting the remaining cases. |
-| Phase-2 integrated candidate | Default cases of `runner_unit`, `runner_abi_layout`, `runner_c_worker_harness`, `unit`, `failure_boundaries` and `runner_validator_failure`; `witness_contract/phases`, `witness_contract/attempt_effects_wait_for_collection`, `witness_contract/queries_use_a_pre_attempt_interval`, `witness_contract/validator_subprocess_populated`, and explicit `witness_contract/order_barrier_mutations`. Cover unchanged producer/reader behavior, native timing, per-phase evidence and sensitivity to barrier faults. |
-| Final | Full `source_drift` and the default battery against the final signed candidate. Select the stated opt-in build/barrier controls explicitly; the default battery alone does not include them. |
+| Phase 1 | The Phase-1 runs and controls above. |
+| Phase-2 checkpoint | `runner_unit/pwrunner_core_unit_executable` with the three over-budget runs. |
+| Phase-2 integrated | Default `runner_unit` cases and the three fixture-building `witness_contract` cases. `python3 docs/generate_worker_identity.py --check` must show no identity input changed. |
+| Final | Full `source_drift` and the default battery against the current signed app. |
 
-Confirm canonical IDs in the current catalog before execution; add the new
-preparation case explicitly. Expand the default-only groups into case selections
-where a suite selector would also run an opt-in. The `native_clock` opt-in and
-power-state/sleep-wake observations are outside this plan. Preserve existing
-checkout locking and evidence ownership. If the automation sandbox blocks required signing, process observation
-or XPC, follow `tests/AGENTS.md`'s same-command escalation rule, retaining the
-original result. That environmental procedure does not authorize automatic
-specimen retries after ordering failures.
+If the automation sandbox blocks process observation or XPC, follow
+`tests/AGENTS.md`'s same-command escalation rule and retain the original
+result. That rule does not authorize rerunning specimens after behavioral
+failures.
 
-Phase 2 is complete when the named ordering cases have no required race between
-startup/publication and a short real-time allowance; controlled delay preserves
-their result; all required receipts, native effects and retained records are
-asserted; the deliberately broken controls are rejected for the intended reason;
-and native deadline coverage and integrated readers still pass. Report preparation
-failures, equipment watchdogs and behavioral failures distinctly. Leave unrelated
-working-tree changes and historical evidence intact.
+Phase 2 is complete when all of these hold:
+
+- The six gated cases record a start receipt naming their spawned PID.
+- The delayed variant passes with its delay observed.
+- The ungated checkpoint run failed for the missing record.
+- The EOF variants and the aggregate case carry their new allowances and
+  assertions.
+- All selected checks pass.
+
+Report builder failures, gated-spawn watchdog failures and behavioral failures
+distinctly. Leave unrelated working-tree changes and historical evidence
+intact.
