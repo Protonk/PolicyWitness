@@ -62,29 +62,22 @@ comparison alone cannot establish behavioral equivalence.
 
 ### Sandboxed automation harnesses
 
-An automation harness's macOS sandbox can block runner XPC lookup
-(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
-(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
-discovery when swiftc cannot write its module cache. It can also make
-`codesign --verify` report an invalid signature for unchanged bytes. Request
-escalation and rerun the same failing command once outside the automation
-sandbox, without changing the artifact under investigation. Treat a signature
-failure as environmental only if the unsandboxed verification passes;
-investigate any failure that remains.
+Inspect diagnostics before attributing a test failure to the product or its
+execution environment. Use an unsandboxed shell for cases requiring `app` or
+`worker`. If the automation sandbox refuses an operation, request escalation
+and rerun the same failing command once outside it without changing the
+artifact under investigation. A passing retry can support an environmental
+explanation; it does not retroactively supply missing observations.
 
-This warning is intentionally repeated at workflow entry points.
-[source_drift](suites/source_drift/README.md#intentional-guidance-agreement)
-compares the first paragraph in all four locations; edit those copies together.
-The explanations that follow it are local to each document.
-
-Inspect diagnostics before attributing a result to the product or harness.
-Use an unsandboxed shell for cases requiring `app` or `worker`. `runner_unit`
-executes embedded children directly without XPC. Cases without an app requirement
-can still need escalation: cancellation and process-observation controls use
-local sockets and exit events, and `source_drift/build_documentation` exercises
-Meson's Swift compiler discovery. The
-[equipment reference](README.md#equipment-checks) explains what the dispatcher
-can establish before execution.
+`runner_unit` executes embedded children directly without XPC. Cases without an
+app requirement can still need escalation: cancellation and process-observation
+controls use local sockets and exit events, and
+`source_drift/build_documentation` exercises Meson's Swift compiler discovery.
+The [equipment reference](README.md#equipment-checks) explains what the
+dispatcher can establish before execution. Follow
+[runner diagnostics](../runner/AGENTS.md#sandboxed-automation-harnesses) for XPC
+or log failures and [build guidance](../docs/BUILD.md#sandboxed-automation-harnesses)
+for compiler discovery, signing or signature verification.
 
 ## Add or change tests
 

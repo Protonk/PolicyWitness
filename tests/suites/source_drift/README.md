@@ -89,34 +89,39 @@ checkout controls add an unindexed gap, add its matching index entry, remove
 the final heading and add a spurious index entry in each tour. Repaired and
 restored copies pass; each rejected mutation names its document.
 
-### Intentional guidance agreement
+### Workflow guidance and checked routes
 
-Agents enter through different workflows and repeatedly mistake automation
-sandbox restrictions for product defects. The warning is therefore deliberately
-visible in `AGENTS.md`, `runner/AGENTS.md`, `tests/AGENTS.md` and `docs/BUILD.md`.
-The first paragraph after `Sandboxed automation harnesses` is shared; later
-paragraphs explain the local workflow and are not compared.
+Sandbox troubleshooting is available in `AGENTS.md`, `runner/AGENTS.md`,
+`tests/AGENTS.md` and `docs/BUILD.md`. Each document explains the local workflow;
+its wording and paragraph order are independent.
 
-[`check_harness_note_agreement`](check.py) extracts that first paragraph from
-each document, normalizes whitespace and compares it with the root AGENTS copy.
-Different line wrapping passes. Change the warning in all four places together;
-there is no generator that propagates it. The rule verifies agreement, not the
-correctness or completeness of the advice.
+[`check_harness_guidance_routes`](check.py) requires exactly one nonempty
+`Sandboxed automation harnesses` section in each document and links from the
+root section to the other diagnostic sections. Sections end at the next heading
+of the same or higher level. Headings alone, comments and fenced or indented
+examples cannot supply guidance; examples and images cannot supply a route.
+The rule compares resolved paths and fragments, not link labels or prose.
+G11 below also checks document links and their destination anchors.
 
-[`check_core_ideas_agreement`](check.py) likewise keeps the principle labels and
-their order aligned between root AGENTS and the architecture document. The
-former gives working instructions; the latter explains implementation and
-evidence. The check does not require identical explanatory prose or establish
-that a principle is enforced at runtime.
+The rule establishes presence and navigation, not the correctness or completeness
+of the advice. Review the unchanged retry, signature-verification qualification
+and limits on attribution when editing guidance.
+
+[`check_core_ideas_agreement`](check.py) keeps the principle labels and their
+order aligned between root `AGENTS.md` and the architecture document. The former
+gives working instructions; the latter explains implementation and evidence.
+The check does not require identical explanatory prose or establish that a
+principle is enforced at runtime.
 
 Both checks run in `source_drift/runner_source_manifests_agree`, included in the
 default battery. They are not direct `build.sh` gates. Disposable-checkout
-controls run the real checker: a changed warning copy or missing heading fails,
-while rewrapping, local continuation edits and coordinated warning edits pass.
-Independent principle prose edits pass; a removed, renamed or reordered label
-on one side fails. Every touched input is restored between controls and the
-restored documents must pass. Inputs and command receipts are retained alongside
-the planner controls.
+controls run the real checker: independent rewrites, paragraph reordering,
+rewrapping and changed link labels pass; missing, duplicated or empty sections
+and missing or incorrect root routes fail. Fake guidance or routes in examples,
+comments or the wrong section fail. Independent principle prose edits pass;
+a removed, renamed or reordered label on one side fails. Every touched input
+is restored between controls and the restored documents must pass. Inputs and
+command receipts are retained alongside the planner controls.
 
 ### Generator contracts
 
@@ -182,7 +187,7 @@ annotated release tag reachable before HEAD; if that release predates
 the baseline, it reports that fact. `--report` turns a growth refusal into a
 warning. This baseline is retained even when empty.
 
-The prose scan includes `docs/*.md`, the root README and AGENTS files,
+The prose scan includes `docs/*.md`, root `README.md` and `AGENTS.md`,
 `controller/AGENTS.md`, `runner/AGENTS.md`, `tests/README.md`, `tests/AGENTS.md`,
 and every Markdown document a generator writes. It ignores fenced examples;
 authored spans are processed in the documents each generator names in its

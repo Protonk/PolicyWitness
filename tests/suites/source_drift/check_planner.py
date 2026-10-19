@@ -157,32 +157,85 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
 
 
 def guidance_scenarios(repo):
-    """Distinguish intentional agreement from independent explanatory prose."""
+    """Exercise local sections and diagnostic routes without comparing wording."""
     paths = [Path(p) for p in ('AGENTS.md', 'runner/AGENTS.md', 'tests/AGENTS.md', 'docs/BUILD.md')]
     documents = {path: (repo / path).read_text() for path in paths}
-    scenarios, coordinated = [], {}
+    scenarios = []
     heading = 'Sandboxed automation harnesses'
+    root_bounds = None
     for path, source in documents.items():
-        match = re.search(r'^#{2,6} ' + heading + r'\n\n(.*?)(?=\n\n)', source, re.M | re.S)
+        match = re.search(r'^(#{2,6}) ' + heading + r'\n', source, re.M)
         assert match, f'fixture requires the warning in {path}'
-        paragraph = match.group(1)
-        start, end = match.span(1)
+        start = match.end()
+        level = len(match[1])
+        following = re.search(r'^#{1,' + str(level) + r'} ', source[start:], re.M)
+        end = start + following.start() if following else len(source)
+        body = source[start:end]
         name = str(path).replace('/', '-').replace('.', '-')
-        changed = source[:end] + ' Coordinated warning control.' + source[end:]
-        coordinated[path] = changed
-        # The reference copy's mismatch names its first disagreeing peer.
-        diagnostic = f'AGENTS.md and {paths[1] if path == paths[0] else path}'
-        scenarios += [
-            (f'guidance-warning-changed-{name}', {path: changed}, 1, diagnostic),
-            (f'guidance-heading-missing-{name}',
-             {path: source.replace(heading, 'Harness warning control', 1)}, 2,
-             f"{path} has no '{heading}' heading"),
-            (f'guidance-warning-rewrapped-{name}',
-             {path: source[:start] + ' '.join(paragraph.split()) + source[end:]}, 0, None),
-            (f'guidance-local-prose-{name}',
-             {path: source[:end] + '\n\nLocal explanation control.' + source[end:]}, 0, None),
+        diagnostic = f'harness guidance: {path}:'
+        section = source[match.start():end]
+        # The fixture locates the authored section directly, independently of
+        # the checker's comment/fence reader.
+        def body_change(value):
+            return source[:start] + value + source[end:]
+        links = re.findall(r'\[[^\]\n]+\]\([^)\n]+\)', body) if path == paths[0] else []
+        independent = '\nA separately written diagnostic explanation.\n\n' + '\n'.join(links) + '\n\n'
+        paragraphs = body.strip().split('\n\n')
+        changed = [
+            ('rewritten', body_change(independent), 0, None),
+            ('rewrapped', body_change('\n' + ' '.join(body.split()) + '\n\n'), 0, None),
+            ('reordered', body_change('\n' + '\n\n'.join(reversed(paragraphs)) + '\n\n'), 0, None),
+            ('local-prose', body_change(body + 'Local diagnostic control.\n\n'), 0, None),
+            ('heading-missing', source[:match.start()] + source[end:], 1, diagnostic + ' expected one'),
+            ('heading-duplicate', body_change(body + match[0] + '\nDuplicate guidance.\n\n'), 1, diagnostic + ' expected one'),
+            ('empty', body_change('\n\n'), 1, diagnostic + ' empty'),
+            ('headings-only', body_change('\n' + '#' * (level + 1) + ' Local topic\n\n'), 1, diagnostic + ' empty'),
+            ('fenced-body', body_change('\n```text\n' + body + '\n```\n\n'), 1, diagnostic + ' empty'),
+            ('comment-body', body_change('\n<!--\n' + body + '\n-->\n\n'), 1, diagnostic + ' empty'),
+            ('indented-body', body_change('\n' + '\n'.join('    ' + line for line in body.splitlines()) + '\n\n'), 1, diagnostic + ' empty'),
+            ('fenced-section', source[:match.start()] + '~~~~text\n' + section + '\n~~~~\n\n' + source[end:], 1, diagnostic + ' expected one'),
+            ('comment-section', source[:match.start()] + '<!--\n' + section + '\n-->\n\n' + source[end:], 1, diagnostic + ' expected one'),
+            ('body-after-peer', body_change('\n' + '#' * level + ' Other guidance\n\n' + body), 1, diagnostic + ' empty'),
+            ('body-after-parent', body_change('\n' + '#' * (level - 1) + ' Other guidance\n\n' + body), 1, diagnostic + ' empty'),
+            # A fence's shorter marker does not close it, and comments in an
+            # example must not hide the real section that follows.
+            ('short-fence-close', body_change('\n````text\n```\n' + body + '\n````\n\n'), 1, diagnostic + ' empty'),
+            ('fake-heading-before-real', source[:match.start()] + '```text\n<!--\n' + match[0] + '```\n\n' + source[match.start():], 0, None),
         ]
-    scenarios.append(('guidance-warning-coordinated', coordinated, 0, None))
+        scenarios.extend((f'guidance-{kind}-{name}', {path: value}, status, message)
+                         for kind, value, status, message in changed)
+        if path == paths[0]:
+            root_bounds = (start, end)
+        scenarios.append((f'guidance-restored-{name}', {path: source}, 0, None))
+
+    root = paths[0]
+    source = documents[root]
+    start, end = root_bounds
+    body = source[start:end]
+    for target in ('runner/AGENTS.md', 'tests/AGENTS.md', 'docs/BUILD.md'):
+        route = target + '#sandboxed-automation-harnesses'
+        link = re.search(r'\[[^\]\n]+\]\(' + re.escape(route) + r'\)', body)[0]
+        diagnostic = f'harness guidance: AGENTS.md: missing diagnostic route {route}'
+        variants = [
+            ('removed', '', 1),
+            ('wrong-path', link.replace(target, 'missing/AGENTS.md'), 1),
+            ('wrong-fragment', link.replace('#sandboxed-automation-harnesses', '#missing'), 1),
+            ('fenced', '\n```markdown\n' + link + '\n```\n', 1),
+            ('comment', '<!-- ' + link + ' -->', 1),
+            ('inline-example', '`' + link + '`', 1),
+            ('image', '!' + link, 1),
+            ('relabeled', '[Other diagnostic wording](' + route + ')', 0),
+            ('relative-path', link.replace(target, './' + target), 0),
+        ]
+        name = target.replace('/', '-').replace('.', '-')
+        for kind, replacement, status in variants:
+            changed = source[:start] + body.replace(link, replacement, 1) + source[end:]
+            scenarios.append((f'guidance-route-{kind}-{name}', {root: changed}, status,
+                              diagnostic if status else None))
+        # A working link elsewhere in the root document cannot supply this route.
+        moved = link + '\n\n' + source[:start] + body.replace(link, '', 1) + source[end:]
+        scenarios.append((f'guidance-route-outside-section-{name}', {root: moved}, 1, diagnostic))
+    scenarios.append(('guidance-routes-restored', {root: source}, 0, None))
 
     agents = paths[0]
     architecture = Path('docs/ARCHITECTURE.md')

@@ -156,6 +156,10 @@
       "joins": {
         "color": "#70428c",
         "style": "dashed"
+      },
+      "links": {
+        "style": "solid",
+        "color": "#444444"
       }
     }
   },
@@ -2808,7 +2812,7 @@
           "label": "AGENTS.md",
           "kind": "document",
           "facts": {
-            "Carries": "the reference copy of the intentionally repeated sandbox warning"
+            "Carries": "repository working rules and sandbox guidance with routes to local diagnostics"
           },
           "sources": [
             {
@@ -2819,7 +2823,7 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -2879,7 +2883,7 @@
           "label": "runner/AGENTS.md",
           "kind": "document",
           "facts": {
-            "Carries": "runner working rules and the harness-note copy"
+            "Carries": "runner working rules and local sandbox diagnostics"
           },
           "sources": [
             {
@@ -2890,7 +2894,7 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -2921,7 +2925,7 @@
           "label": "tests/AGENTS.md",
           "kind": "document",
           "facts": {
-            "Carries": "test working rules and the harness-note copy"
+            "Carries": "test working rules and local sandbox diagnostics"
           },
           "sources": [
             {
@@ -2932,7 +2936,7 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -3156,12 +3160,12 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas"
+            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas"
           },
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement"
+              "symbol": "check_harness_guidance_routes"
             }
           ],
           "checks": [
@@ -3217,7 +3221,7 @@
             },
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             },
             {
@@ -3510,7 +3514,7 @@
           "label": "docs/BUILD.md",
           "kind": "document",
           "facts": {
-            "Carries": "the build figure and tables"
+            "Carries": "the build figure and tables; local signing and compiler-discovery diagnostics"
           },
           "sources": [
             {
@@ -4061,19 +4065,19 @@
           "id": "D22",
           "from": "agents_md",
           "to": "runner_agents",
-          "kind": "copies",
-          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
-          "short": "harness note",
+          "kind": "links",
+          "label": "links to workflow-local sandbox diagnostics; destination section and root route are checked",
+          "short": "diagnostics",
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "HARNESS_NOTE_HEADING"
+              "symbol": "HARNESS_GUIDANCE_ROUTES"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -4082,19 +4086,19 @@
           "id": "D23",
           "from": "agents_md",
           "to": "tests_agents",
-          "kind": "copies",
-          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
-          "short": "harness note",
+          "kind": "links",
+          "label": "links to workflow-local sandbox diagnostics; destination section and root route are checked",
+          "short": "diagnostics",
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "HARNESS_NOTE_HEADING"
+              "symbol": "HARNESS_GUIDANCE_ROUTES"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -4209,12 +4213,12 @@
           "from": "drift_check",
           "to": "agents_md",
           "kind": "checks",
-          "label": "first warning paragraph agrees across four workflow entry points; local explanations are independent",
-          "short": "note equality",
+          "label": "nonempty sandbox guidance sections at workflow entry points and root links to their diagnostics",
+          "short": "guidance routes",
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement"
+              "symbol": "check_harness_guidance_routes"
             }
           ],
           "checks": [
@@ -4922,19 +4926,19 @@
           "id": "D62",
           "from": "agents_md",
           "to": "build_md",
-          "kind": "copies",
-          "label": "manually repeated warning; first paragraph agrees after whitespace normalization",
-          "short": "harness note",
+          "kind": "links",
+          "label": "links to workflow-local sandbox diagnostics; destination section and root route are checked",
+          "short": "diagnostics",
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "HARNESS_NOTE_FILES"
+              "symbol": "HARNESS_GUIDANCE_ROUTES"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_harness_note_agreement",
+              "symbol": "check_harness_guidance_routes",
               "form": "rule"
             }
           ]
@@ -6200,7 +6204,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy’s bundle-local validator by default; an explicit override takes precedence",
+          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; an explicit override takes precedence",
           "short": "spawn",
           "sources": [
             {

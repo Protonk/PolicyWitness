@@ -80,25 +80,18 @@ the [test cleanup guidance](tests/AGENTS.md#preserve-and-clean-up-output).
 
 ## Sandboxed automation harnesses
 
-An automation harness's macOS sandbox can block runner XPC lookup
-(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
-(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
-discovery when swiftc cannot write its module cache. It can also make
-`codesign --verify` report an invalid signature for unchanged bytes. Request
-escalation and rerun the same failing command once outside the automation
-sandbox, without changing the artifact under investigation. Treat a signature
-failure as environmental only if the unsandboxed verification passes;
-investigate any failure that remains.
+A restrictive macOS automation sandbox can obstruct runner XPC lookup,
+unified-log access, signing or keychain access, and Meson's Swift discovery.
+It can also make signature verification fail for unchanged bytes. Inspect the
+diagnostic before attributing a failure. Request escalation and rerun the same
+failing command once outside that sandbox without changing the artifact under
+investigation. Treat a signature failure as environmental only if that
+unsandboxed verification passes; investigate failures that remain.
 
-This warning is intentionally repeated for agents entering through different
-workflows who may mistake harness restrictions for product defects.
-[source_drift](tests/suites/source_drift/README.md#intentional-guidance-agreement)
-compares the first paragraph in all four locations; edit those copies together.
-The explanations that follow it are local to each document.
-
-For workflow-specific diagnostics, see [runner diagnostics](runner/AGENTS.md#sandboxed-automation-harnesses),
-[test execution](tests/AGENTS.md#sandboxed-automation-harnesses), and
-[signing and compiler discovery](docs/BUILD.md#sandboxed-automation-harnesses).
+Follow [runner diagnostics](runner/AGENTS.md#sandboxed-automation-harnesses),
+[test execution guidance](tests/AGENTS.md#sandboxed-automation-harnesses), or
+[signing and compiler discovery](docs/BUILD.md#sandboxed-automation-harnesses)
+for the affected workflow.
 
 ## Maintenance checklist (when changing things)
 

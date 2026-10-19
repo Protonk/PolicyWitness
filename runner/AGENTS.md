@@ -112,21 +112,14 @@ separate from claims about the specimen's policy.
 
 ## Sandboxed automation harnesses
 
-An automation harness's macOS sandbox can block runner XPC lookup
-(`NSCocoaErrorDomain` 4099 or error 159), unified-log access
-(`log: Cannot run while sandboxed`), signing-keychain access, and Meson's Swift
-discovery when swiftc cannot write its module cache. It can also make
-`codesign --verify` report an invalid signature for unchanged bytes. Request
-escalation and rerun the same failing command once outside the automation
-sandbox, without changing the artifact under investigation. Treat a signature
-failure as environmental only if the unsandboxed verification passes;
-investigate any failure that remains.
-
-This warning is intentionally repeated for agents entering through different
-workflows who may mistake harness restrictions for product defects.
-[source_drift](../tests/suites/source_drift/README.md#intentional-guidance-agreement)
-compares the first paragraph in all four locations; edit those copies together.
-The explanations that follow it are local to each document.
+A restrictive automation sandbox can prevent XPC lookup before the host starts
+or block unified-log access after execution succeeds. Lookup diagnostics can
+include `NSCocoaErrorDomain` 4099 or error 159; log access can report
+`log: Cannot run while sandboxed`. Inspect the diagnostic, request escalation
+and rerun the same failing command once outside the automation sandbox,
+keeping the inspected artifact unchanged. A permission-shaped failure alone
+does not establish its cause. For signing, signature verification or compiler
+discovery failures, follow [the build guidance](../docs/BUILD.md#sandboxed-automation-harnesses).
 
 When the harness blocks XPC lookup before host launch, the envelope reports
 `normalized_outcome: "xpc_error"`, an error diagnostic, empty `steps` and no

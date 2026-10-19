@@ -35,10 +35,10 @@ The check has two halves:
         has a row in the `_test_overrides` table in runner/README.md, and
         every row names a property. That table is the only documented
         key list; runner/AGENTS.md points at it rather than carrying one.
-     i. The first paragraph under "Sandboxed automation harnesses" agrees
-        after whitespace normalization in AGENTS.md, runner/AGENTS.md,
-        tests/AGENTS.md and docs/BUILD.md. Agents need the warning at each
-        workflow entry point; later local explanations are independent.
+     i. AGENTS.md, runner/AGENTS.md, tests/AGENTS.md and docs/BUILD.md each
+        have a nonempty "Sandboxed automation harnesses" section. The root
+        section links to the other three diagnostic sections. Wording is
+        independent; section presence and routes do not establish good advice.
      j. Host invariance: no file under runner/Sources binds or calls a
         libsandbox entry point or loads the library. The XPC host never
         links, loads or calls libsandbox; the worker and the validator do.
@@ -838,51 +838,95 @@ def check_test_overrides_table_agreement() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Sandboxed-harness note agreement.
-#
-# Agents enter through different workflows and repeatedly mistake harness
-# restrictions for product defects. Keep the warning visible in each entry
-# document. Compare only the first paragraph after the named heading, using
-# AGENTS.md as the reference and normalizing whitespace to permit rewrapping.
-# Later paragraphs are local explanations. No generator propagates the text;
-# agreement does not establish that the advice is correct or complete. This
-# rule runs in runner_source_manifests_agree, part of the default test battery.
+# Workflow-local harness guidance and diagnostic routes.
+# The rule checks usable entry sections and links, not advice or wording.
 # ---------------------------------------------------------------------------
 
-HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
-HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", REPO_ROOT / "runner/AGENTS.md", REPO_ROOT / "tests/AGENTS.md", REPO_ROOT / "docs/BUILD.md"]
+HARNESS_GUIDANCE_HEADING = "Sandboxed automation harnesses"
+HARNESS_GUIDANCE_FILES = [
+    REPO_ROOT / "AGENTS.md",
+    REPO_ROOT / "runner/AGENTS.md",
+    REPO_ROOT / "tests/AGENTS.md",
+    REPO_ROOT / "docs/BUILD.md",
+]
+HARNESS_GUIDANCE_ROUTES = [
+    (path, "sandboxed-automation-harnesses") for path in HARNESS_GUIDANCE_FILES[1:]
+]
 
 
-def parse_harness_note_paragraph(path: Path) -> str:
-    text = path.read_text(encoding="utf-8")
-    heading_re = re.compile(
-        r'^#{2,6}\s+' + re.escape(HARNESS_NOTE_HEADING) + r'\s*$', re.MULTILINE
-    )
-    match = heading_re.search(text)
-    if match is None:
-        fail(f"{path.relative_to(REPO_ROOT)} has no '{HARNESS_NOTE_HEADING}' heading")
-        sys.exit(2)
-    paragraphs = [p for p in re.split(r'\n\s*\n', text[match.end():]) if p.strip()]
-    if not paragraphs:
-        fail(f"{path.relative_to(REPO_ROOT)}: '{HARNESS_NOTE_HEADING}' has no paragraph")
-        sys.exit(2)
-    return " ".join(paragraphs[0].split())
+def harness_guidance_prose(text: str) -> str:
+    """Ignore comments and fenced/indented examples in this heading/link contract."""
+    lines = []
+    fence = None
+    comment = False
+    for line in text.splitlines():
+        if fence is not None:
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}\s*", line):
+                fence = None
+            lines.append("")
+            continue
+        parts = []
+        while line:
+            if comment:
+                end = line.find("-->")
+                if end < 0:
+                    break
+                line, comment = line[end + 3:], False
+            else:
+                start = line.find("<!--")
+                if start < 0:
+                    parts.append(line)
+                    break
+                parts.append(line[:start])
+                line, comment = line[start + 4:], True
+        prose = "".join(parts)
+        marker = re.match(r" {0,3}(`{3,}|~{3,})(.*)$", prose)
+        if marker and (marker[1][0] != "`" or "`" not in marker[2]):
+            fence = marker[1]
+            lines.append("")
+        elif prose.startswith(("    ", "\t")):
+            lines.append("")
+        else:
+            lines.append(prose)
+    return "\n".join(lines)
 
 
-def check_harness_note_agreement() -> list[str]:
+def check_harness_guidance_routes() -> list[str]:
     problems: list[str] = []
-    canonical_path = HARNESS_NOTE_FILES[0]
-    canonical = parse_harness_note_paragraph(canonical_path)
-    for path in HARNESS_NOTE_FILES[1:]:
-        if parse_harness_note_paragraph(path) != canonical:
-            problems.append(
-                f"  harness note: the shared first paragraph differs between "
-                f"{canonical_path.relative_to(REPO_ROOT)} and {path.relative_to(REPO_ROOT)}. "
-                "The warning is intentionally repeated at agent workflow entry points. "
-                "Update the first paragraph under 'Sandboxed automation harnesses' together in "
-                "AGENTS.md, runner/AGENTS.md, tests/AGENTS.md and docs/BUILD.md. "
-                "Whitespace is ignored; later local explanations are not compared."
-            )
+    sections = {}
+    heading_re = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$", re.M)
+    for path in HARNESS_GUIDANCE_FILES:
+        prose = harness_guidance_prose(path.read_text(encoding="utf-8"))
+        headings = list(heading_re.finditer(prose))
+        matches = [i for i, match in enumerate(headings) if match[2] == HARNESS_GUIDANCE_HEADING]
+        label = f"  harness guidance: {path.relative_to(REPO_ROOT)}"
+        if len(matches) != 1:
+            problems.append(f"{label}: expected one '{HARNESS_GUIDANCE_HEADING}' heading; found {len(matches)}")
+            continue
+        index = matches[0]
+        match = headings[index]
+        end = next((h.start() for h in headings[index + 1:] if len(h[1]) <= len(match[1])), len(prose))
+        body = prose[match.end():end]
+        if not re.search(r"\w", heading_re.sub("", body)):
+            problems.append(f"{label}: empty '{HARNESS_GUIDANCE_HEADING}' section")
+            continue
+        sections[path] = body
+
+    root = HARNESS_GUIDANCE_FILES[0]
+    if root in sections:
+        # An example inside inline code or an image is not a diagnostic route.
+        body = re.sub(r"(`+).*?\1", "", sections[root], flags=re.S)
+        routes = set()
+        for target in re.findall(r"(?<!!)(?<!\\)\[[^\]\n]+\]\(([^()\s]+)\)", body):
+            filename, separator, fragment = target.partition("#")
+            if separator and filename and not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", filename):
+                routes.add(((root.parent / filename).resolve(), fragment))
+        for path, fragment in HARNESS_GUIDANCE_ROUTES:
+            if (path.resolve(), fragment) not in routes:
+                problems.append(
+                    f"  harness guidance: AGENTS.md: missing diagnostic route "
+                    f"{path.relative_to(REPO_ROOT)}#{fragment} in '{HARNESS_GUIDANCE_HEADING}'"
+                )
     return problems
 
 
@@ -1066,7 +1110,7 @@ def main() -> int:
     problems.extend(check_prediction_unavailable_agreement())
     problems.extend(check_prediction_unavailable_planner())
     problems.extend(check_test_overrides_table_agreement())
-    problems.extend(check_harness_note_agreement())
+    problems.extend(check_harness_guidance_routes())
     problems.extend(check_cli_surface_agreement())
     problems.extend(host_invariance_controls())
     problems.extend(check_host_invariance())
