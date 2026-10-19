@@ -23,3 +23,7 @@ Verification belongs in the proposal. The checks should establish the intended b
 > You should read AGENTS.md, even if you're a human
 
 The root [AGENTS.md](AGENTS.md) and its directory-level counterparts give the working rules for the repository while READMEs describe the components and link to their contracts and deeper accounts. The `CLAUDE.md` files at the root and under `controller/`, `runner/`, and `tests/` are symlinks to adjacent `AGENTS.md` files; working guidance is edited in `AGENTS.md`.
+
+## Writing guidance
+
+Before adding an imperative, identify the concrete failure it prevents and check whether an existing instruction or automated check already covers it. Address imperatives directly to the reader, without distinguishing between human and automated contributors.
