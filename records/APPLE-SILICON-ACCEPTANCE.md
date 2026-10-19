@@ -15,12 +15,11 @@ are not credited and are described, not linked.
 
 ## Conclusions
 
-Review subsequently found two gaps in the checks, described under
-[Review repairs](#review-repairs). The candidate and runs below remain the
-original evidence; they do not establish acceptance of those repairs.
-
-The output target is enforced where the plan asked, and every claim below
-rests on a credited run of the final source, `9c6ee31`:
+Review subsequently found two gaps in the checks. Both are repaired and
+accepted against a fresh signed candidate, as described under
+[Review repairs](#review-repairs). The original candidate and runs below
+remain the evidence for the initial implementation at `9c6ee31`; the repair
+section records the additional checks needed to close its gaps:
 
 - Target selection. Cargo is given `--target aarch64-apple-darwin`; the
   controller package's build script refuses any other `TARGET`.
@@ -248,11 +247,64 @@ executed behavior. The retention entry leaves `source` null rather than
 claiming that this was a clean committed run. Build-generation and
 worker-identity checks also passed; no worker-identity input changed.
 
-Integrated acceptance of the repairs is pending. The fresh signed build was
-requested twice, but automatic approval review failed with "Selected model
-is at capacity" before either command executed. This was an approval-service
-failure, not a build failure or an unsafe-action finding. The existing
-`9c6ee31` candidate was not replaced. Resume with a fresh signed build, the
-default battery, and the `signed_artifact_controls`, `build_guard_controls`
-and `build_refusal_controls` opt-ins; record the new candidate and run IDs
-before crediting the repairs as fully accepted.
+Two initial fresh-build requests did not execute because automatic approval
+review failed with "Selected model is at capacity". After the approval mode
+changed, the following command completed successfully from the clean source
+`d98193e5ea32d93f6acdb70bb65e881d942fcb15`:
+
+```sh
+make build PW_FRESH_BUILD=1 IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'
+```
+
+The new candidate is `dist/PolicyWitness.app`, `v0.3.1-53-gd98193e`.
+All five output gates passed, including all eight app executables at assembly
+and packaging. Its hashes are:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `dist/PolicyWitness.zip` | `9ea0a3e3808a9bcfe38b602cec1f151ffbe9891e47234d08d701b7edcad6d1cc` |
+| Embedded `Contents/Resources/Evidence/provenance.json` | `74186c7200e267c29e4606d9007aa4a06ce4c78d15bf20ad60e9d5c74f3fba99` |
+| Controller | `1bb0b1b4c6d44d8a5b9b22be257eb505aaa8cb63496326dea932833bf9e9aecb` |
+
+The build transcript, session, embedded provenance, command receipt and
+subsequent test-source delta are preserved in
+[the default run's build evidence](../tests/out/runs/apple-silicon-repair-default-1/build/).
+They were attached under the checkout lock after verifying the completed
+run's ownership and ID. The candidate hashes above were checked again after
+the final opt-in run.
+
+Each command below ran outside the automation sandbox, with
+`PW_TEST_OUT_DIR=tests/out/runs/<run>` and signing identity resolved from the
+candidate's team:
+
+| Run | Command | Run ID | Test source | Result |
+| --- | --- | --- | --- | --- |
+| `apple-silicon-repair-default-1` | `tests/run.sh` | `20261019T041951Z_8a85f355` | `d98193e` | 194 of 194 default cases passed, with no skips, unrun cases or harness errors. |
+| `apple-silicon-repair-optin-1` | `tests/run.sh --case preflight/signed_artifact_controls --case preflight/build_guard_controls --case preflight/build_refusal_controls` | `20261019T043503Z_54502e91` | `d98193e` | Two of three cases passed: all 29 real-signature scenarios, including the universal dSYM resource, and all 21 build guard builds. The refusal case failed at the new assembled missing-file injection, as described below. |
+| `apple-silicon-repair-optin-2` | `tests/run.sh --case preflight/build_provenance_controls --case source_drift/build_documentation --case preflight/build_refusal_controls` | `20261019T044306Z_4f12cdb6` | `9f762a0` | All three cases passed: 45 provenance helper tests, 83 build refusal controls with 13 mutation demonstrations, and the build documentation checks. No skips, unrun cases or harness errors. |
+
+All three runs inspected the same valid candidate and recorded it unchanged.
+All are retained, including the failed first opt-in run. The offline run
+above is superseded by these integrated checks.
+
+The first refusal run exposed a fault in the new control, not an accepted
+damaged artifact: deleting `sbpl-check` immediately after copying it made
+the following `chmod` fail before the assembled output gate. Commit
+`9f762a09de7fdf9f59f4e7254e7897c5c68a8311` moves the assembled-stage fault
+injection to the first augment copy, after the top-level executable
+permission changes in both variants. The successful rerun checks text,
+empty, two-byte and missing required executables at assembly and packaging
+in both variants, requiring the output-target diagnostic and the absence
+of the protected signing or ZIP operation.
+
+That hook selection and its explanatory comment in
+`control_output_target_mismatch` are the entire code delta after the signed
+candidate's source. Reusing the default battery and the two passing opt-ins
+is a reviewed applicability exception: the delta changes only the refusal
+case's fault injection; the candidate, production build helpers, signing
+controls and build guard controls are unchanged. The provenance helper case
+imports the changed module for mutation-anchor checks, and the build
+documentation case reads its citations, so both were rerun alongside the
+complete refusal case. This judgment does not relabel the earlier runs as
+executions of `9f762a0`. Subsequent acceptance-record and retention-index
+updates change no executable or test code.
