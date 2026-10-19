@@ -193,9 +193,15 @@ warning. This baseline is retained even when empty.
 
 The prose scan includes `docs/*.md`, root `README.md` and `AGENTS.md`,
 `controller/AGENTS.md`, `runner/AGENTS.md`, `tests/README.md`, `tests/AGENTS.md`,
-and every Markdown document a generator writes. It ignores fenced examples;
-authored spans are processed in the documents each generator names in its
-`SPAN_DOCUMENTS`. The guide receives span comments
+and every Markdown document a generator writes. It reads each document through
+[`docs/markdown_reader.py`](../../../docs/markdown_reader.py), so fenced and
+indented code, comments and other HTML are not prose. A literal site is a
+source line of a paragraph, heading, list item or table row, with span values
+blanked. A citation pair is a backticked identifier followed by a link to a
+code file that holds it, in one paragraph, heading or table cell with no
+sentence end, `|` or other link between them; it is recorded as
+`` `identifier` … [label](target) ``. Authored spans are processed in the
+documents each generator names in its `SPAN_DOCUMENTS`. The guide receives span comments
 and values only by copying its shared source. Other generated or copied
 regions are opaque to the span pass. A backticked link label into a non-Markdown
 file denotes a symbol; use a plain filename label for an ordinary file link.

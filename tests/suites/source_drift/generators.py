@@ -115,69 +115,100 @@ def scanned_documents(root=ROOT):
     return sorted(paths)
 
 
-def prose_text(text):
-    gen = module('prose_limits', ROOT / 'docs/generate_limits.py')
-    return '\n'.join(gen.prose_lines(text))
-
-
 def broken_links(paths):
     """Check local files, heading anchors and backticked-symbol link labels (G11)."""
-    from urllib.parse import unquote
-    common = module('link_common', ROOT / 'docs/generator_common.py')
     broken = []
     for path in paths:
-        prose = prose_text(path.read_text())
-        # Keep a backticked link label; ignore other inline code examples.
-        def code(match):
-            if prose[max(0, match.start() - 1):match.start()] == '[' and prose[match.end():match.end()+2] == '](':
-                return match[0]
-            return ' ' * len(match[0])
-        prose = re.sub(r'(`+)([^`]*?)\1', code, prose)
-        if re.search(r'\]\s*\[|^\s*\[[^]\n]+\]:', prose, re.M):
+        document = markdown_reader.read(path)
+        if document.references:
             broken.append(f'{path}: reference-style link is not verified; use inline links')
-        for match in re.finditer(r'\[([^]\n]+)\]\(([^\s)]+)\)', prose):
-            label, target = match[1], match[2]
+        for link in document.links:
+            target = link.target
             if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
                 continue
             filename, separator, anchor = target.partition('#')
-            destination = path.parent / unquote(filename) if filename else path
+            destination = path.parent / filename if filename else path
             if not destination.exists():
                 broken.append(f'{path}: missing file {target}')
                 continue
             if separator:
-                if not destination.is_file() or unquote(anchor) not in markdown_reader.read(destination).anchors:
+                if not destination.is_file() or anchor not in markdown_reader.read(destination).anchors:
                     broken.append(f'{path}: missing heading {target}')
             # A backticked label is a symbol the target must hold: a code file holds it as
             # text, and a Markdown document holds it as the id or term the link names.
-            if re.fullmatch(r'`[^`]+`', label):
-                if not destination.is_file() or label[1:-1] not in destination.read_text(errors='replace'):
-                    broken.append(f'{path}: missing symbol {label} in {target}')
+            if link.code_label is not None:
+                if not destination.is_file() or link.code_label not in destination.read_text(errors='replace'):
+                    broken.append(f'{path}: missing symbol `{link.code_label}` in {target}')
     return broken
 
 BASELINE_NAME = 'tests/fixtures/docs/prose_baseline.json'
 
 
-def authored_prose(text):
+def authored_prose(text, name='<text>'):
+    """Lines of prose blocks with generated and copied regions and span values blanked; other lines are empty."""
     common = module('baseline_common', ROOT / 'docs/generator_common.py')
-    text = prose_text(text)
-    ranges = common.region_ranges(text)
-    ranges += [(m.start(), m.end()) for m in common.SPAN_RE.finditer(text)]
+    hidden = common.region_ranges(text) + [(m.start(), m.end()) for m in common.SPAN_RE.finditer(text)]
     keep = [True] * len(text)
-    for a, b in ranges:
+    for a, b in hidden:
         keep[a:b] = [False] * (b - a)
-    text = ''.join(c if keep[i] else ('\n' if c == '\n' else ' ') for i, c in enumerate(text))
-    return prose_text(text)
+    blanked = ''.join(c if keep[i] else ('\n' if c == '\n' else ' ') for i, c in enumerate(text))
+    prose = markdown_reader.parse(text, name).prose_lines
+    return '\n'.join(line if i in prose else '' for i, line in enumerate(blanked.split('\n')))
+
+
+def citation_pairs(path, text):
+    """Backticked identifiers the linked code file holds, before the link in the same sentence or table cell."""
+    common = module('pair_common', ROOT / 'docs/generator_common.py')
+    identifier = re.compile(r'[A-Za-z_][A-Za-z0-9_.:]*(?:\(\))?')
+    document = markdown_reader.parse(text, str(path))
+    regions = common.region_ranges(text)
+    pairs = []
+    for inline in document.inlines:
+        if any(a <= document.offset(inline.lines[0]) < b for a, b in regions):
+            continue
+        # Each window holds the code spans since the last boundary, with their rendered offsets.
+        window, offset, span, ended = [], 0, False, False
+        for kind, value in inline.pieces:
+            if kind == 'html':
+                span = bool(re.match(r'<!--\s*span\b', value)) or (span and not re.match(r'<!--\s*/span\b', value))
+                continue
+            if span:
+                continue
+            if kind == 'text':
+                cut = max((m.end() for m in re.finditer(r'[.!?](?=\s)|\|', value)), default=None)
+                if cut is not None:
+                    window = []
+                ended = bool(re.search(r'[.!?]$', value))
+                offset += len(value)
+                continue
+            if kind == 'code':
+                window.append((value, offset))
+                offset += len(value) + 2
+                ended = False
+                continue
+            # A link or image ends the window; only a link to a code file can pair.
+            link, near = value, [code for code, start in window if offset - start <= 240] if not ended else []
+            window, ended = [], False
+            offset += len(link.label) + 4
+            target = link.target.split('#', 1)[0]
+            if (kind == 'image' or link.code_label is not None or not target or re.match(r'^[\w+.-]+:', target)
+                    or Path(target).suffix.lower() == '.md' or not (path.parent / target).is_file()):
+                continue
+            cited = (path.parent / target).read_text(errors='replace')
+            held = [code for code in near if identifier.fullmatch(code) and len(code) >= 3 and code in cited]
+            if held:
+                pairs.append(f'`{held[0]}` … [{link.label}]({link.target})')
+    return pairs
 
 
 def prose_sites(root=ROOT):
     """Exact prose sites: one entry per line holding a literal, one per unread citation link."""
     common = module('measurement_common', ROOT / 'docs/generator_common.py')
     pattern = re.compile(common.DURATION_SIZE_RE.pattern + r'|\b\d[\d,]*-steps?\b', re.I)
-    identifier = re.compile(r'[A-Za-z_][A-Za-z0-9_.:]*(?:\(\))?')
-    boundary = re.compile(r'[.!?](?:\s|$)|\n\s*\n|\||\]\([^\s)]+\)')
     entries = []
     for path in scanned_documents(root):
-        text = authored_prose(path.read_text())
+        source = path.read_text()
+        text = authored_prose(source, str(path))
         document = path.relative_to(root).as_posix()
         lines = set()
         for match in pattern.finditer(text):
@@ -185,26 +216,8 @@ def prose_sites(root=ROOT):
             lines.add((a, b if b >= 0 else len(text)))
         for a, b in sorted(lines):
             entries.append(dict(document=document, invariant='G9', kind='literal', text=text[a:b]))
-        # A citation pair is a backticked identifier that the linked file holds, in the same
-        # sentence or table cell as a link whose label is not already a symbol.
-        for link in re.finditer(r'\[([^]\n]+)\]\(([^\s)]+)\)', text):
-            label, target = link[1], link[2].split('#', 1)[0]
-            if re.fullmatch(r'`[^`]+`', label) or not target or re.match(r'^[\w+.-]+:', target):
-                continue
-            if Path(target).suffix.lower() == '.md' or not (path.parent / target).is_file():
-                continue
-            cited = (path.parent / target).read_text(errors='replace')
-            start = max(0, link.start() - 240)
-            window = text[start:link.start()]
-            edges = list(boundary.finditer(window))
-            if edges:
-                start += edges[-1].end()
-                window = text[start:link.start()]
-            tokens = [token for token in re.finditer(r'`([^`\n]+)`', window)
-                      if identifier.fullmatch(token[1]) and len(token[1]) >= 3 and token[1] in cited]
-            if tokens:
-                entries.append(dict(document=document, invariant='G11', kind='citation_pair',
-                                    text=text[start + tokens[0].start():link.end()]))
+        for pair in citation_pairs(path, source):
+            entries.append(dict(document=document, invariant='G11', kind='citation_pair', text=pair))
     return sorted(entries, key=lambda row: (row['document'], row['kind'], row['text']))
 
 
@@ -223,7 +236,7 @@ def baseline_problems(root=ROOT, entries=None):
     for row in entries:
         if row['kind'] == 'count':
             path = root / row['document']
-            if row['document'] not in scanned or row['text'] not in authored_prose(path.read_text()):
+            if row['document'] not in scanned or row['text'] not in authored_prose(path.read_text(), row['document']):
                 problems.append(f'baseline count no longer occurs: {row}')
     return problems
 
@@ -555,13 +568,18 @@ class GeneratorContractTests(unittest.TestCase):
             self.assertNotIn(name, owners)
             owners[name] = set(gen.SPAN_DOCUMENTS)
         for path in scanned_documents():
-            # Fenced teaching examples are not authored spans.
-            text = '\n'.join(module('prose', ROOT / 'docs/generate_limits.py').prose_lines(path.read_text()))
-            text = re.sub(r"`+[^`]*`+", "", text)
-            for match in common.authored_spans(text):
-                prefix = match[1].split('.', 1)[0]
-                self.assertIn(prefix, owners)
-                self.assertIn(path.relative_to(ROOT).as_posix(), owners[prefix])
+            # A span is a comment in prose; examples in code are not spans.
+            text = path.read_text()
+            regions = common.region_ranges(text)
+            document = markdown_reader.parse(text, str(path))
+            for inline in document.inlines:
+                if any(a <= document.offset(inline.lines[0]) < b for a, b in regions):
+                    continue
+                for kind, value in inline.pieces:
+                    span = re.match(r'<!-- span ([a-z][a-z0-9_]*)\.', value) if kind == 'html' else None
+                    if span:
+                        self.assertIn(span[1], owners)
+                        self.assertIn(path.relative_to(ROOT).as_posix(), owners[span[1]])
 
     def test_prose_links_resolve_anchors_and_symbol_links(self):
         self.assertEqual(broken_links(scanned_documents()), [])
@@ -581,9 +599,15 @@ class GeneratorContractTests(unittest.TestCase):
             ('[target][reference]\n\n[reference]: target.md', 'reference-style'),
             ('[target](absent.md)', 'missing file'),
             ('# Here\n[here](#absent)', 'missing heading'),
+            ('[wrapped\nlabel](absent.md)', 'missing file'),
+            ('[`a]b`](source.py)', 'missing symbol'),
         ]:
             path.write_text(content)
             self.assertIn(expected, '\n'.join(broken_links([path])))
+        # Text in a comment or inline code is not a link.
+        for content in ('<!-- [target](absent.md) -->', '`[target](absent.md)`', '<!--\n[target](absent.md)\n-->'):
+            path.write_text(content)
+            self.assertEqual(broken_links([path]), [], content)
 
     def test_prose_baseline_is_consistent_and_growth_is_explicit(self):
         self.assertEqual(baseline_problems(), [])
@@ -704,8 +728,15 @@ class GeneratorContractTests(unittest.TestCase):
         common = module('form_rules', ROOT / 'docs/generator_common.py')
         readme = (ROOT / 'tests/suites/source_drift/README.md').read_text()
         self.assertIn('\n'.join(common.form_table()), readme)
+        # The copy is a table GitHub renders, not text in a comment or fence.
+
+        def cells(table):
+            return [[(cell.text, cell.code) for cell in row] for row in (table.header, *table.rows)]
+        expected = cells(markdown_reader.parse('\n'.join(common.form_table())).tables[0])
+        tables = markdown_reader.parse(readme).tables
+        self.assertEqual(sum(cells(table) == expected for table in tables), 1)
         for form, _, _ in common.FORM_RULES:
-            self.assertEqual(readme.count(f'\n| `{form}` |'), 1, form)
+            self.assertEqual(sum(row[0].code == [form] for table in tables for row in table.rows), 1, form)
             self.assertTrue(common.allowed_file(form, 'tests/suites/source_drift/check.py') in (True, False))
         with self.assertRaises(ValueError):
             common.allowed_file('maybe', 'tests/suites/source_drift/check.py')

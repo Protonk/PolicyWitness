@@ -65,3 +65,22 @@ code satisfy no check; a quoted copy of a limit row beside the real one is not
 a second row; link examples in inline code do not count against a standalone
 section; fenced `## ` lines are not demoted. `source_drift` passed
 (`markdown-switch-limits-20261019`).
+
+## G9 and G11
+
+| Reading | Compared over | Differences | Review |
+| --- | --- | --- | --- |
+| `prose_sites` | The 18 scanned documents | None | The same 12 G9 entries, byte for byte, and no citation pair. |
+| `broken_links` results | The 18 scanned documents | None | No broken link in either version. |
+| Links that G11 checks | The 18 scanned documents | 5 more: 2624 before, 2629 after | Three labels wrap across a line (`docs/BUILD.md:60` and `:521`, `docs/SIGNING.md:194`) and two code labels contain `]` (`docs/BUILD.md:119` and `:135`). The old pattern skipped them. All five resolve, and the code labels' symbols are in their targets. |
+
+Citation pairs are now defined over the parser's inline pieces, as
+[source positions](../MARKDOWN-PARSER-PLAN.md#source-positions-and-recorded-text)
+describes, and recorded as `` `identifier` … [label](target) ``. No baseline
+entry has that kind, and the scan still finds none. The span-prefix ownership
+test now finds spans as HTML comments in prose, so examples in code do not
+count; the form-table copy test also requires one rendered table with the same
+cells. `prose_lines` and `prose_text` are gone. New controls: a broken link
+with a wrapped label or a code label containing `]` is reported; text in a
+comment or inline code is not a link. `source_drift` passed
+(`markdown-switch-g9-g11-20261019`).

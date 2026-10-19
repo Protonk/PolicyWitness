@@ -168,6 +168,13 @@ class LinkTests(unittest.TestCase):
         self.assertEqual(self.links('[a](<two words.md>) [b](a\\_b.py#frag)\n'),
                          [('two words.md', 'a', None, False, False), ('a_b.py#frag', 'b', None, False, False)])
 
+    def test_pieces_keep_order_and_fold_labels_into_links(self):
+        inline = parse('Use `a` and *b*.\nThen [`c`](c.py) ![i](i.png) <!-- span x.y -->1<!-- /span -->\n').inlines[0]
+        self.assertEqual([(kind, value if kind in ('text', 'code', 'html') else value.target) for kind, value in inline.pieces],
+                         [('text', 'Use '), ('code', 'a'), ('text', ' and b. Then '), ('link', 'c.py'), ('text', ' '),
+                          ('image', 'i.png'), ('text', ' '), ('html', '<!-- span x.y -->'), ('text', '1'),
+                          ('html', '<!-- /span -->')])
+
     def test_reference_definitions_are_reported(self):
         document = parse('[x][ref]\n\n[ref]: target.md\n')
         self.assertEqual(list(document.references), ['REF'])

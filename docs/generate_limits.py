@@ -347,21 +347,6 @@ def require_standalone(text, what):
             raise ValueError(f"{what} depend on another document: {link.target}")
 
 
-def prose_lines(text):
-    """Ignore fenced examples when inspecting this guide's Markdown links."""
-    fence = None
-    for line in text.splitlines():
-        match = re.match(r"^\s*(`{3,}|~{3,})", line)
-        if match:
-            delimiter = match.group(1)
-            if fence is None:
-                fence = delimiter
-            elif delimiter[0] == fence[0] and len(delimiter) >= len(fence):
-                fence = None
-        elif fence is None:
-            yield line
-
-
 def validate_guide(text, limits):
     """Check the standalone text; never resolve links against repository files."""
     begin, finish = block_bounds(text, GUIDE_START, GUIDE_END)

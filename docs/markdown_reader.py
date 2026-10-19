@@ -96,6 +96,15 @@ class Inline:
     def code(self):
         return [token.content for token in self.children if token.type == 'code_inline']
 
+    @property
+    def pieces(self):
+        """The run in order as ('text' | 'code' | 'html', str) and ('link' | 'image', Link) pairs.
+
+        Adjacent text merges, a link's label is inside its Link, and emphasis
+        leaves no piece of its own.
+        """
+        return _pieces(self)
+
     def _lead(self):
         # Emphasis processing can leave an empty text token before the first span.
         return [token for token in self.children if not (token.type == 'text' and not token.content)]
@@ -302,8 +311,8 @@ def _flatten(children):
             yield from _flatten(token.children or ())
 
 
-def _links(inline):
-    links, label = [], None
+def _pieces(inline):
+    pieces, label = [], None
     for token in inline.children:
         if token.type == 'link_open':
             label = (token, [])
@@ -311,16 +320,30 @@ def _links(inline):
             opening, children = label
             code = [t for t in children if t.type == 'code_inline']
             only_code = len(children) == 1 and len(code) == 1
-            links.append(Link(unquote(opening.attrs.get('href', '')), plain(children),
-                              code[0].content if only_code else None, False,
-                              opening.markup == 'autolink', inline))
+            pieces.append(('link', Link(unquote(opening.attrs.get('href', '')), plain(children),
+                                        code[0].content if only_code else None, False,
+                                        opening.markup == 'autolink', inline)))
             label = None
         elif label is not None:
             label[1].append(token)
         elif token.type == 'image':
-            links.append(Link(unquote(token.attrs.get('src', '')), plain(token.children or ()), None, True,
-                              False, inline))
-    return links
+            pieces.append(('image', Link(unquote(token.attrs.get('src', '')), plain(token.children or ()), None,
+                                         True, False, inline)))
+        elif token.type == 'code_inline':
+            pieces.append(('code', token.content))
+        elif token.type == 'html_inline':
+            pieces.append(('html', token.content))
+        elif token.type in ('text', 'text_special', 'softbreak', 'hardbreak'):
+            text = plain([token])
+            if pieces and pieces[-1][0] == 'text':
+                pieces[-1] = ('text', pieces[-1][1] + text)
+            elif text:
+                pieces.append(('text', text))
+    return pieces
+
+
+def _links(inline):
+    return [value for kind, value in _pieces(inline) if kind in ('link', 'image')]
 
 
 @lru_cache(maxsize=256)
