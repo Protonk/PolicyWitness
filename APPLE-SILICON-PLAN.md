@@ -289,3 +289,7 @@ candidate passing the required controls and default battery. The handoff must
 identify accepted source/build and run IDs, separate observed builder
 compatibility from untested configurations, and leave native-build enforcement
 explicitly unimplemented.
+
+## Acceptance
+
+The execution record is [records/APPLE-SILICON-ACCEPTANCE.md](records/APPLE-SILICON-ACCEPTANCE.md).

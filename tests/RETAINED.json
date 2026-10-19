@@ -1417,6 +1417,34 @@
       "reason": "Worker documentation correction validation; original failures preserved. Final credit and tested source snapshots are preserved in commit 69c7dfecfdc688ea56cdc4febd9a9a8a41414b6f.",
       "source": null,
       "app_inventory": null
+    },
+    {
+      "path": "runs/apple-silicon-default-2",
+      "run_id": "20261019T020917Z_c7d77733",
+      "reason": "Apple Silicon output target acceptance: default battery against the fresh 9c6ee31 candidate (records/APPLE-SILICON-ACCEPTANCE.md).",
+      "source": "9c6ee314d2081511e1eb7ec1e4277d8e438be967",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/apple-silicon-optin-3",
+      "run_id": "20261019T022139Z_78df238e",
+      "reason": "Apple Silicon output target acceptance: credited opt-in build controls at 9c6ee31 (records/APPLE-SILICON-ACCEPTANCE.md).",
+      "source": "9c6ee314d2081511e1eb7ec1e4277d8e438be967",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/apple-silicon-optin-1",
+      "run_id": "20261019T005102Z_16cbbd3d",
+      "reason": "Apple Silicon output target acceptance: original refusal-control failure (partial-variant reuse case) preserved (records/APPLE-SILICON-ACCEPTANCE.md).",
+      "source": "60b16a3c5b1d76f01c5fee479d16551477c9905f",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/apple-silicon-optin-2",
+      "run_id": "20261019T011524Z_b18843a7",
+      "reason": "Apple Silicon output target acceptance: original refusal-control failure (stamp Swift target defect) preserved (records/APPLE-SILICON-ACCEPTANCE.md).",
+      "source": "06cb69d2edb0f0713aaae37740f94daf63f75e1b",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
