@@ -1584,7 +1584,9 @@ def control_fresh_sequence(co, variant):
     passing(co, changed, 'full')
     stamp3 = json.loads(changed.stamp)
     assert stamp3['scope'] == {'xpc': True} and stamp3['fields']['compilers.swift.command'] == ['swiftc']
-    assert {k: v for k, v in stamp3['fields'].items() if not k.startswith('compilers.swift.')} == stamp1['fields'], 'extension changed another field'
+    assert {k: v for k, v in stamp3['fields'].items() if not k.startswith('compilers.swift.') and k != 'output.swift_target'} == stamp1['fields'], \
+        'extension changed another field'
+    assert stamp3['fields']['output.swift_target'] == [f'arm64-apple-macosx{co.minimum}'], stamp3['fields']
     assert stamp3['published_at'] == stamp1['published_at'] and stamp3['extended_at']
     assert changed.record['configuration']['build_directories']['builddir']['stamp'] == 'extended'
     assert changed.record['toolchain']['compilers']['swift']['observed']['status'] == 'ok'
@@ -2707,7 +2709,9 @@ def demonstrate_bypass(co):
     functions = {refusal: function for refusal, _, function in CONTROLS}
     script = co.root / 'build.sh'
     original = co.script
-    for refusal, label, mutate, *where in MUTATIONS:
+    for index, (refusal, label, mutate, *where) in enumerate(MUTATIONS, 1):
+        # Several mutations can guard one refusal: the index keeps each one's case directories apart.
+        tag = f'{index:02d}-{refusal}'
         target = co.root / (where[0] if where else 'build.sh')
         kept = target.read_bytes()
         mutated = mutate(kept.decode())
@@ -2717,7 +2721,7 @@ def demonstrate_bypass(co):
             for stage in ('self_checks', 'guard'):
                 if stage == 'guard':
                     target.write_bytes(kept)
-                    _restore(co, script, original, f'restore-before-guard-{refusal}-')
+                    _restore(co, script, original, f'restore-before-guard-{tag}-')
                 if target == script:
                     text = mutated if stage == 'self_checks' else _without_self_checks(mutated)
                     script.write_bytes(text.encode())
@@ -2728,7 +2732,7 @@ def demonstrate_bypass(co):
                         text = _without_self_checks(original.decode())
                         script.write_bytes(text.encode())
                         co.script = text.encode()
-                co.prefix = f'mutated-{stage}-{refusal}-'
+                co.prefix = f'mutated-{stage}-{tag}-'
                 co.last = None
                 failure = _control_failure(functions[refusal], co, 'full')
                 assert failure is not None, f'{refusal}: the control passed with the {label} ({stage} stage)'
@@ -2741,8 +2745,8 @@ def demonstrate_bypass(co):
             co.script = original
             (co.builddir / 'pw-probe-runner').unlink(missing_ok=True)
         assert not stages['guard']['self_check_refused'], stages['guard']
-        _restore(co, script, original, f'restore-before-repeat-{refusal}-')
-        co.prefix = f'repeat-{refusal}-'
+        _restore(co, script, original, f'restore-before-repeat-{tag}-')
+        co.prefix = f'repeat-{tag}-'
         functions[refusal](co, 'full')
         co.prefix = ''
         results.append(dict(refusal=refusal, mutation=label, file=str(target.relative_to(co.root)),

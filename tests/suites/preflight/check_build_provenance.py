@@ -970,6 +970,15 @@ class OutputTargetStampTests(StampFixture):
         status, _, err = self.extend('1')
         self.assertEqual(status, 2, err)
         self.assertIn('output.swift_target', err)
+        # A partial build reconfigures the directory without the XPC pieces, so its introspection lists no Swift target;
+        # a full build reusing it is not refused for that before its compile regenerates the target.
+        stamp.write_bytes(extended)
+        write_configured_output(self.builddir, swift=False)
+        (self.builddir / 'meson-info/intro-buildoptions.json').write_text(json.dumps([dict(name='xpc', value=False),
+                                                                                      dict(name='inspection', value=True)]))
+        status, _, err = self.check('1')
+        self.assertEqual(status, 0, err)
+        self.assertEqual(stamp.read_bytes(), extended)
 
 
 class FailedObservationTests(StampFixture):

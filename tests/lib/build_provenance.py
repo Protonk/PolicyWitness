@@ -957,8 +957,12 @@ def stamp_check_admitted(state, xpc):
             raise Refusal(f"{STAMP_NAME} names Swift compiler {stamped_commands['swift']} but the directory records "
                           f"{recorded.get('swift', {}).get('command')}; the stamp does not describe this directory: {FRESH_REMEDY}", 2)
         compilers['swift'] = recorded['swift']
-    configured, _ = configured_output(builddir, xpc=swift_applicable)
-    departed = described(stamp['fields'], configured, output_fields(xpc=swift_applicable))
+    # The Swift target is compared only while the directory is configured with the XPC pieces: a partial build
+    # reconfigures it without them, and the compile that enables them again regenerates the target, which stamp-extend
+    # compares with the stamp after compiling.
+    swift_configured = swift_applicable and meson_options(builddir).get('values', {}).get('xpc') is True
+    configured, _ = configured_output(builddir, xpc=swift_configured)
+    departed = described(stamp['fields'], configured, output_fields(xpc=swift_configured))
     if departed is not None:
         raise Refusal(f'{STAMP_NAME} records {departed} = {redact(stamp["fields"].get(departed))!r} but the directory is configured with '
                       f'{redact(configured.get(departed))!r}; the stamp does not describe this directory: {FRESH_REMEDY}', 2)
