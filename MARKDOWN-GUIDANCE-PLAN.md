@@ -1,5 +1,8 @@
 # Markdown guidance revision plan
 
+Implementation evidence and build-issue resolutions are recorded in the
+[verification account](records/DOC-REWORK-VERIFICATION.md).
+
 ## Intended result and boundary
 
 Revise maintained Markdown to remove the standalone singular and plural actor
@@ -107,12 +110,13 @@ the commit range, tested revisions and any unresolved infrastructure findings.
 
 The inventory below was taken at `3354935`. Git lists 116 tracked Markdown
 paths: 111 canonical targets, four symlink aliases and the excluded
-`CONTRIBUTING.md`. This new plan adds one canonical target. The only nonignored
+`CONTRIBUTING.md`. This plan and its verification record add two canonical
+targets. The only nonignored
 untracked Markdown at inventory time was the original prompt. It remains
 outside the editorial target list while present and may be deleted without
-removing any of the 112 canonical targets.
+removing any of the 113 canonical targets.
 
-Use the explicit 112-path target list in the appendix. At execution start and
+Use the explicit 113-path target list in the appendix. At execution start and
 before final verification, reconcile it with:
 
 ```sh
@@ -607,6 +611,7 @@ records/BUILD-PROVENANCE-ACCEPTANCE.md
 records/BYOXPC-ADHOC-BEHAVIOR.md
 records/BYOXPC-ENTITLEMENT-BEHAVIOR.md
 records/BYOXPC-VERIFICATION-BOUNDARIES.md
+records/DOC-REWORK-VERIFICATION.md
 records/EVIDENCE-CLARITY-PARKING-LOT.md
 records/INTERRUPTION-HOOKS-OUTFLOW.md
 records/ISSUANCE-TIMING-OUTFLOW.md

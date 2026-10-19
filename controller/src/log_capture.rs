@@ -453,6 +453,7 @@ pub fn capture(
 }
 
 /// Stop `reserve_ms` before the shared deadline instead of at it.
+#[allow(dead_code)] // Used by the observer binary and controller receiver tests.
 pub fn capture_reserving(
     command: &mut Command,
     budget: CollectionBudget,
