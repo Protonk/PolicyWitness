@@ -63,6 +63,8 @@ RUNNER_DIR = REPO_ROOT / "runner"
 MESON_BUILD = REPO_ROOT / "meson.build"
 sys.path.insert(0, str(REPO_ROOT / "tests" / "lib"))
 import native_sources  # noqa: E402  (shared with the order-barrier control and build.sh)
+sys.path.insert(0, str(REPO_ROOT / "docs"))
+import markdown_reader  # noqa: E402  (every Markdown structure below is read through it)
 # Runner sources live under SwiftPM-convention target dirs. The source-set
 # checks discover the on-disk set by walking these; the per-symbol contract
 # checks below read specific files out of the core target. Both reference
@@ -165,51 +167,56 @@ def default_suites_from_catalog() -> set[str]:
                    for case in group.get('cases', []))}
 
 
+def required_section(path: Path, heading: str, level: int | None = 2):
+    """The document and its one section under this heading text; a missing section stops the check."""
+    document = markdown_reader.read(path)
+    found = document.section(heading, level)
+    if found is None:
+        fail(f"{path.relative_to(REPO_ROOT)} is missing the {'#' * (level or 2)} {heading!r} section")
+        sys.exit(2)
+    return document, found
+
+
+def section_rows(document, section) -> list[tuple]:
+    """Body rows of the tables in a section."""
+    return [row for table in document.tables if section.holds(table.lines) for row in table.rows]
+
+
+def code_cell(cell, pattern: str) -> str | None:
+    """The name in a cell that holds only a code span matching the pattern."""
+    if cell.code == [cell.text] and re.fullmatch(pattern, cell.text):
+        return cell.text
+    return None
+
+
 def parse_index_rows() -> dict[str, str]:
     """Return {suite_name: tier} parsed from the suite-coverage table
     in tests/README.md.
 
-    Only the table under the "## Suite coverage" heading is considered;
-    parsing stops at the next "## " heading so prose tables elsewhere in
-    the README can't leak in.
+    Only tables in the "Suite coverage" section count, so prose tables
+    elsewhere in the README can't leak in.
     """
-    text = TESTS_README.read_text(encoding="utf-8")
-    parts = text.split("## Suite coverage", 1)
-    if len(parts) != 2:
-        fail("tests/README.md is missing the '## Suite coverage' section")
-        sys.exit(2)
-    section = parts[1]
-    next_heading = re.search(r'^##\s', section, re.MULTILINE)
-    if next_heading:
-        section = section[: next_heading.start()]
+    document, section = required_section(TESTS_README, "Suite coverage")
     rows: dict[str, str] = {}
-    row_re = re.compile(r'^\|\s*`([a-z][a-z0-9_]*)`\s*\|\s*([A-Za-z][^|]*?)\s*\|', re.MULTILINE)
-    for match in row_re.finditer(section):
-        rows[match.group(1)] = match.group(2).strip()
+    for cells in section_rows(document, section):
+        name = code_cell(cells[0], r"[a-z][a-z0-9_]*")
+        if name and len(cells) > 1 and re.match(r"[A-Za-z]", cells[1].text.strip()):
+            rows[name] = cells[1].text.strip()
     return rows
 
 
 def _parse_matrix_section(heading: str) -> set[str]:
-    text = TESTS_COVERAGE.read_text(encoding="utf-8")
-    parts = text.split(heading, 1)
-    if len(parts) != 2:
-        fail(f"tests/COVERAGE.md is missing the {heading!r} section")
-        sys.exit(2)
-    matrix_text = parts[1]
-    # Stop at the next ## heading if present.
-    next_heading = re.search(r'^##\s', matrix_text, re.MULTILINE)
-    if next_heading:
-        matrix_text = matrix_text[: next_heading.start()]
-    row_re = re.compile(r'^\|\s*`([a-z][a-z0-9_]*)`\s*\|', re.MULTILINE)
-    return {m.group(1) for m in row_re.finditer(matrix_text)}
+    document, section = required_section(TESTS_COVERAGE, heading)
+    return {name for cells in section_rows(document, section)
+            if (name := code_cell(cells[0], r"[a-z][a-z0-9_]*"))}
 
 
 def parse_matrix_outcomes() -> set[str]:
-    return _parse_matrix_section("## Normalized outcome coverage matrix")
+    return _parse_matrix_section("Normalized outcome coverage matrix")
 
 
 def parse_attempt_outcome_matrix() -> set[str]:
-    return _parse_matrix_section("## Attempt outcome coverage matrix")
+    return _parse_matrix_section("Attempt outcome coverage matrix")
 
 
 def _parse_swift_enum_constants(enum_name: str) -> set[str]:
@@ -545,24 +552,27 @@ def parse_pwrunner_wire_filter_constants() -> dict[str, str]:
 
 
 def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
-    """Extract (op, filter) pairs from docs/PolicyWitness.md "Currently in
-    this category:" bullets, formatted as
+    """Extract (op, filter) pairs from the list after docs/PolicyWitness.md's
+    "Currently in this category:" paragraph, formatted as
     `(operation, filter_kind)` at the start of each bullet."""
-    text = POLICYWITNESS_MD.read_text(encoding="utf-8")
-    section_re = re.compile(
-        r'## Filter kinds where prediction is unavailable.*?Currently in this category:\s*\n(.*?)(?:\n##|\Z)',
-        re.DOTALL,
-    )
-    match = section_re.search(text)
-    if match is None:
+    document = markdown_reader.read(POLICYWITNESS_MD)
+    section = document.section("Filter kinds where prediction is unavailable")
+    marker = None if section is None else next(
+        (inline for inline in document.inlines if inline.kind == "paragraph" and section.holds(inline.lines)
+         and inline.text.startswith("Currently in this category:")), None)
+    if marker is None:
         fail(
             "could not locate 'Filter kinds where prediction is unavailable' "
-            "section in docs/PolicyWitness.md (or its 'Currently in this category:' marker)"
+            "section in docs/PolicyWitness.md (or its 'Currently in this category:' paragraph)"
         )
         sys.exit(2)
-    body = match.group(1)
-    pair_re = re.compile(r'-\s*`\(([a-z][a-z0-9-]*)\s*,\s*([a-z][a-z0-9_]*)\)`')
-    return {(m.group(1), m.group(2)) for m in pair_re.finditer(body)}
+    pairs = set()
+    for item in document.items:
+        if item.first and section.holds(item.lines) and item.lines[0] >= marker.lines[1]:
+            pair = re.fullmatch(r"\(([a-z][a-z0-9-]*)\s*,\s*([a-z][a-z0-9_]*)\)", item.first.leading_code or "")
+            if pair:
+                pairs.add((pair.group(1), pair.group(2)))
+    return pairs
 
 
 def check_prediction_unavailable_agreement() -> list[str]:
@@ -803,21 +813,12 @@ def parse_test_override_fields() -> set[str]:
 
 
 def parse_readme_test_override_rows() -> set[str]:
-    """Return the keys tabulated under runner/README.md's
-    "## Test seam: `_test_overrides`" heading. Parsing stops at the next
-    "## " heading so other tables in the README can't leak in."""
-    text = RUNNER_README.read_text(encoding="utf-8")
-    heading = "## Test seam: `_test_overrides`"
-    parts = text.split(heading, 1)
-    if len(parts) != 2:
-        fail(f"runner/README.md is missing the {heading!r} section")
-        sys.exit(2)
-    section = parts[1]
-    next_heading = re.search(r'^##\s', section, re.MULTILINE)
-    if next_heading:
-        section = section[: next_heading.start()]
-    row_re = re.compile(r'^\|\s*`([a-z_][a-z0-9_]*)`\s*\|', re.MULTILINE)
-    return {m.group(1) for m in row_re.finditer(section)}
+    """Return the keys tabulated in runner/README.md's
+    "Test seam: `_test_overrides`" section, so other tables in the README
+    can't leak in."""
+    document, section = required_section(RUNNER_README, "Test seam: _test_overrides")
+    return {name for cells in section_rows(document, section)
+            if (name := code_cell(cells[0], r"[a-z_][a-z0-9_]*"))}
 
 
 def check_test_overrides_table_agreement() -> list[str]:
@@ -854,76 +855,32 @@ HARNESS_GUIDANCE_ROUTES = [
 ]
 
 
-def harness_guidance_prose(text: str) -> str:
-    """Ignore comments and fenced/indented examples in this heading/link contract."""
-    lines = []
-    fence = None
-    comment = False
-    # Indentation cannot open an example inside a paragraph; it continues one.
-    paragraph = False
-    for line in text.splitlines():
-        if fence is not None:
-            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}\s*", line):
-                fence = None
-            lines.append("")
-            continue
-        parts = []
-        while line:
-            if comment:
-                end = line.find("-->")
-                if end < 0:
-                    break
-                line, comment = line[end + 3:], False
-            else:
-                start = line.find("<!--")
-                if start < 0:
-                    parts.append(line)
-                    break
-                parts.append(line[:start])
-                line, comment = line[start + 4:], True
-        prose = "".join(parts)
-        marker = re.match(r" {0,3}(`{3,}|~{3,})(.*)$", prose)
-        if marker and (marker[1][0] != "`" or "`" not in marker[2]):
-            fence = marker[1]
-            lines.append("")
-        elif prose.startswith(("    ", "\t")) and not paragraph:
-            lines.append("")
-        else:
-            lines.append(prose)
-        paragraph = bool(lines[-1].strip()) and not re.match(r" {0,3}#{1,6}(?:[ \t]|$)", lines[-1])
-    return "\n".join(lines)
-
-
 def check_harness_guidance_routes() -> list[str]:
     problems: list[str] = []
     sections = {}
-    heading_re = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$", re.M)
     for path in HARNESS_GUIDANCE_FILES:
-        prose = harness_guidance_prose(path.read_text(encoding="utf-8"))
-        headings = list(heading_re.finditer(prose))
-        matches = [i for i, match in enumerate(headings) if match[2] == HARNESS_GUIDANCE_HEADING]
+        document = markdown_reader.read(path)
+        found = document.sections(HARNESS_GUIDANCE_HEADING)
         label = f"  harness guidance: {path.relative_to(REPO_ROOT)}"
-        if len(matches) != 1:
-            problems.append(f"{label}: expected one '{HARNESS_GUIDANCE_HEADING}' heading; found {len(matches)}")
+        if len(found) != 1:
+            problems.append(f"{label}: expected one '{HARNESS_GUIDANCE_HEADING}' heading; found {len(found)}")
             continue
-        index = matches[0]
-        match = headings[index]
-        end = next((h.start() for h in headings[index + 1:] if len(h[1]) <= len(match[1])), len(prose))
-        body = prose[match.end():end]
-        if not re.search(r"\w", heading_re.sub("", body)):
+        section = found[0]
+        # Headings alone cannot supply guidance; comments, code and HTML are not prose.
+        body = [inline for inline in document.inlines if inline.kind != "heading" and section.holds(inline.lines)]
+        if not any(re.search(r"\w", inline.text) for inline in body):
             problems.append(f"{label}: empty '{HARNESS_GUIDANCE_HEADING}' section")
             continue
-        sections[path] = body
+        sections[path] = (document, section)
 
     root = HARNESS_GUIDANCE_FILES[0]
     if root in sections:
-        # An example inside inline code or an image is not a diagnostic route.
-        # Code in a label still leaves a label; neither spans a blank line.
-        within_paragraph = r"(?:[^\n]|\n(?![ \t]*\n))"
-        body = re.sub(r"(`+)" + within_paragraph + r"*?\1", "code", sections[root])
+        document, section = sections[root]
         routes = set()
-        for target in re.findall(r"(?<!!)(?<!\\)\[(?:(?!\])" + within_paragraph + r")+\]\(([^()\s]+)\)", body):
-            filename, separator, fragment = target.partition("#")
+        for link in document.links:
+            if link.image or not section.holds(link.inline.lines):
+                continue
+            filename, separator, fragment = link.target.partition("#")
             if separator and filename and not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", filename):
                 routes.add(((root.parent / filename).resolve(), fragment))
         for path, fragment in HARNESS_GUIDANCE_ROUTES:
@@ -933,7 +890,6 @@ def check_harness_guidance_routes() -> list[str]:
                     f"{path.relative_to(REPO_ROOT)}#{fragment} in '{HARNESS_GUIDANCE_HEADING}'"
                 )
     return problems
-
 
 # ---------------------------------------------------------------------------
 # Entry point
@@ -963,11 +919,12 @@ def parse_cli_usage_lines() -> list[str]:
 def parse_readme_surface_lines() -> list[str]:
     if not CONTROLLER_README.is_file():
         return []
-    text = CONTROLLER_README.read_text(encoding="utf-8")
-    match = re.search(r"## CLI surface \(contract\).*?```text\n(.*?)```", text, re.DOTALL)
-    if match is None:
+    document = markdown_reader.read(CONTROLLER_README)
+    section = document.section("CLI surface (contract)", 2)
+    fence = next((block for block in document.fences("text") if section and section.holds(block.lines)), None)
+    if fence is None:
         return []
-    return [line for line in match.group(1).splitlines() if line.startswith("policy-witness ")]
+    return [line for line in fence.content.splitlines() if line.startswith("policy-witness ")]
 
 
 def check_cli_surface_agreement() -> list[str]:
@@ -994,36 +951,19 @@ BUILD_DOC = REPO_ROOT / "docs/BUILD.md"
 WORKER_DOC = REPO_ROOT / "docs/WORKER.md"
 
 
-def architecture_prose() -> str:
-    """The handwritten text of the architecture document: no generated regions, no fenced blocks."""
-    return document_prose(ARCHITECTURE_DOC)
+def handwritten(path: Path):
+    """The document and a test for lines outside its generated regions, which hold no handwritten text."""
+    document = markdown_reader.read(path)
+    regions = [(document.line_of(m.start()), document.line_of(m.end()) + 1) for m in
+               re.finditer(r"<!-- BEGIN GENERATED ([^>]+?) -->.*?<!-- END GENERATED \1 -->", document.text, re.S)]
+    return document, lambda lines: not any(a <= lines[0] < b for a, b in regions)
 
 
-def document_prose(path: Path) -> str:
-    """The handwritten text of a generated document: no generated regions, no fenced blocks."""
-    text = path.read_text()
-    text = re.sub(r"<!-- BEGIN GENERATED ([^>]+?) -->.*?<!-- END GENERATED \1 -->", "", text, flags=re.S)
-    kept, fence = [], None
-    for line in text.splitlines():
-        match = re.match(r"^\s*(`{3,}|~{3,})", line)
-        if match:
-            delimiter = match.group(1)
-            if fence is None:
-                fence = delimiter
-            elif delimiter[0] == fence[0] and len(delimiter) >= len(fence):
-                fence = None
-        elif fence is None:
-            kept.append(line)
-    return "\n".join(kept)
-
-
-def heading_anchor(heading: str) -> str:
-    return re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
-
-
-def section(prose: str, heading: str) -> str | None:
-    match = re.search(r"^## " + re.escape(heading) + r"\s*$(.*?)(?=^## |\Z)", prose, re.M | re.S)
-    return match.group(1) if match else None
+def bold_labels(document, section, authored) -> list[str]:
+    """The bold text opening each top-level bullet in a section."""
+    return [item.first.leading_strong for item in document.items
+            if item.depth == 0 and item.first and section.holds(item.lines) and authored(item.lines)
+            and item.first.leading_strong is not None]
 
 
 def check_known_gap_index() -> list[str]:
@@ -1038,24 +978,28 @@ def check_known_gap_index() -> list[str]:
 
 def known_gap_index_problems(document: Path) -> list[str]:
     name = document.relative_to(REPO_ROOT).as_posix()
-    prose = document_prose(document)
-    headings = [(m.start(), m.group(1).strip()) for m in re.finditer(r"^## (.+?)\s*$", prose, re.M)]
-    if not headings or headings[-1][1] != "Known gaps":
+    parsed, authored = handwritten(document)
+    headings = [h for h in parsed.headings if h.level == 2 and authored((h.line, h.line + 1))]
+    if not headings or headings[-1].text != "Known gaps":
         return [f"  known gaps: {name} must end with a '## Known gaps' section"]
-    index_start = headings[-1][0]
+    index_start = headings[-1].line
     gaps = []
-    for paragraph in re.finditer(r"(?:(?<=\n\n)|^)Known gap[^\n]*(?:\n(?!\n)[^\n]*)*", prose, re.M):
-        owner = [h for h in headings if h[0] < paragraph.start()]
-        if paragraph.start() >= index_start or not owner:
-            return [f"  known gaps: {name}: a Known gap paragraph must sit under the section whose promise it limits: {paragraph.group(0)[:60]!r}"]
-        gaps.append(heading_anchor(owner[-1][1]))
-    bullets = re.findall(r"^- (.*)$", prose[index_start:], re.M)
+    for paragraph in parsed.inlines:
+        if (paragraph.kind != "paragraph" or paragraph.depth or not authored(paragraph.lines)
+                or not paragraph.text.startswith("Known gap")):
+            continue
+        owner = [h for h in headings if h.line < paragraph.lines[0]]
+        if paragraph.lines[0] >= index_start or not owner:
+            return [f"  known gaps: {name}: a Known gap paragraph must sit under the section whose promise it limits: {paragraph.text[:60]!r}"]
+        gaps.append(markdown_reader.slug(owner[-1].text))
     linked = []
-    for bullet in bullets:
-        match = re.match(r"\[[^\]]+\]\(#([^)]+)\)", bullet)
-        if not match:
-            return [f"  known gaps: {name}: an index bullet must open with a link to its section: {bullet[:60]!r}"]
-        linked.append(match.group(1))
+    for item in parsed.items:
+        if item.depth or item.lines[0] < index_start or not authored(item.lines):
+            continue
+        link = item.first.leading_link if item.first else None
+        if link is None or not link.target.startswith("#"):
+            return [f"  known gaps: {name}: an index bullet must open with a link to its section: {(item.first.text if item.first else '')[:60]!r}"]
+        linked.append(link.target[1:])
     if linked != gaps:
         return [f"  known gaps: {name}: the index lists {linked} but the Known gap paragraphs sit under {gaps}"]
     return []
@@ -1063,22 +1007,20 @@ def known_gap_index_problems(document: Path) -> list[str]:
 
 def check_evidence_channel_paths() -> list[str]:
     """Every landing path in the evidence-channels table resolves in a shape golden."""
-    prose = architecture_prose()
-    body = section(prose, "Evidence channels and ownership")
-    if body is None:
+    document, authored = handwritten(ARCHITECTURE_DOC)
+    section = document.section("Evidence channels and ownership", 2)
+    if section is None:
         return ["  evidence channels: section missing from docs/ARCHITECTURE.md"]
-    rows = [line for line in body.splitlines()
-            if line.startswith("| ") and not line.startswith(("| Channel", "| ---"))]
+    rows = [row for table in document.tables if section.holds(table.lines) and authored(table.lines) for row in table.rows]
     if not rows:
         return ["  evidence channels: table missing from docs/ARCHITECTURE.md"]
     shapes = {name: set(json.loads(path.read_text())["shape"]) for name, path in SHAPE_GOLDENS.items()}
     problems: list[str] = []
-    for row in rows:
-        cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    for cells in rows:
         if len(cells) < 4:
-            problems.append(f"  evidence channels: row has no landing column: {row[:60]!r}")
+            problems.append(f"  evidence channels: row has no landing column: {cells[0].text[:60]!r}")
             continue
-        for path in re.findall(r"`([^`]+)`", cells[3]):
+        for path in cells[3].code:
             golden = "envelope" if path.startswith("data.") else "reply"
             if f"{golden}.{path}" not in shapes[golden]:
                 problems.append(f"  evidence channels: `{path}` is not a key of the {golden} shape golden")
@@ -1087,16 +1029,26 @@ def check_evidence_channel_paths() -> list[str]:
 
 def check_core_ideas_agreement() -> list[str]:
     """Match principle labels and order; each document's explanatory prose is independent."""
-    ideas = section((REPO_ROOT / "AGENTS.md").read_text(), "Core ideas")
-    principles = section(architecture_prose(), "Principles as enforced constraints")
+    agents = markdown_reader.read(REPO_ROOT / "AGENTS.md")
+    ideas = agents.section("Core ideas", 2)
+    architecture, authored = handwritten(ARCHITECTURE_DOC)
+    principles = architecture.section("Principles as enforced constraints", 2)
     if ideas is None or principles is None:
         return ["  core ideas: AGENTS.md 'Core ideas' or docs/ARCHITECTURE.md 'Principles as enforced constraints' is missing"]
-    expected = re.findall(r"^- \*\*(.+?)\*\*", ideas, re.M)
-    actual = [lead.rstrip(".") for lead in re.findall(r"^- \*\*(.+?)\*\*", principles, re.M)]
+    expected = bold_labels(agents, ideas, lambda lines: True)
+    actual = [lead.rstrip(".") for lead in bold_labels(architecture, principles, authored)]
     if not expected or expected != actual:
         return [f"  core ideas: AGENTS.md lists {expected} but the architecture principles are {actual}. "
                 "Keep the bold principle labels in the same order; explanatory prose is not compared."]
     return []
+
+
+def guarded(check) -> list[str]:
+    """A check's problems; a document the Markdown reader refuses is reported, and the other checks still run."""
+    try:
+        return check()
+    except markdown_reader.Refused as error:
+        return [f"  markdown: {error}"]
 
 
 def main() -> int:
@@ -1104,24 +1056,24 @@ def main() -> int:
     # sources: arrays to parse), so the load-bearing comparison is the tree
     # against the explicit lists in meson.build.
     problems: list[str] = []
-    problems.extend(check_meson_source_lists())
-    problems.extend(check_readmes_present())
-    problems.extend(check_index_vs_disk())
-    problems.extend(check_baseline_in_catalog_defaults())
-    problems.extend(check_runner_outcome_suites_have_matrix_rows())
-    problems.extend(check_normalized_outcomes_have_matrix_rows())
-    problems.extend(check_attempt_outcomes_have_matrix_rows())
-    problems.extend(check_attempt_kind_enum_agreement())
-    problems.extend(check_prediction_unavailable_agreement())
-    problems.extend(check_prediction_unavailable_planner())
-    problems.extend(check_test_overrides_table_agreement())
-    problems.extend(check_harness_guidance_routes())
-    problems.extend(check_cli_surface_agreement())
-    problems.extend(host_invariance_controls())
-    problems.extend(check_host_invariance())
-    problems.extend(check_known_gap_index())
-    problems.extend(check_evidence_channel_paths())
-    problems.extend(check_core_ideas_agreement())
+    problems.extend(guarded(lambda: check_meson_source_lists()))
+    problems.extend(guarded(lambda: check_readmes_present()))
+    problems.extend(guarded(lambda: check_index_vs_disk()))
+    problems.extend(guarded(lambda: check_baseline_in_catalog_defaults()))
+    problems.extend(guarded(lambda: check_runner_outcome_suites_have_matrix_rows()))
+    problems.extend(guarded(lambda: check_normalized_outcomes_have_matrix_rows()))
+    problems.extend(guarded(lambda: check_attempt_outcomes_have_matrix_rows()))
+    problems.extend(guarded(lambda: check_attempt_kind_enum_agreement()))
+    problems.extend(guarded(lambda: check_prediction_unavailable_agreement()))
+    problems.extend(guarded(lambda: check_prediction_unavailable_planner()))
+    problems.extend(guarded(lambda: check_test_overrides_table_agreement()))
+    problems.extend(guarded(lambda: check_harness_guidance_routes()))
+    problems.extend(guarded(lambda: check_cli_surface_agreement()))
+    problems.extend(guarded(lambda: host_invariance_controls()))
+    problems.extend(guarded(lambda: check_host_invariance()))
+    problems.extend(guarded(lambda: check_known_gap_index()))
+    problems.extend(guarded(lambda: check_evidence_channel_paths()))
+    problems.extend(guarded(lambda: check_core_ideas_agreement()))
 
     if problems:
         fail("source/test-registry drift detected:")

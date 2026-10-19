@@ -97,12 +97,13 @@ its wording and paragraph order are independent.
 
 [`check_harness_guidance_routes`](check.py) requires exactly one nonempty
 `Sandboxed automation harnesses` section in each document and links from the
-root section to the other diagnostic sections. Sections end at the next heading
-of the same or higher level. Headings alone, comments and fenced or indented
-examples cannot supply guidance; examples and images cannot supply a route.
-An indented line that continues a paragraph is prose, not an example. A link
-label can contain code and wrap within its paragraph. The rule compares
-resolved paths and fragments, not link labels or prose.
+root section to the other diagnostic sections. It reads each document through
+[`docs/markdown_reader.py`](../../../docs/markdown_reader.py). Sections end at
+the next heading of the same or higher level. Headings alone, comments, code
+and other HTML cannot supply guidance; examples and images cannot supply a
+route. The rule compares resolved paths and fragments, not link labels or
+prose. A document the reader refuses is reported, and the other drift checks
+still run.
 G11 below also checks document links and their destination anchors.
 
 The rule establishes presence and navigation, not the correctness or completeness
@@ -118,11 +119,12 @@ principle is enforced at runtime.
 Both checks run in `source_drift/runner_source_manifests_agree`, included in the
 default battery. They are not direct `build.sh` gates. Disposable-checkout
 controls run the real checker: independent rewrites, paragraph reordering,
-rewrapping, changed, code or wrapped link labels and routes on indented
-continuation lines pass; missing, duplicated or empty sections and missing or
-incorrect root routes fail. Fake guidance or routes in examples, comments or the
-wrong section fail, as do routes indented after a blank line or heading and
-labels split by a blank line. Independent principle prose edits pass;
+rewrapping, changed, code or wrapped link labels, routes on indented
+continuation lines and routes in list content after a blank line pass; missing,
+duplicated or empty sections and missing or incorrect root routes fail. Fake
+guidance or routes in examples, comments or the wrong section fail, as do
+routes indented after a blank line or heading, labels split by a blank line and
+an inline comment containing `--`, which the reader refuses. Independent principle prose edits pass;
 a removed, renamed or reordered label on one side fails. Every touched input
 is restored between controls and the restored documents must pass. Inputs and
 command receipts are retained alongside the planner controls.

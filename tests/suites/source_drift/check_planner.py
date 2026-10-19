@@ -9,6 +9,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import native_sources  # noqa: E402
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402  (only for its file list; the fixtures below read Markdown themselves)
 HOST = Path('runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift')
 CALL = 'if predictionUnavailableOpFilters.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {'
 
@@ -32,6 +34,7 @@ def main(out):
     # so a new C target cannot be left out of the fixture.
     paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
     paths += [str(p.relative_to(ROOT)) for p in (ROOT / 'runner/Sources').rglob('*') if p.is_file()]
+    paths += markdown_reader.source_files()
     paths += [str(p.relative_to(ROOT)) for pattern in ('*/run.sh', '*/README.md')
               for p in (ROOT / 'tests/suites').glob(pattern)]
     for name in paths:
@@ -234,6 +237,8 @@ def guidance_scenarios(repo):
             ('indented-continuation', 'continued\n    ' + link, 0),
             ('indented-example', '\n\n    ' + link + '\n\n', 1),
             ('indented-after-heading', '\n\n#### Example\n    ' + link + '\n\n', 1),
+            # A list item's content after a blank line stays in the item.
+            ('list-continuation', '\n\n- Diagnostics are\n\n    ' + link + '\n\n', 0),
         ]
         name = target.replace('/', '-').replace('.', '-')
         for kind, replacement, status in variants:
@@ -243,6 +248,10 @@ def guidance_scenarios(repo):
         # A working link elsewhere in the root document cannot supply this route.
         moved = link + '\n\n' + source[:start] + body.replace(link, '', 1) + source[end:]
         scenarios.append((f'guidance-route-outside-section-{name}', {root: moved}, 1, diagnostic))
+    # The pinned parser reads an inline comment containing "--" as text; the reader refuses it.
+    # A word first keeps the comment inline: one that begins a line is an HTML block.
+    commented = source[:start] + body.replace(link, 'see <!-- a -- b ' + link + ' -->', 1) + source[end:]
+    scenarios.append(('guidance-route-unrecognized-comment', {root: commented}, 1, 'remove the "--"'))
     scenarios.append(('guidance-routes-restored', {root: source}, 0, None))
 
     agents = paths[0]

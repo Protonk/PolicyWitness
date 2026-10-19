@@ -84,3 +84,24 @@ cells. `prose_lines` and `prose_text` are gone. New controls: a broken link
 with a wrapped label or a code label containing `]` is reported; text in a
 comment or inline code is not a link. `source_drift` passed
 (`markdown-switch-g9-g11-20261019`).
+
+## The drift checker
+
+| Reading | Compared over | Differences | Review |
+| --- | --- | --- | --- |
+| Suite-coverage rows, both outcome matrices, the `_test_overrides` rows, the prediction-unavailable pairs, the CLI surface lines | `tests/README.md`, `tests/COVERAGE.md`, `runner/README.md`, `docs/PolicyWitness.md`, `controller/README.md` | None | 42 suites, 16 and 10 outcomes, 10 keys, 4 pairs and 3 usage lines in both. The prediction-unavailable section is level 3; the old pattern found it only because `## ` is a substring of `### `. |
+| Evidence-channel landing paths and the core-idea labels | `docs/ARCHITECTURE.md`, `AGENTS.md` | None | 12 paths and 6 labels in both. |
+| Known gap paragraphs and index links | The architecture, build and worker tours | None | Indexes of 1, 5 and 3 entries in both. |
+| Guidance sections and root routes | The four guidance documents | None | Both pass. |
+
+`harness_guidance_prose`, `document_prose`, `architecture_prose`, `section` and
+`heading_anchor` are gone. A document the reader refuses is reported as a
+problem, and the other checks still run. The planner copies the reader and the
+vendored parser into its disposable checkout; its fixtures still find sections
+and links with their own patterns. New planner controls: a route in list
+content after a blank line passes, which the old checker reported as missing,
+and an inline comment containing `--` is refused. The first version of the
+refusal control put the comment at the start of a line, which is an HTML block
+that the parser and GitHub both hide, so the checker reported a missing route.
+The control now puts a word first. All 182 planner controls passed;
+`source_drift` passed (`markdown-switch-check-3-20261019`).
