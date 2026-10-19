@@ -178,6 +178,34 @@
       "reason": "Apple Silicon review repairs: corrected refusal controls passed all 83 controls and 13 mutation demonstrations; all 45 provenance helper tests and build documentation checks passed. Test source is 9f762a0; the unchanged signed app is from d98193e.",
       "source": "9f762a09de7fdf9f59f4e7254e7897c5c68a8311",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/doc-rework-baseline-20261019",
+      "run_id": "20261019T201847Z_cbd7e783",
+      "source": "df7365ccf334bbc05bdbe9b1a1e5c5ed17500adc",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Temporary doc-rework merge-review evidence: baseline build and controls, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
+    },
+    {
+      "path": "runs/doc-rework-candidate-20261019",
+      "run_id": "20261019T202934Z_e560a554",
+      "source": "2b0be8e1632850aaaa12c657e52882c6b0233d7d",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Temporary doc-rework merge-review evidence: complete acceptance and signed build comparison, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
+    },
+    {
+      "path": "runs/doc-rework-test-build-fixes-20261019",
+      "run_id": "20261019T203850Z_2addfc76",
+      "source": "45bf39fa3f93eaca583e6226a05a6a3d1ae6d073",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Temporary doc-rework merge-review evidence: failed test-build cleanup and its diagnostics, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
+    },
+    {
+      "path": "runs/doc-rework-test-build-fixes-2-20261019",
+      "run_id": "20261019T203951Z_caef01f6",
+      "source": "5d6af0aa82d5b0623dc12cd05f5ed37b47985a2e",
+      "app_inventory": "artifact-integrity/before.json",
+      "reason": "Temporary doc-rework merge-review evidence: corrected warning-free fixture build and Swift tests, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
     }
   ]
 }
