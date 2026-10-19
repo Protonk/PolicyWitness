@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+import os
 from pathlib import Path
 import plistlib
 import shutil
@@ -125,6 +126,60 @@ def check_preflight(out):
         assert report == 0 and 'WARNING:' in stderr.getvalue()
         assert json.loads(stdout.getvalue())['version'] == '0.9.0'
     return repo
+
+
+def check_branch_names(out):
+    """Compare real build stamps and release decisions at one source/path under new refs."""
+    work = out / 'branch-names'
+    work.mkdir()
+    repo = make_repo(work)
+    git(repo, 'branch', 'master')
+    git(repo, 'branch', 'doc-rework')
+    source = (ROOT / 'build.sh').read_text()
+    start = source.index('PW_BUILD_DESCRIBE=')
+    end = source.index('echo "==> Build stamp:', start)
+    stamp_source = source[start:end]
+    assert 'PW_BUILD_COMMIT=' in stamp_source and 'PW_BUILD_NUMBER=' in stamp_source
+    command = ('ROOT_DIR="$1"\n' + stamp_source +
+               '\nprintf "%s\\n" "$PW_BUILD_DESCRIBE" "$PW_BUILD_COMMIT" "$PW_VERSION" "$PW_BUILD_NUMBER"\n')
+    env = {key: value for key, value in os.environ.items()
+           if key not in {'PW_VERSION', 'PW_BUILD_NUMBER'}}
+    receipts = []
+    for state in ('untagged', 'tagged', 'dirty'):
+        if state == 'tagged':
+            git(repo, 'tag', '-a', 'v0.9.1', '-m', 'branch comparison')
+        elif state == 'dirty':
+            (repo / 'README.md').write_text('dirty branch comparison\n')
+        original = None
+        for branch in ('main', 'master', 'doc-rework', f'renamed-{state}'):
+            if branch.startswith('renamed-'):
+                git(repo, 'switch', '-q', '-c', f'new-{state}')
+                git(repo, 'branch', '-m', branch)
+            else:
+                git(repo, 'switch', '-q', branch)
+            actual_branch = git(repo, 'branch', '--show-current')
+            assert actual_branch == branch
+            result = subprocess.run(['/bin/bash', '-euc', command, 'branch-stamp', str(repo)],
+                                    env=env, capture_output=True, text=True, check=True)
+            describe, commit, version, number = result.stdout.splitlines()
+            build_stamp = dict(describe=describe, head=commit, version=version, build_number=number)
+            stamp, problems = release_preflight.inspect(repo)
+            assert build_stamp == {key: stamp[key] for key in build_stamp}, (build_stamp, stamp)
+            if state == 'untagged':
+                expect_problem(problems, 'not at a release tag')
+                assert len(problems) == 1 and version == '0.0.0'
+            elif state == 'tagged':
+                assert problems == [] and describe == 'v0.9.1'
+            else:
+                expect_problem(problems, 'uncommitted changes')
+                assert len(problems) == 1 and describe == 'v0.9.1-dirty'
+            observation = dict(build_stamp=build_stamp, preflight=stamp, problems=problems)
+            if original is None:
+                original = observation
+            assert observation == original, (state, branch, original, observation)
+            receipts.append(dict(state=state, branch=branch, observation=observation))
+    (work / 'build-stamp.sh').write_text(command)
+    (work / 'comparisons.json').write_text(json.dumps(receipts, indent=2) + '\n')
 
 
 FIXTURE_RECORD = None
@@ -527,6 +582,7 @@ def check_publish(out, repo, dest, notes):
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
     check_preflight(out)
+    check_branch_names(out)
     repo, dest, notes = check_archive(out)
     check_publish(out, repo, dest, notes)
     print('release publish controls passed: tag preflight, archive assembly with retention, and '

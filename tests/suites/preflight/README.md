@@ -273,6 +273,11 @@ Offline release controls also exercise the release procedure's decision points.
   creates the release once with the tag verified, downloads every asset back,
   and records origin only when digests and bytes match; a second run verifies
   without creating, and a mismatch leaves origin unrecorded.
+  Branch-name controls run the actual `build.sh` stamp fragment and release
+  preflight at the same commit and checkout path under `main`, `master`,
+  `doc-rework` and newly created then renamed branches. Untagged, annotated-tag
+  and dirty-tree decisions and stamps must agree across names; a retained
+  comparison receipt distinguishes the source state from the branch label.
 - `release_rotation_controls` creates successive releases in real fixture
   repositories. It verifies compressed files and symlink targets independently,
   reads a detached archive after deleting its source runs, and observes that
