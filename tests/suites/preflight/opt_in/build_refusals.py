@@ -2353,7 +2353,9 @@ def control_output_target_mismatch(co, variant):
             target = app / 'Contents/MacOS/sbpl-check'
             actions = {'text': [write(target, '#!/bin/sh\nexit 0\n')], 'empty': [truncate(target, 0)],
                        'short-magic': [truncate(target, 2)], 'missing': [delete(target)]}[fault]
-            boundary = (hook('damage-required', 'cp', actions, last=str(target)) if stage == 'assembled' else
+            # Augments are copied after the top-level tools' chmod calls in both variants. Removing the target at
+            # its own copy would make chmod refuse first, establishing nothing about the assembled output gate.
+            boundary = (hook('damage-required', 'cp', actions, first=str(co.root / 'runner/augments' / co.augment)) if stage == 'assembled' else
                         hook('damage-required', 'codesign', actions, last=str(observer), contains='--force'))
             damaged = co.build(name, variant, hooks=[boundary])
             reason = 'unreadable (FileNotFoundError)' if fault == 'missing' else 'not a Mach-O file'
