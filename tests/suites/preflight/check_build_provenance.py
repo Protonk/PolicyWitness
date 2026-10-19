@@ -100,6 +100,25 @@ def write_compilers(builddir, swift=False):
     (builddir / 'meson-info').mkdir(parents=True, exist_ok=True)
     (builddir / 'meson-info/intro-compilers.json').write_text(json.dumps(dict(host=host)))
     (builddir / 'meson-info/intro-buildoptions.json').write_text(json.dumps([dict(name='xpc', value=swift), dict(name='inspection', value=True)]))
+    write_configured_output(builddir, swift)
+
+
+def write_configured_output(builddir, swift=False, cpu_family='aarch64', arch='arm64', link_arch='arm64', swift_target='arm64-apple-macosx26.0'):
+    """Meson's introspection of the machines and the targets' effective arguments, shaped as Meson 1.12 writes them."""
+    machine = lambda family: dict(system='darwin', cpu_family=family, cpu=family, endian='little')
+    (builddir / 'meson-info/intro-machines.json').write_text(json.dumps(dict(host=machine(cpu_family), build=machine('aarch64'),
+                                                                              target=machine(cpu_family))))
+    c = lambda name: dict(name=name, type='executable', target_sources=[
+        dict(language='c', compiler=['cc'], parameters=['-I.', '-O2', '-arch', arch, '-mmacosx-version-min=26.0']),
+        dict(language=None, compiler=None, parameters=['-Wl,-headerpad_max_install_names', '-arch', link_arch, '-mmacosx-version-min=26.0'])])
+    targets = [c('sb_api_validator'), c('pw-probe-runner'), c('pw-extension-issuer')]
+    if swift:
+        targets.append(dict(name='PWCWorkerShim', type='static library', target_sources=[
+            dict(language='c', compiler=['cc'], parameters=['-arch', arch, '-mmacosx-version-min=26.0']),
+            dict(language=None, compiler=None, parameters=['csr'])]))
+        targets.append(dict(name='PWRunner', type='executable', target_sources=[
+            dict(language='swift', compiler=['swiftc'], parameters=['-module-name', 'PWRunner', '-target', swift_target])]))
+    (builddir / 'meson-info/intro-targets.json').write_text(json.dumps(targets))
 
 
 UNSET_REQUESTS = checkout_lock.Requests({name: None for name in checkout_lock.REQUEST_NAMES})
@@ -847,7 +866,9 @@ class StampTests(StampFixture):
         extended = json.loads(stamp.read_text())
         self.assertEqual(extended['scope'], {'xpc': True})
         self.assertEqual(extended['fields']['compilers.swift.command'], ['swiftc'])
-        self.assertEqual({k: v for k, v in extended['fields'].items() if not k.startswith('compilers.swift.')}, record['fields'])
+        self.assertEqual({k: v for k, v in extended['fields'].items() if not k.startswith('compilers.swift.') and k != 'output.swift_target'},
+                         record['fields'])
+        self.assertEqual(extended['fields']['output.swift_target'], ['arm64-apple-macosx26.0'])
         self.assertEqual(extended['published_at'], record['published_at'])
         # A validated reuse with Swift applicable compares the Swift fields too; a changed one refuses.
         self.assertEqual(self.check('1')[0], 0)
@@ -865,6 +886,90 @@ class StampTests(StampFixture):
         self.assertEqual(stamp.read_bytes(), published)
         session = json.loads(self.session.read_text())
         self.assertIn('toolchain', session)
+
+
+class OutputTargetStampTests(StampFixture):
+    def test_stamps_carry_the_output_target_and_refuse_another(self):
+        stamp = self.builddir / prov.STAMP_NAME
+        self.configure()
+        self.assertEqual(self.publish()[0], 0)
+        published = stamp.read_bytes()
+        self.assertEqual({k: v for k, v in json.loads(published)['fields'].items() if k.startswith('output.')},
+                         {'output.system': 'darwin', 'output.cpu_family': 'aarch64', 'output.c_arch': ['arm64'],
+                          'output.link_arch': ['arm64'], 'output.cargo_triple': 'aarch64-apple-darwin'},
+                         "the stamp records Meson's host machine and the targets' effective arguments")
+        # A stamp from before the output target contract is never relabelled as arm64-compatible: it refuses until fresh mode.
+        old = json.loads(published)
+        old['schema_version'] = 1
+        old['fields'] = {k: v for k, v in old['fields'].items() if not k.startswith('output.')}
+        stamp.write_text(json.dumps(old))
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn('unsupported schema', err)
+        self.assertIn('PW_FRESH_BUILD=1', err)
+        self.assertEqual(json.loads(stamp.read_text()), old, 'validation never rewrites a stamp')
+        missing = json.loads(published)
+        missing['fields'].pop('output.link_arch')
+        stamp.write_text(json.dumps(missing))
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn('lacks its output target fields', err)
+        # A stamp naming another target refuses reuse as such, before any toolchain is probed.
+        probed = []
+        prov.observe_toolchain = lambda *a, **k: probed.append(True) or copy.deepcopy(self.observation)
+        for name, value in (('output.cpu_family', 'x86_64'), ('output.system', 'ios'), ('output.c_arch', ['x86_64']),
+                            ('output.link_arch', ['arm64', 'x86_64']), ('output.cargo_triple', 'x86_64-apple-darwin')):
+            with self.subTest(field=name):
+                changed = json.loads(published)
+                changed['fields'][name] = value
+                stamp.write_text(json.dumps(changed))
+                status, _, err = self.check()
+                self.assertEqual(status, 1, err)
+                self.assertIn(f'is configured for output {name}', err)
+                self.assertIn('a directory configured for another target cannot be reused', err)
+                self.assertEqual(probed, [], 'the target is compared before any toolchain probe')
+        # A stamp naming the target beside a directory configured for another does not describe the directory.
+        stamp.write_bytes(published)
+        write_configured_output(self.builddir, arch='x86_64')
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn("records output.c_arch = ['arm64'] but the directory is configured with ['x86_64']", err)
+        self.assertIn('does not describe this directory', err)
+        write_configured_output(self.builddir, cpu_family='x86_64')
+        status, _, err = self.check()
+        self.assertEqual(status, 2, err)
+        self.assertIn('output.cpu_family', err)
+        # After compiling, a configuration that moved away from the stamped target refuses; the stamp is never rewritten.
+        write_configured_output(self.builddir, link_arch='x86_64')
+        status, _, err = self.extend('0')
+        self.assertEqual(status, 2, err)
+        self.assertIn('no longer describes the output target', err)
+        self.assertEqual(stamp.read_bytes(), published)
+        write_configured_output(self.builddir)
+        self.assertEqual(self.check()[0], 0)
+        self.assertEqual(stamp.read_bytes(), published)
+        # Swift's target joins a newly applicable compiler's fields and is then compared like the others.
+        self.configure(swift=True)
+        self.observation = fake_observation(compilers={
+            'c': fake_observation()['compilers']['c'],
+            'swift': dict(configured=dict(command=['swiftc'], id='llvm', version='6.4', full_version=None),
+                          observed=dict(status='ok', command=['swiftc'], identity='swift-driver version: 1.168.6 Apple Swift version 6.4'))})
+        status, _, err = self.extend('1')
+        self.assertEqual(status, 0, err)
+        extended = stamp.read_bytes()
+        self.assertEqual(json.loads(extended)['fields']['output.swift_target'], ['arm64-apple-macosx26.0'])
+        self.assertEqual(self.check('1')[0], 0)
+        changed = json.loads(extended)
+        changed['fields']['output.swift_target'] = ['x86_64-apple-macosx26.0']
+        stamp.write_text(json.dumps(changed))
+        status, _, err = self.check('1')
+        self.assertEqual(status, 1, err)
+        self.assertIn('is configured for output output.swift_target', err)
+        stamp.write_bytes(extended)
+        write_configured_output(self.builddir, swift=True, swift_target='arm64-apple-ios17.0-macabi')
+        status, _, err = self.extend('1')
+        self.assertEqual(status, 2, err)
+        self.assertIn('output.swift_target', err)
 
 
 class FailedObservationTests(StampFixture):
@@ -912,9 +1017,12 @@ class FreshRemovalTests(unittest.TestCase):
         self.root.mkdir()
         (self.root / 'controller/target/release/deps').mkdir(parents=True)
         (self.root / 'controller/target/debug').mkdir()
+        (self.root / prov.TRIPLE_RELEASE / 'deps').mkdir(parents=True)
         (self.root / 'builddir/meson-info').mkdir(parents=True)
         (self.root / 'builddir-clt').mkdir()
         self.sentinels = {self.root / 'controller/target/debug/keep': 'debug', self.root / 'controller/target/CACHEDIR.TAG': 'tag',
+                          self.root / prov.TRIPLE_DIR / 'debug/keep': 'triple debug',
+                          self.root / 'controller/target/x86_64-apple-darwin/release/keep': 'another triple',
                           self.root / 'builddir-clt/keep': 'alternate', self.work / 'outside/keep': 'outside',
                           self.root / 'dist/PolicyWitness.zip': 'previous'}
         for path, text in self.sentinels.items():
@@ -936,17 +1044,34 @@ class FreshRemovalTests(unittest.TestCase):
         (self.root / 'builddir/meson-info/keep').write_text('cache')
         (self.root / 'controller/target/release/deps/keep').write_text('cache')
         (self.root / 'controller/target/release/deps/link').symlink_to(self.work / 'outside/keep')
+        (self.root / prov.TRIPLE_RELEASE / 'deps/keep').write_text('shipped cache')
         status, out, err = self.remove()
         self.assertEqual(status, 0, err)
         self.assertFalse((self.root / 'builddir').exists())
         self.assertFalse((self.root / 'controller/target/release').exists())
-        self.intact()  # a symlink inside a removed directory is unlinked, never followed
+        self.assertFalse((self.root / prov.TRIPLE_RELEASE).exists())
+        self.assertTrue((self.root / prov.TRIPLE_DIR).is_dir(), "only the triple's release area is replaced")
+        self.intact()  # a symlink inside a removed directory is unlinked, never followed; other profiles and triples stay
         session = json.loads(self.session.read_text())
-        self.assertEqual({k: v['removed'] for k, v in session['fresh']['replacement'].items()}, {'builddir': True, 'cargo_release': True})
+        self.assertEqual({k: v['removed'] for k, v in session['fresh']['replacement'].items()},
+                         {'builddir': True, 'cargo_release': True, 'cargo_target_release': True})
+        self.assertEqual(session['fresh']['replacement']['cargo_target_release']['path'], 'controller/target/aarch64-apple-darwin/release')
         status, _, _ = self.remove()
         self.assertEqual(status, 0, 'absent directories are not an error')
         self.assertEqual({k: v['existed'] for k, v in json.loads(self.session.read_text())['fresh']['replacement'].items()},
-                         {'builddir': False, 'cargo_release': False})
+                         {'builddir': False, 'cargo_release': False, 'cargo_target_release': False})
+        # The triple's release area is admitted like the others: a symlink there refuses before anything is removed.
+        (self.root / 'builddir').mkdir()
+        (self.work / 'elsewhere/triple').mkdir(parents=True)
+        (self.work / 'elsewhere/triple/keep').write_text('external')
+        (self.root / prov.TRIPLE_RELEASE).symlink_to(self.work / 'elsewhere/triple')
+        status, _, err = self.remove()
+        self.assertEqual(status, 2, err)
+        self.assertIn('aarch64-apple-darwin/release is a symlink', err)
+        self.assertTrue((self.root / 'builddir').is_dir(), 'a refused admission removes nothing')
+        self.assertEqual((self.work / 'elsewhere/triple/keep').read_text(), 'external')
+        (self.root / prov.TRIPLE_RELEASE).unlink()
+        (self.root / 'builddir').rmdir()
         # A symlinked component redirecting outside the checkout refuses at admission, before anything is removed.
         (self.root / 'builddir').mkdir()
         (self.root / 'builddir/keep').write_text('rebuilt')
@@ -1009,6 +1134,8 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
         (self.outside / 'release/keep').write_text('outside release\n')
         (self.outside / 'builddir').mkdir()
         (self.outside / 'builddir/keep').write_text('outside builddir\n')
+        (self.outside / 'triple/release').mkdir(parents=True)
+        (self.outside / 'triple/release/keep').write_text('outside triple release\n')
         self.session = self.root / 'controller/target/pw-build-session.json'
 
     def outside_inventory(self):
@@ -1078,6 +1205,8 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
         components = {
             'controller/target': self.outside,
             'controller/target/release': self.outside / 'release',
+            prov.TRIPLE_DIR: self.outside / 'triple',
+            prov.TRIPLE_RELEASE: self.outside / 'triple/release',
             'builddir': self.outside / 'builddir',
             'controller/target/pw-build-session.json': self.outside / 'pw-build-session.json',
         }
@@ -1151,7 +1280,7 @@ class CargoJudgmentTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name).resolve()
         self.target = self.root / 'controller/target'
-        self.release = self.target / 'release'
+        self.release = self.target / prov.TRIPLE / 'release'
         (self.release / 'deps').mkdir(parents=True)
         self.session = self.target / 'pw-build-session.json'
         (self.root / 'controller').mkdir(exist_ok=True)
@@ -1252,6 +1381,7 @@ class CargoJudgmentTests(unittest.TestCase):
             'string false': lambda m: dict(m, fresh='false'),
             'string true': lambda m: dict(m, fresh='true'),
             'another executable': lambda m: dict(m, executable=str(self.release / 'elsewhere')),
+            "the host release area's executable": lambda m: dict(m, executable=str(self.target / 'release' / m['target']['name'])),
             'no profile': lambda m: without(m, 'profile'),
             'empty profile': lambda m: dict(m, profile={}),
             'test profile': lambda m: dict(m, profile=dict(m['profile'], test=True)),
@@ -1292,6 +1422,14 @@ class CargoJudgmentTests(unittest.TestCase):
         config = cargo_config.wrap(dict(build=dict(rustflags=['-C', 'b']), target={host: dict(rustflags='-C t'), 'cfg(unix)': dict(rustflags=['-C', 'u'])}), '/x/.cargo/config.toml')
         rules = resolve(config, {}, host)
         self.assertEqual((rules['source'], rules['resolved'], rules['tokens'], rules['overrides']), ('target rules', False, None, ['build.rustflags']))
+        # The rules that apply are the output triple's: a compiler reporting another host contributes nothing of its own.
+        crossed = cargo_config.wrap(dict(target={'x86_64-apple-darwin': dict(rustflags='-C host'), prov.TRIPLE: dict(rustflags='-C output')}),
+                                    '/x/.cargo/config.toml')
+        self.assertEqual(resolve(crossed, {}, prov.TRIPLE)['tokens'], ['-C', 'output'])
+        self.assertEqual(resolve(crossed, {}, 'x86_64-apple-darwin')['tokens'], ['-C', 'host'], 'the triple decides, not the host')
+        environment_rule = resolve({}, {'CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS': '-C e', 'CARGO_TARGET_X86_64_APPLE_DARWIN_RUSTFLAGS': '-C h'},
+                                   prov.TRIPLE)
+        self.assertEqual((environment_rule['source'], environment_rule['rules']), ('target rules', ['CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS']))
         self.assertIsNone(prov.flag_attribution(['-C', 't'], rules, 'none')['agrees'], 'cfg() rules are not evaluated, so agreement is unknown')
         only_triple = cargo_config.wrap(dict(build=dict(rustflags=['-C', 'b']), target={host: dict(rustflags='-C t'), 'x86_64-unknown-linux-gnu': dict(rustflags='-C o')}), '/x/.cargo/config.toml')
         triple = resolve(only_triple, {}, host)
@@ -1496,6 +1634,26 @@ class CargoConfigurationTests(unittest.TestCase):
         merged, graph = cargo_config.load(self.cwd, self.env)
         child, entries = cargo_config.child_environment(merged, base, self.cwd)
         self.assertEqual(cargo_config.conflicts(dict(child=child), base), [], 'a forced value equal to the build\'s is the valid neighbour')
+
+
+class OutputTripleSelectionTests(unittest.TestCase):
+    def test_the_command_line_target_overrides_lower_defaults(self):
+        file = '/x/.cargo/config.toml'
+        named = cargo_config.wrap(dict(build=dict(target='x86_64-apple-darwin')), file)
+        selected = cargo_config.target_selection(named, {'CARGO_BUILD_TARGET': 'x86_64-apple-darwin'}, prov.TRIPLE)
+        self.assertEqual(selected, dict(source='--target', triple=prov.TRIPLE, overrides=['CARGO_BUILD_TARGET', 'build.target']),
+                         'lower-precedence defaults are recorded as overridden, never applied and never refused')
+        listed = cargo_config.wrap(dict(build=dict(target=['x86_64-apple-darwin', prov.TRIPLE])), file)
+        self.assertEqual(cargo_config.target_selection(listed, {}, prov.TRIPLE)['overrides'], ['build.target'])
+        self.assertEqual(cargo_config.target_selection({}, {}, prov.TRIPLE)['overrides'], [])
+        for value in (7, [7], dict(name='x86_64-apple-darwin')):
+            with self.subTest(value=value), self.assertRaises(cargo_config.Unresolved):
+                cargo_config.target_selection(cargo_config.wrap(dict(build=dict(target=value)), file), {}, prov.TRIPLE)
+        summary = cargo_config.summary(dict(graph=[], launcher=dict(kind='cargo'), env_entries={}, programs={}, child={},
+                                            target=selected), '/Users/nobody')
+        self.assertEqual(summary['target'], selected)
+        self.assertNotIn('target', cargo_config.summary(dict(graph=[], launcher=dict(kind='cargo'), env_entries={}, programs={}, child={}),
+                                                        '/Users/nobody'))
 
 
 class SdkTests(unittest.TestCase):
@@ -1747,6 +1905,53 @@ class OutputTargetTests(unittest.TestCase):
         with self.assertRaises(OSError):
             output_target.runnable_code(app)
 
+    def test_the_build_gate_records_each_stage_and_refuses_any_departure(self):
+        root = self.work / 'gate'
+        (root / 'controller').mkdir(parents=True)
+        _, env = own(self, root)
+        self.assertEqual(run_main(['session-start', '--root', str(root), '--describe', 'x', '--commit', 'x', '--version', '0',
+                                   '--build-number', '0'], env)[0], 0)
+        session = root / 'controller/target/pw-build-session.json'
+        self.assertEqual(json.loads(session.read_text())['output_target'], output_target.DECLARED)
+        status, out, err = run_main(['output-check', '--root', str(root), '--stage', 'cargo', str(self.fixtures['thin-arm64'])], env)
+        self.assertEqual(status, 0, err)
+        self.assertIn('1 outputs are thin arm64 Mach-O for macOS (cargo)', out)
+        for name in ('thin-x86_64', 'universal', 'one-slice-fat', 'thin-arm64e', 'catalyst-arm64', 'truncated', 'text', 'missing'):
+            with self.subTest(output=name):
+                status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'native',
+                                           str(self.fixtures['thin-arm64']), str(self.fixtures[name])], env)
+                self.assertEqual(status, 1, err)
+                self.assertIn('outputs are not thin arm64 Mach-O executables for macOS', err)
+                self.assertIn(f"{self.fixtures[name]}: ", err)
+                self.assertNotIn(f"{self.fixtures['thin-arm64']}: ", err, 'only the departing output is named')
+                recorded = json.loads(session.read_text())['output_check']['native']
+                self.assertEqual(len(recorded['problems']), 1)
+                self.assertEqual(recorded['outputs'][str(self.fixtures['thin-arm64'])]['problems'], [])
+        # A bundle is scanned by header: an unlisted renamed universal file refuses; a dSYM companion is not code.
+        app = self.work / 'gate.app'
+        (app / 'Contents/MacOS').mkdir(parents=True)
+        shutil.copy2(self.fixtures['thin-arm64'], app / 'Contents/MacOS/main')
+        shutil.copytree(self.work / 'debug-x86_64.dSYM', app / 'Contents/MacOS/main.dSYM')
+        status, out, err = run_main(['output-check', '--root', str(root), '--stage', 'assembled', '--app', str(app)], env)
+        self.assertEqual(status, 0, err)
+        self.assertIn('1 outputs', out)
+        shutil.copy2(self.fixtures['universal'], app / 'Contents/MacOS/main.dSYM/notes.txt')
+        status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'packaging', '--app', str(app)], env)
+        self.assertEqual(status, 1, err)
+        self.assertIn('notes.txt: a fat container with 2 slice(s)', err)
+        status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'assembled', '--app', str(self.work / 'absent.app')], env)
+        self.assertEqual(status, 1, err)
+        self.assertIn('the bundle cannot be scanned', err)
+        empty = self.work / 'empty.app'
+        empty.mkdir()
+        status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'assembled', '--app', str(empty)], env)
+        self.assertEqual(status, 1, err)
+        self.assertIn('no output was named or found', err)
+        self.assertEqual(set(json.loads(session.read_text())['output_check']), {'cargo', 'native', 'assembled', 'packaging'})
+        status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'cargo', str(self.fixtures['thin-arm64'])], clean_env())
+        self.assertEqual(status, 2, 'the gate writes the session only under an owned build')
+        self.assertIn('build helpers mutate only under an owned build', err)
+
     def test_weakened_predicates_fail_these_controls(self):
         """Each weakening, applied to a copy of the helper, accepts a fixture the decision above refuses."""
         import importlib.util
@@ -1878,7 +2083,10 @@ class RecordTests(unittest.TestCase):
             'wrong uuid': (lambda r: r['outputs'][1].__setitem__('uuid', 'FFFFFFFF-0000-0000-0000-000000000000'), 'provenance_metadata'),
             'wrong sdk': (lambda r: r['outputs'][1].__setitem__('sdk', '1.0'), 'provenance_metadata'),
             'missing section': (lambda r: r.pop('toolchain'), 'provenance'),
-            'other schema': (lambda r: r.__setitem__('schema_version', 2), 'provenance'),
+            'other schema': (lambda r: r.__setitem__('schema_version', 3), 'provenance'),
+            'an earlier build\'s schema': (lambda r: r.__setitem__('schema_version', 1), 'provenance'),
+            'wrong architectures': (lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']), 'provenance_metadata'),
+            'wrong container': (lambda r: r['outputs'][1].__setitem__('container', 'fat'), 'provenance_metadata'),
         }
         for name, (mutate, code) in cases.items():
             with self.subTest(case=name):
@@ -1978,6 +2186,18 @@ class RecordTests(unittest.TestCase):
             'an unknown top-level field': put('x', 'extra'),
             'a partial knob with full outputs': put('0', 'configuration', 'knobs', 'BUILD_XPC'),
             'a string beyond its bound': put('x' * (prov.LINE_LIMIT + 1), 'toolchain', 'rustc', 'identity'),
+            'output target missing': drop('configuration', 'output_target'),
+            'output target of another architecture': put('x86_64', 'configuration', 'output_target', 'architecture'),
+            'output target of another triple': put('x86_64-apple-darwin', 'configuration', 'output_target', 'cargo_triple'),
+            'Meson machines missing': drop('configuration', 'meson_machines'),
+            'Meson host of another architecture': put(dict(system='darwin', cpu_family='x86_64'), 'configuration', 'meson_machines', 'host'),
+            'Cargo target selection missing': drop('toolchain', 'rustc', 'selection', 'target'),
+            'Cargo target of another triple': put('x86_64-apple-darwin', 'toolchain', 'rustc', 'selection', 'target', 'triple'),
+            "the triple's release area missing": drop('configuration', 'build_directories', 'cargo_target_release'),
+            'an output architecture missing': lambda r: r['outputs'][1].pop('architectures'),
+            'an output of another architecture': lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']),
+            'a universal output': lambda r: r['outputs'][1].update(architectures=['arm64', 'x86_64'], container='fat'),
+            'an output of another platform': lambda r: r['outputs'][1].__setitem__('platform', '6'),
         })
         for label, mutate in faults.items():
             with self.subTest(fault=label):
@@ -2046,6 +2266,42 @@ class RecordTests(unittest.TestCase):
         with self.assertRaises(ValueError) as refused:
             prov.read_zip_record(archive(record, members, 'missing.zip'))
         self.assertIn('lacks Contents/MacOS/sbpl-check', str(refused.exception))
+        # A one-slice fat container of the same arm64 slice: its load commands and the record's hash agree, so only the
+        # container read from the member's own bytes separates it from the thin file the record claims.
+        fat = self.work / 'one-slice-fat'
+        subprocess.run(['/usr/bin/lipo', '-create', str(valid / 'Contents/MacOS/sbpl-check'), '-output', str(fat)], check=True, capture_output=True)
+        self.assertEqual(oracle(fat)['container'], 'fat')
+        self.assertEqual({k: prov.output_metadata(fat)[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')},
+                         {k: prov.output_metadata(valid / 'Contents/MacOS/sbpl-check')[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')})
+        members = {rel: (valid / rel).read_bytes() for rel in prov.PARTIAL_OUTPUTS}
+        members['Contents/MacOS/sbpl-check'] = fat.read_bytes()
+        rehashed = copy.deepcopy(record)
+        next(o for o in rehashed['outputs'] if o['rel_path'] == 'Contents/MacOS/sbpl-check')['sha256'] = hashlib.sha256(fat.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, 'architectures or container'):
+            prov.read_zip_record(archive(rehashed, members, 'one-slice-fat.zip'))
+        # An earlier build's record is read only on request, as its own version describes it; nothing is supplied to it.
+        historical = copy.deepcopy(record)
+        historical['schema_version'] = 1
+        for output in historical['outputs']:
+            output.pop('architectures')
+            output.pop('container')
+        for name in ('output_target', 'meson_machines'):
+            historical['configuration'].pop(name)
+        historical['configuration']['build_directories'].pop('cargo_target_release')
+        historical['configuration']['build_directories']['fresh_mode']['replacement'].pop('cargo_target_release')
+        historical['toolchain']['rustc']['selection'].pop('target')
+        self.assertEqual(prov.record_shape_problems(historical), [], 'a version 1 record is valid as version 1')
+        with self.assertRaisesRegex(ValueError, 'unsupported provenance record'):
+            prov.read_zip_record(archive(historical, name='historical.zip'))
+        data, _ = prov.read_zip_record(archive(historical, name='historical.zip'), historical=True)
+        self.assertEqual(json.loads(data), historical, 'the historical record is returned byte for byte, never completed')
+        mixed = copy.deepcopy(record)
+        mixed['schema_version'] = 1
+        self.assertTrue(prov.record_shape_problems(mixed), 'version 1 is closed: it carries no output target fields')
+        missing = copy.deepcopy(record)
+        missing['outputs'][0].pop('architectures')
+        with self.assertRaisesRegex(ValueError, 'invalid provenance record'):
+            prov.read_zip_record(archive(missing, name='incomplete.zip'), historical=True)
 
     def test_the_producer_validates_before_sealing(self):
         app = self.app('producer')
@@ -2071,7 +2327,9 @@ class RecordTests(unittest.TestCase):
                                                   selection=record['toolchain']['rustc']['selection'],
                                                   requested_rustflags=dict(source='none', tokens=[]), flag_environment={},
                                                   admission=dict(target_directory='/t', build_directory='/t')),
-                       builddir=dict(configured_before=False, stamp_state='published'), cargo_release=dict(existed_before=False))
+                       builddir=dict(configured_before=False, stamp_state='published'), cargo_release=dict(existed_before=False),
+                       cargo_target_release=dict(existed_before=False),
+                       meson_machines=dict(host=dict(system='darwin', cpu_family='aarch64'), build=dict(system='darwin', cpu_family='aarch64')))
         manifest = json.loads((app / 'Contents/Resources/Evidence/manifest.json').read_text())
 
         def produce(session):
@@ -2079,6 +2337,9 @@ class RecordTests(unittest.TestCase):
                                 signature=lambda path: dict(fixture_bundle.LINKER_SIGNED))
         produced = produce(session)
         self.assertEqual(prov.record_shape_problems(produced), [])
+        self.assertEqual({(o['container'], tuple(o['architectures'])) for o in produced['outputs']}, {('thin', ('arm64',))})
+        self.assertEqual(produced['configuration']['output_target'],
+                         dict(output_target.DECLARED, note=produced['configuration']['output_target']['note']))
         for label, mutate, needle in (
                 ('no effective deployment target (the null the accepted app carried)', lambda s: s['cargo']['selection']['child_environment'].__setitem__('MACOSX_DEPLOYMENT_TARGET', None),
                  'no effective deployment target'),
@@ -2086,13 +2347,28 @@ class RecordTests(unittest.TestCase):
                 ('an effective deployment target the outputs do not carry', lambda s: s['cargo']['selection']['child_environment'].__setitem__('MACOSX_DEPLOYMENT_TARGET', '1.0'),
                  'fails its own validation'),
                 ('an xcode observation of another shape', lambda s: s['toolchain'].__setitem__('xcode', dict(status='maybe')), 'fails its own validation'),
-                ('a judgment that is not a boolean', lambda s: s['cargo']['judgments']['sbpl-check'].__setitem__('fresh', 'false'), 'fails its own validation')):
+                ('a judgment that is not a boolean', lambda s: s['cargo']['judgments']['sbpl-check'].__setitem__('fresh', 'false'), 'fails its own validation'),
+                ('no Meson machines', lambda s: s.pop('meson_machines'), 'no Meson host and build machines'),
+                ('a Meson host of another architecture', lambda s: s['meson_machines'].__setitem__('host', dict(system='darwin', cpu_family='x86_64')),
+                 'fails its own validation')):
             with self.subTest(producer=label):
                 changed = copy.deepcopy(session)
                 mutate(changed)
                 with self.assertRaises(prov.Refusal) as refused:
                     produce(changed)
                 self.assertIn(needle, str(refused.exception))
+        # An output outside the target is refused from its bytes, whatever the session says.
+        helper = app / 'Contents/MacOS/sbpl-check'
+        source = self.work / 'x86_64.c'
+        source.write_text('int main(void) { return 0; }\n')
+        subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-arch', 'x86_64', str(source), '-o', str(helper)],
+                       check=True, capture_output=True)
+        for entry in manifest['entries']:
+            if entry['rel_path'] == 'Contents/MacOS/sbpl-check':
+                entry['sha256'] = prov.sha256_file(helper)
+        with self.assertRaises(prov.Refusal) as refused:
+            produce(session)
+        self.assertIn('Contents/MacOS/sbpl-check: outside the output target (architecture x86_64, not exactly arm64)', str(refused.exception))
 
     def test_helper_subcommands_are_the_ones_the_script_invokes(self):
         import importlib.util

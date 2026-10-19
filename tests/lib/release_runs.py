@@ -157,7 +157,8 @@ def verify_release(archive):
         archived_record = real_path(archive / provenance['path'])
         if artifact.digest(archived_record) != provenance.get('sha256'):
             raise ValueError('archived provenance record checksum mismatch')
-        member, controller = build_provenance.read_zip_record(archive / name)
+        # An archived release keeps the record its own build sealed, of whichever schema that build wrote.
+        member, controller = build_provenance.read_zip_record(archive / name, historical=True)
         if member != archived_record.read_bytes():
             raise ValueError('archived provenance record differs from the record inside the ZIP')
         if controller != provenance.get('controller_sha256'):

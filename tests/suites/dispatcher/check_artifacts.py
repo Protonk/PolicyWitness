@@ -13,13 +13,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner
-from fixture_bundle import bundle, seal, fingerprint
+from fixture_bundle import bundle, seal, fingerprint, manifest as write_manifest, record as write_record
 
 # The compiled fixture hosts: the suite wrapper builds them once per run.
 HOST = Path(os.environ['PW_DISPATCHER_HOST_FIXTURE'])
 HOST_IMPORTS_SANDBOX = HOST.with_name(HOST.name + '.imports-sandbox')
 WORKER_IMPORTS_CLOCK = HOST.with_name(HOST.name + '.imports-clock')
 WORKER_CONTINUOUS_CLOCK = HOST.with_name(HOST.name + '.continuous-clock')
+OUTSIDE_TARGET = {name: HOST.with_name(HOST.name + '.' + name) for name in ('x86_64', 'universal', 'one-slice-fat', 'x86_64.dSYM')}
 WORKER_REL = 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
 
 
@@ -43,6 +44,7 @@ def exercise(out, name):
     manifest_path = app / 'Contents/Resources/Evidence/manifest.json'
     manifest = json.loads(manifest_path.read_text())
     expected_issue = None
+    expected_codes = None   # where set, exactly the error codes the fault produces, so one fault never hides another
     if name == 'missing_helper':
         helper.unlink()
         expected_issue = 'required_component'
@@ -113,6 +115,36 @@ def exercise(out, name):
         manifest_path.write_text(json.dumps(manifest))
         seal(app)
         expected_issue = 'provenance_metadata'
+    elif name == 'x86_64_helper':
+        # Bytes outside the output target with everything else consistent: the manifest and the record both describe
+        # them truthfully. The inspector refuses the bytes, and the record's own validation refuses an output that is
+        # not the target; nothing else is wrong.
+        shutil.copyfile(OUTSIDE_TARGET['x86_64'], helper)
+        write_record(app)
+        write_manifest(app)
+        seal(app)
+        expected_issue, expected_codes = 'output_target', {'output_target', 'provenance'}
+    elif name == 'one_slice_fat_helper':
+        # The arm64 stub in a one-slice fat container: the same load commands, UUID and architecture name. The record
+        # keeps claiming a thin file with the new hash, so the container is the only fact it gets wrong, and the bytes
+        # and the record are refused as two separate faults.
+        shutil.copyfile(OUTSIDE_TARGET['one-slice-fat'], helper)
+        record_path = app / 'Contents/Resources/Evidence/provenance.json'
+        record = json.loads(record_path.read_text())
+        next(o for o in record['outputs'] if o['rel_path'] == 'Contents/MacOS/pw-runner-client')['sha256'] = fingerprint(helper)
+        record_path.write_text(json.dumps(record))
+        write_manifest(app)
+        seal(app)
+        expected_issue, expected_codes = 'output_target', {'output_target', 'provenance_metadata'}
+    elif name == 'unlisted_universal_code':
+        # Code the manifest does not list and no name implies is found by its header: inventory is no bypass.
+        shutil.copyfile(OUTSIDE_TARGET['universal'], app / 'Contents/Resources/plugin.data')
+        seal(app)
+        expected_issue, expected_codes = 'output_target', {'output_target'}
+    elif name == 'x86_64_dsym':
+        # A dSYM companion of an x86_64 executable beside a helper is debug data, not code: the bundle stays valid.
+        shutil.copytree(OUTSIDE_TARGET['x86_64.dSYM'], app / 'Contents/MacOS/pw-runner-client.dSYM')
+        seal(app)
     before = fingerprint(app)
     receipts = work / 'receipts.jsonl'
     modes = {'probe/app': name} if name.startswith('mutate_') else {}
@@ -127,12 +159,14 @@ def exercise(out, name):
     evidence = repo / 'tests/out/runs/default/artifact-integrity'
     issues = json.loads((evidence / 'inspection.json').read_text())
     executed = [json.loads(line)['id'] for line in receipts.read_text().splitlines()]
-    valid = name in ('valid', 'worker_continuous_clock')
+    valid = name in ('valid', 'worker_continuous_clock', 'x86_64_dsym')
     assert result.returncode == (0 if valid else 1), (name, result.stderr)
     assert run['ok'] is valid
     assert integrity['valid_before'] is (expected_issue is None)
     if expected_issue:
         assert expected_issue in {e['code'] for e in issues['errors']}, issues
+        if expected_codes is not None:
+            assert {e['code'] for e in issues['errors']} == expected_codes, issues['errors']
         assert executed == ['probe/offline'], executed
         assert run['completion'] == dict(selected=3, completed=1, unrun=2, skipped=0)
         assert fingerprint(app) == before, 'inspection repaired or modified damaged input'
@@ -154,6 +188,9 @@ def exercise(out, name):
         assert issues['host_invariance']['returncode'] == 0, issues['host_invariance']
         assert issues['host_invariance']['sandbox_symbols'] == [], issues['host_invariance']
         assert issues['worker_clock']['returncode'] == 0 and issues['worker_clock']['forbidden'] == [], issues['worker_clock']
+        assert issues['output_target'] and not any(o['target_problems'] for o in issues['output_target']), issues['output_target']
+        if name == 'x86_64_dsym':
+            assert not any('.dSYM' in o['path'] for o in issues['output_target']), 'debug data was inspected as code'
         if name == 'worker_continuous_clock':
             # The permitted continuous clock is read from the worker's real imports.
             assert '_mach_continuous_time' in issues['worker_clock']['undefined'], issues['worker_clock']
@@ -178,6 +215,7 @@ if __name__ == '__main__':
         'resigned_stale_manifest', 'missing_manifest_entry', 'duplicate_manifest_entry',
         'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'worker_imports_clock',
         'worker_continuous_clock', 'worker_unreadable_imports', 'missing_record', 'stale_record',
-        'contradictory_record', 'mutate_pass', 'mutate_fail', 'mutate_crash')]
+        'contradictory_record', 'x86_64_helper', 'one_slice_fat_helper', 'unlisted_universal_code', 'x86_64_dsym',
+        'mutate_pass', 'mutate_fail', 'mutate_crash')]
     (out / 'controls.json').write_text(json.dumps(cases, indent=2) + '\n')
     print(f'{len(cases)} artifact controls passed')

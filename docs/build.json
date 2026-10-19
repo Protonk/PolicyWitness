@@ -78,8 +78,8 @@
       "name": "PW_FRESH_BUILD",
       "default": "0",
       "values": {
-        "0": "reuse builddir/ and controller/target/release/ under the toolchain the stamp records, validating the stamp before any compile or reconfiguration",
-        "1": "replace both directories after admission and require Cargo to report rebuilding every shipped target; the record names each directory's replacement"
+        "0": "reuse builddir/, controller/target/release/ and controller/target/aarch64-apple-darwin/release/ under the toolchain the stamp records, validating the stamp before any compile or reconfiguration",
+        "1": "replace the three directories after admission and require Cargo to report rebuilding every shipped target; the record names each directory's replacement"
       },
       "governs": "the fresh step, Cargo's rebuild requirement and the directory states the record carries; a script knob, not a Meson option; notarize and release enforce 1",
       "sources": [
@@ -382,7 +382,7 @@
         "partial"
       ],
       "reads": "git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment",
-      "writes": "the four stamp variables for Cargo and the plists; after admitting builddir/, controller/target/, its release/ and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the acquisition nonce and the owner's requests",
+      "writes": "the four stamp variables for Cargo and the plists; after admitting builddir/, controller/target/, its release/, its aarch64-apple-darwin/ and that directory's release/, and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the fixed output target, the acquisition nonce and the owner's requests",
       "refusals": [
         "provenance_probe_failed",
         "lock_claim_invalid",
@@ -495,7 +495,7 @@
         "full",
         "partial"
       ],
-      "reads": "in incremental mode: builddir/meson-info/meson-info.json and builddir/pw-toolchain.json when the directory is configured, and the stamped SDK, developer directory, compiler commands and Rust compiler probed now; in fresh mode nothing, since the directory is replaced",
+      "reads": "in incremental mode: builddir/meson-info/meson-info.json and builddir/pw-toolchain.json when the directory is configured: its output target (Meson's host machine, the targets' architecture selections and the Cargo triple), compared with the required target and then with Meson's introspection of the directory before any probe, and the stamped SDK, developer directory, compiler commands and Rust compiler probed now; in fresh mode nothing, since the directory is replaced",
       "writes": "the toolchain observation into the build session",
       "refusals": [
         "builddir_unreadable",
@@ -503,6 +503,7 @@
         "builddir_stamp_missing",
         "builddir_stamp_invalid",
         "builddir_toolchain_changed",
+        "builddir_target_mismatch",
         "provenance_probe_failed",
         "lock_claim_invalid",
         "cache_path_unsafe",
@@ -543,6 +544,12 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_builddir_toolchain_changed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_target_mismatch",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -599,8 +606,8 @@
         "full",
         "partial"
       ],
-      "reads": "Cargo's configuration as one invocation from this directory reads it: `.cargo/config` or `config.toml` here, in each ancestor and in Cargo home, with their includes, merged by Cargo's precedence; the environment overrides; the launcher (a rustup proxy and the toolchain it resolves); and cargo metadata's report of the target and build directories under the pinned target directory",
-      "writes": "the compiler and wrapper selection with its sources, the `[env]` entries and whether each applied, the compiler's inputs in Cargo's child environment, the requested Rust flags by precedence and the admission, into the build session",
+      "reads": "Cargo's configuration as one invocation from this directory reads it: `.cargo/config` or `config.toml` here, in each ancestor and in Cargo home, with their includes, merged by Cargo's precedence; the environment overrides; the launcher (a rustup proxy and the toolchain it resolves); the output triple the command passes and the lower-precedence target defaults it overrides; and cargo metadata's report of the target and build directories under the pinned target directory",
+      "writes": "the compiler and wrapper selection with its sources, the `[env]` entries and whether each applied, the compiler's inputs in Cargo's child environment, the output triple with the defaults it overrides, the requested Rust flags by precedence, target rules attributed to that triple and the admission, into the build session",
       "refusals": [
         "cargo_build_dir_redirected",
         "cargo_build_dir_unknown",
@@ -657,14 +664,14 @@
     {
       "id": "fresh",
       "banners": [
-        "Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release"
+        "Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release ${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release"
       ],
       "variants": [
         "full",
         "partial"
       ],
-      "reads": "builddir/ and controller/target/release/, admitted again with every component below the checkout a real directory of this user, or absent, both before either is removed, and rechecked before each removal",
-      "writes": "removes both directories through their admitted descriptors; records each one's replacement in the build session; nothing else is removed",
+      "reads": "builddir/, controller/target/release/ and controller/target/aarch64-apple-darwin/release/, admitted again with every component below the checkout a real directory of this user, or absent, all before any is removed, and rechecked before each removal",
+      "writes": "removes the three directories through their admitted descriptors; records each one's replacement in the build session; nothing else is removed, including other profiles and other triples",
       "refusals": [
         "fresh_removal_failed",
         "lock_claim_invalid",
@@ -713,11 +720,12 @@
         "full",
         "partial"
       ],
-      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, each a literal boolean bound to the shipped target, a typed non-test profile and the admitted executable, and Cargo's fingerprint for each shipped target",
-      "writes": "controller/target/release/ under the pinned output directory, the messages file Cargo reports its artifacts in, and the judgments into the build session",
+      "reads": "cargo on PATH with its configuration, caches and registries; controller/ sources and the output triple passed with --target, the stamp variables, MACOSX_DEPLOYMENT_TARGET, SDKROOT and RUSTFLAGS; the artifact paths and per-target reuse judgments Cargo reports, each a literal boolean bound to the shipped target, a typed non-test profile and the admitted executable, and Cargo's fingerprint for each shipped target; each shipped output's container, architecture names and platform, from its header, lipo -archs and its load commands",
+      "writes": "controller/target/aarch64-apple-darwin/release/ under the pinned output directory for the shipped executables and controller/target/release/ for build scripts and procedural macros, the messages file Cargo reports its artifacts in, and the output check's observations and the judgments into the build session",
       "refusals": [
         "cargo_artifact_elsewhere",
         "missing_cargo_output",
+        "output_target_mismatch",
         "minimum_mismatch",
         "cargo_failed",
         "cargo_target_reused",
@@ -754,6 +762,12 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_cargo_judgment_unknown",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -803,6 +817,7 @@
       "writes": "builddir/ configuration; a fresh setup publishes builddir/pw-toolchain.json atomically from the selected compilers, SDK and Rust compiler; meson configure records the two options and the policy assertions run at setup or at the regeneration the next compile triggers",
       "refusals": [
         "meson_policy",
+        "meson_target",
         "meson_failed",
         "builddir_stamp_invalid",
         "provenance_probe_failed",
@@ -835,6 +850,12 @@
           "symbol": "control_fresh_sequence",
           "form": "test",
           "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_target",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -851,6 +872,7 @@
       "writes": "builddir/ outputs and the Swift module cache under it",
       "refusals": [
         "meson_policy",
+        "meson_target",
         "meson_failed"
       ],
       "sources": [
@@ -877,11 +899,12 @@
         "full",
         "partial"
       ],
-      "reads": "Meson's introspection of builddir/, Ninja's dependency log, the identity inputs, the stamp and the compilers the directory records, and every shipped output's load commands",
-      "writes": "builddir/pw-toolchain.json extended with the Swift compiler a reused directory discovered when this build enabled the XPC pieces, atomically and without changing another field; the toolchain, option and SDK observations into the build session",
+      "reads": "Meson's introspection of builddir/, Ninja's dependency log, the identity inputs, the stamp and the compilers the directory records, and every shipped output's container, architecture names and load commands",
+      "writes": "builddir/pw-toolchain.json extended with the Swift compiler a reused directory discovered when this build enabled the XPC pieces, atomically and without changing another field; the toolchain, option, Meson machine, output target and SDK observations into the build session",
       "refusals": [
         "minimum_mismatch",
         "missing_native_output",
+        "output_target_mismatch",
         "native_sources_differ",
         "native_sources_unreadable",
         "builddir_stamp_invalid",
@@ -915,6 +938,12 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_fresh_sequence",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -1022,6 +1051,44 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "assembled",
+      "banners": [
+        "Checking the assembled code against the output target: ${APP_BUNDLE}"
+      ],
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "reads": "every regular file under the assembled app whose header is a Mach-O or fat container, found by header rather than by the names copied in and including the bundle mains, except dSYM companions: its container, lipo -archs names and LC_BUILD_VERSION platform",
+      "writes": "the observations into the build session; nothing in the bundle",
+      "refusals": [
+        "output_target_mismatch",
+        "provenance_probe_failed",
+        "lock_claim_invalid",
+        "cache_path_unsafe"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "Checking the assembled code against the output target"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_banner_order",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1138,7 +1205,7 @@
         "full",
         "partial"
       ],
-      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands and signature display; the caller's requests and Cargo's effective deployment target and SDK, from the build session",
+      "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands, container, architecture names and signature display; the caller's requests and Cargo's effective deployment target and SDK, from the build session",
       "writes": "Contents/Resources/Evidence/manifest.json, symbols.json and provenance.json, the manifest listing the other two; the record only after it passes its own validation",
       "refusals": [
         "evidence_failed",
@@ -1269,9 +1336,13 @@
         "full",
         "partial"
       ],
-      "reads": "controller/target/release/sandbox-log-observer",
-      "writes": "that executable's signature, in place",
+      "reads": "controller/target/aarch64-apple-darwin/release/sandbox-log-observer, checked against the output target at this boundary before it is signed",
+      "writes": "that executable's signature, in place, and its observation into the build session",
       "refusals": [
+        "output_target_mismatch",
+        "provenance_probe_failed",
+        "lock_claim_invalid",
+        "cache_path_unsafe",
         "sign_target_not_macho",
         "codesign_failed"
       ],
@@ -1287,6 +1358,12 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },
@@ -1328,9 +1405,14 @@
         "full",
         "partial"
       ],
-      "reads": "the sealed app",
+      "reads": "the sealed app, every Mach-O in it checked against the output target again before the ZIP is written",
       "writes": "PolicyWitness.zip under DIST_DIR",
-      "refusals": [],
+      "refusals": [
+        "output_target_mismatch",
+        "provenance_probe_failed",
+        "lock_claim_invalid",
+        "cache_path_unsafe"
+      ],
       "sources": [
         {
           "path": "build.sh",
@@ -1343,6 +1425,12 @@
           "symbol": "check_banner_order",
           "form": "rule",
           "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     }
@@ -1503,8 +1591,11 @@
         "cargo",
         "configure",
         "native_check",
+        "assembled",
         "presign",
-        "evidence"
+        "evidence",
+        "sign_observer",
+        "zip"
       ],
       "status": "2",
       "variants": [
@@ -1780,7 +1871,7 @@
     },
     {
       "id": "builddir_stamp_missing",
-      "message": "<builddir> is configured but has no pw-toolchain.json; its toolchain is unknown and is not adopted: set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/",
+      "message": "<builddir> is configured but has no pw-toolchain.json; its toolchain is unknown and is not adopted: set PW_FRESH_BUILD=1 to replace builddir/, controller/target/release/ and controller/target/aarch64-apple-darwin/release/",
       "kind": "propagated",
       "steps": [
         "builddir"
@@ -1823,7 +1914,7 @@
     },
     {
       "id": "builddir_stamp_invalid",
-      "message": "pw-toolchain.json is malformed, unsupported, describes another checkout or does not describe the directory's configured compilers; the toolchain is unknown and is not adopted",
+      "message": "pw-toolchain.json is malformed, unsupported, describes another checkout or does not describe the directory's configured compilers or output target; the toolchain is unknown and is not adopted",
       "kind": "propagated",
       "steps": [
         "builddir",
@@ -1861,6 +1952,12 @@
         {
           "path": "tests/suites/preflight/check_build_provenance.py",
           "symbol": "test_stamp_states_are_decided_without_adopting_unknowns",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_stamps_carry_the_output_target_and_refuse_another",
           "form": "test",
           "coverage": "helper"
         }
@@ -1911,6 +2008,49 @@
       ]
     },
     {
+      "id": "builddir_target_mismatch",
+      "message": "builddir/ is configured for output <field> = <recorded>, but the output target requires <required>; a directory configured for another target cannot be reused",
+      "kind": "propagated",
+      "steps": [
+        "builddir"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "stamp-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "a directory configured for another target cannot be reused"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_builddir_target_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_stamps_carry_the_output_target_and_refuse_another",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "provenance_probe_failed",
       "message": "required toolchain observation failed: <field> (<kind>), or a session or report the helper needs is unreadable",
       "kind": "propagated",
@@ -1920,7 +2060,10 @@
         "cargo",
         "configure",
         "native_check",
-        "presign"
+        "assembled",
+        "presign",
+        "sign_observer",
+        "zip"
       ],
       "status": "2",
       "variants": [
@@ -1982,8 +2125,11 @@
         "cargo",
         "configure",
         "native_check",
+        "assembled",
         "presign",
-        "evidence"
+        "evidence",
+        "sign_observer",
+        "zip"
       ],
       "status": "2",
       "variants": [
@@ -2373,7 +2519,7 @@
     },
     {
       "id": "cargo_artifact_elsewhere",
-      "message": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it",
+      "message": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a Cargo setting or Cargo's report moved it",
       "kind": "script",
       "steps": [
         "cargo"
@@ -2386,7 +2532,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it"
+          "symbol": "cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a Cargo setting or Cargo's report moved it"
         }
       ],
       "checks": [
@@ -2661,6 +2807,50 @@
         "buildtype",
         "swift_args",
         "swift_link_args"
+      ]
+    },
+    {
+      "id": "meson_target",
+      "message": "output target: the native products are macOS arm64 code, but Meson is configured for host ${host_system} ${host_cpu_family} (the build machine, ${build_system} ${build_cpu_family}, is not constrained)",
+      "kind": "meson",
+      "steps": [
+        "configure",
+        "compile"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "requires_host": {
+        "system": "darwin",
+        "cpu_family": "aarch64"
+      },
+      "sources": [
+        {
+          "path": "meson.build",
+          "symbol": "output target: the native products are macOS arm64 code"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_meson_assertions",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_meson_target",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/source_drift/build.py",
+          "symbol": "test_meson_output_target_assertion_refuses_other_hosts",
+          "form": "test",
+          "coverage": "helper"
+        }
       ]
     },
     {
@@ -3150,6 +3340,59 @@
         {
           "path": "tests/suites/preflight/check_build_provenance.py",
           "symbol": "test_sdk_versions_normalize_and_unknowns_never_agree",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "output_target_mismatch",
+      "message": "outputs are not thin arm64 Mach-O executables for macOS: <path>: <problem>",
+      "kind": "propagated",
+      "steps": [
+        "cargo",
+        "native_check",
+        "assembled",
+        "sign_observer",
+        "zip"
+      ],
+      "status": "1",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "output-check"
+        },
+        {
+          "path": "tests/lib/build_provenance.py",
+          "symbol": "outputs are not thin arm64 Mach-O executables for macOS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_guards.py",
+          "symbol": "test_build_guards",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
           "form": "test",
           "coverage": "helper"
         }
@@ -4092,6 +4335,7 @@
       "flags": [
         "--manifest-path",
         "--release",
+        "--target",
         "--target-dir",
         "--message-format",
         "--bin",
@@ -4119,6 +4363,41 @@
           "symbol": "check_invocations",
           "form": "rule",
           "coverage": "textual"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_output_check_cargo",
+      "command": "tests/lib/build_provenance.py output-check --root",
+      "step": "cargo",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage cargo"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
+          "form": "test",
+          "coverage": "helper"
         }
       ]
     },
@@ -4308,6 +4587,41 @@
       ]
     },
     {
+      "id": "inv_build_provenance_output_check_native",
+      "command": "tests/lib/build_provenance.py output-check --root",
+      "step": "native_check",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage native"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "inv_minimum_native",
       "command": "check_minimum_macos",
       "step": "native_check",
@@ -4484,6 +4798,41 @@
       ]
     },
     {
+      "id": "inv_build_provenance_output_check_assembled",
+      "command": "tests/lib/build_provenance.py output-check --root",
+      "step": "assembled",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage assembled"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "inv_identity_presign",
       "command": "docs/generate_worker_identity.py --check",
       "step": "presign",
@@ -4646,6 +4995,41 @@
       ]
     },
     {
+      "id": "inv_build_provenance_output_check_observer",
+      "command": "tests/lib/build_provenance.py output-check --root",
+      "step": "sign_observer",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage observer"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
       "id": "inv_guide",
       "command": "docs/generate_limits.py --stage-guide",
       "step": "guide",
@@ -4669,6 +5053,41 @@
         {
           "path": "tests/suites/source_drift/limits.py",
           "symbol": "test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing",
+          "form": "test",
+          "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "inv_build_provenance_output_check_packaging",
+      "command": "tests/lib/build_provenance.py output-check --root",
+      "step": "zip",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "--stage packaging"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_invocations",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
+          "form": "test",
+          "coverage": "helper"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
           "form": "test",
           "coverage": "helper"
         }
@@ -4703,8 +5122,8 @@
       "id": "builddir",
       "path": "builddir/",
       "facts": {
-        "Trusted as": "Meson's configuration and incremental native outputs for this checkout, reused only under the toolchain its stamp (pw-toolchain.json) records: SDK path, version and build, developer directory, configured compiler commands and their probed identities, and the selected Rust compiler",
-        "Refused when": "a component of its path is a symlink, not a directory or another user's, refused at admission before any session or cache write; its recorded source directory is not this checkout, its meson-info cannot be read, its stamp is missing, malformed, unsupported or does not describe the directory, a stamped field differs from the toolchain selected now, or a field needed for that comparison cannot be observed; fresh mode replaces the directory after admission instead of validating it"
+        "Trusted as": "Meson's configuration and incremental native outputs for this checkout, reused only under the toolchain its stamp (pw-toolchain.json) records: SDK path, version and build, developer directory, configured compiler commands and their probed identities, and the selected Rust compiler, and the output target it was configured for: Meson's host machine, the targets' architecture selections and the Cargo triple",
+        "Refused when": "a component of its path is a symlink, not a directory or another user's, refused at admission before any session or cache write; its recorded source directory is not this checkout, its meson-info cannot be read, its stamp is missing, malformed, unsupported (a stamp from before the output target contract included) or does not describe the directory, its stamped output target is not the required one, a stamped field differs from the toolchain selected now, or a field needed for that comparison cannot be observed; fresh mode replaces the directory after admission instead of validating it"
       },
       "sources": [
         {
@@ -4751,8 +5170,8 @@
       "id": "controller_target",
       "path": "controller/target/",
       "facts": {
-        "Trusted as": "Cargo's incremental outputs and intermediate release state under the pinned --target-dir, with Cargo's own reuse judgment recorded per shipped target; fresh mode replaces only its release/ subdirectory",
-        "Refused when": "a component of its path or of release/ is a symlink, not a directory or another user's, or the session destination is not a regular file of this user, refused at admission before any session or cache write; Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, reports no literal boolean judgment for a shipped target, or, in fresh mode, reports reusing one; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected"
+        "Trusted as": "Cargo's incremental outputs and intermediate release state under the pinned --target-dir, the shipped executables under aarch64-apple-darwin/release/ and the host build scripts and procedural macros under release/, with Cargo's own reuse judgment recorded per shipped target; fresh mode replaces only those two release/ subdirectories",
+        "Refused when": "a component of its path, of release/, of aarch64-apple-darwin/ or of its release/ is a symlink, not a directory or another user's, or the session destination is not a regular file of this user, refused at admission before any session or cache write; Cargo would keep intermediate state outside it, reports an executable at another path than the pinned one, produces a shipped output that is not a thin arm64 Mach-O for macOS, reports no literal boolean judgment for a shipped target, or, in fresh mode, reports reusing one; otherwise a stale output is caught only by the minimum and SDK checks and Cargo's own fingerprints, and a replaced cached output that Cargo judges current is recorded as reused, not detected"
       },
       "sources": [
         {
@@ -4790,6 +5209,12 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_replaced_cached_output_is_recorded_not_detected",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_output_target_mismatch",
           "form": "test",
           "coverage": "behavioral"
         }

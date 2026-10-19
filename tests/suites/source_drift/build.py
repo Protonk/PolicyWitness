@@ -39,7 +39,7 @@ class BuildDocumentationTests(unittest.TestCase):
                  'tests/catalog.json', generator.GENERATOR_NAME, generator.MANIFEST_NAME, generator.BASELINE_NAME,
                  self.manifest['document'], 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
                  'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
-                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py'}
+                 'tests/lib/build_provenance.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py'}
         paths.update(str(p.relative_to(ROOT)) for p in self.figures)
         paths |= self.cited()
         for name in paths:
@@ -165,7 +165,9 @@ class BuildDocumentationTests(unittest.TestCase):
             self.assertIn(anchor, anchors)
         self.assertIn('assemble -> embed_client [color=', dot_text)
         self.assertIn('assemble -> skip_xpc [style=dashed]', dot_text)
-        self.assertIn('skip_xpc -> presign [style=dashed]', dot_text)
+        self.assertIn('skip_xpc -> assembled [style=dashed]', dot_text)
+        self.assertIn('embed_services -> assembled [color=', dot_text)
+        self.assertIn('assembled -> presign;', dot_text)
         self.assertNotIn('embed_services -> skip_xpc', dot_text)
         self.assertIn('sign_tools -> evidence [style=dashed]', dot_text)
         # The fresh-only step hangs off its predecessor and rejoins; the direct edge beside it is the incremental path.
@@ -442,6 +444,66 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertNotIn('fixed native policy: b_lto', compile_.stdout + compile_.stderr)
         problems = generator.meson_problems(self.manifest, meson.read_text())
         self.assertTrue(any('b_lto' in p and 'not asserted' in p for p in problems), problems)
+
+    def test_meson_output_target_assertion_refuses_other_hosts(self):
+        """meson.build requires an arm64 macOS host machine and leaves the build machine free. A cross file naming an x86_64
+        macOS host is refused at setup by name; an arm64 macOS cross file is a cross build that compiles thin arm64 outputs;
+        a directory configured for x86_64 before the assertion existed is refused by the regeneration its next compile
+        triggers, before anything compiles. With the assertion removed the x86_64 setup succeeds, so the control would fail,
+        and the grounding rule names the missing assertion; a changed requirement is named too. A Meson running translated
+        reaches the same refusal through its default host; no translated Meson is run here."""
+        directory = tempfile.TemporaryDirectory(prefix='pw-meson-target-')
+        self.addCleanup(directory.cleanup)
+        work = Path(directory.name)
+        cross = {}
+        for family in ('x86_64', 'aarch64'):
+            cross[family] = work / f'{family}.ini'
+            cross[family].write_text("[binaries]\nc = 'cc'\n[host_machine]\nsystem = 'darwin'\n"
+                                     f"cpu_family = '{family}'\ncpu = '{family}'\nendian = 'little'\n")
+
+        def setup(source, name, family):
+            return subprocess.run(['meson', 'setup', str(work / name), str(source), '-Dxpc=false', '--cross-file', str(cross[family])],
+                                  capture_output=True, text=True, timeout=300)
+        message = ('Assert failed: output target: the native products are macOS arm64 code, but Meson is configured for host darwin x86_64 '
+                   '(the build machine, darwin aarch64, is not constrained)')
+        refused = setup(ROOT, 'x86_64', 'x86_64')
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn(message, refused.stdout + refused.stderr)
+        self.assertFalse((work / 'x86_64/build.ninja').exists(), 'a refused setup left a configured directory')
+        crossed = setup(ROOT, 'aarch64', 'aarch64')
+        self.assertEqual(crossed.returncode, 0, crossed.stdout + crossed.stderr)
+        self.assertIn('Build type: cross build', crossed.stdout)
+        compiled = subprocess.run(['meson', 'compile', '-C', str(work / 'aarch64')], capture_output=True, text=True, timeout=600)
+        self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
+        for name in ('sb_api_validator', 'pw-probe-runner', 'pw-extension-issuer'):
+            header = (work / 'aarch64' / name).read_bytes()[:8]
+            self.assertEqual((header[:4], int.from_bytes(header[4:8], 'little')), (b'\xcf\xfa\xed\xfe', 0x0100000c),
+                             f'{name} is not a thin arm64 Mach-O')
+        # A copy of the native sources without the assertion: an x86_64 host configures, the rule names the missing row,
+        # and restoring the assertion makes the next compile's regeneration refuse before anything compiles.
+        source = work / 'source'
+        names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT)
+        for name in set(names.decode().split('\0')) - {''}:
+            if (ROOT / name).is_file() and (name.startswith(('controller/tools/', 'runner/Sources/', 'runner/Services/', 'runner/Clients/'))
+                                            or name in ('meson.build', 'meson.options')):
+                (source / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / name, source / name)
+        meson = source / 'meson.build'
+        text = meson.read_text()
+        start = text.index("assert(host_machine.system() == 'darwin'")
+        end = text.index('build_machine.cpu_family()))\n', start) + len('build_machine.cpu_family()))\n')
+        meson.write_text(text[:start] + text[end:])
+        bypassed = setup(source, 'regenerated', 'x86_64')
+        self.assertEqual(bypassed.returncode, 0, 'with the assertion removed an x86_64 host configures: the control would fail here')
+        self.assertTrue(any('output-target assertion' in p for p in generator.meson_problems(self.manifest, meson.read_text())))
+        meson.write_text(text)
+        regenerated = subprocess.run(['meson', 'compile', '-C', str(work / 'regenerated')], capture_output=True, text=True, timeout=300)
+        self.assertNotEqual(regenerated.returncode, 0)
+        self.assertIn(message, regenerated.stdout + regenerated.stderr)
+        self.assertNotIn('Compiling C object', regenerated.stdout + regenerated.stderr)
+        changed = text.replace("host_machine.cpu_family() == 'aarch64'", "host_machine.cpu_family() == 'x86_64'", 1)
+        self.assertTrue(any('requires host' in p for p in generator.meson_problems(self.manifest, changed)))
+        self.assertEqual(generator.meson_problems(self.manifest, text), [])
 
     def test_release_preflight_refuses_a_grown_build_baseline(self):
         release_spec = importlib.util.spec_from_file_location('preflight_build_baseline', ROOT / 'tests/lib/release_preflight.py')

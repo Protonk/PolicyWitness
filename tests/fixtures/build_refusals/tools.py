@@ -4,12 +4,16 @@
 The build script resolves cargo, meson, ninja, codesign and cp through PATH.
 Each wrapper runs the real tool with the same arguments and appends one
 receipt line. A hook names a tool and a matching call; its actions remove,
-move, truncate, append to, rewrite or replace with a symlink a file, edit
+move, copy over, replace with a new file, truncate, append to, rewrite or
+replace with a symlink a file, edit
 Cargo's artifact report (set or remove fields, drop or duplicate a message), kill or signal the build's shell, the lock owner or
 the wrapper itself, start a holder process beyond the wrapper, or record
 whether the checkout lock is free, before or after that call, so a missing or
 damaged input, a false report, a replaced path or an interruption appears at
-exactly one boundary of the unchanged script. The real tool and a holder
+exactly one boundary of the unchanged script. A hook may also append
+arguments to the real tool's command (a cross file for `meson setup`), so a
+configuration the script does not choose reaches it through the tool it
+already runs. The real tool and a holder
 receive the checkout lock descriptors the claim names, as every protected
 launch must; Python would close them by default. A hook may also answer a call instead of running the
 tool (an old ninja reporting its version). A configured stderr canary is
@@ -104,6 +108,13 @@ def act(action):
     elif op == 'copy':
         shutil.copy2(action['from'], path)
         path.chmod(0o755)
+    elif op == 'replace':
+        # A new file renamed over the path, never a write through its inode: Cargo's uplifted executable is a hard link of
+        # its deps file, and a copy over it would rewrite the cached unit Cargo relinks when the output goes missing.
+        temporary = path.with_name(path.name + '.pw-replace')
+        shutil.copy2(action['from'], temporary)
+        temporary.chmod(0o755)
+        os.replace(temporary, path)
     elif op == 'chmod':
         path.chmod(int(action['mode'], 8))
     elif op == 'truncate':
@@ -160,7 +171,9 @@ def main():
         fired.append(hook['label'])
         executed = None
     else:
-        executed = [config['tools'][tool], *args]
+        appended = [arg for hook in hooks for arg in hook.get('append', [])]
+        fired += [hook['label'] for hook in hooks if hook.get('append') and hook['label'] not in fired]
+        executed = [config['tools'][tool], *args, *appended]
         status = subprocess.run(executed, pass_fds=lock_fds()).returncode
     # The receipt names every hook that fires around this call and is written before the
     # after-actions run, so an action that kills the build's shell still leaves it.

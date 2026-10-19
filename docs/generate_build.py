@@ -37,7 +37,11 @@ the function. The script's first instruction must be `set -euo pipefail`,
 on which every propagated status depends; the signing commands' flags and
 the tool invocations' flags are recorded and compared, not only their names.
 Meson's policy assertions are one family: the manifest's one `meson` row
-carries their shared message template and lists every asserted option.
+carrying `asserts` holds their shared message template and lists every
+asserted option. meson.build's output-target assertion, which requires the
+host machine's system and CPU family, is one more `meson` row carrying
+`requires_host`; its message and the host it requires are compared with
+meson.build the same way.
 
 Generator invariants: this generator holds G1 to G10 directly and G11 through
 the shared prose-link rule, as stated under Generator contracts in
@@ -405,14 +409,19 @@ def load_manifest(path: Path, root: Path = ROOT):
     unbannered = [s for s in data["steps"] if not s["banners"] and s.get("where") != "Makefile"]
     if len(unbannered) > 1 or (unbannered and data["steps"].index(unbannered[0]) > 1):
         raise ValueError("only one step without a banner is allowed, before every bannered step of the script")
-    refusal_ids = _ids("refusals", data["refusals"], ("id", "message", "kind", "steps", "status", "variants", "sources", "checks"), ("asserts",))
+    refusal_ids = _ids("refusals", data["refusals"], ("id", "message", "kind", "steps", "status", "variants", "sources", "checks"),
+                       ("asserts", "requires_host"))
     for refusal in data["refusals"]:
         owner = f"refusal {refusal['id']}"
         _text(owner, refusal, "message")
         if refusal["kind"] not in REFUSAL_KINDS:
             raise ValueError(f"{owner}: unknown kind {refusal['kind']!r}")
-        if (refusal["kind"] == "meson") != ("asserts" in refusal):
-            raise ValueError(f"{owner}: asserts belongs to a meson row and every meson row lists its asserted options")
+        if (refusal["kind"] == "meson") != (("asserts" in refusal) != ("requires_host" in refusal)):
+            raise ValueError(f"{owner}: a meson row lists either the options its assertion family asserts or the host its "
+                             f"output-target assertion requires, and no other row carries either")
+        if "requires_host" in refusal and (not isinstance(refusal["requires_host"], dict) or set(refusal["requires_host"]) != {"system", "cpu_family"}
+                                           or any(not isinstance(v, str) or not re.fullmatch(r"[a-z0-9_]+", v) for v in refusal["requires_host"].values())):
+            raise ValueError(f"{owner}: requires_host must name the system and the CPU family")
         if "asserts" in refusal and (not isinstance(refusal["asserts"], list) or not refusal["asserts"]
                                      or any(not isinstance(a, str) or not re.fullmatch(r"[a-z_]+", a) for a in refusal["asserts"])
                                      or len(set(refusal["asserts"])) != len(refusal["asserts"])):
@@ -588,25 +597,49 @@ def meson_templates(text):
     return sorted({t.replace("@0@", "${name}").replace("@1@", "${expected}").replace("@2@", "${got}") for t in found})
 
 
+def meson_target_assertions(text):
+    """meson.build's output-target assertions: the host system and CPU family each requires, and its message template."""
+    found = re.findall(r"assert\(host_machine\.system\(\) == '([a-z0-9_]+)' and host_machine\.cpu_family\(\) == '([a-z0-9_]+)',\s*"
+                       r"'([^']+)'\.format\(", text)
+    placeholders = ("${host_system}", "${host_cpu_family}", "${build_system}", "${build_cpu_family}")
+    out = []
+    for system, family, template in found:
+        for index, name in enumerate(placeholders):
+            template = template.replace(f"@{index}@", name)
+        out.append(dict(requires_host=dict(system=system, cpu_family=family), message=template))
+    return out
+
+
 def meson_problems(manifest, meson_text):
-    """One manifest row models the assertion family: its message is the template and its asserts are the options, in order."""
-    rows = [r for r in manifest["refusals"] if r["kind"] == "meson"]
+    """One manifest row models the assertion family: its message is the template and its asserts are the options, in order.
+    One more row models each output-target assertion: its message is that assertion's template and it requires the same host."""
+    targets = meson_target_assertions(meson_text)
+    target_rows = [r for r in manifest["refusals"] if r["kind"] == "meson" and "requires_host" in r]
+    out = []
+    if len(targets) != len(target_rows):
+        out.append(f"meson.build makes {len(targets)} output-target assertion(s); the manifest models {len(target_rows)}")
+    for row, found in zip(target_rows, targets):
+        if row["message"] != found["message"]:
+            out.append(f"meson row {row['id']}: message is not the output-target assertion's template {found['message']!r}")
+        if row["requires_host"] != found["requires_host"]:
+            out.append(f"meson row {row['id']}: requires host {row['requires_host']}, but meson.build requires {found['requires_host']}")
+    rows = [r for r in manifest["refusals"] if r["kind"] == "meson" and "asserts" in r]
     templates = meson_templates(meson_text)
     names = [name for name, _ in meson_assertions(meson_text)]
-    out = []
+    family = []
     if len(templates) != 1:
-        out.append(f"meson.build: expected one assertion message template, found {len(templates)}")
+        family.append(f"meson.build: expected one assertion message template, found {len(templates)}")
     for row in rows:
         if templates and row["message"] != templates[0]:
-            out.append(f"meson row {row['id']}: message is not the assertion template {templates[0]!r}")
+            family.append(f"meson row {row['id']}: message is not the assertion template {templates[0]!r}")
     asserted = [name for row in rows for name in row.get("asserts", [])]
     if len(set(asserted)) != len(asserted):
-        out.append("meson rows: an option is asserted by more than one row")
-    out += [f"meson assertion '{name}': not in the manifest" for name in names if name not in asserted]
-    out += [f"meson assertion '{name}' (manifest): not asserted by meson.build" for name in asserted if name not in names]
-    if not out and asserted != names:
-        out.append(f"meson rows: asserted options {asserted} are not in meson.build's order {names}")
-    return out
+        family.append("meson rows: an option is asserted by more than one row")
+    family += [f"meson assertion '{name}': not in the manifest" for name in names if name not in asserted]
+    family += [f"meson assertion '{name}' (manifest): not asserted by meson.build" for name in asserted if name not in names]
+    if not family and asserted != names:
+        family.append(f"meson rows: asserted options {asserted} are not in meson.build's order {names}")
+    return out + family
 
 
 def propagated_problems(manifest, model):
@@ -923,6 +956,8 @@ def render_refusals(manifest):
         message = refusal["message"]
         if "asserts" in refusal:
             message += f" (the assertion family: {len(refusal['asserts'])} options, {', '.join(refusal['asserts'])})"
+        if "requires_host" in refusal:
+            message += f" (the output-target assertion: host {refusal['requires_host']['system']} {refusal['requires_host']['cpu_family']})"
         rows.append([refusal["id"], message, ", ".join(refusal["steps"]), refusal["status"], refusal["kind"],
                      _variant_cell(refusal["variants"]), cell, *_cites(refusal)])
     counts = {kind: sum(r["kind"] == kind for r in manifest["refusals"]) for kind in REFUSAL_KINDS}
@@ -930,8 +965,11 @@ def render_refusals(manifest):
     baseline = (f"{uncovered} have no control that produces them and are listed in the baseline" if uncovered
                 else "every refusal has a control that produces it and the baseline is empty")
     asserted = sum(len(r.get("asserts", [])) for r in manifest["refusals"])
-    summary = (f"<summary>{len(manifest['refusals'])} refusals ({counts['script']} the script's own, {counts['meson']} Meson "
-               f"assertion family over {asserted} options, {counts['propagated']} propagated from a check or a tool, {counts['make']} in the Makefile), "
+    families = sum("asserts" in r for r in manifest["refusals"])
+    targets = sum("requires_host" in r for r in manifest["refusals"])
+    summary = (f"<summary>{len(manifest['refusals'])} refusals ({counts['script']} the script's own, {families} Meson "
+               f"assertion family over {asserted} options, {targets} Meson output-target assertion, {counts['propagated']} propagated "
+               f"from a check or a tool, {counts['make']} in the Makefile), "
                f"with symbol presence and test definition verified and the messages, statuses and steps compared with the "
                f"script; {baseline}; whether a test asserts the row is not verified</summary>")
     return "\n".join(["<details>", summary, "", arch._table(

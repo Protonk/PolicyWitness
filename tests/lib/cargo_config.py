@@ -35,9 +35,18 @@ found, or a launcher answer that cannot be read is an Unresolved condition,
 never a fallback to PATH. The resolution carries the redacted file graph, the
 selected commands with their sources and the sources they override, the
 `[env]` names with whether each applied, the effective values of the
-variables that select the compiler or feed it, and the requested Rust flags by
-precedence. It never carries raw configuration values beyond those, PATH or
-any other environment value.
+variables that select the compiler or feed it, the output target the command
+line selects with the lower-precedence defaults it overrides, and the
+requested Rust flags by precedence. It never carries raw configuration values
+beyond those, PATH or any other environment value.
+
+The output target is the triple the build passes with `--target`, which takes
+precedence over CARGO_BUILD_TARGET and `build.target`; those are recorded as
+overridden, not applied and not refused. Target-specific flags
+(`target.<triple>.rustflags`, CARGO_TARGET_<TRIPLE>_RUSTFLAGS and `cfg()`
+rules) belong to that output triple, not to the triple the compiler reports as
+its own host: with an explicit target, Cargo applies them to the shipped
+units only.
 """
 import os
 from pathlib import Path
@@ -350,22 +359,25 @@ def selection(merged, env, cwd, path_value):
     return out
 
 
-def requested_flags(merged, env, host):
-    """The source Cargo takes its extra rustc flags from, by its precedence; tokens only where the source is established."""
+def requested_flags(merged, env, target):
+    """The source Cargo takes its extra rustc flags from, by its precedence; tokens only where the source is established.
+
+    target is the output triple the command selects; target rules for any other triple, the compiler's host included,
+    do not apply to the shipped units."""
     present = []
     if 'CARGO_ENCODED_RUSTFLAGS' in env:
         value = env['CARGO_ENCODED_RUSTFLAGS']
         present.append(dict(source='CARGO_ENCODED_RUSTFLAGS', tokens=[] if value == '' else value.split('\x1f'), resolved=True))
     if 'RUSTFLAGS' in env:
         present.append(dict(source='RUSTFLAGS', tokens=env['RUSTFLAGS'].split(), resolved=True))
-    target = merged.get('target', {})
+    tables = merged.get('target', {})
     rules = {}
-    if isinstance(target, dict):
-        for name, table in target.items():
+    if isinstance(tables, dict):
+        for name, table in tables.items():
             if isinstance(table, dict) and 'rustflags' in table:
                 rules[name] = table['rustflags']
-    env_rule = f'CARGO_TARGET_{host.upper().replace("-", "_")}_RUSTFLAGS' if host else None
-    applicable = {k: v for k, v in rules.items() if k == host or k.startswith('cfg(')}
+    env_rule = f'CARGO_TARGET_{target.upper().replace("-", "_")}_RUSTFLAGS' if target else None
+    applicable = {k: v for k, v in rules.items() if k == target or k.startswith('cfg(')}
     if applicable or (env_rule and env_rule in env):
         resolved = not any(k.startswith('cfg(') for k in applicable)
         tokens = []
@@ -385,6 +397,26 @@ def requested_flags(merged, env, host):
     return dict(present[0], overrides=[p['source'] for p in present[1:]])
 
 
+def target_selection(merged, env, triple):
+    """The output target: the command line's --target, and the lower-precedence defaults it overrides.
+
+    CARGO_BUILD_TARGET and `build.target` supply a target only when the command
+    names none; with --target they are recorded as overridden, never applied.
+    A `build.target` that is neither a target name nor an array of them is a
+    value Cargo itself refuses to read."""
+    overrides = []
+    if 'CARGO_BUILD_TARGET' in env:
+        overrides.append('CARGO_BUILD_TARGET')
+    configured = leaf(merged, 'build', 'target')
+    if configured is not None:
+        named = isinstance(configured, Leaf) and isinstance(configured.value, str)
+        listed = isinstance(configured, list) and all(isinstance(v, Leaf) and isinstance(v.value, str) for v in configured)
+        if not named and not listed:
+            raise Unresolved('`build.target` is neither a target name nor an array of them')
+        overrides.append('build.target')
+    return dict(source='--target', triple=triple, overrides=overrides)
+
+
 def flag_list(value):
     if isinstance(value, Leaf) and isinstance(value.value, str):
         return value.value.split()
@@ -393,11 +425,11 @@ def flag_list(value):
     raise Unresolved('a rustflags value is neither a string nor an array of strings')
 
 
-def resolve(cwd, env, *, probe):
+def resolve(cwd, env, *, probe, target=None):
     """The resolution for a Cargo invocation in cwd with environment env (the caller's, as Cargo receives it).
 
-    probe runs the launcher queries with the caller's bounds. The merged tree is
-    returned for the flag attribution, which needs the host the compiler reports."""
+    probe runs the launcher queries with the caller's bounds; target is the triple the invocation passes with --target,
+    when it passes one. The merged tree is returned for the flag attribution, which needs that output triple."""
     merged, graph = load(cwd, env)
     start = launcher(cwd, env, probe)
     base = dict(env)
@@ -406,7 +438,10 @@ def resolve(cwd, env, *, probe):
         base['RUSTUP_TOOLCHAIN'] = start['toolchain']
     child, entries = child_environment(merged, base, cwd)
     programs = selection(merged, env, cwd, child.get('PATH'))
-    return dict(graph=graph, launcher=start, env_entries=entries, programs=programs, child=child, merged=merged)
+    resolution = dict(graph=graph, launcher=start, env_entries=entries, programs=programs, child=child, merged=merged)
+    if target is not None:
+        resolution['target'] = target_selection(merged, env, target)
+    return resolution
 
 
 def conflicts(resolution, env):
@@ -428,7 +463,7 @@ def summary(resolution, home):
         programs[role] = dict(source=entry['source'], command=redact(entry.get('command'), home), overrides=entry['overrides'],
                               file=redact(entry.get('file'), home), disabled=bool(entry.get('disabled')))
     child = resolution['child']
-    return dict(files=[file_entry(n) for n in resolution['graph']],
+    out = dict(files=[file_entry(n) for n in resolution['graph']],
                 launcher=dict(kind=resolution['launcher']['kind'], toolchain=resolution['launcher'].get('toolchain')),
                 programs=programs,
                 env_entries={name: dict(applied=e['applied'], force=e['force'], relative=e['relative'], file=redact(e['file'], home))
@@ -437,3 +472,6 @@ def summary(resolution, home):
                                        RUSTUP_TOOLCHAIN=child.get('RUSTUP_TOOLCHAIN'),
                                        path_replaced_by_env=bool(resolution['env_entries'].get('PATH', {}).get('applied')),
                                        rustup_home_replaced_by_env=bool(resolution['env_entries'].get('RUSTUP_HOME', {}).get('applied'))))
+    if 'target' in resolution:
+        out['target'] = dict(resolution['target'])
+    return out

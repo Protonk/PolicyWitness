@@ -1,11 +1,17 @@
 """Read-only bundle inspection and inventories shared by test equipment.
 
-No signing, rebuilding, or manifest repair belongs here. Signature verification
-is local codesign verification, not notarization or release acceptance. One
-consistency rule reads signers: every executable must carry the signer the
-controller carries, so an executable left ad hoc-signed inside a
+No signing, rebuilding, thinning, or manifest repair belongs here. Signature
+verification is local codesign verification, not notarization or release
+acceptance. One consistency rule reads signers: every executable must carry the
+signer the controller carries, so an executable left ad hoc-signed inside a
 production-signed app is refused while a copy signed ad hoc throughout, as
 test equipment is, stays consistent.
+
+The output target is checked on the bytes: every required executable, whatever
+the manifest claims, and every other Mach-O the bundle delivers, found by
+header (output_target.runnable_code), must be a thin arm64 Mach-O for macOS.
+dSYM companions are debug data, not code. Signature, manifest, provenance and
+output-target faults are collected independently, so one never hides another.
 """
 import argparse
 import hashlib
@@ -19,6 +25,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_provenance
+import output_target
 import signer_check
 
 CODESIGN = '/usr/bin/codesign'
@@ -99,7 +106,7 @@ def changes(before, after):
 def inspect(app):
     app = Path(app).resolve()
     report = {'schema_version': 1, 'app': str(app), 'ok': False, 'errors': [],
-              'signatures': [], 'manifest_entries': []}
+              'signatures': [], 'manifest_entries': [], 'output_target': []}
 
     def error(code, path, message, **details):
         report['errors'].append(dict(code=code, path=str(path), message=message, **details))
@@ -204,6 +211,21 @@ def inspect(app):
         error('worker_clock', worker, 'worker import inspection failed: ' + str(exc))
         receipt['error'] = str(exc)
     report['worker_clock'] = receipt
+
+    # Output target: the required executables regardless of the manifest, and every other runnable Mach-O by header, so
+    # an inventory change is no bypass. A bundle that cannot be scanned is an error, never an empty inventory.
+    try:
+        required = [contained(relative) for relative in EXECUTABLES]
+        delivered = list(dict.fromkeys([*(path for path in required if path.is_file()), *output_target.runnable_code(app)]))
+        for path in delivered:
+            relative = path.relative_to(app)
+            observation = build_provenance.output_observation(path)
+            problems = output_target.target_problems(observation)
+            report['output_target'].append(dict(observation, path=str(relative), target_problems=problems))
+            for problem in problems:
+                error('output_target', relative, problem)
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        error('output_target', '.', f'the bundle cannot be inspected for its output target: {exc}')
 
     manifest = None
     try:

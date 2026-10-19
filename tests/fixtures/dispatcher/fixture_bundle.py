@@ -13,8 +13,11 @@ every other executable. This inventory is deliberately independent of
 which is the point. `record(app)` writes a complete provenance record for a
 full build, authored here: nominal toolchain and configuration values of the
 documented shape, the stand-ins' hashes and load commands read with this
-file's own `otool` parse, and the signature facts the linker-signed stand-ins
-carry (ad hoc, no leaf, team, runtime or timestamp). The inspector's checks
+file's own `otool` parse, their architectures and container from `lipo -archs`
+and their own header magic, and the signature facts the linker-signed
+stand-ins carry (ad hoc, no leaf, team, runtime or timestamp). The stubs are
+compiled for arm64 explicitly, so they are the output target whichever
+architecture the compiler or the calling process defaults to. The inspector's checks
 over that record are real and independent of this file, so a control that
 keeps a stale record beside changed bytes must expect a provenance finding.
 """
@@ -49,14 +52,18 @@ LINKER_SIGNED = dict(status='ok', leaf=None, team=None, timestamp=False, runtime
 
 
 def load_commands(path):
-    """UUID and LC_BUILD_VERSION as otool prints them, parsed here."""
+    """UUID and LC_BUILD_VERSION as otool prints them, and the architectures and container, parsed here."""
+    names = subprocess.run(['/usr/bin/lipo', '-archs', str(path)], capture_output=True, text=True, check=True, timeout=60).stdout.split()
+    with open(path, 'rb') as stream:
+        container = 'fat' if stream.read(4) in (b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf') else 'thin'
     text = subprocess.run(['/usr/bin/otool', '-l', str(path)], capture_output=True, text=True, check=True, timeout=60).stdout
     uuid = re.search(r'^\s*uuid (\S+)\s*$', text, re.M).group(1)
     block = text[text.index('cmd LC_BUILD_VERSION'):]
     block = block[:block.index('Load command')] if 'Load command' in block else block
     value = lambda key: re.search(r'^\s*' + key + r' (\S+)\s*$', block, re.M).group(1)
     tools = [dict(tool=tool, version=version) for tool, version in re.findall(r'^\s*tool (\S+)\s*\n\s*version (\S+)\s*$', block, re.M)]
-    return dict(uuid=uuid, platform=value('platform'), minos=value('minos'), sdk=value('sdk'), tools=tools)
+    return dict(uuid=uuid, platform=value('platform'), minos=value('minos'), sdk=value('sdk'), tools=tools,
+                architectures=names, container=container)
 
 
 def record(app):
@@ -83,7 +90,7 @@ def record(app):
     program = lambda source, command: dict(source=source, command=command, overrides=[], file=None, disabled=False)
     compiler = dict(configured=dict(command=['cc'], id='clang', version='0', full_version=None), observed=observed(command=['cc'], identity='fixture cc 0'))
     data = dict(
-        schema_version=1, generated_at='2026-01-01T00:00:00Z',
+        schema_version=2, generated_at='2026-01-01T00:00:00Z',
         source=dict(commit=ZERO[:40], describe='fixture', dirty=False, version='0.0.0', build_number='0', worker_identity=ZERO,
                     input_hashes={name: ZERO for name in ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
                                                           'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')}),
@@ -97,6 +104,7 @@ def record(app):
                            selection=dict(files=[], launcher=dict(kind='cargo', toolchain=None),
                                           programs=dict(rustc=program('default', '/fixture/rustc'), wrapper=program('none', None),
                                                         workspace_wrapper=program('none', None)),
+                                          target=dict(source='--target', triple='aarch64-apple-darwin', overrides=[]),
                                           env_entries={}, child_environment=dict(SDKROOT='/fixture/SDK', MACOSX_DEPLOYMENT_TARGET=minimum,
                                                                                  DEVELOPER_DIR=None, RUSTUP_TOOLCHAIN=None,
                                                                                  path_replaced_by_env=False, rustup_home_replaced_by_env=False))),
@@ -107,12 +115,19 @@ def record(app):
             rustflags=dict(requested=dict(source='none', tokens=[]), flag_environment={}, note='fixture bundle'),
             requests={name: dict(state='unset') for name in ('SDKROOT', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH',
                                                               'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')},
+            output_target=dict(system='macos', platform='1', architecture='arm64', container='thin',
+                               cargo_triple='aarch64-apple-darwin', note='fixture bundle'),
+            meson_machines=dict(host=dict(system='darwin', cpu_family='aarch64'), build=dict(system='darwin', cpu_family='aarch64'),
+                                note='fixture bundle'),
             deployment_target=minimum, sdkroot='/fixture/SDK',
             build_directories=dict(builddir=dict(state='created', replaced_by_fresh_mode=True, stamp='published'),
                                    cargo_release=dict(state='created', replaced_by_fresh_mode=True),
+                                   cargo_target_release=dict(state='created', replaced_by_fresh_mode=True),
                                    fresh_mode=dict(requested=True, replacement={
                                        'builddir': dict(path='builddir', existed=True, removed=True),
-                                       'cargo_release': dict(path='controller/target/release', existed=True, removed=True)}),
+                                       'cargo_release': dict(path='controller/target/release', existed=True, removed=True),
+                                       'cargo_target_release': dict(path='controller/target/aarch64-apple-darwin/release',
+                                                                    existed=True, removed=True)}),
                                    cargo_admission=dict(target_directory='/fixture/target', build_directory='/fixture/target')),
             toolchain_stamp=dict(scope_note='fixture bundle', projection=dict(status='unavailable', reason='fixture bundle'))),
         outputs=outputs,

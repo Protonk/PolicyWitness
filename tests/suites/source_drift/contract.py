@@ -49,7 +49,7 @@ def build_references():
     paths = {'docs/generate_build.py', 'docs/build.json', 'docs/BUILD.md', 'docs/build-steps.dot', 'docs/build-steps.svg',
              'tests/fixtures/docs/build_baseline.json', 'build.sh', 'meson.build', 'Makefile', 'README.md', 'Info.plist',
              'runner/Services/PWRunner/Info.plist', 'tests/lib/artifact.py', 'tests/build-evidence.py',
-             'tests/lib/build_provenance.py', 'tests/lib/checkout_lock.py', 'tests/lib/signer_check.py',
+             'tests/lib/build_provenance.py', 'tests/lib/checkout_lock.py', 'tests/lib/signer_check.py', 'tests/lib/output_target.py',
              'tests/lib/cargo_config.py', 'tests/lib/vendor/README.md', 'tests/lib/vendor/tomli/__init__.py', 'tests/lib/vendor/tomli/_parser.py', 'tests/lib/vendor/tomli/_re.py', 'tests/lib/vendor/tomli/_types.py', 'tests/lib/vendor/tomli/py.typed', 'tests/lib/vendor/tomli/LICENSE'} | ENTRY_FILES
     for group in ('steps', 'refusals', 'signing', 'invocations', 'knobs', 'directories'):
         for item in manifest[group]:

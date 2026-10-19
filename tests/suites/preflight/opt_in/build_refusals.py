@@ -105,10 +105,12 @@ def lock_free(root):
 
 # ---- hooks for the tool wrapper ----------------------------------------------
 
-def hook(label, tool, actions=(), *, when='after', respond=None, **match):
+def hook(label, tool, actions=(), *, when='after', respond=None, append=None, **match):
     entry = dict(label=label, tool=tool, when=when, match=match, actions=list(actions))
     if respond is not None:
         entry['respond'] = respond
+    if append is not None:
+        entry['append'] = list(append)
     return entry
 
 
@@ -122,6 +124,11 @@ def move(path, to):
 
 def copy(source, path):
     return {'op': 'copy', 'from': str(source), 'path': str(path)}
+
+
+def replace(source, path):
+    """A new file renamed over the path: never a write through a Cargo output's hard link to its cached unit."""
+    return {'op': 'replace', 'from': str(source), 'path': str(path)}
 
 
 def append(path, text):
@@ -236,7 +243,8 @@ class Checkout:
         self.canary = 'PW_CANARY_' + os.urandom(8).hex()
         self.base_env['PW_UNRELATED_CANARY'] = self.canary
         self.builddir = self.root / 'builddir'
-        self.target = self.root / 'controller/target/release'
+        self.target = self.root / prov.TRIPLE_RELEASE   # the shipped Cargo outputs
+        self.host_release = self.root / prov.RELEASE    # Cargo's build scripts and procedural macros
         self.minimum = plistlib.loads((self.root / 'Info.plist').read_bytes())['LSMinimumSystemVersion']
         self.ninja_minimum = re.search(r'^NINJA_MINIMUM="([^"]+)"$', self.script.decode(), re.M).group(1)
         self.host_triple = re.search(r'^host: (\S+)$', subprocess.check_output(['rustc', '-vV'], text=True), re.M).group(1)
@@ -367,6 +375,39 @@ class Checkout:
     def meson(self, *args):
         return subprocess.run([self.tools['meson'], *args], capture_output=True, text=True, timeout=300)
 
+    def forbidden(self, name):
+        """A real Mach-O outside the output target, linked with the selected SDK at the plist's minimum so the minimum and
+        SDK checks would pass it: thin x86_64, thin arm64e, universal arm64/x86_64, a one-slice fat container of an arm64
+        executable, or a truncated arm64 executable. Its container and architectures are observed here, independently."""
+        path = self.work / f'forbidden-{name}'
+        if not path.exists():
+            source = self.work / 'forbidden.c'
+            source.write_text('int main(void) { return 0; }\n')
+            clang = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', f'-mmacosx-version-min={self.minimum}', str(source)]
+            arm64 = self.work / 'forbidden-arm64'
+            if not arm64.exists():
+                subprocess.run([*clang, '-arch', 'arm64', '-o', str(arm64)], check=True, capture_output=True, timeout=120)
+            if name in ('x86_64', 'arm64e'):
+                subprocess.run([*clang, '-arch', name, '-o', str(path)], check=True, capture_output=True, timeout=120)
+            elif name == 'universal':
+                subprocess.run([*clang, '-arch', 'arm64', '-arch', 'x86_64', '-o', str(path)], check=True, capture_output=True, timeout=120)
+            elif name == 'one-slice-fat':
+                subprocess.run(['/usr/bin/lipo', '-create', str(arm64), '-output', str(path)], check=True, capture_output=True, timeout=60)
+            elif name == 'truncated':
+                path.write_bytes(arm64.read_bytes()[:100])
+            else:
+                raise ValueError(name)
+            path.chmod(0o755)
+        with path.open('rb') as stream:
+            magic = stream.read(4).hex()
+        listed = subprocess.run(['/usr/bin/lipo', '-archs', str(path)], capture_output=True, text=True, timeout=60)
+        observed = dict(path=str(path), magic=magic, lipo_status=listed.returncode, architectures=listed.stdout.split())
+        equipment = self.out / f'{self.prefix}forbidden-outputs.json'
+        known = json.loads(equipment.read_text()) if equipment.exists() else {}
+        known[name] = observed
+        save(equipment, known)
+        return path
+
     def compile_wrong_worker(self):
         """A worker stand-in that reports a foreign identity and passes every other output check."""
         if self.wrong_worker is None:
@@ -449,8 +490,22 @@ def passing(co, build, variant):
         assert outputs[relative]['cargo']['fresh'] == build.judgments()[name]['fresh']
         assert outputs[relative]['signature']['timestamp'] is True and outputs[relative]['signature']['leaf'] == co.identity
     assert build.record['toolchain']['sdk']['version'] == build.session['sdk_check']['selected']
-    release = build.record['configuration']['build_directories']['cargo_release']
-    assert release['state'] in ('created', 'reused') and not (release['replaced_by_fresh_mode'] and release['state'] == 'reused'), release
+    for name in ('cargo_release', 'cargo_target_release'):
+        release = build.record['configuration']['build_directories'][name]
+        assert release['state'] in ('created', 'reused') and not (release['replaced_by_fresh_mode'] and release['state'] == 'reused'), release
+    # The output target: every shipped output, at every stage the build checked it, and in the record, from the bytes.
+    for output in build.record['outputs']:
+        assert (output['container'], output['architectures'], output['platform']) == ('thin', ['arm64'], '1'), output
+        assert subprocess.check_output(['/usr/bin/lipo', '-archs', str(build.app / output['rel_path'])], text=True).split() == ['arm64']
+    assert build.record['configuration']['output_target']['cargo_triple'] == prov.TRIPLE
+    assert build.record['toolchain']['rustc']['selection']['target']['triple'] == prov.TRIPLE
+    stages = build.session['output_check']
+    assert set(stages) == set(prov.OUTPUT_STAGES) and not any(stage['problems'] for stage in stages.values()), stages
+    assert {Path(path).name for path in stages['cargo']['outputs']} == set(CARGO_BINS)
+    if variant == 'partial':
+        # A partial bundle stays incomplete for the full inspector and still satisfies the output target.
+        report = artifact.inspect(build.app)
+        assert not [e for e in report['errors'] if e['code'] == 'output_target'], report['errors']
     return build
 
 
@@ -656,7 +711,8 @@ def control_build_requests_missing(co, variant):
 
 
 def control_cache_path_unsafe(co, variant):
-    """A symlink at any component of builddir/, controller/target/ or its release/, or at the session destination, refuses at
+    """A symlink at any component of builddir/, controller/target/, its release/, its output triple's directory or that
+    directory's release/, or at the session destination, refuses at
     admission before the session or any cache is written and before any tool runs, in incremental and fresh mode, and
     nothing outside the checkout is created, changed or removed. A path replaced after one helper admitted it is refused
     by the next helper's admission. A missing controller/target/ is created beneath the admitted controller/."""
@@ -664,12 +720,14 @@ def control_cache_path_unsafe(co, variant):
     if outside.exists():
         shutil.rmtree(outside)
     for relative, text in (('target/pw-build-session.json', '{"outside": "session"}\n'), ('target/release/keep', 'outside release\n'),
-                           ('target/debug/keep', 'outside debug\n'), ('builddir/build.ninja', '# outside\n'),
+                           ('target/debug/keep', 'outside debug\n'), ('triple/release/keep', 'outside triple release\n'),
+                           ('builddir/build.ninja', '# outside\n'),
                            ('builddir/keep', 'outside builddir\n'), ('session.json', 'outside session file\n')):
         (outside / relative).parent.mkdir(parents=True, exist_ok=True)
         (outside / relative).write_text(text)
     expected = tree_snapshot(outside)
     components = (('controller/target', outside / 'target'), ('controller/target/release', outside / 'target/release'),
+                  (prov.TRIPLE_DIR, outside / 'triple'), (prov.TRIPLE_RELEASE, outside / 'triple/release'),
                   ('builddir', outside / 'builddir'), (SESSION, outside / 'session.json'))
     build = None
     for relative, target in components:
@@ -703,7 +761,7 @@ def control_cache_path_unsafe(co, variant):
                                     first='metadata')])
     try:
         fired_once(replaced, 'replace-release')
-        check(replaced, 2, 'controller/target/release is a symlink', present=('Replacing the build caches',), absent=('Building Rust',))
+        check(replaced, 2, f'{prov.TRIPLE_RELEASE} is a symlink', present=('Replacing the build caches',), absent=('Building Rust',))
         assert tree_snapshot(outside) == expected, 'fresh mode removed through a replaced path'
         assert (parked_release / 'policy-witness').exists(), 'the replaced directory was removed through its old name'
         preserved(replaced)
@@ -1197,13 +1255,18 @@ def control_missing_cargo_output(co, variant):
 
 
 def control_cargo_artifact_elsewhere(co, variant):
-    """Cargo itself places the outputs under the host triple when the environment selects one."""
-    moved = co.root / 'controller/target' / co.host_triple / 'release/policy-witness'
-    build = co.build('cargo_artifact_elsewhere', variant, env=dict(CARGO_BUILD_TARGET=co.host_triple))
+    """Cargo's report naming a shipped executable at another path than the pinned one refuses before any copy. With the
+    output directory and the output triple both on the command line, no Cargo setting moves the outputs (a lower-precedence
+    x86_64 default is overridden, as the selection sequence shows), so the control edits Cargo's report, which is what the
+    check reads: here it names the host release area, where an output built without --target would land."""
+    messages = co.root / 'controller/target/pw-build-messages.jsonl'
+    moved = co.host_release / 'policy-witness'
+    build = co.build('cargo_artifact_elsewhere', variant,
+                     hooks=[hook('report-elsewhere', 'cargo', [judge(messages, 'policy-witness', set=dict(executable=str(moved)))], first='build')])
     check(build, 2, f'cargo built policy-witness at {moved}, not at {co.target / "policy-witness"}; '
-                    'a target triple or a Cargo setting moved it',
+                    "a Cargo setting or Cargo's report moved it",
           present=('Building Rust controller + tools',), absent=BEFORE_TOOLCHAIN)
-    assert moved.exists(), moved
+    fired_once(build, 'report-elsewhere')
     no_calls(build, 'meson', 'ninja', 'codesign', 'cp')
     preserved(build)
     return build
@@ -1489,13 +1552,20 @@ def control_fresh_sequence(co, variant):
     real = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '-f', 'clang'], text=True).strip()
     wrapper = co.forwarding('cc-forward', real, mode='direct', label='A', stderr_canary=co.canary)
     env = dict(CC=str(wrapper))
-    sentinels = {co.builddir / 'control-sentinel': 'native cache', co.target / 'control-sentinel': 'cargo cache'}
-    for path, text in sentinels.items():
+    sentinels = {co.builddir / 'control-sentinel': 'native cache', co.target / 'control-sentinel': 'cargo cache',
+                 co.host_release / 'control-sentinel': 'cargo host cache'}
+    kept = {co.root / 'controller/target/debug/control-sentinel': 'host debug profile',
+            co.root / prov.TRIPLE_DIR / 'debug/control-sentinel': 'triple debug profile',
+            co.root / 'controller/target/x86_64-apple-darwin/release/control-sentinel': 'another triple'}
+    for path, text in {**sentinels, **kept}.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
     first = co.build('sequence-1-fresh', 'partial', env=env, fresh='1')
     passing(co, first, 'partial')
     assert all(not p.exists() for p in sentinels), 'fresh mode left a cache sentinel'
+    assert all(p.read_text() == text for p, text in kept.items()), 'fresh mode removed another profile or triple'
+    assert {k: v['removed'] for k, v in first.session['fresh']['replacement'].items()} == \
+        {'builddir': True, 'cargo_release': True, 'cargo_target_release': True}, first.session['fresh']
     assert first.calls('meson', 'setup') and not first.calls('meson', 'configure')
     assert all(j['fresh'] is False for j in first.judgments().values())
     stamp1 = json.loads(first.stamp)
@@ -1582,7 +1652,8 @@ def control_fresh_sequence(co, variant):
     cargo_only = co.build('sequence-16-cargo-cache-removed', 'partial', env=env)
     passing(co, cargo_only, 'partial')
     assert all(j['fresh'] is False for j in cargo_only.judgments().values()) and cargo_only.calls('meson', 'configure')
-    assert cargo_only.record['configuration']['build_directories']['cargo_release']['state'] == 'created'
+    assert cargo_only.record['configuration']['build_directories']['cargo_target_release']['state'] == 'created'
+    assert cargo_only.record['configuration']['build_directories']['cargo_release']['state'] == 'reused'
     shutil.rmtree(co.builddir)
     meson_only = co.build('sequence-17-meson-cache-removed', 'partial', env=env)
     passing(co, meson_only, 'partial')
@@ -1612,7 +1683,7 @@ def control_replaced_cached_output_is_recorded_not_detected(co, variant):
     replacement = co.work / 'replacement-sbpl-check'
     replacement.write_bytes(observer_bytes)
     replacement.chmod(0o755)
-    build = co.build('replaced_output', variant, hooks=[hook('replace-cached', 'cargo', [copy(replacement, co.target / 'sbpl-check')], first='build')])
+    build = co.build('replaced_output', variant, hooks=[hook('replace-cached', 'cargo', [replace(replacement, co.target / 'sbpl-check')], first='build')])
     try:
         passing(co, build, variant)
         fired_once(build, 'replace-cached')
@@ -1836,6 +1907,18 @@ def control_cargo_selection_sequence(co, variant):
         remove()
     restored = co.build('selection-6-plain-fresh', variant, fresh='1')
     passing(co, restored, variant)
+    # A lower-precedence x86_64 target default, from the environment and from a configuration file, is overridden by the
+    # managed --target: recorded as overridden, nothing rebuilt, and every output still the output target.
+    remove = cargo_configuration(co, {'.cargo/config.toml': '[build]\ntarget = "x86_64-apple-darwin"\n'})
+    try:
+        defaulted = co.build('selection-6b-x86_64-default-overridden', variant, env=dict(CARGO_BUILD_TARGET='x86_64-apple-darwin'))
+    finally:
+        remove()
+    passing(co, defaulted, variant)
+    selected = defaulted.record['toolchain']['rustc']['selection']['target']
+    assert selected == dict(source='--target', triple=prov.TRIPLE, overrides=['CARGO_BUILD_TARGET', 'build.target']), selected
+    assert all(j['fresh'] is True for j in defaulted.judgments().values()), 'an overridden default changed what Cargo built'
+    assert not (co.root / 'controller/target/x86_64-apple-darwin/release/policy-witness').exists()
     # Flags with retained caches: the encoded variable wins over the script's RUSTFLAGS and Cargo rebuilds with it.
     encoded = co.build('selection-7-encoded-flags', variant, env=dict(CARGO_ENCODED_RUSTFLAGS='-C\x1fdebuginfo=1'))
     passing(co, encoded, variant)
@@ -1844,9 +1927,11 @@ def control_cargo_selection_sequence(co, variant):
         assert judgment['effective_rustflags'] == ['-C', 'debuginfo=1'], judgment['effective_rustflags']
         source = judgment['rustflags_source']
         assert (source['kind'], source['agrees'], source['overrides']) == ('CARGO_ENCODED_RUSTFLAGS', True, ['RUSTFLAGS']), source
-    # Without RUSTFLAGS (inspection off), target rules win over build.rustflags.
-    host = co.host_triple
-    remove = cargo_configuration(co, {'.cargo/config.toml': f'[build]\nrustflags = ["-C", "opt-level=2"]\n[target.{host}]\nrustflags = ["-C", "debuginfo=1"]\n'})
+    # Without RUSTFLAGS (inspection off), the output triple's target rules win over build.rustflags; a rule for another
+    # triple, the one an Intel compiler would report as its host included, does not apply.
+    remove = cargo_configuration(co, {'.cargo/config.toml': f'[build]\nrustflags = ["-C", "opt-level=2"]\n'
+                                                            f'[target.{prov.TRIPLE}]\nrustflags = ["-C", "debuginfo=1"]\n'
+                                                            f'[target.x86_64-apple-darwin]\nrustflags = ["-C", "opt-level=3"]\n'})
     try:
         rules = co.build('selection-8-target-rules', variant, env=dict(PW_INSPECTION='0'))
     finally:
@@ -2128,6 +2213,279 @@ def control_cargo_configuration_oracle(co, variant):
 
 
 # The manifest's refusals in script order, with the variants each applies to.
+# ---- the output target -----------------------------------------------------------------------------------------
+
+def reported_fresh(co, name):
+    """Cargo's own judgment for one shipped target, read from its report rather than from the session."""
+    for line in (co.root / 'controller/target/pw-build-messages.jsonl').read_text().splitlines():
+        message = json.loads(line) if line.strip() else {}
+        if message.get('reason') == 'compiler-artifact' and (message.get('target') or {}).get('name') == name:
+            return message.get('fresh')
+    return None
+
+
+def control_output_target_mismatch(co, variant):
+    """Outputs outside the output target are refused at each boundary a check guards, before the operation it protects, by
+    the check of the bytes, never by the minimum, SDK or identity checks (each substitute carries the plist's minimum
+    and the selected SDK). A Cargo output replaced after Cargo reported it (x86_64, then a truncated arm64 file) refuses
+    before Meson; because Cargo judges the replaced file current and keeps it, the next build without any fault refuses
+    it again. A native output replaced after the compile (universal for the last output; a one-slice fat container of an
+    arm64 executable for the worker, which the identity check would otherwise run) refuses before assembly. A copy
+    replaced in the assembled bundle, with an unlisted universal file added beside it, refuses before any signature.
+    The standalone observer replaced after the app seal refuses before it is signed, and the sealed bundle's code
+    replaced after that refuses before the ZIP is written."""
+    message = 'outputs are not thin arm64 Mach-O executables for macOS'
+    unrelated = ('is built for macOS', 'disagree with the selected SDK', 'reports identity')
+
+    def refused_by_target(build, *names):
+        check(build, 1, message)
+        for name in names:
+            assert name in build.stderr, (build.name, name, build.stderr[-3000:])
+        for text in unrelated:
+            assert text not in build.stderr, (build.name, 'an unrelated check refused instead', text)
+
+    # Cargo outputs, after Cargo reported them, before Meson.
+    for label, fixture, binary, reason in (('x86_64', 'x86_64', 'sbpl-check', 'architecture x86_64, not exactly arm64'),
+                                           ('truncated', 'truncated', 'policy-witness', 'no readable LC_BUILD_VERSION platform')):
+        target = co.target / binary
+        build = co.build(f'output_target_mismatch-cargo-{label}', variant,
+                         hooks=[hook(f'replace-{binary}', 'cargo', [replace(co.forbidden(fixture), target)], first='build')])
+        try:
+            refused_by_target(build, f'{target}: {reason}')
+            assert 'Building Rust controller + tools' in build.stdout
+            for banner in BEFORE_TOOLCHAIN:
+                assert banner not in build.stdout, (build.name, banner)
+            fired_once(build, f'replace-{binary}')
+            no_calls(build, 'meson', 'ninja', 'codesign', 'cp')
+            preserved(build)
+            assert len(build.session['output_check']['cargo']['problems']) == 1, build.session['output_check']
+            if label == 'x86_64':
+                # Reuse is no bypass: Cargo keeps the replaced file as current, and the next build's check refuses it again.
+                again = co.build('output_target_mismatch-cargo-reused', variant)
+                refused_by_target(again, f'{target}: {reason}')
+                assert reported_fresh(co, binary) is True, 'Cargo rebuilt the output; reuse was not exercised'
+                no_calls(again, 'meson', 'ninja', 'codesign', 'cp')
+                preserved(again)
+        finally:
+            target.unlink(missing_ok=True)  # Cargo relinks its cached unit, untouched by the rename, when the output is missing
+    # Native outputs, after the compile, before assembly and before the worker is run for its identity.
+    last = co.builddir / ('PWRunner' if variant == 'full' else 'pw-extension-issuer')
+    worker = co.builddir / 'pw-probe-runner'
+    for label, path, fixture, reason in (('universal-last', last, 'universal', 'a fat container with 2 slice(s) (arm64 x86_64), not a thin Mach-O'),
+                                         ('one-slice-fat-worker', worker, 'one-slice-fat', 'a fat container with 1 slice(s) (arm64), not a thin Mach-O')):
+        build = co.build(f'output_target_mismatch-native-{label}', variant,
+                         hooks=[hook(f'replace-{path.name}', 'meson', [replace(co.forbidden(fixture), path)], first='compile')])
+        try:
+            refused_by_target(build, f'{path}: ')
+            assert reason.split(' (')[0] in build.stderr, (build.name, reason, build.stderr[-2000:])
+            check(build, 1, message, present=('Checking the configured native source lists',),
+                  absent=('Assembling app bundle', 'Checking host/worker identity again'))
+            fired_once(build, f'replace-{path.name}')
+            no_calls(build, 'codesign', 'cp')
+            assert 'worker_identity' not in build.session, 'the worker ran before the output check refused it'
+            preserved(build)
+        finally:
+            path.unlink(missing_ok=True)  # Ninja links the output again when it is missing
+    # The assembled bundle: a copy replaced as it is made and an unlisted universal file beside it, before any signature.
+    app = co.app(variant, 'output_target_mismatch-assembled')
+    copied, unlisted = app / 'Contents/MacOS/sbpl-check', app / 'Contents/Resources/unlisted.dylib'
+    build = co.build('output_target_mismatch-assembled', variant,
+                     hooks=[hook('replace-copy', 'cp', [replace(co.forbidden('x86_64'), copied), replace(co.forbidden('universal'), unlisted)],
+                                 last=str(copied))])
+    refused_by_target(build, f'{copied}: architecture x86_64, not exactly arm64', f'{unlisted}: a fat container with 2 slice(s)')
+    check(build, 1, message, present=('Checking the assembled code against the output target',),
+          absent=('Checking host/worker identity again', 'Codesigning embedded MacOS tools'))
+    fired_once(build, 'replace-copy')
+    assert build.signed() == [], build.signed()
+    assert subprocess.check_output(['/usr/bin/lipo', '-archs', str(co.target / 'sbpl-check')], text=True).split() == ['arm64'], \
+        'the substitution reached the Cargo output instead of the copy'
+    removed_previous(build)
+    # The standalone observer, after the app seal and the signer check, before it is signed in place.
+    app = co.app(variant, 'output_target_mismatch-observer')
+    observer = co.target / 'sandbox-log-observer'
+    build = co.build('output_target_mismatch-observer', variant,
+                     hooks=[hook('replace-observer', 'codesign', [replace(co.forbidden('x86_64'), observer)], last=str(app), contains='--force')])
+    try:
+        refused_by_target(build, f'{observer}: architecture x86_64, not exactly arm64')
+        check(build, 1, message, present=("Checking every executable's signer", 'Codesigning observer tool (not embedded)'),
+              absent=('Staging checked user guide', 'Creating zip'))
+        fired_once(build, 'replace-observer')
+        assert str(observer) not in build.signed(), 'the observer was signed before its check'
+        assert not (build.dist / 'PolicyWitness.zip').exists()
+    finally:
+        observer.unlink(missing_ok=True)
+    # The sealed bundle as packaged, after the observer is signed, before the ZIP.
+    app = co.app(variant, 'output_target_mismatch-packaging')
+    sealed = app / 'Contents/MacOS/sbpl-check'
+    build = co.build('output_target_mismatch-packaging', variant,
+                     hooks=[hook('replace-sealed', 'codesign', [replace(co.forbidden('arm64e'), sealed)], last=str(observer), contains='--force')])
+    refused_by_target(build, f'{sealed}: architecture arm64e, not exactly arm64')
+    check(build, 1, message, present=('Staging checked user guide', 'Creating zip (for notarization)'))
+    fired_once(build, 'replace-sealed')
+    assert 'DONE:' not in build.stdout
+    assert str(observer) in build.signed()
+    assert not (build.dist / 'PolicyWitness.zip').exists() and (build.dist / 'PolicyWitness.md').exists()
+    return build
+
+
+def control_builddir_target_mismatch(co, variant):
+    """A stamp naming another output target refuses reuse before any compile, as does a stamp from before the output
+    target contract, which is never relabelled; neither is rewritten. Fresh mode then replaces exactly the admitted
+    areas (builddir/ and the two Cargo release areas), keeping other profiles and triples, and an unchanged reuse checks
+    every cached executable against the target again."""
+    if not (co.root / STAMP).exists():
+        passing(co, co.build('builddir_target_mismatch-prime', variant), variant)
+    stamp = co.root / STAMP
+    kept = stamp.read_bytes()
+    record = json.loads(kept)
+    build = None
+    try:
+        for label, fields, needle in (('cpu', {'output.cpu_family': 'x86_64'}, "is configured for output output.cpu_family = 'x86_64'"),
+                                      ('triple', {'output.cargo_triple': 'x86_64-apple-darwin'}, 'is configured for output output.cargo_triple'),
+                                      ('arch', {'output.link_arch': ['x86_64']}, 'is configured for output output.link_arch')):
+            text = json.dumps(dict(record, fields=dict(record['fields'], **fields)))
+            stamp.write_text(text)
+            build = co.build(f'builddir_target_mismatch-{label}', variant)
+            check(build, 1, needle, present=('Checking the native build directory',), absent=('Checking the signing identity', *BEFORE_CARGO))
+            assert 'a directory configured for another target cannot be reused' in build.stderr
+            assert stamp.read_text() == text, 'the refusal rewrote the stamp'
+            no_compiles(build)
+            preserved(build)
+        legacy = dict(record, schema_version=1, fields={k: v for k, v in record['fields'].items() if not k.startswith('output.')})
+        stamp.write_text(json.dumps(legacy))
+        old = co.build('builddir_target_mismatch-legacy-stamp', variant)
+        check(old, 2, 'unsupported schema', present=('Checking the native build directory',), absent=('Checking the signing identity', *BEFORE_CARGO))
+        assert 'PW_FRESH_BUILD=1' in old.stderr and json.loads(stamp.read_text()) == legacy, 'an old stamp was adopted or rewritten'
+        no_compiles(old)
+        preserved(old)
+    finally:
+        stamp.write_bytes(kept)
+    replaced = {co.builddir / 'target-sentinel': 'native cache', co.host_release / 'target-sentinel': 'host cache',
+                co.target / 'target-sentinel': 'shipped cache'}
+    kept_paths = {co.root / 'controller/target/debug/target-sentinel': 'host debug', co.root / prov.TRIPLE_DIR / 'debug/target-sentinel': 'triple debug',
+                  co.root / 'controller/target/x86_64-apple-darwin/release/target-sentinel': 'another triple'}
+    for path, text in {**replaced, **kept_paths}.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    recovered = co.build('builddir_target_mismatch-fresh', variant, fresh='1')
+    passing(co, recovered, variant)
+    assert not any(p.exists() for p in replaced), 'fresh mode kept an admitted area'
+    assert all(p.read_text() == text for p, text in kept_paths.items()), 'fresh mode removed another profile or triple'
+    assert all(j['fresh'] is False for j in recovered.judgments().values())
+    reused = co.build('builddir_target_mismatch-reuse', variant)
+    passing(co, reused, variant)
+    assert all(j['fresh'] is True for j in reused.judgments().values()), 'reuse rebuilt a Cargo target'
+    checked = reused.session['output_check']
+    assert {Path(p).name for p in checked['cargo']['outputs']} == set(CARGO_BINS) and not checked['cargo']['problems'], checked['cargo']
+    assert len(checked['native']['outputs']) == (5 if variant == 'full' else 3) and not checked['native']['problems'], checked['native']
+    for path in kept_paths:
+        path.unlink()
+    return build
+
+
+def control_meson_target(co, variant):
+    """Meson configured for another host machine is refused by meson.build's output-target assertion at setup, before
+    anything compiles and before a stamp is published: here a cross file naming an x86_64 macOS host, appended by the tool
+    wrapper to the script's own `meson setup`, which is the host a Meson running translated selects by default. A cross
+    file naming the arm64 macOS host is a cross build and is not refused for being one: that build packages arm64
+    outputs. A fresh native build restores the directory."""
+    cross = {}
+    for family in ('x86_64', 'aarch64'):
+        cross[family] = co.work / f'cross-{family}.ini'
+        cross[family].write_text("[binaries]\nc = 'cc'\nswift = 'swiftc'\n[host_machine]\nsystem = 'darwin'\n"
+                                 f"cpu_family = '{family}'\ncpu = '{family}'\nendian = 'little'\n")
+    refused = co.build('meson_target-x86_64-host', variant, fresh='1',
+                       hooks=[hook('cross-x86_64', 'meson', append=['--cross-file', str(cross['x86_64'])], first='setup')])
+    check(refused, 1, 'Assert failed: output target: the native products are macOS arm64 code, but Meson is configured for host '
+                      'darwin x86_64 (the build machine, darwin aarch64, is not constrained)', where='output',
+          present=('Configuring native build (meson setup, fresh directory)',), absent=('Compiling native executables', 'Assembling app bundle'))
+    fired_once(refused, 'cross-x86_64')
+    assert not (co.root / STAMP).exists(), 'a refused setup published a stamp'
+    no_calls(refused, 'codesign', 'cp')
+    preserved(refused)
+    crossed = co.build('meson_target-arm64-cross', variant, fresh='1',
+                       hooks=[hook('cross-arm64', 'meson', append=['--cross-file', str(cross['aarch64'])], first='setup')])
+    passing(co, crossed, variant)
+    fired_once(crossed, 'cross-arm64')
+    assert 'Build type: cross build' in crossed.stdout, crossed.stdout[-3000:]
+    assert crossed.session['meson_machines']['host'] == dict(system='darwin', cpu_family='aarch64')
+    restored = co.build('meson_target-native-fresh', variant, fresh='1')
+    passing(co, restored, variant)
+    assert 'Build type: native build' in restored.stdout
+    return refused
+
+
+def control_cargo_package_target_guard(co, variant):
+    """The controller package's build script refuses every Cargo target but aarch64-apple-darwin, for a direct Cargo
+    invocation outside build.sh, with isolated output and intermediate directories. Run with --keep-going, so the build
+    script runs although the standard library of a target this machine lacks also fails that target's units: the
+    guard's own message is the observation, and the missing library is recorded beside it. This establishes that the
+    guard fires on TARGET; it does not establish that the guard alone stops a target whose library is installed. The
+    output triple builds, and a guard removed or weakened to an aarch64 prefix or an apple-darwin suffix fails this
+    control."""
+    build_rs = co.root / 'controller/build.rs'
+    original = build_rs.read_text()
+    work = co.work / 'package-guard'
+    outputs = work / 'target'
+    env = {k: v for k, v in co.base_env.items() if not k.startswith(('CARGO_TARGET', 'CARGO_BUILD'))}
+    env.update(CARGO_TARGET_DIR=str(outputs), CARGO_BUILD_BUILD_DIR=str(outputs), CARGO_NET_OFFLINE='true')
+    others = ('x86_64-apple-darwin', 'aarch64-apple-ios')
+
+    def attempt(label, triple):
+        case = co.out / f'{co.prefix}package_guard-{label}-{triple}'
+        status, stdout, stderr = command(case, [co.tools['cargo'], 'build', '--manifest-path', str(co.root / 'controller/Cargo.toml'),
+                                                '--release', '--keep-going', '--target', triple], cwd=co.root, env=env)
+        observed = dict(status=status, guard=f"Cargo's TARGET is \"{triple}\"" in stderr,
+                        library_missing='may not be installed' in stderr or "can't find crate for" in stderr)
+        save(case / 'observed.json', observed)
+        return observed
+
+    results = {}
+    try:
+        neighbour = attempt('original', prov.TRIPLE)
+        assert neighbour['status'] == 0 and not neighbour['guard'], neighbour
+        for triple in others:
+            observed = attempt('original', triple)
+            assert observed['status'] != 0 and observed['guard'], (triple, observed)
+            results[triple] = observed
+        guard = ('    if target != OUTPUT_TRIPLE {\n')
+        weakenings = {'guard removed': '    if false {\n', 'an aarch64 prefix': '    if !target.starts_with("aarch64") {\n',
+                      'an apple-darwin suffix': '    if !target.ends_with("apple-darwin") {\n'}
+        assert original.count(guard) == 1
+        mutations = {}
+        for label, weakened in weakenings.items():
+            build_rs.write_text(original.replace(guard, weakened, 1))
+            observed = {triple: attempt(label.replace(' ', '-'), triple) for triple in others}
+            accepted = [triple for triple, seen in observed.items() if not seen['guard']]
+            assert accepted, f'{label}: the weakened guard still refused every target this control names'
+            mutations[label] = dict(observed=observed, accepted=accepted)
+    finally:
+        build_rs.write_text(original)
+        shutil.rmtree(work, ignore_errors=True)
+    save(co.out / f'{co.prefix}package_guard.json', dict(neighbour=neighbour, refused=results, mutations=mutations,
+                                                          limit='every refused target also lacks its standard library on this machine'))
+    return None
+
+
+def control_translated_builder(co, variant):
+    """Where Rosetta is available, the unchanged script run by a translated shell (`arch -x86_64 /bin/bash`) reaches the
+    output target checks with no translation-policy refusal and packages a signed full build of arm64 outputs. The
+    universal tools it starts directly (Python, git, xcrun and codesign) run translated too; Cargo and Meson, whose
+    launchers have no x86_64 slice here, run natively, so this is not a translated Meson. Without Rosetta the case is
+    recorded as not established, a gap in builder-compatibility evidence rather than a pass."""
+    probe = subprocess.run(['/usr/bin/arch', '-x86_64', '/usr/sbin/sysctl', '-n', 'sysctl.proc_translated'], capture_output=True, text=True, timeout=60)
+    equipment = dict(argv=probe.args, returncode=probe.returncode, stdout=probe.stdout.strip(), stderr=probe.stderr.strip()[:400])
+    save(co.out / f'{co.prefix}translated-builder-equipment.json', equipment)
+    if probe.returncode != 0 or probe.stdout.strip() != '1':
+        print('translated builder: Rosetta is not available here; builder compatibility under translation is not established', flush=True)
+        return None
+    build = co.build('translated-builder', variant, argv=['/usr/bin/arch', '-x86_64', '/bin/bash', str(co.root / 'build.sh')])
+    passing(co, build, variant)
+    for banner in ('Checking the assembled code against the output target', 'Creating zip (for notarization)'):
+        assert banner in build.stdout, banner
+    return build
+
+
 CONTROLS = [
     ('missing_tree_input', ('full', 'partial'), control_missing_tree_input),
     ('checkout_busy', ('full', 'partial'), control_checkout_busy),
@@ -2137,6 +2495,7 @@ CONTROLS = [
     ('sdk_version_unreadable', ('full', 'partial'), control_sdk_version_unreadable),
     ('builddir_stamp_missing', ('full', 'partial'), control_builddir_stamp_missing),
     ('builddir_stamp_invalid', ('full', 'partial'), control_builddir_stamp_invalid),
+    ('builddir_target_mismatch', ('full', 'partial'), control_builddir_target_mismatch),
     ('cargo_build_dir_redirected', ('full', 'partial'), control_cargo_build_dir_redirected),
     ('cargo_build_dir_unknown', ('full', 'partial'), control_cargo_build_dir_unknown),
     ('cargo_configuration_unresolved', ('full', 'partial'), control_cargo_configuration_unresolved),
@@ -2150,9 +2509,11 @@ CONTROLS = [
     ('meson_ninja_missing', ('full', 'partial'), control_meson_ninja_missing),
     ('ninja_old', ('full', 'partial'), control_ninja_old),
     ('meson_policy', ('full', 'partial'), control_meson_policy),
+    ('meson_target', ('full', 'partial'), control_meson_target),
     ('meson_failed', ('full', 'partial'), control_meson_failed),
     ('native_sources_unreadable', ('full', 'partial'), control_native_sources_unreadable),
     ('missing_native_output', ('full', 'partial'), control_missing_native_output),
+    ('output_target_mismatch', ('full', 'partial'), control_output_target_mismatch),
     ('stale_identity_presign', ('full', 'partial'), control_stale_identity_presign),
     ('worker_identity_mismatch', ('full', 'partial'), control_worker_identity_mismatch),
     ('sign_target_not_macho', ('full', 'partial'), control_sign_target_not_macho),
@@ -2173,6 +2534,8 @@ SEQUENCES = [
     ('cargo_configuration_oracle', control_cargo_configuration_oracle),
     ('cargo_selection_sequence', control_cargo_selection_sequence),
     ('sdk_requests', control_sdk_requests),
+    ('cargo_package_target_guard', control_cargo_package_target_guard),
+    ('translated_builder', control_translated_builder),
 ]
 
 
@@ -2193,7 +2556,6 @@ CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BI
                      '    echo "ERROR: expected an executable Cargo output at ${rust_bin}" 1>&2\n'
                      '    exit 2\n'
                      '  fi\n'
-                     '  check_minimum_macos "${rust_bin}"\n'
                      'done\n')
 NINJA_GUARD = ('if ! /usr/bin/python3 -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
                '    "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then\n'
@@ -2205,7 +2567,6 @@ NATIVE_OUTPUT_LOOP = ('for native_bin in "${NATIVE_OUTPUTS[@]}"; do\n'
                       '    echo "ERROR: expected Meson output at ${native_bin}" 1>&2\n'
                       '    exit 2\n'
                       '  fi\n'
-                      '  check_minimum_macos "${native_bin}"\n'
                       'done\n')
 ASSEMBLY_ANCHOR = 'mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"\n'
 TREE_INPUT_LOOP = ('for tree_input in Info.plist PolicyWitness.entitlements runner/augments runner/Services/PWRunner runner/Services/PWRunner/Info.plist runner/Services/PWRunner/Entitlements.plist; do\n'
@@ -2225,6 +2586,27 @@ WORKER_IDENTITY = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.
                    '  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"\n')
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
 PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
+CARGO_OUTPUT_CHECK = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
+                      '  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"\n')
+ASSEMBLED_CHECK = ('echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"\n'
+                   '/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
+FIRST_SIGNATURE = 'sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"\n'
+OUTPUT_TARGET_HELPER = 'tests/lib/output_target.py'
+ARCHITECTURE_EQUALITY = "    if observation['architectures'] != [ARCHITECTURE]:\n"
+CONTAINER_RULE = "    if observation['container'] != CONTAINER:\n        found.append("
+MESON_TARGET_ASSERTION = ("assert(host_machine.system() == 'darwin' and host_machine.cpu_family() == 'aarch64',\n"
+                          "  'output target: the native products are macOS arm64 code, but Meson is configured for host @0@ @1@ "
+                          "(the build machine, @2@ @3@, is not constrained)'.format(\n"
+                          "    host_machine.system(), host_machine.cpu_family(), build_machine.system(), build_machine.cpu_family()))\n")
+
+
+def _membership(text):
+    """The output predicate reduced to arm64 membership: the container rule dropped and equality weakened."""
+    for old, new in ((ARCHITECTURE_EQUALITY, "    if ARCHITECTURE not in observation['architectures']:\n"),
+                     (CONTAINER_RULE, "    if False:\n        found.append(")):
+        assert text.count(old) == 1, old
+        text = text.replace(old, new, 1)
+    return text
 
 
 def _admission_disabled(text):
@@ -2249,6 +2631,10 @@ MUTATIONS = [
     ('worker_identity_mismatch', 'worker identity check removed', lambda t: _remove_block(t, WORKER_IDENTITY)),
     ('cargo_target_reused', 'rebuild requirement dropped', lambda t: t.replace(REQUIRE_REBUILT, '--require-rebuilt "0"', 1)),
     ('cache_path_unsafe', 'path admission disabled in the session helper', _admission_disabled, PROVENANCE_HELPER),
+    ('output_target_mismatch', 'Cargo output check removed', lambda t: _remove_block(t, CARGO_OUTPUT_CHECK)),
+    ('output_target_mismatch', 'assembled check moved past the first signature', lambda t: _move_block(t, ASSEMBLED_CHECK, FIRST_SIGNATURE)),
+    ('output_target_mismatch', 'output predicate reduced to arm64 membership', _membership, OUTPUT_TARGET_HELPER),
+    ('meson_target', 'output-target assertion removed', lambda t: _remove_block(t, MESON_TARGET_ASSERTION), 'meson.build'),
 ]
 
 

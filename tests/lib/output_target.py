@@ -40,6 +40,11 @@ ARCHITECTURE = 'arm64'
 CONTAINER = 'thin'
 CARGO_TRIPLE = 'aarch64-apple-darwin'
 DECLARED = dict(system=SYSTEM, platform=PLATFORM, architecture=ARCHITECTURE, container=CONTAINER, cargo_triple=CARGO_TRIPLE)
+# How each toolchain names the target: Meson's host machine (where the products run; its build machine is not
+# constrained), clang's -arch value and swiftc's -target triple, whose version part is the deployment minimum.
+MESON_HOST = dict(system='darwin', cpu_family='aarch64')
+CLANG_ARCH = 'arm64'
+SWIFT_TARGET = re.compile(r'arm64-apple-macosx\d+(\.\d+)*')
 PLATFORM_NAMES = {'1': 'macOS', '2': 'iOS', '3': 'tvOS', '4': 'watchOS', '5': 'bridgeOS', '6': 'Mac Catalyst',
                   '7': 'iOS simulator', '8': 'tvOS simulator', '9': 'watchOS simulator', '10': 'DriverKit',
                   '11': 'visionOS', '12': 'visionOS simulator'}

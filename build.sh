@@ -11,10 +11,18 @@ set -euo pipefail
 #              mapped to Meson's xpc option. The two C executables still build.
 #   PW_INSPECTION=1  Keep debug info and frame pointers (default); mapped to
 #              Meson's inspection option (Swift -Onone -g versus -O) and to RUSTFLAGS.
-#   PW_FRESH_BUILD=1  Replace builddir/ and controller/target/release/ after
-#              admission and require Cargo to rebuild every shipped target; 0
-#              (the default) reuses both directories under their recorded
-#              toolchain.
+#   PW_FRESH_BUILD=1  Replace builddir/, controller/target/release/ and
+#              controller/target/aarch64-apple-darwin/release/ after admission
+#              and require Cargo to rebuild every shipped target; 0 (the
+#              default) reuses them under their recorded toolchain.
+#
+# Every executable the build delivers is a thin arm64 Mach-O for macOS: Cargo
+# is given the one output triple below, meson.build requires an arm64 macOS
+# host machine and selects the architecture explicitly, and each output, the
+# assembled bundle and the standalone observer are checked against that target
+# by their bytes before they are copied, signed or packaged. The target
+# describes the products only; which machine or process runs the build is
+# not checked.
 #
 # Native compilation (the C worker and validator, the C shim, the Swift client
 # and host) runs through Meson into the ignored builddir/; meson.build owns the
@@ -81,17 +89,21 @@ PW_EXTENSION_ISSUER_BIN="${MESON_BUILD_DIR}/pw-extension-issuer"
 # Swift NSXPCConnection client embedded at the app's top level.
 PW_RUNNER_CLIENT_BIN="${MESON_BUILD_DIR}/pw-runner-client"
 
-# Cargo's output directory is pinned on the command line, so a CARGO_TARGET_DIR
-# or a Cargo configuration value cannot send the outputs elsewhere while the
-# copies below read these fixed paths. Its intermediate release state is
-# admitted under the same directory before Cargo runs. This build's session
-# file lives beside Cargo's artifact messages.
+# Cargo's output directory and output target are pinned on the command line, so
+# a CARGO_TARGET_DIR, a CARGO_BUILD_TARGET or a Cargo configuration value cannot
+# send the outputs elsewhere or build them for another platform while the
+# copies below read these fixed paths. With an explicit target, Cargo puts the
+# shipped executables under <target-dir>/<triple>/release/ and keeps build
+# scripts and procedural macros under <target-dir>/release/. Its intermediate
+# release state is admitted under the same directory before Cargo runs. This
+# build's session file lives beside Cargo's artifact messages.
 CARGO_TARGET_DIR_PINNED="${ROOT_DIR}/controller/target"
+CARGO_OUTPUT_TRIPLE="aarch64-apple-darwin"
 CARGO_MESSAGES="${CARGO_TARGET_DIR_PINNED}/pw-build-messages.jsonl"
 BUILD_SESSION="${CARGO_TARGET_DIR_PINNED}/pw-build-session.json"
-RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/release/policy-witness"
-SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/release/sandbox-log-observer"
-SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/release/sbpl-check"
+RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/policy-witness"
+SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/sandbox-log-observer"
+SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/sbpl-check"
 
 # Build knobs: exactly 0 or 1. An unset BUILD_XPC or PW_INSPECTION means 1 and
 # an unset PW_FRESH_BUILD means 0. Any other value, including an empty one, is
@@ -388,29 +400,34 @@ fi
 echo "==> Admitting the Cargo output and intermediate directories: ${CARGO_TARGET_DIR_PINNED}"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-admit --root "${ROOT_DIR}"
 
-# Fresh mode replaces the two owned cache areas after read-only input, tool and
-# identity admission: builddir/ and controller/target/release/, each a real
-# directory of this user inside the checkout, with no symlink on its path.
-# Other profiles, registry downloads, compiler caches elsewhere and the
-# previous distribution outputs stay. A path that cannot be admitted or a
-# removal that fails stops the build here.
+# Fresh mode replaces the three owned cache areas after read-only input, tool
+# and identity admission: builddir/, controller/target/release/ and the output
+# triple's release/, each a real directory of this user inside the checkout,
+# with no symlink on its path. Other profiles, other triples, registry
+# downloads, compiler caches elsewhere and the previous distribution outputs
+# stay. A path that cannot be admitted or a removal that fails stops the
+# build here.
 if [[ "${PW_FRESH_BUILD}" == "1" ]]; then
-  echo "==> Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release"
+  echo "==> Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release ${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release"
   /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" fresh-remove --root "${ROOT_DIR}"
 fi
 
 # ---- Build binaries --------------------------------------------------------
 
-# Cargo is asked to report what it produced: a target triple or another
-# setting that placed an executable under a different directory refuses
-# here, before a stale file at the pinned path could be copied in its place.
-# Cargo's per-target reuse judgment is recorded as well; in fresh mode every
-# shipped target must report rebuilding.
+# Cargo is asked to report what it produced: a setting that placed an
+# executable under a different directory refuses here, before a stale file at
+# the pinned path could be copied in its place. The output triple is passed
+# explicitly, so a lower-precedence target default is overridden, not used,
+# and the controller package's build script refuses any other target. Every
+# shipped output must then be a thin arm64 Mach-O for macOS, reused or not,
+# before its minimum is read. Cargo's per-target reuse judgment is recorded as
+# well; in fresh mode every shipped target must report rebuilding.
 echo "==> Building Rust controller + tools"
 rm -f "${CARGO_MESSAGES}"
 PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
   cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
+  --target "${CARGO_OUTPUT_TRIPLE}" \
   --target-dir "${CARGO_TARGET_DIR_PINNED}" \
   --message-format=json-render-diagnostics \
   --bin policy-witness \
@@ -426,7 +443,7 @@ while IFS=$'\t' read -r bin_name bin_path; do
     *) continue ;;
   esac
   if [[ "${bin_path}" != "${bin_expected}" ]]; then
-    echo "ERROR: cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a target triple or a Cargo setting moved it" 1>&2
+    echo "ERROR: cargo built ${bin_name} at ${bin_path}, not at ${bin_expected}; a Cargo setting or Cargo's report moved it" 1>&2
     exit 2
   fi
 done <<< "${CARGO_BUILT}"
@@ -439,6 +456,10 @@ for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}
     echo "ERROR: expected an executable Cargo output at ${rust_bin}" 1>&2
     exit 2
   fi
+done
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \
+  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"
+for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
   check_minimum_macos "${rust_bin}"
 done
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-judge --root "${ROOT_DIR}" \
@@ -488,10 +509,12 @@ meson compile -C "${MESON_BUILD_DIR}"
 # identity digest input, so an include reaching outside the digest's
 # directories refuses too. The check is told which checkout the directory
 # must be configured for. The source_drift suite applies the source-list
-# expectation to the manifest read without a build directory. The stamp is
-# then kept intact, or extended with the Swift compiler a reused directory
-# discovered when this build enabled the XPC pieces, and every shipped output
-# must carry the selected SDK.
+# expectation to the manifest read without a build directory. Every native
+# output must then be a thin arm64 Mach-O for macOS before its minimum is read
+# and before the worker is run for its identity. The stamp is then kept
+# intact, or extended with the Swift compiler a reused directory discovered
+# when this build enabled the XPC pieces, and every shipped output must carry
+# the selected SDK.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
 NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}" "${PW_EXTENSION_ISSUER_BIN}")
@@ -506,6 +529,9 @@ for native_bin in "${NATIVE_OUTPUTS[@]}"; do
     echo "ERROR: expected Meson output at ${native_bin}" 1>&2
     exit 2
   fi
+done
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage native "${NATIVE_OUTPUTS[@]}"
+for native_bin in "${NATIVE_OUTPUTS[@]}"; do
   check_minimum_macos "${native_bin}"
 done
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-extend --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
@@ -623,6 +649,14 @@ else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
 fi
 
+# The bundle as assembled, before any of it is signed: every Mach-O it carries,
+# found by header rather than by the list of names copied in, including the
+# bundle mains the seals sign, must be a thin arm64 Mach-O for macOS. The
+# copies are what gets signed; this covers the interval between checking a
+# compiler output and signing its copied bytes.
+echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"
+
 # ---- Codesign --------------------------------------------------------------
 
 # Refuse an identity input edited during the build without regeneration,
@@ -709,8 +743,11 @@ codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 echo "==> Checking every executable's signer"
 /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
 
-# Keep the standalone observer tool signed for direct use.
+# Keep the standalone observer tool signed for direct use. Its bytes are checked
+# against the output target again at this boundary: the copy in the bundle was
+# checked, but this file is signed in place.
 echo "==> Codesigning observer tool (not embedded)"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage observer "${SANDBOX_LOG_OBSERVER_BIN}"
 sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
 
 # ---- Package ---------------------------------------------------------------
@@ -719,7 +756,10 @@ echo "==> Staging checked user guide"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" \
   --stage-guide "${GUIDE_NAME}"
 
+# The sealed bundle's code is checked against the output target once more, as
+# packaged; nothing thins or repairs it.
 echo "==> Creating zip (for notarization): ${ZIP_NAME}"
+/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage packaging --app "${APP_BUNDLE}"
 rm -f "${ZIP_NAME}"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
 

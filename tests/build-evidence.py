@@ -247,8 +247,14 @@ def substitution_record(baseline: Path, app: Path, identity: str, entries: list)
             raise build_provenance.Refusal(f"{relative}: load commands are not readable", 2)
         if len(metadata["tools"]) > build_provenance.TOOLS_LIMIT:
             raise build_provenance.Refusal(f"{relative}: {len(metadata['tools'])} build tools in LC_BUILD_VERSION exceed the record's bounds", 2)
+        # The copy's own bytes: a substituted executable outside the output target is described as it is, and the
+        # record's validation then refuses it; nothing is carried over from the baseline's observation.
+        observed = build_provenance.output_observation(path)
+        if observed["problems"]:
+            raise build_provenance.Refusal(f"{relative}: the output target cannot be observed ({'; '.join(observed['problems'])})", 2)
         entry: Dict[str, Any] = dict(rel_path=relative, uuid=metadata["uuid"], platform=metadata["platform"],
-                                     minos=metadata["minos"], sdk=metadata["sdk"], tools=metadata["tools"])
+                                     minos=metadata["minos"], sdk=metadata["sdk"], tools=metadata["tools"],
+                                     architectures=observed["architectures"], container=observed["container"])
         before = baseline_outputs.get(relative, {})
         if relative != build_provenance.CONTROLLER:
             entry["sha256"] = sha256_file(path)

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / 'tests/fixtures/caller_auth'))
 from bundle import command, inventory, save, sign
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from artifact import inspect
+import build_provenance
 import signer_check
 
 
@@ -151,6 +152,72 @@ def main(source, out, identity):
                 stream.write(b'\0other bytes')
             swapped = observe_record('swapped_record_other_bytes')
             assert not swapped['ok'] and 'provenance_hash' in {e['code'] for e in swapped['errors']}, swapped['errors']
+
+            # The output target, inspected on copies whose every signature verifies and whose manifest hashes agree with
+            # the bytes: an x86_64 helper and an unlisted universal library, real Mach-O signed with the identity, each fail
+            # for architecture. A record that still claims the target for the x86_64 bytes, and one that describes them
+            # truthfully, are each a separate record fault beside the bytes' own.
+            target_app = Path(temporary) / 'Target.app'
+            command(out / 'copy-target-faults', ['/usr/bin/ditto', source, target_app])
+            record_path = target_app / 'Contents/Resources/Evidence/provenance.json'
+            manifest_path = target_app / 'Contents/Resources/Evidence/manifest.json'
+            target_record, target_manifest = record_path.read_bytes(), manifest_path.read_bytes()
+            program = Path(temporary) / 'outside.c'
+            program.write_text('int main(void) { return 0; }\n')
+            built = {}
+            for name, flags in (('x86_64', ['-arch', 'x86_64']), ('universal-dylib', ['-arch', 'arm64', '-arch', 'x86_64', '-dynamiclib'])):
+                built[name] = Path(temporary) / name
+                command(out / f'compile-{name}', ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', *flags, '-mmacosx-version-min=26.0',
+                                                  program, '-o', built[name]], timeout=120)
+                listed = subprocess.run(['/usr/bin/lipo', '-archs', str(built[name])], capture_output=True, text=True, check=True).stdout.split()
+                assert listed == (['x86_64'] if name == 'x86_64' else ['x86_64', 'arm64']), (name, listed)
+            top_rel = 'Contents/MacOS/sbpl-check'
+
+            def reseal(name, edit_record, add_library=False):
+                """Substitute, sign with the identity, refresh the record and the manifest as described, reseal and inspect."""
+                if edit_record is not None:
+                    shutil.copy2(built['x86_64'], target_app / top_rel)
+                    sign(target_app / top_rel, identity, 'sbpl-check', out / f'sign-helper-{name}')
+                if add_library:
+                    library = target_app / 'Contents/Resources/plugin.dylib'
+                    shutil.copy2(built['universal-dylib'], library)
+                    sign(library, identity, 'plugin', out / f'sign-library-{name}')
+                record = json.loads(target_record)
+                if edit_record is not None:
+                    entry = next(o for o in record['outputs'] if o['rel_path'] == top_rel)
+                    entry['sha256'] = hashlib.sha256((target_app / top_rel).read_bytes()).hexdigest()
+                    entry['signature'] = signer_check.facts(signer_check.signature(target_app / top_rel))
+                    edit_record(entry)
+                record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
+                manifest = json.loads(target_manifest)
+                for item in manifest['entries']:
+                    if item['rel_path'] in (top_rel, 'Contents/Resources/Evidence/provenance.json'):
+                        item['sha256'] = hashlib.sha256((target_app / item['rel_path']).read_bytes()).hexdigest()
+                manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+                sign(target_app, identity, app_id, out / f'sign-app-{name}')
+                command(out / f'verify-{name}', ['/usr/bin/codesign', '--verify', '--deep', '--strict', target_app])
+                result = inspect(target_app)
+                save(out / (name + '.json'), result)
+                scenarios.append(name)
+                assert all(s['returncode'] == 0 for s in result['signatures']), (name, result['signatures'])
+                assert not any(e['code'] in ('manifest_hash', 'provenance_hash', 'signer', 'signature') for e in result['errors']), (name, result['errors'])
+                return result
+
+            def describe_bytes(entry):
+                metadata = build_provenance.output_metadata(target_app / top_rel)
+                observed = build_provenance.output_observation(target_app / top_rel)
+                entry.update({k: metadata[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')},
+                             architectures=observed['architectures'], container=observed['container'])
+            claims = reseal('resigned_x86_64_helper_record_claims_target', lambda entry: None)
+            assert {e['code'] for e in claims['errors']} == {'output_target', 'provenance_metadata'}, claims['errors']
+            assert [e['message'] for e in claims['errors'] if e['code'] == 'output_target'] == ['architecture x86_64, not exactly arm64']
+            assert any("record architectures ['arm64'] differs from the bytes ['x86_64']" in e['message'] for e in claims['errors'])
+            truthful = reseal('resigned_x86_64_helper_record_describes_bytes', describe_bytes)
+            assert {e['code'] for e in truthful['errors']} == {'output_target', 'provenance'}, truthful['errors']
+            assert any('not the output target' in e['message'] for e in truthful['errors'] if e['code'] == 'provenance')
+            shutil.copy2(source / top_rel, target_app / top_rel)
+            unlisted = reseal('resigned_unlisted_universal_library', None, add_library=True)
+            assert [(e['code'], e['path']) for e in unlisted['errors']] == [('output_target', 'Contents/Resources/plugin.dylib')] * 2, unlisted['errors']
     finally:
         after = inventory(source)
         save(out / 'source-after.json', after)

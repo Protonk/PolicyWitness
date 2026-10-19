@@ -21,6 +21,7 @@ Subcommands, in the order build.sh uses them:
   stamp-publish   publish the stamp after a successful fresh setup
   stamp-extend    after compiling: keep the stamp intact, or extend it with a newly discovered Swift compiler
   sdk-check       require every shipped Mach-O's SDK to agree with the selected SDK's version
+  output-check    require every output, or every Mach-O an assembled bundle carries, to be a thin arm64 Mach-O for macOS
   worker-identity require the built worker to report the generated identity
   collect         write the record (build-evidence.py imports this)
   inspect         validate an app's record against its manifest and bytes (artifact.py imports this)
@@ -56,6 +57,16 @@ before Cargo runs. Cargo's judgment for a shipped target is its literal boolean
 `fresh` on the one artifact message bound to the binary target, a profile and
 the admitted executable; anything else refuses in either mode.
 
+Output target. The shipped executables are thin arm64 Mach-O for macOS
+(output_target.py). Cargo builds them for the one triple build.sh passes with
+--target, under controller/target/<triple>/release/, while its build scripts
+and procedural macros stay under controller/target/release/; fresh mode
+replaces both release areas. The stamp records the target the Meson directory
+is configured for, from Meson's own introspection rather than a compiler's
+default, and reuse refuses another one. The output target describes the
+products only: nothing here observes the machine or the processes that built
+them, and nothing claims that a build ran natively.
+
 Cargo metadata policy. The reader of Cargo's internal `.fingerprint` files
 supports the layout observed with Cargo 1.99: the uplifted executable is a
 hard link of (or byte-identical to) exactly one `deps/<name>-<meta>` file, and
@@ -89,10 +100,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cargo_config  # noqa: E402
 import checkout_lock  # noqa: E402
+import output_target  # noqa: E402
 
-SCHEMA_VERSION = 1
-STAMP_SCHEMA_VERSION = 1
-SESSION_SCHEMA_VERSION = 2
+SCHEMA_VERSION = 2
+# Records an earlier build sealed, readable only where a reader asks for them explicitly (archived releases).
+HISTORICAL_SCHEMA_VERSIONS = (1,)
+STAMP_SCHEMA_VERSION = 2
+SESSION_SCHEMA_VERSION = 3
 STAMP_NAME = 'pw-toolchain.json'
 SESSION_NAME = 'pw-build-session.json'
 MESSAGES_NAME = 'pw-build-messages.jsonl'
@@ -107,11 +121,15 @@ FLAG_LIMIT = 64
 TOOLS_LIMIT = 16
 RECORD_LIMIT = 256 * 1024
 HOME_MARKER = '<home>'
-FRESH_REMEDY = 'set PW_FRESH_BUILD=1 to replace builddir/ and controller/target/release/'
-PATH_POLICY = 'the build admits only real directories of this user inside the checkout'
+TRIPLE = output_target.CARGO_TRIPLE
 TARGET = 'controller/target'
+# Cargo's host units (build scripts, procedural macros) under release/, the shipped executables under <triple>/release/.
 RELEASE = 'controller/target/release'
+TRIPLE_DIR = f'controller/target/{TRIPLE}'
+TRIPLE_RELEASE = f'{TRIPLE_DIR}/release'
 BUILDDIR = 'builddir'
+FRESH_REMEDY = f'set PW_FRESH_BUILD=1 to replace builddir/, {RELEASE}/ and {TRIPLE_RELEASE}/'
+PATH_POLICY = 'the build admits only real directories of this user inside the checkout'
 SOURCE_INPUTS = ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
                  'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')
 FIXED_MESON_OPTIONS = ('buildtype', 'optimization', 'debug', 'warning_level', 'werror', 'strip', 'unity',
@@ -128,7 +146,8 @@ CARGO_LAYOUT_ENV = ('CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD
 ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTFLAGS',
                'PW_VERSION', 'PW_BUILD_NUMBER')
 SUBCOMMANDS = ('session-start', 'stamp-check', 'fresh-remove', 'cargo-admit', 'cargo-judge', 'stamp-publish',
-               'stamp-extend', 'sdk-check', 'worker-identity', 'inspect')
+               'stamp-extend', 'sdk-check', 'output-check', 'worker-identity', 'inspect')
+OUTPUT_STAGES = ('cargo', 'native', 'assembled', 'observer', 'packaging')
 CONTROLLER = 'Contents/MacOS/policy-witness'
 SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 TOP_HELPERS = ('pw-runner-client', 'sandbox-log-observer', 'sbpl-check')
@@ -323,10 +342,10 @@ def sha256_file(path):
 class BuildPaths:
     """The build's cache paths, admitted under the verified hold before anything is written or inspected through them.
 
-    Every component of builddir/, controller/target/ and controller/target/release/
-    below the checkout root must be a real directory of this user, or absent, and
-    the session destination an absent path or a regular file of this user with one
-    link. Each admitted directory is held open; writes and removals are made
+    Every component of builddir/, controller/target/, its release/, its
+    <triple>/ and that directory's release/ below the checkout root must be a
+    real directory of this user, or absent, and the session destination an
+    absent path or a regular file of this user with one link. Each admitted directory is held open; writes and removals are made
     relative to those descriptors, and each first rechecks that the path from the
     root still names the directory admitted, because the checkout lock excludes
     cooperating builds but does not make a checked pathname immutable. A missing
@@ -340,19 +359,24 @@ class BuildPaths:
             self.admit('controller', required=True)
             self.admit(TARGET)
             if TARGET in self.fds:
-                self.admit(RELEASE)
-                self.admit_file(TARGET, SESSION_NAME)
+                self.admit_target_children()
             self.admit(BUILDDIR)
             # Admit every existing component before creating even an empty
             # cache parent. A refused sibling must leave the checkout intact.
             if create_target and TARGET not in self.fds:
                 self.recheck('controller')
                 self.admit(TARGET, create=True)
-                self.admit(RELEASE)
-                self.admit_file(TARGET, SESSION_NAME)
+                self.admit_target_children()
         except BaseException:
             self.close()
             raise
+
+    def admit_target_children(self):
+        self.admit(RELEASE)
+        self.admit(TRIPLE_DIR)
+        if TRIPLE_DIR in self.fds:
+            self.admit(TRIPLE_RELEASE)
+        self.admit_file(TARGET, SESSION_NAME)
 
     def parent(self, relative):
         parent = str(PurePosixPath(relative).parent)
@@ -572,6 +596,7 @@ def session_start(args):
                              knobs=knobs, stamp=dict(describe=args.describe, commit=args.commit, version=args.version,
                                                      build_number=args.build_number, dirty=args.describe.endswith('-dirty')),
                              sdk_source='caller' if state.admission.requests.values['SDKROOT'] else 'default',
+                             output_target=dict(output_target.DECLARED),
                              requests=state.admission.requests.to_json(),
                              admission=dict(created=state.paths.created),
                              environment={name: os.environ.get(name) for name in ALLOWED_ENV if name in os.environ})
@@ -675,7 +700,7 @@ def cargo_resolution(env, cwd=None):
     """Cargo's configuration and launcher for this invocation, resolved, with the build's policy for the compiler's inputs."""
     cwd = cwd or os.getcwd()
     try:
-        resolution = cargo_config.resolve(cwd, env, probe=probe)
+        resolution = cargo_config.resolve(cwd, env, probe=probe, target=TRIPLE)
     except cargo_config.Unresolved as exc:
         raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
     for name, effective, selected in cargo_config.conflicts(resolution, env):
@@ -792,7 +817,81 @@ def read_stamp(builddir):
     scope = data.get('scope')
     if not isinstance(fields, dict) or not isinstance(scope, dict) or 'xpc' not in scope or not isinstance(data.get('source_dir'), str):
         raise Refusal(f'{path} lacks its fields or scope; its toolchain is unknown and is not adopted: {FRESH_REMEDY}', 2)
+    if any(name not in fields for name in output_fields(xpc=scope.get('xpc') is True)):
+        raise Refusal(f'{path} lacks its output target fields; the target the directory was configured for is unknown and is not adopted: '
+                      f'{FRESH_REMEDY}', 2)
     return data
+
+
+# ---- the output target a configured directory carries -------------------------------------------------------
+
+OUTPUT_FIELDS = ('output.system', 'output.cpu_family', 'output.c_arch', 'output.link_arch', 'output.cargo_triple')
+
+
+def output_fields(*, xpc):
+    return OUTPUT_FIELDS + (('output.swift_target',) if xpc else ())
+
+
+def selections(parameters, flag):
+    """The values that follow each occurrence of flag in one argument list, or ['(none)'] when it names none."""
+    found = [parameters[index + 1] for index, item in enumerate(parameters[:-1]) if item == flag]
+    return found or ['(none)']
+
+
+def configured_output(builddir, *, xpc):
+    """The output target a configured Meson directory carries, from Meson's own introspection, and its machines.
+
+    The fields are Meson's host machine (where the products run) and the
+    architecture each target selects with its effective arguments: clang's
+    -arch at C compile and executable link, swiftc's -target. A compiler's
+    default target, which its version output names, is never consulted. The
+    machines name Meson's host and build machines apart; the build machine is
+    where Meson reported compiling, a toolchain fact, and is not constrained.
+    The Cargo triple is the one this build passes; it belongs to the same
+    contract. Unreadable introspection refuses."""
+    builddir = Path(builddir)
+    try:
+        machines = json.loads((builddir / 'meson-info/intro-machines.json').read_text())
+        targets = json.loads((builddir / 'meson-info/intro-targets.json').read_text())
+        found = dict(c=set(), link=set(), swift=set())
+        for target in targets:
+            for source in target['target_sources']:
+                parameters = [str(item) for item in source.get('parameters') or []]
+                if source.get('language') == 'c':
+                    found['c'].update(selections(parameters, '-arch'))
+                elif source.get('language') == 'swift':
+                    found['swift'].update(selections(parameters, '-target'))
+                elif source.get('language') is None and target['type'] == 'executable':
+                    found['link'].update(selections(parameters, '-arch'))
+        named = {role: dict(system=str(machines[role]['system']), cpu_family=str(machines[role]['cpu_family'])) for role in ('host', 'build')}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise Refusal(f'required toolchain observation failed: the configured output target ({exc.__class__.__name__} reading '
+                      f'meson-info); an unobserved field cannot establish compatibility with {STAMP_NAME}: {FRESH_REMEDY}', 2)
+    fields = {'output.system': named['host']['system'], 'output.cpu_family': named['host']['cpu_family'],
+              'output.c_arch': sorted(found['c']), 'output.link_arch': sorted(found['link']), 'output.cargo_triple': TRIPLE}
+    if xpc:
+        fields['output.swift_target'] = sorted(found['swift'])
+    return fields, named
+
+
+def output_contract_problems(fields, *, xpc):
+    """The output fields that depart from the output target, as (field, recorded, required), in field order."""
+    required = {'output.system': output_target.MESON_HOST['system'], 'output.cpu_family': output_target.MESON_HOST['cpu_family'],
+                'output.c_arch': [output_target.CLANG_ARCH], 'output.link_arch': [output_target.CLANG_ARCH], 'output.cargo_triple': TRIPLE}
+    out = [(name, fields.get(name), value) for name, value in required.items() if fields.get(name) != value]
+    if xpc:
+        swift = fields.get('output.swift_target')
+        if not (isinstance(swift, list) and len(swift) == 1 and isinstance(swift[0], str) and output_target.SWIFT_TARGET.fullmatch(swift[0])):
+            out.append(('output.swift_target', swift, ['arm64-apple-macosx<minimum>']))
+    return out
+
+
+def described(stamp_fields, configured, names):
+    """The first output field the stamp records differently from the directory's configuration, or None."""
+    for name in names:
+        if stamp_fields.get(name) != configured.get(name):
+            return name
+    return None
 
 
 def stamp_record(fields, *, xpc, source_dir, published_at=None, extended_at=None):
@@ -835,6 +934,12 @@ def stamp_check_admitted(state, xpc):
     stamp = read_stamp(builddir)
     if Path(stamp['source_dir']).resolve() != root:
         raise Refusal(f'{STAMP_NAME} describes a build directory for {stamp["source_dir"]}, not this checkout: {FRESH_REMEDY}', 2)
+    # The target first: a directory configured for any other output is not reused, whatever its toolchain.
+    target = output_contract_problems(stamp['fields'], xpc=stamp['scope'].get('xpc') is True)
+    if target:
+        name, recorded, required = target[0]
+        raise Refusal(f'builddir/ is configured for output {name} = {redact(recorded)!r}, but the output target requires {required!r}; '
+                      f'a directory configured for another target cannot be reused: {FRESH_REMEDY}', 1)
     recorded = read_compilers(builddir) or {}
     for language, entry in recorded.items():
         if entry.get('oversized'):
@@ -852,6 +957,11 @@ def stamp_check_admitted(state, xpc):
             raise Refusal(f"{STAMP_NAME} names Swift compiler {stamped_commands['swift']} but the directory records "
                           f"{recorded.get('swift', {}).get('command')}; the stamp does not describe this directory: {FRESH_REMEDY}", 2)
         compilers['swift'] = recorded['swift']
+    configured, _ = configured_output(builddir, xpc=swift_applicable)
+    departed = described(stamp['fields'], configured, output_fields(xpc=swift_applicable))
+    if departed is not None:
+        raise Refusal(f'{STAMP_NAME} records {departed} = {redact(stamp["fields"].get(departed))!r} but the directory is configured with '
+                      f'{redact(configured.get(departed))!r}; the stamp does not describe this directory: {FRESH_REMEDY}', 2)
     observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=swift_applicable, compilers=compilers)
     current = compatibility_fields(observation, xpc=swift_applicable)
     names = ['developer_dir', 'sdk.path', 'sdk.version', 'sdk.build', 'compilers.c.command', 'compilers.c.identity',
@@ -879,7 +989,8 @@ def stamp_check_admitted(state, xpc):
     session['builddir'].update(stamp_state='validated', stamp_scope=stamp['scope'], swift_newly_applicable=bool(xpc and not swift_applicable))
     session['toolchain'] = observation
     state.save()
-    print(f'ok: {STAMP_NAME} agrees with the selected toolchain ({len(names)} fields)')
+    print(f'ok: {STAMP_NAME} agrees with the selected toolchain ({len(names)} fields) and the output target '
+          f'({len(output_fields(xpc=swift_applicable))} fields)')
     return 0
 
 
@@ -905,6 +1016,7 @@ def stamp_publish_admitted(state):
     for name, value in fields.items():
         if value is None:
             raise Refusal(f'required toolchain observation failed: {name}; a stamp never records an unknown value', 2)
+    fields.update(configured_output(builddir, xpc=xpc)[0])
     state.paths.write_json(BUILDDIR, STAMP_NAME, stamp_record(fields, xpc=xpc, source_dir=root))
     session.setdefault('builddir', {}).update(stamp_state='published', stamp_scope=dict(xpc=xpc), swift_newly_applicable=False)
     session['toolchain'] = observation
@@ -930,6 +1042,12 @@ def stamp_extend_admitted(scope, xpc):
         raise Refusal(f'{STAMP_NAME} no longer describes the C compiler the directory records: {FRESH_REMEDY}', 2)
     if xpc and 'swift' not in compilers:
         raise Refusal(f'{builddir.name}/ records no Swift compiler although the XPC pieces were compiled', 2)
+    configured, machines = configured_output(builddir, xpc=xpc)
+    swift_stamped = stamp['scope'].get('xpc') is True
+    departed = described(stamp['fields'], configured, output_fields(xpc=xpc and swift_stamped))
+    if departed is not None:
+        raise Refusal(f'{STAMP_NAME} no longer describes the output target the directory is configured for: {departed} is '
+                      f'{redact(stamp["fields"].get(departed))!r} in the stamp but {redact(configured.get(departed))!r} now: {FRESH_REMEDY}', 2)
     observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=xpc, compilers=compilers)
     state = 'intact'
     if xpc and not stamp['scope'].get('xpc'):
@@ -939,11 +1057,13 @@ def stamp_extend_admitted(scope, xpc):
             if current.get(name) is None:
                 raise Refusal(f'required toolchain observation failed: {name}; the newly discovered Swift compiler cannot be recorded', 2)
         retained = {k: v for k, v in stamp['fields'].items()}
-        difference = compare_fields(retained, current, [k for k in retained if not k.startswith('compilers.swift.')])
+        # The output fields were compared with the directory's configuration above; the rest with the toolchain now.
+        difference = compare_fields(retained, current, [k for k in retained if not k.startswith(('compilers.swift.', 'output.'))])
         if difference is not None:
             name, before, now, kind = difference
             raise Refusal(f'{STAMP_NAME} cannot be extended: {name} is {redact(before)!r} in the stamp but {redact(now)!r} now: {FRESH_REMEDY}', 1)
         retained.update({name: current[name] for name in ('compilers.swift.command', 'compilers.swift.identity')})
+        retained['output.swift_target'] = configured['output.swift_target']
         scope.paths.write_json(BUILDDIR, STAMP_NAME, stamp_record(retained, xpc=True, source_dir=stamp['source_dir'],
                                                                   published_at=stamp.get('published_at'),
                                                                   extended_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
@@ -955,6 +1075,7 @@ def stamp_extend_admitted(scope, xpc):
     session.setdefault('builddir', {})['stamp_after_compile'] = 'extended' if state == 'extended' else before
     session['toolchain'] = observation
     session['meson_options'] = meson_options(builddir)
+    session['meson_machines'] = machines
     scope.save()
     print(f'ok: {STAMP_NAME} {state}')
     return 0
@@ -981,9 +1102,10 @@ def fresh_remove(args):
 
 
 def fresh_remove_admitted(state):
-    """Remove the two owned cache areas, both admitted before either is touched, through their held descriptors."""
+    """Remove the three owned cache areas, all admitted before any is touched, through their held descriptors: builddir/,
+    Cargo's host release area and its output triple's release area. Other profiles and other triples stay."""
     session, root = state.session, state.root
-    targets = {'builddir': BUILDDIR, 'cargo_release': RELEASE}
+    targets = {'builddir': BUILDDIR, 'cargo_release': RELEASE, 'cargo_target_release': TRIPLE_RELEASE}
     replacement = {}
     for name, relative in targets.items():
         existed = state.paths.present(relative)
@@ -1004,7 +1126,8 @@ def fresh_remove_admitted(state):
         entry['removed'] = True
     session['fresh'] = dict(requested=True, replacement=replacement)
     session['builddir'] = dict(configured_before=False, stamp_state='absent', fresh_replaced=replacement['builddir']['removed'])
-    session['cargo_release'] = dict(existed_before=replacement['cargo_release']['existed'], fresh_replaced=replacement['cargo_release']['removed'])
+    for name in ('cargo_release', 'cargo_target_release'):
+        session[name] = dict(existed_before=replacement[name]['existed'], fresh_replaced=replacement[name]['removed'])
     state.save()
     print('ok: fresh mode replaced ' + ', '.join(f"{v['path']} ({'removed' if v['removed'] else 'absent'})" for v in replacement.values()))
     return 0
@@ -1029,10 +1152,12 @@ def cargo_admit_admitted(state):
     observation = rustc_observation(state.root / 'controller', invocation, resolution=resolution)
     required(observation, 'rustc.command')
     try:
-        requested = cargo_config.requested_flags(resolution['merged'], invocation, observation.get('host'))
+        # Target rules belong to the output triple the command passes, whatever host the compiler reports.
+        requested = cargo_config.requested_flags(resolution['merged'], invocation, TRIPLE)
     except cargo_config.Unresolved as exc:
         raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
-    session.setdefault('cargo', {}).update(selection=observation['selection'], host=observation.get('host'), requested_flags=requested)
+    session.setdefault('cargo', {}).update(selection=observation['selection'], host=observation.get('host'), target=TRIPLE,
+                                           requested_flags=requested)
     env = dict(invocation, CARGO_TARGET_DIR=str(pinned))
     cargo = shutil.which('cargo', path=env.get('PATH'))
     if not cargo:
@@ -1056,10 +1181,11 @@ def cargo_admit_admitted(state):
         state.save()
         raise Refusal(f'Cargo would keep intermediate release state under {redact(str(build_directory))}, outside the admitted '
                       f'{redact(str(pinned))}; unset CARGO_BUILD_BUILD_DIR or the build.build-dir setting (nothing was removed)', 1)
-    session['cargo_release'] = dict(session.get('cargo_release', {}), existed_before=state.paths.present(RELEASE),
-                                    fresh_replaced=session.get('cargo_release', {}).get('fresh_replaced', False))
+    for name, relative in (('cargo_release', RELEASE), ('cargo_target_release', TRIPLE_RELEASE)):
+        session[name] = dict(session.get(name, {}), existed_before=state.paths.present(relative),
+                             fresh_replaced=session.get(name, {}).get('fresh_replaced', False))
     state.save()
-    print(f'ok: Cargo intermediate and final release state admitted under {pinned}')
+    print(f'ok: Cargo intermediate and final release state admitted under {pinned} (output triple {TRIPLE})')
     return 0
 
 
@@ -1200,12 +1326,12 @@ def cargo_judge_admitted(state, args):
     requested = (session.get('cargo') or {}).get('requested_flags')
     if not isinstance(requested, dict):
         try:
-            requested = cargo_config.requested_flags({}, env, None)
+            requested = cargo_config.requested_flags({}, env, TRIPLE)
         except cargo_config.Unresolved as exc:
             raise Refusal(f'Cargo configuration cannot be resolved: {exc}; {UNRESOLVED_REMEDY}', 2)
     judgments, problems = {}, []
     for name in args.bin:
-        problem = judgment_problem(name, messages[name], target_dir / 'release' / name)
+        problem = judgment_problem(name, messages[name], target_dir / TRIPLE / 'release' / name)
         if problem is not None:
             judgments[name] = dict(status='unknown', fresh=None, problem=problem)
             problems.append(f'{name} ({problem})')
@@ -1311,6 +1437,49 @@ def sdk_check_admitted(state, args):
     if problems:
         raise Refusal('shipped outputs disagree with the selected SDK version:\n  ' + '\n  '.join(problems), 1)
     print(f'ok: {len(args.path)} outputs carry SDK {args.sdk_version}')
+    return 0
+
+
+def output_observation(path):
+    """One file observed against the output target with this module's bounded probe and load-command reader."""
+    return output_target.observe(path, probe=probe, read_metadata=output_metadata)
+
+
+def output_check(args):
+    with build_scope(args.root) as state:
+        return output_check_admitted(state, args)
+
+
+def output_check_admitted(state, args):
+    """Every named output, and with --app every Mach-O the assembled bundle carries, is a thin arm64 Mach-O for macOS.
+
+    The bundle is scanned by header, so the check covers what was actually
+    copied, the bundle mains and anything unlisted, not a list of expected
+    names; dSYM companions are debug data and are not code. Each stage's
+    observations are recorded in the session; any departure, unreadable file
+    or failed observation refuses, and nothing is thinned or repaired."""
+    session = state.session
+    paths, problems = [Path(path) for path in args.path], []
+    if args.app is not None:
+        try:
+            paths += output_target.runnable_code(args.app)
+        except OSError as exc:
+            problems.append(f'{redact(str(args.app))}: the bundle cannot be scanned ({exc.__class__.__name__})')
+    if not paths and not problems:
+        problems.append('no output was named or found')
+    results = {}
+    for path in paths:
+        observation = output_observation(path)
+        found = output_target.target_problems(observation)
+        results[redact(str(path))] = dict(container=observation['container'], architectures=observation['architectures'],
+                                          platform=observation['platform'], problems=found)
+        if found:
+            problems.append(redact(output_target.describe(observation)))
+    session.setdefault('output_check', {})[args.stage] = dict(outputs=results, problems=problems)
+    state.save()
+    if problems:
+        raise Refusal('outputs are not thin arm64 Mach-O executables for macOS:\n  ' + '\n  '.join(problems), 1)
+    print(f'ok: {len(paths)} outputs are thin {output_target.ARCHITECTURE} Mach-O for macOS ({args.stage})')
     return 0
 
 
@@ -1420,7 +1589,6 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
                                                    'wrappers in the environment and directory Cargo gives it; a probe today does '
                                                    'not identify the compiler that produced a reused output')
     builddir_state = session.get('builddir', {})
-    cargo_state = session.get('cargo_release', {})
     fresh = session.get('fresh', {})
     stamp_projection = None
     try:
@@ -1433,6 +1601,16 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
     effective = ((session.get('cargo') or {}).get('selection') or {}).get('child_environment')
     if not isinstance(effective, dict) or not effective.get('MACOSX_DEPLOYMENT_TARGET') or not effective.get('SDKROOT'):
         raise Refusal("the session carries no effective deployment target and SDK from Cargo's resolved environment; the record cannot be written", 2)
+    machines = session.get('meson_machines')
+    if not isinstance(machines, dict) or set(machines) != {'host', 'build'}:
+        raise Refusal("the session carries no Meson host and build machines; the record cannot be written", 2)
+
+    def cargo_directory(name):
+        # A directory fresh mode replaced was created anew, as builddir/ records after its replacement.
+        state = session.get(name, {})
+        return dict(state='reused' if state.get('existed_before') and not state.get('fresh_replaced') else 'created',
+                    replaced_by_fresh_mode=bool(state.get('fresh_replaced')))
+
     configuration = dict(
         knobs={name: knobs.get(name) for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')},
         meson_options=session.get('meson_options', dict(status='unknown')),
@@ -1440,15 +1618,20 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
                        flag_environment=(session.get('cargo') or {}).get('flag_environment', {}),
                        note='effective flags are recorded per output from Cargo\'s fingerprint; they are additional compiler arguments, not the complete command'),
         requests=caller_requests(session),
+        output_target=dict(output_target.DECLARED,
+                           note='the fixed target every shipped executable must satisfy, observed per output below; it describes the '
+                                'products, not the machine or processes that built them, and makes no claim about translation'),
+        meson_machines=dict(host=machines['host'], build=machines['build'],
+                            note="Meson's host machine is the platform the native products are configured for; its build machine is "
+                                 'where Meson reported compiling, a toolchain fact that is not constrained'),
         deployment_target=effective['MACOSX_DEPLOYMENT_TARGET'],
         sdkroot=effective['SDKROOT'],
         build_directories=dict(
             builddir=dict(state='reused' if builddir_state.get('configured_before') else 'created',
                           replaced_by_fresh_mode=bool(builddir_state.get('fresh_replaced')),
                           stamp=builddir_state.get('stamp_after_compile') or builddir_state.get('stamp_state')),
-            # A directory fresh mode replaced was created anew, as builddir/ records after its replacement.
-            cargo_release=dict(state='reused' if cargo_state.get('existed_before') and not cargo_state.get('fresh_replaced') else 'created',
-                               replaced_by_fresh_mode=bool(cargo_state.get('fresh_replaced'))),
+            cargo_release=cargo_directory('cargo_release'),
+            cargo_target_release=cargo_directory('cargo_target_release'),
             fresh_mode=dict(requested=bool(fresh.get('requested')), replacement=fresh.get('replacement')),
             cargo_admission={k: v for k, v in ((session.get('cargo') or {}).get('admission') or {}).items() if k != 'exact'}),
         toolchain_stamp=dict(scope_note='the stamp covers the Meson configuration and the compatibility inputs observed at setup; '
@@ -1463,8 +1646,12 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
             raise Refusal(f"{relative}: load commands are not readable ({'; '.join(metadata.get('problems') or [metadata.get('kind', 'unknown')])})", 2)
         if len(metadata['tools']) > TOOLS_LIMIT or oversized([v for tool in metadata['tools'] for v in tool.values()]):
             raise Refusal(f"{relative}: {len(metadata['tools'])} build tools in LC_BUILD_VERSION exceed the record's bounds", 2)
+        observed = output_observation(path)
+        departures = output_target.target_problems(observed)
+        if departures:
+            raise Refusal(f"{relative}: outside the output target ({'; '.join(departures)})", 2)
         entry = dict(rel_path=relative, uuid=metadata['uuid'], platform=metadata['platform'], minos=metadata['minos'],
-                     sdk=metadata['sdk'], tools=metadata['tools'])
+                     sdk=metadata['sdk'], tools=metadata['tools'], architectures=observed['architectures'], container=observed['container'])
         if relative != CONTROLLER:
             entry['sha256'] = sha256_file(path)
             if manifest_hashes.get(relative) != entry['sha256']:
@@ -1677,19 +1864,31 @@ OBSERVED_COMPILER = obj(dict(configured=obj(dict(command=COMMAND, id=text(), ver
                              observed=obj(dict(status=one_of('ok'), command=COMMAND, identity=text()))))
 PROGRAM = obj(dict(source=text(), command=text(TEXT_LIMIT, nullable=True), overrides=array(text(), 8), file=text(TEXT_LIMIT, nullable=True),
                    disabled=boolean()))
-SELECTION = obj(dict(
-    files=array(obj(dict(path=text(TEXT_LIMIT), includes=array(obj(dict(path=text(TEXT_LIMIT), optional=boolean(), loaded=boolean())), 64))), 64),
-    launcher=obj(dict(kind=one_of('cargo', 'rustup proxy'), toolchain=text(nullable=True))),
-    programs=obj(dict(rustc=PROGRAM, wrapper=PROGRAM, workspace_wrapper=PROGRAM)),
-    env_entries=mapping(obj(dict(applied=boolean(), force=boolean(), relative=boolean(), file=text(TEXT_LIMIT, nullable=True))), 256),
-    child_environment=obj(dict(SDKROOT=text(TEXT_LIMIT, nullable=True), MACOSX_DEPLOYMENT_TARGET=text(nullable=True),
-                               DEVELOPER_DIR=text(TEXT_LIMIT, nullable=True), RUSTUP_TOOLCHAIN=text(nullable=True),
-                               path_replaced_by_env=boolean(), rustup_home_replaced_by_env=boolean()))))
+def selection_shape(version):
+    fields = dict(
+        files=array(obj(dict(path=text(TEXT_LIMIT), includes=array(obj(dict(path=text(TEXT_LIMIT), optional=boolean(), loaded=boolean())), 64))), 64),
+        launcher=obj(dict(kind=one_of('cargo', 'rustup proxy'), toolchain=text(nullable=True))),
+        programs=obj(dict(rustc=PROGRAM, wrapper=PROGRAM, workspace_wrapper=PROGRAM)),
+        env_entries=mapping(obj(dict(applied=boolean(), force=boolean(), relative=boolean(), file=text(TEXT_LIMIT, nullable=True))), 256),
+        child_environment=obj(dict(SDKROOT=text(TEXT_LIMIT, nullable=True), MACOSX_DEPLOYMENT_TARGET=text(nullable=True),
+                                   DEVELOPER_DIR=text(TEXT_LIMIT, nullable=True), RUSTUP_TOOLCHAIN=text(nullable=True),
+                                   path_replaced_by_env=boolean(), rustup_home_replaced_by_env=boolean())))
+    if version >= 2:
+        fields['target'] = obj(dict(source=one_of('--target'), triple=one_of(TRIPLE),
+                                    overrides=array(one_of('CARGO_BUILD_TARGET', 'build.target'), 2)), closed=True)
+    return obj(fields)
+
+
 WRAPPER = obj(dict(source=text(), command=text(TEXT_LIMIT)), dict(sha256=text(64, HEX64)))
-RUSTC = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), source=one_of('RUSTC', 'CARGO_BUILD_RUSTC', 'build.rustc', 'default'),
-                 identity=text(), release=text(), commit_hash=text(empty=True), host=text(), llvm_version=text(empty=True),
-                 wrappers=obj(optional=dict(wrapper=WRAPPER, workspace_wrapper=WRAPPER), closed=True),
-                 selection_environment=mapping(text(TEXT_LIMIT, empty=True), 16), selection=SELECTION, selection_note=NOTE))
+
+
+def rustc_shape(version):
+    return obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), source=one_of('RUSTC', 'CARGO_BUILD_RUSTC', 'build.rustc', 'default'),
+                    identity=text(), release=text(), commit_hash=text(empty=True), host=text(), llvm_version=text(empty=True),
+                    wrappers=obj(optional=dict(wrapper=WRAPPER, workspace_wrapper=WRAPPER), closed=True),
+                    selection_environment=mapping(text(TEXT_LIMIT, empty=True), 16), selection=selection_shape(version), selection_note=NOTE))
+
+
 TOOL = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), version=text()))
 FINGERPRINT = alternatives(
     ('observed', obj(dict(binding=mapping(text(TEXT_LIMIT), 8), rustflags=FLAGS, rustc_fingerprint=text(nullable=True),
@@ -1709,9 +1908,18 @@ CARGO_JUDGMENT = obj(dict(status=one_of('reported'), fresh=boolean(), profile=CA
                           rustflags_source=FLAG_SOURCE, note=NOTE))
 SIGNATURE = obj(dict(status=one_of('ok'), leaf=text(nullable=True), team=text(nullable=True), timestamp=boolean(), runtime=boolean(),
                      adhoc=boolean(), developer_id_chain=boolean()))
-OUTPUT = obj(dict(rel_path=text(TEXT_LIMIT), uuid=text(36, UUID), platform=text(8, re.compile(r'\d+')), minos=text(16, VERSION),
+
+
+def output_shape(version):
+    fields = dict(rel_path=text(TEXT_LIMIT), uuid=text(36, UUID), platform=text(8, re.compile(r'\d+')), minos=text(16, VERSION),
                   sdk=text(16, VERSION), tools=array(obj(dict(tool=text(16), version=text(32)), closed=True), TOOLS_LIMIT),
-                  sha256=text(64, HEX64, nullable=True)), dict(signature=SIGNATURE, note=NOTE, cargo=CARGO_JUDGMENT))
+                  sha256=text(64, HEX64, nullable=True))
+    if version >= 2:
+        fields.update(architectures=array(text(output_target.NAME_LIMIT), output_target.SLICE_LIMIT, empty=False),
+                      container=one_of('thin', 'fat'))
+    return obj(fields, dict(signature=SIGNATURE, note=NOTE, cargo=CARGO_JUDGMENT))
+
+
 BUILD_DIRECTORY = obj(dict(state=one_of('created', 'reused'), replaced_by_fresh_mode=boolean()), dict(stamp=text(nullable=True)))
 TIMESTAMP = text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'))
 STAMP_FIELDS = {
@@ -1720,20 +1928,30 @@ STAMP_FIELDS = {
     'rustc.wrappers': obj(optional={name: obj(dict(command=text(TEXT_LIMIT), sha256=text(64, HEX64, nullable=True)), closed=True)
                                   for name in ('wrapper', 'workspace_wrapper')}, closed=True),
 }
+SELECTIONS = array(text(LINE_LIMIT), 8, empty=False)
+STAMP_OUTPUT_FIELDS = {'output.system': text(32), 'output.cpu_family': text(32), 'output.c_arch': SELECTIONS,
+                       'output.link_arch': SELECTIONS, 'output.cargo_triple': text(64)}
 
 
-def stamp_projection(value, where, problems):
-    if isinstance(value, dict) and value.get('status') == 'unavailable':
-        obj(dict(status=one_of('unavailable'), reason=NOTE), closed=True)(value, where, problems)
-        return
-    obj(dict(scope=obj(dict(xpc=boolean()), closed=True), published_at=TIMESTAMP,
-             extended_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'), nullable=True), fields=obj()), closed=True)(value, where, problems)
-    if not isinstance(value, dict) or not isinstance(value.get('scope'), dict):
-        return
-    fields = dict(STAMP_FIELDS)
-    if value['scope'].get('xpc') is True:
-        fields.update({'compilers.swift.command': COMMAND, 'compilers.swift.identity': text()})
-    obj(fields, closed=True)(value.get('fields'), where + '.fields', problems)
+def stamp_projection_shape(version):
+    def check(value, where, problems):
+        if isinstance(value, dict) and value.get('status') == 'unavailable':
+            obj(dict(status=one_of('unavailable'), reason=NOTE), closed=True)(value, where, problems)
+            return
+        obj(dict(scope=obj(dict(xpc=boolean()), closed=True), published_at=TIMESTAMP,
+                 extended_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'), nullable=True), fields=obj()), closed=True)(value, where, problems)
+        if not isinstance(value, dict) or not isinstance(value.get('scope'), dict):
+            return
+        fields = dict(STAMP_FIELDS)
+        swift = value['scope'].get('xpc') is True
+        if swift:
+            fields.update({'compilers.swift.command': COMMAND, 'compilers.swift.identity': text()})
+        if version >= 2:
+            fields.update(STAMP_OUTPUT_FIELDS)
+            if swift:
+                fields['output.swift_target'] = SELECTIONS
+        obj(fields, closed=True)(value.get('fields'), where + '.fields', problems)
+    return Shape(check)
 
 
 MESON_OPTION_SHAPES = {name: text() for name in FIXED_MESON_OPTIONS}
@@ -1742,21 +1960,22 @@ MESON_OPTION_SHAPES.update({name: boolean() for name in ('debug', 'werror', 'str
 MESON_OPTION_SHAPES.update({name: FLAGS for name in ('c_args', 'c_link_args', 'swift_args', 'swift_link_args')})
 # Meson has published b_sanitize as both a string and an array across supported versions.
 MESON_OPTION_SHAPES['b_sanitize'] = Shape(lambda v, w, p: (text() if isinstance(v, str) else FLAGS)(v, w, p))
-REPLACEMENT = obj({name: obj(dict(path=one_of(relative), existed=boolean(), removed=boolean()), closed=True)
-                   for name, relative in (('builddir', BUILDDIR), ('cargo_release', RELEASE))}, closed=True, nullable=True)
-RECORD_SHAPE = obj(dict(
-    schema_version=one_of(SCHEMA_VERSION),
-    generated_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ')),
-    source=obj(dict(commit=text(64), describe=text(), dirty=boolean(), version=text(32, VERSION), build_number=text(16, re.compile(r'\d+')),
-                    worker_identity=text(64, HEX64), input_hashes=obj({name: text(64, HEX64) for name in SOURCE_INPUTS}, closed=True))),
-    toolchain=obj(dict(
-        developer_dir=obj(dict(value=text(TEXT_LIMIT), source=one_of('DEVELOPER_DIR', 'xcode-select'))),
-        sdk=obj(dict(path=text(TEXT_LIMIT), version=text(16, VERSION), build=text(32), source=one_of('SDKROOT named by the caller', 'xcrun --sdk macosx default'))),
-        xcode=alternatives(('ok', obj(dict(version=text(), build=text()))),
-                           ('unknown', obj(dict(reason=one_of(*FAILURE_KINDS)), dict(returncode=integer(nullable=True))))),
-        compilers=obj(dict(c=OBSERVED_COMPILER, swift=Shape(lambda v, w, p: None))),
-        rustc=RUSTC, cargo=TOOL, meson=TOOL, ninja=TOOL)),
-    configuration=obj(dict(
+MACHINE = obj(dict(system=text(32), cpu_family=text(32)), closed=True)
+
+
+def cache_areas(version):
+    """The cache areas fresh mode replaces, as the record of that version names them."""
+    areas = (('builddir', BUILDDIR), ('cargo_release', RELEASE))
+    return areas + ((('cargo_target_release', TRIPLE_RELEASE),) if version >= 2 else ())
+
+
+def record_shape(version):
+    """The documented record of one schema version. Version 1 is kept exactly for records earlier builds sealed; only
+    readers that ask for historical records accept it."""
+    replacement = obj({name: obj(dict(path=one_of(relative), existed=boolean(), removed=boolean()), closed=True)
+                       for name, relative in cache_areas(version)}, closed=True, nullable=True)
+    directories = {name: BUILD_DIRECTORY for name, _ in cache_areas(version)}
+    configuration = dict(
         knobs=obj({name: one_of('0', '1') for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')}, closed=True),
         meson_options=alternatives(('ok', obj(dict(values=obj(optional=MESON_OPTION_SHAPES, closed=True)))), ('unknown', obj())),
         rustflags=obj(dict(requested=obj(dict(source=one_of('caller', 'script', 'none'), tokens=array(text(LINE_LIMIT, empty=True), FLAG_LIMIT, nullable=True)),
@@ -1767,24 +1986,51 @@ RECORD_SHAPE = obj(dict(
                      closed=True),
         deployment_target=text(16, re.compile(r'\d+\.\d+')),
         sdkroot=text(TEXT_LIMIT),
-        build_directories=obj(dict(builddir=BUILD_DIRECTORY, cargo_release=BUILD_DIRECTORY,
-                                   fresh_mode=obj(dict(requested=boolean(), replacement=REPLACEMENT)),
+        build_directories=obj(dict(directories,
+                                   fresh_mode=obj(dict(requested=boolean(), replacement=replacement)),
                                    cargo_admission=obj(dict(target_directory=text(TEXT_LIMIT), build_directory=text(TEXT_LIMIT)),
                                                        dict(layout_environment=mapping(text(TEXT_LIMIT, empty=True), 8))))),
-        toolchain_stamp=obj(dict(scope_note=NOTE, projection=Shape(stamp_projection))))),
-    outputs=array(OUTPUT, 16, empty=False),
-    signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),
-                                                            timestamp=boolean()), closed=True), 16), note=NOTE)),
-    limits=array(NOTE, 8, empty=False)), closed=True)
+        toolchain_stamp=obj(dict(scope_note=NOTE, projection=stamp_projection_shape(version))))
+    if version >= 2:
+        configuration.update(
+            output_target=obj(dict(system=one_of(output_target.SYSTEM), platform=one_of(output_target.PLATFORM),
+                                   architecture=one_of(output_target.ARCHITECTURE), container=one_of(output_target.CONTAINER),
+                                   cargo_triple=one_of(output_target.CARGO_TRIPLE), note=NOTE), closed=True),
+            meson_machines=obj(dict(host=MACHINE, build=MACHINE, note=NOTE), closed=True))
+    return obj(dict(
+        schema_version=one_of(version),
+        generated_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ')),
+        source=obj(dict(commit=text(64), describe=text(), dirty=boolean(), version=text(32, VERSION), build_number=text(16, re.compile(r'\d+')),
+                        worker_identity=text(64, HEX64), input_hashes=obj({name: text(64, HEX64) for name in SOURCE_INPUTS}, closed=True))),
+        toolchain=obj(dict(
+            developer_dir=obj(dict(value=text(TEXT_LIMIT), source=one_of('DEVELOPER_DIR', 'xcode-select'))),
+            sdk=obj(dict(path=text(TEXT_LIMIT), version=text(16, VERSION), build=text(32), source=one_of('SDKROOT named by the caller', 'xcrun --sdk macosx default'))),
+            xcode=alternatives(('ok', obj(dict(version=text(), build=text()))),
+                               ('unknown', obj(dict(reason=one_of(*FAILURE_KINDS)), dict(returncode=integer(nullable=True))))),
+            compilers=obj(dict(c=OBSERVED_COMPILER, swift=Shape(lambda v, w, p: None))),
+            rustc=rustc_shape(version), cargo=TOOL, meson=TOOL, ninja=TOOL)),
+        configuration=obj(configuration),
+        outputs=array(output_shape(version), 16, empty=False),
+        signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),
+                                                                timestamp=boolean()), closed=True), 16), note=NOTE)),
+        limits=array(NOTE, 8, empty=False)), closed=True)
+
+
+RECORD_SHAPES = {version: record_shape(version) for version in (*HISTORICAL_SCHEMA_VERSIONS, SCHEMA_VERSION)}
 
 
 def record_shape_problems(record):
-    """Every way a record departs from the documented shape: required fields present and not null, exact types, bounds,
-    the variant's compilers and outputs, permitted unknowns only where the field policy allows them, and signing claims
-    that repeat the outputs' own."""
+    """Every way a record departs from the documented shape of its schema version: required fields present and not
+    null, exact types, bounds, the variant's compilers and outputs, permitted unknowns only where the field policy
+    allows them, and signing claims that repeat the outputs' own. A version 2 record must also describe every output
+    as the output target and Meson's host machine as the target's. Which versions a reader accepts is the reader's
+    decision; this function only validates a record against its own version."""
+    version = record.get('schema_version') if type(record) is dict else None
+    if type(version) is not int or version not in RECORD_SHAPES:
+        return [f"record.schema_version is not one of {', '.join(map(str, RECORD_SHAPES))}"]
     problems = []
-    RECORD_SHAPE(record, 'record', problems)
-    if problems or type(record) is not dict:
+    RECORD_SHAPES[version](record, 'record', problems)
+    if problems:
         return problems
     full = record['configuration']['knobs']['BUILD_XPC'] == '1'
     configuration = record['configuration']
@@ -1794,7 +2040,7 @@ def record_shape_problems(record):
         problems.append('record.configuration fresh mode disagrees with PW_FRESH_BUILD')
     if fresh['requested'] != (fresh['replacement'] is not None):
         problems.append('record.configuration fresh mode must carry replacement observations exactly when requested')
-    for name in ('builddir', 'cargo_release'):
+    for name, _ in cache_areas(version):
         directory = directories[name]
         replacement = (fresh['replacement'] or {}).get(name)
         if replacement and (replacement['existed'] != replacement['removed'] or
@@ -1832,6 +2078,13 @@ def record_shape_problems(record):
             problems.append(f'{where}.cargo belongs to the Cargo targets and only to them')
         if fresh['requested'] and output.get('cargo', {}).get('fresh') is True:
             problems.append(f'{where}.cargo.fresh reports reuse in a fresh build')
+        if version >= 2 and (output['architectures'] != [output_target.ARCHITECTURE] or output['container'] != output_target.CONTAINER
+                             or output['platform'] != output_target.PLATFORM):
+            problems.append(f"{where} describes {output['container']} {' '.join(output['architectures'])} for platform "
+                            f"{output['platform']}, not the output target (thin {output_target.ARCHITECTURE} for macOS)")
+    if version >= 2:
+        if configuration['meson_machines']['host'] != output_target.MESON_HOST:
+            problems.append("record.configuration.meson_machines.host is not the output target's Meson host machine")
     claimed = [(n['rel_path'], n['leaf'], n['team'], n['timestamp']) for n in record['signing']['nested']]
     actual = [(o['rel_path'], o['signature']['leaf'], o['signature']['team'], o['signature']['timestamp']) for o in record['outputs'] if 'signature' in o]
     if claimed != actual:
@@ -1856,14 +2109,17 @@ def record_shape_problems(record):
 
 # ---- inspection of a record ----------------------------------------------------------------------------
 
-def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=None):
+def record_problems(app, manifest, *, read_metadata=output_metadata, observe=None, signatures=None):
     """Problems a record has against its manifest and bundle bytes, as (code, path, message) triples.
 
-    The record must have the documented shape (record_shape_problems) and agree
-    with the manifest and the bytes on every hash, with each executable's load
-    commands on UUID, platform, minimum, SDK and linker tools, and, where the
-    inspector supplies independently observed signature facts, with each
-    nested signature it claims."""
+    The record must be of the current schema, have its documented shape
+    (record_shape_problems) and agree with the manifest and the bytes on every
+    hash, with each executable's load commands on UUID, platform, minimum, SDK
+    and linker tools, with each executable's observed architectures and
+    container, and, where the inspector supplies independently observed
+    signature facts, with each nested signature it claims. The declared output
+    target alone satisfies nothing: every claim is compared with the bytes."""
+    observe = observe or output_observation
     app = Path(app)
     problems = []
     path = app / RECORD_PATH
@@ -1924,6 +2180,10 @@ def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=
         for key in ('uuid', 'platform', 'minos', 'sdk', 'tools'):
             if entry.get(key) != metadata.get(key):
                 problems.append(('provenance_metadata', relative, f'record {key} {entry.get(key)!r} differs from the load commands {metadata.get(key)!r}'))
+        observed = observe(actual)
+        for key in ('architectures', 'container'):
+            if entry.get(key) != observed.get(key):
+                problems.append(('provenance_metadata', relative, f'record {key} {entry.get(key)!r} differs from the bytes {observed.get(key)!r}'))
         if signatures is not None and relative != CONTROLLER:
             observed = signatures.get(relative)
             claimed = entry.get('signature')
@@ -1936,12 +2196,16 @@ def record_problems(app, manifest, *, read_metadata=output_metadata, signatures=
     return problems
 
 
-def read_zip_record(archive):
+def read_zip_record(archive, *, historical=False):
     """The record bytes and controller digest from a release ZIP; no archived code is executed.
 
-    The record must have the documented shape, and every nested output it names
-    must hash to its recorded value. Load commands and signatures are observed
-    on temporary copies of the named executables, never trusted from the record."""
+    The record must have the documented shape of its schema version, and every
+    nested output it names must hash to its recorded value. Load commands,
+    architectures, containers and signatures are observed on temporary copies of
+    the named executables, never trusted from the record. A new release must
+    carry the current schema; with historical=True, a record an earlier build
+    sealed under a version in HISTORICAL_SCHEMA_VERSIONS is read as that version
+    describes it, and nothing it lacks is compared or supplied."""
     import zipfile
     import signer_check
     with zipfile.ZipFile(archive) as zipped:
@@ -1967,7 +2231,8 @@ def read_zip_record(archive):
             data = json.loads(record.decode('utf-8'))
         except ValueError:
             raise ValueError('the accepted ZIP carries an unreadable provenance record')
-        if not isinstance(data, dict) or data.get('schema_version') != SCHEMA_VERSION:
+        accepted = (SCHEMA_VERSION, *HISTORICAL_SCHEMA_VERSIONS) if historical else (SCHEMA_VERSION,)
+        if not isinstance(data, dict) or data.get('schema_version') not in accepted:
             raise ValueError('the accepted ZIP carries an unsupported provenance record')
         problems = record_shape_problems(data)
         if problems:
@@ -1983,6 +2248,10 @@ def read_zip_record(archive):
                 metadata = output_metadata(path)
                 if metadata.get('status') != 'ok' or any(metadata.get(k) != output[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')):
                     raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's load commands")
+                if data['schema_version'] >= 2:
+                    observed = output_observation(path)
+                    if any(observed.get(k) != output[k] for k in ('architectures', 'container')):
+                        raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's architectures or container")
                 if relative != CONTROLLER:
                     observed = signer_check.signature(path)
                     if not observed.get('readable') or signer_check.facts(observed) != output['signature']:
@@ -2020,6 +2289,10 @@ def main(argv=None):
     sub = owned_helper('sdk-check', sdk_check)
     sub.add_argument('--sdk-version', required=True)
     sub.add_argument('path', nargs='+')
+    sub = owned_helper('output-check', output_check)
+    sub.add_argument('--stage', required=True, choices=OUTPUT_STAGES)
+    sub.add_argument('--app', type=Path, help='an assembled bundle whose every Mach-O, found by header, is checked')
+    sub.add_argument('path', nargs='*')
     sub = owned_helper('worker-identity', worker_identity)
     sub.add_argument('--worker', required=True)
     sub.add_argument('--expected', required=True)
