@@ -36,6 +36,11 @@ Keep Python assertions enabled, including direct helper invocations; unset
 `PYTHONOPTIMIZE`. Missing required equipment is a failure with unrun cases,
 not grounds for introducing a skip.
 
+Worker allowances count system sleep. On a Mac that may idle-sleep, run long
+batteries under `caffeinate -i`. For an unexplained timeout, check
+`pmset -g log` for a sleep inside the case's window before attributing it to
+the product; a run that overlapped a sleep is not creditable.
+
 ### Choose the most integrated test that can establish the behavior
 
 Use the public CLI or an existing `_test_overrides` boundary when the behavior
@@ -142,6 +147,9 @@ a second worktree for concurrent runs; a standalone `cargo test` against the
 managed `controller/target/` runs through `tests/lib/checkout_lock.sh` or with
 isolated output and intermediate directories, as the
 [locking contract](README.md#retention-ownership-and-execution-locking) says.
+A worktree is also the way to make a disposable checkout; an rsync copy that
+omits `dist/README.md`, `dist/AGENTS.md` or `.tmp/AGENTS.md` fails the build
+and the drift suite.
 Inspect interrupted or ambiguous output before choosing a fresh directory
 or explicitly removing an owned unfinished run through the pruner.
 

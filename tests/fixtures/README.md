@@ -91,8 +91,9 @@ deterministic, and checked into the repo so tests are hermetic.
 - `blackbox_menagerie/`: SBPL sources and a case manifest (`cases/core.json`)
   sourced from PAWL evidence.
 - `blackbox_e2e/`: per-case directories (`BBX-*`) with specimen templates and
-  expected outcomes for strict evidence validation, plus synthetic envelopes
-  under `checker/` for independent controls of the evidence checker.
+  expected outcomes for strict evidence validation, plus captured envelopes
+  under `checker/` for independent controls of the evidence checker
+  ([README](blackbox_e2e/checker/README.md)).
 - `comparison/`: the comparison-record scenario matrix. `matrix.json` holds
   every S, B, C and T row with its specimen inputs, the raw channel inputs the
   Swift unit reader feeds to `comparisonEvidence(...)`, the raw fields the
