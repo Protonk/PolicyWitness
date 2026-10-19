@@ -226,6 +226,14 @@ def guidance_scenarios(repo):
             ('image', '!' + link, 1),
             ('relabeled', '[Other diagnostic wording](' + route + ')', 0),
             ('relative-path', link.replace(target, './' + target), 0),
+            ('code-label', '[`' + target + '`](' + route + ')', 0),
+            ('code-label-example', '`` [`' + target + '`](' + route + ') ``', 1),
+            ('wrapped-label', '[Wrapped diagnostic\nwording](' + route + ')', 0),
+            # Neither a label nor code within it continues across a blank line.
+            ('split-label', '[Split `diagnostic\n\nwording`](' + route + ')', 1),
+            ('indented-continuation', 'continued\n    ' + link, 0),
+            ('indented-example', '\n\n    ' + link + '\n\n', 1),
+            ('indented-after-heading', '\n\n#### Example\n    ' + link + '\n\n', 1),
         ]
         name = target.replace('/', '-').replace('.', '-')
         for kind, replacement, status in variants:

@@ -859,6 +859,8 @@ def harness_guidance_prose(text: str) -> str:
     lines = []
     fence = None
     comment = False
+    # Indentation cannot open an example inside a paragraph; it continues one.
+    paragraph = False
     for line in text.splitlines():
         if fence is not None:
             if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}\s*", line):
@@ -884,10 +886,11 @@ def harness_guidance_prose(text: str) -> str:
         if marker and (marker[1][0] != "`" or "`" not in marker[2]):
             fence = marker[1]
             lines.append("")
-        elif prose.startswith(("    ", "\t")):
+        elif prose.startswith(("    ", "\t")) and not paragraph:
             lines.append("")
         else:
             lines.append(prose)
+        paragraph = bool(lines[-1].strip()) and not re.match(r" {0,3}#{1,6}(?:[ \t]|$)", lines[-1])
     return "\n".join(lines)
 
 
@@ -915,9 +918,11 @@ def check_harness_guidance_routes() -> list[str]:
     root = HARNESS_GUIDANCE_FILES[0]
     if root in sections:
         # An example inside inline code or an image is not a diagnostic route.
-        body = re.sub(r"(`+).*?\1", "", sections[root], flags=re.S)
+        # Code in a label still leaves a label; neither spans a blank line.
+        within_paragraph = r"(?:[^\n]|\n(?![ \t]*\n))"
+        body = re.sub(r"(`+)" + within_paragraph + r"*?\1", "code", sections[root])
         routes = set()
-        for target in re.findall(r"(?<!!)(?<!\\)\[[^\]\n]+\]\(([^()\s]+)\)", body):
+        for target in re.findall(r"(?<!!)(?<!\\)\[(?:(?!\])" + within_paragraph + r")+\]\(([^()\s]+)\)", body):
             filename, separator, fragment = target.partition("#")
             if separator and filename and not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", filename):
                 routes.add(((root.parent / filename).resolve(), fragment))
