@@ -172,6 +172,6 @@ Preserve `tests/out/.release-rotation/` after interrupted release cleanup.
 Resume the same archive's `release_rotate.py --apply` transaction through the
 [recovery procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
 For external runners, retain staging and durable ownership until removal is
-verified, following the [external-runner workflow](../AGENTS.md#external-runner-workflow-agents).
+verified, following the [external-runner workflow](../AGENTS.md#external-runner-workflow).
 Scratch follows [.tmp/AGENTS.md](../.tmp/AGENTS.md); never move evidence there
 to evade retention.

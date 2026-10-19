@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Read [README.md](README.md) for repository orientation and the documentation index.
-This file governs how contributors and agents work here.
+This file sets the working rules for this repository.
 
 ## Quick Router (open first)
 
@@ -22,7 +22,7 @@ This file governs how contributors and agents work here.
 
 Describe current behavior. Don't add change-history notes to docs — `git log`
 is authoritative. Put directory descriptions in READMEs and working rules in
-AGENTS files, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
+`AGENTS.md` files, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Core ideas
 
@@ -52,7 +52,7 @@ needs it once. Adding or moving a native source requires updating its Meson
 target. Build and test checks diagnose source-list, bundle inventory, signing
 and provenance inconsistencies.
 
-## External runner workflow (agents)
+## External runner workflow
 
 For BYOXPC installation, verification or cleanup, follow
 [the runner commands](controller/README.md) and

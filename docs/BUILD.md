@@ -333,7 +333,7 @@ The build depends on these inputs and working state, in the order it meets them.
   host other than Apple Silicon, or with another `--target`, the build script
   stops it.
 - **The output directory.** `DIST_DIR`, `dist/` by default; a custom one
-  also receives copies of the tracked `dist/` README and AGENTS files. Its
+  also receives copies of the tracked `dist/README.md` and `dist/AGENTS.md`. Its
   trust and that of the build directories are in the table.
 
 <!-- BEGIN GENERATED BUILD DIRECTORIES -->

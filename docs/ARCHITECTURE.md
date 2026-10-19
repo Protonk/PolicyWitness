@@ -1,9 +1,8 @@
 # PolicyWitness architecture
 
-A tour of the internals at the level between the [README](../README.md)'s
-Flow paragraph and the directory READMEs: how one run unfolds in time and the
-boundaries it crosses. It is for a developer or agent who has read the README
-and is about to open a directory. Each section links to the relevant field
+This tour follows one run through the internals and across their boundaries.
+Read it after the README's [The Experiment](../README.md#the-experiment) section
+and before the directory READMEs. Each section links to the relevant field
 reference, contract, module list, test map or build guide.
 
 The <!-- span architecture.documents.architecture.graphs -->4<!-- /span --> figures are generated from [architecture.json](architecture.json)

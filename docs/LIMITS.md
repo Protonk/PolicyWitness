@@ -477,8 +477,7 @@ Two editorial rules keep the shared section honest for its reader, a user of the
 guide. First, shared prose states only what that reader can observe with the
 shipped app: a reply field, a refusal's name, a count, a marker. Second, the
 mechanism a statement rests on goes under "Premises behind the interactions",
-beside the symbol that implements it, so that an agent or a maintainer can
-reopen the premise. Admission rows carry `refusal_field`, the exact
+beside the implementing symbol so the premise can be reopened and checked. Admission rows carry `refusal_field`, the exact
 `admission_failure.field` text measured from a refusal, and every `control`
 starts with one of Fixed, Flag, Derived or Not enforced; developer-only remarks
 belong in `behavior`, which only this document renders.
