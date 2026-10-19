@@ -146,7 +146,8 @@ selection, deduplication, configuration validation, and complete accounting.
   re-signing a copied runner cannot conceal a stale embedded manifest, and that
   real x86_64 and universal Mach-O signed with the identity, with consistent
   manifest and record hashes, fail for architecture, with a record that
-  contradicts the bytes visible as a separate fault.
+  contradicts the bytes visible as a separate fault. A signed app carrying a
+  universal dSYM resource passes without treating its debug slices as code.
 - **Resource dependency:** Built app and matching Developer ID. Uses disposable
   copies under `/private/tmp`; never launches or modifies the selected source app.
 - **When to run:** After changing artifact inspection, inventory, the output
@@ -231,7 +232,9 @@ selection, deduplication, configuration validation, and complete accounting.
   Cargo, with a corrupted cached unit refused again on reuse; after the native
   compile, before the worker runs; in the assembled bundle beside an unlisted
   universal file, before any signature; at the standalone observer; before
-  the ZIP), a stamp names another target or predates the contract, a cross
+  the ZIP). Text, empty and truncated-header replacements and missing required
+  executables refuse in both variants at the assembled and packaging gates,
+  before any signature or the ZIP respectively. A stamp names another target or predates the contract, a cross
   file gives `meson setup` an x86_64 host and, in the partial variant, another
   the arm64 host, which builds and packages (Meson 1.12.1 sets up no Swift
   target in a cross configuration), the controller package's target guard is driven by

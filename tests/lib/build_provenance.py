@@ -1457,20 +1457,23 @@ def output_check(args):
 def output_check_admitted(state, args):
     """Every named output, and with --app every Mach-O the assembled bundle carries, is a thin arm64 Mach-O for macOS.
 
-    The bundle is scanned by header, so the check covers what was actually
-    copied, the bundle mains and anything unlisted, not a list of expected
-    names; dSYM companions are debug data and are not code. Each stage's
+    The build variant's required executables are checked even when missing or
+    no longer recognizable as Mach-O. The header scan adds any unlisted code;
+    dSYM companions are debug data and are not code. Each stage's
     observations are recorded in the session; any departure, unreadable file
     or failed observation refuses, and nothing is thinned or repaired."""
     session = state.session
     paths, problems = [Path(path) for path in args.path], []
     if args.app is not None:
+        expected = FULL_OUTPUTS if session['knobs']['BUILD_XPC'] == '1' else PARTIAL_OUTPUTS
+        paths += [Path(args.app) / relative for relative in expected]
         try:
             paths += output_target.runnable_code(args.app)
         except OSError as exc:
             problems.append(f'{redact(str(args.app))}: the bundle cannot be scanned ({exc.__class__.__name__})')
     if not paths and not problems:
         problems.append('no output was named or found')
+    paths = list(dict.fromkeys(paths))
     results = {}
     for path in paths:
         observation = output_observation(path)

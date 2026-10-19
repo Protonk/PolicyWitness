@@ -21,7 +21,10 @@ Offline release controls also exercise the release procedure's decision points.
   whatever the manifest claims, and every other Mach-O the bundle carries,
   found by header, must be a thin `arm64` Mach-O for macOS (`lipo -archs`
   naming exactly `arm64`, a thin header, the macOS platform in its load
-  commands). dSYM companions are debug data and are not inspected as code.
+  commands). dSYM companions are debug data and are not inspected as code,
+  including fat containers whose every bounded, nonoverlapping slice has a
+  complete matching `MH_DSYM` header. Mixed code/debug containers and malformed
+  fat tables or slice headers remain subject to rejection.
   The fault is reported as `output_target`, independently of signature,
   manifest and record faults.
 - Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
@@ -66,7 +69,8 @@ Offline release controls also exercise the release procedure's decision points.
   produce exactly `output_target` and `provenance_metadata`, the same helper
   described truthfully by its record exactly `output_target` and
   `provenance`, and an unlisted universal library exactly `output_target`. No copy is
-  launched; cleanup removes only the temporary directory and checks the source
+  launched. A validly re-signed copy carrying a universal dSYM resource passes
+  with no additional code in the inventory; cleanup removes only the temporary directory and checks the source
   inventory.
 - `byoxpc_verification_controls` uses never-launched signed copies and isolated
   child registry/home directories. Corrupting a worker or issuer code page must
@@ -137,7 +141,11 @@ Offline release controls also exercise the release procedure's decision points.
   headers and load commands the control reads itself first; observations and
   decisions are compared separately, failed and inconsistent `lipo` reports
   refuse, the bundle scan finds renamed and unlisted code by header while a
-  dSYM companion is skipped by file type and not by path, the build gate
+  dSYM companion is skipped by file type and not by path, including universal,
+  one-slice fat and fat64 debug containers while mixed code/debug or malformed
+  containers remain subject to rejection. Both app-wide gates check every
+  required path in full and partial builds even after text replacement, emptying,
+  truncation of the magic or removal. The build gate
   records each stage and names only the departing output, and copies of the
   check with the container rule removed, the predicate reduced to arm64
   membership, names matched as substrings or the platform rule removed each

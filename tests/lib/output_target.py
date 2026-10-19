@@ -20,8 +20,8 @@ pass.
 
 `runnable_code` lists the Mach-O files below a directory that can run or be
 loaded: every regular file whose header is a Mach-O or fat container, except
-dSYM companion files (file type MH_DSYM), whose debug metadata is not a
-runnable output's platform contract. The scan reads headers, not names or
+dSYM companion files (file type MH_DSYM in every slice), whose debug metadata
+is not a runnable output's platform contract. The scan reads headers, not names or
 manifests, so a renamed or unlisted executable is still found.
 
 The bounded probe and the load-command reader are the caller's
@@ -61,24 +61,62 @@ SLICE_LIMIT = 16
 NAME_LIMIT = 32
 
 
+def fat_is_dsym(stream, magic, slices):
+    """Whether every bounded, nonoverlapping fat slice has a complete MH_DSYM header matching its table entry.
+
+    A malformed table or an unknown, truncated or code slice is never exempted
+    as debug data. Read only the bounded table and each slice's header, not its
+    potentially large debug sections. Both fat_arch and fat_arch_64 are supported.
+    """
+    layout = '>IIIII' if magic == FAT_MAGICS[0] else '>IIQQII'
+    entry_size = struct.calcsize(layout)
+    table_end = 8 + slices * entry_size
+    file_size = os.fstat(stream.fileno()).st_size
+    stream.seek(8)
+    table = stream.read(slices * entry_size)
+    if len(table) != slices * entry_size:
+        return False
+    ranges = []
+    for entry in struct.iter_unpack(layout, table):
+        cpu, subtype, offset, size, alignment, *reserved = entry
+        if (offset < table_end or size < 28 or offset + size > file_size or alignment > 63
+                or offset % (1 << alignment) or any(reserved)):
+            return False
+        if any(offset < end and start < offset + size for start, end in ranges):
+            return False
+        ranges.append((offset, offset + size))
+        stream.seek(offset)
+        data = stream.read(min(size, 32))
+        kind = THIN_MAGICS.get(data[:4])
+        if kind is None:
+            return False
+        order, header_size = kind
+        if len(data) < header_size or struct.unpack_from(order + 'III', data, 4) != (cpu, subtype, MH_DSYM):
+            return False
+    return True
+
+
 def header(path):
-    """What a file's first bytes declare: a thin Mach-O with its file type, a fat container with its slice count,
-    a truncated Mach-O header, or None for any other file. OSError propagates: an unreadable file is not a non-Mach-O."""
+    """The container header, or None for another file. A fat file's type is MH_DSYM only when every slice is debug data;
+    thin headers carry their own type. OSError propagates: an unreadable file is not a non-Mach-O."""
     with open(path, 'rb') as stream:
         data = stream.read(32)
-    magic = data[:4]
-    if magic in THIN_MAGICS:
-        order, size = THIN_MAGICS[magic]
-        if len(data) < size:
-            return dict(container='thin', truncated=True)
-        return dict(container='thin', filetype=struct.unpack(order + 'I', data[12:16])[0])
-    if magic in FAT_MAGICS:
-        if len(data) < 8:
-            return dict(container='fat', truncated=True)
-        slices = struct.unpack('>I', data[4:8])[0]
-        if not 0 < slices <= SLICE_LIMIT:
-            return None
-        return dict(container='fat', slices=slices)
+        magic = data[:4]
+        if magic in THIN_MAGICS:
+            order, size = THIN_MAGICS[magic]
+            if len(data) < size:
+                return dict(container='thin', truncated=True)
+            return dict(container='thin', filetype=struct.unpack(order + 'I', data[12:16])[0])
+        if magic in FAT_MAGICS:
+            if len(data) < 8:
+                return dict(container='fat', truncated=True)
+            slices = struct.unpack('>I', data[4:8])[0]
+            if not 0 < slices <= SLICE_LIMIT:
+                return None
+            found = dict(container='fat', slices=slices)
+            if fat_is_dsym(stream, magic, slices):
+                found['filetype'] = MH_DSYM
+            return found
     return None
 
 
@@ -168,7 +206,7 @@ def runnable_code(root):
             if not stat.S_ISREG(path.lstat().st_mode):
                 continue
             kind = header(path)
-            if kind is None or (kind['container'] == 'thin' and kind.get('filetype') == MH_DSYM):
+            if kind is None or kind.get('filetype') == MH_DSYM:
                 continue
             found.append(path)
     return found

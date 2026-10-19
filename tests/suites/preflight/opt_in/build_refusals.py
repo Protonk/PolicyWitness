@@ -2344,6 +2344,30 @@ def control_output_target_mismatch(co, variant):
     assert 'DONE:' not in build.stdout
     assert str(observer) in build.signed()
     assert not (build.dist / 'PolicyWitness.zip').exists() and (build.dist / 'PolicyWitness.md').exists()
+    # A required path does not disappear from either app-wide gate when its header is no longer recognizable.
+    # The packaging substitutions happen after signature verification, so only the final output gate protects the ZIP.
+    for stage in ('assembled', 'packaging'):
+        for fault in ('text', 'empty', 'short-magic', 'missing'):
+            name = f'output_target_mismatch-{stage}-{fault}'
+            app = co.app(variant, name)
+            target = app / 'Contents/MacOS/sbpl-check'
+            actions = {'text': [write(target, '#!/bin/sh\nexit 0\n')], 'empty': [truncate(target, 0)],
+                       'short-magic': [truncate(target, 2)], 'missing': [delete(target)]}[fault]
+            boundary = (hook('damage-required', 'cp', actions, last=str(target)) if stage == 'assembled' else
+                        hook('damage-required', 'codesign', actions, last=str(observer), contains='--force'))
+            damaged = co.build(name, variant, hooks=[boundary])
+            reason = 'unreadable (FileNotFoundError)' if fault == 'missing' else 'not a Mach-O file'
+            refused_by_target(damaged, f'{target}: {reason}')
+            fired_once(damaged, 'damage-required')
+            assert len(damaged.session['output_check'][stage]['problems']) == 1, damaged.session['output_check'][stage]
+            assert not (damaged.dist / 'PolicyWitness.zip').exists()
+            assert 'DONE:' not in damaged.stdout
+            if stage == 'assembled':
+                assert damaged.signed() == [], damaged.signed()
+                assert 'Codesigning embedded MacOS tools' not in damaged.stdout
+            else:
+                assert str(observer) in damaged.signed()
+                assert 'Creating zip (for notarization)' in damaged.stdout
     return build
 
 

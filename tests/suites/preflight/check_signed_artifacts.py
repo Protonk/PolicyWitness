@@ -218,6 +218,17 @@ def main(source, out, identity):
             shutil.copy2(source / top_rel, target_app / top_rel)
             unlisted = reseal('resigned_unlisted_universal_library', None, add_library=True)
             assert [(e['code'], e['path']) for e in unlisted['errors']] == [('output_target', 'Contents/Resources/plugin.dylib')] * 2, unlisted['errors']
+            # A universal dSYM is debug data in every slice, not an extra executable. Seal it as a resource and
+            # require the real inspector to accept the bundle without adding the debug file to the code inventory.
+            (target_app / 'Contents/Resources/plugin.dylib').unlink()
+            debug = Path(temporary) / 'debug-universal'
+            command(out / 'compile-universal-debug', ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-arch', 'arm64',
+                                                      '-arch', 'x86_64', '-g', program, '-o', debug], timeout=120)
+            dsym = target_app / 'Contents/Resources/debug-universal.dSYM'
+            command(out / 'universal-dsym', ['/usr/bin/xcrun', 'dsymutil', debug, '-o', dsym])
+            debug_result = reseal('resigned_universal_dsym', None)
+            assert debug_result['ok'], debug_result['errors']
+            assert len(debug_result['output_target']) == len(build_provenance.FULL_OUTPUTS), debug_result['output_target']
     finally:
         after = inventory(source)
         save(out / 'source-after.json', after)

@@ -1063,7 +1063,7 @@
         "full",
         "partial"
       ],
-      "reads": "every regular file under the assembled app whose header is a Mach-O or fat container, found by header rather than by the names copied in and including the bundle mains, except dSYM companions: its container, lipo -archs names and LC_BUILD_VERSION platform",
+      "reads": "the variant's required executable paths even when missing or lacking a Mach-O header, plus every regular file under the assembled app whose header is a Mach-O or fat container, except dSYM companions whose every slice has a complete debug header: its container, lipo -archs names and LC_BUILD_VERSION platform",
       "writes": "the observations into the build session; nothing in the bundle",
       "refusals": [
         "output_target_mismatch",
@@ -1405,7 +1405,7 @@
         "full",
         "partial"
       ],
-      "reads": "the sealed app, every Mach-O in it checked against the output target again before the ZIP is written",
+      "reads": "the sealed app, the variant's required executable paths and any additional code found by header checked against the output target again before the ZIP is written; only debug-only dSYM companions are excluded",
       "writes": "PolicyWitness.zip under DIST_DIR",
       "refusals": [
         "output_target_mismatch",

@@ -1804,6 +1804,16 @@ def target_fixtures(work):
     clang('-arch', 'x86_64', '-mmacosx-version-min=26.0', objects, '-o', found['debug-x86_64'])
     subprocess.run(['/usr/bin/xcrun', 'dsymutil', found['debug-x86_64'], '-o', work / 'debug-x86_64.dSYM'], check=True, capture_output=True)
     found['dsym-x86_64'] = work / 'debug-x86_64.dSYM/Contents/Resources/DWARF/debug-x86_64'
+    clang('-arch', 'arm64', '-arch', 'x86_64', '-g', source, '-o', work / 'debug-universal')
+    subprocess.run(['/usr/bin/xcrun', 'dsymutil', work / 'debug-universal', '-o', work / 'debug-universal.dSYM'],
+                   check=True, capture_output=True)
+    found['dsym-universal'] = work / 'debug-universal.dSYM/Contents/Resources/DWARF/debug-universal'
+    for name, inputs, flags in (
+            ('dsym-one-slice', [found['dsym-x86_64']], []),
+            ('dsym-fat64', [found['dsym-universal']], ['-fat64']),
+            ('mixed-debug-code', [found['dsym-x86_64'], found['thin-arm64']], [])):
+        found[name] = work / name
+        subprocess.run(['/usr/bin/lipo', '-create', *inputs, *flags, '-output', found[name]], check=True, capture_output=True)
     return found
 
 
@@ -1897,6 +1907,9 @@ class OutputTargetTests(unittest.TestCase):
         shutil.copy2(self.fixtures['universal'], app / 'Contents/Resources/renamed.txt')
         shutil.copy2(self.fixtures['truncated'], app / 'Contents/Resources/torn')
         shutil.copytree(self.work / 'debug-x86_64.dSYM', app / 'Contents/MacOS/main.dSYM')
+        shutil.copytree(self.work / 'debug-universal.dSYM', app / 'Contents/Resources/universal.dSYM')
+        for name in ('dsym-one-slice', 'dsym-fat64'):
+            shutil.copy2(self.fixtures[name], app / 'Contents/Resources' / name)
         (app / 'Contents/Info.plist').write_text('<plist/>')
         (app / 'Contents/MacOS/link').symlink_to(self.fixtures['thin-x86_64'])
         found = [str(path.relative_to(app)) for path in output_target.runnable_code(app)]
@@ -1904,6 +1917,20 @@ class OutputTargetTests(unittest.TestCase):
         # A dSYM companion's own metadata names another architecture; it is excluded as debug data, not passed.
         dsym = self.observe(app / 'Contents/MacOS/main.dSYM/Contents/Resources/DWARF/debug-x86_64')
         self.assertEqual((dsym['filetype'], dsym['architectures']), (output_target.MH_DSYM, ['x86_64']))
+        # The fat dSYM fixtures contain only debug slices, independently read from their tables and thin headers.
+        for name in ('dsym-universal', 'dsym-one-slice', 'dsym-fat64'):
+            data = self.fixtures[name].read_bytes()
+            layout = '>IIIII' if data[:4] == b'\xca\xfe\xba\xbe' else '>IIQQII'
+            count = struct.unpack_from('>I', data, 4)[0]
+            self.assertEqual(count, 1 if name == 'dsym-one-slice' else 2)
+            for index in range(count):
+                offset = struct.unpack_from(layout, data, 8 + index * struct.calcsize(layout))[2]
+                self.assertEqual(struct.unpack_from('<I', data, offset + 12)[0], 0xa)
+        # A fat file with one debug slice and one runnable slice is still code, even under a dSYM path.
+        mixed = app / 'Contents/MacOS/main.dSYM/mixed'
+        shutil.copy2(self.fixtures['mixed-debug-code'], mixed)
+        self.assertIn(mixed, output_target.runnable_code(app))
+        self.assertTrue(output_target.target_problems(self.observe(mixed)))
         # A Mach-O moved under a dSYM directory is still code: exclusion is by file type, not by path.
         shutil.copy2(self.fixtures['thin-x86_64'], app / 'Contents/MacOS/main.dSYM/Contents/Resources/DWARF/hidden')
         self.assertIn('Contents/MacOS/main.dSYM/Contents/Resources/DWARF/hidden',
@@ -1914,12 +1941,37 @@ class OutputTargetTests(unittest.TestCase):
         with self.assertRaises(OSError):
             output_target.runnable_code(app)
 
+    def test_malformed_fat_debug_slices_are_not_exempted(self):
+        app = self.work / 'malformed-dsym.app'
+        app.mkdir()
+        original = self.fixtures['dsym-universal'].read_bytes()
+        _, _, first, size, _ = struct.unpack_from('>IIIII', original, 8)
+        mutations = {
+            'short-table': original[:20],
+            'short-slice': original[:first + 20],
+        }
+        for name, position, value in (
+                ('slice-in-table', 16, 8), ('outside-file', 16, len(original)),
+                ('short-header', 20, 20), ('oversized-slice', 20, len(original)),
+                ('invalid-alignment', 24, 64), ('overlapping-slices', 36, first),
+                ('wrong-cpu', 8, 0), ('unknown-slice', first, 0), ('code-slice', first + 12, 2)):
+            changed = bytearray(original)
+            struct.pack_into('>I' if position < first else '<I', changed, position, value)
+            mutations[name] = changed
+        for name, data in mutations.items():
+            path = app / name
+            path.write_bytes(data)
+        self.assertEqual(set(output_target.runnable_code(app)), set(app.iterdir()),
+                         'malformed debug claims remain in the code inventory and are refused as fat containers')
+        for path in app.iterdir():
+            self.assertTrue(output_target.target_problems(self.observe(path)), path)
+
     def test_the_build_gate_records_each_stage_and_refuses_any_departure(self):
         root = self.work / 'gate'
         (root / 'controller').mkdir(parents=True)
         _, env = own(self, root)
         self.assertEqual(run_main(['session-start', '--root', str(root), '--describe', 'x', '--commit', 'x', '--version', '0',
-                                   '--build-number', '0'], env)[0], 0)
+                                   '--build-number', '0', '--knob', 'BUILD_XPC=1'], env)[0], 0)
         session = root / 'controller/target/pw-build-session.json'
         self.assertEqual(json.loads(session.read_text())['output_target'], output_target.DECLARED)
         status, out, err = run_main(['output-check', '--root', str(root), '--stage', 'cargo', str(self.fixtures['thin-arm64'])], env)
@@ -1938,12 +1990,15 @@ class OutputTargetTests(unittest.TestCase):
                 self.assertEqual(recorded['outputs'][str(self.fixtures['thin-arm64'])]['problems'], [])
         # A bundle is scanned by header: an unlisted renamed universal file refuses; a dSYM companion is not code.
         app = self.work / 'gate.app'
-        (app / 'Contents/MacOS').mkdir(parents=True)
-        shutil.copy2(self.fixtures['thin-arm64'], app / 'Contents/MacOS/main')
+        for relative in prov.FULL_OUTPUTS:
+            path = app / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.fixtures['thin-arm64'], path)
         shutil.copytree(self.work / 'debug-x86_64.dSYM', app / 'Contents/MacOS/main.dSYM')
+        shutil.copytree(self.work / 'debug-universal.dSYM', app / 'Contents/MacOS/universal.dSYM')
         status, out, err = run_main(['output-check', '--root', str(root), '--stage', 'assembled', '--app', str(app)], env)
         self.assertEqual(status, 0, err)
-        self.assertIn('1 outputs', out)
+        self.assertIn(f'{len(prov.FULL_OUTPUTS)} outputs', out)
         shutil.copy2(self.fixtures['universal'], app / 'Contents/MacOS/main.dSYM/notes.txt')
         status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'packaging', '--app', str(app)], env)
         self.assertEqual(status, 1, err)
@@ -1955,11 +2010,43 @@ class OutputTargetTests(unittest.TestCase):
         empty.mkdir()
         status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'assembled', '--app', str(empty)], env)
         self.assertEqual(status, 1, err)
-        self.assertIn('no output was named or found', err)
+        self.assertIn('policy-witness: unreadable (FileNotFoundError)', err)
         self.assertEqual(set(json.loads(session.read_text())['output_check']), {'cargo', 'native', 'assembled', 'packaging'})
         status, _, err = run_main(['output-check', '--root', str(root), '--stage', 'cargo', str(self.fixtures['thin-arm64'])], clean_env())
         self.assertEqual(status, 2, 'the gate writes the session only under an owned build')
         self.assertIn('build helpers mutate only under an owned build', err)
+
+    def test_app_gates_check_required_paths_without_macho_headers_in_both_variants(self):
+        root = self.work / 'required-gate'
+        (root / 'controller').mkdir(parents=True)
+        _, env = own(self, root)
+        for xpc, expected in (('0', prov.PARTIAL_OUTPUTS), ('1', prov.FULL_OUTPUTS)):
+            self.assertEqual(run_main(['session-start', '--root', str(root), '--describe', 'x', '--commit', 'x', '--version', '0',
+                                       '--build-number', '0', '--knob', f'BUILD_XPC={xpc}'], env)[0], 0)
+            app = root / f'variant-{xpc}.app'
+            for relative in expected:
+                path = app / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(self.fixtures['thin-arm64'], path)
+            for stage in ('assembled', 'packaging'):
+                args = ['output-check', '--root', str(root), '--stage', stage, '--app', str(app)]
+                self.assertEqual(run_main(args, env)[0], 0, 'the variant has exactly its own required inventory')
+                for relative in expected:
+                    path = app / relative
+                    for label, data in (('text', b'#!/bin/sh\nexit 0\n'), ('empty', b''), ('short-magic', b'\xcf\xfa'), ('missing', None)):
+                        with self.subTest(xpc=xpc, stage=stage, path=relative, fault=label):
+                            if data is None:
+                                path.unlink()
+                            else:
+                                path.write_bytes(data)
+                            status, _, err = run_main(args, env)
+                            self.assertEqual(status, 1, err)
+                            reason = 'unreadable (FileNotFoundError)' if data is None else 'not a Mach-O file'
+                            self.assertIn(f'{path}: {reason}', err)
+                            recorded = json.loads((root / 'controller/target/pw-build-session.json').read_text())['output_check'][stage]
+                            self.assertEqual(len(recorded['outputs']), len(expected))
+                            self.assertEqual(recorded['problems'], [f'{path}: {reason}'])
+                    shutil.copy2(self.fixtures['thin-arm64'], path)
 
     def test_weakened_predicates_fail_these_controls(self):
         """Each weakening, applied to a copy of the helper, accepts a fixture the decision above refuses."""
