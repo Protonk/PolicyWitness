@@ -23,11 +23,10 @@ transport while controlling when the relevant conditions occur. A separate
 open-ended investigation is not required. The first phase-2 checkpoint must
 demonstrate that design before converting the remaining selected cases.
 
-This plan was prepared from the working tree on 2026-10-17, including pending
-worker continuous-clock changes and their new fixtures. Preparation involved
-source and contract review, without builds, test execution or measurements of
-Gatekeeper. The reported approximately 200 ms startup cost is motivation, not
-an acceptance threshold or an established cause for any particular failure.
+The implementation baseline is commit `3271e29`. Review covered source and
+contracts, without builds, test execution or measurements of Gatekeeper. The
+reported approximately 200 ms startup cost is motivation, not an acceptance
+threshold or an established cause for any particular failure.
 
 ## Findings and scope
 
@@ -39,9 +38,9 @@ an acceptance threshold or an established cause for any particular failure.
 | [Validator driver](runner/Sources/PWRunnerCore/ValidatorClient.swift), `runValidator` | Starts its I/O deadline after successful spawn, before duplex collection. Startup after spawn can consume that allowance. It retains bytes, closes the collection pipe, then decodes and performs child cleanup. Child `fflush` alone does not establish that this host retained a complete record. |
 | [Deadline helper](runner/Sources/PWRunnerCore/MonotonicDeadline.swift) | Already accepts a clock closure. The collector does not expose that closure through its internal driver overload. |
 | [Orchestrator](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), internal `run` overload | Already permits native validator spawn and child-process substitutions. Its aggregate collection accounting calls `MonotonicDeadline.now` directly. Narrow internal clock/read substitutions can preserve the actual translation, transport, classification and assembly. |
-| [Worker driver](runner/Sources/PWRunnerCore/CWorker.swift), phase callback and guarded release | Calls collection synchronously and rechecks worker completion and ownership before publishing release. The callback interval can be held until independent fixture observations establish expiry. |
+| [Worker driver](runner/Sources/PWRunnerCore/CWorker.swift), phase callback and guarded release | Calls collection synchronously and rechecks worker completion and ownership before publishing release. Production workers exit after terminal publication; the host reconciles acknowledgements after confirmed reap while preserving ownership requirements. The callback interval can be held until independent fixture observations establish expiry. |
 | [Lifecycle worker](tests/fixtures/worker_lifecycle/worker.c) and [validator](tests/fixtures/worker_lifecycle/validator.c) | Already have independent waiting/acknowledgement/attempt/expiry receipts and a late-write gate that observes `EPIPE`. Extend this equipment rather than fabricating a production reply. |
-| [Build](build.sh), final signing, verification and packaging | Checks the worker's identity before signing and verifies signatures afterward, but does not execute the final signed inventory. A pre-signing execution is not a receipt for the final signed executable. |
+| [Build](build.sh), final signing, verification and packaging | Enforces required executable inventories and thin arm64 macOS outputs, checks the worker's identity before signing and verifies signatures afterward, but does not execute the final signed inventory. Preserve the output checks through packaging when adding preparation; a pre-signing execution is not a receipt for the final signed executable. |
 | [Host entry point](runner/Services/PWRunner/main.swift) and [listener selection](runner/Sources/PWRunnerCore/PWRunnerListener.swift) | Direct execution currently constructs a listener; unrecognized arguments fall back to the XPC-service launch path. A blanket no-argument or `--help` invocation is unsafe until a harmless exit path is implemented. |
 
 Phase 2 covers the release-gate control, the two short validator-deadline
@@ -55,10 +54,12 @@ Keep dedicated timing coverage: `CWorkerClockTests`, native
 controls, and genuine live deadline observations. This plan does not redesign
 production allowances or clock domains, change what startup time is charged to,
 or promise that every timing-sensitive test in the repository becomes invariant
-under arbitrary machine load. In particular, the separate continuous-clock work
-has phase-2 sample controls using 200/400/600 ms arrangements in
-`WorkerClockTests`/`clock_failure.c`; do not claim those are repaired by this
-bounded conversion or rewrite that concurrent work incidentally.
+under arbitrary machine load. The phase-2 sample controls in
+[WorkerClockTests](runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift) and
+[clock_failure.c](tests/fixtures/worker_lifecycle/clock_failure.c) already use
+`ready`, `collection-open` and `injected` receipts with independent watchdogs.
+Their handshake establishes ordering under prompt and delayed authorization.
+Preserve these controls outside this conversion.
 
 BYOXPC collisions, installation, host retirement and retries are outside this
 plan. Preparation must not install a runner, connect to XPC, apply a specimen,
@@ -144,7 +145,9 @@ Describe the helper entry point in `runner/README.md`.
 
 After app sealing, deep verification, signer checks and the final standalone
 observer signing, add a required preparation banner/helper call before guide
-staging and ZIP creation. Use the final destination paths:
+staging and ZIP creation. Preserve the existing output-target checks for Cargo
+and native outputs, the assembled app, the standalone observer and packaging.
+Use the final destination paths:
 
 | Shipped executable | Harmless invocation | Expected exit |
 | --- | --- | --- |
@@ -156,7 +159,7 @@ staging and ZIP creation. Use the final destination paths:
 | Each service's `pw-probe-runner` | `--version`, check generated identity | 0 |
 | Each service's `sb_api_validator` | No arguments; usage refusal before querying a PID | 2 |
 | Each service's `pw-extension-issuer` | No arguments, FD 3 closed | 92 |
-| Standalone observer output | `--help`, after its separate signing | 0 |
+| Standalone observer at `${SANDBOX_LOG_OBSERVER_BIN}` (`controller/target/aarch64-apple-darwin/release/sandbox-log-observer`) | `--help`, after its separate signing | 0 |
 
 In `BUILD_XPC=0`, require only the executables actually shipped in that variant
 and the standalone observer. The native worker/validator built as intermediates
@@ -164,10 +167,12 @@ are not embedded in that variant. Do not launch a full XPC service as a
 substitute for the host's harmless entry point.
 
 Record the app's file inventory before and after preparation and require equal
-content hashes, then verify the sealed app again before packaging. Do not rewrite
-embedded evidence to add a post-seal observation. Preparation receipts are local
-execution observations; signatures, notarization and release acceptance keep
-their separate meanings. Downloaded/copied/re-signed artifacts can be cold again.
+content hashes, then verify the sealed app again before guide staging. Retain
+the final packaging output-target check immediately before ZIP creation,
+including its required-output inventory. Do not rewrite embedded evidence to
+add a post-seal observation. Preparation receipts are local execution
+observations; signatures, notarization and release acceptance keep their separate
+meanings. Downloaded/copied/re-signed artifacts can be cold again.
 
 Update these dependencies in the same step:
 
@@ -205,12 +210,16 @@ Extend the existing opt-in `preflight/build_guard_controls` and
 `preflight/build_refusal_controls` rather than crediting a helper unit check as
 build integration. In a disposable checkout, make one legitimately signed helper
 return an unexpected status or hang only on its preparation invocation. Keep
-identity/version and earlier build guards valid so the intended boundary is
-reached. Observe that verification and signing precede preparation, and that
-preparation failure prevents guide/ZIP completion. Successful full and partial
-siblings must prepare exactly their inventories. A control removing the build's
-helper call must fail the independent receipt/inventory oracle. Preserve real
-signing receipts and app hashes; do not tamper with the inspected source app.
+identity/version, required-output inventories, thin arm64 macOS checks and earlier
+build guards valid so the intended boundary is reached. Observe that verification
+and signing precede preparation, and that preparation failure prevents guide/ZIP
+completion. Successful full and partial siblings must prepare exactly their
+inventories. A control removing the build's helper call must fail the independent
+receipt/inventory oracle. Move the existing packaging fault injections in
+[build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py) past preparation
+and the final seal verification so they still exercise the packaging output-target
+guard. Preserve real signing receipts and app hashes; do not tamper with the
+inspected source app.
 
 Phase 1 is complete when both the fixture wrapper and signed build enforce the
 prerequisite, final signed paths have successful receipts, failure controls stop
@@ -236,7 +245,9 @@ internal overload. Also supply an internal aggregate-collection clock closure,
 defaulting to `MonotonicDeadline.now`, for its start/planning/end samples. Tests
 may share an explicitly controlled clock between those two boundaries; production
 continues to use its existing clock and starts/debits budgets at the same points.
-Do not route either through request JSON or add an outcome-forcing override.
+Preserve production terminal exit, the guarded release and acknowledgement
+reconciliation after confirmed reap. Do not expose these substitutions through
+request JSON or add an outcome-forcing override.
 
 Extend the independent lifecycle equipment with a gate-driven expiry mode.
 It publishes arrival and a `waiting` receipt, waits for its own `.expire` gate,
@@ -267,10 +278,10 @@ For the replacement over-budget assertion, establish this sequence:
    `expired` receipt. Then advance the controlled clock to the collector's
    deadline. The clock stays within budget until the required observations exist.
 4. The collector closes through its actual deadline branch, retains the real
-   record, and returns to the host. The host's existing completion recheck must
-   withhold release. Assert no acknowledgement or completed attempt, absence of
-   the independent file effect, retained prediction, worker-failure precedence,
-   `comparison.order == unestablished`, and successful full reply encoding.
+   record, and returns to the host. The host's existing completion and ownership
+   rechecks must withhold release. Assert no acknowledgement or completed attempt,
+   absence of the independent file effect, retained prediction, worker-failure
+   precedence, `comparison.order == unestablished`, and successful full reply encoding.
 5. A sibling without worker expiry must close collection at the controlled
    deadline, release and acknowledge, create the file, and retain the partial
    prediction and its eligible ordering chain.
