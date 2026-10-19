@@ -58,8 +58,8 @@ into the app and service Info.plists; a plain `cargo build` reports `unknown`.
 The [build-stamp contract](../docs/CONTRACT.md#build-stamp) defines these fields.
 
 `--timeout-ms` controls the runner RPC. Independently, `--log-timeout-ms` sets
-the optional collection allowance, defaulting to
-<!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->.
+the optional collection allowance, defaulting
+to <!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->.
 It accepts positive integer milliseconds representable in the monotonic clock,
 including deadline and cleanup-grace addition. Zero, invalid and overflowing
 values fail before invocation, even with `--no-log-capture`; there is no unlimited
@@ -149,8 +149,8 @@ worker evidence. `runner verify` uses the same acquisition procedure and retains
 the same refusal array.
 
 `data.runner_client` records argv, timing, stdin delivery and stdout/stderr
-received/retained byte counts. Each stream retains at most
-<!-- span limits.controller_output.binary -->152 MiB<!-- /span -->;
+received/retained byte counts. Each stream retains at
+most <!-- span limits.controller_output.binary -->152 MiB<!-- /span -->;
 full output is collected first, so this is not a streaming allocation bound.
 `stdout_capture_error` identifies prefix loss and `stdout_parse_error` malformed
 untruncated JSON/UTF-8. Accepted stdin writes prove neither client reads nor XPC
@@ -201,8 +201,8 @@ check this separation at their respective boundaries.
 ### Log collection budgets and cleanup
 
 The query uses the runner client's start/end span, rounded outward to whole
-seconds and padded by
-<!-- span limits.log_window_pad.value_unit -->2 seconds<!-- /span --> at each end.
+seconds and padded
+by <!-- span limits.log_window_pad.value_unit -->2 seconds<!-- /span --> at each end.
 `window` retains the raw milliseconds, pad and UTC bounds; the observer must
 mirror the interval or capture becomes `window_mismatch`. A backwards reading
 produces `invalid_window` with null bounds and no observer invocation. The pad
@@ -340,12 +340,12 @@ describes the alternative configuration.
 Install saves `pending` before creating the plist, then `installed` after
 bootstrap (or plist creation with `--skip-bootstrap`). `data.state` and observed
 `loaded` are separate. Errors after the pending save identify recovery state on
-stderr. The generated plist sets `ThrottleInterval` to
-<!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->;
+stderr. The generated plist sets `ThrottleInterval`
+to <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->;
 this configures launchd's respawn throttle, not a maximum request latency.
 
-Verify sends a fixed allow-all request on stdin, with a default timeout of
-<!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span -->.
+Verify sends a fixed allow-all request on stdin, with a default timeout
+of <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span -->.
 Status, verify and remove return `not_found` envelopes with exit 2 for unknown
 registry keys. Validate checks the bundle recursively and each binary
 individually, refreshing signature/entitlement observations and reporting
@@ -372,8 +372,8 @@ selection refuses.
 
 Remove accepts either collection, rechecks executable/plist ownership, and
 atomically moves ownership into `pending_cleanup` before cleanup. After its own
-bootout it polls for service absence for up to
-<!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span -->.
+bootout it polls for service absence for up
+to <!-- span limits.runner_remove_teardown_wait.value_unit -->1,000 milliseconds<!-- /span -->.
 Warnings, `cleanup_retained` and `retained_record` expose unfinished recovery.
 Retirement requires verified service/plist absence and a saved update. Unknown
 inspection or permission failures preserve recovery; `--skip-bootout` retains it

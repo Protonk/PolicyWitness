@@ -19,8 +19,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 ## How to read the tables
 
-- Capacities are inclusive maxima unless the row says otherwise: a step ID of
-  <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
+- Capacities are inclusive maxima unless the row says otherwise: a step ID
+  of <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
   strings rather than JSON escapes or characters. Rows labeled `bytes` specify
   whether they count raw output, bytecode or a calculated allowance. String
   capacities exclude any terminating NUL.
@@ -175,8 +175,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   values, so no number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
-- Extension issuance precedes worker creation. Its
-  <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
+- Extension issuance precedes worker creation.
+  Its <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
   wait starts after the issuer spawns; target preparation and the spawn call
   precede that clock. Issuer cleanup can overrun the wait. This work consumes
   the client's reply window but none of the later worker or phase collection
@@ -186,8 +186,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   Each eligible phase gets a fresh validator; its I/O deadline is capped by the
   remaining allowance. Planning and cleanup consume this allowance, but cleanup
   and scheduling can overrun it. Exhaustion leaves later predictions unavailable
-  while attempts may still run. Each worker arrival starts its own
-  <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
+  while attempts may still run. Each worker arrival starts its
+  own <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
   release wait; stale releases cannot satisfy it. The host's sentinel polling
   excludes every synchronous collection, and the worker's exec budget excludes
   every measured release wait. Client timeout still cancels none of this work.
@@ -431,10 +431,7 @@ implements it, so that a premise can be reopened when the platform changes.
   the worker polling window; [`ValidatorClientInput`](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
   the validator deadline; `PW_PROCEED_WAIT_MS_DEFAULT` the release wait, with
   `validatorReleaseMarginMs` as the nominal margin
-  (<!-- span limits.worker_proceed_wait.value -->60,000<!-- /span --> >
-  <!-- span limits.validator_io_wait.value -->30,000<!-- /span --> +
-  <!-- span limits.validator_exit_grace.value -->1,000<!-- /span --> +
-  <!-- span limits.validator_release_margin.value -->5,000<!-- /span -->).
+  (<!-- span limits.worker_proceed_wait.value -->60,000<!-- /span --> > <!-- span limits.validator_io_wait.value -->30,000<!-- /span --> + <!-- span limits.validator_exit_grace.value -->1,000<!-- /span --> + <!-- span limits.validator_release_margin.value -->5,000<!-- /span -->).
   Policy transfer precedes polling, each synchronous phase collection interval is
   measured and excluded from the publication allowance, and cleanup and reaping
   add time. [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) measures

@@ -1028,15 +1028,15 @@ The figure and the tables are generated from [build.json](build.json) by
 [generate_build.py](generate_build.py), which parses the script and refuses
 a manifest that disagrees with it. Every row cites the source symbol that
 implements it and the test or rule named by the manifest. Review that test or
-rule to assess coverage of the row. The build has
-<!-- span build.steps -->34<!-- /span --> steps, of which
-<!-- span build.conditional_steps -->1<!-- /span --> runs only in fresh mode,
-<!-- span build.refusals -->54<!-- /span --> refusals, of which
-<!-- span build.covered -->54<!-- /span --> have a control that produces
-them and one is the Meson assertion family over
-<!-- span build.meson_options -->21<!-- /span --> options,
-<!-- span build.signing -->9<!-- /span --> signing calls and
-<!-- span build.knobs -->3<!-- /span --> knobs.
+rule to assess coverage of the row. The build
+has <!-- span build.steps -->34<!-- /span --> steps, of
+which <!-- span build.conditional_steps -->1<!-- /span --> runs only in fresh
+mode, <!-- span build.refusals -->54<!-- /span --> refusals, of
+which <!-- span build.covered -->54<!-- /span --> have a control that produces
+them and one is the Meson assertion family
+over <!-- span build.meson_options -->21<!-- /span -->
+options, <!-- span build.signing -->9<!-- /span --> signing calls
+and <!-- span build.knobs -->3<!-- /span --> knobs.
 
 Before compiling, the script runs every generator's check: limits, contract,
 architecture, this document, and the identity

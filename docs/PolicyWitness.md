@@ -751,8 +751,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 ### How to read the tables
 
-- Capacities are inclusive maxima unless the row says otherwise: a step ID of
-  <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
+- Capacities are inclusive maxima unless the row says otherwise: a step ID
+  of <!-- span limits.step_id.value -->63<!-- /span --> UTF-8 bytes fits, and any longer step ID exceeds its limit. UTF-8 counts measure decoded
   strings rather than JSON escapes or characters. Rows labeled `bytes` specify
   whether they count raw output, bytecode or a calculated allowance. String
   capacities exclude any terminating NUL.
@@ -907,8 +907,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   values, so no number here is an end-to-end runtime. The reply records the
   client span in `data.runner_client.started_at_unix_ms` and
   `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
-- Extension issuance precedes worker creation. Its
-  <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
+- Extension issuance precedes worker creation.
+  Its <!-- span limits.extension_issuer_wait.value_unit -->5,000 milliseconds<!-- /span -->
   wait starts after the issuer spawns; target preparation and the spawn call
   precede that clock. Issuer cleanup can overrun the wait. This work consumes
   the client's reply window but none of the later worker or phase collection
@@ -918,8 +918,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   Each eligible phase gets a fresh validator; its I/O deadline is capped by the
   remaining allowance. Planning and cleanup consume this allowance, but cleanup
   and scheduling can overrun it. Exhaustion leaves later predictions unavailable
-  while attempts may still run. Each worker arrival starts its own
-  <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
+  while attempts may still run. Each worker arrival starts its
+  own <!-- span limits.worker_proceed_wait.value_unit -->60,000 milliseconds<!-- /span -->
   release wait; stale releases cannot satisfy it. The host's sentinel polling
   excludes every synchronous collection, and the worker's exec budget excludes
   every measured release wait. Client timeout still cancels none of this work.
@@ -1877,8 +1877,8 @@ combinations:
   [fresh-read output](#extension-and-fresh-read-output).
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
 - `("sysctl", "read")` — one post-apply `sysctlbyname` value read of
-  `target`, such as `kern.osrelease`, into a non-null
-  <!-- span limits.sysctl_read_bytes.value -->4,096<!-- /span -->-byte
+  `target`, such as `kern.osrelease`, into a
+  non-null <!-- span limits.sysctl_read_bytes.value -->4,096<!-- /span -->-byte
   stack buffer. There is no preliminary sizing call or retry. The worker
   discards the returned value bytes and post-call length; the attempt
   retains the existing PW status and errno. This bounded read does not
@@ -2300,8 +2300,8 @@ $PW runner verify --service-name <service-name>
 `runner verify` sends a fixed allow-all specimen with no probe steps to the
 runner on the client's stdin, as a run does, and reports the outcome and the
 PID the reply names as `runner_pid`: the worker that served the request, or
-the host when the host refused it (the reply's `pid` rule). It defaults to a
-<!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
+the host when the host refused it (the reply's `pid` rule). It defaults to
+a <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
 
 Verification consumes the host it reaches: every host serves one request and
 exits. The next request starts a fresh host once launchd allows a launch,

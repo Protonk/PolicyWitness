@@ -548,12 +548,12 @@ this section names the mechanisms they are built from.
   worker ABI's sizes and offsets. A difference writes a candidate; replacing
   the golden with the reviewed candidate is the acknowledgement
   ([shape goldens](CONTRACT.md#shape-goldens)).
-- **Generators with marked regions.** The
-  <!-- span architecture.documents.kinds.manifest -->8<!-- /span --> manifest
+- **Generators with marked regions.**
+  The <!-- span architecture.documents.kinds.manifest -->8<!-- /span --> manifest
   nodes of the document graph, from the wire numbers to the prose baseline,
   are hand-owned facts, and the identity is digested from the sources
-  themselves. The
-  <!-- span architecture.documents.kinds.generator -->6<!-- /span --> generator
+  themselves.
+  The <!-- span architecture.documents.kinds.generator -->6<!-- /span --> generator
   nodes, one of them the shared module, copy manifest facts into marked
   regions of documents and sources, render counts and limit values into
   inline spans, and resolve limit placeholders in the architecture facts;
@@ -772,8 +772,8 @@ The apparatus itself, from the copied bundle to the processes the policy
 reaches, has the last figure. Two of its facts are easy to miss from the
 guide's install recipe: `runner verify` sends a real request, so it consumes
 the host it reaches, and the next request meets that host's terminal claim
-or waits for the generated plist's `ThrottleInterval` of
-<!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->; and a
+or waits for the generated plist's `ThrottleInterval`
+of <!-- span limits.byoxpc_throttle_interval.value_unit -->1 second<!-- /span -->; and a
 selector's `required_entitlements` is satisfied only by keys the worker's
 read-back records with the value `true`.
 

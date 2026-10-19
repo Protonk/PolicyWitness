@@ -954,8 +954,8 @@ step ID, dlopen or spawn failure) quotes an unbounded string. Its fields are
 `origin=runner_host`, `field`, `actual`, `maximum`, `unit`, and optional
 `step_id`, `step_index`, `parameter_key`, `index`. `utf8_bytes` counts payload
 bytes (excluding the terminating C NUL); `items` counts entries. `nul_bytes`
-counts forbidden embedded NULs in native C-string fields against maximum zero. Limits remain source <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, steps <!-- span limits.probe_steps.value -->256<!-- /span -->, parameters
-<!-- span limits.policy_parameters.value -->1,024<!-- /span -->, step ID <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->, target <!-- span limits.attempt_target.value -->511<!-- /span -->, parameter key/value <!-- span limits.parameter_key.value -->127<!-- /span -->/<!-- span limits.parameter_value.value -->383<!-- /span -->, supplied exec
+counts forbidden embedded NULs in native C-string fields against maximum zero. Limits remain source <!-- span limits.policy_source.value_unit -->262,143 UTF-8 bytes<!-- /span -->, steps <!-- span limits.probe_steps.value -->256<!-- /span -->,
+parameters <!-- span limits.policy_parameters.value -->1,024<!-- /span -->, step ID <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->, target <!-- span limits.attempt_target.value -->511<!-- /span -->, parameter key/value <!-- span limits.parameter_key.value -->127<!-- /span -->/<!-- span limits.parameter_value.value -->383<!-- /span -->, supplied exec
 args <!-- span limits.exec_arguments.value -->15<!-- /span --> of <!-- span limits.exec_argument.value_unit -->127 UTF-8 bytes<!-- /span --> each, the host-only `sandbox_check.operation` and
 `sandbox_check.filter.value` strings 127/511, the filter kind and attempt
 kind/action labels 127 each (unrecognized labels included), `specimen_id` 255,
@@ -1055,8 +1055,8 @@ streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
 `policy_too_large` in both helper status and missing-reply note prose.
 
-Log collection instead enforces streaming bounds: <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> observer stdout and
-<!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> observer stderr, containing the inner log-show capture of at most <!-- span limits.log_show_stdout.binary -->1 MiB<!-- /span -->
+Log collection instead enforces streaming bounds: <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> observer stdout
+and <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> observer stderr, containing the inner log-show capture of at most <!-- span limits.log_show_stdout.binary -->1 MiB<!-- /span -->
 stdout and <!-- span limits.log_show_stderr.binary -->128 KiB<!-- /span --> stderr. The log child stops <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before the shared
 deadline so the observer's report can be delivered before the controller's own
 deadline. Its received counts describe actual reads, including
@@ -1109,8 +1109,8 @@ validity of all received frames. Decoding faults coexist with these observations
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
 the same original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->152 MiB<!-- /span -->
-per runner-client stream, <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream, and streaming limits of
-<!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> stdout / <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> stderr for the observer. Received/retained byte counts
+per runner-client stream, <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream, and streaming limits
+of <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> stdout / <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> stderr for the observer. Received/retained byte counts
 precede lossy context conversion; log collection's counts are actual bounded
 reads, while the other receivers count fully collected buffers.
 `stdout_capture_error` identifies local truncation and precludes parsing the
