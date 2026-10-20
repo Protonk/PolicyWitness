@@ -161,13 +161,18 @@ delivery; that intervention fails the control. `drain_bytes` checks the prefix,
 200,000 following `x` bytes and EOF, returning 24 only for exact delivery.
 Neither mode applies a policy.
 
-The builder ends by executing every fixture once with no arguments and stdin at
-EOF, so each exits at its first check, and prints the status and elapsed time of
-each exec. That absorbs Gatekeeper's first-launch evaluation of a newly linked
-executable (about 200 ms on a fresh macOS 26 machine), which would otherwise be
-charged to the first driver test that spawns the fixture, such as the 150 ms
-over-budget validator case. The warm-up asserts nothing; the tests own every
-behavioral check.
+The builder ends by executing every output it compiled once, with no
+arguments, stdin at EOF and only the standard descriptors open, so each exits
+at its first check, and prints the status and elapsed time of each exec. The
+first exec of a newly built file can take several hundred milliseconds, a
+substantial part of the fixture workers' 1,000 ms readiness wait, so tests must
+not be the first to execute a fixture. Each output's expected status is
+recorded where it is compiled: 90 for the base worker, `.identity-mismatch` and
+`.validator`, 92 for `.issuer`, 0 for `.worker-limits` and 2, a usage refusal,
+for every production-main companion. An unexpected status, a 30-second timeout
+or a launch error is reported, the remaining outputs still run, and the build
+then fails, so its callers stop before any test. Elapsed times are diagnostic;
+the tests own every behavioral check.
 
 The `.issuer` companion builds the production native issuer for Swift host
 controls. `ExtensionEvidenceTests` observe the mapped bytes before and after

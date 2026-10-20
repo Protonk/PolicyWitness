@@ -122,7 +122,8 @@ default to `tests/out/runs/direct`.
 
 Requires Swift, clang, Cargo and a signed app. The catalog declares the app
 requirement for `runner_unit` itself, so the dispatcher records its integrity.
-The wrapper builds and warms the lifecycle fixture and exports its path.
+The wrapper builds the lifecycle fixture, whose builder fails unless every
+output's first exec exits with its recorded status, and exports its path.
 For direct SwiftPM execution, first run
 `tests/fixtures/worker_lifecycle/build.sh <output>` outside the inspected app
 and export that executable path as `PW_LIFECYCLE_WORKER_FIXTURE`. Direct
