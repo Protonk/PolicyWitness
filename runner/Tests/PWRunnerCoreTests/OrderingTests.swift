@@ -523,16 +523,19 @@ func runOrderingTests(_ tk: TestKit) {
         }
     }
     tk.group("validator deadline override at the production boundary") {
-        tk.run("validator collection may outlast the worker budget without reviving attempts") {
+        // The gate returns the spawn only after the fixture validator reaches
+        // main, so the 500 ms collection window is not charged with its startup.
+        func overBudget(validator: String, gate: ValidatorStartGate) throws -> PWRunnerRunResult {
             let path = try orderingFixturePath()
             let parsed = PWRunnerRunSpec(specimen_id: "over-budget",
                 policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "proceed_expire:50"),
                 probe_plan: [orderingStep(operation: "io_hang")],
-                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 150))
+                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
             let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
-                workerExecutablePath: path, validatorExecutablePath: path + ".validator")
+                workerExecutablePath: path, validatorExecutablePath: validator, validatorSpawn: gate.spawn)
+            try gate.requireStarts(1)
             try expectEqual(result.normalized_outcome, NormalizedOutcome.runnerFailed)
-            try expectEqual(result.test_overrides?.validator_io_timeout_ms, 150)
+            try expectEqual(result.test_overrides?.validator_io_timeout_ms, 500)
             try expectEqual(result.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
             try expectEqual(result.phases[0].validator_subprocess?.records?.count, 1)
             try expectEqual(result.runner_subprocess?.worker_evidence?.failure?.operation, 11)
@@ -543,17 +546,40 @@ func runOrderingTests(_ tk: TestKit) {
             try expectEqual(result.steps[0].attempt.result_source, "synthetic")
             try expectEqual(result.steps[0].comparison?.order, "unestablished")
             _ = try pwRunnerEncodeJSON(result)
+            return result
+        }
+        tk.run("validator collection may outlast the worker budget without reviving attempts") {
+            _ = try overBudget(validator: try orderingFixturePath() + ".validator", gate: ValidatorStartGate())
+        }
+        tk.run("validator collection may outlast the worker budget after a delayed validator start") {
+            let gate = ValidatorStartGate(delayMs: 1000)
+            _ = try overBudget(validator: try orderingFixturePath() + ".validator", gate: gate)
+            // Measured on CLOCK_UPTIME_RAW: neither an ignored delay nor a sleep reaches it.
+            try expectContains(gate.starts[0].receipt, "delay_ms=1000")
+            try expectTrue(gate.starts[0].elapsedMs >= 1000, "spawn to start receipt took \(gate.starts[0].elapsedMs) ms")
+        }
+        tk.run("validator collection may outlast the worker budget from a never-executed validator copy") {
+            let copy = "/tmp/pw-cold-validator-" + UUID().uuidString
+            try FileManager.default.copyItem(atPath: try orderingFixturePath() + ".validator", toPath: copy)
+            defer { try? FileManager.default.removeItem(atPath: copy) }
+            let gate = ValidatorStartGate()
+            _ = try overBudget(validator: copy, gate: gate)
+            // Diagnostic only: the OS may stop charging new files, and the
+            // delayed case already guards the gate.
+            FileHandle.standardOutput.write(Data("    cold validator copy: spawn to start receipt \(gate.starts[0].elapsedMs) ms\n".utf8))
         }
         tk.run("validator_io_timeout_ms returns partial prediction, mirrors request and releases worker") {
             let path = try orderingFixturePath()
             let parsed = PWRunnerRunSpec(specimen_id: "deadline", policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "proceed_wait"),
                 probe_plan: [orderingStep(operation: "io_hang")],
-                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 50))
+                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
+            let gate = ValidatorStartGate()
             let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
-                workerExecutablePath: path, validatorExecutablePath: path + ".validator")
+                workerExecutablePath: path, validatorExecutablePath: path + ".validator", validatorSpawn: gate.spawn)
+            try gate.requireStarts(1)
             try expectEqual(result.normalized_outcome, NormalizedOutcome.validatorNoReply)
-            try expectContains(result.error ?? "", "50 ms I/O deadline")
-            try expectEqual(result.test_overrides?.validator_io_timeout_ms, 50)
+            try expectContains(result.error ?? "", "500 ms I/O deadline")
+            try expectEqual(result.test_overrides?.validator_io_timeout_ms, 500)
             try expectEqual(result.runner_subprocess?.exit_code, 0)
             try expectEqual(result.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
             try expectEqual(result.phases.first?.ordering?.proceed_observed, true)
@@ -573,14 +599,16 @@ func runOrderingTests(_ tk: TestKit) {
             var validator: ValidatorOutput?
             let path = try orderingFixturePath() + ".validator"
             let operation = "io_hang_late:" + gateID
+            let start = ValidatorStartGate()
             let out = try orderingWorker("proceed_wait", kind: .fileCreate, target: effect) { pid in
                 let result = runValidator(ValidatorClientInput(executablePath: path, targetPid: pid,
                     probes: [ValidatorProbe(stepId: "s", operation: operation, filterType: "PATH", filterValue: "/etc/hosts")],
-                    verdictReadTimeoutMs: 100, exitGraceMs: 30), processCalls: calls)
+                    verdictReadTimeoutMs: 500, exitGraceMs: 30), processCalls: calls, spawn: start.spawn)
                 switch result { case .success(let v): validator = v; case .failure(_, let v): validator = v }
             }
             guard let v = validator else { throw TestFailure(message: "expected partial validator output") }
             defer { cleanupOrderingChild(v.validatorPid) }
+            try start.requireStarts(1)
             try expectEqual(v.stdoutCollectionStop, "deadline")
             try expectEqual(v.reaped, false)
             try expectEqual(v.terminationRequest?.errno, EPERM)
@@ -605,8 +633,9 @@ func runOrderingTests(_ tk: TestKit) {
                 defer { try? FileManager.default.removeItem(atPath: effect) }
                 let out = try orderingWorker("proceed_wait", kind: .fileCreate, target: effect) { pid in
                     let result = runValidator(ValidatorClientInput(executablePath: path, targetPid: pid,
+                        // Collection ends at EOF; the allowance is only a cap.
                         probes: [ValidatorProbe(stepId: "s", operation: "hang", filterType: "PATH", filterValue: "/etc/hosts")],
-                        verdictReadTimeoutMs: 100, exitGraceMs: 30), processCalls: calls)
+                        verdictReadTimeoutMs: 5_000, exitGraceMs: 30), processCalls: calls)
                     switch result { case .success(let v): validator = v; case .failure(_, let v): validator = v }
                 }
                 guard let v = validator else { throw TestFailure(message: "expected partial validator output") }

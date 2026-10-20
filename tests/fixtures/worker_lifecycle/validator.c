@@ -1,14 +1,35 @@
 /* Validator lifecycle equipment: no sandbox calls, selected only by the query
  * operation in driver tests. Flush a valid record before exit/signal/cleanup.
- * The independent alarm bounds fixture lifetime even if host cleanup fails. */
+ * The independent alarm bounds fixture lifetime even if host cleanup fails.
+ * A test may append a start-receipt path and a start delay in milliseconds to
+ * the driver's three arguments; the receipt shows that main is running. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
-int main(void) {
+#include <fcntl.h>
+#include <time.h>
+int main(int argc, char **argv) {
     alarm(10);
+    if (argc >= 4) {
+        long delay_ms = 0;
+        if (argc >= 5) {
+            char *end = NULL;
+            errno = 0;
+            delay_ms = strtol(argv[4], &end, 10);
+            if (errno != 0 || end == argv[4] || *end != '\0' || delay_ms < 0 || delay_ms > 5000) return 95;
+        }
+        struct timespec delay = {delay_ms / 1000, (delay_ms % 1000) * 1000000L};
+        while (nanosleep(&delay, &delay) != 0) if (errno != EINTR) return 95;
+        int fd = open(argv[3], O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+        if (fd < 0) return 95;
+        char text[64];
+        int n = snprintf(text, sizeof(text), "started pid=%d delay_ms=%ld\n", (int)getpid(), delay_ms);
+        if (n <= 0 || (size_t)n >= sizeof(text) || write(fd, text, (size_t)n) != n) return 95;
+        if (close(fd) != 0) return 95;
+    }
     char *line = NULL;
     size_t cap = 0;
     if (getline(&line, &cap, stdin) <= 0) return 90;

@@ -66,6 +66,16 @@ tests select its operation token, control only kill/wait boundaries when needed,
 and independently reap any fixture child the driver could not confirm. Its alarm
 bounds failures in the test equipment itself.
 
+A driver test may append a start-receipt path and an optional start delay in
+milliseconds (0–5,000) to the driver's three arguments. After arming its alarm,
+the validator sleeps for the delay, then creates the receipt with
+`O_EXCL|O_NOFOLLOW` and writes `started pid=<pid> delay_ms=<n>`; any failure
+exits 95. With only the driver's arguments, as in the builder's warm-up and
+every production-shaped spawn, its behavior is unchanged. The receipt shows that
+`main` is running. It is test equipment, not evidence of a PolicyWitness
+deadline, and the delay stands for time between spawn return and the query
+loop, not for any particular startup cost.
+
 The validator companion echoes the submitted query. Its closed-input control
 closes stdin before emitting over 32 KiB of valid JSON whitespace plus a verdict
 and invalid UTF-8 tail, requiring multiple reads after input failure.

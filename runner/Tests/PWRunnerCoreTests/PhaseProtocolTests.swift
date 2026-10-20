@@ -302,10 +302,16 @@ func runPhaseProtocolTests(_ tk: TestKit) {
         }
         tk.run("aggregate collection exhaustion permits attempts without borrowing an earlier record") {
             guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else { throw TestFailure(message: "missing validator fixture") }
+            // The aggregate stays the binding limit; the gate keeps phase 0's
+            // startup out of its collection window.
+            let gate = ValidatorStartGate()
             let reply = phaseRun((0..<3).map { PWRunnerPhase(phase_id: "p\($0)", actions: [.probe(phaseProbe("s\($0)", "/etc/hosts", operation: "io_hang"))]) },
-                overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 100, validator_total_timeout_ms: 30), validator: fixture + ".validator")
-            try expectEqual(reply.test_overrides?.validator_total_timeout_ms, 30)
+                overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 1_000, validator_total_timeout_ms: 500),
+                validator: fixture + ".validator", spawn: gate.spawn)
+            try gate.requireStarts(1)
+            try expectEqual(reply.test_overrides?.validator_total_timeout_ms, 500)
             try expectEqual(reply.phases[0].validator_subprocess?.stdout_collection_stop, "deadline")
+            try expectEqual(reply.phases[0].validator_subprocess?.records?.map { $0.stepId }, ["s0"])
             try expectEqual(reply.phases[1].collection_status, "budget_exhausted")
             try expectNil(reply.phases[1].validator_subprocess)
             try expectTrue(reply.steps.allSatisfy { $0.attempt.result_source == "worker" })
@@ -338,12 +344,13 @@ func runPhaseProtocolTests(_ tk: TestKit) {
                 policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: "(version 1)(allow default)"),
                 phases: [PWRunnerPhase(phase_id: "timed", actions: [.probe(phaseProbe("early", target.path, operation: "io_hang_late:" + id))]),
                          PWRunnerPhase(phase_id: "later", actions: [.probe(phaseProbe("later", target.path, action: "read_fresh"))])],
-                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 100))
+                _test_overrides: PWRunnerTestOverrides(validator_io_timeout_ms: 500))
+            let start = ValidatorStartGate()
             var reply = CWorkerOrchestrator.run(parsed: request, policyHash: "controlled-validator", bundleId: nil,
                 workerExecutablePath: phaseEquipment("pw-probe-runner"), validatorExecutablePath: fixture + ".validator",
                 validatorSpawn: { pid, path, actions, argv in
                     if !spawned.isEmpty { FileManager.default.createFile(atPath: gate, contents: Data()) }
-                    let rc = nativeValidatorSpawn(pid, path, actions, argv)
+                    let rc = start.launch(pid, path, actions, argv)
                     if rc == 0 { spawned.append(pid.pointee) }
                     return rc
                 }, validatorProcessCalls: { index in
@@ -354,6 +361,7 @@ func runPhaseProtocolTests(_ tk: TestKit) {
             // Use the service's production post-orchestration enrichment before
             // handing this driver reply to complete-document readers.
             reply.steps = enrichPathDiagnostics(steps: reply.steps)
+            try start.requireStarts(2)
             try expectEqual(spawned.count, 2)
             try expectTrue(spawned[0] != spawned[1])
             let deadline = Date().addingTimeInterval(2)

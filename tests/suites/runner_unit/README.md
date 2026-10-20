@@ -207,6 +207,24 @@ record. The registered reader replay checks the encoded reply through Rust
 assembly and the Python consumer and lifecycle oracle; fixture query answers
 are controlled data, and the test independently cleans up the surviving child.
 
+The validator driver starts its I/O deadline when the spawn returns. Cases that
+need a record before that deadline spawn the `.validator` fixture through
+`ValidatorStartGate`, which returns only after the fixture's start receipt names
+the spawned PID, so a cold or delayed startup is not charged to the window:
+the over-budget case and its delayed-start and never-executed-copy variants,
+the partial-prediction override, the surviving validator, aggregate exhaustion
+and M08. Their windows are 500 ms; aggregate exhaustion keeps a 500 ms total
+binding under a 1,000 ms phase allowance and requires phase 0's own record.
+The receipt is equipment, not evidence of a PolicyWitness deadline. The gate's
+5-second watchdog and its spawn-to-receipt times use `CLOCK_UPTIME_RAW`, so a
+system sleep can neither expire it nor stand in for a delay; a missing receipt
+is an equipment failure reported before any behavioral assertion, and the gate
+never reaps or signals a child. The delayed variant requires `delay_ms=1000` and
+at least 1,000 ms to the receipt. The never-executed copy prints its
+spawn-to-receipt time without asserting a bound. The
+`validator_cleanup_unconfirmed_releases_worker` variants end at EOF and keep only
+a 5,000 ms cap.
+
 The live stale/future phase-release controls also check failure-detail units:
 wait expiry reports its millisecond budget, while a rejected future release
 reports the observed ordinal. Constructed unknown failure codes retain raw

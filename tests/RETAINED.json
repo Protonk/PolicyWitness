@@ -206,6 +206,13 @@
       "source": "5d6af0aa82d5b0623dc12cd05f5ed37b47985a2e",
       "app_inventory": "artifact-integrity/before.json",
       "reason": "Temporary doc-rework merge-review evidence: corrected warning-free fixture build and Swift tests, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
+    },
+    {
+      "path": "runs/gate-p3-checkpoint",
+      "run_id": "20261020T033420Z_8c4e3de3",
+      "reason": "Checkpoint for the validator start gate (ValidatorStartGate, introduced with this pin): the over-budget case at its original 150 ms window. Ungated cold copy lost its record; gated cold copy kept it with 185 ms from spawn return to the start receipt; gated warm and gated 1,000 ms delay kept it; ungated 1,000 ms delay lost it; no system sleep. The tested source was f237590 plus uncommitted checkpoint cases, preserved with unified-log excerpts in checkpoint-source/. Retire this pin when the start gate is replaced or a later retained checkpoint supersedes this one.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
