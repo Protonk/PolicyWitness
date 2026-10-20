@@ -75,13 +75,11 @@ documented key list. Property/table agreement does not verify request admission
 or decoding; integrated override cases exercise those boundaries.
 Public-command controls separately verify selection and actual execution.
 
-Three rules read the handwritten text of `docs/ARCHITECTURE.md`: every
+Two rules read the handwritten text of `docs/ARCHITECTURE.md`: every
 top-level paragraph opening with "Known gap" is indexed, in order, by the
 bullets of the document's last section, which lists nothing else; every row of
 the evidence-channels table names its landing paths as code, and each is a key
-of the reply or envelope shape golden; and the principles list matches the
-bold labels and order in `AGENTS.md`'s Core ideas. Explanatory prose can differ
-between the documents.
+of the reply or envelope shape golden.
 The `generator_contract` case holds the document graph's drift node to the
 rules this script runs, and the form table below to the shared module's rules.
 
@@ -91,7 +89,7 @@ the final heading and add a spurious index entry in each tour. Repaired and
 restored copies pass; each rejected mutation names its document. Structure
 controls hide a suite-coverage row, an outcome-matrix row, a test-seam row, a
 prediction-unavailable bullet, the CLI usage block, a Known gap paragraph, the
-evidence-channels table and a core idea in comments, and each is reported; so
+evidence-channels table in comments, and each is reported; so
 are an evidence row without a landing column and a numbered index entry.
 
 ### Workflow guidance and checked routes
@@ -115,22 +113,15 @@ The rule establishes presence and navigation, not the correctness or completenes
 of the advice. Review the unchanged retry, signature-verification qualification
 and limits on attribution when editing guidance.
 
-[`check_core_ideas_agreement`](check.py) keeps the principle labels and their
-order aligned between root `AGENTS.md` and the architecture document. The former
-gives working instructions; the latter explains implementation and evidence.
-The check does not require identical explanatory prose or establish that a
-principle is enforced at runtime.
-
-Both checks run in `source_drift/runner_source_manifests_agree`, included in the
-default battery. They are not direct `build.sh` gates. Disposable-checkout
+The guidance check runs in `source_drift/runner_source_manifests_agree`, included
+in the default battery. It is not a direct `build.sh` gate. Disposable-checkout
 controls run the real checker: independent rewrites, paragraph reordering,
 rewrapping, changed, code or wrapped link labels, routes on indented
 continuation lines and routes in list content after a blank line pass; missing,
 duplicated or empty sections and missing or incorrect root routes fail. Fake
 guidance or routes in examples, comments or the wrong section fail, as do
 routes indented after a blank line or heading, labels split by a blank line and
-an inline comment containing `--`, which the reader refuses. Independent principle prose edits pass;
-a removed, renamed or reordered label on one side fails. Every touched input
+an inline comment containing `--`, which the reader refuses. Every touched input
 is restored between controls and the restored documents must pass. Inputs and
 command receipts are retained alongside the planner controls.
 
@@ -139,6 +130,23 @@ command receipts are retained alongside the planner controls.
 The `generator_contract` case in [generators.py](generators.py) holds these
 invariants across the five generators. Per-generator cases retain their shape,
 stale-copy, marker and build-refusal controls.
+
+The limits manifest is a reviewed description; production code does not load
+it. Every row cites a test or rule, and a value owner must be a test in the
+generator's declared owner set. A check citation's `form` identifies the kind
+of definition, while its `kind` distinguishes value, boundary and path
+coverage. Admission rows carry `refusal_field`, the exact
+`admission_failure.field` text, and each `control` begins with Fixed, Flag,
+Derived or Not enforced.
+
+`python3 docs/generate_limits.py --check` validates the manifest, source and
+check references, generated tables, copied guide sections and the guide's
+internal links. The shared sections contain every limit and shared question
+without requiring companion files or web pages. `--stage-guide PATH` performs
+the same checks before copying the guide and refuses stale documents without
+regenerating them. The build checks freshness before compilation and stages
+the guide before packaging. These checks establish documentation consistency;
+compiled-value and behavioral checks establish implementation agreement.
 
 - **G1. One owner, nothing outside.** Every region (including an authored
   scalar span) and whole-file output has exactly one generator, which changes no byte outside them. A document holds
@@ -340,8 +348,9 @@ also reject defects introduced into the shared source, even when generation
 would otherwise copy them consistently. A build control proves stale guide
 content stops before signing or output creation. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
-`runner_unit` and the Rust unit tests. See the maintenance instructions in
-[docs/LIMITS.md](../../../docs/LIMITS.md).
+`runner_unit` and the Rust unit tests. See the
+[documentation guidance](../../../docs/AGENTS.md#editing-limits-and-shared-guide-content)
+and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 
 The `contract_versions` case checks [docs/contract.json](../../../docs/contract.json)
 against every generated copy in code and documents, exercises the real generator in

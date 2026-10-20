@@ -61,6 +61,21 @@ other change-specific controls. When comparing native builds, run the live
 battery against the candidate, including worker and ordering cases; structural
 comparison alone cannot establish behavioral equivalence.
 
+### Verify a limit change
+
+For a limit change, run
+`tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml`
+and `tests/run.sh --suite source_drift --suite runner_abi_layout --suite runner_unit
+--suite runner_c_worker_harness --suite failure_boundaries` against a normal
+signed build, plus the affected behavior owners in the
+[limits coverage table](../docs/LIMITS.md#grounding-and-coverage).
+
+New entries need an implementation-value check and an honest coverage note;
+a link to source is not enough. Do not label a shortened timeout control as a
+test of the production duration, or a constant comparison as proof of its
+operational consequences. Keep behavioral oracles independent of the limits
+manifest so changing a documented number cannot change their expectations.
+
 ### Sandboxed automation harnesses
 
 Inspect diagnostics before attributing a test failure to the product or its

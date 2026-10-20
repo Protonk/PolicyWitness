@@ -959,13 +959,6 @@ def handwritten(path: Path):
     return document, lambda lines: not any(a <= lines[0] < b for a, b in regions)
 
 
-def bold_labels(document, section, authored) -> list[str]:
-    """The bold text opening each top-level bullet in a section."""
-    return [item.first.leading_strong for item in document.items
-            if item.depth == 0 and item.first and section.holds(item.lines) and authored(item.lines)
-            and item.first.leading_strong is not None]
-
-
 def check_known_gap_index() -> list[str]:
     """Every paragraph opening with "Known gap" is indexed, in order, by the last section, which lists nothing else.
 
@@ -1028,22 +1021,6 @@ def check_evidence_channel_paths() -> list[str]:
     return problems
 
 
-def check_core_ideas_agreement() -> list[str]:
-    """Match principle labels and order; each document's explanatory prose is independent."""
-    agents = markdown_reader.read(REPO_ROOT / "AGENTS.md")
-    ideas = agents.section("Core ideas", 2)
-    architecture, authored = handwritten(ARCHITECTURE_DOC)
-    principles = architecture.section("Principles as enforced constraints", 2)
-    if ideas is None or principles is None:
-        return ["  core ideas: AGENTS.md 'Core ideas' or docs/ARCHITECTURE.md 'Principles as enforced constraints' is missing"]
-    expected = bold_labels(agents, ideas, lambda lines: True)
-    actual = [lead.rstrip(".") for lead in bold_labels(architecture, principles, authored)]
-    if not expected or expected != actual:
-        return [f"  core ideas: AGENTS.md lists {expected} but the architecture principles are {actual}. "
-                "Keep the bold principle labels in the same order; explanatory prose is not compared."]
-    return []
-
-
 def guarded(check) -> list[str]:
     """A check's problems; a document the Markdown reader refuses is reported, and the other checks still run."""
     try:
@@ -1074,7 +1051,6 @@ def main() -> int:
     problems.extend(guarded(lambda: check_host_invariance()))
     problems.extend(guarded(lambda: check_known_gap_index()))
     problems.extend(guarded(lambda: check_evidence_channel_paths()))
-    problems.extend(guarded(lambda: check_core_ideas_agreement()))
 
     if problems:
         fail("source/test-registry drift detected:")

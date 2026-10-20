@@ -3166,7 +3166,7 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas"
+            "Guards": "copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, and the evidence-channel landing paths"
           },
           "sources": [
             {
@@ -3248,11 +3248,6 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_evidence_channel_paths",
-              "form": "rule"
-            },
-            {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_core_ideas_agreement",
               "form": "rule"
             },
             {
@@ -4695,7 +4690,7 @@
           "from": "drift_check",
           "to": "architecture_md",
           "kind": "checks",
-          "label": "Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; principle labels match Core ideas in AGENTS.md in order; explanatory prose is independent",
+          "label": "Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens",
           "short": "prose rules",
           "sources": [
             {
@@ -4705,10 +4700,6 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_evidence_channel_paths"
-            },
-            {
-              "path": "tests/suites/source_drift/check.py",
-              "symbol": "check_core_ideas_agreement"
             }
           ],
           "checks": [

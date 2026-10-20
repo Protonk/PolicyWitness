@@ -248,6 +248,8 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 See the [user guide](PolicyWitness.md) for the request and response contracts.
 Tables are generated from [limits.json](limits.json).
+For edits to the inventory and shared prose, follow the
+[documentation guidance](AGENTS.md#editing-limits-and-shared-guide-content).
 
 <!-- BEGIN GENERATED LIMIT COVERAGE -->
 
@@ -452,53 +454,3 @@ implements it, so that a premise can be reopened when the platform changes.
   refusal control. Non-UTF-8 bytes in comments and string literals have compiled
   through `libsandbox` on Darwin 23.6; that compiler observation also has no
   permanent check.
-
-## Maintaining this document
-
-Edit [limits.json](limits.json), then run `python3 docs/generate_limits.py` from
-the repository root. The same command copies the marked shared section into
-[PolicyWitness.md](PolicyWitness.md); edit its explanations here. The same
-command also copies the shared questions from [QUESTIONS.md](QUESTIONS.md) into
-the guide's Questions section; edit the questions there, writing links into the
-guide as `PolicyWitness.md#anchor`. The JSON is a reviewed description;
-production code does not load it. Check citations carry a `form` that identifies
-an allowed test definition, drift-rule function, or control; their `kind`
-separately describes value, boundary or path coverage. Every row needs a test
-or rule, and every value owner must be a test in the declared owner set.
-Author scalar spans outside generated regions; the limits generator renders
-them before copying the shared prose into the guide. Generator invariants and
-the remaining prose baseline are described in the
-[source-drift contracts](../tests/suites/source_drift/README.md#generator-contracts).
-
-Two editorial rules keep the shared section honest for its reader, a user of the
-guide. First, shared prose states only what that reader can observe with the
-shipped app: a reply field, a refusal's name, a count, a marker. Second, the
-mechanism a statement rests on goes under "Premises behind the interactions",
-beside the implementing symbol so the premise can be reopened and checked. Admission rows carry `refusal_field`, the exact
-`admission_failure.field` text measured from a refusal, and every `control`
-starts with one of Fixed, Flag, Derived or Not enforced; developer-only remarks
-belong in `behavior`, which only this document renders.
-
-`python3 docs/generate_limits.py --check` verifies the manifest's shape, source
-and check references, generated text in both documents, the copied questions,
-and the guide's internal links. The copied sections must contain every limit and
-every shared question and require no companion files or web pages. `--stage-guide PATH` performs the same checks before copying
-the guide; it refuses stale documents without regenerating them. The build
-checks freshness before compilation and stages the guide before packaging.
-
-These checks cannot establish implementation agreement by themselves.
-`source_drift` exercises invalid and stale inputs, copying and staging, a
-standalone guide, and refusal to build with stale documentation.
-`runner_abi_layout` compares
-compiled C values and exercises native query boundaries; `runner_unit` checks
-compiled Swift values/defaults and rejected-frame capture. Rust unit tests check
-controller and helper constants. Existing behavioral suites remain independent
-of the manifest, so changing a documented number cannot change their oracles.
-
-For a limit change, run `tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml` and
-`tests/run.sh --suite source_drift --suite runner_abi_layout --suite runner_unit
---suite runner_c_worker_harness --suite failure_boundaries` against a normal
-signed build, plus the affected behavior owners named above. New entries need
-an implementation-value check and an honest coverage note; a link to source is
-not enough. Do not label a shortened timeout control as a test of the production
-duration, or a constant comparison as proof of its operational consequences.

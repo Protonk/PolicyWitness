@@ -41,6 +41,13 @@ including never answering. The controller is Rust and `NSXPCConnection` is an
 Objective-C API, so a small Swift client owns the connection
 ([why the launcher shells out](../controller/README.md#why-the-rust-launcher-still-shells-out)).
 
+Known gap: a connection racing the host's retirement can fail at the XPC layer
+before receiving `already_ran`. That failure does not establish refusal before
+admission. The controller can re-acquire an external runner after a qualifying
+`already_ran` refusal and observed host retirement, but does not retry XPC
+connection errors. The [user guide](PolicyWitness.md#external-runners-byoxpc)
+describes the qualification and shared request deadline.
+
 The validator is its own process so that `sandbox_check` runs unsandboxed
 against the worker's PID while the worker is held between applying and
 attempting. The observer runs the unified-log query in its own process group
@@ -63,7 +70,9 @@ and releases in its existing phase sequence.
 Only the worker (compile/apply and consume/release), the issuer (file issuance),
 the validator (`sandbox_check`) and `sbpl-check` (compile only) call native sandbox APIs; the topology table's
 Native sandbox API column records these roles. Source and artifact checks
-enforce the host's separation (see [Principles](#principles-as-enforced-constraints)).
+enforce the host's separation through
+[source drift](../tests/suites/source_drift/README.md#invariants) and
+[artifact inspection](../tests/suites/preflight/README.md).
 
 ## Process topology
 
@@ -471,71 +480,6 @@ controls and Python consumer controls check these boundaries while preserving
 serialized execution fields. The helper receiver follows its corresponding
 kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 
-## Principles as enforced constraints
-
-The core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
-instructions. A drift rule compares the bold labels and their order with the
-list below; explanatory prose is independent. The mechanisms described here
-support the constraints on each stage.
-
-- **One-way sandbox per process.** Every authorized connection shares the
-  host's [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) in
-  PWRunnerService.swift.
-  Its locked claim is terminal from the first request's entry, including a
-  malformed or refused request. Later requests receive `already_ran` without
-  orchestration or exit scheduling. Only the owner schedules exit after the
-  normal <!-- span limits.host_exit_delay.value_unit -->50 milliseconds<!-- /span -->
-  reply-flush delay. Service tests observe entry and retirement
-  separately; `runner_byoxpc/single_use` checks two shipped clients, the held
-  host's worker relationship, refusal without a file effect, owner completion
-  and successful service from a fresh host.
-- **Host/worker split.** The host never links, loads or calls libsandbox.
-  `check_host_invariance` checks sources under `runner/Sources/` for direct
-  sandbox calls and bindings or lookups named by literals and simple constants.
-  [`host_invariance`](../tests/lib/artifact.py) inspects the shipped host's
-  undefined imports with `nm -u` before any app-dependent suite runs.
-  These checks do not resolve arbitrary computed library or symbol names; the
-  [source-drift invariants](../tests/suites/source_drift/README.md#invariants)
-  describe their coverage.
-- **Witness over interpretation.** The comparison record names the raw evidence
-  for an observation in `observation_basis`. The consumer,
-  [consumer.py](../tests/lib/consumer.py), re-derives every step's expected
-  observation from the raw channels before accepting an envelope. Bounded
-  operational state routes actions and coordinates phases. Release requests and
-  worker acknowledgements remain separate observations.
-- **Predictions precede attempts.** `proceed` and `proceed_observed` in the
-  shared region identify the latest ordinal; immutable per-phase publications,
-  `collection_closed_before_proceed` in each `PWRunnerOrdering`,
-  and the worker's `wait_for_proceed`. Checked by `OrderingTests` and the
-  opt-in order-barrier mutation control, which must be rerun whenever the
-  wait, the release store or the eligibility rule changes.
-- **No dishonest attribution.** A signal is `runner_failed` with the signal
-  preserved, and
-  `termination_cause` is projected only from a disposition record whose cited
-  facts support it ([`CAUSE_FOR_TRIGGER`](../controller/src/disposition.rs) in
-  disposition.rs). Log correlation is a
-  separate observation with its own `correlation_status`. The pre-apply
-  witness case forbids, outright, `ok`, `bad_policy` and the two spellings
-  no constant defines.
-- **Runner simplicity.** Host orchestration is `PWRunnerService.swift` and
-  `CWorkerOrchestrator.swift`; everything after apply is the C worker, which
-  uses preallocated PW-owned request, evidence and token storage after
-  `sandbox_apply`; the host pre-touches the evidence mapping before spawning.
-  Native lifecycle actions use that preallocated storage. The explicit token
-  channel carries authority; fresh reads acquire their target descriptors after
-  apply. Exec pipes and spawn handles are also acquired after apply, inside the
-  attempt, and released before the slot completes. The
-  [worker tour](WORKER.md) accounts for those resources and their authority.
-
-The worker tour owns the [private-extension limitation](WORKER.md#supplied-extension-authority),
-including the distinction between transient buffers, native results and private
-state.
-
-Known gap: a connection that races the host's retirement can fail before it
-is refused. Later requests are promised `already_ran`, but a connection that
-arrives while the owner is scheduling exit can fail at the XPC layer first,
-and no queue or automatic retry is promised.
-
 ## How the system verifies itself
 
 The suites are listed in [tests/README.md](../tests/README.md#suite-coverage);
@@ -644,7 +588,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | identity_sources | worker and runner sources | source |  | every byte the identity digest covers |  | [`SOURCE_DIRS`](../docs/generate_worker_identity.py) | [`test_every_generated_copy_is_current`](../tests/suites/source_drift/contract.py) |  |
 | meson_build | meson.build | source |  | the native targets and their explicit source lists |  | [`pwrunner_core`](../meson.build) | [`check_meson_source_lists`](../tests/suites/source_drift/check.py) |  |
 | suites | tests/suites/<name>/ | source |  | one run.sh and README per suite |  | [`suites_with_run_sh`](../tests/suites/source_drift/check.py) | [`check_index_vs_disk`](../tests/suites/source_drift/check.py) |  |
-| drift_check | source_drift check.py | check |  |  | copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, the evidence-channel landing paths and the core ideas | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) | [`check_readmes_present`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_baseline_in_catalog_defaults`](../tests/suites/source_drift/check.py); [`check_runner_outcome_suites_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_kind_enum_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_planner`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py); [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py); [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py); [`check_meson_source_lists`](../tests/suites/source_drift/check.py); [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| drift_check | source_drift check.py | check |  |  | copies and vocabularies that are not generated, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build and worker tours, and the evidence-channel landing paths | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) | [`check_readmes_present`](../tests/suites/source_drift/check.py); [`check_index_vs_disk`](../tests/suites/source_drift/check.py); [`check_baseline_in_catalog_defaults`](../tests/suites/source_drift/check.py); [`check_runner_outcome_suites_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_normalized_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_outcomes_have_matrix_rows`](../tests/suites/source_drift/check.py); [`check_attempt_kind_enum_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_agreement`](../tests/suites/source_drift/check.py); [`check_prediction_unavailable_planner`](../tests/suites/source_drift/check.py); [`check_test_overrides_table_agreement`](../tests/suites/source_drift/check.py); [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py); [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_meson_source_lists`](../tests/suites/source_drift/check.py); [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | drift_limits | source_drift limits.py | check |  |  | the limits generator's copies and every local documentation link | [`broken_links`](../tests/suites/source_drift/generators.py) | [`test_document_is_current`](../tests/suites/source_drift/limits.py) |  |
 | drift_contract | source_drift contract.py | check |  |  | the contract and identity generators' copies | [`ContractVersionTests`](../tests/suites/source_drift/contract.py) | [`contract_versions`](../tests/suites/source_drift/run.sh) |  |
 | drift_architecture | source_drift architecture.py | check |  |  | this manifest against its dot, SVG and document copies | [`ArchitectureDocumentationTests`](../tests/suites/source_drift/architecture.py) | [`architecture_documentation`](../tests/suites/source_drift/run.sh) |  |
@@ -714,7 +658,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D47 | drift_generators | gen_architecture | checks | ownership, spans, placeholders, declared columns, captions and render refusal | [`test_architecture_render_failure_leaves_every_copy_untouched`](../tests/suites/source_drift/generators.py) | [`test_captions_state_the_verified_guarantee`](../tests/suites/source_drift/generators.py) |  |
 | D48 | drift_generators | prose_baseline | checks | the listed sites equal the scanned sites; growth only by an explicit entry | [`baseline_problems`](../tests/suites/source_drift/generators.py) | [`test_prose_baseline_is_consistent_and_growth_is_explicit`](../tests/suites/source_drift/generators.py) |  |
 | D49 | preflight | prose_baseline | checks | a release's baseline is a subset of the previous release's | [`inspect_baseline`](../tests/lib/release_preflight.py) | [`test_release_preflight_refuses_a_grown_baseline`](../tests/suites/source_drift/generators.py) |  |
-| D50 | drift_check | architecture_md | checks | Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens; principle labels match Core ideas in AGENTS.md in order; explanatory prose is independent | [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py); [`check_core_ideas_agreement`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D50 | drift_check | architecture_md | checks | Known gap paragraphs equal the index; evidence-channel paths resolve in the shape goldens | [`check_known_gap_index`](../tests/suites/source_drift/check.py); [`check_evidence_channel_paths`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D51 | drift_generators | architecture_json | checks | the drift node's rule citations equal the rules check.py runs | [`test_document_graph_cites_every_drift_rule`](../tests/suites/source_drift/generators.py) | [`test_document_graph_cites_every_drift_rule`](../tests/suites/source_drift/generators.py) |  |
 | D52 | drift_check | meson_build | checks | source list equals the tree | [`check_meson_source_lists`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
 | D53 | build_json | gen_build | reads | steps, refusals, knobs, signing, invocations, directories and citations | [`load_manifest`](../docs/generate_build.py) | [`test_document_and_figure_are_current_and_the_rules_agree`](../tests/suites/source_drift/build.py) |  |
@@ -860,7 +804,6 @@ Every node and edge above cites at least one test or rule.
 Each gap is stated in full where the promise it limits is stated; this list
 only points there, in document order.
 
-- [Principles as enforced constraints](#principles-as-enforced-constraints):
+- [Why these processes exist](#why-these-processes-exist):
   a connection that races the host's retirement can fail before it is
   refused.
-

@@ -13,6 +13,7 @@ This file sets the working rules for this repository.
   [docs/SIGNING.md](docs/SIGNING.md#release-procedure).
 - Test work and evidence: [tests/AGENTS.md](tests/AGENTS.md); the
   [harness reference](tests/README.md) describes commands and coverage.
+- Documentation and shared guide content: [docs/AGENTS.md](docs/AGENTS.md).
 - Local artifacts: follow [scratch guidance](.tmp/AGENTS.md) or
   [distribution guidance](dist/AGENTS.md) before cleanup.
 - Preparing a plan for someone else to execute:
@@ -33,9 +34,8 @@ is authoritative. Put directory descriptions in READMEs and working rules in
 - **No dishonest attribution**: never turn a permission-shaped failure into a sandbox-cause claim without supporting evidence, or claim agreement or disagreement between prediction and enforcement.
 - **Runner simplicity**: keep orchestration in the host and post-apply work in the C worker; avoid clever abstractions and hidden pre-sandbox resource acquisition.
 
-The [architecture principles](docs/ARCHITECTURE.md#principles-as-enforced-constraints)
-explain the implementation and evidence. `source_drift` checks that these
-principle labels match in order; each document's explanatory prose is independent.
+The [architecture tour](docs/ARCHITECTURE.md) explains the implementation
+and evidence behind these constraints.
 
 ## Dev Workflow (fast path)
 

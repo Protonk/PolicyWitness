@@ -55,7 +55,10 @@ IC and CLI are the contaminated-worker and ordinary exec-child controls in the
 Acquisition periods record call-site placement, including outputs acquired on
 compilation return. Check citations name the particular assertion supporting a
 fact; other implementation details retain source-only support. Policy-specific
-outcomes belong to their stated specimens and observation conditions. Process
+outcomes belong to their stated specimens and observation conditions. Call-site
+completeness is established by source review, not by citation checks.
+[Runner guidance](../runner/AGENTS.md#reviewing-a-new-capability) describes the
+review procedure. Process
 exit reclaims that process's
 remaining references; created files and references held by other processes have
 their own lifetimes.
@@ -602,20 +605,6 @@ supposedly prior queries observe. The
 [ordering controls](../tests/suites/witness_contract/README.md#predictions-before-attempts)
 observe both the hold and its limited snapshot meaning. The relevant design
 choice is which authority and observation belong on each side of the boundary.
-
-## Reviewing a new capability
-
-Start with the resource it acquires or receives, the authority that resource
-carries, and the call site relative to application and the attempted operation.
-Follow its references through failure, later phases and process exit. Then name
-the native observation, the publication that makes it readable, and an
-independent control capable of refuting the proposed claim. Source citations
-establish locations; a check's assertions establish its coverage; recorded
-execution establishes the configuration actually observed. The inventory is
-maintained as per-resource facts with citations, and this explanation is
-authored. Call-site completeness is a source-review responsibility. Contributor
-procedures live in [runner guidance](../runner/AGENTS.md) and
-[test guidance](../tests/AGENTS.md).
 
 ## Known gaps
 

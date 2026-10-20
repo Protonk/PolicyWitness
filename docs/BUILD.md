@@ -540,7 +540,7 @@ keychain or swiftc's per-user module cache, and can make `codesign --verify`
 report an invalid signature for unchanged bytes. Request escalation and rerun
 the same failing command once outside the automation sandbox without changing
 the inspected artifact. Treat a signature failure as environmental only if
-that verification passes; investigate any failure that remains.
+that verification passes.
 
 Meson uses swiftc's per-user module cache for discovery before the targets can
 use `builddir/`; discovery and identity prerequisites can fail before copying

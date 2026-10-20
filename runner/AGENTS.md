@@ -35,6 +35,21 @@ and independent native observations. Read the tool's stated limits: candidate
 filter matches do not establish general prediction/enforcement agreement.
 Update the user guide's exclusion pairs and planner/unit controls together.
 
+## Reviewing a new capability
+
+Start with the resource it acquires or receives, the authority that resource
+carries, and the call site relative to policy application and the attempted
+operation. Follow its references through failure, later phases and process
+exit. Name the native observation, the publication that makes it readable, and
+an independent control capable of refuting the proposed claim.
+
+Update the [worker inventory](../docs/WORKER.md#capability-map) through
+[architecture.json](../docs/architecture.json), and review call-site
+completeness. Source citations establish locations; a check's assertions
+establish its coverage; recorded execution establishes the configuration
+actually observed. Follow [test guidance](../tests/AGENTS.md) when selecting
+controls and crediting their evidence.
+
 ## Swift runner unit tests (SwiftPM)
 
 Follow [test-selection guidance](../tests/AGENTS.md#choose-the-most-integrated-test-that-can-establish-the-behavior):

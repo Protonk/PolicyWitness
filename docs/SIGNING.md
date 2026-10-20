@@ -11,23 +11,6 @@ Distribute that staged guide with the release ZIP from the same build.
 The tracked [dist README](../dist/README.md) describes the output directory;
 builds also copy its README and AGENTS.md into a custom `DIST_DIR`.
 
-## Build
-
-See [the developer workflow](../AGENTS.md#dev-workflow-fast-path) for the
-build command and toolchain prerequisites, and [BUILD.md](BUILD.md) for the
-inputs and account of one build in time.
-
-### Sandboxed automation harnesses
-
-See [the build harness note](BUILD.md#sandboxed-automation-harnesses) for
-keychain, Swift discovery and signature-verification constraints.
-
-### Native compile with Meson
-
-See [native compilation](BUILD.md#native-compile-with-meson) for direct Meson
-commands and [the ownership boundary](BUILD.md#what-meson-owns-and-what-the-script-owns)
-for options, source checks and toolchain assumptions.
-
 ## What `build.sh` signs
 
 See [the signing contract](BUILD.md#the-signing-contract) for identity checks,

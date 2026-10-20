@@ -255,26 +255,6 @@ def guidance_scenarios(repo):
     scenarios.append(('guidance-route-unrecognized-comment', {root: commented}, 1, 'remove the "--"'))
     scenarios.append(('guidance-routes-restored', {root: source}, 0, None))
 
-    agents = paths[0]
-    architecture = Path('docs/ARCHITECTURE.md')
-    documents[architecture] = (repo / architecture).read_text()
-    for path, label in [(agents, '- **One-way sandbox per process**:'),
-                        (architecture, '- **One-way sandbox per process.**')]:
-        source = documents[path]
-        assert source.count(label) == 1
-        scenarios.append((f'guidance-principle-prose-{path.stem}',
-                          {path: source.replace(label, label + ' Independent explanation control.')}, 0, None))
-    source = documents[agents]
-    lines = source.splitlines(keepends=True)
-    first = next(i for i, line in enumerate(lines) if line.startswith('- **One-way sandbox per process**:'))
-    second = next(i for i, line in enumerate(lines) if line.startswith('- **Host/worker split**:'))
-    removed = ''.join(lines[:second] + lines[second + 1:])
-    reordered = lines.copy()
-    reordered[first], reordered[second] = reordered[second], reordered[first]
-    for name, changed in [('removed', removed),
-                          ('renamed', source.replace('**Host/worker split**', '**Host separation**', 1)),
-                          ('reordered', ''.join(reordered))]:
-        scenarios.append((f'guidance-principle-label-{name}', {agents: changed}, 1, 'core ideas:'))
     scenarios.append(('guidance-restored', documents, 0, None))
     return scenarios
 
@@ -330,10 +310,8 @@ def structure_scenarios(repo):
     scenarios.append(('structure-evidence-short-row', hidden('docs/ARCHITECTURE.md', row, '|'.join(row.split('|')[:4]) + '|'),
                       1, 'evidence channels: row has no landing column'))
     scenarios.append(('structure-known-gap-ordered-index',
-                      hidden('docs/ARCHITECTURE.md', '- [Principles as enforced constraints](#', '1. [Principles as enforced constraints](#'),
+                      hidden('docs/ARCHITECTURE.md', '- [Why these processes exist](#', '1. [Why these processes exist](#'),
                       1, 'an index bullet must open with a link'))
-    scenarios.append(('structure-core-idea-comment',
-                      hidden('AGENTS.md', '- **Host/worker split**:', '- <!-- **Host/worker split** -->:'), 1, 'core ideas:'))
     return scenarios
 
 

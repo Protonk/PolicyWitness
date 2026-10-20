@@ -2161,8 +2161,11 @@ retirement is established. Hosts that cannot be observed, including system-scope
 hosts under restricted access, keep that refusal behavior.
 
 Other outcomes, including XPC connection errors, do not trigger re-acquisition.
-A connection racing a host's exit can fail before delivering a refusal; that
-error does not establish that the request was refused before admission.
+
+Known gap: a connection racing a host's exit can fail at the XPC layer before
+delivering an `already_ran` refusal. The controller returns that connection
+error without retrying; it does not establish that the request was refused
+before admission.
 
 `data.runner_acquisition` is an array of qualifying refused attempts (empty when
 none qualified). Each contains `runner_client`, the unchanged refusal in
