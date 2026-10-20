@@ -1,5 +1,22 @@
 # Worker tour: explanatory structure and scope
 
+## Implementation and deviations
+
+The [worker tour](WORKER.md) implements the structure and scope below without
+material deviations. Its authored overview uses nine conceptual boxes; the
+knowledge section distinguishes observation limits, divided responsibilities
+and measurement gaps. L sits beside the starting-state account, with its
+recorded configuration qualified at each authored use. The detailed generated
+inventory is relocated intact, and its receipt, manifest and figure files are
+unchanged.
+
+Visual review used the repository's Markdown parser and Mermaid 10.9.3 in a
+local Safari preview at a 900-pixel document width. The overview's labels and
+arrows are legible, the inventory expands, and navigation to L and the generated
+node/edge headings works. No semantic discrepancies requiring separate
+investigation were identified. The sections below retain the planning baseline
+and acceptance criteria.
+
 ## Problem and intended result
 
 [The worker tour](WORKER.md) needs to explain how resources, authority
@@ -22,8 +39,7 @@ bounded. Detailed resource facts and their citations remain available.
 
 ## Scope
 
-This is an execution plan for revising the tour; preparing this plan does not
-perform that revision.
+This plan covers the authored revision of the tour.
 
 The expected implementation changes only authored content and section placement
 in `docs/WORKER.md`. The compact overview will be authored Markdown/Mermaid,
