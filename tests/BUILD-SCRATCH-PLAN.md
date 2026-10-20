@@ -10,10 +10,11 @@ compiler state as case evidence for as long as the run exists. The state is
 reproducible and nothing reads it after the case ends.
 
 After this change those cases build in a per-case scratch directory that the
-case finalizer removes, and the dispatcher reports any completed case that
-leaves a SwiftPM build tree or its scratch directory behind. Mutated sources,
-snapshots, logs, receipts and results stay where they are now. Retention,
-pruning and locking behavior do not change.
+case finalizer removes. Each build records where it went, and the dispatcher
+reports any completed case that leaves a SwiftPM build tree or its scratch
+directory behind, so every run, not a one-time check, witnesses the result.
+Mutated sources, snapshots, logs, receipts and results stay where they
+are now. Retention, pruning and locking behavior do not change.
 
 This is an implementation plan. Follow the [test working rules](AGENTS.md).
 
@@ -65,8 +66,9 @@ build tree.
 ## Scope
 
 The change covers case setup and finalization in [testlib.sh](lib/testlib.sh),
-the seven producers and their wrappers, a reconciliation check in
-[suite_run.py](lib/suite_run.py), their controls and their documentation.
+the seven producers and their wrappers, a shared build-receipt helper, a
+reconciliation check in [suite_run.py](lib/suite_run.py), their controls and
+their documentation.
 
 It leaves these alone:
 
@@ -112,6 +114,33 @@ prepares a separate source root per variant and runs the preserved
 `host_setup_controls` recipe against it, so `host_setup_controls.run` gains a
 scratch parameter and each variant passes its own subdirectory.
 
+### Every run witnesses where its builds went
+
+Build placement is a property every run needs, not a fact about this change
+alone, and once finalization removes scratch nothing else shows where a build
+went. Each producer therefore observes it after its SwiftPM work, through a
+shared helper in `tests/lib/`. The helper asks SwiftPM for the binary path
+with the same `--scratch-path`, then checks the file system:
+
+- the path lies under the scratch path and the named product exists there;
+- the package copy has no `.build`;
+- the scratch path lies outside the producer's output directory and, when
+  `PW_TEST_SCRATCH` is set, under it.
+
+It returns the scratch path, product path and product SHA-256, which the
+producer writes to `build-receipt.json` in its output directory before
+continuing. A failed check fails the case. Scratch is new in every run, so the
+product's existence shows that this case built it. Keep the SwiftPM query
+separate from the file-system checks so the checks can be exercised against
+constructed layouts.
+
+The receipt stays with the run for as long as the run is kept, and each later
+run writes its own, so build placement needs no separately retained evidence.
+Producers that rebuild one copy for successive variants call the helper after
+the last build; their receipt identifies the final variant's product.
+`host_setup_oracle_sensitivity` gets one receipt per variant through the
+recipe it runs.
+
 ### Finalization removes scratch for every outcome
 
 `_test_finish`, shared by `test_pass`, `test_pass_note`, `test_fail` and
@@ -128,10 +157,10 @@ tree costs about 100 MB per case. A case killed before finalization keeps its
 scratch inside the run; the dispatcher already reports that case as missing
 its report or unrun.
 
-Built executables are not retained. `launch_descriptor_controls` records the
-host test executable's SHA-256 in `equipment.json`; that record remains, but
-the bytes do not, and a rebuild from the retained sources is not promised to
-reproduce them.
+Built executables are not retained. Each build receipt records its product's
+SHA-256, and `launch_descriptor_controls` also records the host test
+executable's hash in `equipment.json`. Those records remain, but the bytes do
+not, and a rebuild from the retained sources is not promised to reproduce them.
 
 ### Reconciliation rejects retained build state
 
@@ -144,8 +173,9 @@ directory `suites/<suite>/<test_id>/` without following links:
 Both are harness errors. They leave case statuses unchanged and make
 `run.json.ok` false, so a regression in a default case also blocks the release
 battery until it is fixed. The check sees only SwiftPM's default location; a
-build redirected elsewhere under `artifacts/` is caught by the size check in
-verification and by review of new producers.
+scratch path redirected elsewhere under the case fails the producer's build
+receipt, and build state from other tools is a question for review of new
+producers.
 
 ## Changes
 
@@ -159,8 +189,15 @@ Make these in order: the reconciliation check would fail unconverted producers.
    a populated scratch directory is absent afterward, `artifacts/` is
    unchanged, and a directory outside the case named by a reassigned
    `PW_TEST_SCRATCH` survives.
-2. **Producers.** Add the scratch argument and `--scratch-path`, and pass the
-   argument from each case's `.sh` wrapper:
+2. **Build receipts and producers.** Add the shared helper and a
+   `runner_unit/build_receipt_controls` case, registered in
+   [catalog.json](catalog.json) with its actual prerequisites. The control
+   gives the file-system checks constructed layouts: a valid layout is
+   accepted, and a missing product, a `.build` in the package copy, a binary
+   path outside scratch and a scratch path inside the output directory are
+   each rejected with their own diagnostic. Then add the scratch argument,
+   `--scratch-path` and a build receipt to each producer, and pass the argument
+   from each case's `.sh` wrapper:
    - [service_admission_controls.py](suites/runner_unit/service_admission_controls.py): `swift run`.
    - [sleep_record_controls.py](suites/runner_unit/sleep_record_controls.py): `swift run`.
    - [host_setup_controls.py](suites/runner_unit/host_setup_controls.py): `swift build` and `--show-bin-path` in `run`.
@@ -177,6 +214,16 @@ Make these in order: the reconciliation check would fail unconverted producers.
    - a case that creates `artifacts/<name>/.build` and passes:
      `build_tree_in_evidence`;
    - a case that recreates its scratch after finalization: `scratch_retained`.
+
+   These fixture runs live under the parent case's `artifacts/`, so a
+   deliberate `.build` left there would also fail the parent's
+   reconciliation. The offending directories are stimuli; the evidence is the
+   child run's `run.json` and `dispatch.json` and the control's assertions on
+   them. Record the exact paths each scenario created, assert the child's
+   codes, then remove only those paths whether or not the assertions passed,
+   keeping the child's reports, events and logs. The child's harness error
+   already names the path, and a retained stimulus would add a parent harness
+   error that only repeats a control failure.
 4. **Documentation.**
    - [Output contract](README.md#output-contract-testsout): add `scratch/` to
      the case layout as removed at finalization, and add both rejections to
@@ -185,10 +232,13 @@ Make these in order: the reconciliation check would fail unconverted producers.
    - [shell_helpers README](suites/shell_helpers/README.md): the variable in
      the helper contract, removal under result finalization, and the extended
      `finalizers` control.
+   - [Shared test infrastructure](README.md#shared-test-infrastructure): the
+     build-receipt helper and what its checks establish.
    - [dispatcher README](suites/dispatcher/README.md): the new reconciliation
-     scenarios.
+     scenarios and the removal of their stimuli.
    - [runner_unit README](suites/runner_unit/README.md): the seven cases build
-     in scratch and retain sources, logs and receipts, not build products.
+     in scratch, write build receipts and retain sources, logs and receipts,
+     not build products; `build_receipt_controls` and its layouts.
    - [Working rules](AGENTS.md#add-or-change-tests): one sentence directing
      build intermediates to `PW_TEST_SCRATCH` while sources, logs and receipts
      stay in `artifacts/`. Reconciliation catches only SwiftPM's default
@@ -201,31 +251,38 @@ Use fresh output for each dispatcher run
 `launch_descriptor_controls`, and the documented unsandboxed retry for
 equipment refusals.
 
-- **Build location.** Run each converted producer's Python script directly
-  once, with assertions enabled, an output directory and a scratch directory
-  under `.tmp/`. The scratch directory must hold the SwiftPM state
-  (`workspace-state.json` and `out/`), and the output directory must contain
-  no `.build`. After a dispatcher run the scratch is gone, so this is the only
-  observation that builds went to the argument rather than to some path
-  outside the case.
-- **Controls.** `tests/run.sh --suite shell_helpers --suite dispatcher`. Each
-  new scenario must produce exactly its expected codes while the existing
-  scenarios keep theirs.
+- **Controls.** `tests/run.sh --suite shell_helpers --suite dispatcher --case
+  runner_unit/build_receipt_controls`. Each new scenario must produce exactly
+  its expected codes while the existing scenarios keep theirs. Afterward each
+  child run's reports, logs, `run.json` and `dispatch.json` remain, no
+  stimulus path remains, and the parent cases have no harness error.
 - **Producers.** `tests/run.sh --suite runner_unit`, which includes the three
   opt-ins. The cases' assertions require each mutation's specific failure and
   each fixed variant's pass; a missing `--scratch-path` on `--show-bin-path`
-  names a nonexistent executable and fails. Copies and scratch paths are new
-  in every run, so no earlier product can stand in for a build. Afterward,
-  `find <run> -name .build` and `find <run> -type d -name scratch` return
-  nothing, and each converted case directory is under about 6 MiB. A larger
-  directory means build state reached evidence by a path that neither
-  finalization nor reconciliation detects.
+  names a nonexistent executable and fails. Each converted producer must
+  leave a `build-receipt.json` naming a product under its case's scratch,
+  four of them for `host_setup_oracle_sensitivity`. Copies and scratch paths
+  are new in every run, so no earlier product can stand in for a build.
+  Afterward, `find <run> -name .build` and `find <run> -type d -name scratch`
+  return nothing.
+- **Size.** From that run, record each converted case directory's size for
+  review; each should be under about 6 MiB. A larger directory means build
+  state reached evidence by a path that neither the receipts nor
+  reconciliation name. This measures the change once; it is not a recurring
+  check.
 - **Integration.** The default battery, because every case uses `testlib.sh`
   and every invocation passes through `reconcile()`.
 
 The change is complete when these runs pass with no harness errors, none of
-their case directories holds a `.build` tree or `scratch/`, and the
-documentation describes the scratch layout and both checks.
+their case directories holds a `.build` tree or `scratch/`, every converted
+producer has written its build receipt, and the documentation describes the
+scratch layout, the receipts and both reconciliation checks.
+
+Keep the verification runs in fresh managed output under ordinary retention.
+Only review of this change needs them: every later run repeats the receipts,
+the reconciliation check and the dispatcher controls, so an accepted run holds
+nothing that later runs lack. If review needs them held, pin them with a
+reason naming that condition and retire the pins when review concludes.
 
 ## Evidence that would require reconsideration
 
@@ -233,7 +290,11 @@ documentation describes the scratch layout and both checks.
   outlived the build and wrote to scratch. Identify that process rather than
   rerunning; the experiment found none.
 - A toolchain that writes outside `--scratch-path` would put build state back
-  in the package copy. Reconciliation catches the default location; the size
-  check catches other locations under the case.
+  in the package copy. The receipts and reconciliation reject the default
+  location; state written elsewhere would show as growth in these case
+  directories.
+- A build receipt that fails while the case's other assertions pass means the
+  helper's view of SwiftPM's layout has diverged from the toolchain's. Compare
+  the helper's checks with an actual scratch directory before relaxing them.
 - An investigation that needed a failed case's build tree would argue for
   keeping scratch after failures, at about 100 MB per failed case.
