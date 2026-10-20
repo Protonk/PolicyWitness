@@ -122,13 +122,21 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
    regenerate. Also update `control_sdk_requests`' invalid case and the SDK
    paragraph in [BUILD.md](docs/BUILD.md).
 3. **The Makefile.** Before any recipe, a parse-time check applies the same
-   `xcrun` test to an `SDKROOT` given on the make command line and stops with
-   `$(error …)`. An `SDKROOT` in make's environment has already passed make's
-   own shim, or has already made the request before the Makefile was read.
-   The [build guide](docs/BUILD.md) and the Makefile header say so, and say
-   that a request belongs on the command line (`make build SDKROOT=…`) or with
-   `./build.sh`. Apple's make here is 3.81; the check uses only `origin`,
-   `shell` and `error`.
+   `xcrun` test to any nonempty `SDKROOT`, inherited or given on the make
+   command line, and stops with `$(error …)` on failure. The Makefile never
+   defines `SDKROOT` itself, so its origin does not distinguish anything the
+   guard needs. Apple's make here is 3.81; the check uses only `shell` and
+   `error`. A valid nonempty value costs two `xcrun` calls per parse; release
+   parses the Makefile three times through its recursive targets.
+
+   The developer directory's real make, invoked directly or through
+   `xcrun make`, bypasses the shim and can otherwise pass a bad inherited
+   value to a recipe's `/usr/bin/python3`. The check covers that path too.
+   The [build guide](docs/BUILD.md) and the Makefile header state the limit:
+   `/usr/bin/make` with a bad inherited `SDKROOT` makes the request before
+   the Makefile is read. Any other make reaches the check. They direct
+   callers to put a request on the command line (`make build SDKROOT=…`)
+   or use `./build.sh`.
 4. **A contained route for probes.** Turn the record's
    [probe.py](records/shim-install-request/probe.py) pattern into a helper
    under `tests/lib/`:
@@ -146,10 +154,21 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 | Check | Establishes |
 |---|---|
 | Detector, positive control (opt-in, beside `control_sdk_unavailable`) | A shim run under the helper with `SDKROOT` naming a missing path is reported as a blocked request, and the log shows the denied lookup. The neighbour with an empty `SDKROOT` is not reported. This is the only check that deliberately makes the shim attempt a request, so it stays out of the default battery. |
-| Entry points (default battery, with the resolver's checks) | `tests/run.sh`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2, naming the value. They run under the helper's profile, which allows shims to execute: with the guard removed, a shim would attempt the request, and the detector would report it. An empty `SDKROOT`, `macosx` and the selected SDK path pass. |
-| Makefile | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
+| Entry points (default battery, with the resolver's checks) | `tests/run.sh --help`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2 and the new guard's admission diagnostic naming `SDKROOT` and its value. Run under the helper's containment and assert no request is reported. In isolated fixtures, assert no checkout-lock or build-session writes; the dispatcher does not print help, and the build does not reach lock verification, generator checks or SDK selection. An empty `SDKROOT`, `macosx` and the selected SDK path pass admission, with harmless continuations establishing that each entry point reaches its next boundary. |
+| Makefile, command-line request | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
+| Makefile, inherited request | The developer directory's real make, with an inherited `SDKROOT` naming a missing path, refuses before any recipe under the same containment, with no request reported. Exercise a release target whose first recipe would otherwise start `/usr/bin/python3`. |
 | Existing assertions | The four use the detector. Each still passes, since none sits where a shim can see a bad value. |
 | Build path | `control_sdk_requests`' invalid case refuses at admission with the new message, before the `sdk` step and before any session write. `build_toolchain_switch` still passes, and the provenance record still names the caller's request. |
+
+The default entry-point checks establish early refusal. Removing the guard
+from `checkout_lock.sh -- /usr/bin/true` lets it exit 0 without starting a
+shim. Removing it from `build.sh` lets the build take the lock, remove
+`SDKROOT`, run generator checks and refuse at `sdk` with status 2 and the
+requested value in its message. Status 2 and the value alone therefore do
+not establish admission refusal. `tests/run.sh --help` reaches no test case
+or shim, and these checks do not run cases under the Mach-lookup denial.
+The separate opt-in positive control establishes detection of a blocked
+installation request.
 
 Then run `source_drift`, `preflight/build_provenance_controls`, the
 `preflight` build control groups and the default battery. Read the log
@@ -158,9 +177,9 @@ control may show one.
 
 ## Where it stops
 
-- A shell that starts `/usr/bin/make` (or any shim) with a bad `SDKROOT`
-  makes the request before repository code runs. Only documentation reaches
-  it.
+- A shell that starts `/usr/bin/make` (or any shim) with a bad inherited
+  `SDKROOT` makes the request before repository code runs. Only documentation
+  reaches it. Any other make reaches the Makefile's check before its recipes.
 - `DEVELOPER_DIR` gets no installation guard: the probe found no form that
   makes the request. Whether to refuse a stand-in developer directory that
   can run tools is a separate toolchain question. A build records what ran
