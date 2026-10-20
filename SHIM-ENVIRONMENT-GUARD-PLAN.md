@@ -108,14 +108,19 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
    resolver, so `tests/run.sh`, `checkout_lock.sh` and `build.sh` each apply
    it before any shim can start.
 
-   **Decision:** because `build.sh` hands itself to the front end, an invalid
-   caller request then refuses at the `admission` step, no longer at `sdk`.
-   The `sdk` step keeps refusing a developer directory without an SDK. That
-   changes the refusal's step and message in [build.json](docs/build.json),
-   `control_sdk_requests`' invalid case and [BUILD.md](docs/BUILD.md). The
-   alternative is to exempt the build path, which means the front end telling
-   a build from other commands. Recommended: accept the move. It keeps one
-   rule in one place, and the request is refused earlier.
+   **Decided:** an invalid caller request to `build.sh` refuses at the
+   `admission` step, no longer at `sdk`. Every build passes through this
+   check: a direct build when it hands itself to the front end, and a nested
+   one when `build.sh` sources the resolver. One rule in one place, applied
+   before any shim, is worth more than keeping the build's refusal where it
+   was. Exempting the build path would need the front end to tell a build
+   from other commands.
+
+   The `sdk` step keeps its own `xcrun` test, unchanged. It still selects the
+   SDK, and it still refuses a developer directory without one. Update the
+   refusal's step and message in [build.json](docs/build.json), then
+   regenerate. Also update `control_sdk_requests`' invalid case and the SDK
+   paragraph in [BUILD.md](docs/BUILD.md).
 3. **The Makefile.** Before any recipe, a parse-time check applies the same
    `xcrun` test to an `SDKROOT` given on the make command line and stops with
    `$(error …)`. An `SDKROOT` in make's environment has already passed make's
@@ -144,7 +149,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 | Entry points (default battery, with the resolver's checks) | `tests/run.sh`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2, naming the value. They run under the helper's profile, which allows shims to execute: with the guard removed, a shim would attempt the request, and the detector would report it. An empty `SDKROOT`, `macosx` and the selected SDK path pass. |
 | Makefile | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
 | Existing assertions | The four use the detector. Each still passes, since none sits where a shim can see a bad value. |
-| Build path | `control_sdk_requests`' invalid case refuses at admission with the new message (under the recommended decision). `build_toolchain_switch` still passes, and the provenance record still names the caller's request. |
+| Build path | `control_sdk_requests`' invalid case refuses at admission with the new message, before the `sdk` step and before any session write. `build_toolchain_switch` still passes, and the provenance record still names the caller's request. |
 
 Then run `source_drift`, `preflight/build_provenance_controls`, the
 `preflight` build control groups and the default battery. Read the log
