@@ -1,7 +1,8 @@
 # Markdown parser migration: verification
 
-Evidence for [MARKDOWN-PARSER-PLAN.md](../MARKDOWN-PARSER-PLAN.md). Each switch
-compared the old reading, taken from the parent commit's code, with the new
+Evidence for the Markdown parser migration completed at `1da5aad`. The
+completed `MARKDOWN-PARSER-PLAN.md` is preserved in that commit's tree. Each
+switch compared the old reading, taken from the parent commit's code, with the new
 reading over every document the caller reads. The tables below list every
 difference and its review. Test runs are under `tests/out/runs/` and are
 gitignored; they are available only in the local checkout.
@@ -74,9 +75,11 @@ section; fenced `## ` lines are not demoted. `source_drift` passed
 | `broken_links` results | The 18 scanned documents | None | No broken link in either version. |
 | Links that G11 checks | The 18 scanned documents | 5 more: 2624 before, 2629 after | Three labels wrap across a line (`docs/BUILD.md:60` and `:521`, `docs/SIGNING.md:194`) and two code labels contain `]` (`docs/BUILD.md:119` and `:135`). The old pattern skipped them. All five resolve, and the code labels' symbols are in their targets. |
 
-Citation pairs are now defined over the parser's inline pieces, as
-[source positions](../MARKDOWN-PARSER-PLAN.md#source-positions-and-recorded-text)
-describes, and recorded as `` `identifier` … [label](target) ``. No baseline
+Citation pairs are now defined over the parser's inline pieces within one
+paragraph, heading, list-item paragraph or table cell: a code identifier
+followed within 240 rendered characters by a link to a non-Markdown file that
+contains the identifier, with no sentence end, literal `|` or intervening
+link. They are recorded as `` `identifier` … [label](target) ``. No baseline
 entry has that kind, and the scan still finds none. The span-prefix ownership
 test now finds spans as HTML comments in prose, so examples in code do not
 count; the form-table copy test also requires one rendered table with the same

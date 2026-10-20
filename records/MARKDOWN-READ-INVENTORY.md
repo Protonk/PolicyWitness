@@ -1,7 +1,8 @@
 # Markdown reads in the Python tooling
 
-Background for [MARKDOWN-PARSER-PLAN.md](../MARKDOWN-PARSER-PLAN.md). The
-inventory, line numbers and measurements describe commit `f93323c`.
+Background for the Markdown parser migration. The completed
+`MARKDOWN-PARSER-PLAN.md` is preserved in commit `1da5aad`; the inventory,
+line numbers and measurements here describe commit `f93323c`.
 
 ## Method
 
