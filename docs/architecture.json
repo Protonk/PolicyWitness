@@ -93,6 +93,11 @@
         "style": "rounded,filled",
         "fillcolor": "#ffffff",
         "color": "#555555"
+      },
+      "library": {
+        "shape": "component",
+        "style": "dashed",
+        "color": "#2e7d32"
       }
     },
     "edge_kinds": {
@@ -2420,7 +2425,8 @@
             "gen_identity",
             "gen_architecture",
             "gen_common",
-            "gen_build"
+            "gen_build",
+            "markdown_reader"
           ]
         },
         {
@@ -3589,6 +3595,41 @@
             {
               "path": "tests/suites/source_drift/architecture.py",
               "symbol": "test_routing_and_second_document_refusals",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "markdown_reader",
+          "label": "markdown_reader.py",
+          "kind": "library",
+          "facts": {
+            "Owns": "the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells"
+          },
+          "sources": [
+            {
+              "path": "docs/markdown_reader.py",
+              "symbol": "PARSER"
+            },
+            {
+              "path": "tests/lib/vendor/markdown_it/__init__.py",
+              "symbol": "__version__ = \"3.0.0\""
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/run.sh",
+              "symbol": "markdown_reader",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/markdown.py",
+              "symbol": "test_vendored_files_are_the_wheels_bytes",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/markdown.py",
+              "symbol": "test_only_the_reader_imports_the_parser",
               "form": "test"
             }
           ]
@@ -4980,6 +5021,147 @@
             {
               "path": "tests/suites/source_drift/run.sh",
               "symbol": "runner_source_manifests_agree",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D67",
+          "from": "markdown_reader",
+          "to": "gen_common",
+          "kind": "reads",
+          "label": "Markdown citations and span placement",
+          "short": "citations and spans",
+          "sources": [
+            {
+              "path": "docs/generator_common.py",
+              "symbol": "import markdown_reader"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_markdown_citations_name_headings_heading_code_or_markers",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_a_span_marker_that_begins_a_line_is_refused",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D68",
+          "from": "markdown_reader",
+          "to": "gen_limits",
+          "kind": "reads",
+          "label": "the guide's headings, rows, lists and links and the standalone refusals",
+          "short": "guide structure",
+          "sources": [
+            {
+              "path": "docs/generate_limits.py",
+              "symbol": "import markdown_reader"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/limits.py",
+              "symbol": "test_constructs_in_comments_or_code_satisfy_no_structural_check",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D69",
+          "from": "markdown_reader",
+          "to": "gen_architecture",
+          "kind": "reads",
+          "label": "heading anchors for figure and limit links",
+          "short": "anchors",
+          "sources": [
+            {
+              "path": "docs/generate_architecture.py",
+              "symbol": "markdown_reader.slug"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/markdown.py",
+              "symbol": "test_anchors_keep_underscores_and_number_duplicates",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D70",
+          "from": "markdown_reader",
+          "to": "gen_build",
+          "kind": "reads",
+          "label": "README.md's bundle inventory and figure anchors",
+          "short": "inventory",
+          "sources": [
+            {
+              "path": "docs/generate_build.py",
+              "symbol": "import markdown_reader"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/build.py",
+              "symbol": "test_figure_labels_links_and_paths_render_as_claimed",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/build.py",
+              "symbol": "test_meson_makefile_inventory_and_baseline_mutations_are_named",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D71",
+          "from": "markdown_reader",
+          "to": "drift_check",
+          "kind": "reads",
+          "label": "sections, tables, lists, links and guidance routes",
+          "short": "structure",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "import markdown_reader"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/run.sh",
+              "symbol": "runner_source_manifests_agree",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D72",
+          "from": "markdown_reader",
+          "to": "drift_generators",
+          "kind": "reads",
+          "label": "G9 prose lines, citation pairs and G11 links",
+          "short": "prose",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "import markdown_reader"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_prose_links_resolve_anchors_and_symbol_links",
+              "form": "test"
+            },
+            {
+              "path": "tests/suites/source_drift/generators.py",
+              "symbol": "test_prose_baseline_is_consistent_and_growth_is_explicit",
               "form": "test"
             }
           ]

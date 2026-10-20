@@ -7,6 +7,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+sys.path.insert(0, str(ROOT / 'docs'))
+import markdown_reader  # noqa: E402
 import consumer
 from contract import REQUEST_SCHEMA
 from run_capture import RunCapture
@@ -97,8 +99,10 @@ def run_targets(pw, out, target_dir, session_state):
     assert all(p['arrival_observed'] and p['completion_observed'] for p in runner['phases'])
     assert target.read_bytes() == contents
     # Execute the public example's actual JSON, preserving its phase/action names.
-    guide = (ROOT / 'docs/PolicyWitness.md').read_text()
-    example = guide.split('cat > "$PW_EXTENSION_DIR/request.json" <<JSON\n', 1)[1].split('\nJSON\n', 1)[0]
+    heredoc = 'cat > "$PW_EXTENSION_DIR/request.json" <<JSON\n'
+    fences = [block.content for block in markdown_reader.read(ROOT / 'docs/PolicyWitness.md').fences() if heredoc in block.content]
+    assert len(fences) == 1, f'expected one fenced example writing the extension request; found {len(fences)}'
+    example = fences[0].split(heredoc, 1)[1].split('\nJSON\n', 1)[0]
     request = json.loads(example.replace('$PW_EXTENSION_DIR/target', str(target)))
     _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)
     assert documented['extensions'][0]['issuance_status'] == 'issued'

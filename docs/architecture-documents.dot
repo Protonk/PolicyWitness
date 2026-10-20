@@ -21,6 +21,7 @@ digraph documents {
         gen_architecture;
         gen_common;
         gen_build;
+        markdown_reader;
     }
     subgraph cluster_docs {
         label="documents"; style=dashed; color="#888888"; fontsize=10;
@@ -109,6 +110,7 @@ digraph documents {
     build_baseline [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/fixtures/docs/build_baseline.json\nbuild_baseline", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build_baseline: tests/fixtures/docs/build_baseline.json | every build refusal that no behavioral or helper control produces, with the control that would "];
     drift_build [shape="octagon", style="dashed", color="#8e24aa", label="source_drift build.py\ndrift_build", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_build: source_drift build.py | the build manifest against build.sh, meson.build, the Makefile, the inventories and the baseline, and its copies "];
     worker_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/WORKER.md\nworker_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="worker_md: docs/WORKER.md | resource inventory, capability figure and tables "];
+    markdown_reader [shape="component", style="dashed", color="#2e7d32", label="markdown_reader.py\nmarkdown_reader", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="markdown_reader: markdown_reader.py | the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells "];
     contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers |  "];
     gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table |  "];
     gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract |  "];
@@ -173,4 +175,10 @@ digraph documents {
     agents_md -> build_md [style="solid", color="#444444", label="D62 diagnostics", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D62: links to workflow-local sandbox diagnostics; destination section and root route are checked |  "];
     gen_architecture -> worker_md [style="bold", color="#2e7d32", label="D65 regions, dot, svg", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D65: per-graph destination; capability figure and inventory beside WORKER.md |  "];
     drift_check -> worker_md [style="dashed", color="#8e24aa", label="D66", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D66: Known gap paragraphs equal the final index in document order |  "];
+    markdown_reader -> gen_common [style="solid", color="#8a7400", label="D67 citations and spans", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D67: Markdown citations and span placement |  "];
+    markdown_reader -> gen_limits [style="solid", color="#8a7400", label="D68 guide structure", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D68: the guide's headings, rows, lists and links and the standalone refusals |  "];
+    markdown_reader -> gen_architecture [style="solid", color="#8a7400", label="D69 anchors", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D69: heading anchors for figure and limit links |  "];
+    markdown_reader -> gen_build [style="solid", color="#8a7400", label="D70 inventory", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D70: README.md's bundle inventory and figure anchors |  "];
+    markdown_reader -> drift_check [style="solid", color="#8a7400", label="D71 structure", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D71: sections, tables, lists, links and guidance routes |  "];
+    markdown_reader -> drift_generators [style="solid", color="#8a7400", label="D72 prose", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D72: G9 prose lines, citation pairs and G11 links |  "];
 }

@@ -607,7 +607,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 *Figure: the document graph. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [architecture-documents.dot](architecture-documents.dot). The ids in the figure are the ids in the tables below, and each row cites the source symbol that implements it and the test or rule the manifest names for it. Symbol presence and test definition are verified; whether a test asserts the row is not verified.*
 
 <details>
-<summary>The document graph: 46 nodes and 64 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
+<summary>The document graph: 47 nodes and 70 edges, with symbol presence and test definition verified; whether a test asserts the row is not verified</summary>
 
 #### The document graph nodes
 
@@ -659,6 +659,7 @@ which copies a rule keeps equal, and where the build runs the checks.
 | build_baseline | tests/fixtures/docs/build_baseline.json | manifest | every build refusal that no behavioral or helper control produces, with the control that would |  |  | [`BASELINE_NAME`](../docs/generate_build.py) | [`check_baseline`](../tests/suites/source_drift/build_rules.py) |  |
 | drift_build | source_drift build.py | check |  |  | the build manifest against build.sh, meson.build, the Makefile, the inventories and the baseline, and its copies | [`BuildDocumentationTests`](../tests/suites/source_drift/build.py) | [`build_documentation`](../tests/suites/source_drift/run.sh) |  |
 | worker_md | docs/WORKER.md | document |  | resource inventory, capability figure and tables |  | [`SPAN_DOCUMENTS`](../docs/generate_architecture.py) | [`test_routing_and_second_document_refusals`](../tests/suites/source_drift/architecture.py) |  |
+| markdown_reader | markdown_reader.py | library | the only import of the vendored markdown-it-py 3.0.0 and mdurl 0.1.2, and the Markdown structure the generators and checks read: blocks, headings and anchors, sections, links, inline code, list items and table cells |  |  | [`PARSER`](../docs/markdown_reader.py); [`__version__ = "3.0.0"`](../tests/lib/vendor/markdown_it/__init__.py) | [`markdown_reader`](../tests/suites/source_drift/run.sh); [`test_vendored_files_are_the_wheels_bytes`](../tests/suites/source_drift/markdown.py); [`test_only_the_reader_imports_the_parser`](../tests/suites/source_drift/markdown.py) |  |
 
 #### The document graph edges
 
@@ -728,6 +729,12 @@ which copies a rule keeps equal, and where the build runs the checks.
 | D62 | agents_md | build_md | links | links to workflow-local sandbox diagnostics; destination section and root route are checked | [`HARNESS_GUIDANCE_ROUTES`](../tests/suites/source_drift/check.py) | [`check_harness_guidance_routes`](../tests/suites/source_drift/check.py) |  |
 | D65 | gen_architecture | worker_md | writes | per-graph destination; capability figure and inventory beside WORKER.md | [`graph_document`](../docs/generate_architecture.py) | [`test_routing_and_second_document_refusals`](../tests/suites/source_drift/architecture.py) |  |
 | D66 | drift_check | worker_md | checks | Known gap paragraphs equal the final index in document order | [`check_known_gap_index`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D67 | markdown_reader | gen_common | reads | Markdown citations and span placement | [`import markdown_reader`](../docs/generator_common.py) | [`test_markdown_citations_name_headings_heading_code_or_markers`](../tests/suites/source_drift/generators.py); [`test_a_span_marker_that_begins_a_line_is_refused`](../tests/suites/source_drift/generators.py) |  |
+| D68 | markdown_reader | gen_limits | reads | the guide's headings, rows, lists and links and the standalone refusals | [`import markdown_reader`](../docs/generate_limits.py) | [`test_constructs_in_comments_or_code_satisfy_no_structural_check`](../tests/suites/source_drift/limits.py) |  |
+| D69 | markdown_reader | gen_architecture | reads | heading anchors for figure and limit links | [`markdown_reader.slug`](../docs/generate_architecture.py) | [`test_anchors_keep_underscores_and_number_duplicates`](../tests/suites/source_drift/markdown.py) |  |
+| D70 | markdown_reader | gen_build | reads | README.md's bundle inventory and figure anchors | [`import markdown_reader`](../docs/generate_build.py) | [`test_figure_labels_links_and_paths_render_as_claimed`](../tests/suites/source_drift/build.py); [`test_meson_makefile_inventory_and_baseline_mutations_are_named`](../tests/suites/source_drift/build.py) |  |
+| D71 | markdown_reader | drift_check | reads | sections, tables, lists, links and guidance routes | [`import markdown_reader`](../tests/suites/source_drift/check.py) | [`runner_source_manifests_agree`](../tests/suites/source_drift/run.sh) |  |
+| D72 | markdown_reader | drift_generators | reads | G9 prose lines, citation pairs and G11 links | [`import markdown_reader`](../tests/suites/source_drift/generators.py) | [`test_prose_links_resolve_anchors_and_symbol_links`](../tests/suites/source_drift/generators.py); [`test_prose_baseline_is_consistent_and_growth_is_explicit`](../tests/suites/source_drift/generators.py) |  |
 
 Every node and edge above cites at least one test or rule.
 

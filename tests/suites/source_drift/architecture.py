@@ -138,17 +138,21 @@ class ArchitectureDocumentationTests(unittest.TestCase):
             text = (ROOT / generator.graph_document(self.manifest, graph)).read_text()
             start = generator.REGION_START.format(graph=graph['id'])
             end = generator.REGION_END.format(graph=graph['id'])
-            region = text.split(start)[1].split(end)[0]
-            self.assertIn(f"{graph['file']}.svg", region)
-            for item in graph['nodes'] + graph['edges']:
-                self.assertIn(f"| {item['id']} |", region, (graph['id'], item['id']))
+            region = markdown_reader.parse(text.split(start)[1].split(end)[0])
+            self.assertIn(f"{graph['file']}.svg", [Path(link.target).name for link in region.links if link.image])
+            # Each id opens a row of its own table: nodes under "Node", edges under "From".
+            ids = {table.header[1].text: [row[0].text for row in table.rows] for table in region.tables}
+            self.assertEqual(ids.get('Node'), [n['id'] for n in graph['nodes']], graph['id'])
+            self.assertEqual(ids.get('From'), [e['id'] for e in graph['edges']], graph['id'])
+            texts = [inline.text for inline in region.inlines]
             unpinned = [i['id'] for i in graph['nodes'] + graph['edges'] if not i['checks']]
             if unpinned:
-                self.assertIn('Claims without a cited check:', region)
+                marker = next(n for n, t in enumerate(region.inlines) if t.text.startswith('Claims without a cited check:'))
+                listed = {code for inline in region.inlines[marker:] for code in inline.code}
                 for ident in unpinned:
-                    self.assertIn(f"`{ident}`", region.split('Claims without a cited check:')[1])
+                    self.assertIn(ident, listed)
             else:
-                self.assertIn('Every node and edge above cites at least one test or rule.', region)
+                self.assertIn('Every node and edge above cites at least one test or rule.', texts)
 
     def test_svg_stamps_name_their_dot_text(self):
         for graph in self.manifest['graphs']:

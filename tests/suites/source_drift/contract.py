@@ -397,7 +397,7 @@ class ContractVersionTests(unittest.TestCase):
         document = root / 'docs/ARCHITECTURE.md'
         node = json.loads((ROOT / 'docs/architecture.json').read_text())['graphs'][0]['nodes'][0]['id']
         text = document.read_text()
-        self.assertIn(f'| {node} |', text)
+        self.assertIn(node, [row[0].text for table in markdown_reader.parse(text).tables for row in table.rows])
         document.write_text(text.replace(f'| {node} |', f'| {node}x |', 1))
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -410,7 +410,7 @@ class ContractVersionTests(unittest.TestCase):
         root = self.build_checkout()
         document = root / 'docs/BUILD.md'
         text = document.read_text()
-        self.assertIn('| admission |', text)
+        self.assertIn('admission', [row[0].text for table in markdown_reader.parse(text).tables for row in table.rows])
         document.write_text(text.replace('| admission |', '| admissionx |', 1))
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)

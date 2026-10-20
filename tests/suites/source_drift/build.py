@@ -119,20 +119,25 @@ class BuildDocumentationTests(unittest.TestCase):
         for region in generator.REGIONS:
             start = generator.REGION_START.format(region=region)
             end = generator.REGION_END.format(region=region)
-            regions[region] = text.split(start)[1].split(end)[0]
-        self.assertIn(f"{self.manifest['figure']}.svg", regions['FIGURE'])
+            regions[region] = markdown_reader.parse(text.split(start)[1].split(end)[0])
+
+        def first(region):
+            return [row[0].text for table in regions[region].tables for row in table.rows]
+        self.assertIn(f"{self.manifest['figure']}.svg", [Path(l.target).name for l in regions['FIGURE'].links if l.image])
         for step in self.manifest['steps']:
-            self.assertIn(f"| {step['id']} |", regions['STEPS'], step['id'])
+            self.assertIn(step['id'], first('STEPS'), step['id'])
         for refusal in self.manifest['refusals']:
-            self.assertIn(f"| {refusal['id']} |", regions['REFUSALS'], refusal['id'])
+            self.assertIn(refusal['id'], first('REFUSALS'), refusal['id'])
+        signing = [(row[0].text, row[1].text) for table in regions['SIGNING'].tables for row in table.rows]
         for index, entry in enumerate(self.manifest['signing'], start=1):
-            self.assertIn(f"| {index} | {generator.arch.cell(entry['target'])} |", regions['SIGNING'], entry['id'])
+            target = markdown_reader.parse(generator.arch.cell(entry['target'])).inlines[0].text
+            self.assertIn((str(index), target), signing, entry['id'])
         for item in self.manifest['invocations']:
-            self.assertIn(f"| {item['id']} |", regions['INVOCATIONS'], item['id'])
+            self.assertIn(item['id'], first('INVOCATIONS'), item['id'])
         for knob in self.manifest['knobs']:
-            self.assertIn(f"| {knob['name']} |", regions['KNOBS'])
+            self.assertIn(knob['name'], first('KNOBS'))
         for directory in self.manifest['directories']:
-            self.assertIn(f"| {directory['path']} |", regions['DIRECTORIES'])
+            self.assertIn(directory['path'], first('DIRECTORIES'))
 
     def test_captions_state_the_verified_guarantee(self):
         def verified(text):

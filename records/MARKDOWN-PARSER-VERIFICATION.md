@@ -105,3 +105,19 @@ refusal control put the comment at the start of a line, which is an HTML block
 that the parser and GitHub both hide, so the checker reported a missing route.
 The control now puts a word first. All 182 planner controls passed;
 `source_drift` passed (`markdown-switch-check-3-20261019`).
+
+## Test assertions about documents and the document graph
+
+| Reading | Compared over | Differences | Review |
+| --- | --- | --- | --- |
+| Generated-region ids in `architecture.py` and `build.py` | `docs/ARCHITECTURE.md`, `docs/WORKER.md`, `docs/BUILD.md` | None | Both pass. Node and edge ids must now open rows of their own tables, in manifest order, instead of appearing anywhere in the region; the figure must be an image. |
+| The mutation targets in `contract.py`'s stale-copy build controls | `docs/ARCHITECTURE.md`, `docs/BUILD.md` | None | Each id is the first cell of a table row before the control rewrites it. |
+| The request JSON `check_extensions.py` runs | `docs/PolicyWitness.md` | None | One `sh` fence holds the heredoc, and the extracted text is identical. |
+
+`docs/architecture.json` gains a `library` node kind and a `markdown_reader`
+node in the document graph, with "reads" edges D67-D72 to the generators and
+drift checks that use the reader. A citation of the vendor README's table was
+refused by the new Markdown citation rule, so the node cites
+`markdown_it/__init__.py`'s version instead. The generator wrote the region,
+dot file and SVG; every generator's `--check` passed. `source_drift` passed
+(`markdown-switch-tests-20261019`).
