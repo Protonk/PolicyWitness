@@ -1,95 +1,168 @@
-# Refuse an unvalidated toolchain environment before a shim runs
+# Refuse an unresolvable SDK request before a developer-tool shim runs
 
 ## Problem and intended result
 
-The `/usr/bin` shims for `python3` and `git` locate their tool through
-`xcodebuild -sdk <SDKROOT or macosx> -find <tool>` and validate a custom
-`DEVELOPER_DIR` by running its `xcodebuild`. When that lookup fails, because
-`SDKROOT` names no SDK or `DEVELOPER_DIR` is a stand-in without a working
-`xcodebuild`, the shim asks `xcode-select` to request a Command Line Tools
-installation. That is a machine-wide side effect on the developer's Mac, not a
-test outcome, and probes that set those variables by hand have triggered it
-from this repository. Outside `build.sh`, the only protection today is that
-nobody does it.
+Most developer tools in `/usr/bin` are one shim: `make`, `python3`, `git`,
+`clang`, `cc`, `otool`, `lipo`, `strings`, `dsymutil` and 69 other names are
+links to a single file. When `SDKROOT` names a path that does not exist or a
+name no SDK has, the shim's `xcodebuild -sdk <SDKROOT> -find <tool>` fails
+and the shim asks for a Command Line Tools installation. That is a
+machine-wide side effect on the developer's Mac, not a test outcome. A probe
+run by hand from this repository has triggered it, despite written warnings
+about exactly that. [SHIM-INSTALL-REQUEST-PROBE.md](records/SHIM-INSTALL-REQUEST-PROBE.md)
+records a contained probe of which inputs cause the request and which do not.
 
-The intended result: a control or probe cannot hand a shim an unvalidated
-`SDKROOT` or `DEVELOPER_DIR` through the test infrastructure. The
-infrastructure refuses before the shim starts, the refusal names the variable
-and its value, and a control establishes that the refusal fires. Prose
-warnings about the hazard then have nothing left to say.
+The intended result:
+
+- No repository entry point hands a shim an `SDKROOT` that names no SDK. The
+  entry point refuses before any shim starts, naming the variable and its
+  value.
+- The checks that guard against the request can fail. Today they can only see
+  a request that was actually sent.
+- A probe of an SDK or developer-directory value has a contained way to run.
+- The one entry point no repository code can protect, a shell starting
+  `/usr/bin/make` with a bad `SDKROOT`, is documented.
 
 Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 [tests/AGENTS.md](tests/AGENTS.md) when executing it.
 
+## What the probe established
+
+- The request needs `SDKROOT` naming a missing path or an unknown SDK name.
+  An empty `SDKROOT`, or one naming an existing directory that is not an SDK,
+  makes none.
+- `DEVELOPER_DIR` does not cause it. No stand-in tried (missing, empty, holding
+  the tool, holding `libxcrun.dylib`, Xcode-shaped with or without
+  `xcodebuild`) made a request. A stand-in complete enough to run is a
+  wrong-toolchain question, not an installation one.
+- `/usr/bin/xcrun` and `/usr/bin/xcode-select -p` never make the request, so
+  they can validate a value. `xcrun --sdk <path> --show-sdk-path` echoes any
+  absolute path with status 0, so it validates nothing by itself;
+  `--show-sdk-version` fails for a missing path and for a non-SDK directory.
+- `SDKROOT=… make …` makes the request before make reads a makefile.
+  `make target SDKROOT=…` exports the value to recipes, where a
+  `/usr/bin/python3` step makes it; `$(MAKE)` is the real make and does not.
+- The shim prints `requesting installation of command line developer tools`
+  only when the request is sent. Where Mach lookups are denied it prints
+  `and no install could be requested (perhaps no UI is present)` instead, and
+  the unified log shows a denied lookup of
+  `com.apple.dt.CommandLineTools.installondemand`.
+
 ## What already exists
 
-- [`build.sh`](build.sh) reads its caller's `SDKROOT` from its starting
-  environment and keeps it out of the environment until
-  `xcrun --sdk … --show-sdk-path` resolves it, so its git shim never sees an
-  unresolved SDK request. Its Python steps start directly.
-- [`python_start.sh`](tests/lib/python_start.sh) resolves the developer
-  directory with `xcode-select -p` and requires an executable
-  `usr/bin/python3`. The lock front end, build and dispatcher each source
-  it. A stand-in without Python refuses before a shim can run; a stand-in
-  with an executable Python still passes. This resolver is the place for a
-  developer-directory guard at these entry points.
-- The checkout-lock owner's `child_env` in
-  [`tests/lib/checkout_lock.py`](tests/lib/checkout_lock.py) drops stale
-  claims and adds its own, preserving other values unchanged. It no longer
-  restores bound requests. The shell front end records an environment
-  witness, and the CLI owner and build session start compare it without
-  repairing values. A witness does not validate an SDK or developer directory.
-  A bogus SDKROOT can still reach git or a leaf Python shim in a case.
-- `control_sdk_unavailable` in
-  [`build_refusals.py`](tests/suites/preflight/opt_in/build_refusals.py)
-  exercises the SDK refusal without exposing any shim: only a
-  `sandbox-exec`-contained `xcrun` sees an unconfigured developer directory,
-  through a `BASH_ENV` wrapper, and the control asserts that
-  "requesting installation" never appears in the build output. Its
-  `fake_developer_dir` fixture is the pattern for a developer directory that
-  no shim may run with.
+- [`build.sh`](build.sh) keeps the caller's `SDKROOT` out of its environment
+  until `xcrun --sdk … --show-sdk-path` names an existing directory and
+  `--show-sdk-version` reports a number, and refuses otherwise at its `sdk`
+  step. No shim it starts sees an unresolved request. That two-part test is
+  the one a guard needs.
+- [`python_start.sh`](tests/lib/python_start.sh) runs at the start of
+  `build.sh`, the lock front end
+  [checkout_lock.sh](tests/lib/checkout_lock.sh) and
+  [tests/run.sh](tests/run.sh), before any shim. It runs only
+  `xcode-select -p`. The owner and the dispatcher are direct Python, and the
+  dispatcher's own commands (`caffeinate`, `launchctl`, `codesign`) are not
+  the shim, so nothing before the first command or case starts one. After
+  that, a
+  case's `git`, `clang` or leaf `python3`, or a build script Cargo runs under
+  `checkout_lock.sh -- cargo test`, inherits whatever `SDKROOT` the caller
+  gave.
+- The repository's own spawn sites are already safe. Each place under
+  `tests/` that sets `SDKROOT` or `DEVELOPER_DIR` gives a process one of:
+  - a value that resolves: `build_toolchain_switch`, and `control_sdk_requests`
+    with `macosx` or the selected path;
+  - a value `build.sh` removes before any shim:
+    `control_sdk_requests`' empty and invalid requests;
+  - a value only a contained `xcrun` sees: `contained_xcrun` and
+    `fake_developer_dir` in
+    [build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py);
+  - a stand-in developer directory under a profile that forbids executing
+    any shim: the resolver checks in
+    [check_build_provenance.py](tests/suites/preflight/check_build_provenance.py)
+    and [contract.py](tests/suites/source_drift/contract.py);
+  - plain data: the `SDKROOT='/sdk'` in `check_build_provenance.py` reaches
+    only `cargo_config`, which starts no process.
+
+  The exposure is the caller's environment arriving through an entry point,
+  and probes run by hand.
+- Four assertions say "requesting installation" never appears: two in
+  `build_refusals.py`, one each in `check_build_provenance.py` and
+  `contract.py`. Under their containment a blocked attempt prints the other
+  message, so they cannot fail on it. None currently sits where a shim could
+  see a bad value, so nothing has been hidden.
 - `build_toolchain_switch` (opt-in) sets `DEVELOPER_DIR` and `SDKROOT` for
-  real Xcode and Command Line Tools directories, which resolve by
-  construction. Any guard must keep passing them.
+  real Xcode and Command Line Tools directories. Any guard must keep passing
+  them.
 
 ## Approach
 
-A short survey first: every place under `tests/` that starts a process with
-`DEVELOPER_DIR` or `SDKROOT` set or modified, and whether it passes through
-`child_env` or calls `subprocess` directly. The survey decides between two
-mechanisms; it does not add both.
+1. **A detector that can fail.** One shared test helper reports a request,
+   sent or blocked, from a process's output. It matches `requesting install`
+   (both sent forms) and `no install could be requested`. Where a control
+   also reads the unified log, it counts lookups of the installation service
+   during the control. The four assertions use it.
+2. **Refuse at the entry points.** The entry check validates a set, nonempty
+   `SDKROOT` the way `build.sh` does: `xcrun --sdk "$SDKROOT" --show-sdk-path`
+   must name an existing directory and `--show-sdk-version` must report a
+   number. Otherwise it refuses with status 2, naming the value. An empty
+   `SDKROOT` passes. It runs only `xcrun`, never a shim. It sits beside the
+   resolver, so `tests/run.sh`, `checkout_lock.sh` and `build.sh` each apply
+   it before any shim can start.
 
-1. **A runtime guard on the shared spawn path.** `child_env` refuses a
-   nonempty `SDKROOT` that `xcrun --sdk "$SDKROOT" --show-sdk-path` cannot
-   resolve, and a `DEVELOPER_DIR` whose `usr/bin/xcodebuild` is absent or not
-   executable, before the child starts, naming the variable and value. Direct
-   `subprocess` callers that set either variable are routed through the owner
-   or through one helper that applies the same check. The guard checks a value
-   by existence and by resolution through `xcrun`, never by starting a shim.
-   This is the lighter option if the survey finds few bypasses.
-2. **A static drift check.** A `source_drift` case that fails when a test
-   source assigns either variable into an environment that reaches a
-   `/usr/bin` shim without the helper. Preferred only if the spawn sites are
-   too varied to route through one path.
+   **Decision:** because `build.sh` hands itself to the front end, an invalid
+   caller request then refuses at the `admission` step, no longer at `sdk`.
+   The `sdk` step keeps refusing a developer directory without an SDK. That
+   changes the refusal's step and message in [build.json](docs/build.json),
+   `control_sdk_requests`' invalid case and [BUILD.md](docs/BUILD.md). The
+   alternative is to exempt the build path, which means the front end telling
+   a build from other commands. Recommended: accept the move. It keeps one
+   rule in one place, and the request is refused earlier.
+3. **The Makefile.** Before any recipe, a parse-time check applies the same
+   `xcrun` test to an `SDKROOT` given on the make command line and stops with
+   `$(error …)`. An `SDKROOT` in make's environment has already passed make's
+   own shim, or has already made the request before the Makefile was read.
+   The [build guide](docs/BUILD.md) and the Makefile header say so, and say
+   that a request belongs on the command line (`make build SDKROOT=…`) or with
+   `./build.sh`. Apple's make here is 3.81; the check uses only `origin`,
+   `shell` and `error`.
+4. **A contained route for probes.** Turn the record's
+   [probe.py](records/shim-install-request/probe.py) pattern into a helper
+   under `tests/lib/`:
+   - run a command under a profile that denies Mach lookups and limits writes;
+   - refuse to start unless the `dscl` containment check passes;
+   - report any request through the detector.
+
+   `contained_xcrun` and `fake_developer_dir` use it. Add a line to
+   [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses) routing
+   any by-hand probe of `SDKROOT` or `DEVELOPER_DIR` through it. A warning
+   alone has already failed once; this gives the warning a tool to point to.
 
 ## Verification
 
-- A control beside `control_sdk_unavailable` supplies an `SDKROOT` naming no
-  SDK, and separately a stand-in `DEVELOPER_DIR`, to the guarded path and
-  expects the refusal with the variable named. It keeps the existing
-  assertion that "requesting installation" never appears, and runs under the
-  same `sandbox-exec` containment the fixture already uses, so an escaped
-  shim could not reach `xcode-select` even if the guard failed.
-- `build_toolchain_switch` still passes: real toolchain directories pass the
-  guard, and the provenance record still names the caller's choice.
-- `source_drift` and the `preflight` opt-in controls are green, and the
-  default battery is unchanged.
-- Nothing reproduces the installation request on the development machine.
+| Check | Establishes |
+|---|---|
+| Detector, positive control (opt-in, beside `control_sdk_unavailable`) | A shim run under the helper with `SDKROOT` naming a missing path is reported as a blocked request, and the log shows the denied lookup. The neighbour with an empty `SDKROOT` is not reported. This is the only check that deliberately makes the shim attempt a request, so it stays out of the default battery. |
+| Entry points (default battery, with the resolver's checks) | `tests/run.sh`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2, naming the value. They run under the helper's profile, which allows shims to execute: with the guard removed, a shim would attempt the request, and the detector would report it. An empty `SDKROOT`, `macosx` and the selected SDK path pass. |
+| Makefile | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
+| Existing assertions | The four use the detector. Each still passes, since none sits where a shim can see a bad value. |
+| Build path | `control_sdk_requests`' invalid case refuses at admission with the new message (under the recommended decision). `build_toolchain_switch` still passes, and the provenance record still names the caller's request. |
+
+Then run `source_drift`, `preflight/build_provenance_controls`, the
+`preflight` build control groups and the default battery. Read the log
+afterwards for lookups of the installation service: only the positive
+control may show one.
 
 ## Where it stops
 
-- `build.sh`'s own request handling is unchanged.
-- Shims started outside the test infrastructure, such as a probe run by hand
-  in a shell, are out of scope; the guard covers what the infrastructure
-  spawns.
-- No change to which variables a caller may set for a real toolchain.
+- A shell that starts `/usr/bin/make` (or any shim) with a bad `SDKROOT`
+  makes the request before repository code runs. Only documentation reaches
+  it.
+- `DEVELOPER_DIR` gets no installation guard: the probe found no form that
+  makes the request. Whether to refuse a stand-in developer directory that
+  can run tools is a separate toolchain question. A build records what ran
+  in its provenance.
+- A case that sets its own bad `SDKROOT` and then runs a shim is not caught at
+  the entry point. The current tree has none, and the test-change rules plus
+  the contained route cover new ones.
+- The behavior is Apple's and was observed on one machine
+  (macOS 26.7.1, Xcode 27.1). Rerun the probe after an Xcode or Command Line
+  Tools update.
