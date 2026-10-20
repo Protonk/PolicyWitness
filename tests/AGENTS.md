@@ -36,10 +36,11 @@ Keep Python assertions enabled, including direct helper invocations; unset
 `PYTHONOPTIMIZE`. Missing required equipment is a failure with unrun cases,
 not grounds for introducing a skip.
 
-Worker allowances count system sleep. On a Mac that may idle-sleep, run long
-batteries under `caffeinate -i`. For an unexplained timeout, check
-`pmset -g log` for a sleep inside the case's window before attributing it to
-the product; a run that overlapped a sleep is not creditable.
+Host and worker allowances count system sleep. The dispatcher blocks idle sleep
+while it runs and records in `run.json` how long the system slept during each
+case; Swift unit tests print the same for each test. A failure that overlapped
+sleep is not product evidence, and crediting the case needs a run that did not
+overlap sleep.
 
 ### Choose the most integrated test that can establish the behavior
 

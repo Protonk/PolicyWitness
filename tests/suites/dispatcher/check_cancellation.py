@@ -17,6 +17,19 @@ sys.path.insert(0, str(ROOT / 'tests/fixtures/exec'))
 from control import TreeControl, ExitObserver
 
 
+def idle_assertion(dispatcher_pid):
+    """The dispatcher's idle-sleep helper, found by its exact command line."""
+    found = subprocess.run(['/usr/bin/pgrep', '-f', f'^/usr/bin/caffeinate -i -w {dispatcher_pid}$'],
+                           capture_output=True, text=True, timeout=10)
+    pids = [int(pid) for pid in found.stdout.split()]
+    assert len(pids) == 1, f'expected one idle-sleep assertion for {dispatcher_pid}: {found}'
+    files = subprocess.run(['/usr/sbin/lsof', '-p', str(pids[0]), '-Fn'],
+                           capture_output=True, text=True, timeout=10).stdout
+    assert '.checkout.lock' not in files, f'idle-sleep assertion holds the checkout lock: {files}'
+    assert os.getsid(pids[0]) != os.getsid(dispatcher_pid), 'idle-sleep assertion shares the session'
+    return pids[0]
+
+
 def exercise(out, interrupt, app_guard=False):
     name = 'interrupt' if interrupt else 'release'
     if app_guard:
@@ -59,7 +72,8 @@ def exercise(out, interrupt, app_guard=False):
                 tree.assert_running()
                 observation['helper_survived_direct_sigint'] = True
                 observation.update(dispatcher_pid=process.pid, peers=peers,
-                                   process_groups={role: os.getpgid(pid) for role, pid in peers.items()})
+                                   process_groups={role: os.getpgid(pid) for role, pid in peers.items()},
+                                   idle_assertion_pid=idle_assertion(process.pid))
                 completed = child_out / 'suites/cancel/completed/report.json'
                 prior_bytes = completed.read_bytes()
                 prior_events = (child_out / 'events.jsonl').read_bytes()
@@ -80,8 +94,20 @@ def exercise(out, interrupt, app_guard=False):
                 # Check exits before fixture teardown can release or kill peers.
                 tree.assert_stopped(timeout=2)
                 observation['exited_peers'] = sorted(tree.exited)
+                try:
+                    os.kill(observation['idle_assertion_pid'], 0)
+                except ProcessLookupError:
+                    observation['idle_assertion_stopped'] = True
+                else:
+                    raise AssertionError('idle-sleep assertion outlived the dispatcher')
 
             run = json.loads((child_out / 'run.json').read_text())
+            assert run['idle_sleep_assertion'] == {
+                'command': ['/usr/bin/caffeinate', '-i', '-w', str(process.pid)],
+                'launched': True, 'running_at_end': True, 'error': None}, run['idle_sleep_assertion']
+            # Idle sleep is blocked, so only a requested sleep could make these nonzero.
+            assert [item['system_sleep_ms'] for item in run['invocations']] == (
+                [0, 0, None] if interrupt else [0, 0, 0]), run['invocations']
             if app_guard:
                 assert run['artifact_integrity']['valid_before'] is True
                 assert run['artifact_integrity']['unchanged'] is (not interrupt)

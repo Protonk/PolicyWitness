@@ -46,6 +46,22 @@ reports and no harness errors. A case may skip only with a `skip_reason` declare
 in its catalog contract. Required equipment missing is a run failure. Planning
 errors exit 2 without replacing evidence.
 
+Host and worker allowances count system sleep. For its whole execution the
+executor holds an idle-sleep assertion through `/usr/bin/caffeinate -i -w` and
+its own PID, launched with closed descriptors in its own session so it never
+holds the checkout lock and a terminal interrupt does not end it early.
+`run.json.idle_sleep_assertion` records whether it launched, whether it was
+still running at the end, and any error; a failure to block sleep is printed as
+a `SLEEP:` line and changes no result. Around each command the executor reads
+`CLOCK_MONOTONIC_RAW`, which counts sleep, and `CLOCK_UPTIME_RAW`, which does
+not, and records the gap between their advances in whole milliseconds as the
+invocation's `system_sleep_ms`, copied to its `case_results`. A gap within a
+millisecond either way is read skew. An unstarted invocation records null; a
+failed read or a larger negative gap records null with `system_sleep_error`. An
+invocation that slept gets a `SLEEP:` line naming its cases and statuses, and
+a failure among them is marked not creditable product evidence. Sleep never
+changes a status or `ok`.
+
 ## Independent controls
 
 `check.py` exercises reconciliation against controlled reports/events: aliases,
@@ -60,7 +76,13 @@ selections as unrun, and missing, duplicated, unexpected, or invalid result
 records must never produce success. These controls bypass catalog validation
 deliberately to check the executor's separate defense. A valid alias and reordered
 complete results remain accepted. Inputs, summaries, diagnostics, and return
-statuses are retained alongside the other controls.
+statuses are retained alongside the other controls. The same script supplies
+constructed clock readings for the sleep record: equal advances and read skew
+in either direction record zero, 1 ms and two seconds record exactly, and a
+larger negative gap or a failed read records null with its reason. Failing
+and passing invocations that slept keep their statuses and `ok`, and only the
+failure's `SLEEP:` line is marked not creditable. An absent helper and one that
+exits at once are recorded and reported without changing the run.
 
 `cancellation_controls` runs the public command against three standard-context
 fixture cases: one completes, one waits with a helper that ignores SIGINT, and
@@ -75,7 +97,11 @@ release or kill them. This case needs macOS local sockets and process observatio
 sandboxed automation may need escalation even though no PW app is launched.
 Two additional scenarios guard a fixture app: normal release preserves it, and
 cancellation after an independently applied mutation must retain the exact diff
-and fail artifact integrity as well as execution.
+and fail artifact integrity as well as execution. In every scenario, while the
+active case waits, exactly one `caffeinate` names the dispatcher's PID, holds no
+checkout lock descriptor and runs in its own session; it must be gone once the
+dispatcher stops, and `run.json` must record it as launched and running at the
+end, with zero sleep for every started invocation.
 
 `check_selection.py` uses an independently authored tiny catalog and fixture
 commands that import no test machinery. Their execution receipts record actual

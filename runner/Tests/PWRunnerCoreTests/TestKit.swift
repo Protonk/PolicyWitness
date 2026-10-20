@@ -9,11 +9,23 @@ import Foundation
 // for one expectation block. Inside the block, use the `expect*` helpers;
 // any thrown TestFailure marks the block failed and continues with the
 // next one. `tk.exitCode()` returns 0 iff every block passed.
+//
+// Host and worker allowances count system sleep, so each block also records
+// how long the system slept while it ran. A block that slept at least 1 ms
+// gets a separate line after its result; the outcome itself is unchanged.
 
 final class TestKit {
     private(set) var totalTests = 0
     private(set) var failedTests = 0
+    private(set) var sleptFailures = 0
     private var failureReasons: [(test: String, reason: String)] = []
+
+    /// The clock that counts system sleep and the one that does not. They share
+    /// one timebase, so the gap between their advances is the sleep. Controls
+    /// substitute readings.
+    var sleepClocks: () -> (continuous: UInt64, uptime: UInt64) = {
+        (clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW), clock_gettime_nsec_np(CLOCK_UPTIME_RAW))
+    }
 
     func group(_ name: String, _ body: () -> Void) {
         FileHandle.standardOutput.write(Data("\n[\(name)]\n".utf8))
@@ -22,18 +34,31 @@ final class TestKit {
 
     func run(_ name: String, _ body: () throws -> Void) {
         totalTests += 1
+        let before = sleepClocks()
+        var failure: String?
         do {
             try body()
-            FileHandle.standardOutput.write(Data("  ok   \(name)\n".utf8))
-        } catch let failure as TestFailure {
-            failedTests += 1
-            failureReasons.append((name, failure.message))
-            FileHandle.standardOutput.write(Data("  FAIL \(name): \(failure.message)\n".utf8))
+        } catch let thrown as TestFailure {
+            failure = thrown.message
         } catch {
+            failure = "unexpected throw: \(error)"
+        }
+        let after = sleepClocks()
+        let continuous = after.continuous &- before.continuous
+        let uptime = after.uptime &- before.uptime
+        // Reading the pair takes microseconds; a smaller gap is read skew.
+        let sleptMs: UInt64? = continuous > uptime && continuous - uptime >= 1_000_000
+            ? (continuous - uptime) / 1_000_000 : nil
+        if let failure {
             failedTests += 1
-            let msg = "unexpected throw: \(error)"
-            failureReasons.append((name, msg))
-            FileHandle.standardOutput.write(Data("  FAIL \(name): \(msg)\n".utf8))
+            if sleptMs != nil { sleptFailures += 1 }
+            failureReasons.append((name, failure))
+            FileHandle.standardOutput.write(Data("  FAIL \(name): \(failure)\n".utf8))
+        } else {
+            FileHandle.standardOutput.write(Data("  ok   \(name)\n".utf8))
+        }
+        if let sleptMs {
+            FileHandle.standardOutput.write(Data("       system slept \(sleptMs) ms during this case\n".utf8))
         }
     }
 
@@ -44,6 +69,11 @@ final class TestKit {
     func summary() -> String {
         let passed = totalTests - failedTests
         return "\(passed)/\(totalTests) tests passed"
+    }
+
+    /// Printed before the summary when any failure overlapped system sleep.
+    func sleepSummary() -> String? {
+        sleptFailures == 0 ? nil : "\(sleptFailures) of \(failedTests) failures overlapped system sleep"
     }
 }
 

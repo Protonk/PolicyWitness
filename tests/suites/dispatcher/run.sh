@@ -25,10 +25,10 @@ fi
 
 if test_selected accounting_controls; then
 test_begin dispatcher accounting_controls
-test_step accounting "check complete selection accounting independently of reconciliation"
+test_step accounting "check complete selection accounting and sleep records independently of reconciliation"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "accounting controls failed" \
   "${ROOT_DIR}/tests/suites/dispatcher/check_accounting.py" "${PW_TEST_ARTIFACTS}"
-test_pass "accounting preserves every selection and refuses incomplete or ambiguous results"
+test_pass "accounting preserves every selection, refuses incomplete or ambiguous results, and reports sleep without changing results"
 fi
 
 if test_selected cancellation_controls; then
@@ -40,7 +40,7 @@ test_build_fixture "${ROOT_DIR}/tests/fixtures/dispatcher/build.sh" \
 test_step cancellation "observe interruption, process exits, preserved evidence, and queued work"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "cancellation controls failed" \
   "${ROOT_DIR}/tests/suites/dispatcher/check_cancellation.py" "${PW_TEST_ARTIFACTS}"
-test_pass "ordinary case cancellation stops descendants and retains complete run accounting"
+test_pass "ordinary case cancellation stops descendants and the idle-sleep assertion and retains complete run accounting"
 fi
 
 if test_selected selection_controls; then

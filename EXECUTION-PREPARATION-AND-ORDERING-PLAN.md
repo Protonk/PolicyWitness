@@ -226,9 +226,11 @@ Around each command, next to `started_at_unix_ms` and `finished_at_unix_ms`,
 read `CLOCK_MONOTONIC_RAW` and `CLOCK_UPTIME_RAW` with `time.clock_gettime_ns`.
 Record `system_sleep_ms` on the invocation as the difference between the two
 clocks' advances, in whole milliseconds. Copy the value to each of that
-invocation's `case_results` entries. A blocked invocation records `null`. If a
-reading fails or the difference is negative, record `null` with the reason,
-never 0.
+invocation's `case_results` entries. A blocked invocation records `null`.
+Reading the pair takes a few microseconds, so a gap within a millisecond in
+either direction is read skew and records 0. If a reading fails, or the
+uptime clock advanced a millisecond or more beyond the other, record `null`
+with the reason, never 0.
 
 In `finish`, for each invocation whose `system_sleep_ms` is at least 1, print
 one `SLEEP:` line to stderr beside the `HARNESS:` lines. It names the
@@ -249,9 +251,11 @@ after the case's `ok` or `FAIL` line. For example:
 stored closure that defaults to the real clocks, so a control can substitute
 readings. `TestKit.swift` stays Foundation-only.
 
-In `tests/suites/runner_unit/run.sh`, when the log has internal `FAIL` lines,
-extend the failure message with how many of them are followed by a sleep line,
-for example `(2 of 3 failures overlapped system sleep)`.
+TestKit counts the failures that overlapped sleep. When there are any, the
+test executable prints a line such as `2 of 3 failures overlapped system sleep`
+before its summary. In `tests/suites/runner_unit/run.sh`, when the log has
+internal `FAIL` lines, add that line to the failure message. Counting in
+TestKit keeps the count right when a failure message spans several lines.
 
 ### 3. Replace the operator instruction
 
@@ -270,17 +274,20 @@ sleep line and the wrapper message in the
 
 - Dispatcher controls. In `check_accounting.py`, supply constructed clock
   pairs:
-  - Equal advances and a sub-millisecond gap record 0.
+  - Equal advances and a sub-millisecond gap in either direction record 0.
   - A 1 ms gap records 1, and a 2,000 ms gap records 2,000.
-  - A negative gap and a failed read record `null` with a reason.
+  - A negative gap of a millisecond or more and a failed read record `null`
+    with a reason.
   - A failing and a passing case with 2,000 ms of sleep keep their statuses
     and `ok`. Both appear in a `SLEEP:` line, and only the failure is marked
     not creditable.
 
-  Substitute an unlaunchable `caffeinate` path at the module boundary. The run
-  must complete with `launched: false`, an error and unchanged accounting. In
-  the cancellation controls, no `caffeinate` may outlive the dispatcher after
-  an interrupt, and the checkout lock must be free immediately.
+  Substitute an unlaunchable `caffeinate` path and one that exits at once at
+  the module boundary. The run must complete with the failure recorded and
+  reported and unchanged accounting. In the cancellation controls, while a
+  case runs, exactly one `caffeinate` names the dispatcher's PID, holds no
+  checkout lock descriptor and runs in its own session. None may outlive the
+  dispatcher, whether it is released or interrupted.
 - A Swift test-library control as a new `runner_unit` case, registered in
   `tests/catalog.json` and the runner_unit README following
   `service_admission_controls.py`'s scratch-package pattern. With substituted

@@ -70,6 +70,26 @@ ordinary encode/roundtrip carries valid collection/request/reap evidence on all
 - The test executable exits 0 and its final stdout line matches
   `^\d+/\d+ tests passed$`.
 
+## System sleep
+
+Host and worker allowances count system sleep. TestKit reads
+`CLOCK_MONOTONIC_RAW`, which counts sleep, and `CLOCK_UPTIME_RAW`, which does
+not, around every case. A case during which the system slept at least 1 ms
+gets a separate line after its `ok` or `FAIL` line,
+`system slept N ms during this case`; its outcome is unchanged. When a failure
+overlapped sleep, the executable prints `K of N failures overlapped system sleep`
+before its summary, and the wrapper adds that count to its failure message.
+Such a failure is not product evidence.
+
+`sleep_record_controls` builds a disposable package containing only
+`TestKit.swift` and drives it with substituted readings: awake, slept,
+sub-millisecond and uptime-ahead cases, passing and failing, then the real
+clocks. The `ok` and `FAIL` lines stay exact, sleep lines and the count appear
+only where the readings show sleep, and the patterns the wrapper and the
+mutation controls read keep their meaning. It requires Swift and does not use
+the signed app; its package, output and results remain under
+`artifacts/controls/`.
+
 ## Fixtures
 
 - `tests/fixtures/worker_lifecycle/worker.c` is built by the wrapper with clang.

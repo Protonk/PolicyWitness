@@ -15,6 +15,10 @@ import sys
 import time
 import artifact
 
+# Blocks idle sleep until the dispatcher exits; lid close and requested sleep
+# still happen, so every invocation also records how long the system slept.
+CAFFEINATE = ('/usr/bin/caffeinate', '-i', '-w')
+
 
 def save(path, value):
     temporary = path.with_suffix(path.suffix + '.tmp')
@@ -124,6 +128,62 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
     return current_events, current_reports
 
 
+def sleep_clocks():
+    """Read the clock that counts system sleep and the one that does not."""
+    try:
+        return time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW), time.clock_gettime_ns(time.CLOCK_UPTIME_RAW)
+    except OSError as exc:
+        return f'clock read failed: {exc}'
+
+
+def system_sleep(before, after):
+    """Whole milliseconds the system slept between two readings, or None and why.
+
+    The raw pair shares one timebase and differs only by sleep, so the gap
+    between their advances is the sleep. Reading the pair takes a few
+    microseconds, so a gap within a millisecond either way is read skew.
+    """
+    for reading in (before, after):
+        if isinstance(reading, str):
+            return None, reading
+    gap = (after[0] - before[0]) - (after[1] - before[1])
+    if gap <= -1_000_000:
+        return None, f'uptime clock advanced {-gap} ns more than the sleep-counting clock'
+    return max(gap, 0) // 1_000_000, None
+
+
+def hold_idle_sleep():
+    """Start the idle-sleep assertion; a failure is recorded, never fatal."""
+    record = {'command': [*CAFFEINATE, str(os.getpid())], 'launched': False,
+              'running_at_end': None, 'error': None}
+    try:
+        # Closed descriptors keep the checkout lock out of the helper, and its
+        # own session keeps a terminal interrupt from ending the assertion early.
+        process = subprocess.Popen(record['command'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, close_fds=True, start_new_session=True)
+    except OSError as exc:
+        record['error'] = f'cannot launch caffeinate: {exc}'
+        return None, record
+    record['launched'] = True
+    return process, record
+
+
+def release_idle_sleep(process, record):
+    if process is None:
+        return
+    status = process.poll()
+    record['running_at_end'] = status is None
+    if status is not None:
+        record['error'] = f'caffeinate exited early with status {status}'
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
 def counts(reports):
     result = {'pass': 0, 'fail': 0, 'skip': 0, 'total': 0}
     for report in reports:
@@ -132,7 +192,7 @@ def counts(reports):
     return result
 
 
-def finish(out, run_id, started, invocations, plan, integrity=None):
+def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_assertion=None):
     reports = [report for item in invocations for report in item['reports']]
     errors = [error for item in invocations for error in item['harness_errors']]
     if integrity:
@@ -168,6 +228,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None):
         'plan': plan, 'configuration': plan['configuration'],
         'case_results': case_results,
         'artifact_integrity': integrity,
+        'idle_sleep_assertion': idle_sleep_assertion,
     }
     run['completion'] = {state: sum(c['state'] == state for c in run['case_results'])
                          for state in ('completed', 'skipped', 'unrun')}
@@ -175,6 +236,18 @@ def finish(out, run_id, started, invocations, plan, integrity=None):
     save(out / 'run.json', run)
     for error in errors:
         print(f"HARNESS: [{error['requested_suite']}] {error['code']}: {error['message']}", file=sys.stderr)
+    if idle_sleep_assertion and idle_sleep_assertion['error']:
+        print(f"SLEEP: idle sleep was not blocked: {idle_sleep_assertion['error']}", file=sys.stderr)
+    for item in invocations:
+        slept = item.get('system_sleep_ms')
+        if slept:
+            failed = item['harness_errors'] or any(case['status'] == 'fail' for case in item['case_results'])
+            cases = ', '.join(f"{case['id']} ({case['status'] or case['state']})" for case in item['case_results'])
+            note = '; a failure here is not creditable product evidence' if failed else ''
+            print(f"SLEEP: [{item['requested_suite']}] {cases}: the system slept {slept} ms during this invocation{note}",
+                  file=sys.stderr)
+        elif item.get('system_sleep_error'):
+            print(f"SLEEP: [{item['requested_suite']}] system sleep unknown: {item['system_sleep_error']}", file=sys.stderr)
     print(f'Test run summary: {out / "run.json"}', flush=True)
     return 0 if run['ok'] else 1
 
@@ -232,7 +305,8 @@ def account(item):
         else:
             problem(item, 'unrun_case', f'selected case has no readable terminal report: {case["id"]}')
         item['case_results'].append({'id': case['id'], 'context': case['context'],
-                                     'state': state, 'status': status, 'reason': reason})
+                                     'state': state, 'status': status, 'reason': reason,
+                                     'system_sleep_ms': item.get('system_sleep_ms')})
 
 
 def run_standard_command(command, root, env, scope):
@@ -275,8 +349,10 @@ def execute(root, out, run_id, started, plan, config, scope):
     invocations = [{'index': index, 'requested_suite': group[0]['suite'], 'cases': group,
                     'state': 'not_started', 'case_results': [], 'returncode': None,
                     'started_at_unix_ms': None, 'finished_at_unix_ms': None,
+                    'system_sleep_ms': None, 'system_sleep_error': None,
                     'report_paths': [], 'reports': [], 'harness_errors': []}
                    for index, group in enumerate(groups)]
+    caffeinate, idle_sleep_assertion = hold_idle_sleep()
     journal = out / 'dispatch.json'
     save(journal, {'run_id': run_id, 'invocations': invocations})
     env = {k: v for k, v in os.environ.items() if not k.startswith('PW_TEST_')}
@@ -333,6 +409,7 @@ def execute(root, out, run_id, started, plan, config, scope):
                 save(journal, {'run_id': run_id, 'invocations': invocations})
                 child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
                 command = group[0]['command']
+                clocks_before = sleep_clocks()
                 try:
                     if group[0]['context'] == 'standard':
                         returncode = run_standard_command(command, root, child_env, scope)
@@ -350,6 +427,7 @@ def execute(root, out, run_id, started, plan, config, scope):
                     interrupted = True
                     problem(item, 'interrupted', 'test execution interrupted')
                 item['finished_at_unix_ms'] = time.time_ns() // 1_000_000
+                item['system_sleep_ms'], item['system_sleep_error'] = system_sleep(clocks_before, sleep_clocks())
                 previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
                                                               previous_reports, seen_cases)
             account(item)
@@ -384,7 +462,12 @@ def execute(root, out, run_id, started, plan, config, scope):
                 integrity_error(integrity, 'artifact_inventory_failed', str(exc))
             finally:
                 signal.signal(signal.SIGINT, previous)
-    return finish(out, run_id, started, invocations, plan, integrity)
+        previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            release_idle_sleep(caffeinate, idle_sleep_assertion)
+        finally:
+            signal.signal(signal.SIGINT, previous)
+    return finish(out, run_id, started, invocations, plan, integrity, idle_sleep_assertion)
 
 
 def integrity_error(integrity, code, message, **details):

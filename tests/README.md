@@ -461,6 +461,12 @@ invocations, harness errors, and one `case_results` entry per selected case.
 and artifact errors, or is null for an entirely offline selection. Artifact errors
 fail `ok` independently of case reports; incomplete inspections retain diagnostics
 instead of claiming equality.
+`idle_sleep_assertion` records the `caffeinate -i` helper that blocks idle sleep
+while the executor runs, and each invocation and its `case_results` record
+`system_sleep_ms`, how long the system slept while the command ran. A `SLEEP:`
+line names an invocation that slept and marks a failure in it as not creditable
+product evidence; sleep never changes a status or `ok`. The
+[dispatcher contract](suites/dispatcher/README.md#contract) describes both.
 Distinct catalog cases must use distinct report paths; collisions are rejected
 before output is replaced. The executor also refuses ambiguous report ownership
 and checks complete, unique selection accounting before reporting success.

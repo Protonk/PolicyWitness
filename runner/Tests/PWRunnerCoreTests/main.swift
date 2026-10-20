@@ -94,5 +94,8 @@ runCompiledProfileCaptureTests(tk)
 // the mirror of tests/lib/lifecycle_contract.py's spellings and example rows.
 runDispositionResolverTests(tk)
 
+if let slept = tk.sleepSummary() {
+    FileHandle.standardOutput.write(Data("\n\(slept)\n".utf8))
+}
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))
 exit(tk.exitCode())
