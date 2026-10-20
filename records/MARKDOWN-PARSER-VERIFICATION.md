@@ -179,3 +179,23 @@ region markers stand on their own lines, as `region_ranges` and the guide's
 marker check require. Refusals from a region parsed alone, such as a copied
 section in `require_standalone`, give lines within that region.
 `source_drift` passed after these changes (`markdown-review-fixes-3-20261019`).
+
+## Final runs
+
+After `390f771` a second signed `make build` passed. The cases that import or
+run a file changed since the default battery were rerun and passed:
+`source_drift` as a suite (`markdown-review-fixes-3-20261019`),
+`source_drift/markdown_reader` and `witness_contract/extensions` against the
+new build, with the app unchanged (`markdown-final-extensions-20261019`), and
+`preflight/build_provenance_controls`, which loads `docs/generate_build.py`, and
+`witness_contract/attempt_outcome_matrix_enforced`, which runs the drift
+checker (`markdown-final-dependents-20261019`).
+
+The other default cases keep their results from `markdown-parser-default-20261019`
+as a reviewed exception. Between `893a808` and `390f771` only `docs/*.py`
+generators and the reader, `source_drift` tests, this record, the plan and the
+suite README changed. A search of `tests/` outside `source_drift` for imports
+or invocations of those files found only the three cases above. Other cases
+mention `build.sh` only to run fixture builds or read its text, and the product
+sources did not change. This search establishes which files the other cases
+name, not every path their programs could reach.
