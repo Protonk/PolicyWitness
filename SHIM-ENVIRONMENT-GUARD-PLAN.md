@@ -74,7 +74,12 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
     `control_sdk_requests`' empty and invalid requests;
   - a value only a contained `xcrun` sees: `contained_xcrun` and
     `fake_developer_dir` in
-    [build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py);
+    [build_refusals.py](tests/suites/preflight/opt_in/build_refusals.py).
+    Both profiles deny Mach lookups and process execution, allowing only
+    `/usr/bin/xcrun` to execute. `fake_developer_dir` checks that
+    `/usr/bin/true` is refused, then observes `xcrun`'s actual
+    `invalid DEVELOPER_DIR path` diagnostic. The denied exec alone cannot
+    establish that the profile applied;
   - a stand-in developer directory under a profile that forbids executing
     any shim: the resolver checks in
     [check_build_provenance.py](tests/suites/preflight/check_build_provenance.py)
@@ -140,18 +145,50 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 4. **A contained route for probes.** Turn the record's
    [probe.py](records/shim-install-request/probe.py) pattern into a helper
    under `tests/lib/`:
-   - run a command under a profile owned by the helper, with a fixed blanket
-     `(deny mach-lookup)` and limited writes; callers can only add write paths,
-     not replace or narrow the Mach deny;
-   - refuse to start unless `dscl` succeeds outside, fails inside, and
-     `/usr/bin/true` succeeds inside the same profile;
+   - generate the profile from helper-owned rules with a fixed blanket
+     `(deny mach-lookup)` and limited writes. Callers supply structured write
+     paths and an optional exec allow-list, never SBPL text. An exec
+     allow-list adds `(deny process-exec)` and literal allowances for those
+     paths; no caller input can express a Mach rule;
+   - always allow the helper's check executables for the selected mode.
+     `/usr/bin/dscl` must be able to execute inside the final profile, so an
+     exec restriction cannot substitute for its Mach-dependent check;
+   - refuse to start unless `/usr/bin/dscl . -read /Users/root UniqueID`
+     exits 0 outside with `UniqueID: 0` in stdout, completes with a nonzero
+     status inside, and a command permitted by the final profile succeeds
+     inside it. Use `/usr/bin/true` for the plain profile and the allowed
+     tool for an exec-restricted profile;
    - report any request through the detector.
 
-   The successful `/usr/bin/true` establishes that the profile applies and
-   commands can run. Without it, a refusal to apply the profile could make
-   `dscl` and every probe fail before execution, yielding no detected requests
-   from shims that never ran. A failed containment prerequisite stops the
-   helper before it starts the requested command.
+   `contained_xcrun` and `fake_developer_dir` keep an exec allow-list of
+   `/usr/bin/xcrun`; the helper additionally permits `/usr/bin/dscl` for its
+   check. Their successful run check uses `/usr/bin/xcrun --version` with a
+   known-good developer environment, before introducing the probe's invalid
+   values. The checks and requested command use the same final profile.
+   `/usr/bin/true` remains outside this allow-list: retain its refusal as an
+   exec-restriction assertion after establishing that commands can run, and
+   retain the actual invalid-developer-directory diagnostic from `xcrun`.
+   No developer-tool shim is added to these callers' exec allowances.
+
+   A successful permitted command establishes that the profile applies and
+   commands can run. A denied exec cannot establish that: both exec denial
+   and failure to apply the profile can exit 71 with `Operation not permitted`.
+   Without the success check, `dscl` and every probe could fail before
+   execution, yielding no detected requests from shims that never ran. A
+   failed or missing containment prerequisite stops the helper before it
+   starts the requested command.
+
+   Factor the gate's decision into a pure function over collected check
+   results. Rejected unit controls feed it constructed results for outside
+   failure, outside success without `UniqueID: 0`, inside `dscl` success,
+   failed permitted execution, and missing or incomplete results. Also
+   check that a refused decision prevents command dispatch. The public
+   helper collects its own results using its fixed checks; these controls
+   introduce no profile override or caller-supplied check results. Separately,
+   run the helper under an outer `sandbox-exec` to exercise a real nested
+   `sandbox_apply` failure and establish that the requested command never
+   starts. Keep the constructed decision evidence distinct from that live
+   failure.
 
    Mach-denial log evidence is not a prerequisite for the helper. Where a
    control already reads the unified log, record denial evidence matched by
@@ -159,7 +196,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
    service independently of why `dscl` failed; the opt-in positive control
    requires evidence that the installation-service lookup itself was denied.
 
-   `contained_xcrun` and `fake_developer_dir` use it. Add a line to
+   Add a line to
    [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses) routing
    any by-hand probe of `SDKROOT` or `DEVELOPER_DIR` through it. A warning
    alone has already failed once; this gives the warning a tool to point to.
@@ -168,7 +205,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 
 | Check | Establishes |
 |---|---|
-| Containment helper | `dscl` succeeds outside and fails inside the helper's fixed profile, and `/usr/bin/true` succeeds inside it. Rejected controls establish that failure of any prerequisite prevents the requested command from starting, including when the profile cannot be applied. The helper needs no unified-log access to pass its gate. |
+| Containment helper (default battery, in `preflight/build_provenance_controls`; no app or shim needed for these checks) | Exercise both plain and exec-restricted profiles: outside `dscl` exits 0 with `UniqueID: 0`, inside `dscl` executes and fails, and the profile's permitted success command exits 0. The xcrun-restricted profile also refuses `/usr/bin/true` after the successful tool run. Structured path inputs preserve the fixed Mach deny and the requested exec restriction. Constructed inputs to the gate decision cover each refusal, including inside `dscl` success, without a profile override; a refused decision prevents dispatch. A separate outer-sandbox control produces a real nested `sandbox_apply` failure and no requested-command execution. The helper needs no unified-log access to pass its gate. |
 | Detector, positive control (opt-in, beside `control_sdk_unavailable`) | A shim run under the helper with `SDKROOT` naming a missing path is reported as a blocked request, and the log shows the denied installation-service lookup attributed by PID. The neighbour with an empty `SDKROOT` is not reported. This is the only check that deliberately makes the shim attempt a request, so it stays out of the default battery. |
 | Entry points (default battery, with the resolver's checks) | `tests/run.sh --help`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2 and the new guard's admission diagnostic naming `SDKROOT` and its value. Run under the helper's containment and assert no request is reported. In isolated fixtures, assert no checkout-lock or build-session writes; the dispatcher does not print help, and the build does not reach lock verification, generator checks or SDK selection. An empty `SDKROOT`, `macosx` and the selected SDK path pass admission, with harmless continuations establishing that each entry point reaches its next boundary. |
 | Makefile, command-line request | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
