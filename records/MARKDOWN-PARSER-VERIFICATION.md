@@ -121,3 +121,61 @@ refused by the new Markdown citation rule, so the node cites
 `markdown_it/__init__.py`'s version instead. The generator wrote the region,
 dot file and SVG; every generator's `--check` passed. `source_drift` passed
 (`markdown-switch-tests-20261019`).
+
+## Build and default battery
+
+A signed `make build` ran every generator's check through the reader and
+staged the guide after `validate_guide` read it. The default battery then
+passed all 195 cases (`markdown-parser-default-20261019`), including
+`source_drift/markdown_reader`, `preflight/release_publish_controls`,
+`preflight/release_rotation_controls` and `witness_contract/extensions`, which
+ran the request JSON the reader extracts from the guide. The artifact integrity
+check found the app valid and unchanged. Under `/usr/bin/python3` 3.9.6, with
+nothing else running, the reader imports in about 40 ms and parses the 18
+scanned documents in about 380 ms and all 121 tracked documents in about
+720 ms. Neither the build nor the drift suite caches parsed documents across
+processes.
+
+## Independent review
+
+A read-only review of `f93323c..893a808` swept every tracked Python file
+outside the vendor directory and reran the reader against constructed inputs.
+Only `docs/markdown_reader.py` imports the parser. Each finding and its
+disposition:
+
+| Finding | Disposition |
+| --- | --- |
+| The span-ownership test saw only inline markers, so a span starting a line, or an unclosed span, passed in scanned documents outside `SPAN_DOCUMENTS` | `span_marker_problems` refuses a marker in an HTML block and markers that do not open and close in turn within one paragraph, heading or cell; constructed controls cover each |
+| An image inside a link label was not reported, so G11 skipped it | The reader reports it as an image; reader and G11 controls |
+| `validate_guide` parsed regions alone, so a reference definition elsewhere in the guide, or a region wrapped in a fence, passed | The whole guide is parsed: no reference definitions, and every region marker on its own line outside code; controls for both |
+| A short evidence-channel row was padded by the parser and no longer reported | A row whose landing cell has no code span is reported; planner control |
+| The Known gap index accepted numbered entries | Only bullets index; planner control. A line beginning "Known gap" in the middle of a paragraph is no longer a gap paragraph: the rule now matches its stated form, a paragraph opening with "Known gap" |
+| The guide-link rewrite check compared links, code and blocks but not text or inline HTML | It compares every inline piece; controls for a comment and an escaped bracket |
+| A list item's `first` could come from a later block | `first` is set only when a paragraph is the item's first block; reader control |
+| A bare `<!--` was refused although GitHub shows it as text | Only a literal `<!--` with a later `-->` in the same paragraph is refused; reader control |
+| The span refusal named no document and advised the wrong fix | It names the document and line; the generators pass document names |
+| Marker citations matched by substring | A marker citation must match a whole marker line in an HTML block; controls for a prefix and a quoted marker. One existing self-citation control named a marker by prefix and now names the whole marker |
+| A sentence end before an inline comment did not end a citation window | Comments are transparent to the boundary; baseline control |
+| A multi-line setext heading's anchor kept its line break as a hyphen | The anchor drops the break, as GitHub's does; reader control |
+| The `RECORD` files were not pinned | Their SHA-256 digests are pinned in `markdown.py`; a control rewrites one consistently with a changed file and is refused |
+| The "already imported" `linkify_it` branch, the structural reads in `check.py`, `readme_inventory`, three `validate_guide` checks, G9 sites in code and comments, and line alignment had no controls | Each has one now; the planner runs 192 controls |
+| `limits.py` asserted the Questions heading by substring | It finds the heading's section through the reader and the marker inside it |
+
+The review classified every remaining text operation on Markdown, beyond the
+one miss above, as one of:
+
+- the marker protocol: region extraction by marker, span blanking, the
+  generated-region pattern and the span patterns over HTML pieces;
+- plain text: the code-label symbol search, the boundary pattern over token
+  text and the heredoc split inside the fence the reader selected;
+- independent oracles and fixture construction: the planner's guidance, gap,
+  principle and structure scenarios, the expected demotion and the mutation
+  rewrites;
+- tests of an emitter's own output: `check_release.py`, the generated-caption
+  and staging tests.
+
+Generated regions are excluded by each block's first line, which is exact while
+region markers stand on their own lines, as `region_ranges` and the guide's
+marker check require. Refusals from a region parsed alone, such as a copied
+section in `require_standalone`, give lines within that region.
+`source_drift` passed after these changes (`markdown-review-fixes-3-20261019`).

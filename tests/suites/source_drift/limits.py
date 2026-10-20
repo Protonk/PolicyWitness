@@ -217,7 +217,10 @@ class LimitsDocumentationTests(unittest.TestCase):
         copy = markdown_reader.parse(copied)
         self.assertEqual(sum(h.level == 3 for h in copy.headings), len(questions))
         self.assertFalse([link.target for link in copy.links if link.target.startswith(('PolicyWitness.md', 'LIMITS.md'))])
-        self.assertIn('## Questions\n\n' + generator.GUIDE_QUESTIONS_START, self.guide)
+        guide = markdown_reader.parse(self.guide)
+        marker = next(block for block in guide.blocks
+                      if block.kind == 'html' and block.content.strip() == generator.GUIDE_QUESTIONS_START)
+        self.assertTrue(guide.section('Questions', 2).holds(marker.lines))
 
     def test_generation_updates_values_and_shared_prose_then_is_idempotent(self):
         root = self.checkout()
@@ -316,6 +319,24 @@ class LimitsDocumentationTests(unittest.TestCase):
         quoted = self.guide[:end] + '\n```text\n' + row + '\n```\n' + self.guide[end:]
         generator.validate_guide(quoted, limits)
 
+        def region(start, end):
+            return self.guide.index(start) + len(start), self.guide.index(end)
+
+        def wrapped(start, end, before, after):
+            a, b = region(start, end)
+            return self.guide[:a] + before + self.guide[a:b] + after + self.guide[b:]
+        for guide, message in [
+            (wrapped(generator.GUIDE_QUESTIONS_START, generator.GUIDE_QUESTIONS_END, '\n~~~~~text', '~~~~~\n'),
+             'at least one copied question'),
+            (wrapped(generator.GUIDE_RULES_START, generator.GUIDE_RULES_END, '\n<!--', '-->\n'), 'copied reading rules'),
+            (self.guide.replace('\n## Limits\n', '\n<!--\n## Limits\n-->\n', 1), 'missing its Limits heading'),
+            (self.guide + '\n[ref]: LIMITS.md\n', 'inline internal links only'),
+            (self.guide.replace(generator.GUIDE_RULES_START, '~~~~~text\n' + generator.GUIDE_RULES_START, 1)
+             .replace(generator.GUIDE_RULES_END, generator.GUIDE_RULES_END + '\n~~~~~', 1), 'outside code'),
+        ]:
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                generator.validate_guide(guide, limits)
+
         generator.require_standalone('See `[x](other.md)`, `<https://example.com>` and [y](#y).', 'example')
         for text in ('[x](other.md)', '[x][r]\n\n[r]: #y', '<https://example.com>', '![i](i.png)'):
             with self.subTest(text=text), self.assertRaises(ValueError):
@@ -326,7 +347,9 @@ class LimitsDocumentationTests(unittest.TestCase):
         copied = generator.shared_questions(questions('## One?\n\nSee [it](PolicyWitness.md#limits).\n\n```text\n## fenced\n```'))
         self.assertEqual(copied, '### One?\n\nSee [it](#limits).\n\n```text\n## fenced\n```')
         for body, message in (('One?\n----\n\nAnswer.', "unindented '## ' line"),
-                              ('## One?\n\nSee `](PolicyWitness.md#limits)`.', 'only in links')):
+                              ('## One?\n\nSee `](PolicyWitness.md#limits)`.', 'only in links'),
+                              ('## One?\n\nAnswer <!-- see [x](PolicyWitness.md#limits) --> here.', 'only in links'),
+                              ('## One?\n\nLiteral \\](PolicyWitness.md#limits) text.', 'only in links')):
             with self.subTest(body=body), self.assertRaisesRegex(ValueError, message):
                 generator.shared_questions(questions(body))
 

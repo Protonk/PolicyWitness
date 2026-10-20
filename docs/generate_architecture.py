@@ -449,8 +449,8 @@ def span_values(manifest):
 
 
 def render_document(text, manifest, limits=None, document=None):
-    text = render_spans(text, "architecture", span_values(manifest))
     document = document or manifest["document"]
+    text = render_spans(text, "architecture", span_values(manifest), document)
     document_name = Path(document).name
     graphs = [g for g in manifest["graphs"] if graph_document(manifest, g) == document]
     expected = {g["id"] for g in graphs}
@@ -511,7 +511,7 @@ def check(root: Path):
             continue
         text = document_path.read_text()
         try:
-            problems.extend(f"{document}: {p}" for p in span_problems(text, "architecture", span_values(manifest)))
+            problems.extend(f"{document}: {p}" for p in span_problems(text, "architecture", span_values(manifest), document))
             if render_document(text, manifest, limits, document) != text:
                 problems.append(f"{document}: generated regions are stale; regenerate")
         except ValueError as error:

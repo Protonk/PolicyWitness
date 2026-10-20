@@ -24,14 +24,19 @@ import markdown_reader as reader  # noqa: E402
 
 
 PARSER_MODULES = ('markdown_it', 'mdurl')
+# The RECORD files of the wheels whose digests matched PyPI's when they were vendored.
+RECORDS = {'markdown_it_py-3.0.0.RECORD': 'a1de86362d0f974969ec83963ff307aaa9f5ea30834642f3134e6b239742f95f',
+           'mdurl-0.1.2.RECORD': '72e8c94bf8f6a74a6a9a113a56ae3e9cade7dcb3ce2591fe60eb161f2948167f'}
 
 
 def vendor_problems(root=ROOT):
     """Each vendored parser file must have its wheel's RECORD digest, with nothing added or missing."""
     vendor = root / 'tests/lib/vendor'
     records = sorted(vendor.glob('*.RECORD'))
-    problems = [] if records else [f'no wheel RECORD beside {vendor}']
+    problems = [f'{name}: missing' for name in sorted(set(RECORDS) - {r.name for r in records})]
     for record in records:
+        if hashlib.sha256(record.read_bytes()).hexdigest() != RECORDS.get(record.name):
+            problems.append(f"{record.name}: not the RECORD of the verified wheel")
         dist = record.name[:-len('.RECORD')] + '.dist-info/'
         rows = list(csv.reader(record.read_text().splitlines()))
         packages = {path.split('/')[0] for path, _, _ in rows if not path.startswith(dist)}
@@ -118,6 +123,11 @@ class BlockTests(unittest.TestCase):
         self.assertEqual([(i.ordered, i.number, i.depth, i.first.text) for i in document.items],
                          [(True, '1', 0, 'Step'), (False, '', 1, 'nested after a blank line continued')])
 
+    def test_an_item_opening_with_another_block_has_no_first_paragraph(self):
+        document = parse('- - `inner.xpc`\n\n  `Contents/MacOS/outer` trailing\n- ```\n  code\n  ```\n  after\n')
+        self.assertEqual([(i.depth, i.first and i.first.text) for i in document.items],
+                         [(0, None), (1, 'inner.xpc'), (0, None)])
+
     def test_leading_code_strong_and_link(self):
         document = parse('- `a` b\n- **Label**: text\n- [x](#y): z\n- plain `c`\n')
         self.assertEqual([(i.first.leading_code, i.first.leading_strong,
@@ -137,6 +147,11 @@ class CommentTests(unittest.TestCase):
         for text in ('text <!-- a -- b --> after\n', '![alt <!-- a -- b -->](x.png)\n'):
             with self.subTest(text=text), self.assertRaisesRegex(reader.Refused, 'remove the "--"'):
                 parse(text)
+
+    def test_an_opener_without_a_later_closer_is_text(self):
+        # GitHub shows it as text too: an inline comment needs a later "-->".
+        self.assertEqual(parse('The opener <!-- starts a comment in HTML.\n').inlines[0].text,
+                         'The opener <!-- starts a comment in HTML.')
 
     def test_escaped_entity_and_code_comment_openers_are_text(self):
         document = parse('a \\<!-- b &lt;!-- c `<!--` d\n')
@@ -175,6 +190,10 @@ class LinkTests(unittest.TestCase):
                           ('image', 'i.png'), ('text', ' '), ('html', '<!-- span x.y -->'), ('text', '1'),
                           ('html', '<!-- /span -->')])
 
+    def test_an_image_inside_a_link_label_is_an_image(self):
+        self.assertEqual(self.links('[![badge](missing.png)](target.md)\n'),
+                         [('missing.png', 'badge', None, True, False), ('target.md', '', None, False, False)])
+
     def test_reference_definitions_are_reported(self):
         document = parse('[x][ref]\n\n[ref]: target.md\n')
         self.assertEqual(list(document.references), ['REF'])
@@ -212,6 +231,10 @@ class HeadingTests(unittest.TestCase):
         self.assertIsNone(document.section('Z'))
         with self.assertRaises(reader.Refused):
             parse('## B\n## B\n').section('B')
+
+    def test_a_multi_line_setext_heading_anchors_without_the_break(self):
+        document = parse('Foo\nbar\n===\n')
+        self.assertEqual((document.headings[0].text, document.anchors), ('Foo bar', ['foobar']))
 
     def test_anchors_keep_underscores_and_number_duplicates(self):
         document = parse('## Test seam: `_test_overrides`\n## Repeated\n## Repeated\n## Ünïcode\n')
@@ -261,6 +284,23 @@ class VendorTests(unittest.TestCase):
             'markdown_it_py-3.0.0.RECORD: vendored file markdown_it/rules_inline/html_inline.py differs from the wheel',
             'mdurl-0.1.2.RECORD: vendored file mdurl/extra.py is not in the wheel',
         ])
+
+    def test_a_rewritten_record_is_named(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-record-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in reader.source_files():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, root / name)
+        vendor = root / 'tests/lib/vendor'
+        changed = vendor / 'markdown_it/rules_inline/html_inline.py'
+        changed.write_text(changed.read_text() + '\n')
+        digest = 'sha256=' + base64.urlsafe_b64encode(hashlib.sha256(changed.read_bytes()).digest()).rstrip(b'=').decode()
+        record = vendor / 'markdown_it_py-3.0.0.RECORD'
+        rows = [row if row[0] != 'markdown_it/rules_inline/html_inline.py' else [row[0], digest, str(changed.stat().st_size)]
+                for row in csv.reader(record.read_text().splitlines())]
+        record.write_text(''.join(','.join(row) + '\n' for row in rows))
+        self.assertEqual(vendor_problems(root), ['markdown_it_py-3.0.0.RECORD: not the RECORD of the verified wheel'])
 
     def test_only_the_reader_imports_the_parser(self):
         self.assertEqual(import_problems(ROOT, tracked_python()), [])
@@ -319,6 +359,12 @@ class ImportGuardTests(unittest.TestCase):
         result = self.run_reader(self.checkout(), {'PYTHONPATH': path}, before='import markdown_it; ')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(f'markdown_it loaded from {path}', result.stderr)
+
+    def test_an_already_imported_linkify_it_is_refused(self):
+        path = self.stand_in('linkify_it', 'class LinkifyIt: pass\n')
+        result = self.run_reader(self.checkout(), {'PYTHONPATH': path}, before='import linkify_it; ')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('linkify_it is already imported', result.stderr)
 
     def test_another_version_is_refused(self):
         root = self.checkout()

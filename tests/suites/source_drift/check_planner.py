@@ -126,6 +126,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     scenarios = [(name, {path: source}, expected, diagnostic)
                  for name, path, source, expected, diagnostic in scenarios]
     scenarios += guidance_scenarios(repo)
+    scenarios += structure_scenarios(repo)
     scenarios += gap_scenarios(repo)
     originals = {path: (repo / path).read_text()
                  for _, changes, _, _ in scenarios for path in changes}
@@ -275,6 +276,64 @@ def guidance_scenarios(repo):
                           ('reordered', ''.join(reordered))]:
         scenarios.append((f'guidance-principle-label-{name}', {agents: changed}, 1, 'core ideas:'))
     scenarios.append(('guidance-restored', documents, 0, None))
+    return scenarios
+
+
+def structure_scenarios(repo):
+    """Each table, list, fence and paragraph the checker reads stops counting inside a comment."""
+    def lines(path):
+        return (repo / path).read_text().split('\n')
+
+    def first_row(path, heading):
+        text = lines(path)
+        start = text.index(heading)
+        row = next(line for line in text[start:] if line.startswith('| `'))
+        return row, row.split('`')[1]
+
+    def hidden(path, old, new):
+        source = (repo / path).read_text()
+        assert source.count(old) >= 1, (path, old)
+        return {Path(path): source.replace(old, new, 1)}
+
+    def wrapped(path, first, last, after=0):
+        text = lines(path)
+        a = next(i for i in range(after, len(text)) if first(text[i]))
+        b = next(i for i in range(a + 1, len(text)) if last(text[i]))
+        return {Path(path): '\n'.join(text[:a] + ['<!--'] + text[a:b + 1] + ['-->'] + text[b + 1:])}
+
+    scenarios = []
+    row, name = first_row('tests/README.md', '## Suite coverage')
+    scenarios.append(('structure-suite-row-comment', hidden('tests/README.md', row, row.replace(f'`{name}`', f'<!-- `{name}` -->', 1)),
+                      1, f'tests/suites/{name}/ exists but has no row'))
+    row, name = first_row('tests/COVERAGE.md', '## Normalized outcome coverage matrix')
+    scenarios.append(('structure-matrix-row-comment', hidden('tests/COVERAGE.md', row, row.replace(f'`{name}`', f'<!-- `{name}` -->', 1)),
+                      1, f'NormalizedOutcome.{name} has no row'))
+    row, name = first_row('runner/README.md', '## Test seam: `_test_overrides`')
+    scenarios.append(('structure-override-row-comment', hidden('runner/README.md', row, row.replace(f'`{name}`', f'<!-- `{name}` -->', 1)),
+                      1, f'PWRunnerTestOverrides.{name} has no row'))
+    pair = '`(iokit-open-service, iokit_registry_entry_class)`'
+    scenarios.append(('structure-pair-comment', hidden('docs/PolicyWitness.md', '- ' + pair, f'- <!-- {pair} -->'),
+                      1, "('iokit-open-service', 'iokit_registry_entry_class') in swift"))
+    surface = lines('controller/README.md').index('## CLI surface (contract)')
+    scenarios.append(('structure-cli-fence-comment',
+                      wrapped('controller/README.md', lambda line: line == '```text', lambda line: line == '```', surface),
+                      # The section's next text block, the runner subcommands, then disagrees with the usage.
+                      1, 'CLI surface drift between'))
+    scenarios.append(('structure-known-gap-comment',
+                      wrapped('docs/ARCHITECTURE.md', lambda line: line.startswith('Known gap'), lambda line: not line.strip()),
+                      1, 'known gaps: docs/ARCHITECTURE.md: the index lists'))
+    scenarios.append(('structure-evidence-table-comment',
+                      wrapped('docs/ARCHITECTURE.md', lambda line: line.startswith('| Channel'), lambda line: not line.strip()),
+                      1, 'evidence channels: table missing'))
+    # The parser pads a short row to the header's width; an empty landing cell is still reported.
+    row = next(line for line in lines('docs/ARCHITECTURE.md') if line.startswith('| Prediction |'))
+    scenarios.append(('structure-evidence-short-row', hidden('docs/ARCHITECTURE.md', row, '|'.join(row.split('|')[:4]) + '|'),
+                      1, 'evidence channels: row has no landing column'))
+    scenarios.append(('structure-known-gap-ordered-index',
+                      hidden('docs/ARCHITECTURE.md', '- [Principles as enforced constraints](#', '1. [Principles as enforced constraints](#'),
+                      1, 'an index bullet must open with a link'))
+    scenarios.append(('structure-core-idea-comment',
+                      hidden('AGENTS.md', '- **Host/worker split**:', '- <!-- **Host/worker split** -->:'), 1, 'core ideas:'))
     return scenarios
 
 

@@ -170,13 +170,14 @@ def citation_pairs(path, text):
         window, offset, span, ended = [], 0, False, False
         for kind, value in inline.pieces:
             if kind == 'html':
+                # A comment is invisible: a sentence end before it still ends the sentence.
                 span = bool(re.match(r'<!--\s*span\b', value)) or (span and not re.match(r'<!--\s*/span\b', value))
                 continue
             if span:
                 continue
             if kind == 'text':
                 cut = max((m.end() for m in re.finditer(r'[.!?](?=\s)|\|', value)), default=None)
-                if cut is not None:
+                if cut is not None or (ended and value[:1].isspace()):
                     window = []
                 ended = bool(re.search(r'[.!?]$', value))
                 offset += len(value)
@@ -199,6 +200,34 @@ def citation_pairs(path, text):
             if held:
                 pairs.append(f'`{held[0]}` … [{link.label}]({link.target})')
     return pairs
+
+
+def span_marker_problems(path, text, owners):
+    """Span markers in a scanned document: inline in prose, opened and closed in turn, each with a registered owner."""
+    common = module('marker_common', ROOT / 'docs/generator_common.py')
+    regions = common.region_ranges(text)
+    document = markdown_reader.parse(text, str(path))
+    name = path.relative_to(ROOT).as_posix()
+
+    def authored(lines):
+        return not any(a <= document.offset(lines[0]) < b for a, b in regions)
+    problems = []
+    # A marker that begins a line is an HTML block, which GitHub shows as raw HTML.
+    for block in document.blocks:
+        if block.kind == 'html' and authored(block.lines) and re.search(r'<!--\s*/?span\b', block.content):
+            problems.append(f'{name}:{block.lines[0] + 1}: span marker in an HTML block')
+    for inline in document.inlines:
+        if not authored(inline.lines):
+            continue
+        markers = [value for kind, value in inline.pieces if kind == 'html' and re.match(r'<!--\s*/?span\b', value)]
+        if [marker.startswith('<!-- span ') for marker in markers] != [True, False] * (len(markers) // 2):
+            problems.append(f'{name}:{inline.lines[0] + 1}: span markers do not open and close in turn')
+            continue
+        for marker in markers[::2]:
+            span = re.match(r'<!-- span ([a-z][a-z0-9_]*)\.', marker)
+            if not span or name not in owners.get(span[1], ()):
+                problems.append(f'{name}:{inline.lines[0] + 1}: {marker} has no registered owner')
+    return problems
 
 
 def prose_sites(root=ROOT):
@@ -367,7 +396,7 @@ class GeneratorContractTests(unittest.TestCase):
 
     def test_manifests_do_not_cite_themselves_or_their_outputs(self):
         self.refuse_manifest('architecture', lambda d: d['graphs'][0]['nodes'][0].update(
-            sources=[dict(path=d['document'], symbol='BEGIN GENERATED ARCHITECTURE GRAPH')]), 'self-citation')
+            sources=[dict(path=d['document'], symbol=f"BEGIN GENERATED ARCHITECTURE GRAPH {d['graphs'][0]['id']}")]), 'self-citation')
 
     def test_captions_state_the_verified_guarantee(self):
         gen = module('architecture_caption', ROOT / 'docs/generate_architecture.py')
@@ -541,7 +570,7 @@ class GeneratorContractTests(unittest.TestCase):
         for args in [('--check',), ()]:
             result = self.command(root, 'limits', *args)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn('span marker in an HTML block at line', result.stderr)
+            self.assertRegex(result.stderr, r'docs/LIMITS\.md:\d+: span marker in an HTML block')
             self.assertEqual(self.snapshot(root), before)
 
     def test_markdown_citations_name_headings_heading_code_or_markers(self):
@@ -552,11 +581,11 @@ class GeneratorContractTests(unittest.TestCase):
         (root / 'doc.md').write_text(
             '## Real heading\n\n## Test seam: `_seam`\n\n<!-- BEGIN GENERATED THING -->\n<!-- END GENERATED THING -->\n\n'
             '<!--\n## Commented heading\n-->\n\n```text\n## Fenced heading\n<!-- BEGIN GENERATED FENCED -->\n```\n\n'
-            'Prose names Prose heading and `BEGIN GENERATED PROSE`.\n')
+            'Prose names Prose heading and `BEGIN GENERATED PROSE`.\n\n<!-- note: BEGIN GENERATED QUOTED -->\n')
         for symbol in ('Real heading', '_seam', 'BEGIN GENERATED THING'):
             common.citation({'path': 'doc.md', 'symbol': symbol}, root)
         for symbol in ('Commented heading', 'Fenced heading', 'BEGIN GENERATED FENCED', 'Prose heading',
-                       'BEGIN GENERATED PROSE'):
+                       'BEGIN GENERATED PROSE', 'BEGIN GENERATED TH', 'BEGIN GENERATED QUOTED'):
             with self.subTest(symbol=symbol), self.assertRaisesRegex(ValueError, 'missing symbol'):
                 common.citation({'path': 'doc.md', 'symbol': symbol}, root)
 
@@ -568,18 +597,16 @@ class GeneratorContractTests(unittest.TestCase):
             self.assertNotIn(name, owners)
             owners[name] = set(gen.SPAN_DOCUMENTS)
         for path in scanned_documents():
-            # A span is a comment in prose; examples in code are not spans.
-            text = path.read_text()
-            regions = common.region_ranges(text)
-            document = markdown_reader.parse(text, str(path))
-            for inline in document.inlines:
-                if any(a <= document.offset(inline.lines[0]) < b for a, b in regions):
-                    continue
-                for kind, value in inline.pieces:
-                    span = re.match(r'<!-- span ([a-z][a-z0-9_]*)\.', value) if kind == 'html' else None
-                    if span:
-                        self.assertIn(span[1], owners)
-                        self.assertIn(path.relative_to(ROOT).as_posix(), owners[span[1]])
+            self.assertEqual(span_marker_problems(path, path.read_text(), owners), [])
+        document = ROOT / 'docs/ARCHITECTURE.md'
+        for text, expected in [('Text\n<!-- span limits.step_id.value -->1<!-- /span -->\n', 'in an HTML block'),
+                               ('Waits <!-- span limits.step_id.value -->50 ms.\n', 'open and close in turn'),
+                               ('Value <!-- span nobody.value -->1<!-- /span -->\n', 'no registered owner'),
+                               ('Value `<!-- span nobody.value -->` in code.\n', None)]:
+            problems = span_marker_problems(document, text, owners)
+            self.assertEqual(bool(problems), expected is not None, (text, problems))
+            if expected:
+                self.assertIn(expected, problems[0])
 
     def test_prose_links_resolve_anchors_and_symbol_links(self):
         self.assertEqual(broken_links(scanned_documents()), [])
@@ -601,6 +628,7 @@ class GeneratorContractTests(unittest.TestCase):
             ('# Here\n[here](#absent)', 'missing heading'),
             ('[wrapped\nlabel](absent.md)', 'missing file'),
             ('[`a]b`](source.py)', 'missing symbol'),
+            ('[![badge](missing.png)](target.md#target)', 'missing file missing.png'),
         ]:
             path.write_text(content)
             self.assertIn(expected, '\n'.join(broken_links([path])))
@@ -608,6 +636,17 @@ class GeneratorContractTests(unittest.TestCase):
         for content in ('<!-- [target](absent.md) -->', '`[target](absent.md)`', '<!--\n[target](absent.md)\n-->'):
             path.write_text(content)
             self.assertEqual(broken_links([path]), [], content)
+
+    def test_line_level_prose_keeps_lines_and_reads_only_prose(self):
+        span = '<!-- span limits.step_id.value -->11 seconds<!-- /span -->'
+        text = ('Intro.\n\n```text\nFenced 7 seconds.\n```\n\n<!--\nCommented 8 seconds.\n-->\n\n    Indented 9 seconds.\n\n'
+                '<!-- BEGIN GENERATED CONTROL -->\n| Region 10 seconds |\n| --- |\n<!-- END GENERATED CONTROL -->\n\n'
+                f'A span {span} and a real 12 seconds.\n')
+        prose = authored_prose(text)
+        # The blanked text keeps every line where the parser reported it.
+        self.assertEqual(len(prose.split('\n')), len(text.split('\n')))
+        kept = [(n, line) for n, line in enumerate(prose.split('\n')) if line.strip()]
+        self.assertEqual(kept, [(0, 'Intro.'), (17, 'A span ' + ' ' * len(span) + ' and a real 12 seconds.')])
 
     def test_prose_baseline_is_consistent_and_growth_is_explicit(self):
         self.assertEqual(baseline_problems(), [])
@@ -630,7 +669,8 @@ class GeneratorContractTests(unittest.TestCase):
         # backticked token the linked file does not hold is not a citation.
         original = path.read_text()
         path.write_text(original + '\nIt counts UTF-8 bytes, two 7 ms waits and 9 ms more.\n'
-                        + 'The `no_such_symbol_q7` ([generate_architecture.py](generate_architecture.py)) case.\n')
+                        + 'The `no_such_symbol_q7` ([generate_architecture.py](generate_architecture.py)) case.\n'
+                        + '\nThe `load_manifest` routine ends here.<!-- note --> See [generate_architecture.py](generate_architecture.py).\n')
         added = prose_sites(root)
         for row in prose_sites():
             added.remove(row)

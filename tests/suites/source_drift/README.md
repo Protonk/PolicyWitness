@@ -76,18 +76,23 @@ or decoding; integrated override cases exercise those boundaries.
 Public-command controls separately verify selection and actual execution.
 
 Three rules read the handwritten text of `docs/ARCHITECTURE.md`: every
-paragraph opening with "Known gap" is indexed, in order, by the document's
-last section, which lists nothing else; every landing path in the
-evidence-channels table is a key of the reply or envelope shape golden; and
-the principles list matches the bold labels and order in `AGENTS.md`'s Core
-ideas. Explanatory prose can differ between the documents.
+top-level paragraph opening with "Known gap" is indexed, in order, by the
+bullets of the document's last section, which lists nothing else; every row of
+the evidence-channels table names its landing paths as code, and each is a key
+of the reply or envelope shape golden; and the principles list matches the
+bold labels and order in `AGENTS.md`'s Core ideas. Explanatory prose can differ
+between the documents.
 The `generator_contract` case holds the document graph's drift node to the
 rules this script runs, and the form table below to the shared module's rules.
 
 The Known gap rule covers ARCHITECTURE.md, BUILD.md and WORKER.md. Disposable
 checkout controls add an unindexed gap, add its matching index entry, remove
 the final heading and add a spurious index entry in each tour. Repaired and
-restored copies pass; each rejected mutation names its document.
+restored copies pass; each rejected mutation names its document. Structure
+controls hide a suite-coverage row, an outcome-matrix row, a test-seam row, a
+prediction-unavailable bullet, the CLI usage block, a Known gap paragraph, the
+evidence-channels table and a core idea in comments, and each is reported; so
+are an evidence row without a landing column and a numbered index entry.
 
 ### Workflow guidance and checked routes
 
@@ -202,7 +207,9 @@ source line of a paragraph, heading, list item or table row, with span values
 blanked. A citation pair is a backticked identifier followed by a link to a
 code file that holds it, in one paragraph, heading or table cell with no
 sentence end, `|` or other link between them; it is recorded as
-`` `identifier` … [label](target) ``. Authored spans are processed in the
+`` `identifier` … [label](target) ``. A span marker in a scanned document sits
+in a paragraph, list item or table cell, opens and closes there, and belongs to
+a generator that names the document. Authored spans are processed in the
 documents each generator names in its `SPAN_DOCUMENTS`. The guide receives span comments
 and values only by copying its shared source. Other generated or copied
 regions are opaque to the span pass. A backticked link label into a non-Markdown

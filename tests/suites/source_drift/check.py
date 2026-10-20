@@ -996,7 +996,7 @@ def known_gap_index_problems(document: Path) -> list[str]:
     for item in parsed.items:
         if item.depth or item.lines[0] < index_start or not authored(item.lines):
             continue
-        link = item.first.leading_link if item.first else None
+        link = item.first.leading_link if item.first and not item.ordered else None
         if link is None or not link.target.startswith("#"):
             return [f"  known gaps: {name}: an index bullet must open with a link to its section: {(item.first.text if item.first else '')[:60]!r}"]
         linked.append(link.target[1:])
@@ -1017,7 +1017,8 @@ def check_evidence_channel_paths() -> list[str]:
     shapes = {name: set(json.loads(path.read_text())["shape"]) for name, path in SHAPE_GOLDENS.items()}
     problems: list[str] = []
     for cells in rows:
-        if len(cells) < 4:
+        # The parser pads a short row to the header's width, so a missing landing path is an empty cell.
+        if len(cells) < 4 or not cells[3].code:
             problems.append(f"  evidence channels: row has no landing column: {cells[0].text[:60]!r}")
             continue
         for path in cells[3].code:

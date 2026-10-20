@@ -294,7 +294,7 @@ def span_values(limits):
 
 
 def update_document(text, limits):
-    text = render_spans(text, "limits", span_values(limits))
+    text = render_spans(text, "limits", span_values(limits), "docs/LIMITS.md")
     text = replace_block(text, START, END, render(limits))
     return replace_block(text, COVERAGE_START, COVERAGE_END, render_coverage(limits))
 
@@ -319,12 +319,15 @@ def shared_questions(questions_document):
     # guide become internal links in the copy. Everything else is verbatim.
     shared = demoted(shared, "shared questions")
     copied = shared.replace(f"]({GUIDE_NAME}#", "](#")
-    # The replacement must have changed links and nothing else.
+    # The replacement must have changed link targets and nothing else.
+    def shown(document, rewrite):
+        return [[(kind, (value.label, value.image, rewrite(value.target)) if kind in ("link", "image") else value)
+                 for kind, value in inline.pieces] for inline in document.inlines]
+
+    def internal(target):
+        return target[len(GUIDE_NAME):] if target.startswith(GUIDE_NAME + "#") else target
     before, after = markdown_reader.parse(shared), markdown_reader.parse(copied)
-    expected = [link.target[len(GUIDE_NAME):] if link.target.startswith(GUIDE_NAME + "#") else link.target
-                for link in before.links]
-    if ([link.target for link in after.links] != expected or [i.code for i in after.inlines] != [i.code for i in before.inlines]
-            or after.blocks != before.blocks):
+    if shown(after, lambda target: target) != shown(before, internal) or after.blocks != before.blocks:
         raise ValueError(f"shared questions may name {GUIDE_NAME}# only in links")
     return copied
 
@@ -351,6 +354,14 @@ def validate_guide(text, limits):
     """Check the standalone text; never resolve links against repository files."""
     begin, finish = block_bounds(text, GUIDE_START, GUIDE_END)
     copied = text[begin + len(GUIDE_START):finish - len(GUIDE_END)]
+    guide = markdown_reader.parse(text, GUIDE_NAME)
+    if guide.references:
+        raise ValueError("guide must use inline internal links only")
+    markers = {line.strip() for block in guide.blocks if block.kind == "html" for line in block.content.splitlines()}
+    for marker in (GUIDE_START, GUIDE_END, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END, GUIDE_RULES_START, GUIDE_RULES_END,
+                   GUIDE_EXTENSION_START, GUIDE_EXTENSION_END):
+        if marker not in markers:
+            raise ValueError(f"guide marker {marker} must stand on its own line outside code")
     # Each limit's row opens with its title and the id as a code span.
     rows = [row[0] for table in markdown_reader.parse(copied, "copied limits").tables for row in table.rows if row]
     for item in limits:
@@ -373,11 +384,10 @@ def validate_guide(text, limits):
 
     # Match the anchors GitHub gives the guide's headings, including
     # duplicate-heading suffixes, against its internal links.
-    document = markdown_reader.parse(text, GUIDE_NAME)
-    anchors = set(document.anchors)
+    anchors = set(guide.anchors)
     if "limits" not in anchors:
         raise ValueError("guide is missing its Limits heading")
-    for link in document.links:
+    for link in guide.links:
         if link.target.startswith("#") and not link.image and link.target[1:] not in anchors:
             raise ValueError(f"guide has an unresolved internal link: {link.target}")
 
@@ -399,14 +409,14 @@ def main():
         before = path.read_text()
         after = update_document(before, limits)
         contract_before = contract_path.read_text()
-        contract_after = update_contract(render_spans(contract_before, "limits", span_values(limits)), rows)
+        contract_after = update_contract(render_spans(contract_before, "limits", span_values(limits), CONTRACT_NAME), rows)
         # Documents the limits generator touches only through authored spans.
         span_only = {}
         for name in SPAN_DOCUMENTS:
             if name in ("docs/LIMITS.md", "docs/PolicyWitness.md", CONTRACT_NAME):
                 continue
             text = (ROOT / name).read_text()
-            span_only[name] = (text, render_spans(text, "limits", span_values(limits)))
+            span_only[name] = (text, render_spans(text, "limits", span_values(limits), name))
         # Derive the copies from the freshly rendered sources and the FAQ, even
         # when the on-disk tables were stale. Validate every input before any
         # writes. QUESTIONS.md is an input only; it is never rewritten.
@@ -414,7 +424,8 @@ def main():
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
         guide_after = update_guide_rules(update_guide_questions(
-            update_guide(render_spans(guide_before, "limits", span_values(limits)), after), questions), contract_after)
+            update_guide(render_spans(guide_before, "limits", span_values(limits), "docs/PolicyWitness.md"), after), questions),
+            contract_after)
         guide_after = update_guide_extension_statuses(guide_after, contract_after)
         validate_guide(guide_after, limits)
         question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
@@ -425,8 +436,10 @@ def main():
                 + [(name, old, new) for name, (old, new) in span_only.items()]
                 if old != new]
             if stale:
-                detail = "; ".join(problem for text in [before, contract_before, guide_before, *(old for old, _ in span_only.values())]
-                                   for problem in span_problems(text, "limits", span_values(limits)))
+                sources = [("docs/LIMITS.md", before), (CONTRACT_NAME, contract_before), ("docs/PolicyWitness.md", guide_before),
+                           *((name, old) for name, (old, _) in span_only.items())]
+                detail = "; ".join(problem for name, text in sources
+                                   for problem in span_problems(text, "limits", span_values(limits), name))
                 raise ValueError(f"stale {', '.join(stale)}; " + (f"{detail}; " if detail else "")
                                  + "run python3 docs/generate_limits.py")
             if args.stage_guide is not None:

@@ -1028,7 +1028,7 @@ def span_values(manifest):
 
 
 def render_document(text, manifest):
-    text = render_spans(text, "build", span_values(manifest))
+    text = render_spans(text, "build", span_values(manifest), manifest["document"])
     for region in REGIONS:
         text = arch.replace_block(text, REGION_START.format(region=region), REGION_END.format(region=region), RENDERERS[region](manifest))
     return text
@@ -1054,7 +1054,7 @@ def check(root: Path):
     else:
         text = document_path.read_text()
         try:
-            problems.extend(span_problems(text, "build", span_values(manifest)))
+            problems.extend(span_problems(text, "build", span_values(manifest), manifest["document"]))
             if render_document(text, manifest) != text:
                 problems.append(f"{manifest['document']}: generated regions are stale; regenerate")
         except ValueError as error:

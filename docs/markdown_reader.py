@@ -64,14 +64,14 @@ def slug(text):
     return re.sub(r'[^\w -]', '', text.lower()).replace(' ', '-')
 
 
-def plain(children):
+def plain(children, softbreak=' '):
     """The text a reader sees: text, escapes and code content, without markup or HTML."""
     parts = []
     for token in children:
         if token.type in ('text', 'text_special', 'code_inline'):
             parts.append(token.content)
         elif token.type == 'softbreak':
-            parts.append(' ')
+            parts.append(softbreak)
         elif token.type == 'hardbreak':
             parts.append('\n')
     return ''.join(parts)
@@ -212,8 +212,16 @@ class Document:
     def _read(self):
         lists, items, order, row, rows, header = [], [], [], None, None, None
         heading, table, quotes = None, None, 0
+        # A list item's `first` is its paragraph only when that paragraph is the item's first block.
+        fresh, opening = set(), set()
+        blocks = {'paragraph_open', 'heading_open', 'table_open', 'bullet_list_open', 'ordered_list_open',
+                  'blockquote_open', 'fence', 'code_block', 'html_block', 'hr'}
         for token in self.tokens:
             kind = token.type
+            if kind in blocks and items and items[-1] in fresh:
+                fresh.discard(items[-1])
+                if kind == 'paragraph_open':
+                    opening.add(items[-1])
             if kind in ('bullet_list_open', 'ordered_list_open'):
                 lists.append(kind == 'ordered_list_open')
             elif kind in ('bullet_list_close', 'ordered_list_close'):
@@ -224,6 +232,7 @@ class Document:
                 quotes -= 1
             elif kind == 'list_item_open':
                 items.append(len(order))
+                fresh.add(len(order))
                 order.append([lists[-1], token.info, len(lists) - 1, tuple(token.map), None])
             elif kind == 'list_item_close':
                 items.pop()
@@ -250,12 +259,14 @@ class Document:
                 self.inlines.append(inline)
                 self.links.extend(_links(inline))
                 if heading:
-                    text = inline.text.strip()
-                    self.headings.append(Heading(int(heading.tag[1]), text, slug(text), heading.map[0],
-                                                 heading.markup.startswith('#'), inline))
+                    # GitHub drops the line break of a multi-line setext heading from its anchor.
+                    self.headings.append(Heading(int(heading.tag[1]), inline.text.strip(),
+                                                 slug(plain(inline.children, softbreak='\n').strip()),
+                                                 heading.map[0], heading.markup.startswith('#'), inline))
                 elif row is not None:
                     row.append(inline)
-                elif items and order[items[-1]][4] is None:
+                elif items and items[-1] in opening:
+                    opening.discard(items[-1])
                     order[items[-1]][4] = inline
             elif kind == 'heading_close':
                 heading = None
@@ -264,11 +275,16 @@ class Document:
         self.items = [ListItem(*item) for item in order]
 
     def _refuse_unrecognized_comments(self):
+        # GitHub ends an inline comment at the first later "-->"; the pinned parser
+        # leaves a literal "<!--" as text when the comment contains "--".
         for inline in self.inlines:
-            for token in _flatten(inline.children):
-                if token.type == 'text' and '<!--' in token.content:
-                    raise Refused(f'{self.name}:{inline.lines[0] + 1}: markdown-it-py {VERSION} reads an inline '
-                                  'comment containing "--" as text, but GitHub hides it; remove the "--"')
+            tokens = list(_flatten(inline.children))
+            for index, token in enumerate(tokens):
+                start = token.content.find('<!--') if token.type == 'text' else -1
+                rest = token.content[start + 4:] + ''.join(t.content for t in tokens[index + 1:])
+                if start >= 0 and '-->' in rest:
+                    raise Refused(f'{self.name}:{inline.lines[0] + 1}: markdown-it-py {VERSION} reads this inline '
+                                  'comment as text because it contains "--", but GitHub hides it; remove the "--"')
 
     def line_of(self, offset):
         """The zero-based line holding a character offset."""
@@ -320,6 +336,9 @@ def _pieces(inline):
             opening, children = label
             code = [t for t in children if t.type == 'code_inline']
             only_code = len(children) == 1 and len(code) == 1
+            # An image inside a label is an image of its own, as in a linked badge.
+            pieces.extend(('image', Link(unquote(t.attrs.get('src', '')), plain(t.children or ()), None, True,
+                                         False, inline)) for t in children if t.type == 'image')
             pieces.append(('link', Link(unquote(opening.attrs.get('href', '')), plain(children),
                                         code[0].content if only_code else None, False,
                                         opening.markup == 'autolink', inline)))

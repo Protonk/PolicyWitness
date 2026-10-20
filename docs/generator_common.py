@@ -136,7 +136,9 @@ def markdown_symbol(text, symbol, name):
     """A Markdown citation names a region marker, a heading or a code span in a heading."""
     document = markdown_reader.parse(text, name)
     if symbol.startswith(('BEGIN ', 'END ')):
-        return any(f'<!-- {symbol}' in block.content for block in document.blocks if block.kind == 'html')
+        marker = re.compile(rf'<!-- {re.escape(symbol)}(?: \([^)]*\))? -->')
+        return any(marker.fullmatch(line.strip()) for block in document.blocks if block.kind == 'html'
+                   for line in block.content.splitlines())
     return any(symbol == heading.text or symbol in heading.inline.code for heading in document.headings)
 
 
@@ -173,7 +175,7 @@ def region_ranges(text):
     return ranges
 
 
-def authored_spans(text):
+def authored_spans(text, name='<text>'):
     ranges = region_ranges(text)
     def authored(offset):
         return not any(a <= offset < b for a, b in ranges)
@@ -184,19 +186,19 @@ def authored_spans(text):
         raise ValueError('malformed authored span')
     # A line that begins with a marker starts an HTML block, which GitHub renders
     # outside its paragraph without Markdown formatting.
-    document = markdown_reader.parse(text)
+    document = markdown_reader.parse(text, name)
     blocks = [(document.offset(b.lines[0]), document.offset(b.lines[1])) for b in document.blocks if b.kind == 'html']
     for marker in markers:
         if any(a <= marker.start() < b for a, b in blocks):
-            raise ValueError(f'span marker in an HTML block at line {document.line_of(marker.start()) + 1}; '
-                             'start the line with a word')
+            raise ValueError(f'{name}:{document.line_of(marker.start()) + 1}: span marker in an HTML block, which '
+                             'GitHub shows as raw HTML; keep span markers in paragraphs, list items or table cells')
     # A document may state one value in more than one sentence; each span renders.
     return matches
 
 
-def span_problems(text, prefix, values):
+def span_problems(text, prefix, values, name='<text>'):
     problems = []
-    for match in authored_spans(text):
+    for match in authored_spans(text, name):
         if match[1].split('.', 1)[0] != prefix:
             continue
         name = match[1].split('.', 1)[1]
@@ -207,9 +209,9 @@ def span_problems(text, prefix, values):
     return problems
 
 
-def render_spans(text, prefix, values):
-    span_problems(text, prefix, values)  # validate every authored span before any edit
-    for match in reversed(authored_spans(text)):
+def render_spans(text, prefix, values, name='<text>'):
+    span_problems(text, prefix, values, name)  # validate every authored span before any edit
+    for match in reversed(authored_spans(text, name)):
         if match[1].split('.', 1)[0] == prefix:
             text = text[:match.start(2)] + values[match[1].split('.', 1)[1]] + text[match.end(2):]
     return text

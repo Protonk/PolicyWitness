@@ -328,6 +328,18 @@ class BuildDocumentationTests(unittest.TestCase):
                     generator.parse_script(text)
                 self.assertIn(expected, str(context.exception), name)
 
+    def test_readme_inventory_reads_rendered_bullets_only(self):
+        text = (ROOT / 'README.md').read_text()
+        bullet = '  - `Contents/MacOS/sbpl-check` (SBPL compile-check helper)'
+        self.assertEqual(text.count(bullet), 1)
+        paths, services = generator.readme_inventory(text)
+        self.assertIn('Contents/MacOS/sbpl-check', paths)
+        for hidden in ('  <!--\n' + bullet + '\n  -->', '  ```text\n' + bullet + '\n  ```', '  `' + bullet.strip() + '`'):
+            with self.subTest(hidden=hidden):
+                moved, moved_services = generator.readme_inventory(text.replace(bullet, hidden, 1))
+                self.assertEqual(moved, [p for p in paths if p != 'Contents/MacOS/sbpl-check'])
+                self.assertEqual(moved_services, services)
+
     def test_meson_makefile_inventory_and_baseline_mutations_are_named(self):
         manifest = generator.load_manifest(ROOT / generator.MANIFEST_NAME, ROOT)
         model = generator.parse_script(SCRIPT)

@@ -197,8 +197,9 @@ a token back to a character offset or finds one by searching the source.
   - the end of the container, which is a paragraph, heading, list-item
     paragraph or table cell.
 
-  The 240-character limit is measured over the rendered content between the
-  two. The recorded text is built from the tokens as
+  The 240-character limit runs from the start of the code span to the link,
+  over rendered content, as the old limit ran over source text. An inline
+  comment does not hide a sentence end. The recorded text is built from the tokens as
   `` `identifier` … [label](target) `` with the decoded target. The baseline
   holds no `citation_pair` entry and the current scan finds none, so the new
   form changes no entry. The migrated scan must also find none, or the
