@@ -107,6 +107,23 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
 
   The last keeps the three files as committed. When `PW_PYTHON` is missing,
   it fails with a misleading `env: illegal option -- B`.
+- **The resolver's checks run in the default battery.** They establish the
+  central claim, that the ancestry starts directly, and need no app, so they
+  run wherever the battery runs rather than only before a release. The
+  started Python's children against the caller, and the stand-in developer
+  directory for `checkout_lock.sh` and `tests/run.sh`, belong to
+  `preflight/build_provenance_controls`. `build.sh`'s stand-in check sits
+  beside the knob and unknown-argument refusals in
+  [contract.py](tests/suites/source_drift/contract.py)
+  (`source_drift/contract_versions`), which already run `build.sh` in a
+  disposable checkout and which [build.json](docs/build.json) cites for the
+  `admission` step. Both cases then run `sandbox-exec`. Its profile allows
+  only what each script runs before the resolver, so an edit that runs
+  something earlier fails the battery until the profile follows. Inside a
+  restrictive automation sandbox both may need the unsandboxed rerun
+  [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses)
+  describes. The default cases `validator_batch_mode` and
+  `validator_bridge` already use `sandbox-exec`.
 
 ## Approach
 
@@ -125,7 +142,25 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
    worktree `control_lock_lifetime` assembles, `ENTRY_FILES` in
    [contract.py](tests/suites/source_drift/contract.py) and the guide
    checkout in [limits.py](tests/suites/source_drift/limits.py).
-2. **A witness in place of the requests.** `checkout_lock.sh` exports the
+2. **Start the entry points directly.** `checkout_lock.sh` execs
+   `PW_PYTHON` and no longer removes the five variables, so the owner's
+   environment is its caller's. Every `build.sh` Python step uses the
+   resolved interpreter. `tests/run.sh` execs `PW_PYTHON`. It records no
+   witness: cases that build do so through the front end, which records
+   one.
+
+   Other files parse or quote `build.sh`'s Python lines and change with
+   them:
+   - `parse_script` in [generate_build.py](docs/generate_build.py)
+     recognizes a helper invocation only when it starts with
+     `/usr/bin/python3`, and the module docstring says so. Change the
+     generator, then regenerate.
+   - The mutations in [build.py](tests/suites/source_drift/build.py) and the
+     anchors in `build_refusals.py` (`NINJA_GUARD`, `STAMP_CHECK`,
+     `WORKER_IDENTITY`, `CARGO_OUTPUT_CHECK` and `SELF_CHECK_RE`) quote
+     them. `test_opt_in_mutation_anchors_match_current_sources` fails the
+     default battery when an opt-in anchor goes stale.
+3. **A witness in place of the requests.** `checkout_lock.sh` exports the
    five variables' state as it found them: set or unset, and the exact
    value. The executor chooses the encoding. It must distinguish unset from
    empty and keep every byte a variable can hold. Two places compare the
@@ -140,7 +175,7 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
 
    Nothing restores a value. A nested front end records the witness again
    from its own environment.
-3. **Delete the transport.** Remove:
+4. **Delete the transport.** Remove:
    - `Requests` and its options, the admission reply's `requests` member,
      `--build-requests`, `NO_REQUESTS` and `child_env`'s restoration.
      `child_env` keeps dropping stale claims.
@@ -158,21 +193,6 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
    gives a wrong result: a client from before the edit finds no requests
    and its build refuses, and a client from after it ignores the member an
    older owner sends.
-
-   Every `build.sh` Python step uses the resolved interpreter. Other files
-   parse or quote those lines and change with them:
-   - `parse_script` in [generate_build.py](docs/generate_build.py)
-     recognizes a helper invocation only when it starts with
-     `/usr/bin/python3`, and the module docstring says so. Change the
-     generator, then regenerate.
-   - The mutations in [build.py](tests/suites/source_drift/build.py) and the
-     anchors in `build_refusals.py` (`NINJA_GUARD`, `STAMP_CHECK`,
-     `WORKER_IDENTITY`, `CARGO_OUTPUT_CHECK` and `SELF_CHECK_RE`) quote
-     them. `test_opt_in_mutation_anchors_match_current_sources` fails the
-     default battery when an opt-in anchor goes stale.
-4. **Start the dispatcher directly.** `tests/run.sh` sources the resolver
-   and execs `PW_PYTHON`. It records no witness: cases that build do so
-   through the front end, which records one.
 5. **Wrappers.** Give the three wrappers the `env -S` first line. `Checkout`
    in `build_refusals.py` and the setup in `build_guards.py` already build
    every build environment explicitly and strip the five variables. They
@@ -184,10 +204,10 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
    `cargo build` through the forwarders. Extend the forwarders' comparison
    to `SDKROOT`, `CPATH`, `LIBRARY_PATH` and `MANPATH`, and delete the
    comment that explains their absence.
-6. **The provenance controls.**
+6. **Controls.**
    [check_build_provenance.py](tests/suites/preflight/check_build_provenance.py),
    the default case `preflight/build_provenance_controls`, exercises the
-   transport directly:
+   transport directly and changes with it:
    - Its lock tests start the command-line owner as
      `/usr/bin/python3 -B checkout_lock.py --` (`self.launcher`), which now
      refuses without a witness. They start it through the front end
@@ -204,8 +224,18 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
      and the session fixtures that carry `requests` become witness tests:
      the encoding keeps every byte and tells unset from empty, an absent or
      changed witness refuses, and a nested front end records its own.
+   - It gains the resolver's checks for `checkout_lock.sh` and
+     `tests/run.sh`: the started Python's children against the caller, and
+     the stand-in developer directory.
    - The case's description in [catalog.json](tests/catalog.json), which
      says requests survive the Python shim, describes the witness instead.
+
+   `build.sh`'s stand-in check joins the knob and unknown-argument
+   refusals in [contract.py](tests/suites/source_drift/contract.py). In
+   `build_refusals.py`, the witness refusals replace
+   `control_build_requests_missing`, and `control_sdk_requests`' nested
+   case, which reads its owner's requests through `--build-requests`,
+   observes the nested build's own environment instead.
 7. **Drift check.** Add a `source_drift` check. It refuses
    `/usr/bin/python3`, `env python3` and a bare `python3` command in
    `checkout_lock.sh`, `build.sh` and `tests/run.sh`, and requires the
@@ -223,7 +253,8 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
 
    Replace `build_requests_missing` in [build.json](docs/build.json) with
    the witness refusals, add the resolver's refusal at the `admission`
-   step, and regenerate with `docs/generate_build.py`.
+   step with its `contract.py` control, and regenerate with
+   `docs/generate_build.py`.
    [architecture.json](docs/architecture.json) did not describe the request
    payload when this plan was written; confirm that when editing.
 
@@ -231,8 +262,8 @@ running `/usr/bin/env -0` as a child under `env -i` with chosen values:
 
 | Check | Establishes |
 |---|---|
-| The started Python's children against the caller | A check runs the resolver under `env -i` with chosen values: `CPATH` unset, `LIBRARY_PATH` with a space and a trailing newline, `MANPATH` set, no locale, and `__CF_USER_TEXT_ENCODING` set, since Python adds it when it is missing. The environment a child of the started Python reports equals, byte for byte, that of the shell that starts the interpreter after the resolver's two exports. The same through `/usr/bin/python3` differs, so the comparison can fail. |
-| Stand-in developer directory | `build.sh`, `checkout_lock.sh` and `tests/run.sh` with `DEVELOPER_DIR` naming an empty directory refuse, naming it. They run under a profile that denies Mach lookups, so an escaped shim could not reach the installer, and the output never contains "requesting installation". |
+| The started Python's children against the caller | In `build_provenance_controls`, a check runs the resolver under `env -i` with chosen values: `CPATH` unset, `LIBRARY_PATH` with a space and a trailing newline, `MANPATH` set, no locale, and `__CF_USER_TEXT_ENCODING` set, since Python adds it when it is missing. The environment a child of the started Python reports equals, byte for byte, that of the shell that starts the interpreter after the resolver's two exports. The same through `/usr/bin/python3` differs, so the comparison can fail. |
+| Stand-in developer directory | `checkout_lock.sh` and `tests/run.sh` in `build_provenance_controls`, and `build.sh` in `contract_versions`, with `DEVELOPER_DIR` naming an empty directory refuse, naming it. They run under a profile that denies Mach lookups, so an escaped shim could not reach the installer, and the output never contains "requesting installation". |
 | Witness refusals | Each refuses before any write and leaves the session untouched: `/usr/bin/python3 -B tests/lib/checkout_lock.py -- /bin/bash build.sh` with no witness; the same with a witness recording `CPATH` unset, which names `CPATH`; and a build nested under a Python-only owner, at `session-start`. These replace `control_build_requests_missing`. |
 | SDK requests | Every `control_sdk_requests` case records the same requests and sources as now. The nested case shows the nested build using the environment it was started with. The invalid request keeps its contained `xcrun` and its installation assertion. |
 | Forwarders | Compilations receive exactly the build's `CPATH`, `LIBRARY_PATH` and `MANPATH`, unset where the caller had them unset, and the selected `SDKROOT`. A forwarder deliberately started through `/usr/bin/python3` shows the difference, so the comparison can fail. |
