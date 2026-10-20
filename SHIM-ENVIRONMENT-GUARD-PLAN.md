@@ -140,9 +140,24 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 4. **A contained route for probes.** Turn the record's
    [probe.py](records/shim-install-request/probe.py) pattern into a helper
    under `tests/lib/`:
-   - run a command under a profile that denies Mach lookups and limits writes;
-   - refuse to start unless the `dscl` containment check passes;
+   - run a command under a profile owned by the helper, with a fixed blanket
+     `(deny mach-lookup)` and limited writes; callers can only add write paths,
+     not replace or narrow the Mach deny;
+   - refuse to start unless `dscl` succeeds outside, fails inside, and
+     `/usr/bin/true` succeeds inside the same profile;
    - report any request through the detector.
+
+   The successful `/usr/bin/true` establishes that the profile applies and
+   commands can run. Without it, a refusal to apply the profile could make
+   `dscl` and every probe fail before execution, yielding no detected requests
+   from shims that never ran. A failed containment prerequisite stops the
+   helper before it starts the requested command.
+
+   Mach-denial log evidence is not a prerequisite for the helper. Where a
+   control already reads the unified log, record denial evidence matched by
+   PID when available. The fixed blanket deny guards the installation
+   service independently of why `dscl` failed; the opt-in positive control
+   requires evidence that the installation-service lookup itself was denied.
 
    `contained_xcrun` and `fake_developer_dir` use it. Add a line to
    [tests/AGENTS.md](tests/AGENTS.md#sandboxed-automation-harnesses) routing
@@ -153,7 +168,8 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 
 | Check | Establishes |
 |---|---|
-| Detector, positive control (opt-in, beside `control_sdk_unavailable`) | A shim run under the helper with `SDKROOT` naming a missing path is reported as a blocked request, and the log shows the denied lookup. The neighbour with an empty `SDKROOT` is not reported. This is the only check that deliberately makes the shim attempt a request, so it stays out of the default battery. |
+| Containment helper | `dscl` succeeds outside and fails inside the helper's fixed profile, and `/usr/bin/true` succeeds inside it. Rejected controls establish that failure of any prerequisite prevents the requested command from starting, including when the profile cannot be applied. The helper needs no unified-log access to pass its gate. |
+| Detector, positive control (opt-in, beside `control_sdk_unavailable`) | A shim run under the helper with `SDKROOT` naming a missing path is reported as a blocked request, and the log shows the denied installation-service lookup attributed by PID. The neighbour with an empty `SDKROOT` is not reported. This is the only check that deliberately makes the shim attempt a request, so it stays out of the default battery. |
 | Entry points (default battery, with the resolver's checks) | `tests/run.sh --help`, `checkout_lock.sh -- /usr/bin/true` and `build.sh`, with `SDKROOT` naming a missing path and then an unknown name, refuse with status 2 and the new guard's admission diagnostic naming `SDKROOT` and its value. Run under the helper's containment and assert no request is reported. In isolated fixtures, assert no checkout-lock or build-session writes; the dispatcher does not print help, and the build does not reach lock verification, generator checks or SDK selection. An empty `SDKROOT`, `macosx` and the selected SDK path pass admission, with harmless continuations establishing that each entry point reaches its next boundary. |
 | Makefile, command-line request | `make help SDKROOT=<missing path>` and a release target refuse before any recipe, under the same containment, with no request reported. `make build SDKROOT=<selected path>` reaches `build.sh`. |
 | Makefile, inherited request | The developer directory's real make, with an inherited `SDKROOT` naming a missing path, refuses before any recipe under the same containment, with no request reported. Exercise a release target whose first recipe would otherwise start `/usr/bin/python3`. |
