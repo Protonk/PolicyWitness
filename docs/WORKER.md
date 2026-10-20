@@ -19,6 +19,425 @@ owns the meaning of its records.
 
 ## Capability map
 
+The worker begins with process context and prepared reporting storage. Applying
+its compiled policy adds a restriction to that starting state. Subsequent
+attempts acquire their targets and setup resources under the applied policy,
+then publish observations into storage that already exists. The host retains
+its own view of that storage for collection, including after worker exit.
+
+```mermaid
+flowchart TB
+    subgraph worker["Worker"]
+        subgraph before["Before policy application"]
+            context["Credentials, restrictions<br/>and runtime state"]
+            token["Optional token channel<br/>prepared separately"]
+        end
+        policy["Compile policy,<br/>then apply restriction"]
+        context -->|starting context| policy
+        subgraph after["Under the applied policy"]
+            acquire["Attempt acquisitions:<br/>file targets, Mach rights,<br/>exec setup and children"]
+            extension["Requested extension<br/>consume or release"]
+        end
+        policy -->|after release| after
+        token -->|bearer bytes for consume| extension
+    end
+    storage["Reporting storage prepared before apply<br/>Worker and host retain separate views"]
+    subgraph outside["Outside the worker"]
+        validator["Validator queries<br/>the live worker"]
+        host["Host collects publications<br/>and assembles comparisons"]
+        controller["Controller associates<br/>external log candidates"]
+    end
+    acquire -->|publish observations| storage
+    extension -->|publish native results| storage
+    storage -->|host observes retained view| host
+    validator -->|predictions| host
+    host -->|run evidence| controller
+```
+
+This is a conceptual overview; the [detailed capability inventory](#detailed-capability-inventory)
+keeps the individual resources, lifetimes and supporting citations. The diagram
+shows alternative admitted experiments: exec attempts cannot share a specimen
+with extension use. Token delivery precedes requested consumption; it does not
+consume the token. Fresh reads acquire a new descriptor at each requested point,
+including before consumption, during use and after release.
+
+The host closes validator collection before releasing the worker to attempt a
+phase; the worker receives the release ordinal, while predictions stay outside
+it. The [ordering account](ARCHITECTURE.md#one-run-in-time) explains that hold
+and the evidence needed to establish it.
+
+## What the worker can establish
+
+The worker performs admitted actions and publishes native observations. Its
+inputs include attempt kinds and targets, bounded arguments, phase partitions
+and time allowances; requested extension actions maintain local handle state.
+Prediction belongs to the validator. The host owns disposition, collection and
+comparison, and the controller gathers log candidates. Those responsibilities
+are a deliberate division of work, not observations the worker failed to make.
+
+The observations themselves have limits. Native return values and local
+publications do not establish private kernel extension state, effective
+permissions, revocation or the cause of a permission-shaped failure. Joining
+host observations and log candidates to a result does not automatically justify
+causal attribution or a verdict that prediction and enforcement agree. The
+[evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
+and [comparison contract](PolicyWitness.md#reading-a-comparison-record)
+define those boundaries.
+
+A native effect and a published result are also distinct. A call can create a
+file before the worker dies without publishing its result; the host must then
+withhold that result even though an independent observer can find the file.
+[Native observations and publications](#native-observations-and-publications)
+explains the publication boundary and its create-then-kill control.
+
+Other omissions are gaps in measurement. A complete initial Mach-right census
+and a live signal-mask observation are absent from the available launch evidence.
+That absence does not make these facts fundamentally unknowable or exclude them
+from future investigation. The local caveats below distinguish unmeasured
+starting state from what the recorded native results cannot establish.
+
+## Reporting apparatus
+
+The host's [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) creates
+an evidence object, requests its immediate unlink, sizes and maps it, initializes
+the request and touches its pages. The worker's
+[`map_region`](../controller/tools/pw_probe_runner/pw_probe_runner.c) maps the
+received descriptor before compilation. The mapping holds request data,
+publication payloads and atomic control fields. The host's mapping remains
+available during collection even when worker cleanup is unconfirmed. The
+[C harness](../tests/suites/runner_c_worker_harness/README.md) checks publication
+under its bare-deny and full-region cases.
+
+The worker retains its evidence descriptor as well as the mapping. Its policy
+input and readiness descriptors also stay open until exit. Policy EOF ends
+source delivery and the host closes its readiness reader after the wait, while
+the worker's references remain. Results are published through mapped memory.
+The ready pipe serves readiness, and the policy pipe supplies source bytes.
+[Launch observation L](#launch-observation-l) saw those endpoints in its two
+separate empty allow-default launches, one at each selected observation window.
+
+Request, result and token storage have fixed capacities from the
+[limits inventory](LIMITS.md). The policy buffer and consumed-parameter snapshot
+are static worker storage. Temporary frames hold timing arithmetic, hash state,
+argv pointers and diagnostics. Host-side Swift arrays and copied launch strings
+remain host allocations; spawn copies argument contents into the new image.
+The worker checks the received source length and bounded fields, then passes
+the policy and parameter snapshot to libsandbox. Its compiled-object path is
+[`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) →
+[`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h)
+when requested → application. PW explicitly frees the parameter object and a
+returned compile-error string on the corresponding paths. The compiled profile
+has no explicit PW destruction call; ownership changes inside the private apply
+routine remain unobserved.
+
+The optional compiler receipt uses the already mapped evidence region and reads
+worker memory before apply. The host
+[`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) validates
+and copies the published receipt. Its relation to compiled bytes, application
+and effective permissions is defined by the
+[receipt contract](PolicyWitness.md#compiled-object-receipt-opt-in).
+
+## Starting authority and ambient context
+
+A worker starts with the authority and restrictions of its credentials, signed
+image and inherited context. Built-in workers carry empty entitlements; external
+runners supply a separately signed worker, whose read-back entitlements are
+checked against the specimen's required keys by
+[`enforce_required_entitlements`](../controller/src/runner_select.rs).
+The [external-runner guide](PolicyWitness.md#external-runners-byoxpc) and
+[signing reference](SIGNING.md#evidence-artifacts) own that selection and identity
+account. Applying SBPL adds the specimen restriction to this starting state.
+Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
+change the submitted policy and are recorded as such.
+
+PW does not determine whether privacy consent mediation affected a worker
+attempt. A recorded error or timeout leaves that question unresolved. The
+[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
+target-selection guidance for this limitation.
+
+Host spawn actions select the policy, evidence and readiness endpoints, plus
+the optional token endpoint. The worker launch uses nil spawn attributes and
+leaves other descriptors to native close-on-exec inheritance. Its standard
+output/error are inherited, and the evidence descriptor can also survive under
+its original number if later file actions leave that number intact. The host
+passes nil envp. The examined Apple
+[spawn wrapper](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/libsyscall/wrappers/spawn/posix_spawn.c)
+forwards that pointer and the examined
+[exec path](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_exec.c)
+constructs an empty environment. In its two recorded empty allow-default
+launches, [L](#launch-observation-l) found matching plain and
+environment-displaying process output, inherited null-device standard
+output/error, and the expected protocol endpoints. This observation is separate
+from the source account of inheritance. The contaminated-worker control
+separately establishes a configuration in which an extra descriptor and
+environment value reach the worker.
+
+The worker inherits cwd, umask, limits and signal state. It ignores SIGPIPE
+before compilation. Exec-child setup selects descriptor isolation and a new
+process group, while leaving ignored-signal inheritance and the signal mask to
+native spawn rules. Its empty environment and selected standard descriptors
+have independent [inheritance controls](../tests/suites/runner_exec_inheritance/README.md).
+The observer used by those controls itself ignores SIGPIPE, so that observation
+covers environment and descriptors. For an extension request, preparation sets
+both core limits to zero after resolving the private entry points; local failure
+is recorded. Public admission in
+[`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
+refuses an exec attempt combined with extension use.
+
+Host launch setup has unchecked native returns: file-action initialization and
+worker endpoint duplication, evidence unlink/descriptor flags, issuer handle
+initialization and copied-argument allocation. The source specifies the actions
+requested; a successful normal launch observes one completed path. These
+unchecked paths are visible in
+[`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift),
+[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) and
+[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift).
+The [host setup controls](../tests/suites/runner_unit/README.md#host-setup-failures-and-descriptor-collisions)
+exercise these boundaries in disposable source copies with an independent child
+observer. Injected worker action-add failures allow a child to run with a wrong
+endpoint; failed argument copies allow empty or truncated argv. Injected unlink
+failures leave shared-memory names after owner teardown. The checked worker
+pipe-flag and issuer action/attribute-flag failures prevent spawn and clean up
+in the exercised cases. After a failed handle initialization, the fixture
+adapters record subsequent invalid-handle uses and return EINVAL. Their receipts
+record the host control flow through those adapter calls.
+
+Descriptor order also matters without injected native failure. The
+low-descriptor fixture deliberately closes stdin and low unused descriptors
+before exercising launch setup. In that configuration, evidence is allocated at
+fd 0. The policy action overwrites it before the evidence action reads that
+number: the child receives a policy pipe at fd 3. Its readiness source equals
+its destination and remains close-on-exec in this observation, leaving fd 4
+absent. The issuer's separate high-duplicate control preserves its channel under
+the exercised low-descriptor arrangement.
+
+Known gap: [L](#launch-observation-l) is bounded to its two recorded launch
+configurations. It records descriptors, process identity, cwd, displayed
+arguments/environment and VM regions. Task-port inspection was refused; live
+signal masks, resource limits, a complete Mach-right census and private runtime
+state remain unobserved. Native inheritance and loader behavior therefore form
+part of the instrument's received substrate, without a complete isolation or
+effective-authority census.
+
+### Launch observation L
+
+The [launch-inventory case](../tests/suites/runner_exec_inheritance/README.md#production-launch-inventory-opt-in)
+observed two separate workers with empty allow-default plans, no extensions and
+no validator queries. Existing pre-ready and post-apply sleep overrides selected
+the two observation windows. Source order, selected controls and elapsed time
+locate the observations; the observer did not read publication flags live.
+Both captures showed numeric descriptors 0–4, read/write null-device stdout/stderr,
+cwd `/`, and identical plain and environment-displaying `ps` output. `vmmap`
+returned an inventory; `lsmp` refused task-port inspection. Both workers later
+published completion and were reaped; the pre-ready worker reported readiness
+`EPIPE` after the host's readiness wait expired.
+
+These are observations of the recorded app and those two launch configurations.
+They do not measure a transition within one process, establish an empty Mach-right
+set or identify an unnamed mapping as the reporting object. Extension-bearing
+workers, deny-policy acquisitions, live signal state, umask and resource limits
+were outside the observation.
+
+[L's receipt](worker-launch-observation.json) identifies run
+`20261018T223601Z_85d8418b`, executed from revision
+`f85c7b094d75bf72931cd4856cb4ad086da20cbe` against the signed app accepted with
+runtime implementation `a458b28`. The app's own build stamp remains
+`v0.3.1-39-g6380645-dirty`; its inventory matches that accepted app. Worker source
+identity is
+`4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8`.
+The receipt retains the command, specimens, source hashes, selected raw captures,
+final worker evidence and hashes of the original artifacts. Complete raw output
+is local, gitignored evidence in the pinned run named by the receipt.
+
+Reuse for another implementation or environment requires an applicability
+review or a new observation. Source/hash equality establishes identity, not that
+all relevant conditions were exercised. L is not a new observation of the current
+checkout.
+
+## Acquisitions inside attempts
+
+File targets are opened inside their requested actions. The distinctions among
+those actions determine what is observed:
+
+| Action | Call and retained observation |
+| --- | --- |
+| [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens read-only. The open result determines the published attempt status. On successful open, records an available descriptor-path observation, attempts a one-byte read and close, and discards those latter returns. |
+| [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens with `O_WRONLY \| O_TRUNC`. The open result determines the published attempt status. On successful open, attempts to write `x` and close and discards their returns. |
+| [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens with `O_WRONLY \| O_CREAT` and mode argument `0600`, subject to inherited umask. Existing targets are opened without truncation; missing targets can be created. Close is attempted and its return discarded. |
+| [`attempt_file_read_fresh`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens a fresh close-on-exec descriptor and retains open, metadata, bounded read and single-close results, including partial native evidence when a later call fails. |
+
+The [existing-file control](../tests/suites/witness_contract/README.md#create-on-an-existing-file)
+checks preserved bytes and object identity in its case. The
+[fresh-read contract](PolicyWitness.md#extension-and-fresh-read-output) defines
+which native observations and bounded bytes reach the reply.
+
+Exec setup is also inside the attempt, after apply.
+[`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+creates the output pipes and initializes opaque spawn handles, checks setup
+results and calls cleanup for initialized resources on failure. The examined Apple
+[spawn implementation](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/libsyscall/wrappers/spawn/posix_spawn.c)
+allocates both handles and can grow action storage. That is a published-source
+account; allocation events in the installed libraries were unobserved. PW's
+post-apply diagnostics also call libc formatting and error-string routines into
+fixed destinations. The examined
+[formatting implementation](https://github.com/apple-oss-distributions/Libc/blob/71bbe350ab79eef58113991d817ccc6165061a64/stdio/FreeBSD/vfprintf.c)
+and [error-string implementation](https://github.com/apple-oss-distributions/Libc/blob/71bbe350ab79eef58113991d817ccc6165061a64/string/FreeBSD/strerror.c)
+have path-dependent internal behavior, including a retained fallback error
+buffer. Runtime allocator, locale and binding behavior remain unobserved at
+these call sites.
+
+The [per-attempt resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt)
+exercise a descriptor ceiling and a bare-deny setup path. The ceiling checks
+reuse across attempts; the denying case observes setup reaching spawn for its
+profile and environment. Source establishes post-apply placement. The child
+receives explicit null-device stdin, captured stdout/stderr, an empty environment
+and a new process group. PW drains output and observes the leader under the
+[execution budgets](LIMITS.md#execution-budgets). A nonzero child exit after
+successful spawn still supplies spawn evidence; the
+[exec action contract](PolicyWitness.md#attempt-kinds-the-runner-implements)
+keeps spawn, child exit and cleanup meanings separate.
+
+[`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+retains leader ownership during observation and targets its process group for
+exceptional cleanup. The optional `exec_observation` records the collection
+snapshot before cleanup, actual group/fallback call results and the final leader
+wait separately, behind slot publication. Pending or failed waits have no status;
+clock faults and local deadlines do not fabricate native errno. Missing metadata
+establishes no cleanup fact. Worker death can interrupt cleanup; the host
+supervises the worker. The [lifecycle controls](../tests/suites/runner_exec_lifecycle/README.md)
+observe the exercised leader/descendant paths independently.
+
+Known gap: exec descendants can outlive later steps and worker exit. Ordinary
+completion requests no termination, so same-group descendants that close their
+streams can survive; worker death can also leave descendants alive. Exceptional
+cleanup requests target the owned group, but descendants that leave it escape
+those requests. Signal returns, EOF and leader reap do not establish group absence.
+
+Mach lookup acquires a bootstrap send-right reference, then a service right on
+successful lookup. [`attempt_mach_lookup`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+attempts to deallocate the service right and leaves the acquired bootstrap
+reference until process exit, including after lookup failure and repeated
+attempts. This lifetime is source-established; a live right-count measurement
+is absent. [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+uses an attempt-local stack buffer and publishes call status, discarding the
+returned sysctl value. The inventory includes that buffer among local working
+storage. Unlink and access calls acquire no PW-owned target handle at their
+call sites.
+
+## Supplied extension authority
+
+An extension experiment supplies additional authority deliberately. The host
+resolves the target and records its metadata, then a fresh ordinary-authority
+issuer requests a native file token. The issuer and host have their own channel
+views, separate from worker evidence. Host delivery requires bounded accepted
+issuance and confirmed clean issuer reaping.
+[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
+owns that preparation and its later host erasure.
+
+The worker's [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+resolves consume/release symbols before apply, changes the core limit on the
+prepared path, maps and validates the optional channel, and attempts to close
+its descriptor once. Early main refusals can precede that preparation. Accepted
+token bytes remain a borrowed view of the shared mapping. Requested consume and
+release calls occur in
+[`attempt_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c),
+inside an attempt after apply. The static handle carries state across actions
+and phases; a native result other than the consume failure sentinel establishes
+the handle used by a later requested release.
+
+Worker erasure occurs when preparation rejects a mapped channel, after the
+consume decision on paths reaching that cleanup, before the post-phase test
+seams, and on every ordinary departure after a channel has been accepted.
+[`erase_accepted_token`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+clears the full fixed buffer, including bytes beyond the token's terminating NUL.
+Terminal paths erase before releasing `done`; cancellation and early returns
+erase without adding publications. Fatal termination or an interrupted native
+call need not reach cleanup. Erasure does not call native extension release.
+The accepted mapping remains until exit. The host separately erases its channel
+before reply preparation and again at session destruction; its observation
+belongs to the host. In issuer [`main`](../controller/tools/pw_probe_runner/pw_extension_issuer.c),
+bounded length inspection governs copying and erasure before free. An oversized
+token is rejected and that inspected prefix is erased; the allocation extent
+beyond the bound is unobserved.
+
+Fresh reads obtain a new descriptor at each requested action, so before-consume,
+during-use and after-release reads each test fresh acquisition at that point.
+The worker publishes the native release result and any subsequent requested
+read observations. The [extension checks](../tests/suites/witness_contract/check_extensions.py)
+accept either result for the after-release read and verify returned content
+when successful. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
+defines the limits of native results and local publication.
+
+Known gap: private extension calls may allocate or retain internal state that PW
+cannot inspect. Erasure observations cover PW-owned transient buffers; successful
+native results and phase progress do not establish kernel extension state,
+stable identity, effective permissions or access revocation.
+
+## Native observations and publications
+
+A native call can complete before the worker publishes the attempt slot.
+[`pw_progress`](../controller/tools/pw_probe_runner/pw_worker_evidence.h)
+records the latest atomic milestone, while
+[`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+releases the completed slot after writing its payload. The host reads completed
+payload after observing publication. The
+[create-then-kill control](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication)
+independently observes the created file while requiring the reply to withhold
+the unpublished result. Partially written payload remains outside the evidence
+the host is entitled to decode. Native call-boundary flags and result publication
+have the meanings in the [worker evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract).
+
+The worker's release wait uses atomic fields, continuous-clock samples and local
+arithmetic/text. Refusal erases an accepted token buffer, publishes `done` and
+exits; cancellation erases and exits without adding `done` or acknowledgement.
+After the phase loop it erases a delivered token and runs any selected post-phase
+seam. [`publish_done_and_exit`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+then erases, releases `done` and calls `_exit(0)` without waiting for the host.
+The host retains its evidence mapping after worker exit and independently
+observes reaping. Its exit request still cancels a worker waiting for release;
+grace and termination remain fallback cleanup. These paths use existing storage
+and automatic frames. Explicit PW dynamic acquisitions after
+apply are concentrated in the attempted operations; the source-level inventory
+ends at native/library call boundaries whose internals remain unobserved.
+
+The host plans validator queries in no-report mode and closes collection before
+releasing the worker. The [ordering account](ARCHITECTURE.md#one-run-in-time)
+and [ordering evidence states](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states)
+define eligibility for `query_first`. Earlier actions and external actors can
+change conditions before a later attempt, even with an intact release hold.
+Unqualified raw query records remain available after a refusal; they do not
+establish whether each native call encountered a live target. A phase's valid
+collection/release/acknowledgement chain establishes historical worker lifetime
+through collection even when the worker later exits abnormally without `done`.
+The worker receives the release ordinal; the host retains the predictions and
+assembles comparisons. Later path diagnostics come from the host, and log
+candidates and dossiers from the controller. The
+[evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
+and [comparison contract](PolicyWitness.md#reading-a-comparison-record) define
+what those observations mean, including object-identity and causal limits.
+
+## Changes that change the experiment
+
+A proposed improvement can move authority or an observation across a boundary.
+These examples connect the implementation choice to the question being tested.
+
+| Proposed change | Effect on the question | Current behavior and evidence |
+| --- | --- | --- |
+| Open a file target before apply or retain a read descriptor across extension phases | Exercises previously acquired authority | Fresh-read source and [extension controls](../tests/suites/witness_contract/README.md#native-extension-boundaries) put each acquisition inside its requested action. |
+| Prepare exec pipes and handles before apply | Moves setup outside the specimen's applied conditions | Per-attempt acquisition and [resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt) retain that exposure. |
+| Consume a token during preparation or put its bytes in the evidence region | Moves the authority intervention earlier or gives reporting storage bearer authority | Preparation resolves symbols; the separate channel and requested lifecycle calls are covered by the [native boundary controls](../tests/suites/witness_contract/README.md#native-extension-boundaries). |
+| Retry with a changed target, extra authority or a friendlier policy, or reuse a worker for another specimen | Substitutes different experimental conditions | The driver launches a fresh worker for the submitted specimen. Interrupted I/O and process-observation loops retry within their existing protocols. |
+| Insert `exec_baseline` automatically | Changes the tested policy, including its broad file-read allowance | [Augment composition](../runner/augments/README.md#exec_baseline-composition-limits) is explicit and recorded in resolved source. |
+| Move reply assembly into the worker | Couples reporting to specimen-controlled communication | The host reads released payload; [death before publication](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication) preserves an independently observed effect with a withheld result. |
+
+Removing the collection hold would also let worker effects change what
+supposedly prior queries observe. The
+[ordering controls](../tests/suites/witness_contract/README.md#predictions-before-attempts)
+observe both the hold and its limited snapshot meaning. The relevant design
+choice is which authority and observation belong on each side of the boundary.
+
+## Detailed capability inventory
+
 The figure and expandable inventory are generated from
 [architecture.json](architecture.json). Each S/N node preserves a resource
 entry; X nodes represent external evidence. The facts distinguish an object
@@ -48,9 +467,10 @@ observation path. Open the SVG at its native size to read the complete map.
 
 In the table, H is the host, W the worker, E the host's extension session and I
 the issuer. P means reporting apparatus, A supplied authority or restriction,
-and O operation acquisitions. [L](#launch-observation-l) identifies a recorded
-production launch observation and its applicability;
-IC and CLI are the contaminated-worker and ordinary exec-child controls in the
+and O operation acquisitions. Every use of L in the inventory refers to the
+[two recorded launch configurations](#launch-observation-l), with their stated
+applicability limits; it does not describe every current worker. IC and CLI are
+the contaminated-worker and ordinary exec-child controls in the
 [inheritance suite](../tests/suites/runner_exec_inheritance/README.md).
 Acquisition periods record call-site placement, including outputs acquired on
 compilation return. Check citations name the particular assertion supporting a
@@ -58,10 +478,8 @@ fact; other implementation details retain source-only support. Policy-specific
 outcomes belong to their stated specimens and observation conditions. Call-site
 completeness is established by source review, not by citation checks.
 [Runner guidance](../runner/AGENTS.md#reviewing-a-new-capability) describes the
-review procedure. Process
-exit reclaims that process's
-remaining references; created files and references held by other processes have
-their own lifetimes.
+review procedure. Process exit reclaims that process's remaining references;
+created files and references held by other processes have their own lifetimes.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH worker_capabilities -->
 ![Worker capabilities](worker-capabilities.svg)
@@ -264,347 +682,6 @@ Claims without a cited check: `s14c`, `s16a`, `s16h`, `s16c`, `s16i`, `s16j`, `s
 
 </details>
 <!-- END GENERATED ARCHITECTURE GRAPH worker_capabilities -->
-
-## Launch observation L
-
-[L's receipt](worker-launch-observation.json) identifies run
-`20261018T223601Z_85d8418b`, executed from revision
-`f85c7b094d75bf72931cd4856cb4ad086da20cbe` against the signed app accepted with
-runtime implementation `a458b28`. The app's own build stamp remains
-`v0.3.1-39-g6380645-dirty`; its inventory matches that accepted app. Worker source
-identity is
-`4cb19db043606894ace2e978434f8805edf4c79245f3588cc68a33b36deca9e8`.
-The receipt retains the command, specimens, source hashes, selected raw captures,
-final worker evidence and hashes of the original artifacts. Complete raw output
-is local, gitignored evidence in the pinned run named by the receipt.
-
-The [launch-inventory case](../tests/suites/runner_exec_inheritance/README.md#production-launch-inventory-opt-in)
-observed two separate workers with empty allow-default plans, held by existing
-pre-ready and post-apply sleep overrides. Source order, selected controls and
-elapsed time locate the observations; the observer did not read publication
-flags live. Both captures showed numeric descriptors 0–4, read/write null-device
-stdout/stderr, cwd `/`, and identical plain and environment-displaying `ps`
-output. `vmmap` returned an inventory; `lsmp` refused task inspection. Both
-workers later published completion and were reaped; the pre-ready worker
-reported readiness `EPIPE` after the host's readiness wait expired.
-
-These observations apply to this app and these two launch configurations after
-the accepted refactors. They do not measure changes within one process or
-identify an unnamed mapping as the reporting object. Extension-bearing workers,
-deny-policy acquisitions, signal state, umask and resource limits were outside
-the observation. Reuse after a change to launch, worker or observer behavior
-requires an applicability review or a new observation; source identity alone
-does not establish that the relevant condition was exercised.
-
-## Reporting apparatus
-
-The host's [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift) creates
-an evidence object, requests its immediate unlink, sizes and maps it, initializes
-the request and touches its pages. The worker's
-[`map_region`](../controller/tools/pw_probe_runner/pw_probe_runner.c) maps the
-received descriptor before compilation. The mapping holds request data,
-publication payloads and atomic control fields. The host's mapping remains
-available during collection even when worker cleanup is unconfirmed. The
-[C harness](../tests/suites/runner_c_worker_harness/README.md) checks publication
-under its bare-deny and full-region cases.
-
-The worker retains its evidence descriptor as well as the mapping. Its policy
-input and readiness descriptors also stay open until exit. Policy EOF ends
-source delivery and the host closes its readiness reader after the wait, while
-the worker's references remain. Results are published through mapped memory.
-The ready pipe serves readiness, and the policy pipe supplies source bytes.
-The production launch observation saw those endpoints before and after apply
-under its allow-default specimen.
-
-Request, result and token storage have fixed capacities from the
-[limits inventory](LIMITS.md). The policy buffer and consumed-parameter snapshot
-are static worker storage. Temporary frames hold timing arithmetic, hash state,
-argv pointers and diagnostics. Host-side Swift arrays and copied launch strings
-remain host allocations; spawn copies argument contents into the new image.
-The worker checks the received source length and bounded fields, then passes
-the policy and parameter snapshot to libsandbox. Its compiled-object path is
-[`main`](../controller/tools/pw_probe_runner/pw_probe_runner.c) →
-[`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h)
-when requested → application. PW explicitly frees the parameter object and a
-returned compile-error string on the corresponding paths. The compiled profile
-has no explicit PW destruction call; ownership changes inside the private apply
-routine remain unobserved.
-
-The optional compiler receipt uses the already mapped evidence region and reads
-worker memory before apply. The host
-[`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) validates
-and copies the published receipt. Its relation to compiled bytes, application
-and effective permissions is defined by the
-[receipt contract](PolicyWitness.md#compiled-object-receipt-opt-in).
-
-## Starting authority and ambient context
-
-A worker starts with the authority and restrictions of its credentials, signed
-image and inherited context. Built-in workers carry empty entitlements; external
-runners supply a separately signed worker, whose read-back entitlements are
-checked against the specimen's required keys by
-[`enforce_required_entitlements`](../controller/src/runner_select.rs).
-The [external-runner guide](PolicyWitness.md#external-runners-byoxpc) and
-[signing reference](SIGNING.md#evidence-artifacts) own that selection and identity
-account. Applying SBPL adds the specimen restriction to this starting state.
-Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
-change the submitted policy and are recorded as such.
-
-PW does not determine whether privacy consent mediation affected a worker
-attempt. A recorded error or timeout leaves that question unresolved. The
-[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
-target-selection guidance for this limitation.
-
-Host spawn actions select the policy, evidence and readiness endpoints, plus
-the optional token endpoint. The worker launch uses nil spawn attributes and
-leaves other descriptors to native close-on-exec inheritance. Its standard
-output/error are inherited, and the evidence descriptor can also survive under
-its original number if later file actions leave that number intact. The host
-passes nil envp. The examined Apple
-[spawn wrapper](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/libsyscall/wrappers/spawn/posix_spawn.c)
-forwards that pointer and the examined
-[exec path](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/kern/kern_exec.c)
-constructs an empty environment. The recorded production launch case used an
-empty allow-default specimen. Its observation found matching plain and
-environment-displaying process output, inherited null-device standard
-output/error, and the expected protocol endpoints. The contaminated-worker
-control separately establishes a configuration in which an extra descriptor
-and environment value reach the worker.
-
-The worker inherits cwd, umask, limits and signal state. It ignores SIGPIPE
-before compilation. Exec-child setup selects descriptor isolation and a new
-process group, while leaving ignored-signal inheritance and the signal mask to
-native spawn rules. Its empty environment and selected standard descriptors
-have independent [inheritance controls](../tests/suites/runner_exec_inheritance/README.md).
-The observer used by those controls itself ignores SIGPIPE, so that observation
-covers environment and descriptors. For an extension request, preparation sets
-both core limits to zero after resolving the private entry points; local failure
-is recorded. Public admission in
-[`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
-refuses an exec attempt combined with extension use.
-
-Host launch setup has unchecked native returns: file-action initialization and
-worker endpoint duplication, evidence unlink/descriptor flags, issuer handle
-initialization and copied-argument allocation. The source specifies the actions
-requested; a successful normal launch observes one completed path. These
-unchecked paths are visible in
-[`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift),
-[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) and
-[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift).
-The [host setup controls](../tests/suites/runner_unit/README.md#host-setup-failures-and-descriptor-collisions)
-exercise these boundaries in disposable source copies with an independent child
-observer. Injected worker action-add failures allow a child to run with a wrong
-endpoint; failed argument copies allow empty or truncated argv. Injected unlink
-failures leave shared-memory names after owner teardown. The checked worker
-pipe-flag and issuer action/attribute-flag failures prevent spawn and clean up
-in the exercised cases. After a failed handle initialization, the fixture
-adapters record subsequent invalid-handle uses and return EINVAL. Their receipts
-record the host control flow through those adapter calls.
-
-Descriptor order also matters without injected native failure. The
-low-descriptor fixture deliberately closes stdin and low unused descriptors
-before exercising launch setup. In that configuration, evidence is allocated at
-fd 0. The policy action overwrites it before the evidence action reads that
-number: the child receives a policy pipe at fd 3. Its readiness source equals
-its destination and remains close-on-exec in this observation, leaving fd 4
-absent. The issuer's separate high-duplicate control preserves its channel under
-the exercised low-descriptor arrangement.
-
-Known gap: the starting-state observation is bounded to the exercised launch
-configuration. It records descriptors, process identity, cwd, displayed
-arguments/environment and VM regions. Task-port inspection was refused; live
-signal masks, resource limits, a complete Mach-right census and private runtime
-state remain unobserved. Native inheritance and loader behavior therefore form
-part of the instrument's received substrate, without a complete isolation or
-effective-authority census.
-
-## Acquisitions inside attempts
-
-File targets are opened inside their requested actions. The distinctions among
-those actions determine what is observed:
-
-| Action | Call and retained observation |
-| --- | --- |
-| [`attempt_file_open_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens read-only. The open result determines the published attempt status. On successful open, records an available descriptor-path observation, attempts a one-byte read and close, and discards those latter returns. |
-| [`attempt_file_open_write`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens with `O_WRONLY \| O_TRUNC`. The open result determines the published attempt status. On successful open, attempts to write `x` and close and discards their returns. |
-| [`attempt_file_create`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens with `O_WRONLY \| O_CREAT` and mode argument `0600`, subject to inherited umask. Existing targets are opened without truncation; missing targets can be created. Close is attempted and its return discarded. |
-| [`attempt_file_read_fresh`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | Opens a fresh close-on-exec descriptor and retains open, metadata, bounded read and single-close results, including partial native evidence when a later call fails. |
-
-The [existing-file control](../tests/suites/witness_contract/README.md#create-on-an-existing-file)
-checks preserved bytes and object identity in its case. The
-[fresh-read contract](PolicyWitness.md#extension-and-fresh-read-output) defines
-which native observations and bounded bytes reach the reply.
-
-Exec setup is also inside the attempt, after apply.
-[`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-creates the output pipes and initializes opaque spawn handles, checks setup
-results and calls cleanup for initialized resources on failure. The examined Apple
-[spawn implementation](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/libsyscall/wrappers/spawn/posix_spawn.c)
-allocates both handles and can grow action storage. That is a published-source
-account; allocation events in the installed libraries were unobserved. PW's
-post-apply diagnostics also call libc formatting and error-string routines into
-fixed destinations. The examined
-[formatting implementation](https://github.com/apple-oss-distributions/Libc/blob/71bbe350ab79eef58113991d817ccc6165061a64/stdio/FreeBSD/vfprintf.c)
-and [error-string implementation](https://github.com/apple-oss-distributions/Libc/blob/71bbe350ab79eef58113991d817ccc6165061a64/string/FreeBSD/strerror.c)
-have path-dependent internal behavior, including a retained fallback error
-buffer. Runtime allocator, locale and binding behavior remain unobserved at
-these call sites.
-
-The [per-attempt resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt)
-exercise a descriptor ceiling and a bare-deny setup path. The ceiling checks
-reuse across attempts; the denying case observes setup reaching spawn for its
-profile and environment. Source establishes post-apply placement. The child
-receives explicit null-device stdin, captured stdout/stderr, an empty environment
-and a new process group. PW drains output and observes the leader under the
-[execution budgets](LIMITS.md#execution-budgets). A nonzero child exit after
-successful spawn still supplies spawn evidence; the
-[exec action contract](PolicyWitness.md#attempt-kinds-the-runner-implements)
-keeps spawn, child exit and cleanup meanings separate.
-
-[`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-retains leader ownership during observation and targets its process group for
-exceptional cleanup. The optional `exec_observation` records the collection
-snapshot before cleanup, actual group/fallback call results and the final leader
-wait separately, behind slot publication. Pending or failed waits have no status;
-clock faults and local deadlines do not fabricate native errno. Missing metadata
-establishes no cleanup fact. Worker death can interrupt cleanup; the host
-supervises the worker. The [lifecycle controls](../tests/suites/runner_exec_lifecycle/README.md)
-observe the exercised leader/descendant paths independently.
-
-Known gap: exec descendants can outlive later steps and worker exit. Ordinary
-completion requests no termination, so same-group descendants that close their
-streams can survive; worker death can also leave descendants alive. Exceptional
-cleanup requests target the owned group, but descendants that leave it escape
-those requests. Signal returns, EOF and leader reap do not establish group absence.
-
-Mach lookup acquires a bootstrap send-right reference, then a service right on
-successful lookup. [`attempt_mach_lookup`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-attempts to deallocate the service right and leaves the acquired bootstrap
-reference until process exit, including after lookup failure and repeated
-attempts. This lifetime is source-established; a live right-count measurement
-is absent. [`attempt_sysctl_read`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-uses an attempt-local stack buffer and publishes call status, discarding the
-returned sysctl value. The inventory includes that buffer among local working
-storage. Unlink and access calls acquire no PW-owned target handle at their
-call sites.
-
-## Supplied extension authority
-
-An extension experiment supplies additional authority deliberately. The host
-resolves the target and records its metadata, then a fresh ordinary-authority
-issuer requests a native file token. The issuer and host have their own channel
-views, separate from worker evidence. Host delivery requires bounded accepted
-issuance and confirmed clean issuer reaping.
-[`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift)
-owns that preparation and its later host erasure.
-
-The worker's [`prepare_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-resolves consume/release symbols before apply, changes the core limit on the
-prepared path, maps and validates the optional channel, and attempts to close
-its descriptor once. Early main refusals can precede that preparation. Accepted
-token bytes remain a borrowed view of the shared mapping. Requested consume and
-release calls occur in
-[`attempt_extension`](../controller/tools/pw_probe_runner/pw_probe_runner.c),
-inside an attempt after apply. The static handle carries state across actions
-and phases; a native result other than the consume failure sentinel establishes
-the handle used by a later requested release.
-
-Worker erasure occurs when preparation rejects a mapped channel, after the
-consume decision on paths reaching that cleanup, before the post-phase test
-seams, and on every ordinary departure after a channel has been accepted.
-[`erase_accepted_token`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-clears the full fixed buffer, including bytes beyond the token's terminating NUL.
-Terminal paths erase before releasing `done`; cancellation and early returns
-erase without adding publications. Fatal termination or an interrupted native
-call need not reach cleanup. Erasure does not call native extension release.
-The accepted mapping remains until exit. The host separately erases its channel
-before reply preparation and again at session destruction; its observation
-belongs to the host. In issuer [`main`](../controller/tools/pw_probe_runner/pw_extension_issuer.c),
-bounded length inspection governs copying and erasure before free. An oversized
-token is rejected and that inspected prefix is erased; the allocation extent
-beyond the bound is unobserved.
-
-Fresh reads obtain a new descriptor at each requested action, so before-consume,
-during-use and after-release reads each test fresh acquisition at that point.
-The worker publishes the native release result and any subsequent requested
-read observations. The [extension checks](../tests/suites/witness_contract/check_extensions.py)
-accept either result for the after-release read and verify returned content
-when successful. The [native evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#native-extension-evidence)
-defines the limits of native results and local publication.
-
-Known gap: private extension calls may allocate or retain internal state that PW
-cannot inspect. Erasure observations cover PW-owned transient buffers; successful
-native results and phase progress do not establish kernel extension state,
-stable identity, effective permissions or access revocation.
-
-## Native observations and publications
-
-The worker knows the admitted attempt kinds and targets, bounded arguments,
-phase partitions, release ordinals, time allowances and extension handle state.
-It compiles through libsandbox and applies the returned profile. Its attempts
-record native operations and their outcomes. Prediction belongs to the separate
-validator; disposition and comparison belong to the host.
-
-A native call can complete before the worker publishes the attempt slot.
-[`pw_progress`](../controller/tools/pw_probe_runner/pw_worker_evidence.h)
-records the latest atomic milestone, while
-[`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-releases the completed slot after writing its payload. The host reads completed
-payload after observing publication. The
-[create-then-kill control](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication)
-independently observes the created file while requiring the reply to withhold
-the unpublished result. Partially written payload remains outside the evidence
-the host is entitled to decode. Native call-boundary flags and result publication
-have the meanings in the [worker evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract).
-
-The worker's release wait uses atomic fields, continuous-clock samples and local
-arithmetic/text. Refusal erases an accepted token buffer, publishes `done` and
-exits; cancellation erases and exits without adding `done` or acknowledgement.
-After the phase loop it erases a delivered token and runs any selected post-phase
-seam. [`publish_done_and_exit`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-then erases, releases `done` and calls `_exit(0)` without waiting for the host.
-The host retains its evidence mapping after worker exit and independently
-observes reaping. Its exit request still cancels a worker waiting for release;
-grace and termination remain fallback cleanup. These paths use existing storage
-and automatic frames. Explicit PW dynamic acquisitions after
-apply are concentrated in the attempted operations; the source-level inventory
-ends at native/library call boundaries whose internals remain unobserved.
-
-The host plans validator queries in no-report mode and closes collection before
-releasing the worker. The [ordering account](ARCHITECTURE.md#one-run-in-time)
-and [ordering evidence states](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states)
-define eligibility for `query_first`. Earlier actions and external actors can
-change conditions before a later attempt, even with an intact release hold.
-Unqualified raw query records remain available after a refusal; they do not
-establish whether each native call encountered a live target. A phase's valid
-collection/release/acknowledgement chain establishes historical worker lifetime
-through collection even when the worker later exits abnormally without `done`.
-The worker receives the release ordinal; the host retains the predictions and
-assembles comparisons. Later path diagnostics come from the host, and log
-candidates and dossiers from the controller. The
-[evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
-and [comparison contract](PolicyWitness.md#reading-a-comparison-record) define
-what those observations mean, including object-identity and causal limits.
-
-## Changes that change the experiment
-
-A proposed improvement can move authority or an observation across a boundary.
-These examples connect the implementation choice to the question being tested.
-
-| Proposed change | Effect on the question | Current behavior and evidence |
-| --- | --- | --- |
-| Open a file target before apply or retain a read descriptor across extension phases | Exercises previously acquired authority | Fresh-read source and [extension controls](../tests/suites/witness_contract/README.md#native-extension-boundaries) put each acquisition inside its requested action. |
-| Prepare exec pipes and handles before apply | Moves setup outside the specimen's applied conditions | Per-attempt acquisition and [resource controls](../tests/suites/runner_c_worker_harness/README.md#exec-resources-are-per-attempt) retain that exposure. |
-| Consume a token during preparation or put its bytes in the evidence region | Moves the authority intervention earlier or gives reporting storage bearer authority | Preparation resolves symbols; the separate channel and requested lifecycle calls are covered by the [native boundary controls](../tests/suites/witness_contract/README.md#native-extension-boundaries). |
-| Retry with a changed target, extra authority or a friendlier policy, or reuse a worker for another specimen | Substitutes different experimental conditions | The driver launches a fresh worker for the submitted specimen. Interrupted I/O and process-observation loops retry within their existing protocols. |
-| Insert `exec_baseline` automatically | Changes the tested policy, including its broad file-read allowance | [Augment composition](../runner/augments/README.md#exec_baseline-composition-limits) is explicit and recorded in resolved source. |
-| Move reply assembly into the worker | Couples reporting to specimen-controlled communication | The host reads released payload; [death before publication](../tests/suites/witness_contract/README.md#death-after-the-native-return-before-publication) preserves an independently observed effect with a withheld result. |
-
-Removing the collection hold would also let worker effects change what
-supposedly prior queries observe. The
-[ordering controls](../tests/suites/witness_contract/README.md#predictions-before-attempts)
-observe both the hold and its limited snapshot meaning. The relevant design
-choice is which authority and observation belong on each side of the boundary.
 
 ## Known gaps
 
