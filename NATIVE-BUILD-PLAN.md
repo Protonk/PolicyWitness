@@ -1,14 +1,5 @@
 # Build natively on Apple Silicon, with current versions only
 
-The [Apple Silicon output plan](APPLE-SILICON-PLAN.md) is complete: every
-executable the build delivers is a thin `arm64` Mach-O for macOS, checked by
-its bytes. It deliberately left the builder unconstrained, so the repository
-still explains and tests builders it does not want: Intel Macs (which cannot
-finish the signed build, because the build runs the arm64 worker), shells
-translated by Rosetta (which build successfully today), Meson cross
-configurations, and translated Meson. It also kept reading provenance records
-and archives of earlier PolicyWitness versions.
-
 The intended result is one rule and less machinery: building requires an
 Apple Silicon Mac and a build that is not translated, and the repository
 carries only the current version of each record and format it reads.
