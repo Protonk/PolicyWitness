@@ -160,6 +160,12 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
      tool for an exec-restricted profile;
    - report any request through the detector.
 
+   For `contained_xcrun` and `fake_developer_dir`, a prepare mode writes the
+   profile once into the caller's fixture, runs the gate, and returns the
+   `sandbox-exec -f <profile>` command prefix for the `BASH_ENV` wrapper only
+   on success; refusal returns no prefix and prevents the build from
+   starting, and the profile must remain unchanged between preparation and use.
+
    `contained_xcrun` and `fake_developer_dir` keep an exec allow-list of
    `/usr/bin/xcrun`; the helper additionally permits `/usr/bin/dscl` for its
    check. Their successful run check uses `/usr/bin/xcrun --version` with a
