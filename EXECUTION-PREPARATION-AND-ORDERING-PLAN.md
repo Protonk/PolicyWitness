@@ -550,3 +550,6 @@ Phase 3 is complete when all of these hold:
 
 Report builder failures, gated-spawn watchdog failures and behavioral failures
 distinctly, and name any sleep that overlapped a failure.
+
+The build and the results of these checks are recorded in
+[records/EXECUTION-ORDERING-VERIFICATION.md](records/EXECUTION-ORDERING-VERIFICATION.md).
