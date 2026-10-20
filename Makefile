@@ -35,6 +35,11 @@
 #                            publish uses it in place of the archived copy.
 #   VERSION                  Which archived release publish acts on. Only publish reads
 #                            it; release derives the version from the annotated tag.
+#   SDKROOT                  SDK name or path, checked before any recipe. Use
+#                            make build SDKROOT=... or ./build.sh: /usr/bin/make
+#                            with a bad inherited SDKROOT requests installation
+#                            before this file is read. Any other make reaches
+#                            this check, including for inherited values.
 #
 # Conventions
 #   Bare make prints this card; make build builds.
@@ -59,6 +64,15 @@
 #   checks and live XPC can refuse; see AGENTS.md.
 .DEFAULT_GOAL := help
 .PHONY: help build prune test notarize release publish
+
+# make 3.81: quote the value as shell data, including single quotes in paths.
+# The shell guard uses only xcrun and builtins and preserves the caller's value.
+ifneq ($(SDKROOT),)
+override PW_SDK_REFUSAL := $(shell /bin/bash tests/lib/sdk_guard.sh '$(subst ','"'"',$(SDKROOT))' 2>&1 || printf 'SDKROOT validation failed')
+ifneq ($(PW_SDK_REFUSAL),)
+$(error $(PW_SDK_REFUSAL))
+endif
+endif
 
 # Defaults. The header says what each one means; IDENTITY has no default.
 NOTARY_KEYCHAIN_PROFILE ?=

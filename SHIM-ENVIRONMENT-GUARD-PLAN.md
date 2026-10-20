@@ -111,7 +111,9 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
    number. Otherwise it refuses with status 2, naming the value. An empty
    `SDKROOT` passes. It runs only `xcrun`, never a shim. It sits beside the
    resolver, so `tests/run.sh`, `checkout_lock.sh` and `build.sh` each apply
-   it before any shim can start.
+   it before any shim can start; the shared shell test library also applies
+   it before its first Python call, covering direct suites and
+   `tests/accept-release.sh`.
 
    **Decided:** an invalid caller request to `build.sh` refuses at the
    `admission` step, no longer at `sdk`. Every build passes through this
@@ -130,8 +132,8 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
    `xcrun` test to any nonempty `SDKROOT`, inherited or given on the make
    command line, and stops with `$(error …)` on failure. The Makefile never
    defines `SDKROOT` itself, so its origin does not distinguish anything the
-   guard needs. Apple's make here is 3.81; the check uses only `shell` and
-   `error`. A valid nonempty value costs two `xcrun` calls per parse; release
+   guard needs. Apple's make here is 3.81; the check uses `shell`, `error`
+   and `subst` to quote SDK paths as shell data. A valid nonempty value costs two `xcrun` calls per parse; release
    parses the Makefile three times through its recursive targets.
 
    The developer directory's real make, invoked directly or through

@@ -188,6 +188,11 @@ selection, deduplication, configuration validation, and complete accounting.
 
 - **Case:** `preflight/build_refusal_controls`
 - **Location:** `tests/suites/preflight/opt_in/build_refusals.py`
+- **Contained shim control:** Runs a shim with a missing SDK request only
+  after the shared containment gate passes, and compares an empty-SDK
+  neighbour. Requires unified-log access for the installation-service denial
+  attributed by PID; records profiles, gate checks, command output and log
+  queries. No other control deliberately makes an installation request.
 - **Purpose:** Drive the unchanged build script through every refusal the
   build manifest lists, one disposable fault at a time, in each variant the
   refusal applies to: a tracked input gone, a held checkout lock, a claim

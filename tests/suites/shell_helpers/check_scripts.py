@@ -30,6 +30,7 @@ def main():
         library.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / 'tests/lib/scripts.sh', library)
         shutil.copyfile(ROOT / 'tests/lib/testlib.sh', library.with_name('testlib.sh'))
+        shutil.copyfile(ROOT / 'tests/lib/sdk_guard.sh', library.with_name('sdk_guard.sh'))
         if wrapper == 'runner_byoxpc':
             helper = repo / 'tests/fixtures/byoxpc/session.py'
             helper.parent.mkdir(parents=True)

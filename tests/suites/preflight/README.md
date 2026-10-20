@@ -78,7 +78,10 @@ Offline release controls also exercise the release procedure's decision points.
   and changed helper during validation. Other helper signatures remain valid;
   removal verifies registry and plist cleanup.
 - `build_provenance_controls` exercises the provenance and lock helpers with
-  constructed inputs and disposable directories: claims admitted only by a
+  constructed inputs and disposable directories: SDK admission at shell and
+  make entry points; plain and exec-restricted shim-probe profiles, successful
+  permitted execution, rejected gate decisions and real nested-sandbox
+  refusal; claims admitted only by a
   live owner's handoff and refused when stale, closed, malformed, a separate
   open on the lock inode, a wrong nonce or another worktree's, with the real
   holder unchanged and an unheld descriptor never turned into a hold; an
@@ -221,6 +224,10 @@ Offline release controls also exercise the release procedure's decision points.
   operation, and of the session helper with path admission disabled, must
   fail the matching control. Opt-in, with the same toolchain and identity requirements
   as the guard controls.
+  It also runs the contained shim installation-request positive control and
+  its empty-SDK neighbour, requiring a PID-attributed installation-service
+  denial from the unified log. This is the only control deliberately making
+  that request; its fixture retains the gate, outputs and raw log queries.
 - `build_toolchain_switch_controls` builds under the selected developer
   directory and under the Command Line Tools through `DEVELOPER_DIR`, refusing
   reuse across the switch by a field its independent probes of both

@@ -17,7 +17,7 @@
         },
         {
           "id": "build_provenance_controls",
-          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, direct Python preserves caller environments and missing or changed witnesses refuse before writes and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail",
+          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, direct Python preserves caller environments and missing or changed witnesses refuse before writes and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail; SDK entry guards refuse before downstream work and shim-probe containment gates preserve exec restrictions and reject missing observations",
           "requires": [
             "clang"
           ]
@@ -46,7 +46,7 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard, translated-shell builds where Rosetta is present and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard, translated-shell builds where Rosetta is present and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging",
           "default": false,
           "requires": [
             "app",
@@ -89,12 +89,16 @@
         },
         {
           "id": "release_publish_controls",
-          "requires": ["clang"],
+          "requires": [
+            "clang"
+          ],
           "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches"
         },
         {
           "id": "release_rotation_controls",
-          "requires": ["clang"],
+          "requires": [
+            "clang"
+          ],
           "description": "Release cleanup keeps the latest release and newest local output, protects active and recovery work, and resumes interrupted deletion"
         }
       ]
@@ -1767,14 +1771,28 @@
         {
           "id": "default_location",
           "description": "Install, run and remove through the default registry and user plist locations",
-          "requires": ["app", "gui", "identity"],
-          "command": ["bash", "tests/suites/runner_byoxpc/opt_in/default_location.sh"]
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/default_location.sh"
+          ]
         },
         {
           "id": "bad_neighbor_claims",
           "description": "Re-acquire occupied hosts with attributed refusals, bounded waiting and exactly-once effects",
-          "requires": ["app", "gui", "identity"],
-          "command": ["bash", "tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh"]
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/bad_neighbor_claims.sh"
+          ]
         },
         {
           "id": "single_use",

@@ -8,7 +8,7 @@ def install_runner(source, destination, suites, *, signed_fixtures=False):
     for relative in ('tests/run.sh', 'tests/lib/test_cli.py', 'tests/lib/suite_run.py',
                      'tests/lib/testlib.sh', 'tests/lib/case.sh', 'tests/lib/artifact.py',
                      'tests/lib/signer_check.py', 'tests/lib/build_provenance.py', 'tests/lib/output_target.py', 'tests/lib/retention.py',
-                     'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh',
+                     'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh',
                      'tests/lib/cargo_config.py', 'tests/lib/vendor/tomli/__init__.py', 'tests/lib/vendor/tomli/_parser.py',
                      'tests/lib/vendor/tomli/_re.py', 'tests/lib/vendor/tomli/_types.py', 'tests/lib/vendor/tomli/LICENSE',
                      'tests/RETAINED.json'):

@@ -41,6 +41,7 @@ import artifact
 import build_provenance as prov
 import cargo_config
 import checkout_lock
+import shim_probe
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
 FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
 WRONG_WORKER = ROOT / 'tests/fixtures/build_refusals/wrong_worker.c'
@@ -853,7 +854,7 @@ def control_lock_lifetime(co, variant):
     other = co.work / 'other-worktree'
     if not other.exists():
         (other / 'tests/lib').mkdir(parents=True)
-        for name in ('checkout_lock.py', 'checkout_lock.sh', 'python_start.sh'):
+        for name in ('checkout_lock.py', 'checkout_lock.sh', 'python_start.sh', 'sdk_guard.sh'):
             shutil.copy2(co.root / 'tests/lib' / name, other / 'tests/lib' / name)
     other_front_end = ['/bin/bash', str(other / 'tests/lib/checkout_lock.sh'), '--root', str(other), '--']
     killed, holder, release = lifetime_kill(co, variant, 'lifetime-killed')
@@ -991,7 +992,7 @@ def control_sdk_unavailable(co, variant):
     assert calls[-1] == '--sdk macosx --show-sdk-path', calls
     assert int((fixture / 'invocation.status').read_text()) != 0
     assert 'invalid DEVELOPER_DIR path' in (fixture / 'invocation.stderr').read_text()
-    assert 'requesting installation' not in build.output, build.output[-2000:]
+    assert not shim_probe.installation_requests(build.output), build.output[-2000:]
     shutil.copytree(fixture, co.out / f'{co.prefix}{variant}-sdk_unavailable' / 'sdk-fixture')
     preserved(build)
     return build
@@ -1001,21 +1002,16 @@ def fake_developer_dir(fixture):
     """An unconfigured developer directory, independent of Xcode/CLT layout.
 
     No /usr/bin tool shim runs with the fake DEVELOPER_DIR. The isolated SDK
-    command may execute only xcrun, cannot make Mach service lookups or write
+    command may execute only xcrun and the helper's dscl check, cannot make Mach service lookups or write
     outside its own fixture. Its real configuration error drives the refusal;
     no SDK response or exit status is fabricated.
     """
     fake = fixture / 'unconfigured-developer'
     fake.mkdir(parents=True)
-    profile = fixture / 'sdk.sb'
-    # JSON string quoting is also valid for these SBPL path literals.
-    profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
-        '(allow process-exec (literal "/usr/bin/xcrun"))'
-        '(deny file-write*)(allow file-write* (subpath ' + json.dumps(str(fixture.resolve())) + '))\n')
-    prefix = ['/usr/bin/sandbox-exec', '-f', str(profile)]
+    prefix = shim_probe.prepare(fixture, exec_allowlist=['/usr/bin/xcrun'])
     env = dict(os.environ, DEVELOPER_DIR=str(fake))
-    # Verify containment before the SDK query. A general subprocess cannot run;
-    # the allowed SDK process must report the real developer-directory error.
+    # prepare established successful execution. This separate refusal checks
+    # the exec allowance; the SDK process then reports its real configuration error.
     denied = command(fixture / 'containment', prefix + ['/usr/bin/true'], cwd=fixture, env=env)
     assert denied[0] != 0 and 'Operation not permitted' in denied[2], denied
     refused = command(fixture / 'sdk-probe', prefix + ['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'],
@@ -1033,6 +1029,41 @@ def fake_developer_dir(fixture):
         '  cat ' + shlex.quote(str(fixture / 'invocation.stderr')) + ' >&2\n'
         '  printf "%s\\n" "$sdk_status" > ' + shlex.quote(str(fixture / 'invocation.status')) + '\n'
         '  return "$sdk_status"\n}\n')
+
+
+def control_shim_install_detector(co, variant):
+    """Only this opt-in control deliberately makes a contained shim request installation."""
+    fixture = co.out / 'shim-install-detector'
+    fixture.mkdir()
+    records = []
+    for name, request in (('missing', str(fixture / 'missing.sdk')), ('empty', '')):
+        case = fixture / name
+        record = shim_probe.run(case, ['/usr/bin/python3', '-V'],
+                                env=dict(shim_probe.base_environment(case), SDKROOT=request))
+        records.append(record)
+        assert record['complete'], record
+        if name == 'missing':
+            assert record['status'] != 0 and record['install_requests'], record
+            assert 'no install could be requested' in record['stderr'], record
+        else:
+            assert record['status'] == 0 and not record['install_requests'], record
+    # Unified-log delivery can lag the child. Keep the last raw query and bound
+    # the wait; missing evidence fails this control, never the helper's gate.
+    denials = []
+    for attempt in range(10):
+        time.sleep(1)
+        status, stdout, stderr = command(fixture / f'log-{attempt}',
+            ['/usr/bin/log', 'show', '--last', '1m', '--style', 'ndjson', '--predicate',
+             f'eventMessage CONTAINS "{shim_probe.SERVICE}"'], cwd=fixture, env=co.base_env, timeout=60)
+        assert status == 0, stderr
+        events = [json.loads(line) for line in stdout.splitlines() if line.startswith('{')]
+        denials = shim_probe.install_denials(events, records)
+        if denials:
+            break
+    save(fixture / 'denials.json', denials)
+    assert any(d['pid'] == records[0]['pid'] for d in denials), 'missing PID-attributed installation-service denial'
+    assert not any(d['pid'] == records[1]['pid'] for d in denials), denials
+    return None
 
 
 def control_sdk_version_unreadable(co, variant):
@@ -1741,7 +1772,7 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     with tempfile.TemporaryDirectory(prefix='pw-make-fresh-', dir='/private/tmp') as temporary:
         repo = Path(temporary) / 'repo'
         repo.mkdir()
-        for name in ('Makefile', 'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
+        for name in ('Makefile', 'tests/lib/sdk_guard.sh', 'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
             target = repo / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, target)
@@ -1989,14 +2020,12 @@ def contained_xcrun(fixture, invalid):
     """A BASH_ENV that runs xcrun for the invalid request under a sandbox denying Mach lookups and other executables, so a
     failing SDK lookup cannot reach the installer; every other xcrun call is the real one."""
     fixture.mkdir(parents=True, exist_ok=True)
-    profile = fixture / 'xcrun.sb'
-    profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)(allow process-exec (literal "/usr/bin/xcrun"))'
-                       '(deny file-write*)(allow file-write* (subpath ' + json.dumps(str(fixture.resolve())) + '))\n')
+    prefix = shim_probe.prepare(fixture, exec_allowlist=['/usr/bin/xcrun'])
     script = fixture / 'contained.bash'
     script.write_text('/usr/bin/xcrun() {\n'
                       '  if [[ "${2:-}" == ' + shlex.quote(invalid) + ' ]]; then\n'
                       '    printf "%s\\n" "$*" >> ' + shlex.quote(str(fixture / 'calls')) + '\n'
-                      '    command /usr/bin/sandbox-exec -f ' + shlex.quote(str(profile)) + ' /usr/bin/xcrun "$@"\n'
+                      '    command ' + shlex.join(prefix) + ' /usr/bin/xcrun "$@"\n'
                       '    return\n'
                       '  fi\n'
                       '  command /usr/bin/xcrun "$@"\n}\n')
@@ -2007,8 +2036,8 @@ def control_sdk_requests(co, variant):
     """The caller's SDK request through each entrypoint, kept apart from the SDK the build selects: absent, the default named
     explicitly, explicitly empty, and an explicit path through the shell front end with another owned command nested under
     it. Each build's compilations (forwarding wrappers), the environment they received and the outputs' load commands (read
-    here) must agree with the record's effective settings. An invalid explicit request refuses at SDK selection instead of
-    falling back to the default, without a shim ever running with it."""
+    here) must agree with the record's effective settings. An invalid explicit request refuses instead of
+    falling back to the default, at admission without a shim ever running with it."""
     selected = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
     version = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], text=True).strip()
     real_cc = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '-f', 'clang'], text=True).strip()
@@ -2054,15 +2083,16 @@ def control_sdk_requests(co, variant):
             assert prov.normalize_version(minos) == prov.normalize_version(co.minimum) and prov.normalize_version(sdk) == prov.normalize_version(version)
         if nested_environment:
             assert build.session['requests']['CPATH'] == dict(state='set', value=''), build.session['requests']
-    # An invalid explicit request refuses at SDK selection; its xcrun call is contained, and no default is substituted.
+    # Admission refuses before lock verification or any session write; no default is substituted.
     invalid = '/private/tmp/pw-no-such-sdk-' + os.urandom(4).hex()
     fixture = co.work / 'sdk-request-invalid'
+    session_before = (co.root / SESSION).read_bytes()
     refused = co.build('sdk_requests-invalid', variant, env=dict(SDKROOT=invalid, BASH_ENV=str(contained_xcrun(fixture, invalid))))
-    check(refused, 2, f'xcrun could not select the macOS SDK (DEVELOPER_DIR=unset, requested {invalid})',
-          present=('Selecting the macOS SDK',), absent=('Checking the native build directory', 'Building Rust'))
-    assert 'requesting installation' not in refused.output, refused.output[-2000:]
+    check(refused, 2, f'admission: SDKROOT={invalid} does not resolve to an SDK with a numeric version',
+          absent=('Verifying the checkout lock', 'Checking limits documentation', 'Selecting the macOS SDK', 'Building Rust'))
+    assert not shim_probe.installation_requests(refused.output), refused.output[-2000:]
     assert (fixture / 'calls').read_text().split('\n')[0].startswith(f'--sdk {invalid}'), (fixture / 'calls').read_text()
-    assert refused.session['requests']['SDKROOT'] == dict(state='set', value=invalid)
+    assert (co.root / SESSION).read_bytes() == session_before, 'admission wrote the session'
     assert not refused.receipts
     preserved(refused)
     restored = co.build('sdk_requests-restore', variant, fresh='1')
@@ -2602,6 +2632,7 @@ CONTROLS = [
 ]
 # Controls that drive sequences across variants or establish a limit rather than one refusal; run once each.
 SEQUENCES = [
+    ('shim_install_detector', control_shim_install_detector),
     ('builddir_toolchain_changed', control_builddir_toolchain_changed),
     ('provenance_probe_failed', control_provenance_probe_failed),
     ('fresh_sequence', control_fresh_sequence),

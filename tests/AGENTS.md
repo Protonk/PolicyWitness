@@ -78,6 +78,18 @@ manifest so changing a documented number cannot change their expectations.
 
 ### Sandboxed automation harnesses
 
+Use [the contained probe helper](lib/shim_probe.py) for any by-hand probe of
+`SDKROOT` or `DEVELOPER_DIR`. Start the helper with those
+variables absent and pass the tested values through `--env`, for example:
+
+    env -u SDKROOT -u DEVELOPER_DIR /usr/bin/python3 -I -B tests/lib/shim_probe.py \
+      --fixture /private/tmp/pw-sdk-probe-new --env SDKROOT=/missing.sdk -- /usr/bin/git --version
+
+Use a fresh fixture. The helper refuses unless its containment checks pass;
+it records raw checks, command output and detected installation requests.
+Its prepare mode returns a command prefix only after checking the profile;
+keep that profile unchanged until the caller's final use.
+
 Inspect diagnostics before attributing a test failure to the product or its
 execution environment. Use an unsandboxed shell for cases requiring `app` or
 `worker`. If the automation sandbox refuses an operation, request escalation

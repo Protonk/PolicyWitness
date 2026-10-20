@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import abi_golden
+import shim_probe
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
@@ -30,7 +31,7 @@ architecture_spec.loader.exec_module(architecture_generator)
 
 # build.sh admits its tracked inputs and takes the checkout lock before any check; a build
 # checkout needs those files and the lock launcher, then the limits documents it checks first.
-ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'Info.plist', 'PolicyWitness.entitlements',
+ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh', 'Info.plist', 'PolicyWitness.entitlements',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
 LIMITS_FILES = ENTRY_FILES | {*markdown_reader.source_files(), 'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
@@ -308,13 +309,13 @@ class ContractVersionTests(unittest.TestCase):
         profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
                            '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
         env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
-        env.update(DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false')
+        env.update(SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false')
         result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
                                 cwd=root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn('direct Python unavailable', result.stderr)
         self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
-        self.assertNotIn('requesting installation', result.stdout + result.stderr)
+        self.assertFalse(shim_probe.installation_requests(result.stdout, result.stderr))
         self.assertFalse((root / 'tests/.checkout.lock').exists())
         self.assertFalse((root / 'controller/target').exists())
         self.assertFalse((root / 'dist').exists())
@@ -443,6 +444,8 @@ class ContractVersionTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         makefile = root / 'Makefile'
+        (root / 'tests/lib').mkdir(parents=True)
+        shutil.copy2(ROOT / 'tests/lib/sdk_guard.sh', root / 'tests/lib/sdk_guard.sh')
         text = (ROOT / 'Makefile').read_text()
         self.assertIn('Operator entry points', text, 'the header mutation must change its input')
         env = {name: value for name, value in os.environ.items()
@@ -470,12 +473,14 @@ class ContractVersionTests(unittest.TestCase):
                 self.assertEqual({p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}, before)
 
     def test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal(self):
-        """make build has no guard of its own: it runs build.sh with IDENTITY, DIST_DIR and, only when the caller set it,
+        """After SDK admission, make build runs build.sh with IDENTITY, DIST_DIR and, only when the caller set it,
         PW_FRESH_BUILD. The script's identity refusal names the make invocation to use."""
         directory = tempfile.TemporaryDirectory(prefix='pw-make-build-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         shutil.copy2(ROOT / 'Makefile', root / 'Makefile')
+        (root / 'tests/lib').mkdir(parents=True)
+        shutil.copy2(ROOT / 'tests/lib/sdk_guard.sh', root / 'tests/lib/sdk_guard.sh')
         marker = root / 'ran.json'
         script = root / 'build.sh'
         script.write_text('#!/usr/bin/env bash\nprintf \'{"IDENTITY": "%s", "DIST_DIR": "%s", "PW_FRESH_BUILD": "%s"}\' "${IDENTITY:-}" "${DIST_DIR:-}" "${PW_FRESH_BUILD-unset}" > ran.json\n')

@@ -133,6 +133,15 @@ handling of delayed or uncertain Apple replies.
 - `PW_BYOXPC_IDENTITY`, then `IDENTITY`: signing identity override for signing
   tests; otherwise resolve an available Developer ID matching the app's team.
 
+Shell entry points validate a nonempty inherited `SDKROOT` before starting
+any developer-tool shim, and refuse an unresolved SDK request with status 2.
+This includes direct suite scripts and release acceptance through the shared
+shell test library.
+[shim_probe.py](lib/shim_probe.py) provides contained commands and prepared
+profiles for SDK/developer-directory probes, with a shared detector for sent
+or blocked installation requests; its launch instructions are in
+[AGENTS.md](AGENTS.md#sandboxed-automation-harnesses).
+
 Relative paths resolve from the repository root regardless of the caller's
 working directory. The effective paths are recorded in `plan.json` and
 `run.json`. Runner-mode/service overrides, suite aliases, case selection state,

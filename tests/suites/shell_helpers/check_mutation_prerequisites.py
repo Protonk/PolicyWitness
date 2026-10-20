@@ -18,7 +18,7 @@ def main():
     out = Path(sys.argv[1]).resolve()
     repo = out / 'fixture repo'
     wrapper = 'tests/suites/witness_contract/opt_in/mutations.sh'
-    for relative in (wrapper, 'tests/lib/case.sh', 'tests/lib/testlib.sh'):
+    for relative in (wrapper, 'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/lib/sdk_guard.sh'):
         target = repo / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, target)

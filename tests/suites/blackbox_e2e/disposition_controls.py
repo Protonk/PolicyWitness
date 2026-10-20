@@ -141,7 +141,7 @@ def rust_wrapper_controls(out):
     """
     repo = out / 'fixture repo'
     wrapper = 'tests/suites/unit/disposition_reds.sh'
-    for relative in (wrapper, 'tests/lib/testlib.sh'):
+    for relative in (wrapper, 'tests/lib/testlib.sh', 'tests/lib/sdk_guard.sh'):
         destination = repo / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)

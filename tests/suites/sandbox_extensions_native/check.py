@@ -198,7 +198,7 @@ def main():
     assert identity and identity.startswith('Developer ID Application: '), 'explicit Developer ID identity required'
     source_files = ['tests/fixtures/sandbox_extensions/native.c', 'tests/fixtures/sandbox_extensions/build.sh',
                     'tests/suites/sandbox_extensions_native/check.py', 'tests/suites/sandbox_extensions_native/run.sh',
-                    'tests/catalog.json', 'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/lib/test_cli.py',
+                    'tests/catalog.json', 'tests/lib/case.sh', 'tests/lib/testlib.sh', 'tests/lib/sdk_guard.sh', 'tests/lib/test_cli.py',
                     'tests/lib/suite_run.py', 'tests/fixtures/sandbox_extensions/README.md',
                     'tests/suites/sandbox_extensions_native/README.md']
     source_hashes = {}

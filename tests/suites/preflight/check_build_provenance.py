@@ -38,6 +38,7 @@ import checkout_lock
 import output_target
 import signer_check
 import fixture_bundle
+import shim_probe
 
 PYTHON = sys.executable
 
@@ -680,12 +681,178 @@ class LockTests(unittest.TestCase):
                               '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
         for entry in ('tests/lib/checkout_lock.sh', 'tests/run.sh'):
             result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(ROOT / entry), '--help'],
-                                    env=dict(clean_env(), DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false'),
+                                    env=dict(clean_env(), SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false'),
                                     capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
             self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
             self.assertIn('direct Python unavailable', result.stderr)
-            self.assertNotIn('requesting installation', result.stdout + result.stderr)
+            self.assertFalse(shim_probe.installation_requests(result.stdout, result.stderr))
+
+
+class ShimContainmentTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-shim-', dir='/private/tmp')
+        self.addCleanup(directory.cleanup)
+        self.work = Path(directory.name).resolve()
+        if os.environ.get('PW_TEST_ARTIFACTS'):
+            self.addCleanup(lambda: shutil.copytree(self.work, Path(os.environ['PW_TEST_ARTIFACTS']) / self._testMethodName))
+
+    def test_detector_sent_blocked_and_neighbours(self):
+        for text in ('requesting installation of command line developer tools', 'requesting install.',
+                     'and no install could be requested (perhaps no UI is present)'):
+            self.assertEqual(shim_probe.installation_requests(text), [text])
+        self.assertEqual(shim_probe.installation_requests('invalid DEVELOPER_DIR path', 'xcrun version 72.'), [])
+        records = [dict(pid=123)]
+        messages = [dict(eventMessage=f'Sandbox: xcode-select({pid}) deny(1) mach-lookup {shim_probe.SERVICE}')
+                    for pid in (123, 1234)]
+        self.assertEqual(len(shim_probe.install_denials(messages, records)), 1)
+
+    def test_constructed_gate_refusals_stop_dispatch_and_prepare(self):
+        from unittest import mock
+        good = dict(outside=dict(complete=True, status=0, stdout='UniqueID: 0\n'),
+                    inside=dict(complete=True, status=70, stdout=''),
+                    permitted=dict(complete=True, status=0, stdout=''))
+        self.assertEqual(shim_probe.gate_errors(good), [])
+        faults = [('outside', 'status', 1), ('outside', 'stdout', ''), ('inside', 'status', 0),
+                  ('permitted', 'status', 71), ('inside', 'complete', False), ('permitted', 'status', None)]
+        for index, (name, key, value) in enumerate(faults):
+            results = copy.deepcopy(good)
+            results[name][key] = value
+            self.assertTrue(shim_probe.gate_errors(results), results)
+            for mode in ('prepare', 'run'):
+                fixture = self.work / f'{index}-{mode}'
+                with mock.patch.object(shim_probe, 'execute', side_effect=[results[k] for k in ('outside', 'inside', 'permitted')]) as execute:
+                    with self.assertRaises(shim_probe.ContainmentError):
+                        if mode == 'prepare':
+                            shim_probe.prepare(fixture)
+                        else:
+                            shim_probe.run(fixture, ['/usr/bin/true'])
+                    self.assertEqual(execute.call_count, 3, 'a refused gate dispatched the requested command')
+                self.assertFalse((fixture / 'invocation.json').exists())
+        self.assertTrue(shim_probe.gate_errors({}))
+
+    def test_profiles_apply_and_keep_exec_restrictions(self):
+        for restricted in (False, True):
+            fixture = self.work / str(restricted)
+            prefix = shim_probe.prepare(fixture, exec_allowlist=['/usr/bin/xcrun'] if restricted else None)
+            checks = json.loads((fixture / 'containment.json').read_text())['checks']
+            self.assertIn('UniqueID: 0', checks['outside']['stdout'])
+            self.assertIn('eServerError', checks['inside']['stderr'] + checks['inside']['stdout'])
+            self.assertEqual(checks['permitted']['status'], 0)
+            result = shim_probe.execute(prefix + ['/usr/bin/true'], env=shim_probe.base_environment(fixture), cwd=fixture)
+            (fixture / 'exec-check.json').write_text(json.dumps(result, indent=2))
+            self.assertEqual(result['status'], 71 if restricted else 0, result)
+            if restricted:
+                self.assertIn('execvp()', result['stderr'])
+
+    def test_structured_paths_cannot_add_profile_rules(self):
+        path = self.work / 'quote ") (allow mach-lookup) ;'
+        path.mkdir()
+        prefix = shim_probe.prepare(self.work / 'quoted', write_paths=[path], exec_allowlist=['/usr/bin/xcrun'])
+        text = Path(prefix[-1]).read_text()
+        self.assertIn('(deny mach-lookup)', text)
+        self.assertIn(json.dumps(str(path)), text)
+
+    def test_nested_sandbox_refuses_without_dispatch(self):
+        fixture = self.work / 'nested'
+        marker = self.work / 'ran'
+        outer = self.work / 'outer.sb'
+        outer.write_text('(version 1)(allow default)\n')
+        argv = ['/usr/bin/sandbox-exec', '-f', str(outer), PYTHON, '-B', str(ROOT / 'tests/lib/shim_probe.py'),
+                '--fixture', str(fixture), '--', '/usr/bin/touch', str(marker)]
+        result = shim_probe.execute(argv, env=clean_env(), cwd=self.work)
+        (self.work / 'outer-result.json').write_text(json.dumps(result, indent=2))
+        self.assertEqual(result['status'], 2, result)
+        checks = json.loads((fixture / 'containment.json').read_text())['checks']
+        self.assertEqual(checks['permitted']['status'], 71, checks)
+        self.assertIn('sandbox_apply', checks['permitted']['stderr'])
+        self.assertFalse(marker.exists())
+        self.assertFalse((fixture / 'invocation.json').exists())
+
+    def checkout(self):
+        root = self.work / 'checkout'
+        for relative in ('build.sh', 'Makefile', 'tests/run.sh', 'tests/accept-release.sh', 'tests/suites/unit/run.sh',
+                         'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh',
+                         'tests/lib/checkout_lock.sh', 'tests/lib/checkout_lock.py', 'Info.plist', 'PolicyWitness.entitlements',
+                         'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist'):
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, target)
+        (root / 'runner/augments').mkdir()
+        return root
+
+    def test_entrypoints_refuse_sdk_at_admission(self):
+        root = self.checkout()
+        fixture = self.work / 'entry-containment'
+        prefix = shim_probe.prepare(fixture, write_paths=[root])
+        invalids = [str(self.work / 'missing.sdk'), 'pw-no-such-sdk', str(self.work)]
+        entries = [('tests/run.sh', '--help'), ('tests/lib/checkout_lock.sh', '--', '/usr/bin/true'), ('build.sh',),
+                   ('tests/accept-release.sh', '--help'), ('tests/suites/unit/run.sh',)]
+        for i, request in enumerate(invalids):
+            for j, entry in enumerate(entries):
+                argv = prefix + ['/bin/bash', str(root / entry[0]), *entry[1:]]
+                result = shim_probe.execute(argv, env=dict(shim_probe.base_environment(fixture), SDKROOT=request), cwd=root)
+                (fixture / f'{i}-{j}.json').write_text(json.dumps(result, indent=2))
+                self.assertEqual(result['status'], 2, result)
+                self.assertIn(f'admission: SDKROOT={request} does not resolve', result['stderr'])
+                self.assertFalse(result['install_requests'])
+                for downstream in ('Verifying the checkout lock', 'Checking limits documentation', 'Selecting the macOS SDK', 'usage:'):
+                    self.assertNotIn(downstream, result['stdout'])
+                for path in ('tests/.checkout.lock', 'controller/target', 'dist'):
+                    self.assertFalse((root / path).exists(), path)
+
+    def test_valid_sdk_requests_reach_each_entrypoints_next_boundary(self):
+        root = self.checkout()
+        fixture = self.work / 'valid-containment'
+        prefix = shim_probe.prepare(fixture, write_paths=[root])
+        selected = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+        for index, request in enumerate(('', 'macosx', selected)):
+            env = dict(shim_probe.base_environment(fixture), SDKROOT=request)
+            entries = [(ROOT / 'tests/run.sh', ['--help'], 'usage:', 0),
+                       (ROOT / 'tests/accept-release.sh', ['--help'], 'usage:', 0),
+                       (root / 'tests/lib/checkout_lock.sh', ['--', '/usr/bin/true'], '', 0),
+                       (root / 'build.sh', [], 'Checking limits documentation', 2)]
+            for j, (entry, args, marker, status) in enumerate(entries):
+                result = shim_probe.execute(prefix + ['/bin/bash', str(entry), *args], env=env, cwd=root)
+                (fixture / f'{index}-{j}.json').write_text(json.dumps(result, indent=2))
+                self.assertEqual(result['status'], status, result)
+                self.assertIn(marker, result['stdout'])
+                self.assertFalse(result['install_requests'])
+
+    def test_make_checks_command_line_and_inherited_sdk_before_recipes(self):
+        root = self.checkout()
+        fixture = self.work / 'make-containment'
+        prefix = shim_probe.prepare(fixture, write_paths=[root])
+        developer = subprocess.check_output(['/usr/bin/xcode-select', '-p'], text=True).strip()
+        real_make = developer + '/usr/bin/make'
+        invalid = str(self.work / 'missing.sdk')
+        env = shim_probe.base_environment(fixture)
+        for index, (make, target, args, extra) in enumerate([
+                ('/usr/bin/make', 'help', ['SDKROOT=' + invalid], {}),
+                ('/usr/bin/make', 'release', ['SDKROOT=' + invalid], {}),
+                (real_make, 'release', [], dict(SDKROOT=invalid)),
+                (real_make, 'release', ['SDKROOT=' + invalid, 'PW_SDK_REFUSAL='], {}),
+                (real_make, 'help', ["SDKROOT=" + str(self.work / "quote'$(touch never).sdk")], {})]):
+            result = shim_probe.execute(prefix + [make, target, *args], env=dict(env, **extra), cwd=root)
+            (fixture / f'invalid-{index}.json').write_text(json.dumps(result, indent=2))
+            self.assertEqual(result['status'], 2, result)
+            self.assertIn('admission: SDKROOT=', result['stderr'])
+            self.assertNotIn('==>', result['stdout'])
+            self.assertFalse(result['install_requests'])
+        self.assertFalse((root / 'never').exists())
+        selected = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+        (root / 'build.sh').write_text('#!/bin/bash\nprintf "build reached: %s\\n" "$SDKROOT"\n')
+        for index, request in enumerate(('', 'macosx', selected)):
+            result = shim_probe.execute(prefix + [real_make, 'build', 'SDKROOT=' + request], env=env, cwd=root)
+            (fixture / f'valid-{index}.json').write_text(json.dumps(result, indent=2))
+            self.assertEqual(result['status'], 0, result)
+            self.assertIn('build reached: ' + request, result['stdout'])
+            self.assertFalse(result['install_requests'])
+        (root / 'tests/lib/sdk_guard.sh').unlink()
+        result = shim_probe.execute(prefix + [real_make, 'build', 'SDKROOT=' + selected], env=env, cwd=root)
+        (fixture / 'missing-guard.json').write_text(json.dumps(result, indent=2))
+        self.assertEqual(result['status'], 2, result)
+        self.assertNotIn('build reached:', result['stdout'])
 
 
 class ProbeTests(unittest.TestCase):

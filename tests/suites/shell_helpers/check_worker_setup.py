@@ -24,7 +24,7 @@ def main():
         work = out / mode
         repo = work / 'fixture repo'
         for relative in ('tests/suites/runner_c_worker_harness/run.sh',
-                         'tests/lib/testlib.sh', 'tests/lib/case.sh'):
+                         'tests/lib/testlib.sh', 'tests/lib/sdk_guard.sh', 'tests/lib/case.sh'):
             destination = repo / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, destination)

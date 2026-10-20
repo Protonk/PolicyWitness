@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Direct suite scripts and release acceptance reach this library before Python.
+source "$(dirname "${BASH_SOURCE[0]}")/sdk_guard.sh" || exit 2
+pw_sdk_guard || exit 2
+
 _PW_TEST_BEGUN_DIR=''
 
 # Assertions are executable test checks. Refuse an optimized interpreter before

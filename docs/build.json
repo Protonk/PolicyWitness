@@ -130,13 +130,17 @@
         "full",
         "partial"
       ],
-      "reads": "IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment",
+      "reads": "IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment; every nonempty SDKROOT, inherited or supplied on the command line, is validated by sdk_guard.sh while parsing the Makefile before any recipe",
       "writes": "nothing; runs build.sh with them",
       "refusals": [],
       "sources": [
         {
           "path": "Makefile",
           "symbol": "[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app"
+        },
+        {
+          "path": "Makefile",
+          "symbol": "PW_SDK_REFUSAL"
         }
       ],
       "checks": [
@@ -151,6 +155,12 @@
           "symbol": "test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal",
           "form": "test",
           "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_make_checks_command_line_and_inherited_sdk_before_recipes",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ],
       "where": "Makefile"
@@ -162,7 +172,7 @@
         "full",
         "partial"
       ],
-      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it",
+      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts",
       "writes": "the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else",
       "refusals": [
         "knob_value",
@@ -171,7 +181,8 @@
         "checkout_busy",
         "direct_python_unavailable",
         "environment_witness_missing",
-        "environment_witness_changed"
+        "environment_witness_changed",
+        "sdk_request_invalid"
       ],
       "sources": [
         {
@@ -1674,6 +1685,49 @@
           "symbol": "test_nested_scope_cannot_admit_after_acquisition_owner_exits",
           "form": "test",
           "coverage": "helper"
+        }
+      ]
+    },
+    {
+      "id": "sdk_request_invalid",
+      "message": "admission: SDKROOT=<value> does not resolve to an SDK with a numeric version",
+      "kind": "propagated",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "python_start.sh"
+        },
+        {
+          "path": "tests/lib/sdk_guard.sh",
+          "symbol": "does not resolve to an SDK with a numeric version"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_entrypoints_refuse_sdk_at_admission",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_sdk_requests",
+          "form": "test",
+          "coverage": "behavioral"
         }
       ]
     },

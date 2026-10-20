@@ -1,4 +1,6 @@
 # Sourced by each shell entry point; never trust an inherited PW_PYTHON.
+source "$(dirname "${BASH_SOURCE[0]}")/sdk_guard.sh" || exit 2
+pw_sdk_guard || exit 2
 # xcode-select normalizes DEVELOPER_DIR without starting a developer-tool shim.
 if ! PW_DEVELOPER_DIRECTORY="$(/usr/bin/xcode-select -p)"; then
   echo "ERROR: direct Python unavailable: cannot resolve ${DEVELOPER_DIR+DEVELOPER_DIR=${DEVELOPER_DIR}; }xcode-select's selection" >&2
