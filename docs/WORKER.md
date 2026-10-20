@@ -19,12 +19,6 @@ owns the meaning of its records.
 
 ## Capability map
 
-The worker begins with process context and prepared reporting storage. Applying
-its compiled policy adds a restriction to that starting state. Subsequent
-attempts acquire their targets and setup resources under the applied policy,
-then publish observations into storage that already exists. The host retains
-its own view of that storage for collection, including after worker exit.
-
 ```mermaid
 flowchart TB
     subgraph worker["Worker"]
@@ -38,7 +32,7 @@ flowchart TB
             acquire["Attempt acquisitions:<br/>file targets, Mach rights,<br/>exec setup and children"]
             extension["Requested extension<br/>consume or release"]
         end
-        policy -->|after release| after
+        policy -->|after host release| after
         token -->|bearer bytes for consume| extension
     end
     storage["Reporting storage prepared before apply<br/>Worker and host retain separate views"]
@@ -58,8 +52,7 @@ This is a conceptual overview; the [detailed capability inventory](#detailed-cap
 keeps the individual resources, lifetimes and supporting citations. The diagram
 shows alternative admitted experiments: exec attempts cannot share a specimen
 with extension use. Token delivery precedes requested consumption; it does not
-consume the token. Fresh reads acquire a new descriptor at each requested point,
-including before consumption, during use and after release.
+consume the token.
 
 The host closes validator collection before releasing the worker to attempt a
 phase; the worker receives the release ordinal, while predictions stay outside
@@ -77,9 +70,12 @@ are a deliberate division of work, not observations the worker failed to make.
 
 The observations themselves have limits. Native return values and local
 publications do not establish private kernel extension state, effective
-permissions, revocation or the cause of a permission-shaped failure. Joining
-host observations and log candidates to a result does not automatically justify
-causal attribution or a verdict that prediction and enforcement agree. The
+permissions, revocation or the cause of a permission-shaped failure. Nor do they
+show whether privacy consent mediation affected an attempt; the
+[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
+target-selection guidance for that limitation. Joining host observations and
+log candidates to a result does not automatically justify causal attribution or
+a verdict that prediction and enforcement agree. The
 [evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
 and [comparison contract](PolicyWitness.md#reading-a-comparison-record)
 define those boundaries.
@@ -90,11 +86,9 @@ withhold that result even though an independent observer can find the file.
 [Native observations and publications](#native-observations-and-publications)
 explains the publication boundary and its create-then-kill control.
 
-Other omissions are gaps in measurement. A complete initial Mach-right census
-and a live signal-mask observation are absent from the available launch evidence.
-That absence does not make these facts fundamentally unknowable or exclude them
-from future investigation. The local caveats below distinguish unmeasured
-starting state from what the recorded native results cannot establish.
+Other omissions are measurement gaps: a live signal-mask observation and a
+complete initial Mach-right census are absent from the launch evidence, not
+unknowable.
 
 ## Reporting apparatus
 
@@ -111,10 +105,8 @@ under its bare-deny and full-region cases.
 The worker retains its evidence descriptor as well as the mapping. Its policy
 input and readiness descriptors also stay open until exit. Policy EOF ends
 source delivery and the host closes its readiness reader after the wait, while
-the worker's references remain. Results are published through mapped memory.
-The ready pipe serves readiness, and the policy pipe supplies source bytes.
-[Launch observation L](#launch-observation-l) saw those endpoints in its two
-separate empty allow-default launches, one at each selected observation window.
+the worker's references remain. [Launch observation L](#launch-observation-l)
+saw those endpoints in both of its recorded launches.
 
 Request, result and token storage have fixed capacities from the
 [limits inventory](LIMITS.md). The policy buffer and consumed-parameter snapshot
@@ -146,14 +138,8 @@ checked against the specimen's required keys by
 [`enforce_required_entitlements`](../controller/src/runner_select.rs).
 The [external-runner guide](PolicyWitness.md#external-runners-byoxpc) and
 [signing reference](SIGNING.md#evidence-artifacts) own that selection and identity
-account. Applying SBPL adds the specimen restriction to this starting state.
-Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
+account. Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
 change the submitted policy and are recorded as such.
-
-PW does not determine whether privacy consent mediation affected a worker
-attempt. A recorded error or timeout leaves that question unresolved. The
-[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
-target-selection guidance for this limitation.
 
 Host spawn actions select the policy, evidence and readiness endpoints, plus
 the optional token endpoint. The worker launch uses nil spawn attributes and
@@ -184,40 +170,23 @@ is recorded. Public admission in
 [`extensionMeaningFailure`](../runner/Sources/PWRunnerCore/ProbeRunner.swift)
 refuses an exec attempt combined with extension use.
 
-Host launch setup has unchecked native returns: file-action initialization and
-worker endpoint duplication, evidence unlink/descriptor flags, issuer handle
-initialization and copied-argument allocation. The source specifies the actions
-requested; a successful normal launch observes one completed path. These
-unchecked paths are visible in
+Host launch setup leaves some native returns unchecked: file-action
+initialization and worker endpoint duplication, evidence unlink/descriptor
+flags, issuer handle initialization and copied-argument allocation, in
 [`runCWorker`](../runner/Sources/PWRunnerCore/CWorker.swift),
 [`ExtensionSession`](../runner/Sources/PWRunnerCore/ExtensionIssuer.swift) and
-[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift).
-The [host setup controls](../tests/suites/runner_unit/README.md#host-setup-failures-and-descriptor-collisions)
-exercise these boundaries in disposable source copies with an independent child
-observer. Injected worker action-add failures allow a child to run with a wrong
-endpoint; failed argument copies allow empty or truncated argv. Injected unlink
-failures leave shared-memory names after owner teardown. The checked worker
-pipe-flag and issuer action/attribute-flag failures prevent spawn and clean up
-in the exercised cases. After a failed handle initialization, the fixture
-adapters record subsequent invalid-handle uses and return EINVAL. Their receipts
-record the host control flow through those adapter calls.
-
-Descriptor order also matters without injected native failure. The
-low-descriptor fixture deliberately closes stdin and low unused descriptors
-before exercising launch setup. In that configuration, evidence is allocated at
-fd 0. The policy action overwrites it before the evidence action reads that
-number: the child receives a policy pipe at fd 3. Its readiness source equals
-its destination and remains close-on-exec in this observation, leaving fd 4
-absent. The issuer's separate high-duplicate control preserves its channel under
-the exercised low-descriptor arrangement.
-
-Known gap: [L](#launch-observation-l) is bounded to its two recorded launch
-configurations. It records descriptors, process identity, cwd, displayed
-arguments/environment and VM regions. Task-port inspection was refused; live
-signal masks, resource limits, a complete Mach-right census and private runtime
-state remain unobserved. Native inheritance and loader behavior therefore form
-part of the instrument's received substrate, without a complete isolation or
-effective-authority census.
+[`withCStringArrayCopy`](../runner/Sources/PWRunnerCore/CWorker.swift). A
+successful normal launch observes one completed path. The
+[host setup controls](../tests/suites/runner_unit/README.md#host-setup-failures-and-descriptor-collisions)
+inject these failures in disposable source copies with an independent child
+observer. Action-add failures let a child run with a wrong endpoint, failed
+argument copies allow empty or truncated argv, and unlink failures leave
+shared-memory names after owner teardown; checked worker pipe-flag and issuer
+action/attribute-flag failures prevent spawn in the exercised cases. Without
+injected failure, the low-descriptor fixture closes stdin and low unused
+descriptors first, so evidence is allocated at fd 0 and the policy action
+overwrites it: the child receives a policy pipe at fd 3, and a readiness source
+already at its destination stays close-on-exec, leaving fd 4 absent.
 
 ### Launch observation L
 
@@ -250,9 +219,14 @@ final worker evidence and hashes of the original artifacts. Complete raw output
 is local, gitignored evidence in the pinned run named by the receipt.
 
 Reuse for another implementation or environment requires an applicability
-review or a new observation. Source/hash equality establishes identity, not that
-all relevant conditions were exercised. L is not a new observation of the current
-checkout.
+review or a new observation; matching source hashes establish source identity,
+not that the relevant conditions were exercised.
+
+Known gap: the starting-state census is limited to L's two recorded launches.
+Live signal masks, resource limits, a complete Mach-right census and private
+runtime state remain unobserved; native inheritance and loader behavior
+therefore remain part of the instrument's received substrate, without a
+complete isolation or effective-authority census.
 
 ## Acquisitions inside attempts
 
@@ -388,11 +362,11 @@ the host is entitled to decode. Native call-boundary flags and result publicatio
 have the meanings in the [worker evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract).
 
 The worker's release wait uses atomic fields, continuous-clock samples and local
-arithmetic/text. Refusal erases an accepted token buffer, publishes `done` and
-exits; cancellation erases and exits without adding `done` or acknowledgement.
-After the phase loop it erases a delivered token and runs any selected post-phase
-seam. [`publish_done_and_exit`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
-then erases, releases `done` and calls `_exit(0)` without waiting for the host.
+arithmetic/text. Refusal publishes `done` and exits; cancellation exits without
+adding `done` or acknowledgement. After the phase loop and any selected
+post-phase seam,
+[`publish_done_and_exit`](../controller/tools/pw_probe_runner/pw_probe_runner.c)
+releases `done` and calls `_exit(0)` without waiting for the host.
 The host retains its evidence mapping after worker exit and independently
 observes reaping. Its exit request still cancels a worker waiting for release;
 grace and termination remain fallback cleanup. These paths use existing storage
@@ -400,21 +374,13 @@ and automatic frames. Explicit PW dynamic acquisitions after
 apply are concentrated in the attempted operations; the source-level inventory
 ends at native/library call boundaries whose internals remain unobserved.
 
-The host plans validator queries in no-report mode and closes collection before
-releasing the worker. The [ordering account](ARCHITECTURE.md#one-run-in-time)
+Earlier actions and external actors can change conditions before a later
+attempt, even with an intact release hold. Unqualified raw query records remain
+available after a refusal; they do not establish whether each native call
+encountered a live target. The [ordering account](ARCHITECTURE.md#one-run-in-time)
 and [ordering evidence states](../tests/FAILURE-PROPAGATION-CONTRACT.md#ordering-evidence-states)
-define eligibility for `query_first`. Earlier actions and external actors can
-change conditions before a later attempt, even with an intact release hold.
-Unqualified raw query records remain available after a refusal; they do not
-establish whether each native call encountered a live target. A phase's valid
-collection/release/acknowledgement chain establishes historical worker lifetime
-through collection even when the worker later exits abnormally without `done`.
-The worker receives the release ordinal; the host retains the predictions and
-assembles comparisons. Later path diagnostics come from the host, and log
-candidates and dossiers from the controller. The
-[evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
-and [comparison contract](PolicyWitness.md#reading-a-comparison-record) define
-what those observations mean, including object-identity and causal limits.
+define eligibility for `query_first` and what an acknowledged release
+establishes after abnormal exit.
 
 ## Changes that change the experiment
 
@@ -433,8 +399,7 @@ These examples connect the implementation choice to the question being tested.
 Removing the collection hold would also let worker effects change what
 supposedly prior queries observe. The
 [ordering controls](../tests/suites/witness_contract/README.md#predictions-before-attempts)
-observe both the hold and its limited snapshot meaning. The relevant design
-choice is which authority and observation belong on each side of the boundary.
+observe both the hold and its limited snapshot meaning.
 
 ## Detailed capability inventory
 

@@ -14,8 +14,23 @@ Visual review used the repository's Markdown parser and Mermaid 10.9.3 in a
 local Safari preview at a 900-pixel document width. The overview's labels and
 arrows are legible, the inventory expands, and navigation to L and the generated
 node/edge headings works. No semantic discrepancies requiring separate
-investigation were identified. The sections below retain the planning baseline
-and acceptance criteria.
+investigation were identified.
+
+The executor's first targeted run, `worker-tour-editorial-20261019`, failed
+`runner_source_manifests_agree` because its working-input guard found
+`WORKER.md` changed during the run. That run's other two passes do not establish
+that they examined the committed text, and `worker-tour-editorial-stable-20261019`
+reran only the failed case. Review run `worker-tour-review-20261019` passed all
+three cases against `57fc26d` without overlapping system sleep.
+
+Review follow-up removed passages repeating the overview, the knowledge section
+or owning contracts; placed the starting-state Known gap after L; named the host
+release on the overview's edge; and pointed runner guidance's inventory link at
+`#detailed-capability-inventory`. The generated region, receipt, manifest and
+figure files remain unchanged. Run `worker-tour-followup-20261019` passed all
+three targeted cases against that revision.
+
+The sections below retain the planning baseline and acceptance criteria.
 
 ## Problem and intended result
 
