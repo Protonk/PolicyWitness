@@ -368,7 +368,7 @@ def assert_observations(variant, rows, results):
             assert ready["oracle_access_mode"] == (os.O_RDONLY if variant == "wrong_ready_direction" else os.O_WRONLY), row
 
 
-def main(out):
+def main(out, scratch):
     if not __debug__:
         raise RuntimeError("Python assertions must remain enabled")
     out.mkdir(parents=True)
@@ -381,6 +381,8 @@ def main(out):
     shutil.copyfile(ROOT / "tests/suites/runner_unit/host_setup_controls.py", recipe)
     shutil.copyfile(Path(__file__), inputs / Path(__file__).name)
     shutil.copyfile(Path(__file__).with_suffix(".sh"), inputs / Path(__file__).with_suffix(".sh").name)
+    shutil.copyfile(ROOT / "tests/lib/build_receipt.py", inputs / "build_receipt.py")
+    sys.path.insert(0, str(inputs))
     save(inputs / "inventory.json", inventory(inputs))
     spec = importlib.util.spec_from_file_location("preserved_host_setup_controls", recipe)
     legacy = importlib.util.module_from_spec(spec)
@@ -398,7 +400,7 @@ def main(out):
             controls = directory / "legacy-controls"
             try:
                 with (directory / "recipe.log").open("w") as log, contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
-                    legacy.run(controls)
+                    legacy.run(controls, scratch / variant)
                 summary["legacy_recipe_completed"] = True
             except Exception as error:
                 summary["legacy_recipe_completed"] = False
@@ -419,4 +421,4 @@ def main(out):
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]).resolve())
+    main(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())

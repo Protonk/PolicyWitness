@@ -7,6 +7,11 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root / "tests/lib"))
+from build_receipt import record_build
+
+SWIFT = ['swift']
+scratch = Path(sys.argv[2]).resolve()
 out = Path(sys.argv[1]); out.mkdir(parents=True)
 package = out/'package'
 sources = package/'Sources/SleepRecordControls'; sources.mkdir(parents=True)
@@ -44,7 +49,7 @@ FileHandle.standardOutput.write(Data("\\n\\(tk.summary())\\n".utf8))
 exit(tk.exitCode())
 ''')
 with (out/'run.log').open('w') as log:
-    run = subprocess.run(['swift', 'run', '--package-path', str(package), 'SleepRecordControls'],
+    run = subprocess.run([*SWIFT, 'run', '--package-path', str(package), '--scratch-path', str(scratch), 'SleepRecordControls'],
                          stdout=subprocess.PIPE, stderr=log, timeout=300)
 stdout = run.stdout.decode()
 (out/'stdout.txt').write_text(stdout)
@@ -75,3 +80,4 @@ assert [line.strip() for line in lines if line.strip().startswith('ok ')] == [
     'ok   awake pass', 'ok   slept pass', 'ok   sub-millisecond gap', 'ok   uptime ahead', 'ok   real clocks']
 assert 'SKIP' not in stdout
 (out/'results.json').write_text(json.dumps({'exit_code': run.returncode, 'lines': lines}, indent=2) + '\n')
+record_build(package, out, scratch, "SleepRecordControls", swift_command=SWIFT)

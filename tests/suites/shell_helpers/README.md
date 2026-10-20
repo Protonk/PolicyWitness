@@ -23,6 +23,9 @@ Source `tests/lib/case.sh`, which loads `testlib.sh`, then call `test_begin`.
 The case owns its suite/test identity, steps, checker arguments, and final
 `test_pass`. The helpers do not decide that a case has passed.
 
+`test_begin` exports `PW_TEST_SCRATCH` as `${PW_TEST_DIR}/scratch` without
+creating it; build intermediates go there and evidence stays in `artifacts/`.
+
 Loading `testlib.sh` checks the actual `/usr/bin/python3` assertion mode and
 exits 2 with an actionable diagnostic if assertions are disabled. This protects
 the dispatcher and direct shell suite entry points before case work or output
@@ -136,6 +139,13 @@ return success so callers can continue with another case.
 Quiet mode means `PW_TEST_QUIET=1`; unset, empty, and `0` retain ordinary messages
 in direct scripts as well as through the public command.
 
+Before emitting terminal evidence, the shared writer removes the case's
+scratch directory for every outcome. It uses the directory established by
+`test_begin`, ignoring reassigned `PW_TEST_SCRATCH`; before setup or when
+`PW_TEST_DIR` no longer matches that directory, it removes nothing.
+Cleanup failure does not suppress the terminal report, and dispatcher
+reconciliation reports remaining scratch.
+
 The `finalizers` case exercises all four public functions with quiet unset,
 empty, `0`, and `1`, omitted arguments, empty arguments, and literal messages/JSON data.
 The fixture calls `test_begin` and the selected public function, then writes
@@ -145,6 +155,14 @@ receipt, one start/terminal event pair in each stream, and the matching report.
 Suite alias, case identity, message, duration, and artifact path must agree;
 nested JSON, quotes, newlines, backslashes, and Unicode must survive. A shell
 expression in the message must never create its canary file.
+Each control records the exported scratch path and reads its populated bytes
+before finalization; the observer compares the path with the independently
+constructed `<case>/scratch`. Populated scratch must disappear, artifact bytes
+remain unchanged, and an outside directory named by a reassigned
+`PW_TEST_SCRATCH` survive. Additional controls exercise all four finalizers
+without `test_begin` and with reassigned `PW_TEST_DIR`, requiring populated
+scratch to survive while reports and terminal events still appear. The observer
+removes those exact guard fixtures after inspection, retaining their receipts.
 
 These controls inspect public behavior without replacing the clock or calling
 the private writer. Elapsed time is bounded by the enclosing process duration;

@@ -125,6 +125,22 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
         if len(terminal) == 1 and report['status'] != terminal[0]:
             problem(invocation, 'status_mismatch', f'{relative}: report status disagrees with test_end', **details)
         invocation['reports'].append(report)
+        case_dir = out / Path(relative).parent
+        # Inspect directory entries without traversing symlinks, including a
+        # symlink at the case root. Scratch itself must be absent after finish.
+        if os.path.lexists(case_dir / 'scratch'):
+            problem(invocation, 'scratch_retained', f'{relative}: case scratch remains',
+                    **{**details, 'path': str((case_dir / 'scratch').relative_to(out))})
+        if not case_dir.is_symlink():
+            for directory, names, _ in os.walk(case_dir, followlinks=False):
+                for name in names:
+                    path = Path(directory) / name
+                    if name == '.build' and not path.is_symlink():
+                        problem(invocation, 'build_tree_in_evidence',
+                                f'{relative}: SwiftPM build tree remains at {path.relative_to(out)}',
+                                **{**details, 'path': str(path.relative_to(out))})
+                # A build tree is one violation, regardless of its contents.
+                names[:] = [name for name in names if name != '.build']
     return current_events, current_reports
 
 

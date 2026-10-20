@@ -14,6 +14,10 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tests/lib"))
+from build_receipt import record_build
+
+SWIFT = ['swift']
 FIXTURE = ROOT / "tests/fixtures/host_setup"
 
 
@@ -75,7 +79,7 @@ def check(receipt, owner, fault):
     return "child observed; setup failure did not prevent spawn" if fault != "baseline" else "baseline endpoints observed"
 
 
-def run(out):
+def run(out, scratch):
     out.mkdir(parents=True)
     package = out / "runner"
     shutil.copytree(ROOT / "runner/Sources", package / "Sources")
@@ -119,9 +123,8 @@ def run(out):
     observer = out / "observer"; child_path = out / "child.json"
     with (out / "build.log").open("w") as log:
         subprocess.run(["clang", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", f'-DRECEIPT_PATH="{child_path}"', str(FIXTURE / "observer.c"), "-o", str(observer)], check=True, stdout=log, stderr=log)
-        subprocess.run(["swift", "build", "--package-path", str(package), "--product", "PWRunnerCoreTests"], check=True, stdout=log, stderr=log, timeout=180)
-    binary_dir = subprocess.check_output(["swift", "build", "--package-path", str(package), "--show-bin-path"], text=True).strip()
-    executable = Path(binary_dir) / "PWRunnerCoreTests"
+        subprocess.run([*SWIFT, "build", "--package-path", str(package), "--scratch-path", str(scratch), "--product", "PWRunnerCoreTests"], check=True, stdout=log, stderr=log, timeout=180)
+    executable = record_build(package, out, scratch, "PWRunnerCoreTests", swift_command=SWIFT)
     cases = [("worker", f) for f in ("baseline", "collision", "actions_init", "dup2.0", "dup2.3", "dup2.4", "strdup.0", "strdup.2", "unlink", "clear_cloexec", "nosigpipe")]
     cases += [("worker_token", "baseline"), ("worker_token", "dup2.5")]
     cases += [("issuer", f) for f in ("baseline", "collision", "actions_init", "attrs_init", "dup2.3", "open.1", "flags", "strdup.0", "unlink")]
@@ -163,4 +166,4 @@ def run(out):
 
 
 if __name__ == "__main__":
-    run(Path(sys.argv[1]).resolve())
+    run(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())

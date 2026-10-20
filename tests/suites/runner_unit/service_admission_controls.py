@@ -6,6 +6,11 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root / "tests/lib"))
+from build_receipt import record_build
+
+SWIFT = ['swift']
+scratch = Path(sys.argv[2]).resolve()
 out = Path(sys.argv[1]); out.mkdir(parents=True)
 package = out/'runner'
 shutil.copytree(root/'runner/Sources', package/'Sources')
@@ -25,7 +30,7 @@ for name,anchor,replacement,reason in mutations:
     text=fixed.replace(anchor,replacement) if anchor else fixed
     service.write_text(text); (out/(name+'.swift')).write_text(text)
     with (out/(name+'.log')).open('w') as log:
-        run=subprocess.run(['swift','run','--package-path',str(package),'PWRunnerCoreTests'],stdout=log,stderr=log,timeout=120)
+        run=subprocess.run([*SWIFT,'run','--package-path',str(package),'--scratch-path',str(scratch),'PWRunnerCoreTests'],stdout=log,stderr=log,timeout=120)
     log=(out/(name+'.log')).read_text()
     assert '[host single use admission]' in log and 'tests passed' in log, (name,'build/equipment failure')
     if reason:
@@ -34,3 +39,4 @@ for name,anchor,replacement,reason in mutations:
     results.append(dict(control=name,exit_code=run.returncode,expected_failure=reason))
 service.write_text(fixed)
 (out/'results.json').write_text(json.dumps(results,indent=2)+'\n')
+record_build(package, out, scratch, "PWRunnerCoreTests", swift_command=SWIFT)

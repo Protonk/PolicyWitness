@@ -306,6 +306,15 @@
           "description": "Swift runner unit-test batch"
         },
         {
+          "id": "build_receipt_controls",
+          "description": "Constructed layouts require a real product under case scratch, outside retained output, with no package build tree",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/build_receipt_controls.sh"
+          ],
+          "requires": []
+        },
+        {
           "id": "service_admission_controls",
           "description": "Service seams detect original per-connection admission and refusal exit defects in disposable source copies",
           "command": [

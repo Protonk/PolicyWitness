@@ -70,6 +70,15 @@ rewritten events, reused paths, and removed reports. Failure scenarios generally
 include a subsequent passing case. Missing/nonexecutable entrypoints instead
 prove rejection happens before any execution or output replacement.
 
+Scratch controls require ordinary finalization to remove populated scratch,
+and independently require `build_tree_in_evidence` for a retained nested
+`.build` and `scratch_retained` for scratch recreated after finalization.
+Reported case statuses remain passing while either harness error fails the
+run. Each scenario includes a later passing case and checks exact error codes.
+The control records its stimulus paths and removes only those directories
+after checking the child, including on assertion failure, so the parent scan
+does not reject the deliberate fixtures. Child reports, events and logs remain.
+
 `accounting_controls` runs `check_accounting.py`, which supplies independent
 handoff records directly at the accounting/finalization boundary: ambiguous ownership must retain both
 selections as unrun, and missing, duplicated, unexpected, or invalid result

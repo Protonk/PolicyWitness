@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+_PW_TEST_BEGUN_DIR=''
+
 # Assertions are executable test checks. Refuse an optimized interpreter before
 # callers initialize or replace evidence, even when sourced inside a conditional.
 if ! /usr/bin/python3 - <<'PY'
@@ -145,9 +147,12 @@ test_begin() {
   PW_TEST_EVENTS_LOCAL="${PW_TEST_DIR}/events.jsonl"
   PW_TEST_REPORT="${PW_TEST_DIR}/report.json"
   PW_TEST_ARTIFACTS="${PW_TEST_DIR}/artifacts"
+  PW_TEST_SCRATCH="${PW_TEST_DIR}/scratch"
+  _PW_TEST_BEGUN_DIR="${PW_TEST_DIR}"
 
   export PW_TEST_SUITE PW_TEST_ID PW_TEST_START_MS
   export PW_TEST_DIR PW_TEST_EVENTS_LOCAL PW_TEST_REPORT PW_TEST_ARTIFACTS
+  export PW_TEST_SCRATCH
 
   mkdir -p "${PW_TEST_ARTIFACTS}"
 
@@ -229,6 +234,11 @@ _test_finish() {
   local status="$1"
   local message="$2"
   local data_json="$3"
+  if [[ -n "${_PW_TEST_BEGUN_DIR}" && "${PW_TEST_DIR:-}" == "${_PW_TEST_BEGUN_DIR}" ]]; then
+    # Preserve terminal reporting even when cleanup fails; reconciliation
+    # independently rejects any remaining scratch. Never trust an override.
+    rm -rf -- "${PW_TEST_DIR}/scratch" || true
+  fi
   local end_ms
   end_ms="$(now_ms)"
   local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))

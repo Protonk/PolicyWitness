@@ -15,6 +15,10 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tests/lib"))
+from build_receipt import record_build
+
+SWIFT = ['swift']
 HERE = ROOT / "tests/fixtures/launch_descriptor"
 FAILURES = ("spawn_failure", "truncate_failure", "mmap_nil", "mmap_failed", "pipe_1", "pipe_2", "nosigpipe", "get_flags", "nonblock", "pipe_cloexec", "extension_dup")
 
@@ -114,7 +118,7 @@ def check(r, variant, mode):
         assert child[5]['access_mode'] == 0 and not child[5]['mapped'], 'extension fd5 not retained separately'
 
 
-def run(out):
+def run(out, scratch):
     assert not out.exists(), 'fresh output required'
     base = subprocess.check_output(['git','rev-parse','HEAD'], cwd=ROOT, text=True).strip()
     out.mkdir(parents=True)
@@ -167,8 +171,8 @@ def run(out):
     worker=app/'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
     observer=out/'observer'
     command(out,'observer-build',['clang','-Wall','-Wextra','-Werror','-I'+str(ROOT/'controller/tools/pw_probe_runner'),'-DREAL_WORKER="'+str(worker)+'"',str(HERE/'observer.c'),'-o',str(observer)])
-    command(out,'core-build',['swift','build','--package-path',str(package),'--product','PWRunnerCoreTests'])
-    binary=Path(subprocess.check_output(['swift','build','--package-path',str(package),'--show-bin-path'],text=True).strip())/'PWRunnerCoreTests'
+    command(out,'core-build',[*SWIFT,'build','--package-path',str(package),'--scratch-path',str(scratch),'--product','PWRunnerCoreTests'])
+    binary = record_build(package, out, scratch, 'PWRunnerCoreTests', swift_command=SWIFT)
     (out/'equipment.json').write_text(json.dumps(dict(worker=str(worker),worker_sha256=digest(worker),observer_sha256=digest(observer),host_sha256=digest(binary),uname=subprocess.check_output(['uname','-a'],text=True).strip()),indent=2)+'\n')
     results=[]; receipts={}
     cases=[(v,m) for v in ('candidate','old_lifetime') for m in ('high','self','extension_delivery')]
@@ -227,4 +231,4 @@ def run(out):
     (out/'results.json').write_text(json.dumps(results,indent=2)+'\n')
     print(json.dumps(results,indent=2))
 
-if __name__=='__main__': run(Path(sys.argv[1]).resolve())
+if __name__=='__main__': run(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())

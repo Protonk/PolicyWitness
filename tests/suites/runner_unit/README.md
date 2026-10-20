@@ -105,6 +105,27 @@ the signed app; its package, output and results remain under
 
 ## Artifacts
 
+`service_admission_controls`, `sleep_record_controls`, `host_setup_controls`,
+`launch_descriptor_controls`, `host_setup_oracle_sensitivity`,
+`exec_reader_mutations` and `reaped_ack_mutation` build their disposable Swift
+packages under case scratch. They retain sources, logs and `build-receipt.json`
+files naming the final product's path and SHA-256, but finalization removes
+SwiftPM intermediates and products for every outcome. Each oracle-sensitivity
+variant gets its own scratch directory and receipt. Successive builds of one
+package retain incremental state until the case finishes; their receipt names
+the final variant's product after retaining and checking its output.
+Sleep-record controls likewise save stdout and check outcomes before recording
+the build. Host setup and launch-descriptor controls need the product path
+before execution and record it at that point. All queries use the same Swift
+command as their producer's builds, including the `xcrun` prefix where used.
+
+`build_receipt_controls` uses constructed layouts without Swift or the app.
+It accepts a valid product and rejects a missing product, a package `.build`,
+a product outside scratch, scratch inside output, and scratch outside the case
+boundary with separate diagnostics. Its deliberate fixtures live in scratch;
+only results remain in artifacts. A constructed launcher records forwarded
+arguments while a failing `swift` on `PATH` detects unintended command fallback.
+
 `<run>` is the selected output directory: `tests/out/runs/default` for the
 public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
 default to `tests/out/runs/direct`.

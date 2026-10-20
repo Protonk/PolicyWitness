@@ -15,6 +15,11 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(ROOT / "tests/lib"))
+from build_receipt import record_build
+
+SWIFT = ['/usr/bin/xcrun', 'swift']
+scratch = Path(sys.argv[2]).resolve()
 OUT = Path(sys.argv[1]).resolve()
 OUT.mkdir(parents=True)
 commands = []
@@ -77,7 +82,7 @@ try:
         body = fixed.replace(anchor, "", 1) if mutated else fixed
         source.write_text(body)
         (OUT / (variant + ".swift")).write_text(body)
-        rc, log = run(variant, ["/usr/bin/xcrun", "swift", "run", "--package-path", package,
+        rc, log = run(variant, [*SWIFT, "run", "--package-path", package, "--scratch-path", scratch,
                                "PWRunnerCoreTests"], env=environment)
         failures = [line.strip() for line in log.splitlines() if line.strip().startswith("FAIL ")]
         successes = [line.strip() for line in log.splitlines() if line.strip().startswith("ok ")]
@@ -98,3 +103,4 @@ try:
 finally:
     source.write_text(fixed)
 print(json.dumps(results, indent=2))
+record_build(package, OUT, scratch, "PWRunnerCoreTests", swift_command=SWIFT)

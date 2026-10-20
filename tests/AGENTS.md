@@ -109,6 +109,10 @@ expected outcomes, independent observations and cleanup ownership in the case.
 Retain raw inputs, output and diagnostics; distinguish a harness deadline or
 equipment failure from a PolicyWitness result.
 
+Put build intermediates in `PW_TEST_SCRATCH` and retain sources, logs and
+receipts in `artifacts/`; reconciliation detects SwiftPM's default `.build`
+location, while this rule covers other build state too.
+
 Preserve independent file/process observations and separate assertions for
 prediction and attempt evidence. A successful return code alone does not prove
 an effect, and a permission-shaped failure alone does not establish a sandbox

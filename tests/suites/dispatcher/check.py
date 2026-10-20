@@ -15,6 +15,9 @@ def main():
     out = Path(sys.argv[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
     cases = [
+        ('scratch_cleanup', ['scratch_cleanup', 'pass'], True, ()),
+        ('build_tree', ['build_tree', 'pass'], False, ('build_tree_in_evidence',)),
+        ('scratch_retained', ['scratch_retained', 'pass'], False, ('scratch_retained',)),
         ('pass_and_skip', ['pass', 'skip'], True, ()),
         ('all_skip', ['skip'], True, ()),
         ('alias', ['wrapper'], True, ()),
@@ -75,56 +78,77 @@ def main():
         argv = ['bash', str(repo / 'tests/run.sh')]
         for suite in requested:
             argv.extend(['--suite', suite])
-        result = subprocess.run(argv, env=env, cwd=work, capture_output=True, timeout=20)
-        (work / 'stdout').write_bytes(result.stdout)
-        (work / 'stderr').write_bytes(result.stderr)
-        (work / 'exit.json').write_text(json.dumps({'returncode': result.returncode}) + '\n')
-        if name in ('missing', 'nonexecutable'):
-            assert result.returncode == 2 and b'missing or nonexecutable case runner' in result.stderr, (name, result.stderr)
-            assert (child_out / 'run.json').read_text() == prior_run, name
-            assert not (child_out / 'dispatch.json').exists(), name
+        stimuli = []
+        if name == 'build_tree':
+            stimuli.append(child_out / 'suites/build_tree/fixture_case/artifacts/package/.build')
+        elif name == 'scratch_retained':
+            stimuli.append(child_out / 'suites/scratch_retained/fixture_case/scratch')
+        (work / 'stimuli.json').write_text(json.dumps([str(path) for path in stimuli]) + '\n')
+        try:
+            result = subprocess.run(argv, env=env, cwd=work, capture_output=True, timeout=20)
+            (work / 'stdout').write_bytes(result.stdout)
+            (work / 'stderr').write_bytes(result.stderr)
+            (work / 'exit.json').write_text(json.dumps({'returncode': result.returncode}) + '\n')
+            if name in ('missing', 'nonexecutable'):
+                assert result.returncode == 2 and b'missing or nonexecutable case runner' in result.stderr, (name, result.stderr)
+                assert (child_out / 'run.json').read_text() == prior_run, name
+                assert not (child_out / 'dispatch.json').exists(), name
+                inventory.append(name)
+                print(f'{name}: ok', flush=True)
+                continue
+            requested = list(dict.fromkeys(requested))
+            summary = json.loads((child_out / 'run.json').read_text())
+            journal = json.loads((child_out / 'dispatch.json').read_text())
+            assert result.returncode == (0 if expected_ok else 1), (name, result.returncode, result.stderr)
+            assert summary['ok'] is expected_ok and 'stale' not in summary, (name, summary)
+            assert summary['requested_suites'] == requested, (name, summary)
+            invocations = summary['invocations']
+            assert [item['requested_suite'] for item in invocations] == requested, name
+            assert [item['index'] for item in invocations] == list(range(len(requested))), name
+            assert journal['invocations'] == invocations, name
+            actual_codes = {error['code'] for error in summary['harness_errors']}
+            if name in ('scratch_cleanup', 'build_tree', 'scratch_retained'):
+                assert actual_codes == set(codes), (name, summary['harness_errors'])
+                assert len(summary['harness_errors']) == len(codes), name
+                assert not (child_out / 'suites/scratch_cleanup/fixture_case/scratch').exists(), name
+                for stimulus in stimuli:
+                    assert stimulus.is_dir(), stimulus
+                    assert any(error.get('path') == str(stimulus.relative_to(child_out))
+                               for error in summary['harness_errors']), summary
+                assert all(report['status'] == 'pass' for report in summary['reports']), summary
+            assert set(codes) <= actual_codes, (name, codes, summary['harness_errors'])
+            if expected_ok:
+                assert not summary['harness_errors'], summary
+            for error in summary['harness_errors']:
+                assert error['requested_suite'] == requested[error['invocation']], error
+                assert error['code'].encode() in result.stderr, (name, error, result.stderr)
+            reports = summary['reports']
+            expected_counts = {status: sum(report['status'] == status for report in reports)
+                               for status in ('pass', 'fail', 'skip')}
+            assert summary['counts'] == {**expected_counts, 'total': len(reports)}, (name, summary)
+            assert summary['ok'] is (expected_counts['fail'] == 0 and not summary['harness_errors']), name
+            if requested[-1] == 'pass':
+                assert invocations[-1]['state'] == 'exited' and invocations[-1]['returncode'] == 0, name
+                assert any(report['suite'] == 'pass' and report['status'] == 'pass'
+                           for report in invocations[-1]['reports']), 'failure suppressed the next requested suite'
+            if name == 'alias':
+                assert set(summary['suites']) == {'reported_alias'} and summary['counts']['pass'] == 1
+                assert invocations[0]['report_paths'] == ['suites/reported_alias/fixture_case/report.json']
+            if name == 'pass_and_skip':
+                assert summary['counts'] == {'pass': 1, 'skip': 1, 'fail': 0, 'total': 2}
+            if name == 'all_skip':
+                assert summary['counts'] == {'pass': 0, 'skip': 1, 'fail': 0, 'total': 1}
+            if name == 'pass_then_crash':
+                assert invocations[0]['returncode'] == 19 and summary['counts']['pass'] == 2
+            if name == 'failed_report_zero_exit':
+                assert invocations[0]['returncode'] == 0 and summary['counts']['fail'] == 1
             inventory.append(name)
             print(f'{name}: ok', flush=True)
-            continue
-        requested = list(dict.fromkeys(requested))
-        summary = json.loads((child_out / 'run.json').read_text())
-        journal = json.loads((child_out / 'dispatch.json').read_text())
-        assert result.returncode == (0 if expected_ok else 1), (name, result.returncode, result.stderr)
-        assert summary['ok'] is expected_ok and 'stale' not in summary, (name, summary)
-        assert summary['requested_suites'] == requested, (name, summary)
-        invocations = summary['invocations']
-        assert [item['requested_suite'] for item in invocations] == requested, name
-        assert [item['index'] for item in invocations] == list(range(len(requested))), name
-        assert journal['invocations'] == invocations, name
-        actual_codes = {error['code'] for error in summary['harness_errors']}
-        assert set(codes) <= actual_codes, (name, codes, summary['harness_errors'])
-        if expected_ok:
-            assert not summary['harness_errors'], summary
-        for error in summary['harness_errors']:
-            assert error['requested_suite'] == requested[error['invocation']], error
-            assert error['code'].encode() in result.stderr, (name, error, result.stderr)
-        reports = summary['reports']
-        expected_counts = {status: sum(report['status'] == status for report in reports)
-                           for status in ('pass', 'fail', 'skip')}
-        assert summary['counts'] == {**expected_counts, 'total': len(reports)}, (name, summary)
-        assert summary['ok'] is (expected_counts['fail'] == 0 and not summary['harness_errors']), name
-        if requested[-1] == 'pass':
-            assert invocations[-1]['state'] == 'exited' and invocations[-1]['returncode'] == 0, name
-            assert any(report['suite'] == 'pass' and report['status'] == 'pass'
-                       for report in invocations[-1]['reports']), 'failure suppressed the next requested suite'
-        if name == 'alias':
-            assert set(summary['suites']) == {'reported_alias'} and summary['counts']['pass'] == 1
-            assert invocations[0]['report_paths'] == ['suites/reported_alias/fixture_case/report.json']
-        if name == 'pass_and_skip':
-            assert summary['counts'] == {'pass': 1, 'skip': 1, 'fail': 0, 'total': 2}
-        if name == 'all_skip':
-            assert summary['counts'] == {'pass': 0, 'skip': 1, 'fail': 0, 'total': 1}
-        if name == 'pass_then_crash':
-            assert invocations[0]['returncode'] == 19 and summary['counts']['pass'] == 2
-        if name == 'failed_report_zero_exit':
-            assert invocations[0]['returncode'] == 0 and summary['counts']['fail'] == 1
-        inventory.append(name)
-        print(f'{name}: ok', flush=True)
+        finally:
+            # Only remove the exact control-owned stimuli, preserving child evidence.
+            for stimulus in stimuli:
+                if stimulus.exists():
+                    shutil.rmtree(stimulus)
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} dispatcher controls passed')
 

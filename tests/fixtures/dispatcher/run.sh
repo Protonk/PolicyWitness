@@ -24,8 +24,19 @@ if [[ "${NAME}" == fail_then_zero ]]; then
   (test_fail "deliberate failed report") || true
   exit 0
 fi
+case "${NAME}" in
+  scratch_cleanup)
+    mkdir -p "${PW_TEST_SCRATCH}/nested"
+    printf 'temporary\n' >"${PW_TEST_SCRATCH}/nested/state"
+    ;;
+  build_tree)
+    mkdir -p "${PW_TEST_ARTIFACTS}/package/.build"
+    ;;
+esac
 test_pass "fixture reports success"
 case "${NAME}" in
+  scratch_retained) mkdir -p "${PW_TEST_SCRATCH}" ;;
+  scratch_cleanup|build_tree) ;;
   pass_then_crash) exit 19 ;;
   unfinished) test_begin "${SUITE}" unfinished_case ;;
   duplicate_end) test_pass "second terminal event" ;;

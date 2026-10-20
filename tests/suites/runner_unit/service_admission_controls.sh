@@ -5,5 +5,5 @@ source "${ROOT_DIR}/tests/lib/case.sh"
 test_begin runner_unit service_admission_controls
 test_step controls "restore per-connection admission and refusal exit separately in a disposable source copy"
 test_check_python "${PW_TEST_ARTIFACTS}/controls.log" "service regression controls failed" \
-  "${ROOT_DIR}/tests/suites/runner_unit/service_admission_controls.py" "${PW_TEST_ARTIFACTS}/controls"
+  "${ROOT_DIR}/tests/suites/runner_unit/service_admission_controls.py" "${PW_TEST_ARTIFACTS}/controls" "${PW_TEST_SCRATCH}/build"
 test_pass "fixed services pass; per-connection admission and refusal exit each restore the expected failure"

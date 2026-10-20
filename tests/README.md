@@ -319,7 +319,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
 | `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |
-| `runner_unit` | Baseline + opt-in | Swift host admission, drivers, lifecycle and evidence encoding; actual transfer replies cross Rust/Python readers. Internal SKIP/FAIL output fails the wrapper. | Swift; driver case also needs clang, Cargo and a signed app, without XPC. Launch-descriptor ownership controls require the signed worker. Isolated host setup faults, descriptor collisions and opt-in oracle-sensitivity, confirmed-reap and exec-reader mutations use Swift/clang without the app. | [Suite](suites/runner_unit/README.md) |
+| `runner_unit` | Baseline + opt-in | Swift host admission, drivers, lifecycle and evidence encoding; actual transfer replies cross Rust/Python readers. Constructed build-receipt layouts need only Python. Internal SKIP/FAIL output fails the wrapper. | Swift; driver case also needs clang, Cargo and a signed app, without XPC. Launch-descriptor ownership controls require the signed worker. Isolated host setup faults, descriptor collisions and opt-in oracle-sensitivity, confirmed-reap and exec-reader mutations use Swift/clang without the app. | [Suite](suites/runner_unit/README.md) |
 | `integration` | Baseline | CLI and runner envelopes for the request fixtures. | App and XPC. | [Suite](suites/integration/README.md) |
 | `runner_apply_isolation_v2` | Baseline | Empty-plan SBPL v2 deny-default application, surviving reply, worker PID consistency and clean exit. No populated attempt results. | App and XPC. | [Suite](suites/runner_apply_isolation_v2/README.md) |
 | `runner_apply_isolation_v3` | Baseline | The same empty-plan application and reply contract using SBPL v3. | App and XPC. | [Suite](suites/runner_apply_isolation_v3/README.md) |
@@ -374,6 +374,25 @@ it does not depend on the wrapper's `set -e`. Direct scripts retain the optional
 helpers in `testlib.sh`; the public dispatcher enforces catalog prerequisites and
 rejects undeclared skips. [shell_helpers](suites/shell_helpers/README.md) documents
 the API and independent controls.
+
+`test_begin` exports `PW_TEST_SCRATCH` as the case's `scratch/` path without
+creating it. Public finalizers remove that directory for pass, fail and skip
+before writing terminal evidence; interrupted cases retain it inside their run.
+Sources, logs and receipts belong in `PW_TEST_ARTIFACTS`.
+
+### SwiftPM build receipts
+
+`tests/lib/build_receipt.py` queries SwiftPM with the producer's own Swift
+command and explicit `--scratch-path`, verifies that the named product exists under scratch, that
+the package has no `.build`, and that scratch is outside the producer's output
+and under `PW_TEST_SCRATCH` when set. It records the resolved scratch/product
+paths, product SHA-256 and query command in `build-receipt.json`, with query
+diagnostics in `build-location.log`. Receipts survive finalization; products
+do not. For successive builds of one copy the receipt describes the final
+variant, after its output and outcome checks have been retained and passed.
+Host setup and launch-descriptor controls query earlier because they need the
+product path to run their checks. Constructed `runner_unit/build_receipt_controls`
+independently exercise placement and command forwarding without Swift.
 
 ### CLI capture
 
@@ -446,6 +465,7 @@ directory so tooling can read stable paths. `<run>` defaults to
     report.json
     events.jsonl
     artifacts/...
+    scratch/...       # disposable build state; removed at case finalization
 ```
 
 `owner.json` establishes run ownership as described in the
@@ -481,6 +501,10 @@ unrun selections, and undeclared skips fail. A declared skip requires a matching
 absent annotated mismatch after evidence validation. There is no skip-policy flag.
 `run.json.ok` and the shell exit agree: zero failed reports and zero harness
 errors. Exit 2 means planning/configuration was rejected before execution.
+Readable terminal reports also trigger a case-directory scan without following
+links: a retained `.build` directory records `build_tree_in_evidence`, and a
+remaining case `scratch` path records `scratch_retained`. These harness errors
+leave reported case statuses unchanged and make `run.json.ok` false.
 The [dispatcher suite](suites/dispatcher/README.md) documents the independent controls.
 
 BYOXPC sessions use durable private registries. The opt-in
