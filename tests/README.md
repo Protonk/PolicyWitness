@@ -205,9 +205,9 @@ environment witness and starts the developer directory's Python directly,
 with locale coercion disabled. The CLI owner and build session start refuse
 a missing or changed witness; neither restores values. Nested front ends
 witness their own caller. The dispatcher resolves the same direct Python
-independently and records no witness; cases that build use the front end. The hold
-lasts until the last compiler or tool that holds the descriptor exits, even
-when the owner and the script are killed first. A standalone Cargo
+independently and records no witness; cases that build use the front end.
+The hold lasts until the last compiler or tool that holds the descriptor
+exits, even when the owner and the script are killed first. A standalone Cargo
 invocation against the managed `controller/target/` goes through the same
 front end, which takes the lock or is admitted under an inherited claim:
 

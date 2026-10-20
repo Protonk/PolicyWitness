@@ -712,10 +712,11 @@ def control_environment_witness_changed(co, variant):
     """A deliberate shim start changes CPATH; the owner refuses before taking the lock."""
     session = co.root / SESSION
     kept = session.read_bytes() if session.exists() else None
-    # An explicit SDK suppresses the shim's CPATH insertion on this toolchain.
-    # Observe a safe default shim start, then construct a witness agreeing on
-    # every variable except CPATH, which the caller left unset. This isolates
-    # that refusal from the earlier SDKROOT comparison without guessing SDK aliases.
+    # The owner compares SDKROOT first and the shim inserts one, so a witness of
+    # the caller's own environment would be refused for SDKROOT. Witness what the
+    # shim gives its Python under the same environment instead, except CPATH,
+    # which the caller left unset: the refusal then names CPATH. A caller-set
+    # SDKROOT would not isolate it, since the shim then inserts no CPATH here.
     names = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
     probe = 'import json, os; print(json.dumps({n: os.environ.get(n) for n in ' + repr(names) + '}))'
     observed = json.loads(subprocess.check_output(['/usr/bin/python3', '-B', '-c', probe],

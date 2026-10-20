@@ -85,14 +85,15 @@ Offline release controls also exercise the release procedure's decision points.
   owner that exits or is killed during admission leaving no hold and no
   session; a hold that outlives a killed owner and wrapper while a protected
   grandchild runs, which a wrapper dropping the descriptor fails, and SIGINT,
-  SIGTERM and SIGKILL at the launcher; exact environment witnesses captured by the shell front
-  end, compared without restoration and recorded anew by nested front ends;
-  missing or changed witnesses refused before writes; direct Python child
-  environments compared byte for byte against the caller, with a shim
-  negative control; stand-in developer directories refused under containment; session writes, fresh removal and stamp publication
-  refused without a claim or with a missing, malformed or stale session
-  nonce; symlinked, non-directory and foreign cache components and unsafe
-  session destinations refused before any write, an owned missing
+  SIGTERM and SIGKILL at the launcher; exact environment witnesses captured
+  by the shell front end, compared without restoration and recorded anew by
+  nested front ends; missing or changed witnesses refused before writes;
+  direct Python child environments compared byte for byte against the
+  caller, with a shim negative control; stand-in developer directories
+  refused under containment; session writes, fresh removal and stamp
+  publication refused without a claim or with a missing, malformed or stale
+  session nonce; symlinked, non-directory and foreign cache components and
+  unsafe session destinations refused before any write, an owned missing
   `controller/target/` created, and a path replaced between admission and use
   refused without writing or removing through it; stamps published, validated,
   extended and refused as missing, malformed, unsupported, foreign, changed
@@ -184,8 +185,8 @@ Offline release controls also exercise the release procedure's decision points.
   checkout once per refusal the build manifest lists, in each variant the
   refusal applies to. A fault is arranged beside one boundary: a tracked input
   gone, a held lock, a claim without a live owner's handoff or an owner
-  killed mid-build, a CLI owner or nested build with a missing or changed environment
-  witness, an environment that cannot
+  killed mid-build, a CLI owner or nested build with a missing or changed
+  environment witness, an environment that cannot
   select the SDK or report its version, a stamp that is missing, malformed or
   foreign, a forwarding compiler wrapper relabelled after the stamp recorded
   it or failing its version probe, redirected or unobservable Cargo

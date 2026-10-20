@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import signal
 import socket
 import struct
@@ -262,7 +263,7 @@ class LockTests(unittest.TestCase):
                 _, fds, _, _ = socket.recv_fds(server, 65536, 1)
                 with socket.socket(fileno=fds[0]) as reply:
                     info = os.fstat(fd)
-                    message = dict(v=1, status='ok', nonce=record['nonce'], device=info.st_dev, inode=info.st_ino, requests=None)
+                    message = dict(v=1, status='ok', nonce=record['nonce'], device=info.st_dev, inode=info.st_ino)
                     socket.send_fds(reply, [json.dumps(message).encode()], [fd])
             threading.Thread(target=answer, daemon=True).start()
             env = dict(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(client.fileno()))
@@ -394,7 +395,6 @@ class LockTests(unittest.TestCase):
         (self.root / 'tests').mkdir(parents=True)
         self.lock = self.root / checkout_lock.LOCK
         self.launcher = ['/bin/bash', str(ROOT / 'tests/lib/checkout_lock.sh'), '--root', str(self.root), '--']
-        self.front_end = ['/bin/bash', str(ROOT / 'tests/lib/checkout_lock.sh'), '--root', str(self.root), '--']
 
     def script(self, name, text):
         path = self.work / name
@@ -599,10 +599,9 @@ class LockTests(unittest.TestCase):
         caller.update(CPATH='', LIBRARY_PATH=os.fsdecode(bytes(range(1, 256))) + '\n', MANPATH='spaced dir/man\n')
         report = ('import json, os, sys; sys.path.insert(0, sys.argv[1]); import checkout_lock; '
                   'print(json.dumps(checkout_lock.verify_environment(), sort_keys=True))')
-        import shlex
         command = shlex.join([PYTHON, '-B', '-c', report, LIB])
-        nested = command + '; CPATH=/inner/include ' + shlex.join(self.front_end) + ' ' + command
-        result = subprocess.run([*self.front_end, '/bin/bash', '-c', nested], env=caller, capture_output=True, text=True, timeout=60)
+        nested = command + '; CPATH=/inner/include ' + shlex.join(self.launcher) + ' ' + command
+        result = subprocess.run([*self.launcher, '/bin/bash', '-c', nested], env=caller, capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         outer, inner = map(json.loads, result.stdout.splitlines())
         expected = {n: dict(state='set', value=caller[n]) if n in caller else dict(state='unset') for n in NAMES}
@@ -641,7 +640,9 @@ class LockTests(unittest.TestCase):
         ]))
         for interpreter in ('direct', '/usr/bin/python3'):
             before, after = self.work / 'before', self.work / 'after'
-            env = dict(PATH='/usr/bin:/bin', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man', __CF_USER_TEXT_ENCODING=os.environ['__CF_USER_TEXT_ENCODING'])
+            # Python adds __CF_USER_TEXT_ENCODING when it is missing, so the caller supplies one.
+            env = dict(PATH='/usr/bin:/bin', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man',
+                       __CF_USER_TEXT_ENCODING=os.environ.get('__CF_USER_TEXT_ENCODING', f'0x{os.getuid():X}:0x0:0x0'))
             result = subprocess.run(['/usr/bin/env', '-i', *[f'{k}={v}' for k, v in env.items()], '/bin/bash', str(script),
                                      LIB, str(before), interpreter, str(after)], capture_output=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1163,6 +1164,8 @@ class FreshRemovalTests(unittest.TestCase):
 
 
 class OwnershipAndAdmissionTests(unittest.TestCase):
+    """Helpers refuse before any write without a live owner's handoff, a valid session or admitted paths."""
+
     def test_refused_start_does_not_create_a_missing_target_directory(self):
         with checkout_lock.owned(self.root, env=clean_env()) as scope:
             status, _, err = self.start(scope.child_env(clean_env()))
@@ -1205,8 +1208,6 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
             self.assertEqual(status, 0, err)
             self.assertEqual(json.loads(self.session.read_text())['requests']['SDKROOT'],
                              dict(state='set', value='requested sdk\n'))
-
-    """Helpers refuse before any write without a live owner's handoff, a valid session or admitted paths."""
 
     def setUp(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-admit-', dir='/private/tmp')

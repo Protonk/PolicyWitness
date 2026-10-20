@@ -79,8 +79,8 @@ exhaustive account of private runtime dependencies, and it says so in its
   effective options plus `inspection` and `xpc`; the requested Rust flags
   with the source that set them and which flag variables were set; the
   caller's `requests`, kept apart from what the build selected: `SDKROOT`
-  set (with its exact value, an empty one included) or unset as the caller
-  left it before any Python ran, `DEVELOPER_DIR` and
+  set (with its exact value, an empty one included) or unset as the
+  environment `build.sh` started with held it, `DEVELOPER_DIR` and
   `MACOSX_DEPLOYMENT_TARGET` with their values, and only the set or unset
   state of `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`; the fixed
   `output_target` (system `macos`, platform `1`, architecture `arm64`, a

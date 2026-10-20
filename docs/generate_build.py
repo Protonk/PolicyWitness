@@ -26,10 +26,11 @@ The parser accepts the forms build.sh uses and refuses any other: a banner is
 `echo "==> ..."` outside a function; a refusal is `echo "ERROR: ..." 1>&2` or
 a stderr heredoc whose first ERROR line is the message, followed within three
 lines by `exit N`; a signature is a `sign_macho "..."` call and a seal a
-`codesign --force` command; helpers run under `"${PW_PYTHON}"` as `"${ROOT_DIR}/<path>"`, bare or captured
-into a variable, as the lock front end `exec /bin/bash "${ROOT_DIR}/<path>"`,
-or as the resolver `source "${ROOT_DIR}/<path>"`, with a bare-word subcommand
-and the first `--flag` recorded; branches are
+`codesign --force` command; helpers run under `"${PW_PYTHON}"` as
+`"${ROOT_DIR}/<path>"`, bare or captured into a variable, as the lock front
+end `exec /bin/bash "${ROOT_DIR}/<path>"`, or as the resolver
+`source "${ROOT_DIR}/<path>"`, with a bare-word subcommand and the first
+`--flag` recorded; branches are
 `if`/`else`/`fi`, loops `for`/`done`, and `case`/`esac` may hold refusals
 but no banners. A banner inside an `if` on `"${PW_FRESH_BUILD}"` belongs to
 that condition (`fresh` or `incremental`), which the manifest step names in

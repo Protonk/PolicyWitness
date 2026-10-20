@@ -162,7 +162,7 @@
         "full",
         "partial"
       ],
-      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD, arguments and tracked inputs; the developer directory selected by xcode-select under DEVELOPER_DIR, whose executable usr/bin/python3 each entry resolves independently; without a claim, the shell front end witnesses SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE and starts the lock owner directly",
+      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it",
       "writes": "the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else",
       "refusals": [
         "knob_value",
@@ -231,8 +231,8 @@
         "full",
         "partial"
       ],
-      "reads": "the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, the acquisition nonce its owner record carries; never the environment alone",
-      "writes": "nothing on disk; verifies the inherited lock claim without restoring environment values",
+      "reads": "the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, and the acquisition nonce its owner record carries; never the environment alone",
+      "writes": "nothing",
       "refusals": [
         "lock_claim_invalid"
       ],

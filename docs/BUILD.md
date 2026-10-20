@@ -117,8 +117,8 @@ writes. A test compares the staged copy itself.
 | Id | Banner | Variants | Reads | Writes | Refusals | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment | nothing; runs build.sh with them | none | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py) |
-| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD, arguments and tracked inputs; the developer directory selected by xcode-select under DEVELOPER_DIR, whose executable usr/bin/python3 each entry resolves independently; without a claim, the shell front end witnesses SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE and starts the lock owner directly | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy, direct_python_unavailable, environment_witness_missing, environment_witness_changed | [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py) |
-| lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, the acquisition nonce its owner record carries; never the environment alone | nothing on disk; verifies the inherited lock claim without restoring environment values | lock_claim_invalid | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy, direct_python_unavailable, environment_witness_missing, environment_witness_changed | [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py) |
+| lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, and the acquisition nonce its owner record carries; never the environment alone | nothing | lock_claim_invalid | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | check_limits | Checking limits documentation | both | docs/limits.json and the documents it renders | nothing | stale_limits | [`Checking limits documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_contract | Checking contract versions | both | docs/contract.json, docs/architecture.json and their generated copies | nothing | stale_contract, stale_architecture | [`Checking contract versions`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_build_doc | Checking build documentation | both | docs/build.json, build.sh, meson.build, the Makefile, the inventories, the baseline and the generated copies | nothing | stale_build_doc | [`Checking build documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
@@ -187,8 +187,8 @@ The build depends on these inputs and working state, in the order it meets them.
   execution does, so a build and a battery in one checkout are mutually
   exclusive. A direct invocation hands itself to the shell front end before
   any Python runs; the front end witnesses the caller's `SDKROOT`, `CPATH`,
-  `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, starts Python directly and takes the
-  lock without blocking and refuses a busy one before any cache or
+  `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, and the owner it starts directly
+  takes the lock without blocking and refuses a busy one before any cache or
   distribution mutation. [Locking](#the-checkout-lock) explains how a claim
   is admitted, how the witness is checked and how long the hold lasts.
 - **The git stamp.** `git describe`, `rev-parse` and `rev-list` give the
@@ -510,9 +510,11 @@ tool invocations, and Cargo's own locking does not protect a shell deletion
 made before Cargo starts. A protected descendant that outlives its command
 keeps the lock until it exits. The witness establishes preservation from the
 front end onward, not the history of its caller: values already inserted by a
-shim before the front end starts are part of that caller's environment. Leaf
-Python scripts and the git shim still exist; the resolver does not validate
-an SDK or a developer directory that contains an executable Python.
+shim before the front end starts are part of that caller's environment.
+`make build` is such a caller: `/usr/bin/make` is a shim that prepends the
+developer directory's manual paths to `MANPATH`. Leaf Python scripts and the
+git shim still exist; the resolver does not validate an SDK or a developer
+directory that contains an executable Python.
 
 A standalone Cargo invocation against the managed cache goes through the same
 front end, which takes the lock or is admitted by the owner of an inherited
@@ -698,8 +700,9 @@ arranged beside the guarded boundary: a tracked input gone, a held lock, a
 claim without a live owner's handoff (stale or closed descriptors, an unheld
 descriptor on the lock inode with a released owner's nonce, another open
 while a real owner holds the lock, a wrong nonce, another checkout) or an
-owner killed mid-build, a CLI owner or nested build without a witness, or a witness changed by a shim, an environment in
-which xcrun selects no SDK or reports no numeric version, a missing,
+owner killed mid-build, a CLI owner or nested build without a witness, or a
+witness changed by a shim, an environment in which xcrun selects no SDK or
+reports no numeric version, a missing,
 malformed or foreign stamp, a forwarding Rust or C compiler wrapper
 relabelled after the stamp recorded it, a probe that fails, hangs or floods
 stderr past its cap while exiting zero, a Cargo configuration that cannot be

@@ -122,3 +122,49 @@ The resolver's contained invalid-directory controls and invalid SDK control
 also assert its absence. Environment preservation is checked against a
 deliberate shim-start negative control, including raw bytes, empty and unset
 values, trailing newlines, and a wrapper interpreter path containing spaces.
+
+## Review corrections
+
+A review of the committed implementation (`16e2f83`) found no behavioral
+defect. Its corrections are documentation, comments and test-file cleanup:
+
+- `build.sh`'s lock comment again says that the held descriptor outlives a
+  killed script or owner and that a claim is verified by the owner's
+  handoff, never the environment, and now says what the witness replaces.
+- The build manifest's `admission` row again names `--help`'s ordering and
+  the tracked-input check, and says that the owner takes the lock; the `lock`
+  row writes nothing. BUILD.md says that the owner, not the front end, takes
+  the lock, and that `make build` reaches the front end through
+  `/usr/bin/make`, a shim that prepends to `MANPATH` (re-observed with
+  `env -i` during the review). SIGNING.md describes the recorded SDK request
+  as `build.sh`'s starting environment.
+- `check_build_provenance.py` drops a fake owner's stale `requests` member,
+  the duplicate `front_end` launcher, a function-level import and a
+  misplaced class docstring, and supplies `__CF_USER_TEXT_ENCODING` when the
+  test's own environment lacks it. A comment in
+  `control_environment_witness_changed` explains why the witness copies the
+  shim's environment. Long lines are rewrapped.
+
+`build.sh` is a worker-identity input, so the identity was regenerated
+(`b2d02e1998b4c770498336356d18a0def7f85d8d225e959747baa5e20acc4e6f`) and the
+app rebuilt incrementally with the same identity and commands as above.
+
+| Check | Result | Evidence |
+|---|---|---|
+| `source_drift` and `preflight/build_provenance_controls`, before the build | 9/9 passed | [Run](../tests/out/runs/direct-python-review-offline-20261020/run.json) |
+| Signed build | Passed; no installation request in the output | ZIP SHA-256 `21a62d9082bf7f13eb10e01e3fced4e65a9c99833103340fc403982458d87788` |
+| Full default battery | 198/198 passed; zero skips, harness errors or sleep overlap; app valid before and unchanged after | [Run](../tests/out/runs/direct-python-review-default-20261020/run.json) |
+| `preflight/signed_artifact_controls`, `preflight/build_guard_controls`, `preflight/build_toolchain_switch_controls` | 3/3 passed | [Run](../tests/out/runs/direct-python-review-controls-20261020/run.json) |
+| Cargo tests under the checkout lock | 345 passed, zero failed, the same three ignored | Console only |
+
+These runs are gitignored and available only in this local checkout. Their
+source state is the commit that adds this section, which changed nothing
+after they ran apart from this section.
+
+Reviewed exception: `preflight/build_refusal_controls` was not rerun. Between
+its credited run and these corrections, `build.sh` and `build_refusals.py`
+changed only in comment lines, checked by filtering the diff for
+non-comment lines, and the regenerated identity copies agree with the tree,
+which the default battery's `contract_versions` and
+`test_opt_in_mutation_anchors_match_current_sources` establish. This is an
+applicability judgment, not a mechanical check.

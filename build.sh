@@ -158,10 +158,22 @@ for tree_input in Info.plist PolicyWitness.entitlements runner/augments runner/S
 done
 
 # ---- Checkout lock -----------------------------------------------------------
-# A build and a managed test execution hold the same checkout lock. The
-# shell front end witnesses the caller's environment and supervises this
-# script under its hold. Nested builds with different values use that front
-# end again. Every entry resolves Python independently, without a shim.
+# A build and a managed test execution in one checkout are mutually exclusive:
+# both hold tests/.checkout.lock. Every Python step here starts the developer
+# directory's python3 directly, which the resolver finds without running a
+# shim: the /usr/bin/python3 shim inserts SDKROOT, CPATH, LIBRARY_PATH and
+# MANPATH into everything it starts. Without a claim in the environment, this
+# script hands itself to the shell front end before any Python runs: the front
+# end witnesses the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE
+# with shell builtins, and the owner it starts takes the lock or refuses a busy
+# one before any cache or distribution mutation, then supervises this script
+# again under it. The held descriptor is passed to the script and inherited by
+# every compiler and tool it runs, so the hold lasts until the last of them
+# exits, even if this script or its owner is killed first. Under a claim, the
+# owner's handoff is verified below, never the environment alone. Nothing
+# restores a value: session-start compares the witness with the environment
+# this script started with, and a nested build that wants other values starts
+# through the front end again.
 source "${ROOT_DIR}/tests/lib/python_start.sh"
 if [[ -z "${PW_CHECKOUT_LOCK_ROOT+set}${PW_CHECKOUT_LOCK_NONCE+set}${PW_CHECKOUT_LOCK_CHANNEL+set}${PW_CHECKOUT_LOCK_FD+set}" ]]; then
   exec /bin/bash "${ROOT_DIR}/tests/lib/checkout_lock.sh" --root "${ROOT_DIR}" -- /bin/bash "${BASH_SOURCE[0]}" "$@"
