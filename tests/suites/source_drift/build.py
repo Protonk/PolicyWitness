@@ -254,8 +254,8 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertEqual(generator.invocation_problems(manifest, model), [])
         cases = [
             ('reordered banner', generator.banner_problems,
-             SCRIPT.replace('echo "==> Checking limits documentation"\n/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
-                            'echo "==> Checking contract versions"\n/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1),
+             SCRIPT.replace('echo "==> Checking limits documentation"\n"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking contract versions"',
+                            'echo "==> Checking contract versions"\n"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_limits.py" --check\necho "==> Checking limits documentation"', 1),
              'banner order: position 2'),
             ('removed banner', generator.banner_problems, self.mutated('echo "==> Compiling native executables"\n', ''), 'banner order'),
             ('banner variant moved', generator.banner_problems,
@@ -292,11 +292,11 @@ class BuildDocumentationTests(unittest.TestCase):
              self.mutated('codesign --force --options runtime --timestamp \\\n  --entitlements "${ENTITLEMENTS_PLIST}" \\\n  -s "${IDENTITY}" "${APP_BUNDLE}"', 'codesign --force --options runtime --timestamp -s "${IDENTITY}" "${APP_BUNDLE}"'),
              f"signing order: entry {next(i for i, row in enumerate(manifest['signing'], 1) if row['id'] == 'seal_app')}"),
             ('helper moved to another step', generator.invocation_problems,
-             self.mutated('echo "==> Checking every executable\'s signer"\n/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 'echo "==> Checking every executable\'s signer"\n')
-                 .replace('echo "==> Verifying signature + entitlements"\n', 'echo "==> Verifying signature + entitlements"\n/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 1),
+             self.mutated('echo "==> Checking every executable\'s signer"\n"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 'echo "==> Checking every executable\'s signer"\n')
+                 .replace('echo "==> Verifying signature + entitlements"\n', 'echo "==> Verifying signature + entitlements"\n"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"\n', 1),
              "invocation 'tests/lib/signer_check.py' in step verify"),
             ('generator check removed', generator.invocation_problems,
-             self.mutated('/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_build.py" --check\n', ''), "invocation 'docs/generate_build.py --check' in step check_build_doc"),
+             self.mutated('"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_build.py" --check\n', ''), "invocation 'docs/generate_build.py --check' in step check_build_doc"),
             ('timestamp dropped from the signatures', generator.signing_problems,
              self.mutated('  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"', '  codesign --force --options runtime -s "${IDENTITY}" "${target}"'),
              'signing order: entry 1'),

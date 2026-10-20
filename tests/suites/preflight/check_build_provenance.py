@@ -38,7 +38,7 @@ import output_target
 import signer_check
 import fixture_bundle
 
-PYTHON = '/usr/bin/python3'
+PYTHON = sys.executable
 
 
 @contextmanager
@@ -121,22 +121,27 @@ def write_configured_output(builddir, swift=False, cpu_family='aarch64', arch='a
     (builddir / 'meson-info/intro-targets.json').write_text(json.dumps(targets))
 
 
-UNSET_REQUESTS = checkout_lock.Requests({name: None for name in checkout_lock.REQUEST_NAMES})
+NAMES = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
 LIB = str(ROOT / 'tests/lib')
 CLAIM = dict(fd=checkout_lock.ENV_FD, root=checkout_lock.ENV_ROOT, nonce=checkout_lock.ENV_NONCE, channel=checkout_lock.ENV_CHANNEL)
 
 
 def clean_env():
     """This process's environment without the claim the dispatcher passed for the real checkout."""
-    return {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+    return {k: v for k, v in os.environ.items() if not k.startswith(('PW_CHECKOUT_LOCK_', 'PW_ENV_WITNESS_'))}
 
 
-def own(test, root, requests=UNSET_REQUESTS):
+def witnessed(env):
+    return dict(env, **{'PW_ENV_WITNESS_' + name: 's' + env[name] if name in env else 'u' for name in NAMES},
+                PYTHONCOERCECLOCALE='0')
+
+
+def own(test, root):
     """An in-process owner of a disposable checkout's lock for the test's duration: its scope and a claimed environment."""
     stack = ExitStack()
     test.addCleanup(stack.close)
-    scope = stack.enter_context(checkout_lock.owned(root, requests=requests, env=clean_env()))
-    return scope, scope.child_env(clean_env())
+    scope = stack.enter_context(checkout_lock.owned(root, env=clean_env()))
+    return scope, scope.child_env(witnessed({k: v for k, v in clean_env().items() if k not in NAMES}))
 
 
 def lock_free(root):
@@ -196,7 +201,10 @@ FAKE_OWNER = textwrap.dedent('''
     fd, record = checkout_lock.acquire(root)
     server, end = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
     checkout_lock.bind_channel(fd, end)
-    env = {k: v for k, v in os.environ.items() if not k.startswith('PW_CHECKOUT_LOCK_')}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(('PW_CHECKOUT_LOCK_', 'PW_ENV_WITNESS_'))}
+    for name in ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE'):
+        env.pop(name, None)
+        env['PW_ENV_WITNESS_' + name] = 'u'
     env.update(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(end.fileno()))
     subprocess.Popen([sys.executable, '-B', client, sys.argv[1], root, result, release], env=env, pass_fds=(end.fileno(),))
     end.close()
@@ -357,7 +365,7 @@ class LockTests(unittest.TestCase):
         for signum in (signal.SIGINT, signal.SIGTERM):
             report = self.work / f'stubborn-{signum}.json'
             owner = subprocess.Popen([PYTHON, '-B', '-c', launcher, LIB, '--root', str(self.root), '--',
-                                      PYTHON, '-B', str(stubborn), LIB, str(report)], env=clean_env(), start_new_session=True)
+                                      PYTHON, '-B', str(stubborn), LIB, str(report)], env=witnessed(clean_env()), start_new_session=True)
             pids = []
             try:
                 wait_for(report.exists)
@@ -385,7 +393,7 @@ class LockTests(unittest.TestCase):
         self.root = self.work / 'checkout'
         (self.root / 'tests').mkdir(parents=True)
         self.lock = self.root / checkout_lock.LOCK
-        self.launcher = [PYTHON, '-B', str(ROOT / 'tests/lib/checkout_lock.py'), '--root', str(self.root), '--']
+        self.launcher = ['/bin/bash', str(ROOT / 'tests/lib/checkout_lock.sh'), '--root', str(self.root), '--']
         self.front_end = ['/bin/bash', str(ROOT / 'tests/lib/checkout_lock.sh'), '--root', str(self.root), '--']
 
     def script(self, name, text):
@@ -424,7 +432,7 @@ class LockTests(unittest.TestCase):
         (other / 'tests').mkdir(parents=True)
         with checkout_lock.owned(other, env=clean_env()):
             pass  # the other worktree has a lock file of its own, never held below
-        with checkout_lock.owned(self.root, requests=UNSET_REQUESTS, env=clean_env()) as scope:
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
             inode, record = self.lock.stat().st_ino, self.lock.read_bytes()
             claim = {k: v for k, v in scope.child_env({}).items()}
             status, text = self.admit(claim, scope.pass_fds())
@@ -586,57 +594,97 @@ class LockTests(unittest.TestCase):
                 pass
         wait_for(lambda: lock_free(self.root), message='release after the orphaned command exits')
 
-    def test_requests_are_captured_before_python_and_handed_to_nested_owners(self):
-        caller = {k: v for k, v in clean_env().items() if k not in checkout_lock.REQUEST_NAMES}
-        caller.update(CPATH='', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man')  # SDKROOT and LC_CTYPE unset
-        expected = {name: caller.get(name) for name in checkout_lock.REQUEST_NAMES}
-        report = (f'for n in SDKROOT CPATH LIBRARY_PATH MANPATH LC_CTYPE; do '
-                  f'if [[ -n "${{!n+set}}" ]]; then printf "%s set %s\\n" "$n" "$(printf %s "${{!n}}" | xxd -p | tr -d "\\n")"; '
-                  f'else printf "%s unset\\n" "$n"; fi; done; '
-                  f'{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} --build-requests; '
-                  f'CPATH=/inner/include /bin/bash {LIB}/checkout_lock.sh --root {self.root} -- '
-                  f'{PYTHON} -B {LIB}/checkout_lock.py --verify --root {self.root} --build-requests')
-        result = subprocess.run([*self.front_end, '/bin/bash', '-c', report], env=caller, capture_output=True, text=True, timeout=60)
+    def test_witness_preserves_bytes_and_nested_front_end_records_its_own(self):
+        caller = {k: v for k, v in clean_env().items() if k not in NAMES}
+        caller.update(CPATH='', LIBRARY_PATH=os.fsdecode(bytes(range(1, 256))) + '\n', MANPATH='spaced dir/man\n')
+        report = ('import json, os, sys; sys.path.insert(0, sys.argv[1]); import checkout_lock; '
+                  'print(json.dumps(checkout_lock.verify_environment(), sort_keys=True))')
+        import shlex
+        command = shlex.join([PYTHON, '-B', '-c', report, LIB])
+        nested = command + '; CPATH=/inner/include ' + shlex.join(self.front_end) + ' ' + command
+        result = subprocess.run([*self.front_end, '/bin/bash', '-c', nested], env=caller, capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        lines = result.stdout.splitlines()
-        seen = {}
-        for line in lines[:5]:
-            name, state, *value = line.split(' ')
-            seen[name] = bytes.fromhex(value[0]).decode() if state == 'set' else None
-        self.assertEqual(seen, expected, 'the command did not see the caller\'s values restored')
-        handed = [line.split(' ') for line in lines[5:10]]
-        decoded = {words[1]: (bytes.fromhex(words[3]).decode() if words[2] == 'set' else None) for words in handed}
-        self.assertEqual(decoded, expected, 'the owner did not hand over the requests the front end recorded')
-        self.assertEqual(lines[10:15], lines[5:10], 'a nested launcher must hand over its owner\'s requests, not its own environment')
-        # Without the front end the owner holds no requests and a build is refused; ownership alone needs none.
-        bare = subprocess.run([*self.launcher, PYTHON, '-B', f'{LIB}/checkout_lock.py', '--verify', '--root', str(self.root), '--build-requests'],
-                              env=caller, capture_output=True, text=True, timeout=30)
-        self.assertEqual(bare.returncode, 2)
-        self.assertIn('holds no preserved build requests', bare.stderr)
-        plain = subprocess.run([*self.launcher, PYTHON, '-B', f'{LIB}/checkout_lock.py', '--verify', '--root', str(self.root)],
-                               env=caller, capture_output=True, text=True, timeout=30)
-        self.assertEqual(plain.returncode, 0, plain.stderr)
-        # Malformed or incomplete request options refuse before the lock is taken.
-        for options in (['--request', 'BOGUS=1'], ['--request', 'SDKROOT=/x', '--request', 'SDKROOT=/y'], ['--request', 'SDKROOT=/x']):
-            with self.subTest(options=options):
-                refused = subprocess.run([PYTHON, '-B', f'{LIB}/checkout_lock.py', '--root', str(self.root), *options, '--', '/usr/bin/true'],
-                                         env=caller, capture_output=True, text=True, timeout=30)
-                self.assertEqual(refused.returncode, 2)
-                self.assertIn('request', refused.stderr)
-        self.assertTrue(lock_free(self.root))
-        # A Python caller of the owned scope supplies its snapshot explicitly; a nested scope cannot supply its own.
-        snapshot = checkout_lock.Requests(dict(expected))
-        with checkout_lock.owned(self.root, requests=snapshot, env=clean_env()) as scope:
-            self.assertEqual(scope.child_env({'SDKROOT': '/shim'}).get('SDKROOT'), None)
-            with self.assertRaises(checkout_lock.Refusal):
-                with checkout_lock.owned(self.root, requests=snapshot, env=scope.child_env(clean_env())):
-                    pass
-        large = checkout_lock.Requests(dict(expected, CPATH='x' * checkout_lock.REQUEST_LIMIT))
-        with checkout_lock.owned(self.root, requests=large, env=clean_env()) as scope:
-            with checkout_lock.admitted(self.root, scope.child_env()) as handed:
-                self.assertEqual(handed.requests.values, large.values, 'a multi-chunk reply lost request bytes')
-        with self.assertRaisesRegex(checkout_lock.Refusal, 'combined request snapshot'):
-            checkout_lock.Requests({name: 'x' * checkout_lock.REQUEST_LIMIT for name in checkout_lock.REQUEST_NAMES})
+        outer, inner = map(json.loads, result.stdout.splitlines())
+        expected = {n: dict(state='set', value=caller[n]) if n in caller else dict(state='unset') for n in NAMES}
+        self.assertEqual(outer, expected)
+        self.assertEqual(inner, dict(expected, CPATH=dict(state='set', value='/inner/include')))
+        # Python-only ownership leaves the supplied environment alone, including stale claims being dropped.
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
+            self.assertEqual(scope.child_env({'CPATH': '/unchanged'})['CPATH'], '/unchanged')
+
+    def test_witness_refusals_precede_lock_writes(self):
+        caller = {k: v for k, v in clean_env().items() if k not in NAMES}
+        cli = [PYTHON, '-B', f'{LIB}/checkout_lock.py', '--root', str(self.root), '--', '/usr/bin/true']
+        for name in NAMES:
+            for fault in ('missing', 'changed', 'malformed'):
+                env = witnessed(caller)
+                key = 'PW_ENV_WITNESS_' + name
+                if fault == 'missing':
+                    env.pop(key)
+                else:
+                    env[key] = 's' if fault == 'changed' else 'invalid'
+                with self.subTest(name=name, fault=fault):
+                    result = subprocess.run(cli, env=env, capture_output=True, text=True, timeout=30)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn('environment witness', result.stderr)
+                    self.assertIn(name, result.stderr)
+                    self.assertFalse(self.lock.exists(), 'a refused witness wrote the lock')
+
+    def test_direct_python_children_inherit_the_callers_environment(self):
+        # Compare NUL-delimited raw bytes; no decoding or line splitting can hide changes.
+        script = self.script('environment.sh', '\n'.join([
+            'source "$1/python_start.sh"',
+            'if [[ "$3" == direct ]]; then set -- "$1" "$2" "$PW_PYTHON" "$4"; fi',
+            '/usr/bin/env -0 "_=$3" > "$2"',
+            '"$3" -B -c \'import subprocess,sys; open(sys.argv[1], "wb").write(subprocess.check_output(["/usr/bin/env", "-0"]))\' "$4"',
+            ':'
+        ]))
+        for interpreter in ('direct', '/usr/bin/python3'):
+            before, after = self.work / 'before', self.work / 'after'
+            env = dict(PATH='/usr/bin:/bin', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man', __CF_USER_TEXT_ENCODING=os.environ['__CF_USER_TEXT_ENCODING'])
+            result = subprocess.run(['/usr/bin/env', '-i', *[f'{k}={v}' for k, v in env.items()], '/bin/bash', str(script),
+                                     LIB, str(before), interpreter, str(after)], capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            a, b = set(before.read_bytes().split(b'\0')), set(after.read_bytes().split(b'\0'))
+            if interpreter == 'direct':
+                self.assertEqual(a, b, (a - b, b - a))
+            else:
+                self.assertNotEqual(a, b, 'the shim negative control did not change the environment')
+
+    def test_forwarder_preserves_the_environment_and_a_shim_control_does_not(self):
+        wrapper = self.work / 'forward'
+        shutil.copy2(ROOT / 'tests/fixtures/build_refusals/forward.py', wrapper)
+        wrapper.chmod(0o755)
+        interpreter = self.work / 'directory with spaces/python'
+        interpreter.parent.mkdir()
+        interpreter.symlink_to(PYTHON)
+        receipt = self.work / 'forward.jsonl'
+        config = self.work / 'forward-config.json'
+        config.write_text(json.dumps({'forward': dict(real='/usr/bin/true', mode='direct',
+                                                     receipt=str(receipt), record_env=list(NAMES))}))
+        env = {k: v for k, v in clean_env().items() if k not in NAMES}
+        env.update(PW_PYTHON=str(interpreter), PYTHONCOERCECLOCALE='0', PW_FORWARD_CONFIG=str(config))
+        for command in ([str(wrapper)], ['/usr/bin/python3', str(wrapper)]):
+            result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        direct, shim = [json.loads(line)['environment'] for line in receipt.read_text().splitlines()]
+        self.assertEqual(direct, {name: None for name in NAMES})
+        self.assertNotEqual(shim, direct)
+        self.assertIsNotNone(shim['CPATH'])
+
+    def test_entrypoints_refuse_a_stand_in_developer_directory_without_a_shim(self):
+        developer = self.work / 'empty developer'
+        developer.mkdir()
+        profile = self.script('resolver.sb', '(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
+                              '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
+        for entry in ('tests/lib/checkout_lock.sh', 'tests/run.sh'):
+            result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(ROOT / entry), '--help'],
+                                    env=dict(clean_env(), DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false'),
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
+            self.assertIn('direct Python unavailable', result.stderr)
+            self.assertNotIn('requesting installation', result.stdout + result.stderr)
 
 
 class ProbeTests(unittest.TestCase):
@@ -1119,14 +1167,44 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
         with checkout_lock.owned(self.root, env=clean_env()) as scope:
             status, _, err = self.start(scope.child_env(clean_env()))
             self.assertEqual(status, 2, err)
-            self.assertIn('no preserved build requests', err)
+            self.assertIn('environment witness missing for SDKROOT', err)
             self.assertFalse((self.root / 'controller/target').exists())
-        with checkout_lock.owned(self.root, requests=UNSET_REQUESTS, env=clean_env()) as scope:
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
             (self.root / 'builddir').symlink_to(self.outside / 'builddir')
-            status, _, err = self.start(scope.child_env(clean_env()))
+            status, _, err = self.start(scope.child_env(witnessed({k: v for k, v in clean_env().items() if k not in NAMES})))
             self.assertEqual(status, 2, err)
             self.assertIn('is a symlink', err)
             self.assertFalse((self.root / 'controller/target').exists())
+
+    def test_session_witness_refusals_preserve_the_session_and_missing_target(self):
+        with checkout_lock.owned(self.root, env=clean_env()) as scope:
+            base = witnessed({k: v for k, v in clean_env().items() if k not in NAMES})
+            for existing in (False, True):
+                if existing:
+                    self.session.parent.mkdir()
+                    self.session.write_bytes(b'previous session\n')
+                for name in NAMES:
+                    for fault in ('missing', 'changed'):
+                        env = dict(base)
+                        if fault == 'missing':
+                            env.pop('PW_ENV_WITNESS_' + name)
+                        else:
+                            env['PW_ENV_WITNESS_' + name] = 's'
+                        status, _, err = self.start(scope.child_env(env))
+                        self.assertEqual(status, 2, (name, fault, err))
+                        self.assertIn(name, err)
+                        if existing:
+                            self.assertEqual(self.session.read_bytes(), b'previous session\n')
+                        else:
+                            self.assertFalse(self.session.parent.exists())
+            self.session.unlink()
+            env = dict(base, PW_ENV_WITNESS_SDKROOT='srequested sdk\n')
+            args = ['session-start', '--root', str(self.root), '--describe', 'x', '--commit', 'x', '--version', '0',
+                    '--build-number', '0', '--sdk-request-state', 'set', '--sdk-request-value=requested sdk\n']
+            status, _, err = run_main(args, scope.child_env(env))
+            self.assertEqual(status, 0, err)
+            self.assertEqual(json.loads(self.session.read_text())['requests']['SDKROOT'],
+                             dict(state='set', value='requested sdk\n'))
 
     """Helpers refuse before any write without a live owner's handoff, a valid session or admitted paths."""
 
@@ -1156,7 +1234,7 @@ class OwnershipAndAdmissionTests(unittest.TestCase):
                          '--build-number', '0'], env)
 
     def test_helpers_refuse_without_ownership(self):
-        bare = clean_env()
+        bare = witnessed({k: v for k, v in clean_env().items() if k not in NAMES})
         (self.root / 'builddir').mkdir()
         (self.root / 'builddir/build.ninja').write_text('# control\n')
         write_compilers(self.root / 'builddir')

@@ -192,7 +192,7 @@ selection, deduplication, configuration validation, and complete accounting.
   build manifest lists, one disposable fault at a time, in each variant the
   refusal applies to: a tracked input gone, a held checkout lock, a claim
   without a live owner's handoff or an owner killed mid-build, a build
-  launched by a Python owner without the caller's requests, a developer
+  launched with a missing or changed environment witness, a developer
   directory without the SDK or without a numeric SDK version, a missing,
   malformed or foreign toolchain stamp, forwarding Rust and C compiler
   wrappers relabelled after the stamp recorded them, a probe that fails,

@@ -103,3 +103,14 @@ if test_selected "${PW_TEST_ID}"; then
   fi
   test_pass "the reader reports CommonMark structure from the vendored wheels' bytes and is the parser's only importer" "{\"log\":\"${RUN_LOG}\"}"
 fi
+
+PW_TEST_ID="direct_python_start"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step ancestry "check direct Python entrypoints and wrapper shebangs with rejected controls"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/direct-python.log"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/direct_python.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "direct Python ancestry controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "entrypoints use direct Python and wrapper shebangs agree; weakening controls fail"
+fi

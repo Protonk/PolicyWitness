@@ -141,8 +141,7 @@ CARGO_SELECTION_ENV = ('RUSTC', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER', 'CAR
 UNRESOLVED_REMEDY = 'the compiler Cargo would select, or the environment it would give it, is unknown'
 CARGO_FLAG_ENV = ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_RUSTFLAGS')
 CARGO_LAYOUT_ENV = ('CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'CARGO_HOME')
-# Caller settings recorded at session start: the interpreter shim leaves these alone, so this process sees the
-# caller's values; SDKROOT and the other shim-affected variables come from the owner's requests instead.
+# Caller settings recorded at session start, alongside the witnessed requests.
 ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTFLAGS',
                'PW_VERSION', 'PW_BUILD_NUMBER')
 SUBCOMMANDS = ('session-start', 'stamp-check', 'fresh-remove', 'cargo-admit', 'cargo-judge', 'stamp-publish',
@@ -563,8 +562,6 @@ def build_scope(root, *, create_target=False, session=True):
     except checkout_lock.Refusal as exc:
         raise Refusal(f'checkout lock claim is not verified: {exc}; build helpers mutate only under an owned build', 2)
     try:
-        if create_target and admission.requests is None:
-            raise Refusal(checkout_lock.NO_REQUESTS, 2)
         paths = BuildPaths(root, create_target=create_target)
         try:
             current = None
@@ -584,9 +581,12 @@ def build_scope(root, *, create_target=False, session=True):
 
 
 def session_start(args):
+    # Check before BuildPaths can create controller/target or touch a session.
+    try:
+        requests = checkout_lock.verify_environment(sdk_request=(args.sdk_request_state, args.sdk_request_value))
+    except checkout_lock.Refusal as exc:
+        raise Refusal(str(exc), 2)
     with build_scope(args.root, create_target=True, session=False) as state:
-        if state.admission.requests is None:
-            raise Refusal(checkout_lock.NO_REQUESTS, 2)
         knobs = {}
         for item in args.knob:
             name, _, value = item.partition('=')
@@ -595,9 +595,9 @@ def session_start(args):
                              started_at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), root=str(state.root),
                              knobs=knobs, stamp=dict(describe=args.describe, commit=args.commit, version=args.version,
                                                      build_number=args.build_number, dirty=args.describe.endswith('-dirty')),
-                             sdk_source='caller' if state.admission.requests.values['SDKROOT'] else 'default',
+                             sdk_source='caller' if requests['SDKROOT'].get('value') else 'default',
                              output_target=dict(output_target.DECLARED),
-                             requests=state.admission.requests.to_json(),
+                             requests=requests,
                              admission=dict(created=state.paths.created),
                              environment={name: os.environ.get(name) for name in ALLOWED_ENV if name in os.environ})
         state.save()
@@ -676,24 +676,9 @@ def compiler_observation(command, builddir, env):
     return dict(status='ok', command=command, identity=found['line'])
 
 
-def invocation_environment(session):
-    """The environment build.sh gives Cargo: this helper's, with the variables the interpreter shim inserts restored.
-
-    The Python shim adds CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE to this
-    process; build.sh restored the caller's state for them from the owner's
-    requests, and Cargo inherits that state, not this process's. SDKROOT is the
-    path build.sh selected and exported, which the shim leaves alone."""
-    env = dict(os.environ)
-    requests = (session or {}).get('requests') or {}
-    for name in ('CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE'):
-        entry = requests.get(name)
-        if not isinstance(entry, dict):
-            continue
-        if entry.get('state') == 'set':
-            env[name] = entry.get('value', '')
-        else:
-            env.pop(name, None)
-    return env
+def invocation_environment():
+    """The environment build.sh gives Cargo, inherited unchanged by this direct Python."""
+    return dict(os.environ)
 
 
 def cargo_resolution(env, cwd=None):
@@ -966,7 +951,7 @@ def stamp_check_admitted(state, xpc):
     if departed is not None:
         raise Refusal(f'{STAMP_NAME} records {departed} = {redact(stamp["fields"].get(departed))!r} but the directory is configured with '
                       f'{redact(configured.get(departed))!r}; the stamp does not describe this directory: {FRESH_REMEDY}', 2)
-    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=swift_applicable, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(), xpc=swift_applicable, compilers=compilers)
     current = compatibility_fields(observation, xpc=swift_applicable)
     names = ['developer_dir', 'sdk.path', 'sdk.version', 'sdk.build', 'compilers.c.command', 'compilers.c.identity',
              'rustc.command', 'rustc.identity', 'rustc.wrappers']
@@ -1015,7 +1000,7 @@ def stamp_publish_admitted(state):
     if not compilers or 'c' not in compilers:
         raise Refusal(f'{builddir.name}/ records no C compiler after setup', 2)
     xpc = 'swift' in compilers
-    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=xpc, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(), xpc=xpc, compilers=compilers)
     fields = compatibility_fields(observation, xpc=xpc)
     for name, value in fields.items():
         if value is None:
@@ -1052,7 +1037,7 @@ def stamp_extend_admitted(scope, xpc):
     if departed is not None:
         raise Refusal(f'{STAMP_NAME} no longer describes the output target the directory is configured for: {departed} is '
                       f'{redact(stamp["fields"].get(departed))!r} in the stamp but {redact(configured.get(departed))!r} now: {FRESH_REMEDY}', 2)
-    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(session), xpc=xpc, compilers=compilers)
+    observation = observe_toolchain(builddir, root / 'controller', invocation_environment(), xpc=xpc, compilers=compilers)
     state = 'intact'
     if xpc and not stamp['scope'].get('xpc'):
         # Swift is newly applicable: validate the discovered compiler, then extend without touching other fields.
@@ -1149,7 +1134,7 @@ def cargo_admit_admitted(state):
     session = state.session
     pinned = state.root / TARGET
     manifest_path = state.root / 'controller/Cargo.toml'
-    invocation = invocation_environment(session)
+    invocation = invocation_environment()
     # Cargo's compiler selection, its child environment and the requested flags, resolved before Cargo runs in either
     # mode: an unresolvable setting or an effective input that conflicts with build policy refuses here.
     resolution = cargo_resolution(invocation)
@@ -1325,7 +1310,7 @@ def cargo_judge(args):
 def cargo_judge_admitted(state, args):
     session = state.session
     target_dir = state.root / TARGET
-    env = invocation_environment(session)
+    env = invocation_environment()
     messages = artifact_messages(state, set(args.bin))
     requested = (session.get('cargo') or {}).get('requested_flags')
     if not isinstance(requested, dict):
@@ -1696,9 +1681,13 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
 
 
 def caller_requests(session):
-    """What the caller asked for, apart from what the build then selected: SDKROOT and the variables the interpreter
-    shim inserts from the owner's requests, DEVELOPER_DIR and MACOSX_DEPLOYMENT_TARGET as the caller's environment held
-    them at session start. Values are published only for the SDK, developer directory and deployment target."""
+    """What the caller asked for, apart from what the build then selected.
+
+    SDKROOT and the other witnessed variables describe the build's starting
+    environment; DEVELOPER_DIR and MACOSX_DEPLOYMENT_TARGET are recorded at
+    session start. Only the SDK, developer directory and deployment target
+    publish their values.
+    """
     requests = session.get('requests')
     if not isinstance(requests, dict):
         raise Refusal("the session carries no caller requests; the record cannot be written", 2)
@@ -2279,6 +2268,8 @@ def main(argv=None):
         return sub
 
     sub = owned_helper('session-start', session_start)
+    sub.add_argument('--sdk-request-state', choices=('set', 'unset'), default='unset')
+    sub.add_argument('--sdk-request-value', default='')
     sub.add_argument('--knob', action='append', default=[], metavar='NAME=VALUE')
     sub.add_argument('--describe', required=True)
     sub.add_argument('--commit', required=True)

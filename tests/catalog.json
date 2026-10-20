@@ -17,7 +17,7 @@
         },
         {
           "id": "build_provenance_controls",
-          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, requests survive the Python shim and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail",
+          "description": "Lock claims are admitted only by a live owner's handoff, holds outlive killed owners while protected children run, direct Python preserves caller environments and missing or changed witnesses refuse before writes and helpers write only owned, admitted paths; stamps, Cargo judgments, SDK versions, signature displays and provenance records are decided from constructed inputs without adopting unknowns; the output target check decides real thin, fat, foreign-architecture and malformed Mach-O fixtures read independently, and its weakened copies fail",
           "requires": [
             "clang"
           ]
@@ -139,6 +139,10 @@
         {
           "id": "markdown_reader",
           "description": "Markdown reader controls, vendored parser bytes and the parser import boundary"
+        },
+        {
+          "id": "direct_python_start",
+          "description": "Build and test ancestry uses direct Python; wrapper shebangs agree and independent weakening controls reject shim and bare Python commands"
         }
       ]
     },

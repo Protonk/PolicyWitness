@@ -200,9 +200,12 @@ checkout runs one build or one execution at a time: a competing build or
 execution gets a checkout-busy error before any cache or distribution
 mutation, even with a different output path. A direct build hands itself to
 `tests/lib/checkout_lock.sh`, the shell front end that records the caller's
-`SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE` before the Python
-shim can change them and then starts the owner; the build is admitted through
-the handoff, takes those requests from it and refuses without them. The hold
+`SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE` as an exact
+environment witness and starts the developer directory's Python directly,
+with locale coercion disabled. The CLI owner and build session start refuse
+a missing or changed witness; neither restores values. Nested front ends
+witness their own caller. The dispatcher resolves the same direct Python
+independently and records no witness; cases that build use the front end. The hold
 lasts until the last compiler or tool that holds the descriptor exits, even
 when the owner and the script are killed first. A standalone Cargo
 invocation against the managed `controller/target/` goes through the same
@@ -315,7 +318,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | Suite | Tier | Coverage and limits | Equipment overview | Reference |
 | --- | --- | --- | --- | --- |
 | `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins; offline release controls vary. | [Suite](suites/preflight/README.md) |
-| `source_drift` | Baseline | Source manifests, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
+| `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
 | `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |

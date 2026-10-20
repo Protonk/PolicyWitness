@@ -117,13 +117,13 @@ writes. A test compares the staged copy itself.
 | Id | Banner | Variants | Reads | Writes | Refusals | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment | nothing; runs build.sh with them | none | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py) |
-| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, recorded by the shell front end's builtins before any Python runs, and tests/.checkout.lock, which the owner it starts takes before supervising the script again under it | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy | [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, the acquisition nonce its owner record carries and the requests the owner bound to that acquisition; never the environment alone | SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE restored to the caller's recorded state; nothing on disk | lock_claim_invalid, build_requests_missing | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_build_requests_missing`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD, arguments and tracked inputs; the developer directory selected by xcode-select under DEVELOPER_DIR, whose executable usr/bin/python3 each entry resolves independently; without a claim, the shell front end witnesses SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE and starts the lock owner directly | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy, direct_python_unavailable, environment_witness_missing, environment_witness_changed | [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py) |
+| lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, the acquisition nonce its owner record carries; never the environment alone | nothing on disk; verifies the inherited lock claim without restoring environment values | lock_claim_invalid | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | check_limits | Checking limits documentation | both | docs/limits.json and the documents it renders | nothing | stale_limits | [`Checking limits documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_contract | Checking contract versions | both | docs/contract.json, docs/architecture.json and their generated copies | nothing | stale_contract, stale_architecture | [`Checking contract versions`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_build_doc | Checking build documentation | both | docs/build.json, build.sh, meson.build, the Makefile, the inventories, the baseline and the generated copies | nothing | stale_build_doc | [`Checking build documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_identity | Checking host/worker identity | both | the identity inputs and the three generated copies | nothing | stale_identity | [`Checking host/worker identity`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
-| stamp | Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE} | both | git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment | the four stamp variables for Cargo and the plists; after admitting builddir/, controller/target/, its release/, its aarch64-apple-darwin/ and that directory's release/, and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the fixed output target, the acquisition nonce and the owner's requests | provenance_probe_failed, lock_claim_invalid, cache_path_unsafe | [`Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_cache_path_unsafe`](../tests/suites/preflight/opt_in/build_refusals.py) |
+| stamp | Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE} | both | git describe, rev-parse and rev-list, or PW_VERSION and PW_BUILD_NUMBER from the environment; the environment witness compared with the starting environment (SDKROOT supplied from before its removal) | the four stamp variables for Cargo and the plists; after admitting builddir/, controller/target/, its release/, its aarch64-apple-darwin/ and that directory's release/, and the session destination, controller/target/ when it is missing and the build session file, opened with the stamp, the three knobs, the fixed output target, the acquisition nonce and the build's witnessed starting environment as requests | provenance_probe_failed, lock_claim_invalid, cache_path_unsafe, environment_witness_missing, environment_witness_changed | [`Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_provenance_probe_failed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_cache_path_unsafe`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_environment_witness_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_environment_witness_changed`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | minimum | Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS} | both | LSMinimumSystemVersion in Info.plist | MACOSX_DEPLOYMENT_TARGET for Cargo | plist_minimum_malformed | [`Supported macOS (Info.plist LSMinimumSystemVersion): ${PW_MINIMUM_MACOS}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | sdk | Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST}) | both | the SDK path and numeric version xcrun reports under DEVELOPER_DIR for the macosx default, or for the SDK a caller's SDKROOT names | SDKROOT for Cargo and Meson, resolved by xcrun, and the SDK version every shipped output must carry | sdk_unavailable, sdk_version_unreadable | [`Selecting the macOS SDK (xcrun --sdk ${SDK_REQUEST})`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_sdk_version_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | builddir | Checking the native build directory: ${MESON_BUILD_DIR} | both | in incremental mode: builddir/meson-info/meson-info.json and builddir/pw-toolchain.json when the directory is configured: its output target (Meson's host machine, the targets' architecture selections and the Cargo triple), compared with the required target and then with Meson's introspection of the directory before any probe, and the stamped SDK, developer directory, compiler commands and Rust compiler probed now; in fresh mode nothing, since the directory is replaced | the toolchain observation into the build session | builddir_unreadable, builddir_other_checkout, builddir_stamp_missing, builddir_stamp_invalid, builddir_toolchain_changed, builddir_target_mismatch, provenance_probe_failed, lock_claim_invalid, cache_path_unsafe, cargo_configuration_unresolved, cargo_environment_conflict | [`Checking the native build directory: ${MESON_BUILD_DIR}`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_build_directory_configured_for_another_checkout_before_cargo`](../tests/suites/source_drift/contract.py); [`control_builddir_stamp_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_builddir_stamp_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_builddir_toolchain_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_builddir_target_mismatch`](../tests/suites/preflight/opt_in/build_refusals.py) |
@@ -182,15 +182,15 @@ The build depends on these inputs and working state, in the order it meets them.
   must exist before the first check; the first absent one is named. A copy
   that finds its input gone later fails on its own, since the build assumes a
   stable checkout.
-- **The checkout lock and the caller's requests.** Every invocation holds
+- **The checkout lock and the caller's environment.** Every invocation holds
   `tests/.checkout.lock` from admission through packaging, as a managed test
   execution does, so a build and a battery in one checkout are mutually
   exclusive. A direct invocation hands itself to the shell front end before
-  any Python runs; the front end records the caller's `SDKROOT`, `CPATH`,
-  `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, and the owner it starts takes the
+  any Python runs; the front end witnesses the caller's `SDKROOT`, `CPATH`,
+  `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, starts Python directly and takes the
   lock without blocking and refuses a busy one before any cache or
   distribution mutation. [Locking](#the-checkout-lock) explains how a claim
-  is admitted, how the requests reach the script and how long the hold lasts.
+  is admitted, how the witness is checked and how long the hold lasts.
 - **The git stamp.** `git describe`, `rev-parse` and `rev-list` give the
   version, the commit count, the describe string and the commit
   ([`PW_BUILD_DESCRIBE`](../build.sh)). `PW_VERSION` and `PW_BUILD_NUMBER`
@@ -242,9 +242,9 @@ The build depends on these inputs and working state, in the order it meets them.
 - **The SDK and the developer directory.** `xcrun --sdk macosx` selects the
   SDK once, under whatever `DEVELOPER_DIR` names, unless the caller's
   `SDKROOT` names an SDK, which `xcrun` resolves instead. The caller's
-  `SDKROOT` is the one the front end recorded, restored at the lock step: the
-  system Python shim inserts an `SDKROOT` of its own into everything it
-  starts, which must not pass for a caller's choice. The script exports
+  `SDKROOT` is the value in the environment `build.sh` starts with, saved
+  before the script removes it until SDK selection. An empty value selects
+  the default but remains recorded as explicitly set. The script exports
   the resolved path as `SDKROOT` for Cargo and Meson alike, keeps its numeric
   version and records which of the two selected it. A failed selection or a
   version that is not numeric refuses before the build directory and the
@@ -437,13 +437,28 @@ the file's inode, never on a replaced file, so the file is never unlinked.
 Acquisition, nested admission and protected launches belong to
 [checkout_lock.py](../tests/lib/checkout_lock.py). A direct `build.sh` hands
 itself to the shell front end [checkout_lock.sh](../tests/lib/checkout_lock.sh)
-before any Python runs. The front end records the caller's `SDKROOT`, `CPATH`,
-`LIBRARY_PATH`, `MANPATH` and `LC_CTYPE`, each set with its exact value or
-unset, with shell builtins, because the system `/usr/bin/python3` is a shim
-that inserts values of its own into everything it starts. The owner it
-starts takes the lock without blocking or refuses a busy one, binds the
-requests to its acquisition and supervises the script again in its own
-process group: it restores the requests for it, forwards SIGINT, SIGTERM and
+before any Python runs. Each of `build.sh`, the front end and `tests/run.sh`
+sources [python_start.sh](../tests/lib/python_start.sh), which resolves
+`xcode-select -p` under `DEVELOPER_DIR` and requires an executable
+`usr/bin/python3` there. It refuses with status 2 and names the directory
+when unavailable, and never trusts an inherited `PW_PYTHON`. It exports
+`PW_PYTHON` and `PYTHONCOERCECLOCALE=0` so the interpreter preserves the
+caller's locale environment as well.
+
+The front end witnesses `SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and
+`LC_CTYPE` with shell builtins. Each `PW_ENV_WITNESS_<name>` is `u` for unset
+or `s` followed by the exact value, including empty values and trailing
+newlines. The command-line owner compares these against its environment
+before taking the lock; a missing or changed witness refuses and names the
+variable. A nested front end records its own caller's environment.
+`session-start` compares again before creating a target directory or writing
+the session, using the SDK request `build.sh` saved before removing `SDKROOT`.
+Nothing restores values, and `configuration.requests` describes the
+environment the build starts with. Python callers of `owned()` need no
+witness for ownership alone; to launch a build they use the front end.
+
+The owner takes the lock without blocking or refuses a busy one and
+supervises the script in its own process group. It forwards SIGINT, SIGTERM and
 SIGHUP to the group, allows the supervisor's [`GROUP_GRACE`](../tests/lib/checkout_lock.py) for the group to
 stop, then sends SIGKILL if necessary and observes termination for at most
 [`KILL_GRACE`](../tests/lib/checkout_lock.py). A
@@ -457,9 +472,7 @@ first checks the channel's socket identity against the acquisition record
 and its kernel-reported peer PID against the acquisition owner's PID. It
 accepts the answer only when that descriptor is open on this checkout's lock
 file and the owner record carries the acquisition nonce the claim names. The
-owner hands over its requests with the descriptor and the script restores
-them, so a nested build sees the caller's values rather than those of any
-Python process between them. A claim whose channel is closed or was never
+owner hands over the descriptor and acquisition identity. A claim whose channel is closed or was never
 passed, a descriptor that is not an owner channel (an unheld descriptor on
 the lock inode, say), a wrong nonce, another checkout's claim and an owner
 that has exited or does not answer within a bounded wait all refuse, and the
@@ -471,10 +484,7 @@ because taking a free lock says nothing about earlier ownership. Every
 helper that writes the session, removes a cache or publishes or extends the
 stamp is admitted the same way and requires the session to carry the same
 acquisition nonce, so a helper run by hand or after its owner died writes
-nothing. A build launched by an owner that holds no requests, such as a bare
-`checkout_lock.py` launcher, refuses at the `lock` step and names the front
-end; a Python caller that takes the lock itself supplies an explicitly
-preserved snapshot when it launches a build.
+nothing.
 
 The hold belongs to the open file description. The owner passes the held
 descriptor explicitly to the script, bash passes it on to every compiler and
@@ -498,9 +508,11 @@ Known gap: this is a managed-entrypoint guarantee for builds, the battery,
 acceptance, archiving and rotation; it does not serialize arbitrary direct
 tool invocations, and Cargo's own locking does not protect a shell deletion
 made before Cargo starts. A protected descendant that outlives its command
-keeps the lock until it exits. The front end records what its caller's
-environment holds: a caller that is itself a process started through the
-Python shim passes the shim's values unless it removes them first.
+keeps the lock until it exits. The witness establishes preservation from the
+front end onward, not the history of its caller: values already inserted by a
+shim before the front end starts are part of that caller's environment. Leaf
+Python scripts and the git shim still exist; the resolver does not validate
+an SDK or a developer directory that contains an executable Python.
 
 A standalone Cargo invocation against the managed cache goes through the same
 front end, which takes the lock or is admitted by the owner of an inherited
@@ -554,7 +566,7 @@ its policy assertions, so they need the unsandboxed shell.
 
 <!-- BEGIN GENERATED BUILD REFUSALS -->
 <details>
-<summary>54 refusals (17 the script's own, 1 Meson assertion family over 21 options, 1 Meson output-target assertion, 35 propagated from a check or a tool, 0 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
+<summary>56 refusals (17 the script's own, 1 Meson assertion family over 21 options, 1 Meson output-target assertion, 37 propagated from a check or a tool, 0 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
 
 | Id | Message | Steps | Status | Kind | Variants | Coverage | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -563,7 +575,9 @@ its policy assertions, so they need the unsandboxed shell.
 | missing_tree_input | missing tracked build input: ${tree_input} | admission | 2 | script | both | a control produces it | [`missing tracked build input: ${tree_input}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | checkout_busy | checkout busy: another execution or mutating operation holds tests/.checkout.lock; wait for it to finish or use a second worktree | admission | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`checkout busy`](../tests/lib/checkout_lock.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_claims_are_admitted_only_by_a_live_owners_handoff`](../tests/suites/preflight/check_build_provenance.py) |
 | lock_claim_invalid | checkout lock claim is not verified: <reason> | lock, stamp, builddir, cargo_admit, fresh, cargo, configure, native_check, assembled, presign, evidence, sign_observer, zip | 2 | propagated | both | a control produces it | [`checkout_lock.py`](../build.sh); [`checkout lock claim is not verified`](../tests/lib/checkout_lock.py); [`build helpers mutate only under an owned build`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_claims_are_admitted_only_by_a_live_owners_handoff`](../tests/suites/preflight/check_build_provenance.py); [`test_owner_exit_during_admission_creates_no_hold`](../tests/suites/preflight/check_build_provenance.py); [`test_helpers_refuse_without_ownership`](../tests/suites/preflight/check_build_provenance.py); [`test_unrelated_socket_cannot_handoff_a_copied_nonce_and_unheld_descriptor`](../tests/suites/preflight/check_build_provenance.py); [`test_nested_scope_cannot_admit_after_acquisition_owner_exits`](../tests/suites/preflight/check_build_provenance.py) |
-| build_requests_missing | the owner of tests/.checkout.lock holds no preserved build requests; a build must start from build.sh or tests/lib/checkout_lock.sh, which record SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE before Python runs | lock | 2 | propagated | both | a control produces it | [`checkout_lock.py`](../build.sh); [`holds no preserved build requests`](../tests/lib/checkout_lock.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_build_requests_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_requests_are_captured_before_python_and_handed_to_nested_owners`](../tests/suites/preflight/check_build_provenance.py) |
+| direct_python_unavailable | direct Python unavailable: <developer directory or selection failure> | admission | 2 | propagated | both | a control produces it | [`python_start.sh`](../build.sh); [`direct Python unavailable`](../tests/lib/python_start.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py) |
+| environment_witness_missing | environment witness missing for <variable>; start through tests/lib/checkout_lock.sh | admission, stamp | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`environment witness missing for`](../tests/lib/checkout_lock.py); [`verify_environment`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_environment_witness_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_witness_refusals_precede_lock_writes`](../tests/suites/preflight/check_build_provenance.py) |
+| environment_witness_changed | environment witness differs for <variable>; start through tests/lib/checkout_lock.sh | admission, stamp | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`environment witness differs for`](../tests/lib/checkout_lock.py); [`verify_environment`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_environment_witness_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_witness_refusals_precede_lock_writes`](../tests/suites/preflight/check_build_provenance.py) |
 | plist_minimum_malformed | Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}' | minimum | 2 | script | both | a control produces it | [`Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk`](../tests/suites/source_drift/contract.py) |
 | sdk_unavailable | xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST}) | sdk | 2 | script | both | a control produces it | [`xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | sdk_version_unreadable | xcrun did not report a numeric macOS SDK version (got '${SDK_VERSION:-}') | sdk | 2 | script | both | a control produces it | [`xcrun did not report a numeric macOS SDK version`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_version_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |
@@ -684,8 +698,7 @@ arranged beside the guarded boundary: a tracked input gone, a held lock, a
 claim without a live owner's handoff (stale or closed descriptors, an unheld
 descriptor on the lock inode with a released owner's nonce, another open
 while a real owner holds the lock, a wrong nonce, another checkout) or an
-owner killed mid-build, a build launched by a Python owner without the
-caller's requests beside one whose owner supplies them, an environment in
+owner killed mid-build, a CLI owner or nested build without a witness, or a witness changed by a shim, an environment in
 which xcrun selects no SDK or reports no numeric version, a missing,
 malformed or foreign stamp, a forwarding Rust or C compiler wrapper
 relabelled after the stamp recorded it, a probe that fails, hangs or floods
@@ -1031,8 +1044,8 @@ implements it and the test or rule named by the manifest. Review that test or
 rule to assess coverage of the row. The build
 has <!-- span build.steps -->34<!-- /span --> steps, of
 which <!-- span build.conditional_steps -->1<!-- /span --> runs only in fresh
-mode, <!-- span build.refusals -->54<!-- /span --> refusals, of
-which <!-- span build.covered -->54<!-- /span --> have a control that produces
+mode, <!-- span build.refusals -->56<!-- /span --> refusals, of
+which <!-- span build.covered -->56<!-- /span --> have a control that produces
 them and one is the Meson assertion family
 over <!-- span build.meson_options -->21<!-- /span -->
 options, <!-- span build.signing -->9<!-- /span --> signing calls
@@ -1055,10 +1068,11 @@ The helpers and tools the build invokes, with the step each runs in:
 
 <!-- BEGIN GENERATED BUILD INVOCATIONS -->
 <details>
-<summary>40 helper and tool invocations, with symbol presence and test definition verified and each command's name, step and listed flags compared with the script; whether a test asserts the row is not verified</summary>
+<summary>41 helper and tool invocations, with symbol presence and test definition verified and each command's name, step and listed flags compared with the script; whether a test asserts the row is not verified</summary>
 
 | Id | Command | Flags compared | Step | Variants | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- |
+| inv_python_start | tests/lib/python_start.sh | (not compared) | admission | both | [`source "${ROOT_DIR}/tests/lib/python_start.sh"`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_lock_launch | tests/lib/checkout_lock.sh --root | (not compared) | admission | both | [`checkout_lock.sh" --root`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_lock_verify | tests/lib/checkout_lock.py --verify | (not compared) | lock | both | [`checkout_lock.py" --verify`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |
 | inv_limits_check | docs/generate_limits.py --check | (not compared) | check_limits | both | [`docs/generate_limits.py" --check`](../build.sh) | [`check_invocations`](../tests/suites/source_drift/build_rules.py) |

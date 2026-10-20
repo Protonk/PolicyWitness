@@ -414,3 +414,14 @@ markers, automatic helper discovery, layout edits and both handshake edits.
 The identity changes on protocol implementation edits even when geometry does
 not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
 and the `runner_unit` host-driver control.
+
+### Direct Python ancestry
+
+`direct_python_start` checks the Python commands in `build.sh`,
+`tests/lib/checkout_lock.sh` and `tests/run.sh`, refusing `/usr/bin/python3`,
+`env python3` and bare `python3` invocations. It also requires the three
+build-control wrappers to start with `#!/usr/bin/env -S ${PW_PYTHON} -B`.
+Disposable copies with each forbidden invocation or a changed wrapper line
+must fail; restored copies and comments pass. Leaf Python scripts are outside
+this check. Runtime preservation and contained resolver refusals belong to
+`preflight/build_provenance_controls` and `contract_versions`.

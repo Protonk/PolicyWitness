@@ -92,6 +92,7 @@ def test_build_guards(out, identity):
                              'RUSTFLAGS', 'BASH_ENV', 'ENV', 'PW_VERSION', 'PW_BUILD_NUMBER', 'PW_CHECKOUT_LOCK_FD',
                              'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL', 'SDKROOT', 'CPATH',
                              'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')}
+    base_env.update(PW_PYTHON=sys.executable, PYTHONCOERCECLOCALE="0")
     scenarios = []
     with tempfile.TemporaryDirectory(prefix='pw-build-guards-', dir='/private/tmp') as temporary:
         work = Path(temporary)

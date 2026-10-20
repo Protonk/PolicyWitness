@@ -43,38 +43,30 @@ launches never receive it. After the owner is gone its channel is closed, so
 descendants that are still running keep the lock but cannot admit new nested
 mutations.
 
-Requests. The system /usr/bin/python3 is a launcher shim that inserts
-SDKROOT, CPATH, LIBRARY_PATH and MANPATH into the environment of everything
-it starts, and the interpreter may coerce LC_CTYPE; a caller's set or unset
-state for these cannot be recovered once Python runs. The shell front end
-tests/lib/checkout_lock.sh records each one's state and exact value with
-shell builtins and passes them here as arguments. The outermost owner binds
-them to its acquisition, restores them in the environment of each command it
-launches and hands them to every nested admission. A nested owner uses its
-owner's requests and never captures its own. A Python caller that takes the
-lock itself supplies requests explicitly or has none; a build refuses without
-them.
+Environment witness. The shell front end starts the developer directory's
+Python directly, with locale coercion disabled, and exports a witness of
+SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE. The command-line owner
+compares it before taking the lock; a missing or changed value refuses.
+Nothing restores environment values. A nested front end witnesses its own
+caller. Python callers of owned() need no witness; builds check one again
+at session-start, before any session or cache write.
 
     checkout_lock.sh [--root CHECKOUT] -- COMMAND [ARG...]
-        The supported entrypoint: capture the requests, then run this file.
+        The supported entrypoint: record the witness, then start this file directly.
 
-    checkout_lock.py [--root CHECKOUT] [--request NAME=VALUE | --request-unset NAME]... -- COMMAND [ARG...]
+    checkout_lock.py [--root CHECKOUT] -- COMMAND [ARG...]
         Take the lock without blocking, or be admitted by the owner of an
         inherited claim on this checkout, then supervise COMMAND in its own process group:
         forward SIGINT, SIGTERM and SIGHUP to that group, serve admissions
         while it runs and exit with its status. Cancellation allows GROUP_GRACE
         seconds before SIGKILL and KILL_GRACE seconds to observe exit, then
-        returns 128 + the original signal. Without request options the
-        owner holds no requests (ownership-only commands need none).
+        returns 128 + the original signal. Requires the front end's witness.
 
-    checkout_lock.py --verify [--root CHECKOUT] [--build-requests]
-        Be admitted by the owner of the inherited claim and exit 0. With
-        --build-requests, print the owner's requests, one
-        `request NAME set HEX` or `request NAME unset` line each, and refuse
-        when the owner holds none.
+    checkout_lock.py --verify [--root CHECKOUT]
+        Be admitted by the owner of the inherited claim and exit 0.
 
-Exit 2 names the refusal: a busy lock, an unverified claim, missing requests,
-malformed request options or a missing command. Otherwise the command's
+Exit 2 names the refusal: a busy lock, an unverified claim, a missing or
+changed environment witness, or a missing command. Otherwise the command's
 status is returned, 128 + N for a command stopped by signal N.
 """
 import argparse
@@ -105,11 +97,9 @@ BUSY = ('checkout busy: another execution or mutating operation holds tests/.che
         'wait for it to finish or use a second worktree')
 UNSET_REMEDY = f'unset {", ".join(CLAIM_ENV)} to take the lock here'
 FRONT_END = 'tests/lib/checkout_lock.sh'
-NO_REQUESTS = ('the owner of tests/.checkout.lock holds no preserved build requests; a build must start from build.sh or '
-               f'{FRONT_END}, which record SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE before Python runs')
 NONCE_RE = re.compile(r'[0-9a-f]{32}')
-REQUEST_NAMES = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
-REQUEST_LIMIT = 16 * 1024
+ENVIRONMENT_NAMES = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
+WITNESS_PREFIX = 'PW_ENV_WITNESS_'
 MESSAGE_LIMIT = 64 * 1024
 HANDOFF_TIMEOUT = 10
 GROUP_GRACE = 10
@@ -120,70 +110,34 @@ SOL_LOCAL, LOCAL_PEERPID = 0, 2
 
 
 class Refusal(ValueError):
-    """A lock that cannot be held, a claim that cannot be admitted or a request snapshot that cannot be used."""
+    """A lock that cannot be held, a claim that cannot be admitted or an environment witness that does not match."""
 
 
-# ---- requests ----------------------------------------------------------------------
+# ---- environment witness -------------------------------------------------------------
 
-class Requests:
-    """The caller's state for each interpreter-affected variable: an exact value, or None for unset."""
+def verify_environment(*, sdk_request=None):
+    """Compare with the shell's witness, never repair; return the observed request states.
 
-    def __init__(self, values):
-        if not isinstance(values, dict) or set(values) != set(REQUEST_NAMES):
-            raise Refusal('a request snapshot must name exactly ' + ', '.join(REQUEST_NAMES))
-        for name, value in values.items():
-            if value is not None and (not isinstance(value, str) or '\0' in value or len(value.encode()) > REQUEST_LIMIT):
-                raise Refusal(f'request {name} is not a bounded string')
-        self.values = dict(values)
-        if len(json.dumps(self.to_json()).encode()) > MESSAGE_LIMIT - 4096:
-            raise Refusal('the combined request snapshot exceeds the handoff message bound')
-
-    @classmethod
-    def from_arguments(cls, assigned, unset):
-        values = {}
-        for item in assigned:
-            name, separator, value = item.partition('=')
-            if not separator or name not in REQUEST_NAMES or name in values:
-                raise Refusal(f'malformed or repeated request: {name!r}')
-            values[name] = value
-        for name in unset:
-            if name not in REQUEST_NAMES or name in values:
-                raise Refusal(f'malformed or repeated request: {name!r}')
-            values[name] = None
-        return cls(values)
-
-    @classmethod
-    def from_json(cls, data):
-        if data is None:
-            return None
-        if not isinstance(data, dict):
-            raise Refusal('the owner sent a malformed request snapshot')
-        values = {}
-        for name, entry in data.items():
-            if not isinstance(entry, dict) or entry.get('state') not in ('set', 'unset'):
-                raise Refusal('the owner sent a malformed request snapshot')
-            if entry['state'] == 'set' and not isinstance(entry.get('value'), str):
-                raise Refusal('the owner sent a set request without its value')
-            values[name] = entry.get('value') if entry['state'] == 'set' else None
-        return cls(values)
-
-    def to_json(self):
-        return {name: (dict(state='unset') if value is None else dict(state='set', value=value))
-                for name, value in sorted(self.values.items())}
-
-    def apply(self, env):
-        """The environment with each requested variable restored to the caller's state."""
-        out = dict(env)
-        for name, value in self.values.items():
-            if value is None:
-                out.pop(name, None)
-            else:
-                out[name] = value
-        return out
-
-    def lines(self):
-        return [f'request {name} unset' if self.values[name] is None else f'request {name} set {self.values[name].encode().hex()}'
-                for name in REQUEST_NAMES]
+    Each exported witness is 'u' for unset or 's' followed by the exact value.
+    Python's filesystem decoding preserves non-UTF-8 environment bytes through
+    surrogateescape. No delimiter, command substitution or length bound loses
+    empty values, trailing newlines or any other byte an environment can hold.
+    session-start supplies SDKROOT's state from before build.sh removed it.
+    """
+    requests = {}
+    for name in ENVIRONMENT_NAMES:
+        value = os.environ.get(name)
+        if name == 'SDKROOT' and sdk_request is not None:
+            state, value = sdk_request
+            value = value if state == 'set' else None
+        witness = os.environ.get(WITNESS_PREFIX + name)
+        if witness is None:
+            raise Refusal(f'environment witness missing for {name}; start through {FRONT_END}')
+        expected = 'u' if value is None else 's' + value
+        if witness != expected:
+            raise Refusal(f'environment witness differs for {name}; start through {FRONT_END}')
+        requests[name] = dict(state='unset') if value is None else dict(state='set', value=value)
+    return requests
 
 
 # ---- the lock file -------------------------------------------------------------------
@@ -311,8 +265,8 @@ def inherited_fds(env=None):
 class Admission:
     """A descriptor a live owner handed over, open on this checkout's lock file, with the acquisition it belongs to."""
 
-    def __init__(self, root, fd, nonce, identity, requests):
-        self.root, self.fd, self.nonce, self.identity, self.requests = root, fd, nonce, identity, requests
+    def __init__(self, root, fd, nonce, identity):
+        self.root, self.fd, self.nonce, self.identity = root, fd, nonce, identity
 
     def close(self):
         if self.fd is not None:
@@ -433,9 +387,8 @@ def admit(root, env=None, *, timeout=HANDOFF_TIMEOUT):
         record = read_owner(fd)
         if not record or record.get('nonce') != found['nonce'] or record.get('pid') != owner['pid']:
             raise Refusal('owner record does not carry the claimed nonce')
-        requests = Requests.from_json(reply.get('requests'))
         received = []
-        return Admission(root, fd, found['nonce'], expected, requests)
+        return Admission(root, fd, found['nonce'], expected)
     finally:
         for fd in received:
             os.close(fd)
@@ -457,11 +410,11 @@ def admitted(root, env=None):
 # ---- owners ------------------------------------------------------------------------------
 
 class Scope:
-    """A live owner: the held descriptor, its acquisition, the requests it binds and the channel it serves."""
+    """A live owner: the held descriptor, its acquisition, and the channel it serves."""
 
-    def __init__(self, root, fd, nonce, identity, requests, *, nested, channel=None):
+    def __init__(self, root, fd, nonce, identity, *, nested, channel=None):
         self.root, self.fd, self.nonce, self.identity = Path(root), fd, nonce, identity
-        self.requests, self.nested = requests, nested
+        self.nested = nested
         if nested:
             self.server, self.client = None, socket.socket(fileno=os.dup(channel))
         else:
@@ -506,8 +459,7 @@ class Scope:
             elif request.get('nonce') != self.nonce:
                 reason = 'the claim names another acquisition'
             else:
-                answer = dict(v=1, status='ok', nonce=self.nonce, device=self.identity[0], inode=self.identity[1],
-                              requests=None if self.requests is None else self.requests.to_json())
+                answer = dict(v=1, status='ok', nonce=self.nonce, device=self.identity[0], inode=self.identity[1])
                 encoded = json.dumps(answer).encode()
                 sent = socket.send_fds(reply, [encoded], [self.fd])
                 reply.sendall(encoded[sent:])
@@ -522,11 +474,9 @@ class Scope:
                 reply.close()
 
     def child_env(self, base=None):
-        """An environment for a protected child: this owner's claim, the bound requests restored, stale claims dropped."""
+        """An environment for a protected child: this owner's claim, stale claims dropped."""
         base = os.environ if base is None else base
         env = {k: v for k, v in base.items() if k not in CLAIM_ENV}
-        if self.requests is not None:
-            env = self.requests.apply(env)
         env.update({ENV_ROOT: str(self.root), ENV_NONCE: self.nonce, ENV_FD: str(self.fd),
                     ENV_CHANNEL: str(self.client.fileno())})
         return env
@@ -608,29 +558,26 @@ def group_finished(pgid, timeout, child=None):
 
 
 @contextmanager
-def owned(root, *, requests=None, env=None):
+def owned(root, *, env=None):
     """Own the checkout lock for the block: take it, or be admitted by the owner of an inherited claim on this checkout.
 
     The acquisition scope serves admissions until its block ends; nested
-    scopes preserve its channel. A nested scope uses its owner's requests; supplying requests to one
-    refuses. A claim on another checkout is not a claim on this one: separate
-    worktrees have independent locks, so the scope takes this one itself and
-    its children inherit only its own claim."""
+    scopes preserve its channel. A claim on another checkout is not a claim
+    on this one: separate worktrees have independent locks, so the scope takes
+    this one itself and its children inherit only its own claim."""
     env = os.environ if env is None else env
     root = Path(root).resolve()
     if claim_for(root, env):
-        if requests is not None:
-            raise Refusal('a nested owner uses the requests its owner holds; it cannot supply its own')
         try:
             admission = admit(root, env)
         except Refusal as exc:
             raise Refusal(f'checkout lock claim is not verified: {exc}; {UNSET_REMEDY}')
-        scope = Scope(root, admission.fd, admission.nonce, admission.identity, admission.requests, nested=True,
+        scope = Scope(root, admission.fd, admission.nonce, admission.identity, nested=True,
                       channel=claim(env)['channel'])
     else:
         fd, record = acquire(root)
         held = os.fstat(fd)
-        scope = Scope(root, fd, record['nonce'], (held.st_dev, held.st_ino), requests, nested=False)
+        scope = Scope(root, fd, record['nonce'], (held.st_dev, held.st_ino), nested=False)
     scope.start()
     try:
         yield scope
@@ -645,39 +592,27 @@ def main(argv=None):
                                      allow_abbrev=False)
     parser.add_argument('--root', type=Path, default=ROOT, help='the checkout whose lock is held (default: this repository)')
     parser.add_argument('--verify', action='store_true', help='be admitted by the owner of the inherited claim and exit')
-    parser.add_argument('--build-requests', action='store_true', help="with --verify: print the owner's requests; refuse without them")
-    parser.add_argument('--request', action='append', default=[], metavar='NAME=VALUE', help='a captured request (from the shell front end)')
-    parser.add_argument('--request-unset', action='append', default=[], metavar='NAME', help='a captured unset request')
     parser.add_argument('command', nargs=argparse.REMAINDER, help='-- COMMAND [ARG...] to run under the lock')
     args = parser.parse_args(argv)
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     root = Path(args.root).resolve()
     try:
         if args.verify:
-            if command or args.request or args.request_unset:
-                parser.error('--verify takes no command or requests')
+            if command:
+                parser.error('--verify takes no command')
             try:
                 admission = admit(root)
             except Refusal as exc:
                 raise Refusal(f'checkout lock claim is not verified: {exc}; {UNSET_REMEDY}')
             try:
-                if args.build_requests:
-                    if admission.requests is None:
-                        raise Refusal(NO_REQUESTS)
-                    print('\n'.join(admission.requests.lines()))
                 print(f'ok: admitted by the owner of {LOCK} for {root} (acquisition {admission.nonce[:12]})', file=sys.stderr)
             finally:
                 admission.close()
             return 0
-        if args.build_requests:
-            parser.error('--build-requests requires --verify')
         if not command:
             raise Refusal('no command to run under the checkout lock')
-        captured = None
-        if args.request or args.request_unset:
-            captured = Requests.from_arguments(args.request, args.request_unset)
-        # A nested launcher uses its owner's requests: what it captured is the environment Python gave it.
-        with owned(root, requests=None if claim_for(root, os.environ) else captured) as scope:
+        verify_environment()
+        with owned(root) as scope:
             return scope.supervise(command)
     except Refusal as exc:
         print(f'ERROR: {exc}', file=sys.stderr)

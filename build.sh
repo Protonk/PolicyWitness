@@ -158,66 +158,38 @@ for tree_input in Info.plist PolicyWitness.entitlements runner/augments runner/S
 done
 
 # ---- Checkout lock -----------------------------------------------------------
-# A build and a managed test execution in one checkout are mutually exclusive:
-# both hold tests/.checkout.lock. Without a claim in the environment, this
-# script hands itself to the shell front end before any Python runs: the front
-# end records the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE
-# with shell builtins (the system Python shim inserts values of its own), and
-# the owner it starts takes the lock or refuses a busy one before any cache or
-# distribution mutation, then supervises this script again under it. The held
-# descriptor is passed to the script and inherited by every compiler and tool
-# it runs, so the hold lasts until the last of them exits, even if this
-# script or its owner is killed first. Under a claim, the owner's handoff is
-# verified below, never the environment alone, and the requests it hands over
-# are restored here, so a nested build sees the caller's values rather than
-# the interpreter's. The SDK request stays out of the environment until xcrun
-# has resolved it: a Python or git shim started with an SDKROOT that names no
-# SDK requests a Command Line Tools installation instead of failing.
+# A build and a managed test execution hold the same checkout lock. The
+# shell front end witnesses the caller's environment and supervises this
+# script under its hold. Nested builds with different values use that front
+# end again. Every entry resolves Python independently, without a shim.
+source "${ROOT_DIR}/tests/lib/python_start.sh"
 if [[ -z "${PW_CHECKOUT_LOCK_ROOT+set}${PW_CHECKOUT_LOCK_NONCE+set}${PW_CHECKOUT_LOCK_CHANNEL+set}${PW_CHECKOUT_LOCK_FD+set}" ]]; then
   exec /bin/bash "${ROOT_DIR}/tests/lib/checkout_lock.sh" --root "${ROOT_DIR}" -- /bin/bash "${BASH_SOURCE[0]}" "$@"
 fi
+# Keep the caller's SDK request apart until xcrun resolves it: a git shim
+# given an invalid SDKROOT can request a Command Line Tools installation.
+SDK_REQUEST_STATE=unset
+SDK_REQUEST_VALUE="${SDKROOT-}"
+if [[ -n "${SDKROOT+set}" ]]; then
+  SDK_REQUEST_STATE=set
+fi
 unset SDKROOT
-# A request arrives hex-encoded, so any value survives exactly; the sentinel
-# keeps trailing newlines, and bash 3.2's printf -v mishandles an empty result.
-restore_request() {
-  local name="$1" state="$2" hex="${3:-}" escapes="" value
-  if [[ "${name}" == "SDKROOT" ]]; then
-    SDK_REQUEST_STATE="${state}"
-  fi
-  if [[ "${state}" == "unset" ]]; then
-    unset "${name}"
-    return
-  fi
-  while [[ -n "${hex}" ]]; do
-    escapes="${escapes}\\x${hex:0:2}"
-    hex="${hex:2}"
-  done
-  value="$(printf '%b' "${escapes}"; printf x)"
-  if [[ "${name}" == "SDKROOT" ]]; then
-    SDK_REQUEST_VALUE="${value%x}"
-    return
-  fi
-  export "${name}=${value%x}"
-}
 echo "==> Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
-LOCK_REQUESTS="$(/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/checkout_lock.py" --verify --root "${ROOT_DIR}" --build-requests)"
-while read -r _ request_name request_state request_hex; do
-  restore_request "${request_name}" "${request_state}" "${request_hex}"
-done <<< "${LOCK_REQUESTS}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/checkout_lock.py" --verify --root "${ROOT_DIR}"
 
 # Check the documentation and the identity copies before any build or signing
 # work; the identity is checked again before signing and the guide again when
 # it is staged. The build writes nothing into the tree: a stale copy is
 # refused, and the generator the refusal names regenerates it.
 echo "==> Checking limits documentation"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_limits.py" --check
 echo "==> Checking contract versions"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_contract.py" --check
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_architecture.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_contract.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_architecture.py" --check
 echo "==> Checking build documentation"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_build.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_build.py" --check
 echo "==> Checking host/worker identity"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 
 # ---- Build stamp -------------------------------------------------------------
 # The app version is a coordinate derived from git, never edited by hand:
@@ -239,7 +211,8 @@ echo "==> Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
 # session destination before creating anything: each must be a real directory
 # of this user inside the checkout, or absent, and a missing controller/target/
 # is created only beneath the admitted controller/.
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" session-start --root "${ROOT_DIR}" \
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" session-start --root "${ROOT_DIR}" \
+  --sdk-request-state "${SDK_REQUEST_STATE}" --sdk-request-value="${SDK_REQUEST_VALUE}" \
   --knob "BUILD_XPC=${BUILD_XPC}" --knob "PW_INSPECTION=${PW_INSPECTION}" --knob "PW_FRESH_BUILD=${PW_FRESH_BUILD}" \
   --describe "${PW_BUILD_DESCRIBE}" --commit "${PW_BUILD_COMMIT}" --version "${PW_VERSION}" --build-number "${PW_BUILD_NUMBER}"
 
@@ -318,7 +291,7 @@ if [[ "${PW_FRESH_BUILD}" == "1" ]]; then
   echo "    fresh mode: the directory is replaced after admission; its reuse is not validated"
 else
   if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
-    if ! MESON_SOURCE_DIR="$(/usr/bin/python3 -c 'import json, os, sys; print(os.path.realpath(json.load(open(sys.argv[1]))["directories"]["source"]))' "${MESON_BUILD_DIR}/meson-info/meson-info.json" 2>/dev/null)"; then
+    if ! MESON_SOURCE_DIR="$("${PW_PYTHON}" -c 'import json, os, sys; print(os.path.realpath(json.load(open(sys.argv[1]))["directories"]["source"]))' "${MESON_BUILD_DIR}/meson-info/meson-info.json" 2>/dev/null)"; then
       echo "ERROR: ${MESON_BUILD_DIR} has no readable meson-info; remove it or use a fresh build directory" 1>&2
       exit 2
     fi
@@ -327,7 +300,7 @@ else
       exit 2
     fi
   fi
-  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
+  "${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
 fi
 
 # Select and verify the signing identity: an explicit identity present in the
@@ -398,7 +371,7 @@ fi
 # in incremental and fresh builds alike. Nothing outside the checkout is ever
 # removed because a Cargo setting names it.
 echo "==> Admitting the Cargo output and intermediate directories: ${CARGO_TARGET_DIR_PINNED}"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-admit --root "${ROOT_DIR}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-admit --root "${ROOT_DIR}"
 
 # Fresh mode replaces the three owned cache areas after read-only input, tool
 # and identity admission: builddir/, controller/target/release/ and the output
@@ -409,7 +382,7 @@ echo "==> Admitting the Cargo output and intermediate directories: ${CARGO_TARGE
 # build here.
 if [[ "${PW_FRESH_BUILD}" == "1" ]]; then
   echo "==> Replacing the build caches (PW_FRESH_BUILD=1): ${MESON_BUILD_DIR} ${CARGO_TARGET_DIR_PINNED}/release ${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release"
-  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" fresh-remove --root "${ROOT_DIR}"
+  "${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" fresh-remove --root "${ROOT_DIR}"
 fi
 
 # ---- Build binaries --------------------------------------------------------
@@ -434,7 +407,7 @@ PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   --bin sandbox-log-observer \
   --bin sbpl-check \
   > "${CARGO_MESSAGES}"
-CARGO_BUILT="$(/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/cargo_artifacts.py" "${CARGO_MESSAGES}" policy-witness sandbox-log-observer sbpl-check)"
+CARGO_BUILT="$("${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/cargo_artifacts.py" "${CARGO_MESSAGES}" policy-witness sandbox-log-observer sbpl-check)"
 while IFS=$'\t' read -r bin_name bin_path; do
   case "${bin_name}" in
     policy-witness) bin_expected="${RUNNER_BIN}" ;;
@@ -457,12 +430,12 @@ for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}
     exit 2
   fi
 done
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \
   "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"
 for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
   check_minimum_macos "${rust_bin}"
 done
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-judge --root "${ROOT_DIR}" \
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-judge --root "${ROOT_DIR}" \
   --bin policy-witness --bin sandbox-log-observer --bin sbpl-check \
   --require-rebuilt "${PW_FRESH_BUILD}" --rustflags-source "${RUSTFLAGS_SOURCE}"
 
@@ -486,7 +459,7 @@ if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; the
   exit 2
 fi
 NINJA_VERSION="$(ninja --version)"
-if ! /usr/bin/python3 -c 'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)' \
+if ! "${PW_PYTHON}" -c 'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)' \
     "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then
   echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2
   exit 2
@@ -497,7 +470,7 @@ if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then
 else
   echo "==> Configuring native build (meson setup, fresh directory): ${MESON_BUILD_DIR} ${MESON_OPTIONS[*]}"
   meson setup "${MESON_BUILD_DIR}" "${ROOT_DIR}" "${MESON_OPTIONS[@]}"
-  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-publish --root "${ROOT_DIR}"
+  "${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-publish --root "${ROOT_DIR}"
 fi
 echo "==> Compiling native executables"
 meson compile -C "${MESON_BUILD_DIR}"
@@ -516,7 +489,7 @@ meson compile -C "${MESON_BUILD_DIR}"
 # when this build enabled the XPC pieces, and every shipped output must carry
 # the selected SDK.
 echo "==> Checking the configured native source lists and the identity closure against the tree"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/native_sources.py" --builddir "${MESON_BUILD_DIR}" --root "${ROOT_DIR}"
 NATIVE_OUTPUTS=("${SB_API_VALIDATOR_BIN}" "${PW_PROBE_RUNNER_BIN}" "${PW_EXTENSION_ISSUER_BIN}")
 if [[ "${BUILD_XPC}" == "1" ]]; then
   NATIVE_OUTPUTS+=("${PW_RUNNER_CLIENT_BIN}")
@@ -530,12 +503,12 @@ for native_bin in "${NATIVE_OUTPUTS[@]}"; do
     exit 2
   fi
 done
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage native "${NATIVE_OUTPUTS[@]}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage native "${NATIVE_OUTPUTS[@]}"
 for native_bin in "${NATIVE_OUTPUTS[@]}"; do
   check_minimum_macos "${native_bin}"
 done
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-extend --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" sdk-check --root "${ROOT_DIR}" --sdk-version "${SDK_VERSION}" \
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-extend --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" sdk-check --root "${ROOT_DIR}" --sdk-version "${SDK_VERSION}" \
   "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}" "${NATIVE_OUTPUTS[@]}"
 
 # ---- Assemble app bundle ---------------------------------------------------
@@ -655,7 +628,7 @@ fi
 # copies are what gets signed; this covers the interval between checking a
 # compiler output and signing its copied bytes.
 echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"
 
 # ---- Codesign --------------------------------------------------------------
 
@@ -665,9 +638,9 @@ echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"
 # identity: a worker compiled from other identity inputs and an unchanged
 # generated constant can agree with the tree, so the binary is asked as well.
 echo "==> Checking host/worker identity again, before signing"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 GENERATED_WORKER_IDENTITY="$(/usr/bin/sed -nE 's/^WORKER_IDENTITY = "([0-9a-f]{64})"$/\1/p' "${ROOT_DIR}/tests/lib/contract.py")"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \
   --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"
 
 # Sign one Mach-O named by the signing list. The list names exactly the
@@ -716,7 +689,7 @@ fi
 # below covers both. The controller's final hash cannot live inside the record
 # that seal covers; the release record carries it.
 echo "==> Writing evidence manifest and provenance record"
-/usr/bin/python3 "${ROOT_DIR}/tests/build-evidence.py" \
+"${PW_PYTHON}" "${ROOT_DIR}/tests/build-evidence.py" \
   --app-bundle "${APP_BUNDLE}" \
   --app-entitlements "${ENTITLEMENTS_PLIST}" \
   --build-session "${BUILD_SESSION}" --root "${ROOT_DIR}" --identity "${IDENTITY}"
@@ -741,25 +714,25 @@ codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 # made, not on the identity string. The dSYM bundles are sealed resources,
 # not executables, and are not checked.
 echo "==> Checking every executable's signer"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
 
 # Keep the standalone observer tool signed for direct use. Its bytes are checked
 # against the output target again at this boundary: the copy in the bundle was
 # checked, but this file is signed in place.
 echo "==> Codesigning observer tool (not embedded)"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage observer "${SANDBOX_LOG_OBSERVER_BIN}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage observer "${SANDBOX_LOG_OBSERVER_BIN}"
 sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
 
 # ---- Package ---------------------------------------------------------------
 
 echo "==> Staging checked user guide"
-/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" \
+"${PW_PYTHON}" -B "${ROOT_DIR}/docs/generate_limits.py" \
   --stage-guide "${GUIDE_NAME}"
 
 # The sealed bundle's code is checked against the output target once more, as
 # packaged; nothing thins or repairs it.
 echo "==> Creating zip (for notarization): ${ZIP_NAME}"
-/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage packaging --app "${APP_BUNDLE}"
+"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage packaging --app "${APP_BUNDLE}"
 rm -f "${ZIP_NAME}"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
 

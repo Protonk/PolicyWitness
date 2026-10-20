@@ -30,7 +30,7 @@ architecture_spec.loader.exec_module(architecture_generator)
 
 # build.sh admits its tracked inputs and takes the checkout lock before any check; a build
 # checkout needs those files and the lock launcher, then the limits documents it checks first.
-ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'Info.plist', 'PolicyWitness.entitlements',
+ENTRY_FILES = {'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'Info.plist', 'PolicyWitness.entitlements',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb'))}
 LIMITS_FILES = ENTRY_FILES | {*markdown_reader.source_files(), 'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
@@ -299,6 +299,25 @@ class ContractVersionTests(unittest.TestCase):
         self.assertEqual({name: (root / name).read_bytes() for name in before}, before)
         self.assertFalse(destination.exists())
         self.assertFalse((root / 'builddir').exists())
+
+    def test_build_refuses_a_stand_in_developer_directory_before_any_python(self):
+        root = self.checkout(extra=ENTRY_FILES)
+        developer = root / 'empty developer'
+        developer.mkdir()
+        profile = root / 'resolver.sb'
+        profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
+                           '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
+        env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
+        env.update(DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false')
+        result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
+                                cwd=root, env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('direct Python unavailable', result.stderr)
+        self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
+        self.assertNotIn('requesting installation', result.stdout + result.stderr)
+        self.assertFalse((root / 'tests/.checkout.lock').exists())
+        self.assertFalse((root / 'controller/target').exists())
+        self.assertFalse((root / 'dist').exists())
 
     def test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check(self):
         root = self.checkout(extra=ENTRY_FILES)

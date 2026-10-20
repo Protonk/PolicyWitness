@@ -23,17 +23,23 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md#planning-a-change) and
 
 ## What already exists
 
-- [`build.sh`](build.sh)'s shell front end records the caller's `SDKROOT` as a
-  request and keeps it out of the environment until
-  `xcrun --sdk … --show-sdk-path` has resolved it, so a shim the build starts
-  never sees an unresolved `SDKROOT`. `DEVELOPER_DIR` passes through so a
-  caller can choose a toolchain.
+- [`build.sh`](build.sh) reads its caller's `SDKROOT` from its starting
+  environment and keeps it out of the environment until
+  `xcrun --sdk … --show-sdk-path` resolves it, so its git shim never sees an
+  unresolved SDK request. Its Python steps start directly.
+- [`python_start.sh`](tests/lib/python_start.sh) resolves the developer
+  directory with `xcode-select -p` and requires an executable
+  `usr/bin/python3`. The lock front end, build and dispatcher each source
+  it. A stand-in without Python refuses before a shim can run; a stand-in
+  with an executable Python still passes. This resolver is the place for a
+  developer-directory guard at these entry points.
 - The checkout-lock owner's `child_env` in
-  [`tests/lib/checkout_lock.py`](tests/lib/checkout_lock.py) is the shared
-  spawn path for dispatched cases and protected children: it drops stale
-  claims and applies the bound requests. That is why
-  [`check_build_provenance.py`](tests/suites/preflight/check_build_provenance.py)
-  can assert that a caller's `SDKROOT` does not reach a child's environment.
+  [`tests/lib/checkout_lock.py`](tests/lib/checkout_lock.py) drops stale
+  claims and adds its own, preserving other values unchanged. It no longer
+  restores bound requests. The shell front end records an environment
+  witness, and the CLI owner and build session start compare it without
+  repairing values. A witness does not validate an SDK or developer directory.
+  A bogus SDKROOT can still reach git or a leaf Python shim in a case.
 - `control_sdk_unavailable` in
   [`build_refusals.py`](tests/suites/preflight/opt_in/build_refusals.py)
   exercises the SDK refusal without exposing any shim: only a

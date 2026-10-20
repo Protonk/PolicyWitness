@@ -239,6 +239,8 @@ class Checkout:
                                       'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER', 'CC', 'BASH_ENV', 'ENV', 'PW_VERSION', 'PW_BUILD_NUMBER',
                                       'DEVELOPER_DIR', 'SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE', 'PW_CHECKOUT_LOCK_FD',
                                       'PW_CHECKOUT_LOCK_ROOT', 'PW_CHECKOUT_LOCK_NONCE', 'PW_CHECKOUT_LOCK_CHANNEL')}
+        self.base_env = {k: v for k, v in self.base_env.items() if not k.startswith(checkout_lock.WITNESS_PREFIX)}
+        self.base_env.update(PW_PYTHON=sys.executable, PYTHONCOERCECLOCALE="0")
         # Canaries: an unrelated environment value and every wrapped tool's stderr; no record may carry them.
         self.canary = 'PW_CANARY_' + os.urandom(8).hex()
         self.base_env['PW_UNRELATED_CANARY'] = self.canary
@@ -682,31 +684,52 @@ def control_lock_claim_invalid(co, variant):
     return builds[0]
 
 
-def control_build_requests_missing(co, variant):
-    """A build launched by a Python-only owner, which cannot know the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH or
-    LC_CTYPE, refuses at the lock step before any write, naming the shell front end; a Python owner that supplies an
-    explicitly preserved snapshot builds, and the session records that snapshot."""
+def control_environment_witness_missing(co, variant):
+    """Neither the CLI owner nor session-start writes with an absent witness."""
     session = co.root / SESSION
     kept = session.read_bytes() if session.exists() else None
-    python_only = ['/usr/bin/python3', '-B', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
-                   '/bin/bash', str(co.root / 'build.sh')]
-    build = co.build('build_requests_missing', variant, argv=python_only)
-    check(build, 2, 'holds no preserved build requests', present=('Verifying the checkout lock',),
-          absent=('Checking limits documentation', 'Build stamp'))
-    assert 'tests/lib/checkout_lock.sh' in build.stderr, build.stderr[-1000:]
+    cli = ['/usr/bin/python3', '-B', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
+           '/bin/bash', str(co.root / 'build.sh')]
+    build = co.build('environment_witness_missing', variant, argv=cli)
+    check(build, 2, 'environment witness missing for SDKROOT', absent=('Verifying the checkout lock',))
     assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
     preserved(build)
-    snapshot = {name: None for name in checkout_lock.REQUEST_NAMES}
-    supplied = textwrap.dedent(f'''
+    python_only = textwrap.dedent(f"""
         import sys
         sys.path.insert(0, {str(co.root / 'tests/lib')!r})
         import checkout_lock
-        with checkout_lock.owned({str(co.root)!r}, requests=checkout_lock.Requests({snapshot!r})) as scope:
+        with checkout_lock.owned({str(co.root)!r}) as scope:
             sys.exit(scope.supervise(['/bin/bash', {str(co.root / 'build.sh')!r}]))
-    ''')
-    neighbour = co.build('build_requests_missing-supplied', variant, argv=['/usr/bin/python3', '-B', '-c', supplied])
-    passing(co, neighbour, variant)
-    assert neighbour.session['requests'] == {name: dict(state='unset') for name in checkout_lock.REQUEST_NAMES}, neighbour.session['requests']
+    """)
+    nested = co.build('environment_witness_missing-nested', variant, argv=[sys.executable, '-B', '-c', python_only])
+    check(nested, 2, 'environment witness missing for SDKROOT', present=('Build stamp',), absent=('Supported macOS',))
+    assert not nested.receipts and (session.read_bytes() if session.exists() else None) == kept
+    preserved(nested)
+    return build
+
+
+def control_environment_witness_changed(co, variant):
+    """A deliberate shim start changes CPATH; the owner refuses before taking the lock."""
+    session = co.root / SESSION
+    kept = session.read_bytes() if session.exists() else None
+    # An explicit SDK suppresses the shim's CPATH insertion on this toolchain.
+    # Observe a safe default shim start, then construct a witness agreeing on
+    # every variable except CPATH, which the caller left unset. This isolates
+    # that refusal from the earlier SDKROOT comparison without guessing SDK aliases.
+    names = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
+    probe = 'import json, os; print(json.dumps({n: os.environ.get(n) for n in ' + repr(names) + '}))'
+    observed = json.loads(subprocess.check_output(['/usr/bin/python3', '-B', '-c', probe],
+                                                  env=co.base_env, text=True))
+    assert observed['CPATH'] is not None, 'the shim negative control did not change CPATH'
+    witnessed = {'PW_ENV_WITNESS_' + name: 'u' if value is None else 's' + value
+                 for name, value in observed.items()}
+    witnessed['PW_ENV_WITNESS_CPATH'] = 'u'
+    cli = ['/usr/bin/python3', '-B', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
+           '/bin/bash', str(co.root / 'build.sh')]
+    build = co.build('environment_witness_changed', variant, argv=cli, env=witnessed)
+    check(build, 2, 'environment witness differs for CPATH', absent=('Verifying the checkout lock',))
+    assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
+    preserved(build)
     return build
 
 
@@ -829,7 +852,7 @@ def control_lock_lifetime(co, variant):
     other = co.work / 'other-worktree'
     if not other.exists():
         (other / 'tests/lib').mkdir(parents=True)
-        for name in ('checkout_lock.py', 'checkout_lock.sh'):
+        for name in ('checkout_lock.py', 'checkout_lock.sh', 'python_start.sh'):
             shutil.copy2(co.root / 'tests/lib' / name, other / 'tests/lib' / name)
     other_front_end = ['/bin/bash', str(other / 'tests/lib/checkout_lock.sh'), '--root', str(other), '--']
     killed, holder, release = lifetime_kill(co, variant, 'lifetime-killed')
@@ -1989,41 +2012,47 @@ def control_sdk_requests(co, variant):
     version = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version'], text=True).strip()
     real_cc = subprocess.check_output(['/usr/bin/xcrun', '--sdk', 'macosx', '-f', 'clang'], text=True).strip()
     real_rustc = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip() if shutil.which('rustup') else shutil.which('rustc')
-    recorded = ['SDKROOT', 'MACOSX_DEPLOYMENT_TARGET']
+    recorded = ['SDKROOT', 'MACOSX_DEPLOYMENT_TARGET', 'CPATH', 'LIBRARY_PATH', 'MANPATH']
     cc = co.forwarding('cc-requests', real_cc, mode='direct', record_env=recorded)
     rustc = co.forwarding('rustc-requests', real_rustc, mode='direct', record_env=recorded)
     tools = dict(CC=str(cc), RUSTC=str(rustc))
     front_end = ['/bin/bash', str(co.root / 'tests/lib/checkout_lock.sh'), '--root', str(co.root), '--']
-    nested = (f'/bin/bash {shlex.quote(str(co.root / "build.sh"))} && /bin/bash {shlex.quote(str(co.root / "tests/lib/checkout_lock.sh"))} '
-              f'--root {shlex.quote(str(co.root))} -- /usr/bin/python3 -B {shlex.quote(str(co.root / "tests/lib/checkout_lock.py"))} '
-              f'--verify --root {shlex.quote(str(co.root))} --build-requests')
+    # The outer owner starts with a path; the nested front end witnesses a different request.
+    nested = (f'SDKROOT=macosx CPATH= /bin/bash {shlex.quote(str(co.root / "tests/lib/checkout_lock.sh"))} '
+              f'--root {shlex.quote(str(co.root))} -- /bin/bash {shlex.quote(str(co.root / "build.sh"))}')
     cases = (('absent', {}, None, dict(state='unset'), 'xcrun --sdk macosx default'),
              ('default-named', dict(SDKROOT='macosx'), None, dict(state='set', value='macosx'), 'SDKROOT named by the caller'),
              ('explicitly-empty', dict(SDKROOT=''), None, dict(state='set', value=''), 'xcrun --sdk macosx default'),
-             ('explicit-path-front-end', dict(SDKROOT=selected), [*front_end, '/bin/bash', '-c', nested],
-              dict(state='set', value=prov.redact(selected)), 'SDKROOT named by the caller'))
+             ('explicit-path-front-end', dict(SDKROOT=selected), [*front_end, '/bin/bash', str(co.root / 'build.sh')],
+              dict(state='set', value=prov.redact(selected)), 'SDKROOT named by the caller'),
+             ('nested-environment', dict(SDKROOT=selected), [*front_end, '/bin/bash', '-c', nested],
+              dict(state='set', value='macosx'), 'SDKROOT named by the caller'))
     build = None
     for index, (label, env, argv, request, source) in enumerate(cases):
-        build = co.build(f'sdk_requests-{label}', variant, env=dict(tools, **env), argv=argv, fresh='1' if index == 0 else '0')
+        nested_environment = label == 'nested-environment'
+        build = co.build(f'sdk_requests-{label}', variant, env=dict(tools, **env), argv=argv,
+                         fresh='1' if index == 0 or nested_environment else '0')
         passing(co, build, variant)
         record = build.record
         assert record['configuration']['requests']['SDKROOT'] == request, (label, record['configuration']['requests'])
         assert record['toolchain']['sdk']['source'] == source, (label, record['toolchain']['sdk'])
         assert build.session['requests']['SDKROOT'] == (dict(state='unset') if request['state'] == 'unset'
-                                                        else dict(state='set', value=env['SDKROOT'])), build.session['requests']
+                                                        else dict(state='set', value='macosx' if nested_environment else env['SDKROOT'])), build.session['requests']
         assert record['configuration']['sdkroot'] == prov.redact(selected) == record['toolchain']['sdk']['path'], record['configuration']
         assert record['configuration']['deployment_target'] == co.minimum
         compiled = [r for r in build.forward if r['kind'] == 'compile']
-        assert {r['wrapper'] for r in compiled} == {'cc-requests', 'rustc-requests'} or index > 0, {r['wrapper'] for r in compiled}
+        if index == 0 or nested_environment:
+            assert {r['wrapper'] for r in compiled} == {'cc-requests', 'rustc-requests'}, {r['wrapper'] for r in compiled}
         for receipt in compiled:
-            assert receipt['environment'] == dict(SDKROOT=selected, MACOSX_DEPLOYMENT_TARGET=co.minimum), (label, receipt['environment'])
+            expected = dict(SDKROOT=selected, MACOSX_DEPLOYMENT_TARGET=co.minimum,
+                            CPATH='' if nested_environment else None, LIBRARY_PATH=None, MANPATH=None)
+            assert receipt['environment'] == expected, (label, receipt['environment'])
         for output in record['outputs']:
             minos, sdk = mach_o_build_version(build.app / output['rel_path'])
             assert (minos, sdk) == (output['minos'], output['sdk']), (label, output['rel_path'], minos, sdk)
             assert prov.normalize_version(minos) == prov.normalize_version(co.minimum) and prov.normalize_version(sdk) == prov.normalize_version(version)
-        if argv:
-            handed = {words[1]: words for words in (line.split(' ') for line in build.stdout.splitlines() if line.startswith('request '))}
-            assert bytes.fromhex(handed['SDKROOT'][3]).decode() == selected, ('the nested owner did not hand over the outer request', handed)
+        if nested_environment:
+            assert build.session['requests']['CPATH'] == dict(state='set', value=''), build.session['requests']
     # An invalid explicit request refuses at SDK selection; its xcrun call is contained, and no default is substituted.
     invalid = '/private/tmp/pw-no-such-sdk-' + os.urandom(4).hex()
     fixture = co.work / 'sdk-request-invalid'
@@ -2040,10 +2069,8 @@ def control_sdk_requests(co, variant):
     return build
 
 
-# The recording forwarders are Python started through the system shim, which inserts SDKROOT, CPATH, LIBRARY_PATH, MANPATH
-# and LC_CTYPE into its own environment, so only variables the shim leaves alone are compared; [env] applies one rule to
-# every name, which MACOSX_DEPLOYMENT_TARGET exercises.
-ORACLE_ENV = ('PATH', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN', 'PW_ORACLE_PLAIN', 'PW_ORACLE_RELATIVE')
+ORACLE_ENV = ('PATH', 'MACOSX_DEPLOYMENT_TARGET', 'RUSTUP_TOOLCHAIN', 'PW_ORACLE_PLAIN', 'PW_ORACLE_RELATIVE',
+              'SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH')
 
 
 class Oracle:
@@ -2538,7 +2565,8 @@ CONTROLS = [
     ('missing_tree_input', ('full', 'partial'), control_missing_tree_input),
     ('checkout_busy', ('full', 'partial'), control_checkout_busy),
     ('lock_claim_invalid', ('full', 'partial'), control_lock_claim_invalid),
-    ('build_requests_missing', ('full', 'partial'), control_build_requests_missing),
+    ('environment_witness_missing', ('full', 'partial'), control_environment_witness_missing),
+    ('environment_witness_changed', ('full', 'partial'), control_environment_witness_changed),
     ('sdk_unavailable', ('full', 'partial'), control_sdk_unavailable),
     ('sdk_version_unreadable', ('full', 'partial'), control_sdk_version_unreadable),
     ('builddir_stamp_missing', ('full', 'partial'), control_builddir_stamp_missing),
@@ -2605,7 +2633,7 @@ CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BI
                      '    exit 2\n'
                      '  fi\n'
                      'done\n')
-NINJA_GUARD = ('if ! /usr/bin/python3 -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
+NINJA_GUARD = ('if ! "${PW_PYTHON}" -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
                '    "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then\n'
                '  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2\n'
                '  exit 2\n'
@@ -2629,15 +2657,15 @@ MACHO_GUARD = ('  if ! /usr/bin/file -b "${target}" 2>/dev/null | /usr/bin/grep 
                '    exit 2\n'
                '  fi\n')
 SIGN_ANCHOR = '  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"\n'
-STAMP_CHECK = '  /usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n'
-WORKER_IDENTITY = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \\\n'
+STAMP_CHECK = '  "${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n'
+WORKER_IDENTITY = ('"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \\\n'
                    '  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"\n')
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
 PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
-CARGO_OUTPUT_CHECK = ('/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
+CARGO_OUTPUT_CHECK = ('"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
                       '  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"\n')
 ASSEMBLED_CHECK = ('echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"\n'
-                   '/usr/bin/python3 -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
+                   '"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
 FIRST_SIGNATURE = 'sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"\n'
 OUTPUT_TARGET_HELPER = 'tests/lib/output_target.py'
 ARCHITECTURE_EQUALITY = "    if observation['architectures'] != [ARCHITECTURE]:\n"
@@ -2686,7 +2714,7 @@ MUTATIONS = [
 ]
 
 
-SELF_CHECK_RE = re.compile(r'^/usr/bin/python3 -B "\$\{ROOT_DIR\}/docs/generate_[a-z_]+\.py" --check\n', re.M)
+SELF_CHECK_RE = re.compile(r'^"\$\{PW_PYTHON\}" -B "\$\{ROOT_DIR\}/docs/generate_[a-z_]+\.py" --check\n', re.M)
 SELF_CHECK_MARKERS = ('is stale', 'missing symbol', 'disagrees with the script', 'generate_worker_identity.py')
 
 

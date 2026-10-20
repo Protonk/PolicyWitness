@@ -37,7 +37,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         root = Path(directory.name)
         # build.sh admits its tracked inputs and takes the checkout lock before the limits check it makes first.
         paths = {'docs/generator_common.py', 'tests/catalog.json', 'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
-                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'Info.plist',
+                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh', 'tests/lib/checkout_lock.py', 'tests/lib/checkout_lock.sh', 'tests/lib/python_start.sh', 'Info.plist',
                  'PolicyWitness.entitlements', 'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist',
                  *(p.relative_to(ROOT).as_posix() for p in (ROOT / 'runner/augments').glob('*.sb')),
                  generator.CONTRACT_NAME, generator.MATRIX_NAME, *generator.SPAN_DOCUMENTS, *markdown_reader.source_files()}
