@@ -29,9 +29,11 @@ The script's own shell launches both probes, even if the first fails, so the
 refusal can name both observations. A Rosetta-translated process still reads
 `hw.optional.arm64` as `1` but `sysctl.proc_translated` as `1`.
 An absent, empty or other value refuses: the build never proceeds on an
-observation it could not make. Probe failures must reach this diagnostic
-rather than exit through `set -e`; represent an empty or unavailable value
-explicitly. One admission refusal, `native_builder_required`, covers both
+observation it could not make. Exit status zero with empty stdout still
+refuses because the required value was not observed. Nonzero probe exits must
+reach this diagnostic rather than exit through `set -e`; represent an empty
+or unavailable value explicitly. One admission refusal,
+`native_builder_required`, covers both
 facts in both build variants, with status 2 and a message naming each value
 read, for example `this build runs only natively on Apple Silicon (hw.optional.arm64=<value>,
 sysctl.proc_translated=<value>)`.
@@ -279,9 +281,12 @@ Call `prepare()` from the test parent before entering any control sandbox.
 prefix. Keep its outside-DSCL success, inside-DSCL failure and permitted-command
 success checks. For this extra-rule mode, also capture the two sysctl probes
 outside and inside that same profile, with SDKROOT and DEVELOPER_DIR absent.
-Require the outside values to be `1` and `0`. The inside shell must run to
-completion, reporting the status and output of each probe: the arm64 query
-must fail with empty stdout while the translation query succeeds with `0`.
+Require both outside probes to exit zero with values `1` and `0`. The inside
+shell must run to completion, reporting the status, stdout and stderr of each
+probe: require the arm64 query to exit zero with empty stdout, while the
+translation query exits zero and prints `0`. This accepts the observed
+blocked-read behavior as valid control setup; the build guard must then
+refuse its missing arm64 value despite the query's zero exit status.
 An apply/exec failure or incomplete probe cannot count as the expected empty
 sysctl. Retain all raw checks in `containment.json`; return no prefix if any
 gate fails. Only after this startup validation may the caller put the invalid
@@ -290,13 +295,17 @@ single `sandbox-exec` prefix. Keep the prepared profile unchanged through the
 unchanged-script run, displaced-guard run and restored-script repeat.
 
 Extend the helper's controls in `preflight/build_provenance_controls`
-(`check_build_provenance.py`) for the combined profile: successful startup,
-the empty arm64 read alongside the successful translation read, preservation
-of the existing containment gates, and constructed missing, wrong or
-incomplete sysctl observations that stop both `prepare()` and `run()` before
-dispatch. Keep the existing plain-profile, exec-restriction and nested-sandbox
-refusal tests. The build-refusal mutation phase must then show the original
-guard's builder refusal and the displaced guard's SDK refusal, under identical
+(`check_build_provenance.py`) for the combined profile: successful startup
+with an arm64 read that exits zero and prints nothing alongside the
+successful translation read, preservation of the existing containment gates,
+and constructed observations with missing records, wrong values, nonzero
+statuses or incomplete probes that stop both `prepare()` and `run()` before
+dispatch. Rejecting
+a constructed nonzero result here tests the setup gate, not the build guard's
+handling of a real failed sysctl. Keep the existing plain-profile,
+exec-restriction and nested-sandbox refusal tests. The build-refusal mutation
+phase must then show the original guard's builder refusal and the displaced
+guard's SDK refusal, under identical
 combined containment, with raw diagnostics and installation-request detection
 retained.
 SDK checks in the Rosetta case use the ordinary shim-probe profile with
@@ -311,7 +320,7 @@ The case results must establish these observations:
 | Native success | Fresh full and partial builds pass on this Mac; a fresh signed candidate passes inspection and the default battery. |
 | Translated build refused | In `preflight/translated_build_refusal_controls`, the unchanged script under `arch -x86_64 /bin/bash`, and `make build` under `arch -x86_64 /usr/bin/make`, refuse naming `sysctl.proc_translated=1` in both variants. With SDKROOT unset or valid, observe the script's refusal, empty wrapped-tool receipts, unchanged session/cache/distribution inventories and refusal ahead of the independently held lock. Make's earlier shim/SDK work is allowed. |
 | Admission precedence | Exercise direct `--help`, an unknown argument, bad knobs, missing tracked inputs and an invalid SDKROOT alongside an unreadable sysctl, and alongside translation in the Rosetta case: the builder refusal wins. On an admitted native shell, retain the existing precedence. For make with an invalid command-line SDKROOT, require the parse-time SDK refusal and no entry into build.sh. The unreadable-sysctl plus invalid-SDK subcase uses the helper's validated combined profile; all SDK fault subcases use one contained shim-probe invocation. |
-| Unconfirmed machine refused | In `preflight/build_refusal_controls`, the unchanged script under the sandbox profile reports the empty `hw.optional.arm64` and native `sysctl.proc_translated=0`, with the same receipt, inventory and lock-boundary checks in both variants. There is no Intel Mac here: refusal of `0` and an absent sysctl is supported by predicate review, not an Intel execution; record that limit. |
+| Unconfirmed machine refused | In `preflight/build_refusal_controls`, the unchanged script under the sandbox profile refuses the zero-exit, empty-output `hw.optional.arm64` observation while `sysctl.proc_translated` exits zero and prints `0`, with the same receipt, inventory and lock-boundary checks in both variants. This exercises the empty-value path only. Refusal of an arm64 value of `0` or a nonzero sysctl exit (including an unknown OID) rests on guard-code review; neither a real failing build probe nor an Intel execution is established by this control. Record that limit. |
 | Guard sensitivity | Removing the guard, moving it past Python/SDK setup or moving it past the lock front end fails `control_unconfirmed_machine` in `demonstrate_bypass`, without Rosetta. The restored script passes the same control. |
 | Current versions | The archive reader and release verification refuse a schema 1 record and an archive without a provenance object. Complete generated schema-2 archives with the original note literals verify through `preflight/release_publish_controls`, without local release material. Verification of the complete local v0.3.2 archive is a separate recorded implementation check; the shell rule is not retroactively imposed on its recorded toolchain. |
 | Worker wait | Identity regenerated; `runner_c_worker_harness`, the default battery and the opt-in `witness_contract/order_barrier_mutations` pass. |
