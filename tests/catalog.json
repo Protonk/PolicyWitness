@@ -154,7 +154,7 @@
         },
         {
           "id": "direct_python_start",
-          "description": "Build and test ancestry uses direct Python; wrapper shebangs agree and independent weakening controls reject shim and bare Python commands"
+          "description": "Build, test and release ancestry uses direct Python; wrapper shebangs agree and independent weakening controls reject shim and bare Python commands"
         }
       ]
     },

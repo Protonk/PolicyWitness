@@ -44,7 +44,7 @@
 # Conventions
 #   Bare make prints this card; make build builds.
 #   Every target is phony; make tracks no outputs here.
-#   /usr/bin/python3 -B is deliberate: the system interpreter, writing no bytecode.
+#   Python helpers run through tests/lib/python.sh, never the /usr/bin/python3 shim.
 #   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version
 #   and $$battery survive across lines and the first failure stops the chain.
 #   release calls notarize, and notarize calls build, through $(MAKE) rather than
@@ -147,7 +147,7 @@ notarize:
 		exit 2; \
 	fi
 	@echo "==> [notarize] preflight report for $(DIST_DIR)"
-	@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist "$(DIST_DIR)"
+	@tests/lib/python.sh tests/lib/release_preflight.py --report --dist "$(DIST_DIR)"
 # The release build is fresh: a caller's conflicting knob refuses here instead of being overridden silently.
 	@if [ -n "$${PW_FRESH_BUILD+x}" ] && [ "$${PW_FRESH_BUILD}" != "1" ]; then \
 		echo "ERROR: notarize builds with PW_FRESH_BUILD=1; the supplied PW_FRESH_BUILD='$${PW_FRESH_BUILD}' conflicts with it" >&2; \
@@ -156,16 +156,16 @@ notarize:
 	@$(MAKE) build PW_FRESH_BUILD=1
 # One shell from here: the attempt directory path must reach every step.
 	@set -eu; \
-	  release_evidence="$$(/usr/bin/python3 -B tests/lib/release_evidence.py "$(DIST_DIR)/PolicyWitness.zip")"; \
+	  release_evidence="$$(tests/lib/python.sh tests/lib/release_evidence.py "$(DIST_DIR)/PolicyWitness.zip")"; \
 	  echo "==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip and wait once -> $$release_evidence"; \
-	  /usr/bin/python3 -B notarize.py "$(DIST_DIR)/PolicyWitness.zip" "$(NOTARY_KEYCHAIN_PROFILE)" --evidence-dir "$$release_evidence"; \
+	  tests/lib/python.sh notarize.py "$(DIST_DIR)/PolicyWitness.zip" "$(NOTARY_KEYCHAIN_PROFILE)" --evidence-dir "$$release_evidence"; \
 	  echo "==> [notarize] staple, validate and assess $(DIST_DIR)/PolicyWitness.app"; \
-	  /usr/bin/python3 -B tests/lib/release_commands.py --step staple "$$release_evidence" 60 /usr/bin/xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"; \
-	  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation "$$release_evidence" 60 /usr/bin/xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"; \
-	  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper "$$release_evidence" 60 /usr/sbin/spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"; \
+	  tests/lib/python.sh tests/lib/release_commands.py --step staple "$$release_evidence" 60 /usr/bin/xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"; \
+	  tests/lib/python.sh tests/lib/release_commands.py --step staple-validation "$$release_evidence" 60 /usr/bin/xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"; \
+	  tests/lib/python.sh tests/lib/release_commands.py --step gatekeeper "$$release_evidence" 60 /usr/sbin/spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"; \
 	  echo "==> [notarize] re-zip the stapled app and accept the final ZIP"; \
 	  rm -f "$(DIST_DIR)/PolicyWitness.zip"; \
-	  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip "$$release_evidence" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"; \
+	  tests/lib/python.sh tests/lib/release_commands.py --step re-zip "$$release_evidence" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"; \
 	  bash tests/accept-release.sh "$(DIST_DIR)/PolicyWitness.zip" --evidence-dir "$$release_evidence"
 
 # release: the whole procedure, in order. The strict preflight comes first so a
@@ -176,7 +176,7 @@ notarize:
 # stapled app into its own run directory; release_archive.py stages and verifies
 # the archive and retains both runs; release_rotate.py then retires older
 # working test output. A rotation failure leaves the release complete: resume
-# with `python3 -B tests/lib/release_rotate.py $(DIST_DIR)/archive/v<version> --apply`.
+# with `tests/lib/python.sh tests/lib/release_rotate.py $(DIST_DIR)/archive/v<version> --apply`.
 # Commit the tests/RETAINED.json change afterwards either way.
 release:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
@@ -186,19 +186,19 @@ release:
 	fi
 # Stop before anything builds or is submitted; notarize prints the report again.
 	@echo "==> [release] strict preflight for $(DIST_DIR)"
-	@/usr/bin/python3 -B tests/lib/release_preflight.py --dist "$(DIST_DIR)" >/dev/null
+	@tests/lib/python.sh tests/lib/release_preflight.py --dist "$(DIST_DIR)" >/dev/null
 	@$(MAKE) notarize
 # One shell from here: the version and battery path must reach every step.
 	@set -eu; \
-	  version="$$(/usr/bin/python3 -B tests/lib/release_preflight.py --dist "$(DIST_DIR)" --format version)"; \
+	  version="$$(tests/lib/python.sh tests/lib/release_preflight.py --dist "$(DIST_DIR)" --format version)"; \
 	  battery="tests/out/runs/release-$$version-default"; \
 	  echo "==> [release] default battery against $(DIST_DIR)/PolicyWitness.app -> $$battery"; \
 	  PW_APP_DIR="$(DIST_DIR)/PolicyWitness.app" PW_TEST_OUT_DIR="$$battery" ./tests/run.sh; \
 	  echo "==> [release] archive $(DIST_DIR)/archive/v$$version"; \
-	  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" --battery "$$battery" \
+	  tests/lib/python.sh tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" --battery "$$battery" \
 	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",); \
 	  echo "==> [release] clean up older working test output"; \
-	  /usr/bin/python3 -B tests/lib/release_rotate.py "$(DIST_DIR)/archive/v$$version" --apply
+	  tests/lib/python.sh tests/lib/release_rotate.py "$(DIST_DIR)/archive/v$$version" --apply
 
 # publish: the only outward step. release_publish.py verifies the archive,
 # including its portable test evidence, pushes the tag if the remote lacks it,
@@ -212,5 +212,5 @@ publish:
 		exit 2; \
 	fi
 	@echo "==> [publish] verify and publish $(DIST_DIR)/archive/v$(VERSION)"
-	@/usr/bin/python3 -B tests/lib/release_publish.py "$(DIST_DIR)/archive/v$(VERSION)" \
+	@tests/lib/python.sh tests/lib/release_publish.py "$(DIST_DIR)/archive/v$(VERSION)" \
 	  $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",)

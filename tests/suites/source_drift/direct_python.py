@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-ENTRIES = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh')
+ENTRIES = ('build.sh', 'tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh', 'Makefile')
 WRAPPERS = ('tests/fixtures/build_refusals/tools.py', 'tests/fixtures/build_refusals/forward.py',
             'tests/fixtures/build_guards/tools.py')
 SHEBANG = '#!/usr/bin/env -S ${PW_PYTHON} -B'

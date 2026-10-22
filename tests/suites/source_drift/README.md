@@ -426,7 +426,8 @@ and the `runner_unit` host-driver control.
 ### Direct Python ancestry
 
 `direct_python_start` checks the Python commands in `build.sh`,
-`tests/lib/checkout_lock.sh` and `tests/run.sh`, refusing `/usr/bin/python3`,
+`tests/lib/checkout_lock.sh`, `tests/run.sh`, `tests/lib/python.sh`,
+`tests/accept-release.sh` and the Makefile, refusing `/usr/bin/python3`,
 `env python3` and bare `python3` invocations. It also requires the three
 build-control wrappers to start with `#!/usr/bin/env -S ${PW_PYTHON} -B`.
 Disposable copies with each forbidden invocation or a changed wrapper line

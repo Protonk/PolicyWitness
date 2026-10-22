@@ -1881,7 +1881,8 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     with tempfile.TemporaryDirectory(prefix='pw-make-fresh-', dir='/private/tmp') as temporary:
         repo = Path(temporary) / 'repo'
         repo.mkdir()
-        for name in ('Makefile', 'tests/lib/sdk_guard.sh', 'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
+        for name in ('Makefile', 'tests/lib/sdk_guard.sh', 'tests/lib/python_start.sh', 'tests/lib/python.sh',
+                     'tests/lib/release_preflight.py', 'tests/fixtures/docs/prose_baseline.json', 'tests/fixtures/docs/build_baseline.json'):
             target = repo / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, target)

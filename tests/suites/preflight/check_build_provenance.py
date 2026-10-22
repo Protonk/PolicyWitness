@@ -674,12 +674,29 @@ class LockTests(unittest.TestCase):
         self.assertNotEqual(shim, direct)
         self.assertIsNotNone(shim['CPATH'])
 
+    def test_helper_wrapper_children_inherit_the_callers_environment(self):
+        # Release recipes start their helpers through tests/lib/python.sh; the shim is the negative control.
+        code = 'import subprocess,sys; sys.stdout.buffer.write(subprocess.check_output(["/usr/bin/env", "-0"]))'
+        env = dict(PATH='/usr/bin:/bin', LIBRARY_PATH='spaced dir/lib\n', MANPATH='/caller/man',
+                   __CF_USER_TEXT_ENCODING=os.environ.get('__CF_USER_TEXT_ENCODING', f'0x{os.getuid():X}:0x0:0x0'))
+        expected = {name: env.get(name) for name in NAMES}
+        for command in (['/bin/bash', str(ROOT / 'tests/lib/python.sh')], ['/usr/bin/python3', '-B']):
+            result = subprocess.run(['/usr/bin/env', '-i', *[f'{k}={v}' for k, v in env.items()], *command, '-c', code],
+                                    capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            child = dict(entry.split('=', 1) for entry in result.stdout.decode().split('\0') if entry)
+            seen = {name: child.get(name) for name in NAMES}
+            if command[0] == '/bin/bash':
+                self.assertEqual(seen, expected)
+            else:
+                self.assertNotEqual(seen, expected, 'the shim negative control did not change the environment')
+
     def test_entrypoints_refuse_a_stand_in_developer_directory_without_a_shim(self):
         developer = self.work / 'empty developer'
         developer.mkdir()
         profile = self.script('resolver.sb', '(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
                               '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
-        for entry in ('tests/lib/checkout_lock.sh', 'tests/run.sh'):
+        for entry in ('tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh'):
             result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(ROOT / entry), '--help'],
                                     env=dict(clean_env(), SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false'),
                                     capture_output=True, text=True, timeout=30)
@@ -834,7 +851,7 @@ class ShimContainmentTests(unittest.TestCase):
     def checkout(self):
         root = self.work / 'checkout'
         for relative in ('build.sh', 'Makefile', 'tests/run.sh', 'tests/accept-release.sh', 'tests/suites/unit/run.sh',
-                         'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/sdk_guard.sh',
+                         'tests/lib/testlib.sh', 'tests/lib/python_start.sh', 'tests/lib/python.sh', 'tests/lib/sdk_guard.sh',
                          'tests/lib/checkout_lock.sh', 'tests/lib/checkout_lock.py', 'Info.plist', 'PolicyWitness.entitlements',
                          'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist'):
             target = root / relative
@@ -849,7 +866,7 @@ class ShimContainmentTests(unittest.TestCase):
         prefix = shim_probe.prepare(fixture, write_paths=[root])
         invalids = [str(self.work / 'missing.sdk'), 'pw-no-such-sdk', str(self.work)]
         entries = [('tests/run.sh', '--help'), ('tests/lib/checkout_lock.sh', '--', '/usr/bin/true'), ('build.sh',),
-                   ('tests/accept-release.sh', '--help'), ('tests/suites/unit/run.sh',)]
+                   ('tests/accept-release.sh', '--help'), ('tests/lib/python.sh', '--version'), ('tests/suites/unit/run.sh',)]
         for i, request in enumerate(invalids):
             for j, entry in enumerate(entries):
                 argv = prefix + ['/bin/bash', str(root / entry[0]), *entry[1:]]
@@ -872,6 +889,7 @@ class ShimContainmentTests(unittest.TestCase):
             env = dict(shim_probe.base_environment(fixture), SDKROOT=request)
             entries = [(ROOT / 'tests/run.sh', ['--help'], 'usage:', 0),
                        (ROOT / 'tests/accept-release.sh', ['--help'], 'usage:', 0),
+                       (root / 'tests/lib/python.sh', ['-c', 'print("reached")'], 'reached', 0),
                        (root / 'tests/lib/checkout_lock.sh', ['--', '/usr/bin/true'], '', 0),
                        (root / 'build.sh', [], 'Checking limits documentation', 2)]
             for j, (entry, args, marker, status) in enumerate(entries):

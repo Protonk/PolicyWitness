@@ -291,8 +291,8 @@ an earlier transaction still has quarantined output; resume that transaction fir
 Preview or resume just this last step with the archived version:
 
 ```sh
-python3 -B tests/lib/release_rotate.py dist/archive/v0.2.7
-python3 -B tests/lib/release_rotate.py dist/archive/v0.2.7 --apply
+tests/lib/python.sh tests/lib/release_rotate.py dist/archive/v0.2.7
+tests/lib/python.sh tests/lib/release_rotate.py dist/archive/v0.2.7 --apply
 ```
 
 Preview is read-only. `--apply` either creates a journal or resumes its existing
@@ -372,11 +372,12 @@ they do not cancel or classify work at Apple.
 ### Individual steps and manual equivalent
 
 Build once with `make build IDENTITY=...`. Then submit the
-existing ZIP with the bounded helper:
+existing ZIP with the bounded helper. Start every helper through
+`tests/lib/python.sh`, as `make` does, never the `/usr/bin/python3` shim:
 
 ```sh
-RELEASE_EVIDENCE="$(/usr/bin/python3 -B tests/lib/release_evidence.py dist/PolicyWitness.zip)"
-/usr/bin/python3 -B notarize.py dist/PolicyWitness.zip entitlement-jail --evidence-dir "$RELEASE_EVIDENCE"
+RELEASE_EVIDENCE="$(tests/lib/python.sh tests/lib/release_evidence.py dist/PolicyWitness.zip)"
+tests/lib/python.sh notarize.py dist/PolicyWitness.zip entitlement-jail --evidence-dir "$RELEASE_EVIDENCE"
 ```
 
 Without `--evidence-dir`, `notarize.py` creates a new attempt and prints its
@@ -388,7 +389,7 @@ responses in a new evidence directory first. Upload the ZIP, then use the
 returned submission ID to obtain Apple's decision:
 
 ```sh
-RELEASE_EVIDENCE="$(/usr/bin/python3 -B tests/lib/release_evidence.py dist/PolicyWitness.zip)"
+RELEASE_EVIDENCE="$(tests/lib/python.sh tests/lib/release_evidence.py dist/PolicyWitness.zip)"
 NOTARY_EVIDENCE="$RELEASE_EVIDENCE/notarization"
 mkdir "$NOTARY_EVIDENCE"
 cp dist/PolicyWitness.zip "$NOTARY_EVIDENCE/submitted.zip"
@@ -410,17 +411,17 @@ the direct commands above rely on your supervision if the tool itself stalls.
 After acceptance, with the same app that was submitted:
 
 ```sh
-/usr/bin/python3 -B tests/lib/release_commands.py --step staple "$RELEASE_EVIDENCE" 60 xcrun stapler staple dist/PolicyWitness.app
-/usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation "$RELEASE_EVIDENCE" 60 xcrun stapler validate -v dist/PolicyWitness.app
-/usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper "$RELEASE_EVIDENCE" 60 spctl -a -vv --type execute dist/PolicyWitness.app
+tests/lib/python.sh tests/lib/release_commands.py --step staple "$RELEASE_EVIDENCE" 60 xcrun stapler staple dist/PolicyWitness.app
+tests/lib/python.sh tests/lib/release_commands.py --step staple-validation "$RELEASE_EVIDENCE" 60 xcrun stapler validate -v dist/PolicyWitness.app
+tests/lib/python.sh tests/lib/release_commands.py --step gatekeeper "$RELEASE_EVIDENCE" 60 spctl -a -vv --type execute dist/PolicyWitness.app
 rm -f dist/PolicyWitness.zip
-/usr/bin/python3 -B tests/lib/release_commands.py --step re-zip "$RELEASE_EVIDENCE" 60 ditto -c -k --sequesterRsrc --keepParent dist/PolicyWitness.app dist/PolicyWitness.zip
+tests/lib/python.sh tests/lib/release_commands.py --step re-zip "$RELEASE_EVIDENCE" 60 ditto -c -k --sequesterRsrc --keepParent dist/PolicyWitness.app dist/PolicyWitness.zip
 bash tests/accept-release.sh dist/PolicyWitness.zip --evidence-dir "$RELEASE_EVIDENCE"
 ```
 
 Run these one at a time and stop if any command fails. A named step cannot
 overwrite an earlier receipt. For a standalone command, omit `--step` and pass
-the distribution directory: `/usr/bin/python3 -B tests/lib/release_commands.py
+the distribution directory: `tests/lib/python.sh tests/lib/release_commands.py
 dist 60 COMMAND ...` creates a separate dated attempt under `dist/evidence/`.
 Read the status of manually issued Apple calls from their retained raw replies.
 The helper writes `result.json` for calls it issues itself.
