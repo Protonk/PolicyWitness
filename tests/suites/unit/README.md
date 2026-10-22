@@ -17,6 +17,12 @@ Rust unit tests and formatting for the controller crate.
   selectable and classifies build, equipment and unrelated failures separately.
 - `rust.byoxpc_reds` selects the two BYOXPC selection tests the same way (a required entitlement key present with value `false` is
   refused, naming the worker and the key); promoted from red.
+- `rust.read_fresh_reds` selects the six read_fresh association tests the same
+  way (a matching `file-read-data` event names a submitted `read_fresh` attempt
+  as a candidate, alone or ambiguously). They carry `#[ignore]` and stay red until
+  read_fresh eligibility lands; their absence, irrelevant-evidence and
+  unusable-evidence companions run in `rust.unit`. A failure counts as red only
+  when the test's own failure output carries its registered assertion message.
 - No case requires a built `.app` bundle.
 
 `collector_states_preserve_the_serialized_execution_half` in
@@ -36,6 +42,26 @@ output through the independent Python consumer; their
 until native exit observation, injects temporary unavailable/interrupted reads,
 then requires the original bytes and EOF. A permanently unavailable read must
 exhaust the original collection deadline and still establish child cleanup.
+
+`read_fresh_attempt_is_a_file_read_data_candidate` and its companions in
+[sandbox_log.rs](../../../controller/src/sandbox_log.rs) match a submitted
+`file/read_fresh` attempt, whose query names another operation and target,
+against a `file-read-data` event on the attempt's target and events that must
+stay unmatched: another PID, an unrelated path, the query's operation or target,
+`file-read-metadata` and `file-read*`. The literal expected list holds one
+candidate, for the relevant event, with or without completed attempt evidence.
+An `open_read` attempt on the same events is a positive control, not the
+fresh-read oracle. The fresh-read assembly controls in
+[run_flow.rs](../../../controller/src/run_flow.rs) carry a fresh open denied
+with EPERM through the observer parser, production assembly, serialization and
+the independent consumer, for `probe_plan` and explicit phases. The relevant
+event yields one candidate and an empty `permission_failures_without_record`;
+repeated or mixed `open_read`/`read_fresh` attempts on one target share one
+ambiguous event. Empty, other-PID, unrelated-operation, unrelated-path,
+wrong-window and disabled captures keep their distinct capture, correlation and
+missing-record results, and execution bytes stay unchanged across all of them.
+These constructed inputs establish eligibility and assembly, not OS event
+production or delivery; a candidate is not a causal attribution.
 
 ## Success criteria
 
@@ -59,6 +85,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/unit/rust.fmt/artifacts/cargo-fmt-check.log`
 - `<run>/suites/unit/rust.disposition_reds/artifacts/cargo-test-ignored.log`
 - `<run>/suites/unit/rust.byoxpc_reds/artifacts/cargo-test-ignored.log`
+- `<run>/suites/unit/rust.read_fresh_reds/artifacts/cargo-test-ignored.log`
 
 Run:
 

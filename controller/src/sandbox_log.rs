@@ -1226,6 +1226,126 @@ mod tests {
         assert_eq!(out[0].candidate_step_ids, ["s"]);
         assert_eq!(out[0].association, "candidate");
     }
+    // Fresh-read fixture: one submitted read_fresh attempt whose query names
+    // another operation and target. The relevant event and every expected
+    // association are written from the documented contract, never derived
+    // from attempt_operations, the comparison mappings or matcher output.
+    fn fresh_read_request(id: &str, action: &str) -> Value {
+        json!({"step_id": id,
+            "sandbox_check": {"operation": "file-write-data", "filter": {"kind": "path", "value": "/query"}},
+            "attempt": {"kind": "file", "action": action, "target": "/attempt"}})
+    }
+    /// A completed fresh open denied with EPERM: no stat, read or close.
+    fn fresh_read_reply(id: &str) -> Value {
+        json!({"step_id": id, "sandbox_check": {"operation": "file-write-data", "filter_value": "/query"},
+            "attempt": {"requested_kind": "file", "requested_action": "read_fresh",
+                "requested_path": "/attempt", "observed_path": null, "result_source": "worker",
+                "outcome": "read_failed", "rc": -1, "errno": 1,
+                "fresh_read": {"open_rc": -1, "open_errno": 1}}})
+    }
+    /// Events that never name a file attempt on `/attempt`.
+    fn fresh_read_negative_events() -> Vec<SandboxDenyEvent> {
+        vec![
+            deny(Some(99), "file-read-data", "/attempt"), // another PID
+            deny(Some(42), "file-read-data", "/unrelated"), // unrelated path
+            deny(Some(42), "file-write-data", "/query"),  // the query's operation and target
+            deny(Some(42), "file-read-data", "/query"),   // the query's target
+            deny(Some(42), "file-write-data", "/attempt"), // the query's operation
+            deny(Some(42), "file-read-metadata", "/attempt"), // unlisted operation
+            deny(Some(42), "file-read*", "/attempt"),     // no wildcard alias
+        ]
+    }
+    fn fresh_read_events() -> Vec<SandboxDenyEvent> {
+        let mut events = vec![deny(Some(42), "file-read-data", "/attempt")];
+        events.extend(fresh_read_negative_events());
+        events
+    }
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn read_fresh_attempt_is_a_file_read_data_candidate() {
+        let out = match_step_denies(
+            &[fresh_read_reply("s")],
+            &[fresh_read_request("s", "read_fresh")],
+            &fresh_read_events(),
+            Some(42),
+        );
+        assert!(
+            out.iter().any(|a| a.event_index == 0),
+            "read_fresh red [matcher, completed attempt]: file-read-data event 0 on /attempt names no candidate"
+        );
+        assert_eq!(
+            serde_json::to_value(&out).unwrap(),
+            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
+                "matching_evidence": [{"step_id": "s", "operation": "file-read-data",
+                    "operation_source": "submitted_attempt", "requested_kind": "file",
+                    "requested_action": "read_fresh", "path": "/attempt",
+                    "path_sources": ["submitted_attempt.target", "attempt.requested_path"]}]}]),
+            "exactly one association, for the relevant event"
+        );
+    }
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn read_fresh_candidate_needs_no_completed_attempt_evidence() {
+        // Publication never completed: no outcome, native observation or
+        // observed path. A denial can precede interrupted publication.
+        let reply = json!({"step_id": "s", "sandbox_check": {"operation": "file-write-data", "filter_value": "/query"},
+            "attempt": {"requested_kind": "file", "requested_action": "read_fresh",
+                "requested_path": "/attempt", "observed_path": null, "result_source": "synthetic",
+                "outcome": "no_completed_result", "rc": -1, "errno": null,
+                "missing_reason": "slot_incomplete"}});
+        let out = match_step_denies(
+            &[reply],
+            &[fresh_read_request("s", "read_fresh")],
+            &fresh_read_events(),
+            Some(42),
+        );
+        assert!(
+            out.iter().any(|a| a.event_index == 0),
+            "read_fresh red [matcher, unpublished attempt]: file-read-data event 0 on /attempt names no candidate"
+        );
+        assert_eq!(
+            serde_json::to_value(&out).unwrap(),
+            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
+                "matching_evidence": [{"step_id": "s", "operation": "file-read-data",
+                    "operation_source": "submitted_attempt", "requested_kind": "file",
+                    "requested_action": "read_fresh", "path": "/attempt",
+                    "path_sources": ["submitted_attempt.target", "attempt.requested_path"]}]}]),
+            "exactly one association, for the relevant event"
+        );
+    }
+    #[test]
+    fn open_read_attempt_is_a_candidate_for_the_fresh_read_event() {
+        // A positive control for the same events; it is not the fresh-read oracle.
+        let reply = json!({"step_id": "s", "sandbox_check": {"operation": "file-write-data", "filter_value": "/query"},
+            "attempt": {"requested_kind": "file", "requested_action": "open_read",
+                "requested_path": "/attempt", "observed_path": null, "result_source": "worker",
+                "outcome": "open_failed", "rc": -1, "errno": 1}});
+        let out = match_step_denies(
+            &[reply],
+            &[fresh_read_request("s", "open_read")],
+            &fresh_read_events(),
+            Some(42),
+        );
+        assert_eq!(
+            serde_json::to_value(&out).unwrap(),
+            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
+                "matching_evidence": [{"step_id": "s", "operation": "file-read-data",
+                    "operation_source": "submitted_attempt", "requested_kind": "file",
+                    "requested_action": "open_read", "path": "/attempt",
+                    "path_sources": ["submitted_attempt.target", "attempt.requested_path"]}]}])
+        );
+    }
+    #[test]
+    fn fresh_read_attempt_has_no_candidate_among_irrelevant_events() {
+        // Without the relevant event, every remaining event stays unmatched.
+        let out = match_step_denies(
+            &[fresh_read_reply("s")],
+            &[fresh_read_request("s", "read_fresh")],
+            &fresh_read_negative_events(),
+            Some(42),
+        );
+        assert_eq!(serde_json::to_value(&out).unwrap(), json!([]));
+    }
     #[test]
     fn missing_or_mismatched_pid_and_operation_cannot_match() {
         let steps = [reply("s")];

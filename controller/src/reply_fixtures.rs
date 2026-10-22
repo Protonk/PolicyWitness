@@ -64,6 +64,26 @@ pub(crate) fn step(id: &str, action: &str, path: &str, observation: &str) -> Val
             "order": "query_first", "limitations": []}})
 }
 
+/// A completed `read_fresh` step whose fresh open failed with EPERM. A failed
+/// open has no stat, read or close observation. The query names another
+/// operation and target (`file-write-data` on `/query`), so neither can supply
+/// the attempt's scope.
+pub(crate) fn fresh_open_permission_failure(id: &str, path: &str) -> Value {
+    let boundary =
+        json!({"state": "supported", "answer": "reached", "basis": ["slot", "attempt_support"]});
+    let result =
+        json!({"state": "supported", "answer": "published", "basis": ["slot", "attempt_support"]});
+    json!({"step_id": id, "phase_id": "main", "sandbox_check": query("open_write", "/query"),
+        "attempt": {"requested_kind": "file", "requested_action": "read_fresh", "requested_path": path,
+            "outcome": "read_failed", "rc": -1, "errno": 1, "error": null, "observed_path": null,
+            "result_source": "worker", "path_diagnostics": attempt_paths(path),
+            "lifecycle": {"boundary": boundary, "result": result, "summary": "completed"},
+            "fresh_read": {"open_rc": -1, "open_errno": 1}},
+        "comparison": {"observation": "permission_failure", "observation_basis": "permission_errno",
+            "operation_relation": "different", "target_relation": "different_submitted",
+            "order": "query_first", "limitations": []}})
+}
+
 /// A step whose attempt never published: an incomplete slot under terminal
 /// collection, with the boundary question unresolved.
 pub(crate) fn incomplete_step(id: &str, action: &str, path: &str) -> Value {

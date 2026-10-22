@@ -603,3 +603,16 @@ PTY), move the test into the smoke suite and remove it from this registry.
 - **Equipment:** Signed app, matching Developer ID and GUI launchd session.
 - **Ownership:** Shared session helper; registry-busy is a failure, never retried.
 - **Artifacts:** Default listing, plist observations, run envelope and cleanup receipts.
+
+### Read_fresh association reds
+
+- **Case:** `unit/rust.read_fresh_reds`
+- **Location:** `tests/suites/unit/read_fresh_reds.sh`
+- **Purpose:** Select the `#[ignore]`d read_fresh association controller tests by
+  exact name: a matching `file-read-data` event must name a submitted
+  `read_fresh` attempt as a candidate in the matcher and in the serialized
+  envelope, alone or ambiguously with another eligible attempt.
+- **Opt-in reason:** Specified red for planned behavior
+  (`tests/READ-FRESH-PLAN.md`); non-default until promoted.
+- **When to run:** After changing `attempt_operations` or the candidate matcher.
+- **Artifacts:** `<run>/suites/unit/rust.read_fresh_reds/artifacts/cargo-test-ignored.log`

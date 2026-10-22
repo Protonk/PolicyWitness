@@ -2169,6 +2169,394 @@ else:
         }
     }
 
+    // Fresh-read log association through observer parsing, assembly,
+    // serialization and the independent consumer. Each fresh open failed with
+    // EPERM and its query names another operation and target. Expected capture,
+    // correlation and association values are literals from the documented
+    // contract; none is derived from the matcher or an operation mapping.
+    fn fresh_read_action(id: &str, action: &str) -> Value {
+        json!({"step_id": id,
+            "sandbox_check": {"operation": "file-write-data", "filter": {"kind": "path", "value": "/query"}},
+            "attempt": {"kind": "file", "action": action, "target": "/attempt"}})
+    }
+
+    fn fresh_read_event(pid: i32, operation: &str, path: &str) -> Value {
+        json!({"pid": pid, "process": "pw-probe-runner", "operation": operation, "path": path,
+            "raw_line": format!("fixture {pid} {operation} {path}")})
+    }
+
+    /// One fresh-read step `s`, submitted through `probe_plan` or one phase.
+    fn fresh_read_fixture(phased: bool) -> (Value, Value) {
+        let mut step = fresh_open_permission_failure("s", "/attempt");
+        let request = if phased {
+            step["phase_id"] = json!("fresh");
+            json!({"phases": [{"phase_id": "fresh", "actions": [fresh_read_action("s", "read_fresh")]}]})
+        } else {
+            json!({"probe_plan": [fresh_read_action("s", "read_fresh")]})
+        };
+        (request, reply_with("ok", None, vec![step]))
+    }
+
+    /// The open-read step with its query moved to the fresh-read fixture's
+    /// separate scope.
+    fn open_read_with_separate_query(id: &str) -> Value {
+        let mut step = step(id, "open_read", "/attempt", "permission_failure");
+        step["sandbox_check"] = query("open_write", "/query");
+        step["comparison"]["operation_relation"] = json!("different");
+        step["comparison"]["target_relation"] = json!("different_submitted");
+        step
+    }
+
+    /// Matching evidence for a submitted file attempt on `/attempt` whose reply
+    /// supplies the requested path and both host forms equal to the input.
+    fn fresh_read_evidence(id: &str, action: &str) -> Value {
+        json!({"step_id": id, "operation": "file-read-data", "operation_source": "submitted_attempt",
+            "requested_kind": "file", "requested_action": action, "path": "/attempt",
+            "path_sources": ["submitted_attempt.target", "attempt.requested_path",
+                "runner_host.after_orchestration.realpath_resolved",
+                "runner_host.after_orchestration.parent_realpath_resolved"]})
+    }
+
+    /// One serialized envelope with constructed observer output for the
+    /// requested window. `None` disables capture; the collector must not run.
+    fn fresh_read_envelope(
+        request: &Value,
+        runner: &Value,
+        log: Option<(&Value, &Value)>,
+    ) -> (Value, Value) {
+        use crate::sandbox_log::parse_observer_output;
+        use std::os::unix::process::ExitStatusExt;
+        use std::process::{ExitStatus, Output};
+
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let observer = log.map(|(bounds, events)| {
+            let mut data = bounds.clone();
+            data["observer_schema_version"] = json!(2);
+            data["observed_deny"] = json!(!events.as_array().unwrap().is_empty());
+            data["deny_events"] = events.clone();
+            json!({"kind": "sandbox_log_observer_report",
+                "schema_version": crate::json_contract::SCHEMA_VERSION, "data": data})
+        });
+        let mut invoked = false;
+        let execution = complete_execution(execution_data(Some(runner.clone())));
+        let (result, data, exit_code) = attach_sandbox_logs(
+            execution,
+            request,
+            observer.is_none(),
+            |pid, name, requested| {
+                invoked = true;
+                assert_eq!((pid, name), (42, "pw-probe-runner"));
+                assert_eq!(requested, window);
+                let out = Output {
+                    status: ExitStatus::from_raw(0),
+                    stdout: serde_json::to_vec(observer.as_ref().unwrap()).unwrap(),
+                    stderr: vec![],
+                };
+                Ok(parse_observer_output(&out, requested))
+            },
+        );
+        assert_eq!(
+            invoked,
+            observer.is_some(),
+            "collector runs only with capture enabled"
+        );
+        assert_eq!(exit_code, 0);
+        let text = json_contract::render_envelope("run", result, &data).unwrap();
+        (
+            serde_json::from_str(&text).unwrap(),
+            observer.unwrap_or(Value::Null),
+        )
+    }
+
+    /// Execution evidence that no log variant may change.
+    fn assert_fresh_read_execution(wire: &Value, runner: &Value, baseline: &[u8], name: &str) {
+        assert_eq!(wire["result"]["ok"], true, "{name}");
+        assert_eq!(wire["result"]["exit_code"], 0, "{name}");
+        assert_eq!(wire["result"]["normalized_outcome"], "ok", "{name}");
+        assert_eq!(wire["data"]["runner_result"], *runner, "{name}");
+        assert_eq!(
+            wire["data"]["runner_result"]["runner_subprocess"]["pid"], 42,
+            "{name}"
+        );
+        for step in wire["data"]["runner_result"]["steps"].as_array().unwrap() {
+            let attempt = &step["attempt"];
+            if attempt["requested_action"] == "read_fresh" {
+                assert_eq!(
+                    attempt["fresh_read"],
+                    json!({"open_rc": -1, "open_errno": 1})
+                );
+                assert_eq!(
+                    (&attempt["rc"], &attempt["errno"], &attempt["outcome"]),
+                    (&json!(-1), &json!(1), &json!("read_failed"))
+                );
+            }
+            assert_eq!(step["comparison"]["observation"], "permission_failure");
+            assert_eq!(step["comparison"]["observation_basis"], "permission_errno");
+        }
+        let diag = &wire["data"]["runner_sandbox_diagnostics"];
+        assert_eq!(diag["process_disposition"], "clean_exit", "{name}");
+        assert!(diag["termination_cause"].is_null(), "{name}");
+        assert_eq!(
+            execution_bytes(wire),
+            baseline,
+            "execution changed under {name}"
+        );
+    }
+
+    /// Capture admission, window and retained evidence, checked apart from
+    /// any candidate.
+    fn assert_fresh_read_capture(
+        wire: &Value,
+        observer: &Value,
+        status: &str,
+        events: &Value,
+        name: &str,
+    ) {
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let cap = &wire["data"]["sandbox_log_capture"];
+        assert_eq!(cap["capture_status"], status, "{name}");
+        assert_eq!(
+            cap["observer"], *observer,
+            "{name}: admitted observer reply retained"
+        );
+        assert_eq!(cap["observer"]["data"]["observer_schema_version"], 2);
+        assert_eq!(cap["window"]["started_at_unix_ms"], 1_000, "{name}");
+        assert_eq!(cap["window"]["ended_at_unix_ms"], 2_500, "{name}");
+        assert_eq!(cap["window"]["start"], json!(window.start), "{name}");
+        assert_eq!(cap["window"]["end"], json!(window.end), "{name}");
+        assert_eq!(cap["deny_events"], *events, "{name}: events retained");
+        assert_eq!(
+            cap["observed_deny"],
+            !events.as_array().unwrap().is_empty(),
+            "{name}"
+        );
+    }
+
+    /// The relevant event through the whole path. Capture, retained evidence,
+    /// execution and consumer validation come first; the candidate assertion
+    /// carries the registered red message.
+    fn assert_fresh_read_candidates(
+        request: &Value,
+        runner: &Value,
+        expected: Value,
+        missing_message: &str,
+    ) {
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let good = json!({"start": window.start, "end": window.end, "last": null});
+        let events = json!([fresh_read_event(42, "file-read-data", "/attempt")]);
+        let (disabled, _) = fresh_read_envelope(request, runner, None);
+        let (wire, observer) = fresh_read_envelope(request, runner, Some((&good, &events)));
+        assert_fresh_read_execution(&wire, runner, &execution_bytes(&disabled), "relevant");
+        assert_fresh_read_capture(&wire, &observer, "captured", &events, "relevant");
+        let diag = &wire["data"]["runner_sandbox_diagnostics"];
+        assert_eq!(diag["correlation_status"], "pid_match");
+        let answers = consume(&[disabled, wire.clone()]);
+        let cap = &wire["data"]["sandbox_log_capture"];
+        assert_eq!(
+            cap["step_denies"][0]["candidate_step_ids"], expected[0]["candidate_step_ids"],
+            "{missing_message}"
+        );
+        assert_eq!(cap["step_denies"], expected, "exact association list");
+        assert_eq!(diag["permission_failures_without_record"], json!([]));
+        let recovered = &answers[1];
+        assert_eq!(recovered["correlation_status"], "pid_match");
+        assert_eq!(recovered["permission_failures_without_record"], json!([]));
+        assert_eq!(recovered["events"], events);
+        let mut resolved = expected;
+        resolved[0]["event"] = events[0].clone();
+        assert_eq!(recovered["candidates"], resolved);
+    }
+
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn fresh_read_candidate_survives_probe_plan_assembly() {
+        let (request, runner) = fresh_read_fixture(false);
+        assert_fresh_read_candidates(
+            &request,
+            &runner,
+            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
+                "matching_evidence": [fresh_read_evidence("s", "read_fresh")]}]),
+            "read_fresh red [envelope, probe_plan]: the relevant event names no candidate for s",
+        );
+    }
+
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn fresh_read_candidate_survives_phased_assembly() {
+        let (request, runner) = fresh_read_fixture(true);
+        assert_fresh_read_candidates(
+            &request,
+            &runner,
+            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
+                "matching_evidence": [fresh_read_evidence("s", "read_fresh")]}]),
+            "read_fresh red [envelope, phases]: the relevant event names no candidate for s",
+        );
+    }
+
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn repeated_fresh_reads_share_one_ambiguous_event() {
+        // Neither the event nor phase ownership identifies one occurrence.
+        let request = json!({"phases": [
+            {"phase_id": "earlier", "actions": [fresh_read_action("s1", "read_fresh")]},
+            {"phase_id": "later", "actions": [fresh_read_action("s2", "read_fresh")]}
+        ]});
+        let mut steps = vec![
+            fresh_open_permission_failure("s1", "/attempt"),
+            fresh_open_permission_failure("s2", "/attempt"),
+        ];
+        steps[0]["phase_id"] = json!("earlier");
+        steps[1]["phase_id"] = json!("later");
+        assert_fresh_read_candidates(
+            &request,
+            &reply_with("ok", None, steps),
+            json!([{"event_index": 0, "candidate_step_ids": ["s1", "s2"], "association": "ambiguous",
+                "matching_evidence": [fresh_read_evidence("s1", "read_fresh"),
+                    fresh_read_evidence("s2", "read_fresh")]}]),
+            "read_fresh red [envelope, repeated phases]: the relevant event names neither s1 nor s2",
+        );
+    }
+
+    #[test]
+    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
+    fn open_read_and_fresh_read_share_one_ambiguous_event() {
+        let request = json!({"probe_plan": [
+            fresh_read_action("o", "open_read"),
+            fresh_read_action("f", "read_fresh")
+        ]});
+        let steps = vec![
+            open_read_with_separate_query("o"),
+            fresh_open_permission_failure("f", "/attempt"),
+        ];
+        assert_fresh_read_candidates(
+            &request,
+            &reply_with("ok", None, steps),
+            json!([{"event_index": 0, "candidate_step_ids": ["o", "f"], "association": "ambiguous",
+                "matching_evidence": [fresh_read_evidence("o", "open_read"),
+                    fresh_read_evidence("f", "read_fresh")]}]),
+            "read_fresh red [envelope, mixed open_read]: the relevant event names o but not f",
+        );
+    }
+
+    #[test]
+    fn fresh_read_absent_irrelevant_and_unusable_log_evidence_stay_distinct() {
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let good = json!({"start": window.start, "end": window.end, "last": null});
+        let mut wrong = good.clone();
+        wrong["start"] = json!("1970-01-01 00:00:02+0000");
+        // (name, bounds and events, capture status, correlation status,
+        // step_denies, permission_failures_without_record)
+        let rows = [
+            (
+                "empty",
+                Some((&good, json!([]))),
+                "captured",
+                "no_match",
+                json!([]),
+                json!(["s"]),
+            ),
+            (
+                "other_pid",
+                Some((
+                    &good,
+                    json!([fresh_read_event(99, "file-read-data", "/attempt")]),
+                )),
+                "captured",
+                "no_match",
+                json!([]),
+                json!(["s"]),
+            ),
+            (
+                "unrelated_operation",
+                Some((
+                    &good,
+                    json!([fresh_read_event(42, "file-read-metadata", "/attempt")]),
+                )),
+                "captured",
+                "pid_match",
+                json!([]),
+                json!(["s"]),
+            ),
+            (
+                "unrelated_path",
+                Some((
+                    &good,
+                    json!([fresh_read_event(42, "file-read-data", "/unrelated")]),
+                )),
+                "captured",
+                "pid_match",
+                json!([]),
+                json!(["s"]),
+            ),
+            (
+                "wrong_window",
+                Some((
+                    &wrong,
+                    json!([fresh_read_event(42, "file-read-data", "/attempt")]),
+                )),
+                "window_mismatch",
+                "unavailable",
+                Value::Null,
+                Value::Null,
+            ),
+            (
+                "disabled",
+                None,
+                "",
+                "not_attempted",
+                Value::Null,
+                Value::Null,
+            ),
+        ];
+        for phased in [false, true] {
+            let (request, runner) = fresh_read_fixture(phased);
+            let (disabled, _) = fresh_read_envelope(&request, &runner, None);
+            let baseline = execution_bytes(&disabled);
+            let mut envelopes = Vec::new();
+            for (name, log, status, correlation, step_denies, missing) in &rows {
+                let (wire, observer) =
+                    fresh_read_envelope(&request, &runner, log.as_ref().map(|(b, e)| (*b, e)));
+                assert_fresh_read_execution(&wire, &runner, &baseline, name);
+                let cap = &wire["data"]["sandbox_log_capture"];
+                let diag = &wire["data"]["runner_sandbox_diagnostics"];
+                match log {
+                    Some((_, events)) => {
+                        assert_fresh_read_capture(&wire, &observer, status, events, name);
+                        assert_eq!(cap["step_denies"], *step_denies, "{name}");
+                    }
+                    None => assert!(cap.is_null(), "{name}: no capture object"),
+                }
+                assert_eq!(diag["correlation_status"], *correlation, "{name}");
+                assert_eq!(
+                    diag["permission_failures_without_record"], *missing,
+                    "{name}"
+                );
+                envelopes.push(wire);
+            }
+            let answers = consume(&envelopes);
+            for ((name, log, status, correlation, step_denies, missing), recovered) in
+                rows.iter().zip(&answers)
+            {
+                assert_eq!(recovered["correlation_status"], *correlation, "{name}");
+                assert_eq!(
+                    recovered["permission_failures_without_record"], *missing,
+                    "{name}"
+                );
+                assert_eq!(recovered["candidates"], *step_denies, "{name}");
+                match log {
+                    Some((_, events)) => {
+                        assert_eq!(recovered["capture_status"], *status, "{name}");
+                        assert_eq!(recovered["events"], *events, "{name}");
+                    }
+                    None => {
+                        assert_eq!(recovered["capture_status"], "not_reported");
+                        assert!(recovered["events"].is_null());
+                    }
+                }
+            }
+        }
+    }
+
     #[test]
     fn padded_records_survive_assembly_and_consumer_recovery() {
         use crate::sandbox_log::{observer_argv, parse_observer_output};
