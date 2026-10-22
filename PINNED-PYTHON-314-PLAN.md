@@ -49,14 +49,21 @@ never trusting an inherited `PW_PYTHON`, exporting `PW_PYTHON` and
   asdf or uv shim.
 - Checks, in order, each refusing with status 2 before any helper starts:
   the path is an executable regular file or a link to one; its real path is
-  under `/opt/homebrew/Cellar/python@3.14/`; one isolated probe
-  (`"$PW_PYTHON" -I -B -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'`)
-  prints a version whose minor is 3.14. The first two failures keep the
+  under `/opt/homebrew/Cellar/python@3.14/<patch>/`, and that `<patch>`
+  component names a 3.14 version. The first failure keeps the
   `direct_python_unavailable` refusal, with the path and `brew install
-  python@3.14` in the message; the third is a new refusal,
-  `python_version_mismatch`, naming the version found and the version
-  required. Export the probed patch version as `PW_PYTHON_VERSION` for the
-  records below.
+  python@3.14` in the message; the second is a new refusal,
+  `python_version_mismatch`, naming what was found and what is required.
+  Export the version read from the real path as `PW_PYTHON_VERSION`.
+- The five entry points (`build.sh`, `tests/run.sh`, `checkout_lock.sh`,
+  `python.sh`, `tests/accept-release.sh`) add one isolated probe,
+  `"$PW_PYTHON" -I -B -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'`,
+  and refuse with `python_version_mismatch` when its answer differs from the
+  real path's version. Leaf starts through `testlib.sh` do not probe. The
+  probe costs the interpreter's startup, 34 ms here against 29 ms for an
+  empty `-c pass`; the real-path check costs 3 ms, the same as today's
+  `xcode-select -p`. So a battery pays the probe a handful of times and the
+  leaf check once per shell start, at the cost the resolver already has.
 - Only the probe runs isolated. The helpers keep `-B` and nothing else:
   `-E` or `-I` would ignore `PYTHONCOERCECLOCALE`, the interpreter would set
   `LC_CTYPE` from a C locale, and the witness would refuse the build with a
@@ -69,9 +76,11 @@ never trusting an inherited `PW_PYTHON`, exporting `PW_PYTHON` and
   `PW_PYTHON=sys.executable` do so for fixture wrappers whose shebang reads
   it, and that stays as it is.
 
-The cost is one probe per shell start. A battery of about two hundred cases
-adds about two hundred probes; measure it in verification and expect a few
-seconds.
+Budget: a battery's `duration_ms` on the same build and machine grows by
+at most 10 s or 1 % of the pre-change value, whichever is larger. Exceeding
+it blocks completion rather than becoming follow-on work, because the cheap
+leaf check makes the budget easy to meet; an overrun means the probe leaked
+into leaf starts or something else regressed, and either needs finding.
 
 ### 2. Every start the resolver owns
 
@@ -105,18 +114,35 @@ seconds.
 - Build provenance: `observe_toolchain` in `tests/lib/build_provenance.py`
   adds a `python` observation beside `cargo`, `meson` and `ninja`: the pinned
   path, its real path, the probed version, and the status of the probe.
-  Add it to `record_shape()`'s `toolchain` object as an optional member
-  rather than bumping `SCHEMA_VERSION`, so `record_problems` and
-  `verify_release` keep reading archived releases unchanged; confirm that
-  reading before choosing, since the record's readers are strict by design.
-  Document the member in [docs/SIGNING.md](docs/SIGNING.md#the-provenance-record)'s
-  `toolchain` bullet.
+  Bump `SCHEMA_VERSION` from 2 to 3 and make the member required in
+  `record_shape()`, so a new build without it is refused rather than
+  silently incomplete. Archived releases keep their version-2 records:
+  `read_zip_record` refuses a record of any other version by design (the
+  `version-1.zip` control in `check_build_provenance.py` establishes it),
+  and nothing re-reads an archived release routinely; `release_archive`,
+  `release_publish` and `release_rotate` each verify the release they are
+  handling, which is a new build. One precondition follows: land the bump
+  with `tests/out/.release-rotation/` empty, because an interrupted
+  rotation of a version-2 archive could not resume afterwards. The fixture
+  records in `tests/fixtures/dispatcher/fixture_bundle.py` and the
+  `RecordTests` gain the member. Document it in
+  [docs/SIGNING.md](docs/SIGNING.md#the-provenance-record)'s `toolchain`
+  bullet and note the version there.
 - Test runs: `resolve_config` in `tests/lib/test_cli.py` adds
   `python: {path, realpath, version}` to the configuration that `plan.json`
   and `run.json` carry. The readers compare `plan.configuration` with
   `run.configuration` (`tests/lib/retention.py:178`,
   `tests/suites/dispatcher/check_selection.py:138`); an added key passes
   through both. Document it in the output contract in `tests/README.md`.
+- Case reports: the report writer in `tests/lib/testlib.sh` adds
+  `interpreter: {path, realpath, version}` from the resolver's exports to
+  every `report.json`, and `reconcile` in `tests/lib/suite_run.py` compares
+  each report's `interpreter.realpath` with the run configuration's,
+  recording an `interpreter_mismatch` harness error otherwise. That makes
+  the declared interpreter per-case evidence the dispatcher checks, with the
+  limits stated under verification. Bump the report's `schema_version` if
+  the output contract treats an added field as a version change; document
+  the field either way.
 
 ### 4. Controls
 
@@ -210,10 +236,13 @@ the end.
   scripts and release acceptance reach `testlib.sh` without `case.sh`, and
   the record's direct-arm failure (`PW_PYTHON: unbound variable` in a direct
   suite) is exactly a start that `case.sh` alone would miss.
-- An optional provenance member instead of a schema bump, pending the reader
-  check above. If `verify_release` or `record_problems` cannot accept an
-  added member without a bump, bump and record the compatibility rule in
-  `docs/SIGNING.md` instead.
+- A schema bump with a required member, not an optional one. Only the
+  version makes presence enforceable for new builds; the readers already
+  refuse other versions by design, and archived releases are not re-read.
+- The probe at entry points only, with the real path standing for the
+  version at leaf starts. The Cellar path names the version, the check costs
+  what today's resolver costs, and the entry points verify the probe against
+  it once per battery.
 - Deliberate shim starts stay only in named controls. The shim is the
   negative control for environment preservation and the subject of the
   containment probes; both need it, and the allow-list keeps every other use
@@ -225,10 +254,15 @@ the end.
    whose provenance record carries `toolchain.python` with the keg real path
    and a 3.14 version.
 2. The default battery against that build from an unsandboxed shell, with a
-   fresh `PW_TEST_OUT_DIR`; `run.json` carries the `python` configuration
-   and every case report comes from a 3.14 leaf (the new `shell_helpers`
-   case asserts it; spot-check a live suite's artifacts for
-   `sys.executable` if any records it).
+   fresh `PW_TEST_OUT_DIR`; `run.json` carries the `python` configuration,
+   and no `interpreter_mismatch` harness error, so every case report
+   declares the pinned interpreter and the dispatcher checked it. That is
+   the whole of what the battery establishes about interpreters: each
+   case's shell resolved the pin. That every Python invocation inside a case
+   used it rests on the drift check over suite scripts, and that checkers'
+   children used it rests on `sys.executable`. The new `shell_helpers` case
+   establishes the mechanism dynamically once, from a C locale, for the
+   dispatcher-driven and direct starts.
 3. `tests/run.sh --suite source_drift --suite shell_helpers --suite
    dispatcher --suite preflight`, plus the opt-in groups
    `preflight/opt_in/build_refusals.py` (environment witness, direct Python
@@ -239,8 +273,8 @@ the end.
    refusal under the exec-denying profile; `pw_python_start` with a stand-in
    refuses `python_version_mismatch`; the coercion variant of the witness
    control prints the coercion text.
-5. Timing: the battery's wall time before and after, from `run.json`'s
-   `duration_ms`, with the per-case probe cost visible in the difference.
+5. Timing: the battery's `duration_ms` before and after on the same build
+   and machine, against the budget above.
 
 Passes that would mislead, and what rules each out:
 
@@ -249,8 +283,9 @@ Passes that would mislead, and what rules each out:
 - A developer shell with `LANG=en_US.UTF-8` suppresses locale coercion;
   every preservation control builds its environment with `env -i`.
 - A leaf that still runs 3.9 through a missed shim line passes every test it
-  passed before; the drift check's whole-tree scope and the new case's
-  version assertion are the only things that notice.
+  passed before, and its report still declares the pin, because the report
+  records the resolver's answer, not each invocation; the drift check's
+  whole-tree scope is what notices.
 - `/opt/homebrew/bin/python3` resolving to the same binary today makes a
   `PATH` lookup look equivalent; the real-path check under the keg is what
   distinguishes them, so keep it even though it passes trivially here.
@@ -264,8 +299,8 @@ Passes that would mislead, and what rules each out:
   link or places the Cellar elsewhere; the pin's location assumption fails
   and the resolver needs a second supported location, recorded as such.
 - The per-case probe costs more than a few seconds per battery.
-- The record's readers refuse archived releases after the toolchain member
-  is added; then bump the schema and document the rule.
+- An interrupted release rotation exists when the schema bump lands; finish
+  or abandon it first, following `docs/SIGNING.md`.
 - A live case fails only under the direct-started leaf. None of the 21
   offline cases did; the live suites were not run under it before this plan.
 - Python 3.15 changes locale coercion (PEP 686); the preservation controls
