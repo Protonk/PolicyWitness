@@ -55,36 +55,51 @@ whose shebang reads it, and that stays as it is.
 Two functions do the checking, each refusing with status 2 before any helper
 starts:
 
-- `pw_python_start` runs at every start. The path is an executable regular
-  file or a link to one, or the refusal is `direct_python_unavailable` with
-  the path and `brew install python@3.14` in the message. Its real path is
-  under `/opt/homebrew/Cellar/python@3.14/<patch>/` with a `<patch>` that
-  names a 3.14 version, or the refusal is `python_version_mismatch`, naming
-  what was found and what is required. It exports `PW_PYTHON`,
-  `PW_PYTHON_VERSION` read from the real path, and `PYTHONCOERCECLOCALE=0`.
-  It costs 3 ms, the same as today's `xcode-select -p`. It takes an optional
-  explicit path so that controls can exercise both refusals against a
-  stand-in; entry points call it without one.
+- `pw_python_start` runs at every start. Any `PYTHON*` variable in the
+  environment other than `PYTHONCOERCECLOCALE` and `PYTHONDONTWRITEBYTECODE`
+  is the refusal `python_environment_set`, naming the variable; `PYTHONPATH`
+  and `PYTHONHOME` reach the interpreter through `-B -S`, and the resolver
+  refuses rather than repairs. The path is an executable regular file or a
+  link to one, or the refusal is `direct_python_unavailable` with the path
+  and `brew install python@3.14` in the message. Its real path is under
+  `/opt/homebrew/Cellar/python@3.14/<keg>/`, where `<keg>` is `X.Y.Z` or
+  `X.Y.Z_N` with `_N` a Homebrew revision, and `X.Y` is 3.14, or the
+  refusal is `python_version_mismatch`, naming what was found and what is
+  required. It exports `PW_PYTHON`, `PW_PYTHON_VERSION` as the upstream
+  `X.Y.Z` without the revision, `PW_PYTHON_REALPATH` in full, and
+  `PYTHONCOERCECLOCALE=0`. It costs 3 ms, the same as today's
+  `xcode-select -p`. It takes an optional explicit path and an optional
+  Cellar root so that controls can exercise each refusal against a stand-in
+  tree; entry points call it with neither.
 - `pw_python_probe` runs only at the five entry points (`build.sh`,
   `tests/run.sh`, `checkout_lock.sh`, `python.sh`,
-  `tests/accept-release.sh`), after `pw_python_start`. It starts the
-  interpreter once in isolation,
-  `"$PW_PYTHON" -I -B -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'`,
-  and refuses with `python_version_mismatch` when the answer differs from
-  `PW_PYTHON_VERSION`. It costs the interpreter's startup, 34 ms against
-  29 ms for an empty `-c pass`, so a battery pays it a handful of times.
+  `tests/accept-release.sh`), after `pw_python_start`. It starts
+  `PW_PYTHON` once as
+  `"$PW_PYTHON" -I -S -B -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])'`;
+  `-I` alone still imports `site`, so `-S` is part of the probe. A probe
+  that fails to launch, exits nonzero or prints anything but a version is
+  `direct_python_unavailable` with the status and the head of its stderr; a
+  version other than `PW_PYTHON_VERSION` is `python_version_mismatch`. It
+  costs the interpreter's startup, 34 ms against 29 ms for an empty
+  `-c pass`, so a battery pays it a handful of times. It takes an optional
+  explicit executable so that controls can exercise both outcomes with a
+  stand-in; entry points call it without one.
 
-Helpers start with `-B -S` and no other flag. `-S` keeps site-packages,
-`.pth` files and `sitecustomize` off `sys.path`, so the interpreter's
-site-packages, which every `brew install` and `pip install` can change
-without a witness, are not an input; the vendored packages and the tree's
-own `sys.path` insertions are all a helper can import. `-E` and `-I` are
-excluded because they ignore `PYTHONCOERCECLOCALE`; from a C locale the
-interpreter would then set `LC_CTYPE=C.UTF-8` for itself and its children,
-and the witness would refuse the build with a remedy that names the front
-end instead of the interpreter. The probe is the one isolated start, and it
-runs nothing but the version print. The wrapper shebang becomes
-`#!/usr/bin/env -S ${PW_PYTHON} -B -S`.
+Helper scripts start with `-B -S`; `-c` starts, which are the `testlib.sh`
+heredocs, with `-B -S -P`. `-S` keeps site-packages, `.pth` files and
+`sitecustomize` off `sys.path`, so the interpreter's site-packages, which
+every `brew install` and `pip install` can change without a witness, are
+not an input. `-P` keeps the working directory off a `-c` start's path; a
+script start keeps its own directory, which is in the tree. With the
+`PYTHON*` refusal, every `sys.path` entry of a helper is under the
+interpreter's prefix or under the checkout: the standard library, the
+script's directory, and the tree's own insertions. `-E` and `-I` are
+excluded for helpers because they ignore `PYTHONCOERCECLOCALE`; from a C
+locale the interpreter would then set `LC_CTYPE=C.UTF-8` for itself and its
+children, and the witness would refuse the build with a remedy that names
+the front end instead of the interpreter. The probe is the one isolated
+start, and it runs nothing but the version print. The wrapper shebang
+becomes `#!/usr/bin/env -S ${PW_PYTHON} -B -S`.
 
 ### 2. Every start the resolver owns
 
@@ -96,8 +111,8 @@ runs nothing but the version print. The wrapper shebang becomes
   scripts and release acceptance resolve the interpreter themselves; a suite
   script started outside the dispatcher has no `PW_PYTHON` to inherit. Its
   seven `/usr/bin/python3` heredocs (the assertion guard, `now_ms` and the
-  others) and `test_check_python` in `case.sh:53` become
-  `"${PW_PYTHON}" -B -S`.
+  others) become `"${PW_PYTHON}" -B -S -P`, and `test_check_python` in
+  `case.sh:53` becomes `"${PW_PYTHON}" -B -S`.
 - The sweep. 144 lines in 59 shell scripts under `tests/` mention
   `/usr/bin/python3` (46 suite scripts, 9 fixtures, 4 in `tests/lib`,
   comments included), and three `runner_unit` scripts call a bare `python3`.
@@ -117,7 +132,8 @@ runs nothing but the version print. The wrapper shebang becomes
 
 - Build provenance. `observe_toolchain` in `tests/lib/build_provenance.py`
   adds a `python` observation beside `cargo`, `meson` and `ninja`: the pinned
-  path, its real path, the probed version and the probe's status.
+  path, its full real path including any Homebrew revision, the probed
+  version and the probe's status.
   `record_shape()` requires the member under `SCHEMA_VERSION` 3. Archived
   releases keep their version-2 records: `read_zip_record` refuses a record of
   any other version (the `version-1.zip` control in
@@ -151,17 +167,20 @@ runs nothing but the version print. The wrapper shebang becomes
   in `tests/suites/preflight/check_build_provenance.py` establishes the
   contract for `python.sh` from a forced C locale, and its failure diff names
   `LC_CTYPE`; it is the model. Add, beside it, the same assertion for each
-  entry point plus two more: `sys.path` carries no `site-packages` entry
-  and `site` is not in `sys.modules`, with a message that names the
-  directories found and says the resolver starts helpers with `-S` so
-  Homebrew's and pip's installs are not an input. Add the dispatcher-driven
+  entry point plus the import boundary: `site` is not in `sys.modules`, and
+  the real path of every `sys.path` entry is under the interpreter's prefix
+  or under the checkout, with a message that names the entries found and
+  says the resolver starts helpers with `-S` and refuses `PYTHON*` so
+  nothing outside the interpreter and the tree is an input. A variant sets
+  `PYTHONPATH` and expects `python_environment_set`. Add the dispatcher-driven
   and direct-suite versions as one `shell_helpers` case: a one-case probe
   suite installed with `tests/fixtures/dispatcher/repository.py`, run through
   `tests/run.sh` and as a direct suite script, whose leaf records its own
   and a child's values of the five witnessed names, `sys.version_info[:2]`,
-  the real path of `sys.executable`, and the two site facts. Assert the five
-  names equal the caller's (all unset under `env -i`), the version is 3.14,
-  the real path is under the keg, and site is absent. These controls observe
+  the real path of `sys.executable`, and the import boundary. Assert the
+  five names equal the caller's (all unset under `env -i`), the version is
+  3.14, the real path is under the keg, and the boundary holds. These
+  controls observe
   consequences, so they catch every cause of the same signature, which a
   check for a flag would not.
 - The coercion signature. In `verify_environment`
@@ -177,9 +196,15 @@ runs nothing but the version print. The wrapper shebang becomes
   longer selects Python. They use instead an exec-denying `sandbox-exec`
   profile (the existing `(deny process-exec)` form) that leaves the pinned
   path out, so each entry point refuses with `direct_python_unavailable`
-  before any Python runs, and they exercise `python_version_mismatch` and
-  the real-path check through `pw_python_start` with a stand-in script that
-  prints another version.
+  before any Python runs. The two functions get separate controls, since
+  `pw_python_start` never runs the interpreter: `pw_python_start` with a
+  stand-in path and Cellar root refuses a missing or unexecutable file, a
+  `<keg>` of another minor, and a `<keg>` that is not a version, and
+  accepts a revision-suffixed keg such as `3.14.8_1` with
+  `PW_PYTHON_VERSION` reading `3.14.8`; `pw_python_probe` with a stand-in
+  executable that prints another version refuses `python_version_mismatch`,
+  and with one that exits nonzero or prints no version refuses
+  `direct_python_unavailable`.
   `test_build_refuses_a_stand_in_developer_directory_before_any_python` in
   `tests/suites/source_drift/contract.py` and the `direct_python_unavailable`
   controls in `build_refusals.py` change the same way; `docs/build.json`
@@ -197,15 +222,16 @@ runs nothing but the version print. The wrapper shebang becomes
 - `README.md:87-89`: `brew install meson ninja python@3.14`, and a sentence
   that the helpers run on that formula's interpreter.
 - `docs/BUILD.md`: the prerequisites; the direct-Python paragraph under "The
-  checkout lock" (lines 463-470), which gains the `-B -S` sentence and the
-  fact that site-packages are not an input; the paragraph at lines 534-540
-  about leaf scripts and the resolver; and the refusal table
-  (`direct_python_unavailable` text, the new `python_version_mismatch` row).
-  These come from `docs/build.json`: edit the refusal entries
-  (`direct_python_unavailable` at line 1797, its citations at 1811-1814)
-  and `inv_python_start` (line 4247), which carries the `-B -S` sentence
-  with citations to the resolver line and to the site control, then
-  regenerate with `docs/generate_build.py` and review the result.
+  checkout lock" (lines 463-470), which gains the import boundary (`-B -S`,
+  `-P` for `-c` starts, the `PYTHON*` refusal); the paragraph at lines
+  534-540 about leaf scripts and the resolver; and the refusal table
+  (`direct_python_unavailable` text, the new `python_version_mismatch` and
+  `python_environment_set` rows). These come from `docs/build.json`: edit
+  the refusal entries (`direct_python_unavailable` at line 1797, its
+  citations at 1811-1814) and `inv_python_start` (line 4247), which carries
+  the boundary sentence with citations to the resolver line and to the
+  import-boundary control, then regenerate with `docs/generate_build.py`
+  and review the result.
 - `tests/README.md`: lines 216-219 on the dispatcher's resolution, the shell
   case setup section, and the output contract's configuration and report
   keys.
@@ -245,6 +271,9 @@ change to which interpreter the product's own tools use.
   omits it.
 - Lexical checks for `-E`, `-I` or `-S`: a check for a flag misses every
   other cause of the same signature.
+- Unsetting `PYTHONPATH` and `PYTHONHOME` in the resolver: the resolver
+  never repairs the caller's environment; it refuses and names the
+  variable, as the SDK guard does.
 - Moving the real interpreter to test refusals: it needs root; the
   exec-denying profile and the stand-in argument do not.
 
@@ -268,9 +297,11 @@ change to which interpreter the product's own tools use.
    `translated_build_refusals.py`, and `tests/lib/checkout_lock.sh -- cargo
    test --manifest-path controller/Cargo.toml`.
 4. The resolver's own refusals: each entry point exits 2 with the named
-   refusal under the exec-denying profile; `pw_python_start` with a stand-in
-   refuses `python_version_mismatch`; the coercion variant of the witness
-   control prints the coercion text; the site control passes at every start.
+   refusal under the exec-denying profile; the `pw_python_start` and
+   `pw_python_probe` stand-in controls refuse and accept as specified; the
+   coercion variant of the witness control prints the coercion text; the
+   import-boundary control passes at every start and refuses under
+   `PYTHONPATH`.
 5. Timing. The battery's `duration_ms` on the same build and machine grows
    by at most 10 s or 1 % of the pre-change value, whichever is larger. An
    overrun blocks completion: the leaf check costs what today's resolver
@@ -297,8 +328,9 @@ Passes that would mislead, and what rules each out:
 ## What would require reconsideration
 
 - Homebrew's keg layout on a supported machine lacks the `opt/python@3.14`
-  link or places the Cellar elsewhere; the pin's location assumption fails
-  and the resolver needs a second supported location, recorded as such.
+  link, places the Cellar elsewhere, or names a keg directory in a form
+  other than `X.Y.Z` or `X.Y.Z_N`; the pin's location or version parse
+  fails and the resolver needs the new form, recorded as such.
 - The timing budget is exceeded after the probe is confirmed absent from
   leaf starts; then the resolver's cost model is wrong, not the sweep.
 - An interrupted release rotation exists when the schema bump lands; finish
