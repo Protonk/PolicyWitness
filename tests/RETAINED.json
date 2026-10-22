@@ -2,125 +2,6 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "runs/byoxpc-investigation-20261006",
-      "run_id": "byoxpc-investigation-20261006",
-      "reason": "BYOXPC investigation receipts: signing, environment observation limits, entitlement effects, ad-hoc runtime control, verification boundaries and respawn behavior; manual observations with verified cleanup.",
-      "source": "e2115cf38cdf486f50c6545e7c9b4a218aa11a35",
-      "app_inventory": "baseline/source-inventory.json"
-    },
-    {
-      "path": "runs/byoxpc-consumer-probes-20261006",
-      "run_id": "byoxpc-consumer-probes-20261006",
-      "reason": "Three partial BYOXPC consumer workflows: specimen transfer, exec helpers and repeated use, including independent effects after a client timeout; all owned installations and fixtures cleaned up.",
-      "source": "e6ea44b4e38b2c175429af93a3250deb99dc25b1",
-      "app_inventory": "baseline/source-inventory.json"
-    },
-    {
-      "path": "runs/byoxpc-remediation-baseline-reds",
-      "run_id": "20261006T183314Z_84233c0f",
-      "reason": "BYOXPC remediation baseline: the three registered regressions (false-valued selection key, recursive verification, worker entitlement read-back) recorded red on the starting commit.",
-      "source": "2b9a207a92f5d3b53992549e16404ec2f830f714",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-remediation-baseline",
-      "run_id": "byoxpc-remediation-baseline",
-      "reason": "BYOXPC remediation timing measurement before and after the generated plist's ThrottleInterval; owned installations removed with absence verified.",
-      "source": "2b9a207a92f5d3b53992549e16404ec2f830f714",
-      "app_inventory": "before-group-4/source-before.json"
-    },
-    {
-      "path": "runs/byoxpc-g1-offline",
-      "run_id": "20261006T183936Z_eec9c8c5",
-      "reason": "BYOXPC remediation Group 1 offline gates: Rust unit batch with the additive envelope shape golden, rustfmt and the fake-tool ownership controls.",
-      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g1-live",
-      "run_id": "20261006T184032Z_21fa002d",
-      "reason": "BYOXPC remediation Group 1 live gates: entitlement read-back promoted, BBX-001/002, external-auth and registry recovery under the signed build; the dossier witness met the verify host's retirement race.",
-      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g1-live-2",
-      "run_id": "20261006T184139Z_b5ea13d6",
-      "reason": "BYOXPC remediation Group 1: ownership controls with the fake verify PID and the dossier witness after the session helper waits for the verify host to retire; the checker's held-request length still counted selector fields.",
-      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g1-live-3",
-      "run_id": "20261006T184325Z_8e5513c3",
-      "reason": "BYOXPC remediation Group 1 live gates: both dossier witness cases pass once the checker strips selector fields from the held-request length.",
-      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g2-gates",
-      "run_id": "20261006T184625Z_0032342c",
-      "reason": "BYOXPC remediation Group 2 gates under recursive verification: registry recovery, external-auth, entitlement read-back and BBX-001 pass; the first validate report also listed the host because a recursive verify of a bundle's main executable repeats the bundle verdict.",
-      "source": "7421101ccebf50d8b6beb1c3db3a7f2a97acdb79",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g2-gates-2",
-      "run_id": "20261006T184745Z_7fc8ab99",
-      "reason": "BYOXPC remediation Group 2: the offline verification control promoted (install refuses, validate reports bundle and worker) beside codesign.preflight on the rebuilt app.",
-      "source": "7421101ccebf50d8b6beb1c3db3a7f2a97acdb79",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g3-gates",
-      "run_id": "20261006T185358Z_e9b4260b",
-      "reason": "BYOXPC remediation Group 3 gates, first run: the promoted Rust reds, the Rust batch, the fake-tool and verification controls pass; two live installs were refused already_ran by orphaned clients that reached the fresh host before verify (unified-log receipts quoted in the plan), and the dossier checker lacked the granted key.",
-      "source": "af523f4d1984551a3cfac4a0a770afe46c6a6f27",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g3-repro",
-      "run_id": "20261006T185955Z_813d90fe",
-      "reason": "BYOXPC remediation Group 3 live gates: dossier witness, entitlement read-back and entitlement transfer pass in the previously failing order, with a process snapshot before each verify.",
-      "source": "af523f4d1984551a3cfac4a0a770afe46c6a6f27",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g4-gates",
-      "run_id": "20261006T190653Z_20361586",
-      "reason": "BYOXPC remediation Group 4 gates with the generated plist's one-second ThrottleInterval: single-use with plist-derived waits, BBX-002, registry recovery and the Rust batch.",
-      "source": "7de5062c7c962d34051b9a629e4527fe8a9b3fec",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-g5-docs",
-      "run_id": "20261006T191404Z_c2800d3c",
-      "reason": "BYOXPC remediation Group 5: source drift, limits, contract and architecture checks and a smoke run against the regenerated documents.",
-      "source": "7de5062c7c962d34051b9a629e4527fe8a9b3fec",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-final-default",
-      "run_id": "20261006T191816Z_f8d03fbf",
-      "reason": "BYOXPC remediation final gate: the default battery, 167 of 167 cases, against the signed build stamped v0.2.6-38-g0865136.",
-      "source": "08651368504d302c4257e1a2261b7050bd642c64",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-final-optin",
-      "run_id": "20261006T195217Z_ba3ea082",
-      "reason": "BYOXPC remediation final gate, first opt-in run: all 17 runner_byoxpc cases pass; the BYOXPC dossier witness met the verified host still retiring because the session helper had waited on the worker's PID (the served reply's pid), not the host's.",
-      "source": "08651368504d302c4257e1a2261b7050bd642c64",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/byoxpc-final-optin-2",
-      "run_id": "20261006T195539Z_a3900021",
-      "reason": "BYOXPC remediation final gate, opt-in rerun after the session helper waits for the host launchd lists: fake-tool ownership controls, dossier witness, entitlement read-back and transfer, single-use and BBX-001 pass.",
-      "source": "08651368504d302c4257e1a2261b7050bd642c64",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
       "path": "runs/validator-selection-receipts-20261018",
       "run_id": "20261018T220505Z_efebca1e",
       "reason": "Validator default refactor acceptance; dirty source identified by implementation-source.json and pre-receipt-fix-source.json. Initial runs retain buffered receipt diagnostic; final credits in acceptance-credits.json. Supporting investigation and acceptance records are preserved in commit 69c7dfecfdc688ea56cdc4febd9a9a8a41414b6f.",
@@ -156,34 +37,6 @@
       "app_inventory": "artifact-integrity/before.json"
     },
     {
-      "path": "runs/doc-rework-baseline-20261019",
-      "run_id": "20261019T201847Z_cbd7e783",
-      "source": "df7365ccf334bbc05bdbe9b1a1e5c5ed17500adc",
-      "app_inventory": "artifact-integrity/before.json",
-      "reason": "Temporary doc-rework merge-review evidence: baseline build and controls, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
-    },
-    {
-      "path": "runs/doc-rework-candidate-20261019",
-      "run_id": "20261019T202934Z_e560a554",
-      "source": "2b0be8e1632850aaaa12c657e52882c6b0233d7d",
-      "app_inventory": "artifact-integrity/before.json",
-      "reason": "Temporary doc-rework merge-review evidence: complete acceptance and signed build comparison, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
-    },
-    {
-      "path": "runs/doc-rework-test-build-fixes-20261019",
-      "run_id": "20261019T203850Z_2addfc76",
-      "source": "45bf39fa3f93eaca583e6226a05a6a3d1ae6d073",
-      "app_inventory": "artifact-integrity/before.json",
-      "reason": "Temporary doc-rework merge-review evidence: failed test-build cleanup and its diagnostics, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
-    },
-    {
-      "path": "runs/doc-rework-test-build-fixes-2-20261019",
-      "run_id": "20261019T203951Z_caef01f6",
-      "source": "5d6af0aa82d5b0623dc12cd05f5ed37b47985a2e",
-      "app_inventory": "artifact-integrity/before.json",
-      "reason": "Temporary doc-rework merge-review evidence: corrected warning-free fixture build and Swift tests, cited by records/DOC-REWORK-VERIFICATION.md. Retire this pin when merge review is resolved and integrated acceptance supersedes these claims; preserve the failed receipt until that decision."
-    },
-    {
       "path": "runs/gate-p3-checkpoint",
       "run_id": "20261020T033420Z_8c4e3de3",
       "reason": "Checkpoint for the validator start gate (ValidatorStartGate, introduced with this pin): the over-budget case at its original 150 ms window. Ungated cold copy lost its record; gated cold copy kept it with 185 ms from spawn return to the start receipt; gated warm and gated 1,000 ms delay kept it; ungated 1,000 ms delay lost it; no system sleep. The tested source was f237590 plus uncommitted checkpoint cases, preserved with unified-log excerpts in checkpoint-source/. Retire this pin when the start gate is replaced or a later retained checkpoint supersedes this one.",
@@ -205,20 +58,6 @@
       "source": "3c98b39601f2e475bfbcc7d639c6cdcff79b95af",
       "app_inventory": "artifact-integrity/before.json",
       "release": "v0.3.2"
-    },
-    {
-      "path": "runs/read-fresh-candidates-red",
-      "run_id": "20261022T052707Z_a8741b11",
-      "reason": "read_fresh denial-log association baseline: on the registered commit, unit/rust.read_fresh_reds recorded all six positive tests failing at their registered missing-candidate assertions while unit/rust.unit and source_drift/runner_source_manifests_agree passed; no system sleep. attachments/ holds source and tool receipts, the console transcript and the selector classification controls. Retire only through an explicit evidence-retention decision that preserves or supersedes these observations.",
-      "source": "7183d3700fe2414fbe8bb7cb532dda5ea7dd154c",
-      "app_inventory": null
-    },
-    {
-      "path": "runs/read-fresh-candidates-green",
-      "run_id": "20261022T053225Z_6dec0839",
-      "reason": "read_fresh denial-log association correction: on the corrected commit, the unit suite (all six unit/rust.read_fresh_reds tests passing), source_drift/limits_documentation and source_drift/runner_source_manifests_agree passed; no system sleep. attachments/ holds source and tool receipts and the console transcript. Retire only through an explicit evidence-retention decision that preserves or supersedes these observations.",
-      "source": "4ec0a52b3420d26176054199d620708d82134dae",
-      "app_inventory": null
     }
   ]
 }
