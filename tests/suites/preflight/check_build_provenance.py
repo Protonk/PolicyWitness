@@ -28,6 +28,7 @@ import tempfile
 import textwrap
 import time
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
@@ -693,6 +694,57 @@ class LockTests(unittest.TestCase):
                 self.assertEqual(seen, expected)
             else:
                 self.assertNotEqual(seen, expected, 'the shim negative control did not change the environment')
+
+    def test_a_coerced_locale_is_named_as_such(self):
+        # The witness says LC_CTYPE was unset; the interpreter set it, which only coercion does.
+        env = dict(clean_env(), **{'PW_ENV_WITNESS_' + name: 'u' for name in NAMES})
+        for name in NAMES:
+            env.pop(name, None)
+        with mock.patch.dict(os.environ, dict(env, LC_CTYPE='C.UTF-8'), clear=True):
+            with self.assertRaises(checkout_lock.Refusal) as refused:
+                checkout_lock.verify_environment()
+        self.assertIn('coerced the locale to C.UTF-8', str(refused.exception))
+        self.assertIn('PYTHONCOERCECLOCALE=0 was not honored', str(refused.exception))
+        with mock.patch.dict(os.environ, dict(env, LC_CTYPE='en_US.UTF-8'), clear=True):
+            with self.assertRaises(checkout_lock.Refusal) as refused:
+                checkout_lock.verify_environment()
+        self.assertIn('start through tests/lib/checkout_lock.sh', str(refused.exception))
+        self.assertNotIn('coerced', str(refused.exception))
+
+    def test_helpers_import_only_the_interpreter_and_the_tree(self):
+        # From a C locale, a working directory outside the checkout and no PYTHON* variable: a script start through
+        # python.sh and an inline start resolved the same way see only the interpreter's prefix and the tree.
+        probe = self.script('boundary.py', 'import json, os, sys\n'
+                            'print(json.dumps(dict(site="site" in sys.modules, prefix=os.path.realpath(sys.prefix), '
+                            'path=[os.path.realpath(p) if p else p for p in sys.path], lc=os.environ.get("LC_CTYPE"))))\n')
+        inline = ('import json, os, sys; print(json.dumps(dict(site="site" in sys.modules, prefix=os.path.realpath(sys.prefix), '
+                  'path=[os.path.realpath(p) if p else p for p in sys.path], lc=os.environ.get("LC_CTYPE"))))')
+        env = dict(PATH='/usr/bin:/bin', HOME=os.environ['HOME'], TMPDIR=str(self.work),
+                   __CF_USER_TEXT_ENCODING=os.environ.get('__CF_USER_TEXT_ENCODING', f'0x{os.getuid():X}:0x0:0x0'))
+        resolver = str(ROOT / 'tests/lib/python_start.sh')
+        starts = {'python.sh script': ['/bin/bash', str(ROOT / 'tests/lib/python.sh'), str(probe)],
+                  'inline': ['/bin/bash', '-c', f'source {shlex.quote(resolver)}; pw_python_start || exit 2; '
+                                                f'"$PW_PYTHON" -B -S -P -c {shlex.quote(inline)}'],
+                  'stdin': ['/bin/bash', '-c', f'source {shlex.quote(resolver)}; pw_python_start || exit 2; '
+                                               f'"$PW_PYTHON" -B -S -P - < {shlex.quote(str(probe))}']}
+        for label, argv in starts.items():
+            with self.subTest(label):
+                result = subprocess.run(argv, env=env, cwd=self.work, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                seen = json.loads(result.stdout)
+                self.assertFalse(seen['site'], 'site was imported; the resolver starts helpers with -S')
+                # A script start keeps the script's own directory, here the work directory; an inline or stdin start
+                # must not reach the working directory at all.
+                allowed = [seen['prefix'] + '/', str(ROOT) + '/'] + ([os.path.realpath(self.work) + '/'] if label == 'python.sh script' else [])
+                outside = [p for p in seen['path'] if not any(p.startswith(prefix) or p + '/' == prefix for prefix in allowed)]
+                self.assertEqual(outside, [], 'sys.path reaches outside the interpreter and the tree; the resolver starts helpers '
+                                              'with -S (and -P for inline starts) and refuses PYTHON* so nothing else is an input')
+                self.assertIsNone(seen['lc'], 'the interpreter coerced the locale')
+        result = subprocess.run(starts['python.sh script'], env=dict(env, PYTHONPATH=str(self.work)), cwd=self.work,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('python_environment_set', result.stderr)
+        self.assertIn('PYTHONPATH', result.stderr)
 
     def test_entrypoints_refuse_an_unexecutable_interpreter_before_any_python(self):
         # The profile lets the entry point's shell run but not the pinned interpreter: the

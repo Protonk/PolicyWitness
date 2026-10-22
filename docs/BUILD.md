@@ -460,13 +460,30 @@ the file's inode, never on a replaced file, so the file is never unlinked.
 Acquisition, nested admission and protected launches belong to
 [checkout_lock.py](../tests/lib/checkout_lock.py). A direct `build.sh` hands
 itself to the shell front end [checkout_lock.sh](../tests/lib/checkout_lock.sh)
-before any Python runs. Each of `build.sh`, the front end and `tests/run.sh`
-sources [python_start.sh](../tests/lib/python_start.sh), which resolves
-`xcode-select -p` under `DEVELOPER_DIR` and requires an executable
-`usr/bin/python3` there. It refuses with status 2 and names the directory
-when unavailable, and never trusts an inherited `PW_PYTHON`. It exports
-`PW_PYTHON` and `PYTHONCOERCECLOCALE=0` so the interpreter preserves the
-caller's locale environment as well.
+before any Python runs. Each of `build.sh`, the front end, `tests/run.sh`,
+`tests/lib/python.sh` and `tests/accept-release.sh` sources
+[python_start.sh](../tests/lib/python_start.sh) and calls its two
+functions, never trusting an inherited `PW_PYTHON`. `pw_python_start`
+selects Homebrew's `python@3.14` at
+`/opt/homebrew/opt/python@3.14/bin/python3.14`, the one path the pin names,
+and checks with shell builtins that it is an executable file whose real
+directory lies in a `python@3.14` keg naming a 3.14 version (a Homebrew
+revision suffix such as `3.14.8_1` is allowed; the recorded version is the
+upstream `3.14.8`); it refuses with status 2 as `direct Python unavailable`
+or `python_version_mismatch`, and refuses as `python_environment_set` when
+any `PYTHON*` variable other than `PYTHONCOERCECLOCALE`,
+`PYTHONDONTWRITEBYTECODE` and `PYTHONOPTIMIZE` is set, since the helpers
+take no Python environment and the resolver repairs nothing. It exports
+`PW_PYTHON`, `PW_PYTHON_REALPATH`, `PW_PYTHON_VERSION` and
+`PYTHONCOERCECLOCALE=0`, so the interpreter preserves the caller's locale
+environment as well. `pw_python_probe` then starts the interpreter once, as
+`-I -S -B`, and refuses when the version it reports is not the keg's.
+Helpers start with `-B -S`, inline and stdin starts with `-B -S -P`: a
+helper's `sys.path` holds the interpreter's own standard library, the
+script's directory and the tree's explicit insertions, and nothing else; the
+interpreter's site-packages, `.pth` files and the working directory are not
+inputs. `-E` and `-I` are not used for helpers because they ignore
+`PYTHONCOERCECLOCALE`.
 
 The front end witnesses `SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and
 `LC_CTYPE` with shell builtins. Each `PW_ENV_WITNESS_<name>` is `u` for unset
@@ -535,9 +552,10 @@ keeps the lock until it exits. The witness establishes preservation from the
 front end onward, not the history of its caller: values already inserted by a
 shim before the front end starts are part of that caller's environment.
 `make build` is such a caller: `/usr/bin/make` is a shim that prepends the
-developer directory's manual paths to `MANPATH`. Leaf Python scripts and the
-git shim still exist; the resolver does not validate an SDK or a developer
-directory that contains an executable Python.
+developer directory's manual paths to `MANPATH`. Leaf checkers resolve the
+same pinned interpreter through `tests/lib/testlib.sh`, so a case and its
+children start no shim either; the git shim still exists, and the resolver
+does not validate an SDK.
 
 A standalone Cargo invocation against the managed cache goes through the same
 front end, which takes the lock or is admitted by the owner of an inherited
@@ -606,7 +624,7 @@ its policy assertions, so they need the unsandboxed shell.
 | python_version_mismatch | python_version_mismatch: <interpreter or keg> is Python <found>; 3.14 is required | admission | 2 | propagated | both | a control produces it | [`python_start.sh`](../build.sh); [`python_version_mismatch`](../tests/lib/python_start.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_the_path_checks_refuse_by_name_without_starting_anything`](../tests/suites/preflight/check_build_provenance.py) |
 | python_environment_set | python_environment_set: <variable> is set; the helpers take no Python environment (unset it) | admission | 2 | propagated | both | a control produces it | [`python_start.sh`](../build.sh); [`python_environment_set`](../tests/lib/python_start.sh) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_python_environment_is_refused_except_the_three_the_helpers_own`](../tests/suites/preflight/check_build_provenance.py) |
 | environment_witness_missing | environment witness missing for <variable>; start through tests/lib/checkout_lock.sh | admission, stamp | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`environment witness missing for`](../tests/lib/checkout_lock.py); [`verify_environment`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_environment_witness_missing`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_witness_refusals_precede_lock_writes`](../tests/suites/preflight/check_build_provenance.py) |
-| environment_witness_changed | environment witness differs for <variable>; start through tests/lib/checkout_lock.sh | admission, stamp | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`environment witness differs for`](../tests/lib/checkout_lock.py); [`verify_environment`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_environment_witness_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_witness_refusals_precede_lock_writes`](../tests/suites/preflight/check_build_provenance.py) |
+| environment_witness_changed | environment witness differs for <variable>; start through tests/lib/checkout_lock.sh (or, for an LC_CTYPE the interpreter set from a C locale: the helper interpreter coerced the locale; PYTHONCOERCECLOCALE=0 was not honored) | admission, stamp | 2 | propagated | both | a control produces it | [`checkout_lock.sh`](../build.sh); [`environment witness differs for`](../tests/lib/checkout_lock.py); [`verify_environment`](../tests/lib/build_provenance.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`control_environment_witness_changed`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_environment_witness_coerced`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_a_coerced_locale_is_named_as_such`](../tests/suites/preflight/check_build_provenance.py); [`test_witness_refusals_precede_lock_writes`](../tests/suites/preflight/check_build_provenance.py) |
 | plist_minimum_malformed | Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}' | minimum | 2 | script | both | a control produces it | [`Info.plist LSMinimumSystemVersion is not a major.minor version: '${PW_MINIMUM_MACOS}'`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_malformed_plist_minimum_after_its_banner_and_before_the_sdk`](../tests/suites/source_drift/contract.py) |
 | sdk_unavailable | xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST}) | sdk | 2 | script | both | a control produces it | [`xcrun could not select the macOS SDK (DEVELOPER_DIR=${DEVELOPER_DIR:-unset}, requested ${SDK_REQUEST})`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_unavailable`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | sdk_version_unreadable | xcrun did not report a numeric macOS SDK version (got '${SDK_VERSION:-}') | sdk | 2 | script | both | a control produces it | [`xcrun did not report a numeric macOS SDK version`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_sdk_version_unreadable`](../tests/suites/preflight/opt_in/build_refusals.py) |

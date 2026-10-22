@@ -818,6 +818,24 @@ def control_environment_witness_missing(co, variant):
     return build
 
 
+def control_environment_witness_coerced(co, variant):
+    """The CLI owner started with -E from a C locale coerces LC_CTYPE; the refusal names the coercion, not the front end."""
+    session = co.root / SESSION
+    kept = session.read_bytes() if session.exists() else None
+    names = ('SDKROOT', 'CPATH', 'LIBRARY_PATH', 'MANPATH', 'LC_CTYPE')
+    witnessed = {'PW_ENV_WITNESS_' + name: 'u' for name in names}
+    witnessed['LANG'] = 'C'
+    cli = [sys.executable, '-E', '-B', '-S', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
+           '/bin/bash', str(co.root / 'build.sh')]
+    build = co.build('environment_witness_coerced', variant, argv=cli, env=witnessed)
+    check(build, 2, 'the helper interpreter coerced the locale to C.UTF-8', absent=('Verifying the checkout lock',))
+    check(build, 2, 'PYTHONCOERCECLOCALE=0 was not honored')
+    assert 'start through tests/lib/checkout_lock.sh' not in build.stderr, build.stderr[-2000:]
+    assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
+    preserved(build)
+    return build
+
+
 def control_environment_witness_changed(co, variant):
     """A deliberate shim start changes CPATH; the owner refuses before taking the lock."""
     session = co.root / SESSION
@@ -2678,6 +2696,7 @@ CONTROLS = [
     ('lock_claim_invalid', ('full', 'partial'), control_lock_claim_invalid),
     ('environment_witness_missing', ('full', 'partial'), control_environment_witness_missing),
     ('environment_witness_changed', ('full', 'partial'), control_environment_witness_changed),
+    ('environment_witness_coerced', ('full', 'partial'), control_environment_witness_coerced),
     ('sdk_unavailable', ('full', 'partial'), control_sdk_unavailable),
     ('sdk_version_unreadable', ('full', 'partial'), control_sdk_version_unreadable),
     ('builddir_stamp_missing', ('full', 'partial'), control_builddir_stamp_missing),

@@ -25,10 +25,13 @@ def main():
     out = Path(sys.argv[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
     inventory = []
-    modes = [('unset', None, False), ('zero', '0', False), ('empty', '', False),
-             ('one', '1', True), ('two', '2', True), ('text', 'yes', True)]
+    # (label, PYTHONOPTIMIZE value or None, blocked, other PYTHON* variable or None): optimization reaches the
+    # assertion guard, which refuses an optimizing value; any other PYTHON* variable is the resolver's refusal.
+    modes = [('unset', None, False, None), ('zero', '0', False, None), ('empty', '', False, None),
+             ('one', '1', True, None), ('two', '2', True, None), ('text', 'yes', True, None),
+             ('environment', None, True, 'PYTHONPATH')]
     for entry in ('dispatcher', 'direct_suite'):
-        for label, optimization, blocked in modes:
+        for label, optimization, blocked, variable in modes:
             for assertion in ('pass', 'fail'):
                 name = f'{entry}_{label}_{assertion}'
                 work = out / name
@@ -57,6 +60,8 @@ def main():
                            PYTHONDONTWRITEBYTECODE='1')
                 if optimization is not None:
                     env['PYTHONOPTIMIZE'] = optimization
+                if variable is not None:
+                    env[variable] = str(work / 'elsewhere')
                 argv = (['bash', str(repo / 'tests/run.sh'), '--suite', 'probe']
                         if entry == 'dispatcher' else ['bash', str(suite)])
                 result = subprocess.run(argv, env=env, cwd=work, capture_output=True, timeout=15)
@@ -65,8 +70,12 @@ def main():
                 (work / 'exit.json').write_text(json.dumps({'argv': argv, 'returncode': result.returncode}) + '\n')
                 if blocked:
                     require(result.returncode == 2, f'{name}: startup must exit 2, got {result.returncode}')
-                    require(b'Python assertions are disabled' in result.stderr and b'PYTHONOPTIMIZE' in result.stderr,
-                            f'{name}: missing actionable startup diagnostic: {result.stderr!r}')
+                    if variable is not None:
+                        require(b'python_environment_set' in result.stderr and variable.encode() in result.stderr,
+                                f'{name}: the refusal does not name python_environment_set and {variable}: {result.stderr!r}')
+                    else:
+                        require(b'Python assertions are disabled' in result.stderr and b'PYTHONOPTIMIZE' in result.stderr,
+                                f'{name}: missing actionable startup diagnostic: {result.stderr!r}')
                     require(not started.exists() and not continued.exists() and not receipt.exists(),
                             f'{name}: rejected startup ran fixture work')
                     require(snapshot(child_out) == before, f'{name}: rejected startup changed prior evidence')

@@ -16,6 +16,18 @@ test_pass "optimized Python is rejected; normal assertion failures remain test f
 
 fi
 
+if test_selected interpreter_boundary; then
+test_begin shell_helpers interpreter_boundary
+test_step controls "observe the resolved interpreter, the witnessed names and the import boundary at a dispatcher-driven and a direct start"
+if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/shell_helpers/check_interpreter.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "interpreter boundary controls failed; see artifacts/assertions.log"
+fi
+test_pass "a case and its child see the pinned 3.14 interpreter, no witnessed name, no site-packages and no path outside the tree; PYTHONPATH refuses"
+
+fi
+
 if test_selected controls; then
 test_begin shell_helpers controls
 test_step controls "exercise case failures, logs, prerequisites, and stage ordering"

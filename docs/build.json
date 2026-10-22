@@ -1956,7 +1956,7 @@
     },
     {
       "id": "environment_witness_changed",
-      "message": "environment witness differs for <variable>; start through tests/lib/checkout_lock.sh",
+      "message": "environment witness differs for <variable>; start through tests/lib/checkout_lock.sh (or, for an LC_CTYPE the interpreter set from a C locale: the helper interpreter coerced the locale; PYTHONCOERCECLOCALE=0 was not honored)",
       "kind": "propagated",
       "steps": [
         "admission",
@@ -1991,6 +1991,18 @@
         {
           "path": "tests/suites/preflight/opt_in/build_refusals.py",
           "symbol": "control_environment_witness_changed",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_environment_witness_coerced",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_a_coerced_locale_is_named_as_such",
           "form": "test",
           "coverage": "behavioral"
         },

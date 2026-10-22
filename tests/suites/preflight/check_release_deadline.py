@@ -77,7 +77,7 @@ def exercise(out, name):
                 observation['exited_peers'] = sorted(tree.exited)
 
             invocations = [json.loads(line) for line in receipts.read_text().splitlines()]
-            assert invocations == [dict(pid=peers['P'], argv=argv[3:])], 'command was retried or arguments changed'
+            assert invocations == [dict(pid=peers['P'], argv=argv[4:])], 'command was retried or arguments changed'
             assert list(evidence.glob('evidence/*/command')) == captures, 'extra command captures'
             assert (capture / 'stdout').read_bytes() == stdout_bytes, 'raw stdout changed on finalization'
             assert (capture / 'stderr').read_bytes() == stderr_bytes, 'raw stderr changed on finalization'

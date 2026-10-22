@@ -135,6 +135,11 @@ def verify_environment(*, sdk_request=None):
             raise Refusal(f'environment witness missing for {name}; start through {FRONT_END}')
         expected = 'u' if value is None else 's' + value
         if witness != expected:
+            if name == 'LC_CTYPE' and witness == 'u' and value in ('C.UTF-8', 'UTF-8'):
+                # The front end witnessed no LC_CTYPE and the interpreter set one from a C locale: it coerced the
+                # locale, so PYTHONCOERCECLOCALE=0 was not honored (an -E or -I start, or a start outside the resolver).
+                raise Refusal(f'environment witness differs for {name}: the helper interpreter coerced the locale to {value}; '
+                              'PYTHONCOERCECLOCALE=0 was not honored (start it through python_start.sh without -E or -I)')
             raise Refusal(f'environment witness differs for {name}; start through {FRONT_END}')
         requests[name] = dict(state='unset') if value is None else dict(state='set', value=value)
     return requests

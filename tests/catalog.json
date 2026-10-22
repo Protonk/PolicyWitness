@@ -178,6 +178,10 @@
           "description": "optimized Python is rejected; normal assertion failures remain test failures"
         },
         {
+          "id": "interpreter_boundary",
+          "description": "a case and its child see the pinned 3.14 interpreter, no witnessed name, no site-packages and no path outside the tree; PYTHONPATH refuses"
+        },
+        {
           "id": "script_groups",
           "description": "wrappers preserve child order, streams, phase boundaries, and failing status"
         },

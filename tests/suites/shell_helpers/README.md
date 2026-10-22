@@ -26,8 +26,16 @@ The case owns its suite/test identity, steps, checker arguments, and final
 `test_begin` exports `PW_TEST_SCRATCH` as `${PW_TEST_DIR}/scratch` without
 creating it; build intermediates go there and evidence stays in `artifacts/`.
 
-Loading `testlib.sh` checks the actual `/usr/bin/python3` assertion mode and
-exits 2 with an actionable diagnostic if assertions are disabled. This protects
+Loading `testlib.sh` resolves the pinned interpreter the way the entry points
+do (`tests/lib/python_start.sh`: the keg path, its version and no `PYTHON*`
+variable beyond the three the helpers own) and then checks that interpreter's
+assertion mode, exiting 2 with an actionable diagnostic if assertions are
+disabled. `interpreter_boundary` observes the result from a C locale and a
+working directory outside the checkout: a case and the child it starts see no
+witnessed name, run the pinned 3.14 interpreter from its keg, have not imported
+`site`, and have no `sys.path` entry outside the interpreter and the tree,
+whether the dispatcher or a direct suite script started them; `PYTHONPATH`
+makes both starts refuse before any case work. This protects
 the dispatcher and direct shell suite entry points before case work or output
 initialization. Unset `PYTHONOPTIMIZE` to run tests; empty and `0` values remain
 valid because they leave assertions enabled. The check uses an explicit branch
