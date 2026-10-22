@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec /usr/bin/python3 "${CONTROL_WORKER_DRIVER}" "$(basename "$0")" "$@"
+exec "${PW_PYTHON}" -B -S "${CONTROL_WORKER_DRIVER}" "$(basename "$0")" "$@"

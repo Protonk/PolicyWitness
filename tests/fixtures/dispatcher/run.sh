@@ -41,6 +41,6 @@ case "${NAME}" in
   unfinished) test_begin "${SUITE}" unfinished_case ;;
   duplicate_end) test_pass "second terminal event" ;;
   pass|leaf|reuse_previous) ;;
-  *) /usr/bin/python3 "${ROOT_DIR}/tests/fixtures/dispatcher/alter.py" \
+  *) "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/fixtures/dispatcher/alter.py" \
        "${NAME}" "${PW_TEST_REPORT}" "${PW_TEST_EVENTS}" ;;
 esac

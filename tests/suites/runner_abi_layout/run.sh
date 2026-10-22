@@ -62,7 +62,7 @@ if ! PW_PRINTER_OUT="${PRINTER_OUT}" \
      PW_ABI_GOLDEN="${ROOT_DIR}/tests/fixtures/contract/abi_layout.txt" \
      PW_ABI_GOLDEN_CANDIDATE="${PW_TEST_ARTIFACTS}/abi_layout.candidate.txt" \
      PW_TESTS_LIB="${ROOT_DIR}/tests/lib" \
-     /usr/bin/python3 - 2>"${PW_TEST_ARTIFACTS}/layout-check.err" <<'PY'
+     "${PW_PYTHON}" -B -S -P - 2>"${PW_TEST_ARTIFACTS}/layout-check.err" <<'PY'
 import json
 import os
 import re
@@ -277,7 +277,7 @@ if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Werror -O2 -std=c11 \
   test_fail "extension channel printer failed to compile"
 fi
 "${PW_TEST_ARTIFACTS}/extension-printer" >"${PW_TEST_ARTIFACTS}/extension-layout.txt"
-if ! /usr/bin/python3 "${SUITE_DIR}/extension_layout.py" "${PW_TEST_ARTIFACTS}/extension-layout.txt" \
+if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/extension_layout.py" "${PW_TEST_ARTIFACTS}/extension-layout.txt" \
     >"${PW_TEST_ARTIFACTS}/extension-layout.log" 2>&1; then
   test_fail "transient extension channel layout disagrees"
 fi
@@ -299,7 +299,7 @@ for helper in worker_limits validator_limits; do
     test_fail "${helper}.c failed to compile" "{}"
   fi
 done
-if ! /usr/bin/python3 "${SUITE_DIR}/limits.py" "${PW_TEST_ARTIFACTS}" \
+if ! "${PW_PYTHON}" -B -S "${SUITE_DIR}/limits.py" "${PW_TEST_ARTIFACTS}" \
     >"${PW_TEST_ARTIFACTS}/limits.log" 2>&1; then
   test_fail "documented C limits or native query controls disagree" "{\"log\":\"${PW_TEST_ARTIFACTS}/limits.log\"}"
 fi

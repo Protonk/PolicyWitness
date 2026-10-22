@@ -25,7 +25,7 @@ if os.environ.get('RETENTION_GRANDCHILD'):
               'deadline = time.monotonic() + 30\n'
               'while not os.path.exists(sys.argv[1]) and time.monotonic() < deadline:\n'
               '    time.sleep(0.02)\n')
-    grandchild = subprocess.Popen([sys.executable, '-B', '-c', waiter, os.environ['RETENTION_GRANDCHILD_RELEASE']],
+    grandchild = subprocess.Popen([sys.executable, '-B', '-S', '-P', '-c', waiter, os.environ['RETENTION_GRANDCHILD_RELEASE']],
                                   pass_fds=tuple(fds), start_new_session=True).pid
 with receipt.open('a') as stream:
     stream.write(json.dumps(dict(pid=os.getpid(), out=str(out), run_id=os.environ['PW_TEST_RUN_ID'], grandchild=grandchild,

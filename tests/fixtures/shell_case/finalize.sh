@@ -30,7 +30,7 @@ if [[ "${CONTROL_SETUP}" == reassigned_dir ]]; then
 fi
 # Read the exported value and bytes in a child before the finalizer can remove
 # them; the Python controller derives the expected path independently.
-/usr/bin/python3 - "${CONTROL_SETUP_RECEIPT}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${CONTROL_SETUP_RECEIPT}" <<'PY'
 import json
 import os
 from pathlib import Path

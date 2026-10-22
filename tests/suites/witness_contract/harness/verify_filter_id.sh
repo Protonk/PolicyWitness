@@ -249,7 +249,7 @@ probe() {
         echo "no-output:${code}"
         return
     fi
-    /usr/bin/python3 -c '
+    "${PW_PYTHON}" -B -S -P -c '
 import json, sys
 try: d=json.loads(sys.stdin.read())
 except Exception: print("parse-err"); sys.exit()

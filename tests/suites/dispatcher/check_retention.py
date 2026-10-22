@@ -30,7 +30,7 @@ class Controls:
         install_runner(ROOT, repo, {'probe': {'command': ['bash', 'tests/suites/probe/run.sh'], 'cases': ['witness']}})
         script = repo / 'tests/suites/probe/run.sh'
         script.parent.mkdir(parents=True)
-        script.write_text('#!/bin/bash\nexec /usr/bin/python3 -B tests/fixtures/dispatcher/retention_case.py\n')
+        script.write_text('#!/bin/bash\nexec "${PW_PYTHON}" -B -S tests/fixtures/dispatcher/retention_case.py\n')
         script.chmod(0o755)
         fixture = repo / 'tests/fixtures/dispatcher/retention_case.py'
         fixture.parent.mkdir(parents=True)

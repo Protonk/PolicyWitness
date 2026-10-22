@@ -68,11 +68,11 @@ def check_evidence(out):
     # The actual command CLI must share the attempt, preserve failed receipts,
     # and refuse duplicate/path-escaping steps before invoking any process.
     receipt = work / 'executions'
-    command = [sys.executable, '-B', '-c',
+    command = [sys.executable, '-B', '-S', '-P', '-c',
                'import pathlib,sys; p=pathlib.Path(sys.argv[1]); '
                'p.write_text(p.read_text()+"called\\n" if p.exists() else "called\\n"); '
                'print("partial receipt"); sys.exit(7)', str(receipt)]
-    wrapper = [sys.executable, '-B', str(ROOT / 'tests/lib/release_commands.py')]
+    wrapper = [sys.executable, '-B', '-S', str(ROOT / 'tests/lib/release_commands.py')]
     def call(step):
         return subprocess.run([*wrapper, '--step', step, str(session), '10', *command],
                               capture_output=True, text=True, timeout=20)

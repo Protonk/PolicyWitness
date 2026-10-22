@@ -76,7 +76,7 @@ RESPONSE_FILE="${PW_TEST_ARTIFACTS}/verdicts.ndjson"
   # produce exactly one parse_error verdict and drain the rest
   # before reading the next line, not split the line into chunks
   # and emit multiple verdicts (audit finding 2).
-  /usr/bin/python3 -c 'print("x" * 80000)'
+  "${PW_PYTHON}" -B -S -P -c 'print("x" * 80000)'
   # A valid probe AFTER the overlong line proves the drain worked.
   printf '%s\n' '{"step_id":"after_overlong","operation":"network-outbound","filter_type":"NONE"}'
 } >"${REQUEST_FILE}"
@@ -93,7 +93,7 @@ fi
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${RESPONSE_FILE}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RESPONSE_FILE}" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 

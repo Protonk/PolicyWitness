@@ -24,7 +24,7 @@ fi
 FAKE_WORKER="/nonexistent/policy-witness-worker-not-real"
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-PW_FAKE_WORKER="${FAKE_WORKER}" /usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+PW_FAKE_WORKER="${FAKE_WORKER}" "${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json
 import os
 import sys
@@ -59,7 +59,7 @@ if [[ "${RC}" -eq 0 ]]; then
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-PW_FAKE_WORKER="${FAKE_WORKER}" /usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+PW_FAKE_WORKER="${FAKE_WORKER}" "${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
 import json
 import os
 import sys

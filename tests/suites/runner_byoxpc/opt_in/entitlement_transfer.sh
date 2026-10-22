@@ -10,7 +10,7 @@ cleanup() {
   local status=$?
   trap - EXIT
   for copy in granted denied; do
-    /usr/bin/python3 "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/${copy}/session.json" || status=1
+    "${PW_PYTHON}" -B -S "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/${copy}/session.json" || status=1
   done
   exit "$status"
 }
@@ -19,7 +19,7 @@ IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 [[ -n "$IDENTITY" ]] || test_fail "matching Developer ID required"
 for copy in granted denied; do
   mkdir -p "${PW_TEST_ARTIFACTS}/${copy}"
-  /usr/bin/python3 - "${PW_TEST_ARTIFACTS}/${copy}/supplied.plist" "${copy}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${PW_TEST_ARTIFACTS}/${copy}/supplied.plist" "${copy}" <<'PY'
 import plistlib, sys
 from pathlib import Path
 Path(sys.argv[1]).write_bytes(plistlib.dumps({'com.apple.security.cs.allow-jit': sys.argv[2] == 'granted'}))

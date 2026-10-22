@@ -48,7 +48,7 @@ def main():
                 (target / filename).write_text(json.dumps(document, indent=2) + '\n')
         report_path = directory / 'comparison.json'
         process = subprocess.run(
-            [sys.executable, '-B', str(COMPARER), 'compare', str(directory / 'candidate'),
+            [sys.executable, '-B', '-S', str(COMPARER), 'compare', str(directory / 'candidate'),
              str(directory / 'baseline'), '--out', str(report_path), *options],
             text=True, capture_output=True, timeout=30)
         (directory / 'stdout.txt').write_text(process.stdout)

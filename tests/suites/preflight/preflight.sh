@@ -59,6 +59,6 @@ mkdir -p "$(dirname "${OUT_PATH}")"
 APP_PATH="${PW_APP_DIR}"
 
 step "artifact_inspection" "verify bundle components, signatures, and evidence hashes"
-/usr/bin/python3 "${ROOT_DIR}/tests/lib/artifact.py" "${APP_PATH}" "${OUT_PATH}"
+"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/artifact.py" "${APP_PATH}" "${OUT_PATH}"
 
 test_pass "bundle signatures and evidence hashes agree" "{\"out_path\":\"${OUT_PATH}\"}"

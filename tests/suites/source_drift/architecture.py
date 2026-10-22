@@ -46,7 +46,7 @@ class ArchitectureDocumentationTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', str(root / generator.GENERATOR_NAME), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
                               cwd=root, capture_output=True, text=True, timeout=60)
 
     def load(self, data):

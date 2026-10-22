@@ -33,5 +33,5 @@ else
 fi
 test_step later "must only run after the checker succeeds"
 test_run_logged "${PW_TEST_ARTIFACTS}/later.log" "controlled later stage failed" \
-  /usr/bin/python3 "${FIXTURE_DIR}/command.py" later
+  "${PW_PYTHON}" -B -S "${FIXTURE_DIR}/command.py" later
 test_pass "controlled case passed"

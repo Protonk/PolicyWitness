@@ -19,7 +19,7 @@ fi
 # The bug-report specimen, and its allow-default neighbour as the positive
 # open/path control. The policy text is the only difference.
 for name in specimen neighbour; do
-  /usr/bin/python3 - "${PW_TEST_ARTIFACTS}/${name}.json" "${name}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${PW_TEST_ARTIFACTS}/${name}.json" "${name}" <<'PY'
 import json, sys
 from pathlib import Path
 policy = {"specimen": "(version 2)\n(deny default)\n(allow file-read-data)",
@@ -43,7 +43,7 @@ done
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${PW_TEST_ARTIFACTS}/specimen-run.json" "${PW_TEST_ARTIFACTS}/neighbour-run.json" >"${ASSERT_LOG}" 2>&1 <<'PY'
+"${PW_PYTHON}" -B -S -P - "${PW_TEST_ARTIFACTS}/specimen-run.json" "${PW_TEST_ARTIFACTS}/neighbour-run.json" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 

@@ -82,7 +82,7 @@ def act(action):
                   'deadline = time.monotonic() + 600\n'
                   'while not os.path.exists(sys.argv[1]) and time.monotonic() < deadline:\n'
                   '    time.sleep(0.05)\n')
-        child = subprocess.Popen([sys.executable, '-B', '-c', waiter, action['release']], pass_fds=lock_fds(), start_new_session=True)
+        child = subprocess.Popen([sys.executable, '-B', '-S', '-P', '-c', waiter, action['release']], pass_fds=lock_fds(), start_new_session=True)
         path.write_text(json.dumps(dict(holder=child.pid, wrapper=os.getpid(), passed=list(lock_fds()))))
         return
     if op == 'probe_lock':

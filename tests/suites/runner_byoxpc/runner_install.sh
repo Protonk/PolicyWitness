@@ -13,7 +13,7 @@ if [[ -z "${PW_TEST_RUNNER_ENV_PATH+x}" ]]; then
   cleanup() {
     local status=$?
     trap - EXIT
-    /usr/bin/python3 "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
+    "${PW_PYTHON}" -B -S "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
     exit "${status}"
   }
   trap cleanup EXIT

@@ -8,7 +8,7 @@ SESSION_TOOL="${ROOT_DIR}/tests/fixtures/byoxpc/session.py"
 cleanup() {
   local status=$?
   trap - EXIT
-  /usr/bin/python3 "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
+  "${PW_PYTHON}" -B -S "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
   exit "$status"
 }
 trap cleanup EXIT
@@ -16,7 +16,7 @@ IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 [[ -n "$IDENTITY" ]] || test_fail "matching Developer ID required"
 test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "owned BYOXPC setup failed" \
   "$SESSION_TOOL" install "$PW_BIN" "$PW_APP_DIR" "$PW_TEST_ARTIFACTS" "${PW_TEST_ARTIFACTS}/runner_env.json" "$IDENTITY"
-export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
+export PW_RUNNER_REGISTRY="$("${PW_PYTHON}" -B -S -P -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
 test_step overlap "hold the owner; observe a raw refusal and public re-acquisition with one effect on a fresh host"
 test_check_python "${PW_TEST_ARTIFACTS}/single-use.log" "live single-use control failed" \
   "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/single_use.py" "$PW_BIN" "$PW_TEST_ARTIFACTS"

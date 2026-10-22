@@ -305,7 +305,7 @@ class GeneratorContractTests(unittest.TestCase):
         return root
 
     def command(self, root, name, *args):
-        return subprocess.run([sys.executable, '-B', str(root / f'docs/generate_{name}.py'), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / f'docs/generate_{name}.py'), *args],
                               cwd=root, capture_output=True, text=True, timeout=60)
 
     def snapshot(self, root):

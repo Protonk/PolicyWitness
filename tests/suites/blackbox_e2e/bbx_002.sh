@@ -54,7 +54,7 @@ cp -R "${WORK_ROOT}" "${PW_TEST_ARTIFACTS}/workspace.before"
 
 SPECIMEN_JSON="${PW_TEST_ARTIFACTS}/specimen.rendered.json"
 
-/usr/bin/python3 - "${PROFILE_SBPL}" "${SPECIMEN_TEMPLATE}" "${SPECIMEN_JSON}" "${ALLOW_FILE}" "${MISSING_FILE}" "${INVALID_MACH_SERVICE}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${PROFILE_SBPL}" "${SPECIMEN_TEMPLATE}" "${SPECIMEN_JSON}" "${ALLOW_FILE}" "${MISSING_FILE}" "${INVALID_MACH_SERVICE}" <<'PY'
 import json
 import os
 import sys

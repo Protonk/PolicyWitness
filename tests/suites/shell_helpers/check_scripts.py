@@ -45,8 +45,8 @@ def main():
             path = repo / child
             path.parent.mkdir(parents=True, exist_ok=True)
             if child == early_failure:
-                path.write_text('set -e\n/usr/bin/python3 "${CONTROL_SCRIPT_DRIVER}" "$0"\n'
-                                'false\n/usr/bin/python3 "${CONTROL_SCRIPT_DRIVER}" "$0" forbidden\n')
+                path.write_text('set -e\n"${PW_PYTHON}" -B -S "${CONTROL_SCRIPT_DRIVER}" "$0"\n'
+                                'false\n"${PW_PYTHON}" -B -S "${CONTROL_SCRIPT_DRIVER}" "$0" forbidden\n')
             else:
                 shutil.copyfile(FIXTURE / 'script_child.sh', path)
             path.chmod(0o755)

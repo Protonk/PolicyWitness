@@ -37,7 +37,7 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
 import json
 import sys
 from pathlib import Path

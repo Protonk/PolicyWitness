@@ -34,7 +34,7 @@ export PW_TEST_RUNNER_ENV_PATH="${RUNNER_ENV_PATH}"
 cleanup() {
   local status=$?
   trap - EXIT
-  /usr/bin/python3 "${ROOT_DIR}/tests/fixtures/byoxpc/session.py" cleanup \
+  "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/fixtures/byoxpc/session.py" cleanup \
     "${PW_BIN}" "${RUNNER_ENV_PATH%/*}/session.json" || status=1
   exit "${status}"
 }
@@ -47,7 +47,7 @@ if [[ ! -f "${RUNNER_ENV_PATH}" ]]; then
   exit "${failures}"
 fi
 
-read -r RUNNER_ID SERVICE_NAME < <(/usr/bin/python3 - "${RUNNER_ENV_PATH}" <<'PY'
+read -r RUNNER_ID SERVICE_NAME < <("${PW_PYTHON}" -B -S -P - "${RUNNER_ENV_PATH}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -61,7 +61,7 @@ if [[ -z "${RUNNER_ID}" || -z "${SERVICE_NAME}" ]]; then
   exit 1
 fi
 
-export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${RUNNER_ENV_PATH}")"
+export PW_RUNNER_REGISTRY="$("${PW_PYTHON}" -B -S -P -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${RUNNER_ENV_PATH}")"
 
 export PW_TEST_RUNNER_MODE="byoxpc"
 export PW_TEST_RUNNER_SERVICE="${SERVICE_NAME}"

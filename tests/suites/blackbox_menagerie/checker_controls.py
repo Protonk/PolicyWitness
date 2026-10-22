@@ -64,7 +64,7 @@ def main():
             expected_path.write_text(json.dumps((expected or expectations)[suite], indent=2) + "\n")
             checker = ROOT / "tests/suites" / suite / "validate_run.py"
             result = subprocess.run(
-                [sys.executable, str(checker), str(run_path), str(expected_path)],
+                [sys.executable, '-B', '-S', str(checker), str(run_path), str(expected_path)],
                 capture_output=True, text=True, timeout=5,
             )
             output = result.stdout + result.stderr

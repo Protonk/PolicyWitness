@@ -95,7 +95,7 @@ def main():
         directory = out / name
         directory.mkdir(parents=True, exist_ok=True)
         report_path = directory / 'comparison.json'
-        process = subprocess.run([sys.executable, '-B', str(COMPARER), 'exe', str(candidate), str(baseline),
+        process = subprocess.run([sys.executable, '-B', '-S', str(COMPARER), 'exe', str(candidate), str(baseline),
                                   '--out', str(report_path), *options], text=True, capture_output=True, timeout=120)
         (directory / 'stdout.txt').write_text(process.stdout)
         (directory / 'stderr.txt').write_text(process.stderr)

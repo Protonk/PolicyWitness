@@ -148,11 +148,11 @@ probe() {
         return
     fi
     local rc_field errno_field
-    rc_field="$(echo "${out}" | /usr/bin/python3 -c 'import json,sys
+    rc_field="$(echo "${out}" | "${PW_PYTHON}" -B -S -P -c 'import json,sys
 try: d=json.loads(sys.stdin.read())
 except Exception: print("parse-err"); sys.exit()
 print(d.get("rc", d.get("error","-")))')"
-    errno_field="$(echo "${out}" | /usr/bin/python3 -c 'import json,sys
+    errno_field="$(echo "${out}" | "${PW_PYTHON}" -B -S -P -c 'import json,sys
 try: d=json.loads(sys.stdin.read())
 except Exception: print("-"); sys.exit()
 print(d.get("errno","-"))')"

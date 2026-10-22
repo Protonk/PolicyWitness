@@ -17,7 +17,7 @@ if ! require_pw_app "${PW_BIN}"; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json, sys
 from pathlib import Path
 spec = {
@@ -40,7 +40,7 @@ set -e
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))

@@ -45,7 +45,7 @@ if case == 'active':
     (path / 'artifacts').mkdir()
     (path / 'artifacts/partial.bin').write_bytes(b'partial observation\x00\xff\n')
     print('active fixture reached rendezvous', flush=True)
-    helper = subprocess.Popen([sys.executable, '-B', __file__, 'helper'])
+    helper = subprocess.Popen([sys.executable, '-B', '-S', __file__, 'helper'])
     rendezvous(b'P')
     helper.wait(timeout=3)
 

@@ -66,7 +66,7 @@ def main(source, out, identity):
             scenarios.append('adhoc_helper_named')
             assert named == [f'Contents/MacOS/sbpl-check: signed by ad hoc, not {leaf}'], named
             # The command build.sh runs: status 1 and the header naming the identity, over the same copy.
-            cli = subprocess.run([sys.executable, '-B', str(ROOT / 'tests/lib/signer_check.py'), str(app), leaf],
+            cli = subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'tests/lib/signer_check.py'), str(app), leaf],
                                  capture_output=True, text=True, timeout=120)
             save(out / 'signer-cli.json', dict(argv=cli.args, returncode=cli.returncode, stdout=cli.stdout, stderr=cli.stderr))
             scenarios.append('signer_cli_refuses')

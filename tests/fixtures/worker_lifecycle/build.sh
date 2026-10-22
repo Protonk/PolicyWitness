@@ -67,7 +67,7 @@ done
 # error is reported and the remaining outputs still run; the build then fails,
 # so its callers stop before the tests. Elapsed time is diagnostic only; it and
 # the timeout use time.monotonic, which does not advance during system sleep.
-/usr/bin/python3 -B -I - "${WARM_UP[@]}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${WARM_UP[@]}" <<'PY'
 import subprocess, sys, time
 inventory = sys.argv[1:]
 failures = 0

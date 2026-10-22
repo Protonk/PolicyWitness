@@ -697,7 +697,7 @@ def main():
         run_path = artifacts / f"{name}.json"
         run_path.write_text(json.dumps(envelope, indent=2) + "\n")
         result = subprocess.run(
-            [sys.executable, str(CHECKER), str(run_path),
+            [sys.executable, '-B', '-S', str(CHECKER), str(run_path),
              str(FIXTURES / case / "expected.json")],
             capture_output=True, text=True, timeout=5,
         )

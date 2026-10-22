@@ -100,7 +100,7 @@ def main():
             stem = artifacts / f"{name}.{label}"
             run_path = Path(f"{stem}.run.json")
             run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
-            argv = [sys.executable, str(CHECKER), str(run_path), "--step-id", step_id,
+            argv = [sys.executable, '-B', '-S', str(CHECKER), str(run_path), "--step-id", step_id,
                     "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
             output = result.stdout + result.stderr

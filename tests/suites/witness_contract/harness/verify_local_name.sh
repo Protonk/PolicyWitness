@@ -141,7 +141,7 @@ probe_id() {
     printf '%s\n' "${code}" > "${raw}.status"
     out="$(cat "${raw}.stdout")"
     [[ -n "${out}" ]] || { echo "no-output:${code}"; return; }
-    /usr/bin/python3 -c '
+    "${PW_PYTHON}" -B -S -P -c '
 import json, sys
 try: d = json.loads(sys.stdin.read())
 except Exception: print("parse-err"); sys.exit()

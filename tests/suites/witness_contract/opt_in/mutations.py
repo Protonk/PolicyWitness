@@ -79,7 +79,7 @@ def driver(package, out, lifecycle, expected):
 def harness_control(harness, worker, out, expected):
     command(out / 'harness', [harness, worker, 'proceed_delayed_observed_quiescence'])
     value = json.loads((out / 'harness/stdout').read_text())
-    result = command(out / 'harness-oracle', ['/usr/bin/python3',
+    result = command(out / 'harness-oracle', [sys.executable, '-B', '-S',
         ROOT / 'tests/suites/runner_c_worker_harness/check_proceed.py', out / 'harness/stdout'], check=False)
     assert value['applied'] and value['apply_rc'] == 0 and value['done'] and value['exit_code'] == 0, value
     assert all(s['completed'] and s['rc'] == 0 for s in value['slots']), value
@@ -137,7 +137,7 @@ def signed_copy(source, work, out, identity, worker, host=None):
     command(out / 'sign-worker', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp', '-s', identity, app / WORKER], timeout=90)
     command(out / 'sign-service', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'runner/Services/PWRunner/Entitlements.plist', '-s', identity, app / SERVICE], timeout=90)
-    command(out / 'evidence', ['/usr/bin/python3', ROOT / 'tests/build-evidence.py', '--app-bundle', app,
+    command(out / 'evidence', [sys.executable, '-B', '-S', ROOT / 'tests/build-evidence.py', '--app-bundle', app,
         '--app-entitlements', ROOT / 'PolicyWitness.entitlements', '--substitution-of', source, '--identity', identity], timeout=120)
     command(out / 'sign-app', ['/usr/bin/codesign', '--force', '--options', 'runtime', '--timestamp',
         '--entitlements', ROOT / 'PolicyWitness.entitlements', '-s', identity, app], timeout=90)

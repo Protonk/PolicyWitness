@@ -30,7 +30,7 @@ if test_selected cli; then
 test_begin runner_exec_inheritance cli
 inheritance_setup
 test_step run "inspect environment, descriptors, and stdin in three ordinary CLI exec steps"
-if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_exec_inheritance/check.py" \
+if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_exec_inheritance/check.py" \
     cli "${PW_TEST_ARTIFACTS}" "${PW_BIN}" "${HELPER}" \
     >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/assert.log" >&2
@@ -44,7 +44,7 @@ if test_selected contaminated_worker; then
 test_begin runner_exec_inheritance contaminated_worker
 inheritance_setup
 test_step run "verify worker launch contamination, then observe its exec children"
-if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_exec_inheritance/check.py" \
+if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_exec_inheritance/check.py" \
     worker "${PW_TEST_ARTIFACTS}" "${WORKER}" "${HELPER}" "${HARNESS}" \
     >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/assert.log" >&2

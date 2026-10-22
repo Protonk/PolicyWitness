@@ -10,7 +10,7 @@ test_build_fixture "${ROOT_DIR}/tests/fixtures/exec/build.sh" "${HELPER}"
 test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_harness/build.sh" "${HARNESS}" \
   "${PW_TEST_ARTIFACTS}/harness-build.log"
 test_step run "unmodified worker must pass; environment and descriptor leaks must be diagnosed"
-if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_exec_inheritance/opt_in/mutations.py" \
+if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_exec_inheritance/opt_in/mutations.py" \
     "${PW_TEST_ARTIFACTS}" "${HELPER}" "${HARNESS}" \
     >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/assert.log" >&2

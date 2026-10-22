@@ -92,7 +92,7 @@ class ContractVersionTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', str(root / 'docs/generate_contract.py'), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_contract.py'), *args],
                               cwd=root, capture_output=True, text=True, timeout=10)
 
     def snapshot(self, root):
@@ -572,7 +572,7 @@ class WorkerIdentityTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', str(root / 'docs/generate_worker_identity.py'), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_worker_identity.py'), *args],
                               cwd=root, capture_output=True, text=True, timeout=10)
 
     def test_identity_is_current_relocatable_and_regeneration_is_idempotent(self):

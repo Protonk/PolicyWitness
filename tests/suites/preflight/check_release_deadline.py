@@ -30,7 +30,7 @@ def exercise(out, name):
     config_path = work / 'fixture.json'
     stdout_bytes = b'{"partial": "' + secrets.token_hex(16).encode() + b'\x00\xff'
     stderr_bytes = b'pending response\r\n\x00\xfe' + secrets.token_bytes(32)
-    argv = ['/usr/bin/python3', '-B', str(FIXTURE), str(config_path), 'literal ; $() " argument']
+    argv = [sys.executable, '-B', '-S', str(FIXTURE), str(config_path), 'literal ; $() " argument']
     env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
     env['PYTHONDONTWRITEBYTECODE'] = '1'
     observation = dict(scenario=name)
@@ -44,7 +44,7 @@ def exercise(out, name):
                 parent_exits_on_interrupt=name == 'parent_exits')) + '\n')
             started = time.monotonic()
             with (work / 'wrapper.stdout').open('wb') as stdout, (work / 'wrapper.stderr').open('wb') as stderr:
-                process = subprocess.Popen(['/usr/bin/python3', '-B', str(WRAPPER),
+                process = subprocess.Popen([sys.executable, '-B', '-S', str(WRAPPER),
                     str(evidence), str(DEADLINE), *argv], env=env,
                     stdout=stdout, stderr=stderr, start_new_session=True)
                 wrapper.watch(process.pid)

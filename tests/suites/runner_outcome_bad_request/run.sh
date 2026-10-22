@@ -30,7 +30,7 @@ if ! require_pw_app "${PW_BIN}"; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen_decode.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -62,7 +62,7 @@ if [[ "${RC}" -eq 0 ]]; then
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -114,7 +114,7 @@ test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "probe step with kind=path but empty value — expect bad_request"
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen_filter.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -155,7 +155,7 @@ if [[ "${RC}" -eq 0 ]]; then
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
 import json
 import sys
 from pathlib import Path

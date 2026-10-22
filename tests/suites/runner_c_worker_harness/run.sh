@@ -77,7 +77,7 @@ run_refusal_case() {
   local test_id="$1" scenario="$2" expect_code="$3" desc="$4"
   run_harness_case "${test_id}" "${scenario}" "${desc}" || return 0
   set +e
-  PW_EXPECT_CODE="${expect_code}" /usr/bin/python3 - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  PW_EXPECT_CODE="${expect_code}" "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, os, subprocess, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -160,7 +160,7 @@ run_happy_default_allow() {
   run_harness_case "happy_default_allow" "happy_default_allow" \
     "pw-probe-runner under (allow default): read /etc/hosts succeeds, sentinels fire, clean exit" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -197,7 +197,7 @@ run_bare_deny_default() {
   run_harness_case "bare_deny_default" "bare_deny_default" \
     "pw-probe-runner under bare (deny default): worker still completes; slot reports kernel deny" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -237,7 +237,7 @@ run_terminal_exit_without_request() {
   run_harness_case "terminal_exit_without_request" "terminal_exit_without_request" \
     "worker publishes done and independently exits with exit_requested left zero" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, subprocess, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -267,7 +267,7 @@ run_max_slots_deny_default() {
   run_harness_case "max_slots_deny_default" "max_slots_deny_default" \
     "worker completes all 256 shared-memory slots under bare (deny default)" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -303,7 +303,7 @@ run_sigkill_fallback() {
   run_harness_case "sigkill_fallback" "sigkill_fallback" \
     "host SIGKILL fallback reaps a worker stalled before done" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -331,7 +331,7 @@ run_params_round_trip() {
   run_harness_case "params_round_trip" "params_round_trip" \
     "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc/hosts when TARGET=/private/etc" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -387,7 +387,7 @@ run_unlink_allow() {
   run_harness_case "unlink_allow" "unlink_allow" \
     "file unlink under (allow default): worker removes the harness temp file" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -407,7 +407,7 @@ run_unlink_deny() {
   run_harness_case "unlink_deny" "unlink_deny" \
     "file unlink under (deny default): worker is denied; target survives" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -430,7 +430,7 @@ run_create_allow() {
   run_harness_case "create_allow" "create_allow" \
     "file create under (allow default): worker creates the (absent) target" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -455,7 +455,7 @@ run_compile_failure() {
   run_harness_case "compile_failure" "compile_failure" \
     "malformed SBPL: apply_rc=-1, done flips, applied stays 0, worker still clean-exits" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -528,7 +528,7 @@ run_policy_truncated_prefix() {
   run_harness_case "policy_truncated_prefix" "policy_truncated_prefix" \
     "policy cut after (allow default), before its (deny default) tail: the worker must refuse the prefix" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -576,7 +576,7 @@ run_policy_delivery_control() {
   local test_id="$1" scenario="$2" desc="$3"
   run_harness_case "${test_id}" "${scenario}" "${desc}" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -640,7 +640,7 @@ run_exec_pipes_per_attempt() {
   run_harness_case "exec_pipes_per_attempt" "exec_pipes_per_attempt" \
     "32 exec slots plus a system import and surrounding reads under a 64-descriptor hard ceiling" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -678,7 +678,7 @@ run_exec_setup_post_apply_denied() {
   run_harness_case "exec_setup_post_apply_denied" "exec_setup_post_apply_denied" \
     "one exec slot under bare (deny default): setup succeeds post-apply and posix_spawn is the denied call" || return 0
   set +e
-  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -715,7 +715,7 @@ run_exec_attempt_budget() {
   run_harness_case "${test_id}" "${test_id}" \
     "six deadline-hitting helpers under a shortened exec attempt budget (${mode})" || return 0
   set +e
-  PW_MODE="${mode}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  PW_MODE="${mode}" "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import errno, json, os, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -771,7 +771,7 @@ run_proceed_control() {
   local scenario="$1"
   run_harness_case "${scenario}" "${scenario}" "Exercise release, acknowledgement and attempt exclusion: ${scenario}" || return 0
   set +e
-  /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_proceed.py" "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1
+  "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_proceed.py" "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1
   local arc=$?
   set -e
   finish_from_assert_log "${arc}"
@@ -786,7 +786,7 @@ done
 if test_selected sysctl_read_capacity; then
   test_begin runner_c_worker_harness sysctl_read_capacity
   test_step control "observe the actual sysctl call capacity and reject a shortened-capacity mutation"
-  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_sysctl.py" \
+  if "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_sysctl.py" \
       "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
     test_pass "one non-null 4096-byte read, unchanged PW status/errno and rejected shortened capacity"
   else
@@ -821,7 +821,7 @@ fi
 if test_selected exec_control_states; then
   test_begin runner_c_worker_harness exec_control_states
   test_step control "compare independent native call ledger and reject six exec evidence mutations"
-  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_exec_evidence.py" \
+  if "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_exec_evidence.py" \
       "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
     test_pass "native call policy preserved; collection, cleanup requests and reap independently recorded; six mutations rejected"
   else
@@ -832,7 +832,7 @@ fi
 if test_selected terminal_erasure; then
   test_begin runner_c_worker_harness terminal_erasure
   test_step control "observe full accepted buffers and the done-store boundary; reject shortened and reversed erasure"
-  if /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_terminal_erasure.py" \
+  if "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_terminal_erasure.py" \
       "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
     test_pass "independent full-capacity and done-boundary erasure; ordinary exits preserved; both mutations rejected"
   else

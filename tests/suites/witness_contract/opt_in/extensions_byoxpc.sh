@@ -8,14 +8,14 @@ SESSION_TOOL="${ROOT_DIR}/tests/fixtures/byoxpc/session.py"
 cleanup() {
   local status=$?
   trap - EXIT
-  /usr/bin/python3 "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
+  "${PW_PYTHON}" -B -S "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
   exit "$status"
 }
 trap cleanup EXIT
 IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 [[ -n "$IDENTITY" ]] || test_fail "matching Developer ID required"
 SUPPLIED="${PW_TEST_ARTIFACTS}/supplied.plist"
-/usr/bin/python3 - "$SUPPLIED" <<'PY'
+"${PW_PYTHON}" -B -S -P - "$SUPPLIED" <<'PY'
 import plistlib, sys
 from pathlib import Path
 Path(sys.argv[1]).write_bytes(plistlib.dumps({'com.apple.security.cs.allow-jit': True}))
@@ -23,7 +23,7 @@ PY
 test_step install "install an owned runner; read back issuer and worker authority independently"
 test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "extension BYOXPC setup failed" \
   "$SESSION_TOOL" install "$PW_BIN" "$PW_APP_DIR" "$PW_TEST_ARTIFACTS" "${PW_TEST_ARTIFACTS}/runner_env.json" "$IDENTITY" "$SUPPLIED"
-export PW_RUNNER_REGISTRY="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
+export PW_RUNNER_REGISTRY="$("${PW_PYTHON}" -B -S -P -c 'import json,sys; print(json.load(open(sys.argv[1]))["PW_RUNNER_REGISTRY"])' "${PW_TEST_ARTIFACTS}/runner_env.json")"
 test_check_python "${PW_TEST_ARTIFACTS}/readback.log" "extension issuer read-back failed" \
   "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/entitlement_readback.py" "$PW_BIN" "$PW_TEST_ARTIFACTS" "$SUPPLIED"
 test_step lifecycle "repeat native lifecycle, placement, omission and target preparation through BYOXPC"

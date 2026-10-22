@@ -141,7 +141,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
             captured = evidence / path
             captured.parent.mkdir(parents=True, exist_ok=True)
             captured.write_text(source)
-        argv = [sys.executable, '-B', str(repo / 'tests/suites/source_drift/check.py')]
+        argv = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py')]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=30)
         (evidence / 'stdout').write_text(result.stdout)
         (evidence / 'stderr').write_text(result.stderr)
@@ -408,7 +408,7 @@ def configured_controls(repo, manifest_original, worker_line, out):
             (evidence / f'{step}.stderr').write_text(result.stderr)
             if result.returncode != 0:
                 raise AssertionError(f'{name}: meson {step} failed: {result.stderr}')
-        argv = [sys.executable, '-B', str(checker), '--builddir', str(builddir), '--root', str(repo)]
+        argv = [sys.executable, '-B', '-S', str(checker), '--builddir', str(builddir), '--root', str(repo)]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=60)
         (evidence / 'stdout').write_text(result.stdout)
         (evidence / 'stderr').write_text(result.stderr)
@@ -424,7 +424,7 @@ def configured_controls(repo, manifest_original, worker_line, out):
     shutil.copytree(repo, copy, symlinks=True)
     evidence = out / 'configured-copied-checkout'
     evidence.mkdir()
-    argv = [sys.executable, '-B', str(copy / 'tests/lib/native_sources.py'), '--builddir', str(copy / 'builddir'), '--root', str(copy)]
+    argv = [sys.executable, '-B', '-S', str(copy / 'tests/lib/native_sources.py'), '--builddir', str(copy / 'builddir'), '--root', str(copy)]
     result = subprocess.run(argv, cwd=copy, capture_output=True, text=True, timeout=60)
     (evidence / 'stdout').write_text(result.stdout)
     (evidence / 'stderr').write_text(result.stderr)

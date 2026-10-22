@@ -236,7 +236,7 @@ def checkpoint_policy(out):
 def acceptance_lifetime(out):
     repo, _, _, new, _ = fixture(out, 'acceptance-lifetime')
     active = repo / 'tests/out/release-acceptance/active'
-    command = [sys.executable, '-B', __file__, '--hold-acceptance', str(repo), str(active)]
+    command = [sys.executable, '-B', '-S', __file__, '--hold-acceptance', str(repo), str(active)]
     child = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         assert child.stdout.readline() == b'ready\n'
@@ -294,7 +294,7 @@ def crash(repo, mode):
 def interrupted(out):
     for mode, code in (('rename', 91), ('index', 92), ('partial', 93), ('deleted', 94)):
         repo, _, battery, new, current = fixture(out, 'crash-' + mode)
-        process = subprocess.run([sys.executable, '-B', __file__, '--crash', str(repo), mode],
+        process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), mode],
                                  capture_output=True, timeout=30)
         assert process.returncode == code, (mode, process.stderr)
         (repo.parent / 'crash.json').write_text(json.dumps(dict(mode=mode, returncode=process.returncode)))
@@ -327,7 +327,7 @@ def interrupted(out):
     # A later release cannot orphan an earlier transaction's quarantine by
     # treating the old indexed original as merely absent.
     repo, _, _, new, _ = fixture(out, 'successive-checkpoints')
-    process = subprocess.run([sys.executable, '-B', __file__, '--crash', str(repo), 'rename'],
+    process = subprocess.run([sys.executable, '-B', '-S', __file__, '--crash', str(repo), 'rename'],
                              capture_output=True, timeout=30)
     assert process.returncode == 91, process.stderr
     newer, current = make_release(repo, '0.9.2')
@@ -352,7 +352,7 @@ def atomic_and_locking(out):
         reject(lambda: retention.write_index(repo, dict(schema_version=1, runs=[])), 'atomic replacement failed')
     assert index_path.read_bytes() == original
     with retention.checkout_lock(repo):
-        command = [sys.executable, '-B', '-c',
+        command = [sys.executable, '-B', '-S', '-P', '-c',
             'import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); '
             'import release_rotate; release_rotate.rotate(Path(sys.argv[2]),root=Path(sys.argv[3]),apply=True)',
             str(ROOT / 'tests/lib'), str(new), str(repo)]

@@ -48,7 +48,7 @@ def main():
         config_path.write_text(json.dumps(config))
 
         def invoke(destination, argv, **kwargs):
-            result = command(destination, ['/usr/bin/python3', ROOT / 'tests/fixtures/byoxpc/tools.py',
+            result = command(destination, [sys.executable, '-B', '-S', ROOT / 'tests/fixtures/byoxpc/tools.py',
                                            config_path, *argv], **kwargs)
             if mode in ('uncertain_install', 'uncertain_no_record') and argv[1:3] == ['runner', 'install']:
                 # Preserve a tool observation of incomplete execution, as a

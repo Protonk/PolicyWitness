@@ -17,7 +17,7 @@ if ! require_pw_app "${PW_BIN}"; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json, sys
 from pathlib import Path
 spec = {

@@ -17,7 +17,7 @@ if ! require_pw_app "${PW_BIN}"; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json, sys
 from pathlib import Path
 spec = {
@@ -43,7 +43,7 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "baseline specimen should succeed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" <<'PY'
 import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))

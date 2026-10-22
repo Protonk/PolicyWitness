@@ -74,7 +74,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" "${ROOT_DIR}/tests/lib" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" "${ROOT_DIR}/tests/lib" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 sys.path.insert(0, sys.argv[2])
 import consumer
@@ -159,7 +159,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -236,7 +236,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -297,7 +297,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -356,7 +356,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -425,7 +425,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -487,7 +487,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -561,7 +561,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -658,7 +658,7 @@ run_exec_attempt_with_baseline_succeeds() {
   test_step "run" "(deny default) + augments:[exec_baseline] + exec fixture helper → ok"
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
   "schema_version": 5,
@@ -685,7 +685,7 @@ PY
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 assert env["result"]["normalized_outcome"] == "ok", \
@@ -758,7 +758,7 @@ run_exec_attempt_args_and_stderr_round_trip() {
   test_step "run" "exec helper exits 37 then 0; both retain output and the plan continues"
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, secrets, sys
 spec = {
   "schema_version": 5,
@@ -790,7 +790,7 @@ PY
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" "${specimen}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" "${specimen}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 plan = json.loads(open(sys.argv[2]).read())["probe_plan"]
@@ -844,7 +844,7 @@ run_exec_attempt_stdout_truncation_marker() {
   test_step "run" "exec helper --stdout-bytes 4096 → captured up to 1023 bytes with truncation marker"
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
   "schema_version": 5,
@@ -872,7 +872,7 @@ PY
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 s = env["data"]["runner_result"]["steps"][0]
@@ -953,7 +953,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
@@ -1068,7 +1068,7 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]

@@ -324,7 +324,7 @@ class ImportGuardTests(unittest.TestCase):
     def run_reader(self, root, env=None, before=''):
         script = (before + 'import sys; sys.path.insert(0, sys.argv[1]); import markdown_reader; '
                   'print(markdown_reader.parse("x").inlines[0].text)')
-        return subprocess.run([sys.executable, '-B', '-c', script, str(root / 'docs')], capture_output=True, text=True,
+        return subprocess.run([sys.executable, '-B', '-S', '-P', '-c', script, str(root / 'docs')], capture_output=True, text=True,
                               env=dict(os.environ, **(env or {})), timeout=60)
 
     def checkout(self, vendored=True):

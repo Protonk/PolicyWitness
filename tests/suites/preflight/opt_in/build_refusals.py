@@ -798,7 +798,7 @@ def control_environment_witness_missing(co, variant):
     """Neither the CLI owner nor session-start writes with an absent witness."""
     session = co.root / SESSION
     kept = session.read_bytes() if session.exists() else None
-    cli = ['/usr/bin/python3', '-B', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
+    cli = [sys.executable, '-B', '-S', str(co.root / 'tests/lib/checkout_lock.py'), '--root', str(co.root), '--',
            '/bin/bash', str(co.root / 'build.sh')]
     build = co.build('environment_witness_missing', variant, argv=cli)
     check(build, 2, 'environment witness missing for SDKROOT', absent=('Verifying the checkout lock',))
@@ -811,7 +811,7 @@ def control_environment_witness_missing(co, variant):
         with checkout_lock.owned({str(co.root)!r}) as scope:
             sys.exit(scope.supervise(['/bin/bash', {str(co.root / 'build.sh')!r}]))
     """)
-    nested = co.build('environment_witness_missing-nested', variant, argv=[sys.executable, '-B', '-c', python_only])
+    nested = co.build('environment_witness_missing-nested', variant, argv=[sys.executable, '-B', '-S', '-P', '-c', python_only])
     check(nested, 2, 'environment witness missing for SDKROOT', present=('Build stamp',), absent=('Supported macOS',))
     assert not nested.receipts and (session.read_bytes() if session.exists() else None) == kept
     preserved(nested)
@@ -1040,7 +1040,7 @@ def control_lock_lifetime(co, variant):
     try:
         wait_for(lambda: not lock_free(other), message='the other worktree hold')
         script = (f'/bin/bash {shlex.quote(str(co.root / "build.sh"))} && /bin/bash {shlex.quote(str(co.root / "tests/lib/checkout_lock.sh"))} '
-                  f'--root {shlex.quote(str(co.root))} -- /usr/bin/python3 -B {shlex.quote(str(co.root / "tests/lib/checkout_lock.py"))} '
+                  f'--root {shlex.quote(str(co.root))} -- {shlex.quote(sys.executable)} -B -S {shlex.quote(str(co.root / "tests/lib/checkout_lock.py"))} '
                   f'--verify --root {shlex.quote(str(co.root))} && echo nested-owned-command-admitted')
         nested = co.build('lifetime-nested', variant, fresh='1', env=dict(CC=str(cc), RUSTC=str(rustc)),
                           argv=[*front_end, '/bin/bash', '-c', script],

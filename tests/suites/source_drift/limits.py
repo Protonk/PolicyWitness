@@ -50,7 +50,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', str(root / 'docs/generate_limits.py'), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
                               cwd=root, capture_output=True, text=True, timeout=10)
 
     def load(self, data):
@@ -66,7 +66,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
         self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
         self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
-        subprocess.run([sys.executable, '-B', str(ROOT / 'docs/generate_limits.py'), '--check'], check=True)
+        subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'docs/generate_limits.py'), '--check'], check=True)
 
     def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
         rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)

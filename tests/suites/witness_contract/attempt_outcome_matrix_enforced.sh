@@ -16,7 +16,7 @@ DRIFT_CHECK="${ROOT_DIR}/tests/suites/source_drift/check.py"
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${API_FILE}" "${COVERAGE_FILE}" "${DRIFT_CHECK}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+"${PW_PYTHON}" -B -S -P - "${API_FILE}" "${COVERAGE_FILE}" "${DRIFT_CHECK}" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import re
 import sys
 from pathlib import Path

@@ -20,7 +20,7 @@ fi
 # global-name bootstrap lookup. This checks the unavailable-query contract;
 # it does not establish a matched local-name enforcement operation.
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json, sys
 from pathlib import Path
 spec = {

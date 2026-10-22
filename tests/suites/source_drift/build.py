@@ -52,7 +52,7 @@ class BuildDocumentationTests(unittest.TestCase):
         return root
 
     def command(self, root, *args):
-        return subprocess.run([sys.executable, '-B', str(root / generator.GENERATOR_NAME), *args],
+        return subprocess.run([sys.executable, '-B', '-S', str(root / generator.GENERATOR_NAME), *args],
                               cwd=root, capture_output=True, text=True, timeout=120)
 
     def load(self, data, root=ROOT):
@@ -68,7 +68,7 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertTrue(result.stdout.startswith('ok: build manifest'), result.stdout)
         for path in self.figures:
             self.assertTrue(path.is_file(), path)
-        rules = subprocess.run([sys.executable, '-B', str(ROOT / 'tests/suites/source_drift/build_rules.py')],
+        rules = subprocess.run([sys.executable, '-B', '-S', str(ROOT / 'tests/suites/source_drift/build_rules.py')],
                                cwd=ROOT, capture_output=True, text=True, timeout=120)
         self.assertEqual(rules.returncode, 0, rules.stderr)
         self.assertIn('10 build documentation rules agree', rules.stdout)

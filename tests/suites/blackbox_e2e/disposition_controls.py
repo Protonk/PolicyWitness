@@ -147,7 +147,7 @@ def rust_wrapper_controls(out):
         shutil.copyfile(ROOT / relative, destination)
     cargo = repo / 'bin/cargo'
     cargo.parent.mkdir()
-    cargo.write_text('''#!/usr/bin/python3
+    cargo.write_text('''#!/usr/bin/env -S ${PW_PYTHON} -B -S
 import json, os, pathlib, sys
 p = pathlib.Path(os.environ['DISPOSITION_CARGO_FIXTURE'])
 config = json.loads(p.read_text())

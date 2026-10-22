@@ -55,7 +55,7 @@ def main(output, scratch):
     decoy = fixture / 'swift'
     decoy.write_text('#!/bin/sh\nexit 97\n')
     decoy.chmod(0o755)
-    swift = [sys.executable, str(launcher), str(forwarded), str(build), 'swift']
+    swift = [sys.executable, '-B', '-S', str(launcher), str(forwarded), str(build), 'swift']
     with patch.dict(os.environ, PATH=str(fixture) + os.pathsep + os.environ.get('PATH', '')):
         product = record_build(package, output, build, 'Product', swift_command=swift)
     assert product == build / 'Product', product

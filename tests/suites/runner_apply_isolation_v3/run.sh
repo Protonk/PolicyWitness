@@ -18,7 +18,7 @@ if ! require_pw_app "${PW_BIN}"; then
 fi
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
-/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${SPECIMEN_PATH}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -50,7 +50,7 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" <<'PY'
+"${PW_PYTHON}" -B -S -P - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" <<'PY'
 import json
 import sys
 from pathlib import Path

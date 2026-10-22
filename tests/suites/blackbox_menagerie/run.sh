@@ -24,7 +24,7 @@ fi
 if test_selected validation_controls; then
 test_begin "${PW_TEST_SUITE}" validation_controls
 test_step checker "check both black-box validators and failure precedence without the app"
-if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/blackbox_menagerie/checker_controls.py" \
+if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/blackbox_menagerie/checker_controls.py" \
     "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
   cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
   test_fail "shared black-box validation controls failed"
@@ -33,7 +33,7 @@ test_pass "both black-box checkers preserve evidence checks and suite-specific e
 
 fi
 
-case_list=$( /usr/bin/python3 - "${MANIFEST}" <<'PY'
+case_list=$( "${PW_PYTHON}" -B -S -P - "${MANIFEST}" <<'PY'
 import json
 import sys
 from pathlib import Path

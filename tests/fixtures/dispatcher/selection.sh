@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-exec /usr/bin/python3 "${ROOT}/tests/fixtures/dispatcher/selection.py" "$(basename "$(dirname "$0")")" "$@"
+exec "${PW_PYTHON}" -B -S "${ROOT}/tests/fixtures/dispatcher/selection.py" "$(basename "$(dirname "$0")")" "$@"
