@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ${PW_PYTHON} -B
+#!/usr/bin/env -S ${PW_PYTHON} -B -S
 """Delegate to the real tool and record a receipt; a configured hook changes files beside one call.
 
 The build script resolves cargo, meson, ninja, codesign and cp through PATH.

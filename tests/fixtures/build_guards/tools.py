@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ${PW_PYTHON} -B
+#!/usr/bin/env -S ${PW_PYTHON} -B -S
 """Delegate to real tools, injecting one fault at the selected boundary.
 
 The configuration names the real tools, a receipt file and one fault:

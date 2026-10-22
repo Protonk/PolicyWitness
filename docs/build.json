@@ -172,7 +172,7 @@
         "full",
         "partial"
       ],
-      "reads": "hw.optional.arm64 and sysctl.proc_translated, each read by /usr/sbin/sysctl from the script's own shell before anything else runs (--help included): the build proceeds only on 1 and 0, and an empty value or a failed probe refuses; then BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits after the knobs are validated, before any other check); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts",
+      "reads": "hw.optional.arm64 and sysctl.proc_translated, each read by /usr/sbin/sysctl from the script's own shell before anything else runs (--help included): the build proceeds only on 1 and 0, and an empty value or a failed probe refuses; then BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits after the knobs are validated, before any other check); whether each tracked input the build copies exists; the pinned interpreter, /opt/homebrew/opt/python@3.14/bin/python3.14, which must be an executable file in a python@3.14 keg that names a 3.14 version and must report that version when probed in isolation, with no PYTHON* variable set other than the three the helpers own, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts",
       "writes": "the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else",
       "refusals": [
         "native_builder_required",
@@ -181,6 +181,8 @@
         "missing_tree_input",
         "checkout_busy",
         "direct_python_unavailable",
+        "python_version_mismatch",
+        "python_environment_set",
         "environment_witness_missing",
         "environment_witness_changed",
         "sdk_request_invalid"
@@ -232,7 +234,7 @@
         },
         {
           "path": "tests/suites/source_drift/contract.py",
-          "symbol": "test_build_refuses_a_stand_in_developer_directory_before_any_python",
+          "symbol": "test_build_refuses_an_unexecutable_interpreter_before_any_python",
           "form": "test",
           "coverage": "behavioral"
         },
@@ -1795,7 +1797,7 @@
     },
     {
       "id": "direct_python_unavailable",
-      "message": "direct Python unavailable: <developer directory or selection failure>",
+      "message": "direct Python unavailable: <path, keg or probe failure>",
       "kind": "propagated",
       "steps": [
         "admission"
@@ -1824,7 +1826,81 @@
         },
         {
           "path": "tests/suites/source_drift/contract.py",
-          "symbol": "test_build_refuses_a_stand_in_developer_directory_before_any_python",
+          "symbol": "test_build_refuses_an_unexecutable_interpreter_before_any_python",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "python_version_mismatch",
+      "message": "python_version_mismatch: <interpreter or keg> is Python <found>; 3.14 is required",
+      "kind": "propagated",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "python_start.sh"
+        },
+        {
+          "path": "tests/lib/python_start.sh",
+          "symbol": "python_version_mismatch"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_the_path_checks_refuse_by_name_without_starting_anything",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
+    {
+      "id": "python_environment_set",
+      "message": "python_environment_set: <variable> is set; the helpers take no Python environment (unset it)",
+      "kind": "propagated",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "python_start.sh"
+        },
+        {
+          "path": "tests/lib/python_start.sh",
+          "symbol": "python_environment_set"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_propagated_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/preflight/check_build_provenance.py",
+          "symbol": "test_python_environment_is_refused_except_the_three_the_helpers_own",
           "form": "test",
           "coverage": "behavioral"
         }

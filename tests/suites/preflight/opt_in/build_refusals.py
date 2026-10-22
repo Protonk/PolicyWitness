@@ -2744,7 +2744,7 @@ CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BI
                      '    exit 2\n'
                      '  fi\n'
                      'done\n')
-NINJA_GUARD = ('if ! "${PW_PYTHON}" -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
+NINJA_GUARD = ('if ! "${PW_PYTHON}" -B -S -P -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
                '    "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then\n'
                '  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2\n'
                '  exit 2\n'
@@ -2768,15 +2768,15 @@ MACHO_GUARD = ('  if ! /usr/bin/file -b "${target}" 2>/dev/null | /usr/bin/grep 
                '    exit 2\n'
                '  fi\n')
 SIGN_ANCHOR = '  codesign --force --options runtime --timestamp -s "${IDENTITY}" "${target}"\n'
-STAMP_CHECK = '  "${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n'
-WORKER_IDENTITY = ('"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \\\n'
+STAMP_CHECK = '  "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-check --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"\n'
+WORKER_IDENTITY = ('"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" worker-identity --root "${ROOT_DIR}" \\\n'
                    '  --worker "${PW_PROBE_RUNNER_BIN}" --expected "${GENERATED_WORKER_IDENTITY}"\n')
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
 PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
-CARGO_OUTPUT_CHECK = ('"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
+CARGO_OUTPUT_CHECK = ('"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
                       '  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"\n')
 ASSEMBLED_CHECK = ('echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"\n'
-                   '"${PW_PYTHON}" -B "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
+                   '"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
 FIRST_SIGNATURE = 'sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"\n'
 OUTPUT_TARGET_HELPER = 'tests/lib/output_target.py'
 ARCHITECTURE_EQUALITY = "    if observation['architectures'] != [ARCHITECTURE]:\n"

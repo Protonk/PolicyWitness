@@ -691,19 +691,113 @@ class LockTests(unittest.TestCase):
             else:
                 self.assertNotEqual(seen, expected, 'the shim negative control did not change the environment')
 
-    def test_entrypoints_refuse_a_stand_in_developer_directory_without_a_shim(self):
-        developer = self.work / 'empty developer'
-        developer.mkdir()
+    def test_entrypoints_refuse_an_unexecutable_interpreter_before_any_python(self):
+        # The profile lets the entry point's shell run but not the pinned interpreter: the
+        # resolver's checks are builtins, so the probe is the first start, and it refuses.
         profile = self.script('resolver.sb', '(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
-                              '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
+                              '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname"))')
         for entry in ('tests/lib/checkout_lock.sh', 'tests/run.sh', 'tests/lib/python.sh', 'tests/accept-release.sh'):
             result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(ROOT / entry), '--help'],
-                                    env=dict(clean_env(), SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false'),
+                                    env=dict(clean_env(), SDKROOT='', PW_PYTHON='/usr/bin/false'),
                                     capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-            self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
             self.assertIn('direct Python unavailable', result.stderr)
+            self.assertIn(PINNED_PYTHON, result.stderr)
+            self.assertNotIn('/usr/bin/false', result.stderr)
             self.assertFalse(shim_probe.installation_requests(result.stdout, result.stderr))
+
+
+PINNED_PYTHON = '/opt/homebrew/opt/python@3.14/bin/python3.14'
+
+
+class ResolverTests(unittest.TestCase):
+    """pw_python_start and pw_python_probe against stand-ins, one refusal at a time; neither takes anything from the environment."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-resolver-', dir='/private/tmp')
+        self.addCleanup(directory.cleanup)
+        self.work = Path(directory.name).resolve()
+
+    def resolve(self, *arguments, env=None, probe=None):
+        """Source the resolver and call pw_python_start with arguments, then pw_python_probe with probe when given."""
+        calls = 'pw_python_start ' + ' '.join(shlex.quote(a) for a in arguments)
+        if probe is not None:
+            calls += ' && pw_python_probe ' + shlex.quote(probe)
+        script = f'source {shlex.quote(str(ROOT / "tests/lib/python_start.sh"))}; {calls} && printf "%s %s %s\\n" "$PW_PYTHON" "$PW_PYTHON_VERSION" "$PW_PYTHON_REALPATH"'
+        base = {k: v for k, v in clean_env().items() if not k.startswith('PYTHON')}
+        return subprocess.run(['/bin/bash', '-c', script], env=dict(base, **(env or {})), capture_output=True, text=True, timeout=30)
+
+    def keg(self, name, executable=True):
+        cellar = self.work / 'Cellar/python@3.14'
+        binary = cellar / name / 'bin/python3.14'
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        binary.write_text('#!/bin/bash\nexit 0\n')
+        binary.chmod(0o755 if executable else 0o644)
+        return cellar, binary
+
+    def test_the_pin_resolves_and_probes_here(self):
+        result = self.resolve(probe=PINNED_PYTHON)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        path, version, real = result.stdout.split()
+        self.assertEqual(path, PINNED_PYTHON)
+        self.assertRegex(version, r'^3\.14\.\d+$')
+        self.assertTrue(real.startswith('/opt/homebrew/Cellar/python@3.14/'), real)
+
+    def test_a_revision_suffixed_keg_is_accepted_with_its_upstream_version(self):
+        cellar, binary = self.keg('3.14.8_1')
+        opt = self.work / 'opt'
+        opt.mkdir()
+        (opt / 'python@3.14').symlink_to(Path('../Cellar/python@3.14/3.14.8_1'))
+        result = self.resolve(str(opt / 'python@3.14/bin/python3.14'), str(cellar))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        path, version, real = result.stdout.split()
+        self.assertEqual((version, real), ('3.14.8', str(binary)))
+
+    def test_the_path_checks_refuse_by_name_without_starting_anything(self):
+        cellar, _ = self.keg('3.14.8')
+        _, other_minor = self.keg('3.15.0')
+        _, unversioned = self.keg('HEAD')
+        _, unexecutable = self.keg('3.14.9', executable=False)
+        for label, path, needle in (
+                ('missing', str(self.work / 'missing/python3.14'), 'direct Python unavailable'),
+                ('not executable', str(unexecutable), 'direct Python unavailable'),
+                ('outside the cellar', '/usr/bin/true', 'direct Python unavailable'),
+                ('another minor', str(other_minor), 'python_version_mismatch'),
+                ('an unversioned keg', str(unversioned), 'python_version_mismatch')):
+            with self.subTest(label):
+                result = self.resolve(path, str(cellar))
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn(needle, result.stderr)
+                self.assertIn(path if label != 'an unversioned keg' else 'HEAD', result.stderr)
+                self.assertEqual(result.stdout, '')
+
+    def test_python_environment_is_refused_except_the_three_the_helpers_own(self):
+        for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONSAFEPATH', 'PYTHONWARNINGS'):
+            with self.subTest(name):
+                result = self.resolve(env={name: '/x'})
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn('python_environment_set', result.stderr)
+                self.assertIn(name, result.stderr)
+        for name, value in (('PYTHONOPTIMIZE', '0'), ('PYTHONOPTIMIZE', ''), ('PYTHONDONTWRITEBYTECODE', '1'), ('PYTHONCOERCECLOCALE', '0')):
+            with self.subTest(name):
+                result = self.resolve(env={name: value})
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_the_probe_refuses_a_stand_in_that_disagrees_or_fails(self):
+        other = self.work / 'other'
+        other.write_text('#!/bin/bash\necho 3.9.6\n')
+        other.chmod(0o755)
+        silent = self.work / 'silent'
+        silent.write_text('#!/bin/bash\necho "not a version"\n')
+        silent.chmod(0o755)
+        for label, probe, needle in (('another version', str(other), 'python_version_mismatch'),
+                                     ('no version', str(silent), 'direct Python unavailable'),
+                                     ('a failing start', '/usr/bin/false', 'direct Python unavailable')):
+            with self.subTest(label):
+                result = self.resolve(probe=probe)
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn(needle, result.stderr)
+                self.assertIn(probe, result.stderr)
 
 
 class ShimContainmentTests(unittest.TestCase):

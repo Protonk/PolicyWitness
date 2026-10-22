@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ${PW_PYTHON} -B
+#!/usr/bin/env -S ${PW_PYTHON} -B -S
 """Forwarding compiler wrapper: run the real compiler with the same arguments and record what was asked.
 
 Build controls put a copy of this file on PATH, in CC, RUSTC or RUSTC_WRAPPER

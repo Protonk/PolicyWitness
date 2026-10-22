@@ -301,21 +301,18 @@ class ContractVersionTests(unittest.TestCase):
         self.assertFalse(destination.exists())
         self.assertFalse((root / 'builddir').exists())
 
-    def test_build_refuses_a_stand_in_developer_directory_before_any_python(self):
+    def test_build_refuses_an_unexecutable_interpreter_before_any_python(self):
         root = self.checkout(extra=ENTRY_FILES)
-        developer = root / 'empty developer'
-        developer.mkdir()
         profile = root / 'resolver.sb'
         profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
-                           '(allow process-exec (literal "/bin/bash") (literal "/usr/sbin/sysctl") (literal "/usr/bin/dirname")'
-                           ' (literal "/usr/bin/xcode-select"))')
+                           '(allow process-exec (literal "/bin/bash") (literal "/usr/sbin/sysctl") (literal "/usr/bin/dirname"))')
         env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
-        env.update(SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false')
+        env.update(SDKROOT='', PW_PYTHON='/usr/bin/false')
         result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
                                 cwd=root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn('direct Python unavailable', result.stderr)
-        self.assertIn('DEVELOPER_DIR=' + str(developer), result.stderr)
+        self.assertIn('/opt/homebrew/opt/python@3.14/bin/python3.14', result.stderr)
         self.assertFalse(shim_probe.installation_requests(result.stdout, result.stderr))
         self.assertFalse((root / 'tests/.checkout.lock').exists())
         self.assertFalse((root / 'controller/target').exists())

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-# Direct suite scripts and release acceptance reach this library before Python.
-source "$(dirname "${BASH_SOURCE[0]}")/sdk_guard.sh" || exit 2
-pw_sdk_guard || exit 2
+# Direct suite scripts and release acceptance reach this library before Python;
+# it resolves the pinned interpreter itself, as the entry points do.
+source "$(dirname "${BASH_SOURCE[0]}")/python_start.sh" || exit 2
+pw_python_start || exit 2
 
 _PW_TEST_BEGUN_DIR=''
 
 # Assertions are executable test checks. Refuse an optimized interpreter before
 # callers initialize or replace evidence, even when sourced inside a conditional.
-if ! /usr/bin/python3 - <<'PY'
+if ! "${PW_PYTHON}" -B -S -P - <<'PY'
 if not __debug__:
     raise SystemExit("ERROR: Python assertions are disabled; unset PYTHONOPTIMIZE before running tests")
 PY
@@ -23,7 +24,7 @@ testlib_root() {
 }
 
 now_ms() {
-  /usr/bin/python3 - <<'PY'
+  "${PW_PYTHON}" -B -S -P - <<'PY'
 import time
 print(int(time.time() * 1000))
 PY
@@ -33,7 +34,7 @@ gen_run_id() {
   local stamp
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   local suffix
-  suffix="$(/usr/bin/python3 - <<'PY'
+  suffix="$("${PW_PYTHON}" -B -S -P - <<'PY'
 import uuid
 print(uuid.uuid4().hex[:8])
 PY
@@ -84,7 +85,7 @@ emit_event() {
   PW_EVENT_DATA="${data_json}" \
   PW_EVENT_DURATION_MS="${duration_ms}" \
   PW_EVENT_TS_MS="${ts_ms}" \
-  /usr/bin/python3 - <<'PY'
+  "${PW_PYTHON}" -B -S -P - <<'PY'
 import json
 import os
 
@@ -200,7 +201,7 @@ write_report() {
   PW_REPORT_STATUS="${status}" \
   PW_REPORT_MESSAGE="${message}" \
   PW_REPORT_DURATION_MS="${duration_ms}" \
-  /usr/bin/python3 - <<'PY'
+  "${PW_PYTHON}" -B -S -P - <<'PY'
 import json
 import os
 
@@ -405,7 +406,7 @@ render_specimen_with_runner() {
   fi
 
   mkdir -p "$(dirname "${output_path}")"
-  /usr/bin/python3 - "${input_path}" "${output_path}" "${mode}" "${service}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${input_path}" "${output_path}" "${mode}" "${service}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -433,7 +434,7 @@ assert_runner_kind() {
     return 0
   fi
 
-  /usr/bin/python3 - "${run_json}" "${expected}" <<'PY'
+  "${PW_PYTHON}" -B -S -P - "${run_json}" "${expected}" <<'PY'
 import json
 import sys
 from pathlib import Path

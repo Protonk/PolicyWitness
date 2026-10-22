@@ -50,5 +50,5 @@ test_check_python() {
   if [[ $# -eq 0 ]]; then
     test_fail "missing Python checker for log: ${log_path}"
   fi
-  test_run_logged "${log_path}" "${failure_message}" /usr/bin/python3 "$@"
+  test_run_logged "${log_path}" "${failure_message}" "${PW_PYTHON}" -B -S "$@"
 }
