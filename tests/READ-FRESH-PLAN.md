@@ -6,6 +6,9 @@ controller's candidate matcher. Establish it with constructed evidence, retain
 the separation between log association and execution evidence, and clarify the
 shared reading rule for permission failures without a candidate record.
 
+Execution and verification are recorded in
+[READ-FRESH-DENIAL-ASSOCIATION.md](../records/READ-FRESH-DENIAL-ASSOCIATION.md).
+
 At the investigated source revision, `653e049`,
 [`attempt_operations`](../controller/src/sandbox_log.rs) omits `read_fresh`,
 although the [denial-log correlation contract](../docs/PolicyWitness.md#denial-log-correlation)
