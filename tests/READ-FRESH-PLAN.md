@@ -34,14 +34,14 @@ matching behavior, while [`consumer.denials`](lib/consumer.py) resolves supplied
 associations without discovering omitted candidates. Consumer validation alone
 therefore cannot serve as the regression's success criterion.
 
-The intended scope is the Rust eligibility arm, focused tests and their owning
-suite description, the shared reading-rule clarification, and a durable problem
-record with retained verification evidence. Admission, worker execution,
-comparison production, log collection, and matching gates retain their current
-behavior. A common mapping generator or cross-language mapping refactor is
-outside this change.
+The intended scope is the Rust eligibility arm, focused tests with a registered
+red selector and its catalog/documentation entries, the shared reading-rule
+clarification, and a durable problem record with retained verification evidence.
+Admission, worker execution, comparison production, log collection, and matching
+gates retain their current behavior. A common mapping generator or
+cross-language mapping refactor is outside this change.
 
-1. **Correct the existing Rust eligibility arm.**
+1. **Define the narrow correction and preserve a committed baseline.**
 
    In `attempt_operations` in
    [sandbox_log.rs](../controller/src/sandbox_log.rs), add `read_fresh` alongside
@@ -52,10 +52,12 @@ outside this change.
    completed-result or permission-failure prerequisite: candidates can survive
    interrupted result publication, and association does not classify execution.
 
-   Prepare the regression below before retaining the correction, so its failure
-   on the original arm is observed. If the arm is already corrected when this
-   plan is executed, temporarily remove only this eligibility entry to establish
-   the same discriminating failure, then restore it.
+   First commit the regressions and registered selector described below, with
+   the failing positive tests ignored and the production arm unchanged. Run the
+   red control from that clean commit before adding the eligibility entry.
+   Then commit the correction, remove the ignores and verify the same selector
+   on the clean corrected commit. Step 4 specifies these two checkpoints;
+   a temporary working-tree removal is not the credited baseline.
 
 2. **Add a matcher regression with an independent expected result.**
 
@@ -90,6 +92,12 @@ outside this change.
    The original eligibility arm must fail the explicit positive assertion with
    zero candidates despite the supplied matching event. Compilation, fixture
    validation or capture failures do not establish this regression.
+
+   Give each expected missing-candidate assertion a distinctive message, unique
+   to its test and scenario. The selector will recognize that message, not a
+   generic panic or nonzero Cargo exit. Keep the negative events and `open_read`
+   positive control in nonignored companion tests so they run on the baseline
+   even when the fresh-read positive assertion fails.
 
 3. **Verify the serialized envelope and distinguish evidence states.**
 
@@ -133,6 +141,14 @@ outside this change.
    Do not calculate the expected missing-record list by subtracting the
    producer's returned candidates; use the literal lists above.
 
+   Keep the absence, irrelevant-evidence and unusable-evidence rows in
+   nonignored tests. Separate the positive scenarios that need their own red
+   observation into individually selectable tests; a first table-row panic
+   must not hide another required control. In table-driven assertions, include
+   the scenario in the distinctive expected-red message. Admission, retained
+   evidence and fixture-validation failures must use different messages and
+   occur before the missing-candidate assertion.
+
    Cover both `probe_plan` and explicit `phases`. Add a repeated fresh-read case
    with distinct IDs `s1` and `s2` on the same target, preferably in successive
    phases: one event must produce `["s1", "s2"]` and `"ambiguous"`, with two
@@ -150,9 +166,51 @@ outside this change.
    signaled-run and incomplete-result controls that establish no causal
    inference from a candidate.
 
-4. **Clarify the shared reading rule and run the owning checks.**
+4. **Register the red baseline, clarify the rule and verify the correction.**
 
-   Edit rule 3 in the shared reading rules of
+   Add `unit/rust.read_fresh_reds`, implemented in
+   `tests/suites/unit/read_fresh_reds.sh`, using
+   [byoxpc_reds.sh](suites/unit/byoxpc_reds.sh) as the existing pattern.
+   Select the positive tests from steps 2 and 3 by full name with
+   `cargo test --bin policy-witness -- --include-ignored --exact`.
+   Maintain an explicit test-name/expected-assertion-message list, require the
+   exact selected test count, and distinguish each expected assertion failure
+   from a missing test, build/equipment error or unrelated failure. Keep the
+   red result failed in the managed report; expected failure is evidence for
+   the defect, not passing acceptance. The unchanged selector must pass when
+   every selected test passes after the correction. Check its classification
+   with passing and rejected output, including an unrelated failure alongside
+   an expected red, without introducing a new general test framework.
+
+   Register the case with its prerequisites and `default: false` in
+   [catalog.json](catalog.json), include it in the `opt_in` selection, and
+   document it in [OPT_IN_TESTS.md](OPT_IN_TESTS.md) and the
+   [unit suite README](suites/unit/README.md). Keep the
+   [suite map](README.md#suite-coverage) aligned with the temporary opt-in
+   membership. Mark only the positive regressions that currently fail with
+   `#[ignore]`. Commit these tests, fixtures and selector before changing
+   production behavior. The default battery runs the passing companion controls
+   and skips the ignored positives; an explicit `--suite unit` includes the red
+   case even while it is nondefault.
+
+   From the clean baseline commit, run:
+
+   ```sh
+   PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates-red \
+     tests/run.sh --case unit/rust.read_fresh_reds --case unit/rust.unit \
+       --case source_drift/runner_source_manifests_agree
+   ```
+
+   Require every selected positive regression to fail at its identified
+   missing-candidate assertion, with no unexpected failures. Require
+   `unit/rust.unit` to pass with those positives ignored and the companion
+   controls active; require the registry/source-drift case to pass. The
+   registered selector supplies the red classification, not manual inspection
+   of the crate-wide output. Development runs of filtered Cargo tests do not
+   replace this managed baseline.
+
+   Apply the eligibility correction from step 1. Edit rule 3 in the shared
+   reading rules of
    [FAILURE-PROPAGATION-CONTRACT.md](FAILURE-PROPAGATION-CONTRACT.md#reading-rules).
    Replace the "attribution needs a captured denial record" clause. The rule
    limits what the envelope establishes; it does not make delivery of a log
@@ -180,77 +238,60 @@ outside this change.
 
    Regenerate the copied guide with `python3 docs/generate_limits.py` and check
    it with `python3 docs/generate_limits.py --check`. The guide's event-operation
-   table already describes the intended behavior. Update the
-   [unit suite README](suites/unit/README.md) to identify what the new controls
-   establish. Inline Rust tests run in the existing `unit/rust.unit` case and
-   need no additional catalog case.
+   table already describes the intended behavior. Remove the test ignores,
+   promote `unit/rust.read_fresh_reds` to default membership, remove its opt-in
+   membership/registry entry, and update the unit README and suite map to match.
+   Keep its exact selector and expected assertion messages unchanged. The
+   controls now also run in the ordinary `unit/rust.unit` batch.
 
-   Run the credited original-arm control through the public dispatcher, selecting
-   the existing Rust batch case. From the root, with the final regression inputs
-   present and only the eligibility entry absent:
-
-   ```sh
-   PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates-red \
-     tests/run.sh --case unit/rust.unit
-   ```
-
-   This runs the new inline controls alongside the existing binary unit tests.
-   Keep its failing status: only the identified missing-candidate assertions
-   establish the intended red result. Compilation, equipment, harness or unrelated
-   test failures are separate failures, not evidence for this omission. A filtered
-   `cargo test` under the checkout lock can help development, but it does not
-   replace this credited managed run. No failing commit on `main` is required.
-
-   Restore the eligibility entry and run final verification in a separate fresh
-   directory:
+   Commit the correction and promotion, then run final verification from that
+   clean commit in a separate fresh directory. The unit suite includes the
+   same registered selector:
 
    ```sh
    PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates-green \
-     tests/run.sh --suite unit --case source_drift/limits_documentation
+     tests/run.sh --suite unit --case source_drift/limits_documentation \
+       --case source_drift/runner_source_manifests_agree
    ```
 
-   Freeze the test code and fixtures for this pair; their expected values are
-   identical in both runs. If relevant inputs change afterward, repeat the pair
-   rather than crediting an obsolete red test. Use new output names for reruns.
-   The intended production delta between the two source snapshots is only the
-   `read_fresh` eligibility entry.
+   Freeze the test bodies, fixtures, expectations and selector for this pair;
+   removing `#[ignore]` must be the only test-source change. If an assertion or
+   relevant input needs revision, establish a new committed baseline and rerun
+   the pair. Use new output names for reruns. The intended production delta
+   between the two tested commits is only the `read_fresh` eligibility entry;
+   document the accompanying ignore removal, case promotion and rule changes.
 
-   Identify each tested working tree with a source receipt: full base `HEAD`,
-   tracked working-tree diff against that commit (including staged changes),
-   copies of any untracked source inputs, and a manifest of source paths, modes,
-   symlink targets and content hashes. Include the controller, test/consumer
-   code, fixtures and harness inputs; taking the tracked-tree manifest plus new
-   input files avoids relying on a guessed dependency subset. Capture before
-   and after execution to establish that those inputs did not change during the
-   run. A commit hash alone does not identify either dirty tree, and hashes alone
-   cannot reconstruct its uncommitted bytes. Preserve the patch and added files
-   alongside the manifest.
-
-   Retain those receipts, exact commands/configuration, tool versions, raw test
-   output and dispatcher `run.json` separately for red and green. Follow the
+   For each credited run, record the full tested commit hash and clean source
+   status before and after execution, with all test inputs committed. Run first,
+   then add the verification record and retention pins in a later commit. This
+   identifies the actual tests-containing revision, not its parent or the later
+   evidence-recording commit. Retain exact commands/configuration, tool versions,
+   raw test output and dispatcher `run.json` separately for red and green.
+   Follow the
    [evidence attachment and locking guidance](AGENTS.md#preserve-and-clean-up-output):
-   stage pre-run receipts outside the not-yet-created output directory, then
-   attach them to the terminal run under the checkout lock after verifying its
-   run ID. Record any source differences between the runs explicitly.
+   capture any additional transcript outside the not-yet-created output
+   directory, then attach it to the terminal run under the checkout lock after
+   verifying its run ID. No dirty-tree patch, untracked-source archive or custom
+   source manifest is needed for these clean committed runs.
 
    Before closing out this plan, commit a short problem/verification record at
    `records/READ-FRESH-DENIAL-ASSOCIATION.md`, following
    [records guidance](../records/AGENTS.md). It must contain the defect and
    expected envelope behavior, both managed run IDs and artifact paths, commands,
-   observed failing assertions and passing results, base commits and source
-   receipt hashes, and the final implementation commit. Include reproduction
-   from that implementation: remove only the `read_fresh` alternative from the
-   `file-read-data` arm, retain the committed tests, and run the red command.
+   exact test names, observed failing assertion messages and passing results,
+   and the clean baseline and corrected commit hashes. Reproduction is to
+   check out the recorded baseline commit in a worktree and run
+   `tests/run.sh --case unit/rust.read_fresh_reds` with a fresh output directory;
+   the same command on the corrected commit must pass.
    This leaves a usable account after the plan is deleted. Link the record from
    this associated plan while it exists; do not add a permanent documentation
    or index link to the record.
 
    Pin both managed runs in [RETAINED.json](RETAINED.json) under the
    [retention contract](README.md#retention-ownership-and-execution-locking).
-   For a dirty tested tree, use `source: null` in that index and identify its base
-   plus exact delta in the record and receipt; the base or a later commit is not
-   the tested commit. The record must state that linked `tests/out/` artifacts
-   are gitignored and available only in this checkout. The committed account and
+   Set each pin's `source` to its full tested commit hash. The record must state
+   that linked `tests/out/` artifacts are gitignored and available only in this
+   checkout. The committed account and
    reproduction remain available elsewhere; the pins protect local raw evidence
    from ordinary pruning but do not publish it. Retire the pins only through an
    explicit evidence-retention decision that preserves or supersedes the cited
@@ -278,8 +319,8 @@ outside this change.
    eligibility on the original arm and pass with the correction, the evidence
    state controls to retain their distinct results, consumer recovery and
    execution-preservation assertions to pass, and the selected suite and
-   generator checks to succeed. The committed problem record and retained source
-   receipts must identify both tested trees and distinguish the expected red
+   generator checks to succeed. The committed problem record and retained runs
+   must identify both tested commits and distinguish the classified red
    failure from green acceptance. No result may upgrade a candidate to proof of
    sandbox cause or prediction/enforcement agreement. If implementation requires
    changing field meanings, native execution, collection gates or comparison
