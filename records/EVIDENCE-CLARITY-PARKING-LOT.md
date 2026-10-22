@@ -6,170 +6,17 @@ Recorded 2026-10-14 against source
 Status: parked design questions. These ideas came from inverting the claims
 retained during the documentation review: a sentence can be necessary for
 current PW while the design that requires it remains improvable. This record
-preserves the second group of interface improvements and the larger architecture
-ideas. It does not schedule their implementation or add gates to the associated
-six-item plan. No new experiment establishes the proposals below.
+preserves the larger architecture ideas. It does not schedule their
+implementation. No new experiment establishes the proposals below.
 
 Each entry names the current burden, a possible improvement, what would justify
 returning to it, and the boundary that would remain. Source links locate the
-reviewed implementation; subsequent changes may supersede the observation.
-
-## Interface improvements to revisit
-
-### P1 — Name compiled-profile capture for what it captures
-
-**Current burden.** `capture_applied_profile` invites the reader to imagine a
-readback of kernel policy state. The [guide](../docs/PolicyWitness.md) must explain
-that the receipt captures a userspace compiler object associated with the
-application path. Its contents do not establish the kernel's effective policy.
-
-**Possible improvement.** Rename the request and receipt vocabulary around
-compiled-profile capture, with `capture_compiled_profile` as a candidate. Record
-the capture stage and the separate application result explicitly. Make the
-ordinary output understandable without a corrective paragraph about the name.
-
-**Revisit when.** A request/receipt revision can carry a complete migration of
-admission, encoders, readers, examples and capture controls. Inventory the capture
-paths first so the new name covers their actual timing and ownership. Apply the
-[wire contract](../docs/CONTRACT.md); changing accepted input needs its own version
-decision, separate from the response change.
-
-**Boundary retained.** Better naming supplies no kernel readback. A compiled
-object, a successful apply call and subsequent access observations remain
-different evidence.
-
-**Status 2026-10-16.** Complete in `b6e6c3`, with acceptance on fresh signed
-build 0.3.0 (665) at clean source
-`399de801047d4b0633ac26a8e037346651cd891d`. The request uses
-`policy.capture_compiled_profile`; the reply uses `compiled_profile`. Request
-schema 5, response schema 22 and nested receipt schema 2 carry the migration;
-controller envelope 7 is unchanged. The retired request spelling is refused
-without an alias. Captured receipts require `producer: "worker"` and
-`capture_stage: "before_apply"`; unavailable receipts publish neither context
-field. Swift, Rust and the independent Python reader check this context after
-the outer version gate.
-
-The worker still copies the same compiler object before applying it. Nonce,
-identity, checksum and length checks, successful application and normal worker
-completion still gate byte publication. Application remains separately reported
-by `sandboxed_after_apply` and the worker failure evidence. The live request
-control also kills a worker after application and requires an unavailable
-capture without bytecode or capture context, while retaining successful
-application evidence. The [guide](../docs/PolicyWitness.md#compiled-object-receipt-opt-in)
-describes the resulting contract. Capture capacity is unchanged; the renamed
-receipt and context fields add 52 bytes to the synthesized maximum reply
-(52,419,240 bytes), without changing the controller's existing output budget.
-
-Acceptance is retained in [the retention index](../tests/RETAINED.json). The
-linked run output is gitignored and available only in this local checkout.
-
-| Evidence | Result |
-| --- | --- |
-| [Default battery](../tests/out/runs/compiled-profile-default-20261017-credited/run.json), `20261017T045156Z_49c100f7` | 188/188 passed; no skips, unrun cases or harness errors; inspected app valid and unchanged. Includes 439/439 Swift tests, Rust tests, CLI/direct-XPC request controls, native worker controls and independent response readers. |
-| [Build and review receipts](../tests/out/runs/compiled-profile-default-20261017-credited/compiled-profile-acceptance/receipt.json) | Fresh signed build 665 records clean `399de80`, Xcode 27.1 and SDK 27.0. Retained build log, embedded provenance and archive/controller hashes identify the tested artifact. |
-| [Live fixture refresh](../tests/out/runs/compiled-profile-live-fixtures-20261017/run.json), `20261017T043738Z_ef312436` | Six cases passed on development build 663. Current response-22 fixtures are exact copies of live outputs with their original producer stamps; historical fixtures remain intact. Final behavior acceptance comes from the clean-build battery above. |
-
-Acceptance exposed a repeated race in unchanged controller log collection:
-after observing child exit, the collector treated one temporarily unavailable
-or interrupted nonblocking read as a terminal open pipe. The first full battery
-at `b6e6c3` stopped with 98 passed, one failed and 89 unrun. Commit `399de80`
-repairs that blocker by continuing until EOF or the original collection
-deadline, retaining process ownership and bounded cleanup. A deterministic
-delayed-read control failed against the original loop and passed after the fix;
-it also checks permanent unavailability reaches the deadline and is reaped.
-The replacement battery above credits the repaired implementation. The failed
-battery, preliminary shape/bound/reader failures, focused replacement checks
-and deterministic failing transcript are retained without rewriting their
-outcomes.
-
-**Reviewed evidence-reuse exception.** The closing changes update this record
-and `tests/RETAINED.json`, and remove `COMPILED-PROFILE-CAPTURE-PLAN.md`. Review
-found no change to executed code, generators, fixtures, test commands or app
-bytes. Acceptance therefore remains attached to clean `399de80`; the closing
-commit is not represented as the source of build 665. The temporary plan is
-retired with this acceptance record and the current owning documentation.
-
-### P2 — Make independent diagnostics identify their context
-
-**Current burden.** Readers must repeatedly distinguish controller fallback
-compilation from worker compilation, a requested interruption from an observed
-boundary, and bytes accepted by a pipe from bytes acknowledged by its receiver.
-These distinctions appear across the [guide](../docs/PolicyWitness.md),
-[architecture account](../docs/ARCHITECTURE.md) and
-[extension control fixture](../tests/fixtures/extension_controls/README.md).
-
-**Possible improvement.** Give each diagnostic a clear producer, purpose and
-observed stage. Keep fallback compilation in a separately named diagnostic
-record. Pair test interventions with independent receipts for the boundary
-actually reached. Where a receiver can safely acknowledge a defined event,
-record that acknowledgement beside transport write progress.
-
-**Revisit when.** A concrete consumer mistake or missing discriminating control
-identifies which record needs improvement. Prototype one channel at a time and
-show that the additional observation changes a defensible conclusion. Account
-for extra protocol state, publication ordering and failure paths before adding
-acknowledgements to the post-sandbox worker.
-
-**Boundary retained.** A fallback result belongs to its own process and context.
-A request to interrupt does not establish arrival at the requested point.
-Transport acceptance does not establish receiver processing; an acknowledgement
-establishes only the event its protocol defines. Do not acquire target resources
-before sandbox application merely to make later observations easier.
-
-**Status 2026-10-15.** The third distinction is resolved for the policy pipe.
-`runner_c_worker_harness/policy_truncated_prefix` first showed the shipped
-worker compiling and applying a 28-byte prefix of a 43-byte submission with no
-published failure, indistinguishable from a complete 28-byte submission. Commit
-`7ad4c96` (its plan, since removed, recorded the acceptance evidence) gives the
-worker the submission's expected byte count through the shared header, has it
-publish the count it read at EOF before judging it, and has it refuse any
-length that differs before compiling; the reply carries the receipt as
-`runner_subprocess.worker_evidence.policy_read` beside the host's write counts.
-Host write counts still establish writes accepted by the pipe, and the receipt
-establishes only its defined event: the worker reached EOF with the reported
-count. The fallback compilation context and the test-seam receipts remain parked.
-
-### P3 — Make build provenance a deliberate artifact
-
-**Current burden.** The [build account](../docs/BUILD.md) relies on build tools'
-records to decide whether cached outputs are current. Source identity, selected
-paths and signature checks leave questions about the actual compiler, SDK,
-effective configuration and inputs behind an artifact.
-
-**Possible improvement.** Emit a bounded provenance record containing actual
-tool identities, SDK selection, effective build configuration and relevant source
-inputs. Detect reuse of a configured directory under incompatible settings and
-define a clean release-build mode. Connect the record to hashes of the produced
-artifacts. If certificate class and secure timestamp are intended release
-guarantees, verify them on final signed artifacts rather than relying only on
-the requested identity, leaf name and runtime flag.
-
-**Revisit when.** A provenance question can be expressed as a field and a check
-that would distinguish two materially different builds. Test changed compiler,
-SDK and configuration with retained caches, plus missing or inconsistent records.
-Keep the recording rules, build guards, embedded evidence and
-[signing procedure](../docs/SIGNING.md) aligned. Bound the recorded environment
-to avoid collecting unrelated credentials or machine configuration.
-
-**Boundary retained.** The record still trusts the tools reporting or consuming
-inputs. It is not proof of reproducibility, compiler correctness, execution of
-particular bytes, or exhaustive knowledge of private runtime dependencies.
-Closing the six-item plan's build-refusal coverage does not settle these questions.
-
-**Status 2026-10-15.** Investigated; the bar is met. Several questions are now
-fields with checks that distinguish builds (the SDK and linker version every
-shipped Mach-O already carries, Meson's recorded compiler identities and
-effective options, the built worker's reported identity, the certificate chain
-and timestamp on the signed artifacts), and the record would let the build
-retire refusals whose conditions earlier checks or a fresh build already
-exclude. The associated plan was executed and retired on 2026-10-16; its
-acceptance is recorded in `records/BUILD-PROVENANCE-ACCEPTANCE.md`, and the
-resulting behavior is described by [the build document](../docs/BUILD.md) and
-[the signing guide](../docs/SIGNING.md#evidence-artifacts).
+reviewed implementation; subsequent changes may supersede the observation. A
+dated drive-by comment under each entry compares it with the tree on that date.
 
 ## Larger improvements
 
-### P4 — Give unfinished cleanup an explicit owner
+### P1 — Give unfinished cleanup an explicit owner
 
 **Current burden.** A nominal timeout can be followed by a blocking final reap.
 For example, `ChildProcessState.terminate` in
@@ -195,7 +42,24 @@ promise instantaneous kernel cleanup. Preserve fresh sandbox processes and never
 reuse a worker whose execution or cleanup remains unresolved. Converting polling
 to elapsed deadlines in the six-item plan does not solve this ownership problem.
 
-### P5 — Preserve more log identity and timing
+**Fable drive-by comment, 2026-10-22, against `9e574fc`.** The burden stands.
+The `ChildProcessState` contract in
+[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) still says that
+after a successful kill the blocking wait remains, that an unconfirmed
+disposition may leave a live child or zombie, and that no global reaper or new
+lifecycle timeout exists. The visibility half of the boundary was met on
+2026-10-18: `924a6ed` separated exec observation from cleanup evidence, so an
+unresolved child now appears as a reap stop reason such as
+`ownership_unconfirmed` or `deadline` with a collection basis of
+`execution_may_continue`, and [WORKER.md](../docs/WORKER.md) rows s7 and s36a
+state that unconfirmed cleanup can outlive the driver. Ownership transfer, a
+durable recovery record and a total response bound are untouched. The revisit
+trigger has not fired. The nearest signal is finding 2 of the PAWL feedback in
+`records/USER-EXPERIENCE-REPORT.md`, where a consumer reconciles worker and
+validator termination records itself because PW does not bound completion.
+Leave parked; the remaining ask is ownership, not visibility.
+
+### P2 — Preserve more log identity and timing
 
 **Current burden.** The current denial event in
 [sandbox_log.rs](../controller/src/sandbox_log.rs) has PID, process, operation,
@@ -219,7 +83,29 @@ delivery or unique causal attribution. Missing denial lines cannot establish
 that no denial occurred, and a nearby event cannot by itself explain a process's
 termination.
 
-### P6 — Resume notarization from retained submission evidence
+**Fable drive-by comment, 2026-10-22, against `9e574fc`.** The burden stands
+verbatim: `SandboxDenyEvent` in
+[sandbox_log.rs](../controller/src/sandbox_log.rs) carries PID, process,
+operation, path and raw line, and the
+[guide](../docs/PolicyWitness.md#denial-log-correlation) still says structured
+event timestamps, step ordering and PID-reuse protection are unavailable. The
+revisit condition is met, though. The observer runs `log show --style syslog`,
+so every raw line already begins with a timestamp;
+[check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py)
+parses it, with a comment that production makes no temporal claim, and a unit
+test in [sandbox-log-observer.rs](../controller/src/bin/sandbox-log-observer.rs)
+asserts the serialized event has no `timestamp` key. The sample and the parsing
+route exist; what is missing is the decision to expose the field, and the
+controls this entry lists for repeated operations, reused PIDs and delayed
+delivery. Since this entry was written, two association defects of a different
+kind were found and are the better-evidenced work: the read_fresh operation
+admission corrected in `4ec0a52`, and the exec row's `process-exec*` spelling
+recorded in `0e253b5` under `records/exec-row/`, whose sketch also names
+interpreter execs as an open edge. This is the one entry ready to move into a
+plan; that plan would need a reading-rule version decision under
+[the wire contract](../docs/CONTRACT.md).
+
+### P3 — Resume notarization from retained submission evidence
 
 **Current burden.** [notarize.py](../notarize.py) retains the archive and submission
 ID, submits once and waits once. An unresolved response stops the release flow;
@@ -241,7 +127,19 @@ attempt and rotation ownership rules before exposing an operator command.
 state. Such a state still stops continuation. An acceptance for one archive does
 not authorize publication of different bytes.
 
-### P7 — Clarify admission around host retirement
+**Fable drive-by comment, 2026-10-22, against `9e574fc`.** Unchanged and
+untriggered. [notarize.py](../notarize.py) still submits once and waits once,
+and has not been edited since 2026-09-28. [SIGNING.md](../docs/SIGNING.md)
+states that the code adds no polling loop, retry, resubmission or resume state
+machine, and gives the manual recovery procedure: a new evidence directory, the
+retained ZIP and its hash, one `notarytool submit --no-wait`, then one bounded
+`notarytool wait` on the returned submission ID. The 0.3.2 release reached a
+stapled app whose acceptance is pinned in
+[tests/RETAINED.json](../tests/RETAINED.json), and no retained evidence records
+an unresolved notarization response. The revisit condition, recovery testable
+independently of a new submission, has no equipment yet. Leave parked.
+
+### P4 — Clarify admission around host retirement
 
 **Current burden.** The disposable host's admission and retirement path in
 [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)
@@ -263,6 +161,27 @@ and client behavior in one account.
 **Boundary retained.** A lost XPC reply can leave execution unknown. Blind retry
 of `xpc_error` could repeat side effects. Preserve one specimen per host and
 worker, and never claim exactly-once execution from an acknowledgement alone.
+
+**Fable drive-by comment, 2026-10-22, against `9e574fc`.** Substantially
+addressed for external runners on 2026-10-17 by `6fd44fb`. The host's
+`already_ran` refusal in
+[PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)
+is the explicit "unexecuted" acknowledgement this entry asked for. The
+controller's [runner_acquisition.rs](../controller/src/runner_acquisition.rs)
+re-acquires only after an admitted pre-worker `already_ran` with empty steps
+and no subprocess report, from a host whose generation it identifies by PID and
+executable path and whose retirement it observes, inside the shared RPC wait;
+each refused attempt is retained in the envelope's `runner_acquisition`. The
+[guide](../docs/PolicyWitness.md) now documents the retirement window beside
+the throttle note, which the PAWL feedback had named as the undocumented gap,
+and a case in [the catalog](../tests/catalog.json) covers attributed refusals,
+bounded waiting and exactly-once effects. Two parts remain parked.
+[run_flow.rs](../controller/src/run_flow.rs) supplies the executable path only
+for `MachService` targets, so a bundled `XpcService` runner's `already_ran`
+never qualifies and gets no retry. And no request identity was added to the
+protocol; the "execution may have begun" side of the distinction is still
+inferred from reply shape. The retiring-host experiment this entry asked for
+exists only on the BYOXPC side.
 
 ## Limits that survive these improvements
 
