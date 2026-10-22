@@ -102,7 +102,7 @@ import cargo_config  # noqa: E402
 import checkout_lock  # noqa: E402
 import output_target  # noqa: E402
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 STAMP_SCHEMA_VERSION = 2
 SESSION_SCHEMA_VERSION = 3
 STAMP_NAME = 'pw-toolchain.json'
@@ -737,6 +737,19 @@ def tool_observation(name, env, pattern=r'\d'):
     return dict(status='ok', command=redact(path), version=found['line'])
 
 
+def python_observation(env):
+    """The pinned interpreter the resolver selected and exported: its path, real path and the version its keg names,
+    beside the version one isolated probe reports. An environment without the resolver's exports is a failed observation."""
+    path, real, keg_version = env.get('PW_PYTHON'), env.get('PW_PYTHON_REALPATH'), env.get('PW_PYTHON_VERSION')
+    if not path or not real or not keg_version:
+        return dict(status='failed', kind='launch_failed', command=None)
+    found = version_line(probe([path, '-I', '-S', '-B', '-c', 'import sys; print("%d.%d.%d" % sys.version_info[:3])'], env=env),
+                         r'^\d+\.\d+\.\d+$')
+    if found['status'] != 'ok':
+        return dict(found, command=redact(path))
+    return dict(status='ok', command=redact(path), realpath=redact(real), keg_version=keg_version, version=found['line'])
+
+
 def observe_toolchain(builddir, manifest_dir, env, *, xpc, compilers=None):
     """env is the environment build.sh gives Cargo and the compilers (invocation_environment)."""
     """Every toolchain observation the stamp and the record use; compilers come from the directory or the stamp."""
@@ -748,7 +761,7 @@ def observe_toolchain(builddir, manifest_dir, env, *, xpc, compilers=None):
     return dict(developer_dir=developer_dir_observation(env), sdk=sdk_observation(env), xcode=xcode_observation(env),
                 compilers=observed, rustc=rustc_observation(manifest_dir, env),
                 cargo=tool_observation('cargo', env), meson=tool_observation('meson', env), ninja=tool_observation('ninja', env),
-                xpc=bool(xpc))
+                python=python_observation(env), xpc=bool(xpc))
 
 
 def compatibility_fields(observation, *, xpc):
@@ -1572,7 +1585,8 @@ def collect(session, app, root, identity, *, manifest_entries, signature):
                             sdk=dict({part: toolchain['sdk'][part]['line'] for part in ('path', 'version', 'build')},
                                      source='SDKROOT named by the caller' if session.get('sdk_source') == 'caller' else 'xcrun --sdk macosx default'),
                             xcode=toolchain['xcode'], compilers=compilers, rustc=published(toolchain['rustc']),
-                            cargo=toolchain['cargo'], meson=toolchain['meson'], ninja=toolchain['ninja'])
+                            cargo=toolchain['cargo'], meson=toolchain['meson'], ninja=toolchain['ninja'],
+                            python=toolchain.get('python'))
     toolchain_record['sdk']['path'] = redact(toolchain_record['sdk']['path'])
     toolchain_record['rustc']['selection_note'] = ('the command Cargo would run, resolved through its configuration files and '
                                                    'includes, environment overrides and launcher, and probed now without its '
@@ -1883,6 +1897,9 @@ def rustc_shape():
 
 
 TOOL = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), version=text()))
+# The pinned interpreter: the keg's version and the probed version agree by the resolver's own check.
+INTERPRETER = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), realpath=text(TEXT_LIMIT), keg_version=text(16, VERSION),
+                       version=text(16, VERSION)), closed=True)
 FINGERPRINT = alternatives(
     ('observed', obj(dict(binding=mapping(text(TEXT_LIMIT), 8), rustflags=FLAGS, rustc_fingerprint=text(nullable=True),
                           profile_fingerprint=text(nullable=True), limitation=NOTE))),
@@ -1994,7 +2011,7 @@ def record_shape():
             xcode=alternatives(('ok', obj(dict(version=text(), build=text()))),
                                ('unknown', obj(dict(reason=one_of(*FAILURE_KINDS)), dict(returncode=integer(nullable=True))))),
             compilers=obj(dict(c=OBSERVED_COMPILER, swift=Shape(lambda v, w, p: None))),
-            rustc=rustc_shape(), cargo=TOOL, meson=TOOL, ninja=TOOL)),
+            rustc=rustc_shape(), cargo=TOOL, meson=TOOL, ninja=TOOL, python=INTERPRETER)),
         configuration=obj(configuration),
         outputs=array(output_shape(), 16, empty=False),
         signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),

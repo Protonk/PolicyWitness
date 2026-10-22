@@ -2846,7 +2846,7 @@ MUTATIONS = [
 ]
 
 
-SELF_CHECK_RE = re.compile(r'^"\$\{PW_PYTHON\}" -B "\$\{ROOT_DIR\}/docs/generate_[a-z_]+\.py" --check\n', re.M)
+SELF_CHECK_RE = re.compile(r'^"\$\{PW_PYTHON\}" -B -S "\$\{ROOT_DIR\}/docs/generate_[a-z_]+\.py" --check\n', re.M)
 SELF_CHECK_MARKERS = ('is stale', 'missing symbol', 'disagrees with the script', 'generate_worker_identity.py')
 
 

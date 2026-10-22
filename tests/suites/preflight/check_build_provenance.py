@@ -89,6 +89,8 @@ def fake_observation(**overrides):
         cargo=ok(command='/opt/homebrew/opt/rustup/bin/cargo', version='cargo 1.99.0'),
         meson=ok(command='/opt/homebrew/bin/meson', version='1.12.1'),
         ninja=ok(command='/opt/homebrew/bin/ninja', version='1.13.2'),
+        python=ok(command='/opt/homebrew/opt/python@3.14/bin/python3.14', realpath='/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14',
+                  keg_version='3.14.8', version='3.14.8'),
         xpc=False)
     for key, value in overrides.items():
         base[key] = value
@@ -634,9 +636,10 @@ class LockTests(unittest.TestCase):
         # Compare NUL-delimited raw bytes; no decoding or line splitting can hide changes.
         script = self.script('environment.sh', '\n'.join([
             'source "$1/python_start.sh"',
-            'if [[ "$3" == direct ]]; then set -- "$1" "$2" "$PW_PYTHON" "$4"; fi',
+            'pw_python_start || exit 2',
+            'if [[ "$3" == direct ]]; then set -- "$1" "$2" "$PW_PYTHON" "$4" -B -S -P; else set -- "$1" "$2" "$3" "$4" -B; fi',
             '/usr/bin/env -0 "_=$3" > "$2"',
-            '"$3" -B -c \'import subprocess,sys; open(sys.argv[1], "wb").write(subprocess.check_output(["/usr/bin/env", "-0"]))\' "$4"',
+            '"$3" "${@:5}" -c \'import subprocess,sys; open(sys.argv[1], "wb").write(subprocess.check_output(["/usr/bin/env", "-0"]))\' "$4"',
             ':'
         ]))
         for interpreter in ('direct', '/usr/bin/python3'):
@@ -2599,7 +2602,7 @@ class RecordTests(unittest.TestCase):
             'wrong uuid': (lambda r: r['outputs'][1].__setitem__('uuid', 'FFFFFFFF-0000-0000-0000-000000000000'), 'provenance_metadata'),
             'wrong sdk': (lambda r: r['outputs'][1].__setitem__('sdk', '1.0'), 'provenance_metadata'),
             'missing section': (lambda r: r.pop('toolchain'), 'provenance'),
-            'other schema': (lambda r: r.__setitem__('schema_version', 3), 'provenance'),
+            'other schema': (lambda r: r.__setitem__('schema_version', prov.SCHEMA_VERSION + 1), 'provenance'),
             'an earlier build\'s schema': (lambda r: r.__setitem__('schema_version', 1), 'provenance'),
             'wrong architectures': (lambda r: r['outputs'][1].__setitem__('architectures', ['x86_64']), 'provenance_metadata'),
             'wrong container': (lambda r: r['outputs'][1].__setitem__('container', 'fat'), 'provenance_metadata'),

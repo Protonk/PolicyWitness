@@ -40,7 +40,8 @@ if os.environ.get('RETENTION_HOLD'):
 status = os.environ.get('RETENTION_STATUS', 'pass')
 case = out / 'suites/probe/witness'
 case.mkdir(parents=True)
-(case / 'report.json').write_text(json.dumps(dict(suite='probe', test_id='witness', status=status)))
+(case / 'report.json').write_text(json.dumps(dict(suite='probe', test_id='witness', status=status,
+                                                interpreter={name: os.environ.get(variable) for name, variable in (('path', 'PW_PYTHON'), ('realpath', 'PW_PYTHON_REALPATH'), ('version', 'PW_PYTHON_VERSION'))})))
 with (out / 'events.jsonl').open('a') as stream:
     for step, value in [('test_start', 'start'), ('test_end', status)]:
         stream.write(json.dumps(dict(kind='test_event', run_id=os.environ['PW_TEST_RUN_ID'],

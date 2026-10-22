@@ -38,7 +38,7 @@ def identity(suite, case):
                                 and '/' not in part for part in (suite, case)) else None
 
 
-def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_cases):
+def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_cases, interpreter=None):
     """Read this invocation's evidence without aborting on malformed input."""
     event_path = out / 'events.jsonl'
     try:
@@ -124,6 +124,12 @@ def reconcile(invocation, out, run_id, previous_events, previous_reports, seen_c
             continue
         if len(terminal) == 1 and report['status'] != terminal[0]:
             problem(invocation, 'status_mismatch', f'{relative}: report status disagrees with test_end', **details)
+        # The case's shell resolved the interpreter itself; its report must name the one this run resolved.
+        declared = report.get('interpreter')
+        declared = declared.get('realpath') if isinstance(declared, dict) else None
+        if interpreter is not None and declared != interpreter:
+            problem(invocation, 'interpreter_mismatch',
+                    f'{relative}: report declares interpreter {declared!r}; this run resolved {interpreter!r}', **details)
         invocation['reports'].append(report)
         case_dir = out / Path(relative).parent
         # Inspect directory entries without traversing symlinks, including a
@@ -472,7 +478,7 @@ def execute(root, out, run_id, started, plan, config, scope):
                 item['finished_at_unix_ms'] = time.time_ns() // 1_000_000
                 item['system_sleep_ms'], item['system_sleep_error'] = system_sleep(clocks_before, sleep_clocks())
                 previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
-                                                              previous_reports, seen_cases)
+                                                              previous_reports, seen_cases, config['python']['realpath'])
             account(item)
             for case in item['case_results']:
                 outcomes[case['id']] = case['status'] if not item['harness_errors'] else 'fail'

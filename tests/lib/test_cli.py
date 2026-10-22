@@ -152,7 +152,10 @@ def resolve_config(root, env):
     # The menagerie embeds this label in temporary paths and SBPL literals.
     if run_id and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', run_id):
         raise ValueError('PW_TEST_RUN_ID must start with a letter/digit and contain at most 128 letters, digits, dots, underscores, or hyphens')
-    return {'app_dir': str(app), 'pw_bin': str(binary), 'out_dir': str(out), 'quiet': quiet == '1'}
+    python = {name: env.get(variable) for name, variable in (('path', 'PW_PYTHON'), ('realpath', 'PW_PYTHON_REALPATH'), ('version', 'PW_PYTHON_VERSION'))}
+    if not all(python.values()):
+        raise ValueError('the interpreter is unresolved; start through tests/run.sh, which exports PW_PYTHON, PW_PYTHON_REALPATH and PW_PYTHON_VERSION')
+    return {'app_dir': str(app), 'pw_bin': str(binary), 'out_dir': str(out), 'quiet': quiet == '1', 'python': python}
 
 
 def main():

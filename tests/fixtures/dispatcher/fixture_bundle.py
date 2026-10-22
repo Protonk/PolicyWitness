@@ -90,7 +90,7 @@ def record(app):
     program = lambda source, command: dict(source=source, command=command, overrides=[], file=None, disabled=False)
     compiler = dict(configured=dict(command=['cc'], id='clang', version='0', full_version=None), observed=observed(command=['cc'], identity='fixture cc 0'))
     data = dict(
-        schema_version=2, generated_at='2026-01-01T00:00:00Z',
+        schema_version=3, generated_at='2026-01-01T00:00:00Z',
         source=dict(commit=ZERO[:40], describe='fixture', dirty=False, version='0.0.0', build_number='0', worker_identity=ZERO,
                     input_hashes={name: ZERO for name in ('meson.build', 'meson.options', 'controller/Cargo.lock', 'Info.plist',
                                                           'PolicyWitness.entitlements', 'runner/Services/PWRunner/Entitlements.plist')}),
@@ -109,7 +109,9 @@ def record(app):
                                                                                  DEVELOPER_DIR=None, RUSTUP_TOOLCHAIN=None,
                                                                                  path_replaced_by_env=False, rustup_home_replaced_by_env=False))),
             cargo=observed(command='/fixture/cargo', version='cargo 0'), meson=observed(command='/fixture/meson', version='0'),
-            ninja=observed(command='/fixture/ninja', version='0')),
+            ninja=observed(command='/fixture/ninja', version='0'),
+            python=observed(command='/fixture/python3.14', realpath='/fixture/Cellar/python@3.14/3.14.8/bin/python3.14',
+                            keg_version='3.14.8', version='3.14.8')),
         configuration=dict(
             knobs=dict(BUILD_XPC='1', PW_INSPECTION='1', PW_FRESH_BUILD='1'), meson_options=dict(status='unknown'),
             rustflags=dict(requested=dict(source='none', tokens=[]), flag_environment={}, note='fixture bundle'),

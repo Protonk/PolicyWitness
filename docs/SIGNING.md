@@ -42,7 +42,7 @@ runner; nothing reads the record at run time.
 
 ### The provenance record
 
-`provenance.json` (`schema_version` 2) is the tools' report about one build:
+`provenance.json` (`schema_version` 3) is the tools' report about one build:
 what was selected, what the tools said about themselves, what the build
 directories looked like and what bytes shipped. It does not establish
 reproducibility, compiler correctness, that particular bytes executed, or an
@@ -59,7 +59,10 @@ exhaustive account of private runtime dependencies, and it says so in its
   full build, the Swift compiler, Meson's configured command, id, version and
   full version beside the identity the command reported when probed in the
   build directory's context (a partial build records the Swift compiler as
-  not applicable); the Rust compiler Cargo would run and its `selection`,
+  not applicable); the pinned Python interpreter the helpers ran on: its
+  path, its real path in the keg (with any Homebrew revision), the version
+  the keg names and the version one isolated probe reported; the Rust
+  compiler Cargo would run and its `selection`,
   resolved as one Cargo invocation from the build's directory resolves it:
   the configuration files read there, in its ancestors and in Cargo home
   (redacted) with their includes, the source of the compiler and of each

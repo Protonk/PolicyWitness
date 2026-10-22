@@ -219,6 +219,8 @@ report = {
     "message": os.environ.get("PW_REPORT_MESSAGE", ""),
     "duration_ms": maybe_int(os.environ.get("PW_REPORT_DURATION_MS")),
     "artifacts_dir": os.environ.get("PW_TEST_ARTIFACTS", ""),
+    "interpreter": {"path": os.environ.get("PW_PYTHON"), "realpath": os.environ.get("PW_PYTHON_REALPATH"),
+                    "version": os.environ.get("PW_PYTHON_VERSION")},
     "notes": [],
 }
 if report['status'] == 'skip' and os.environ.get('PW_TEST_SKIP_REASON'):

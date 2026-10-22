@@ -497,6 +497,10 @@ installation and cleanup. The installation case is also a selected dependency.
 
 `run.json` retains reports/counts and includes the plan, effective configuration,
 invocations, harness errors, and one `case_results` entry per selected case.
+The configuration's `python` entry is the interpreter the dispatcher resolved
+(path, real path and version); every `report.json` carries an `interpreter`
+entry from the case's own resolution, and a report that names another real
+path is the `interpreter_mismatch` harness error.
 `artifact_integrity` records initial validity, final equality, evidence location,
 and artifact errors, or is null for an entirely offline selection. Artifact errors
 fail `ok` independently of case reports; incomplete inspections retain diagnostics

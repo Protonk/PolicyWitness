@@ -49,6 +49,6 @@ if case == 'active':
     rendezvous(b'P')
     helper.wait(timeout=3)
 
-(path / 'report.json').write_text(json.dumps(dict(suite='cancel', test_id=case,
-                                                status='pass', message='fixture completed')) + '\n')
+(path / 'report.json').write_text(json.dumps(dict(suite='cancel', test_id=case, status='pass', message='fixture completed',
+                                                interpreter={name: os.environ.get(variable) for name, variable in (('path', 'PW_PYTHON'), ('realpath', 'PW_PYTHON_REALPATH'), ('version', 'PW_PYTHON_VERSION'))})) + '\n')
 event('test_end', 'pass')

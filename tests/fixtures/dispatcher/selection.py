@@ -37,7 +37,9 @@ for leaf in os.environ['PW_TEST_CASES'].splitlines():
     path.mkdir(parents=True, exist_ok=True)
     status = 'skip' if mode.startswith('skip') else 'fail' if mode == 'fail' else 'pass'
     report = {'suite': suite, 'test_id': leaf, 'status': status, 'message': mode,
-              'skip_reason': 'fixture_unavailable' if mode == 'skip_declared' else 'undeclared'}
+              'skip_reason': 'fixture_unavailable' if mode == 'skip_declared' else 'undeclared',
+              'interpreter': {name: os.environ.get(variable) for name, variable in
+                              (('path', 'PW_PYTHON'), ('realpath', 'PW_PYTHON_REALPATH'), ('version', 'PW_PYTHON_VERSION'))}}
     (path / 'report.json').write_text(json.dumps(report))
     events = [dict(kind='test_event', run_id=os.environ['PW_TEST_RUN_ID'], suite=suite,
                    test_id=leaf, step=step, status=value)
