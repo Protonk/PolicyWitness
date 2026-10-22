@@ -56,10 +56,13 @@ Two functions do the checking, each refusing with status 2 before any helper
 starts:
 
 - `pw_python_start` runs at every start. Any `PYTHON*` variable in the
-  environment other than `PYTHONCOERCECLOCALE` and `PYTHONDONTWRITEBYTECODE`
-  is the refusal `python_environment_set`, naming the variable; `PYTHONPATH`
-  and `PYTHONHOME` reach the interpreter through `-B -S`, and the resolver
-  refuses rather than repairs. The path is an executable regular file or a
+  environment other than `PYTHONCOERCECLOCALE`, `PYTHONDONTWRITEBYTECODE`
+  and `PYTHONOPTIMIZE` is the refusal `python_environment_set`, naming the
+  variable; `PYTHONPATH` and `PYTHONHOME` reach the interpreter through
+  `-B -S`, and the resolver refuses rather than repairs. `PYTHONOPTIMIZE`
+  passes through to the assertion guard in `testlib.sh`, which keeps its
+  own refusal and diagnostic for an optimizing value and its acceptance of
+  `0` and the empty value. The path is an executable regular file or a
   link to one, or the refusal is `direct_python_unavailable` with the path
   and `brew install python@3.14` in the message. Its real path is under
   `/opt/homebrew/Cellar/python@3.14/<keg>/`, where `<keg>` is `X.Y.Z` or
@@ -85,15 +88,16 @@ starts:
   explicit executable so that controls can exercise both outcomes with a
   stand-in; entry points call it without one.
 
-Helper scripts start with `-B -S`; `-c` starts, which are the `testlib.sh`
-heredocs, with `-B -S -P`. `-S` keeps site-packages, `.pth` files and
-`sitecustomize` off `sys.path`, so the interpreter's site-packages, which
-every `brew install` and `pip install` can change without a witness, are
-not an input. `-P` keeps the working directory off a `-c` start's path; a
-script start keeps its own directory, which is in the tree. With the
-`PYTHON*` refusal, every `sys.path` entry of a helper is under the
-interpreter's prefix or under the checkout: the standard library, the
-script's directory, and the tree's own insertions. `-E` and `-I` are
+Script starts use `-B -S`; inline (`-c`) and stdin (`-`) starts use
+`-B -S -P`, in shell scripts and in the children Python checkers start
+alike. `-S` keeps site-packages, `.pth` files and `sitecustomize` off
+`sys.path`, so the interpreter's site-packages, which every `brew install`
+and `pip install` can change without a witness, are not an input. `-P`
+keeps the working directory off an inline or stdin start's path, where it
+would otherwise be `sys.path[0]`; a script start keeps its own directory,
+which is in the tree. With the `PYTHON*` refusal, every `sys.path` entry of
+a helper is under the interpreter's prefix or under the checkout: the
+standard library, the script's directory, and the tree's own insertions. `-E` and `-I` are
 excluded for helpers because they ignore `PYTHONCOERCECLOCALE`; from a C
 locale the interpreter would then set `LC_CTYPE=C.UTF-8` for itself and its
 children, and the witness would refuse the build with a remedy that names
@@ -116,8 +120,11 @@ becomes `#!/usr/bin/env -S ${PW_PYTHON} -B -S`.
 - The sweep. 144 lines in 59 shell scripts under `tests/` mention
   `/usr/bin/python3` (46 suite scripts, 9 fixtures, 4 in `tests/lib`,
   comments included), and three `runner_unit` scripts call a bare `python3`.
-  Every invocation becomes `"${PW_PYTHON}" -B -S`. Children that a checker
-  starts with `sys.executable` pass `-B -S` as well. Review the fixture
+  Of those lines, 92 in 38 files are heredoc or `-c` starts and become
+  `"${PW_PYTHON}" -B -S -P`; the rest start a script and become
+  `"${PW_PYTHON}" -B -S`. Children that a checker starts with
+  `sys.executable` follow the same rule: the 8 `-c` starts in 7 files take
+  `-B -S -P`, the 28 script starts `-B -S`. Review the fixture
   scripts under `tests/fixtures/shell_case`, `dispatcher`, `worker_lifecycle`
   and `worker_harness` one by one: a shim start stays only where a control
   uses the shim as a deliberate negative control, and the drift check names
@@ -179,9 +186,11 @@ becomes `#!/usr/bin/env -S ${PW_PYTHON} -B -S`.
   and a child's values of the five witnessed names, `sys.version_info[:2]`,
   the real path of `sys.executable`, and the import boundary. Assert the
   five names equal the caller's (all unset under `env -i`), the version is
-  3.14, the real path is under the keg, and the boundary holds. These
-  controls observe
-  consequences, so they catch every cause of the same signature, which a
+  3.14, the real path is under the keg, and the boundary holds. Both run
+  with the working directory outside the checkout, so a start that lacks
+  `-P` shows as an entry outside the interpreter and the tree. These
+  controls observe consequences, so they catch every cause of the same
+  signature, which a
   check for a flag would not.
 - The coercion signature. In `verify_environment`
   (`tests/lib/checkout_lock.py`), when the differing name is `LC_CTYPE`, the
@@ -213,9 +222,20 @@ becomes `#!/usr/bin/env -S ${PW_PYTHON} -B -S`.
   scope from the six entry points and three wrappers to `case.sh`,
   `testlib.sh` and every `*.sh` under `tests/`: no `/usr/bin/python3` or bare
   `python3` command token outside the allow-list of deliberate shim
-  controls; each entry point calls `pw_python_start` and `pw_python_probe`
-  without arguments; each wrapper shebang is `#!/usr/bin/env -S ${PW_PYTHON}
-  -B -S`. Its rejected controls get the new cases.
+  controls; every `${PW_PYTHON}` start carries `-B -S`, and `-P` as well
+  when it is an inline or stdin start; each entry point calls
+  `pw_python_start` and `pw_python_probe` without arguments; each wrapper
+  shebang is `#!/usr/bin/env -S ${PW_PYTHON} -B -S`. This is the mechanical
+  agreement over the sweep's form; the controls above establish the
+  behavior. Its rejected controls get the new cases.
+- Startup refusals. `tests/suites/shell_helpers/check_python_startup.py`
+  keeps its six `PYTHONOPTIMIZE` modes and their diagnostics, through the
+  dispatcher and as a direct suite, and gains a seventh mode with another
+  `PYTHON*` variable set (`PYTHONPATH`): status 2, a diagnostic naming
+  `python_environment_set` and the variable, no fixture work (the started,
+  continued and receipt files absent) and prior evidence unchanged, through
+  the same blocked path the optimizing modes use. The fixture repository it
+  installs already copies `python_start.sh` and `sdk_guard.sh`.
 
 ### 5. Documentation and generated copies
 
@@ -269,8 +289,9 @@ change to which interpreter the product's own tools use.
   acceptance reach `testlib.sh` without `case.sh`.
 - An optional provenance member: nothing would refuse a new build that
   omits it.
-- Lexical checks for `-E`, `-I` or `-S`: a check for a flag misses every
-  other cause of the same signature.
+- Lexical checks as the test of coercion or of the import boundary: a check
+  for a flag misses every other cause of the same signature. The drift rule
+  over the sweep's form is mechanical agreement, not that test.
 - Unsetting `PYTHONPATH` and `PYTHONHOME` in the resolver: the resolver
   never repairs the caller's environment; it refuses and names the
   variable, as the SDK guard does.
@@ -300,8 +321,8 @@ change to which interpreter the product's own tools use.
    refusal under the exec-denying profile; the `pw_python_start` and
    `pw_python_probe` stand-in controls refuse and accept as specified; the
    coercion variant of the witness control prints the coercion text; the
-   import-boundary control passes at every start and refuses under
-   `PYTHONPATH`.
+   import-boundary control passes at every start from outside the checkout
+   and refuses under `PYTHONPATH`; the startup control's seven modes pass.
 5. Timing. The battery's `duration_ms` on the same build and machine grows
    by at most 10 s or 1 % of the pre-change value, whichever is larger. An
    overrun blocks completion: the leaf check costs what today's resolver
