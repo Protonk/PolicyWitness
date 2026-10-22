@@ -35,10 +35,11 @@ associations without discovering omitted candidates. Consumer validation alone
 therefore cannot serve as the regression's success criterion.
 
 The intended scope is the Rust eligibility arm, focused tests and their owning
-suite description, and the shared reading-rule clarification. Admission, worker
-execution, comparison production, log collection, and matching gates retain
-their current behavior. A common mapping generator or cross-language mapping
-refactor is outside this change.
+suite description, the shared reading-rule clarification, and a durable problem
+record with retained verification evidence. Admission, worker execution,
+comparison production, log collection, and matching gates retain their current
+behavior. A common mapping generator or cross-language mapping refactor is
+outside this change.
 
 1. **Correct the existing Rust eligibility arm.**
 
@@ -153,12 +154,29 @@ refactor is outside this change.
 
    Edit rule 3 in the shared reading rules of
    [FAILURE-PROPAGATION-CONTRACT.md](FAILURE-PROPAGATION-CONTRACT.md#reading-rules).
-   State that permission-shaped failures alone do not establish sandbox cause,
-   candidate associations do not prove causation, and
-   `permission_failures_without_record` names permission-failing steps without
-   a candidate in this capture when correlation is available. Its contents say
-   nothing about absence from the OS log store. Preserve the existing rule's
-   treatment of other failures and nonzero spawned-child exits.
+   Replace the "attribution needs a captured denial record" clause. The rule
+   limits what the envelope establishes; it does not make delivery of a log
+   record a prerequisite for attribution supported by independent evidence.
+   Use this meaning explicitly:
+
+   > A `permission_failure` or `other_failure` observation, or an exec attempt
+   > whose spawned child exited nonzero, does not attribute the failure to the
+   > sandbox. The envelope does not establish that sandbox enforcement caused
+   > a particular attempt's failure. A candidate association records a match
+   > between a captured denial's PID, operation and path and a submitted
+   > attempt; it does not establish that the attempt produced that record or
+   > that the denial caused its failure. When correlation is available and the
+   > reply carries comparisons, `permission_failures_without_record` lists
+   > permission-failing steps without a candidate in this capture. Missing
+   > candidates establish neither absence of denial records from the OS log
+   > store nor absence of sandbox enforcement.
+
+   A reader can conclude that the reported attempt failed and that a denial
+   with the stated correspondence was captured, when those observations exist.
+   Causal attribution requires evidence beyond the envelope's candidate relation;
+   independent experiments can supply such evidence even when this capture has
+   no delivered denial record. This clarification preserves the candidate
+   contract rather than introducing an attribution threshold.
 
    Regenerate the copied guide with `python3 docs/generate_limits.py` and check
    it with `python3 docs/generate_limits.py --check`. The guide's event-operation
@@ -167,13 +185,76 @@ refactor is outside this change.
    establish. Inline Rust tests run in the existing `unit/rust.unit` case and
    need no additional catalog case.
 
-   Retain the original-arm failure and corrected result separately. Use fresh
-   output names for each invocation; for final verification, run from the root:
+   Run the credited original-arm control through the public dispatcher, selecting
+   the existing Rust batch case. From the root, with the final regression inputs
+   present and only the eligibility entry absent:
 
    ```sh
-   PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates \
+   PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates-red \
+     tests/run.sh --case unit/rust.unit
+   ```
+
+   This runs the new inline controls alongside the existing binary unit tests.
+   Keep its failing status: only the identified missing-candidate assertions
+   establish the intended red result. Compilation, equipment, harness or unrelated
+   test failures are separate failures, not evidence for this omission. A filtered
+   `cargo test` under the checkout lock can help development, but it does not
+   replace this credited managed run. No failing commit on `main` is required.
+
+   Restore the eligibility entry and run final verification in a separate fresh
+   directory:
+
+   ```sh
+   PW_TEST_OUT_DIR=tests/out/runs/read-fresh-candidates-green \
      tests/run.sh --suite unit --case source_drift/limits_documentation
    ```
+
+   Freeze the test code and fixtures for this pair; their expected values are
+   identical in both runs. If relevant inputs change afterward, repeat the pair
+   rather than crediting an obsolete red test. Use new output names for reruns.
+   The intended production delta between the two source snapshots is only the
+   `read_fresh` eligibility entry.
+
+   Identify each tested working tree with a source receipt: full base `HEAD`,
+   tracked working-tree diff against that commit (including staged changes),
+   copies of any untracked source inputs, and a manifest of source paths, modes,
+   symlink targets and content hashes. Include the controller, test/consumer
+   code, fixtures and harness inputs; taking the tracked-tree manifest plus new
+   input files avoids relying on a guessed dependency subset. Capture before
+   and after execution to establish that those inputs did not change during the
+   run. A commit hash alone does not identify either dirty tree, and hashes alone
+   cannot reconstruct its uncommitted bytes. Preserve the patch and added files
+   alongside the manifest.
+
+   Retain those receipts, exact commands/configuration, tool versions, raw test
+   output and dispatcher `run.json` separately for red and green. Follow the
+   [evidence attachment and locking guidance](AGENTS.md#preserve-and-clean-up-output):
+   stage pre-run receipts outside the not-yet-created output directory, then
+   attach them to the terminal run under the checkout lock after verifying its
+   run ID. Record any source differences between the runs explicitly.
+
+   Before closing out this plan, commit a short problem/verification record at
+   `records/READ-FRESH-DENIAL-ASSOCIATION.md`, following
+   [records guidance](../records/AGENTS.md). It must contain the defect and
+   expected envelope behavior, both managed run IDs and artifact paths, commands,
+   observed failing assertions and passing results, base commits and source
+   receipt hashes, and the final implementation commit. Include reproduction
+   from that implementation: remove only the `read_fresh` alternative from the
+   `file-read-data` arm, retain the committed tests, and run the red command.
+   This leaves a usable account after the plan is deleted. Link the record from
+   this associated plan while it exists; do not add a permanent documentation
+   or index link to the record.
+
+   Pin both managed runs in [RETAINED.json](RETAINED.json) under the
+   [retention contract](README.md#retention-ownership-and-execution-locking).
+   For a dirty tested tree, use `source: null` in that index and identify its base
+   plus exact delta in the record and receipt; the base or a later commit is not
+   the tested commit. The record must state that linked `tests/out/` artifacts
+   are gitignored and available only in this checkout. The committed account and
+   reproduction remain available elsewhere; the pins protect local raw evidence
+   from ordinary pruning but do not publish it. Retire the pins only through an
+   explicit evidence-retention decision that preserves or supersedes the cited
+   observations.
 
    The source-drift check establishes that the shared rule and generated guide
    agree; it does not establish candidate eligibility. The Rust controls supply
@@ -197,7 +278,9 @@ refactor is outside this change.
    eligibility on the original arm and pass with the correction, the evidence
    state controls to retain their distinct results, consumer recovery and
    execution-preservation assertions to pass, and the selected suite and
-   generator checks to succeed. No result may upgrade a candidate to proof of
+   generator checks to succeed. The committed problem record and retained source
+   receipts must identify both tested trees and distinguish the expected red
+   failure from green acceptance. No result may upgrade a candidate to proof of
    sandbox cause or prediction/enforcement agreement. If implementation requires
    changing field meanings, native execution, collection gates or comparison
    mappings, reconsider the scope and contract decision before extending it.
