@@ -812,7 +812,7 @@
         "attempt.errno": 1,
         "attempt.requested_action": "open_read"
       },
-      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record)",
+      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (the envelope does not attribute it to the sandbox)",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "permission_errno",
@@ -2104,7 +2104,7 @@
         "attempt.fresh_read.open_errno": 1,
         "attempt.fresh_read.read_rc": null
       },
-      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record)",
+      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (the envelope does not attribute it to the sandbox)",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "permission_errno",

@@ -1391,8 +1391,15 @@ label.
 2. `attempt.missing_reason` explains an unavailable attempt channel.
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the
-   sandbox; attribution needs a captured denial record, and
-   `permission_failures_without_record` lists the steps that have none.
+   sandbox. The envelope does not establish that sandbox enforcement caused a
+   particular attempt's failure. A candidate association records a match
+   between a captured denial's PID, operation and path and a submitted
+   attempt; it does not establish that the attempt produced that record or
+   that the denial caused its failure. When correlation is available and the
+   reply carries comparisons, `permission_failures_without_record` lists
+   permission-failing steps without a candidate in this capture. Missing
+   candidates establish neither absence of denial records from the OS log
+   store nor absence of sandbox enforcement.
 4. A `path` query, or an attempt whose mapped filter is `path`, never
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
@@ -1458,7 +1465,7 @@ Lifecycle limitations in the table come from the step's summary.
 | Row | Specimen | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 | S | allow, read succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | readable bytes unchanged after the run |
-| S02 | S | deny, read EPERM | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record) |
+| S02 | S | deny, read EPERM | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (the envelope does not attribute it to the sandbox) |
 | S03 | S | allow, mode-000 file EACCES | `allow` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | direct open of locked outside PW fails with EACCES before the run; mode 0000 is a DAC condition, not policy |
 | S05 | S | query denied path, attempt other path | `deny` | `succeeded` | `completed_worker_status` | `matched` | `different_submitted` | `query_first` | — | readable and denied bytes unchanged |
 | S06 | S | query write, attempt read | `allow` | `succeeded` | `completed_worker_status` | `different` | `same_submitted` | `query_first` | — | readable bytes unchanged |
@@ -1482,7 +1489,7 @@ Lifecycle limitations in the table come from the step's summary.
 | S24 | S | allow, open_write succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | writable exists before the run with its 20-byte content and holds exactly the worker's one written byte after it |
 | S25 | S | read of the path S19 unlinked, ENOENT | `allow` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | the query ran before release while unlink_s19 existed; S19's unlink preceded this read |
 | S26 | S | fresh read returns independently known bytes | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | Returned bytes equal the independently prepared readable file; its bytes remain unchanged after the run. |
-| S27 | S | fresh open fails with permission errno | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record) |
+| S27 | S | fresh open fails with permission errno | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (the envelope does not attribute it to the sandbox) |
 | B1 | B | steered deny, read succeeds, ordered | `deny` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub transcript supplies deny; b_readable bytes unchanged; the real read succeeds under (allow default) |
 | B2 | B | verdict omitted, read succeeds | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b2; b_readable bytes unchanged |
 | B3 | B | verdict omitted, unlink of queried path | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b3; unlink_b3 exists before the run and is absent after it |

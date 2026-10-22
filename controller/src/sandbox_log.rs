@@ -172,7 +172,7 @@ fn attempt_operations(attempt: &Value) -> &'static [&'static str] {
         attempt.get("kind").and_then(Value::as_str),
         attempt.get("action").and_then(Value::as_str),
     ) {
-        (Some("file"), Some("open_read" | "access")) => &["file-read-data"],
+        (Some("file"), Some("open_read" | "read_fresh" | "access")) => &["file-read-data"],
         (Some("file"), Some("open_write")) => &["file-write-data"],
         (Some("file"), Some("create")) => &["file-write-create", "file-write-data"],
         (Some("file"), Some("unlink")) => &["file-write-unlink"],
@@ -1261,7 +1261,6 @@ mod tests {
         events
     }
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn read_fresh_attempt_is_a_file_read_data_candidate() {
         let out = match_step_denies(
             &[fresh_read_reply("s")],
@@ -1284,7 +1283,6 @@ mod tests {
         );
     }
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn read_fresh_candidate_needs_no_completed_attempt_evidence() {
         // Publication never completed: no outcome, native observation or
         // observed path. A denial can precede interrupted publication.

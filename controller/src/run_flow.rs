@@ -2368,7 +2368,6 @@ else:
     }
 
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn fresh_read_candidate_survives_probe_plan_assembly() {
         let (request, runner) = fresh_read_fixture(false);
         assert_fresh_read_candidates(
@@ -2381,7 +2380,6 @@ else:
     }
 
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn fresh_read_candidate_survives_phased_assembly() {
         let (request, runner) = fresh_read_fixture(true);
         assert_fresh_read_candidates(
@@ -2394,7 +2392,6 @@ else:
     }
 
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn repeated_fresh_reads_share_one_ambiguous_event() {
         // Neither the event nor phase ownership identifies one occurrence.
         let request = json!({"phases": [
@@ -2418,7 +2415,6 @@ else:
     }
 
     #[test]
-    #[ignore = "red until read_fresh is eligible for file-read-data (tests/READ-FRESH-PLAN.md)"]
     fn open_read_and_fresh_read_share_one_ambiguous_event() {
         let request = json!({"probe_plan": [
             fresh_read_action("o", "open_read"),

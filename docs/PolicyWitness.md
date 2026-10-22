@@ -1577,8 +1577,15 @@ Read the channels' results, relations and order with these rules:
 2. `attempt.missing_reason` explains an unavailable attempt channel.
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the
-   sandbox; attribution needs a captured denial record, and
-   `permission_failures_without_record` lists the steps that have none.
+   sandbox. The envelope does not establish that sandbox enforcement caused a
+   particular attempt's failure. A candidate association records a match
+   between a captured denial's PID, operation and path and a submitted
+   attempt; it does not establish that the attempt produced that record or
+   that the denial caused its failure. When correlation is available and the
+   reply carries comparisons, `permission_failures_without_record` lists
+   permission-failing steps without a candidate in this capture. Missing
+   candidates establish neither absence of denial records from the OS log
+   store nor absence of sandbox enforcement.
 4. A `path` query, or an attempt whose mapped filter is `path`, never
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
@@ -1638,7 +1645,7 @@ jq '.data.runner_result.steps[]
        limitations: .comparison.limitations}' run.json
 ```
 
-Permission-shaped failures that no captured denial record names:
+Permission-shaped failures without a candidate in this capture:
 
 ```sh
 jq '.data.runner_sandbox_diagnostics.permission_failures_without_record' run.json

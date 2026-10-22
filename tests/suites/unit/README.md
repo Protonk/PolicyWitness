@@ -19,10 +19,10 @@ Rust unit tests and formatting for the controller crate.
   refused, naming the worker and the key); promoted from red.
 - `rust.read_fresh_reds` selects the six read_fresh association tests the same
   way (a matching `file-read-data` event names a submitted `read_fresh` attempt
-  as a candidate, alone or ambiguously). They carry `#[ignore]` and stay red until
-  read_fresh eligibility lands; their absence, irrelevant-evidence and
-  unusable-evidence companions run in `rust.unit`. A failure counts as red only
-  when the test's own failure output carries its registered assertion message.
+  as a candidate, alone or ambiguously); promoted from red. They also run inside
+  `rust.unit` with their absence, irrelevant-evidence and unusable-evidence
+  companions. A failure counts as red only when the test's own failure output
+  carries its registered assertion message.
 - No case requires a built `.app` bundle.
 
 `collector_states_preserve_the_serialized_execution_half` in
