@@ -1,0 +1,69 @@
+diff --git a/controller/src/log_replay_tests.rs b/controller/src/log_replay_tests.rs
+index ab2df02..fa1fe37 100644
+--- a/controller/src/log_replay_tests.rs
++++ b/controller/src/log_replay_tests.rs
+@@ -193,6 +193,64 @@ for e in json.load(sys.stdin):
+         );
+     }
+ 
++    // Kernel records captured from a signed f468200 build on macOS 26.7.1
++    // (25G241), replayed through the production parser and matcher. Each names
++    // the worker PID and the submitted target of one denied attempt. The mach
++    // and sysctl records confirm rows that already associate; exec is the row
++    // under test.
++    #[test]
++    fn exec_row_observed_records_name_their_attempts() {
++        let pid = 66145;
++        let observed = [
++            ("mach", "mach_lookup", "bootstrap_look_up", "com.apple.logd",
++             "2026-10-22 07:13:19.040132-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(66145) deny(1) mach-lookup com.apple.logd"),
++            ("sysctl", "sysctl", "read", "kern.osrelease",
++             "2026-10-22 07:13:19.040159-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(66145) deny(1) sysctl-read kern.osrelease"),
++            ("exec", "exec", "spawn", "/usr/bin/true",
++             "2026-10-22 07:13:19.040197-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(66145) deny(1) process-exec* /usr/bin/true"),
++        ];
++        let mut reds = Vec::new();
++        for (id, kind, action, target, line) in observed {
++            let parsed = crate::log_show::parse_sandbox_deny_line(line).unwrap();
++            let event = SandboxDenyEvent {
++                pid: parsed.pid,
++                process: parsed.process,
++                operation: parsed.operation,
++                path: parsed.path,
++                raw_line: Some(parsed.raw_line),
++            };
++            assert_eq!(event.pid, Some(pid), "{id}: parser PID");
++            assert_eq!(event.path.as_deref(), Some(target), "{id}: parser target");
++            let steps = [json!({"step_id": id, "attempt": {"requested_path": target}})];
++            let plan = [json!({"step_id": id, "attempt": {"kind": kind, "action": action, "target": target}})];
++            let out = match_step_denies(&steps, &plan, &[event.clone()], Some(pid));
++            if !(out.len() == 1 && out[0].candidate_step_ids == [id]) {
++                reds.push(format!("{kind}/{action} ({})", event.operation.unwrap()));
++            }
++        }
++        assert!(reds.is_empty(), "exec-row red [observed records]: no candidate for {}", reds.join(", "));
++    }
++
++    // The same exec expectation written from the user guide's correlation
++    // table ("exec spawn | process-exec") instead of an observed record.
++    #[test]
++    fn exec_row_documented_operation_names_a_candidate() {
++        let steps = [json!({"step_id": "s", "attempt": {"requested_path": "/pw/helper"}})];
++        let plan = [json!({"step_id": "s", "attempt": {"kind": "exec", "action": "spawn", "target": "/pw/helper"}})];
++        let event = |op: &str| SandboxDenyEvent {
++            pid: Some(42),
++            process: Some("pw-probe-runner".into()),
++            operation: Some(op.into()),
++            path: Some("/pw/helper".into()),
++            raw_line: Some(format!("fixture {op}")),
++        };
++        let out = match_step_denies(&steps, &plan, &[event("process-exec"), event("file-read-data")], Some(42));
++        assert!(
++            out.len() == 1 && out[0].event_index == 0 && out[0].candidate_step_ids == ["s"],
++            "exec-row red [documented table]: process-exec event names no candidate"
++        );
++    }
++
+     #[test]
+     fn supplied_text_survives_parser_receiver_association_and_consumer() {
+         let plan: Vec<_> = [("early","open_read","/early"), ("late","open_read","/late"),

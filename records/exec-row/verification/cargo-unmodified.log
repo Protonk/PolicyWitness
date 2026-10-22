@@ -1,0 +1,53 @@
+   Compiling typenum v1.19.0
+   Compiling version_check v0.9.5
+   Compiling libc v0.2.178
+   Compiling proc-macro2 v1.0.103
+   Compiling objc2 v0.6.3
+   Compiling quote v1.0.42
+   Compiling unicode-ident v1.0.22
+   Compiling cfg_aliases v0.2.1
+   Compiling objc2-encode v4.1.0
+   Compiling serde_core v1.0.228
+   Compiling nix v0.30.1
+   Compiling cfg-if v1.0.4
+   Compiling bitflags v2.10.0
+   Compiling generic-array v0.14.7
+   Compiling serde_json v1.0.147
+   Compiling serde v1.0.228
+   Compiling zmij v0.1.7
+   Compiling memchr v2.7.6
+   Compiling itoa v1.0.16
+   Compiling controller v0.1.0 (/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/controller)
+   Compiling syn v2.0.111
+   Compiling cpufeatures v0.2.17
+   Compiling block2 v0.6.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling dispatch2 v0.3.0
+   Compiling sha2 v0.10.9
+   Compiling ctrlc v3.5.1
+   Compiling serde_derive v1.0.228
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.17s
+     Running unittests src/main.rs (controller/target/debug/deps/policy_witness-715eac2f83737fd4)
+
+running 2 tests
+test run_flow::tests::log_replay::exec_row_documented_operation_names_a_candidate ... ok
+test run_flow::tests::log_replay::exec_row_observed_records_name_their_attempts ... FAILED
+
+failures:
+
+---- run_flow::tests::log_replay::exec_row_observed_records_name_their_attempts stdout ----
+
+thread 'run_flow::tests::log_replay::exec_row_observed_records_name_their_attempts' (99926186) panicked at src/log_replay_tests.rs:231:9:
+exec-row red [observed records]: no candidate for exec/spawn (process-exec*)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    run_flow::tests::log_replay::exec_row_observed_records_name_their_attempts
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 257 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--bin policy-witness`
+exit 101

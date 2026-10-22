@@ -1,0 +1,1044 @@
+{
+  "artifact_integrity": null,
+  "case_results": [
+    {
+      "context": "standard",
+      "id": "unit/rust.unit",
+      "reason": "unit tests ok",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.fmt",
+      "reason": "rustfmt clean",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.disposition_reds",
+      "reason": "all 4 disposition tests pass; they remain selectable after removing #[ignore]",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.observer_admission",
+      "reason": "observer admission control passed",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.byoxpc_reds",
+      "reason": "all 2 BYOXPC selection tests pass; they remain selectable after removing #[ignore]",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "unit/rust.read_fresh_reds",
+      "reason": "all 6 read_fresh association tests pass; they remain selectable by exact name",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "blackbox_e2e/comparison_controls",
+      "reason": "envelope comparison preserves structure and command semantics",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "witness_contract/attempt_outcome_matrix_enforced",
+      "reason": "AttemptOutcome enum present, matrix consistent, source_drift enforces",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "witness_contract/log_capture_controls",
+      "reason": "live acceptance distinguishes complete, empty, budget-limited and unexpected outcomes",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    },
+    {
+      "context": "standard",
+      "id": "witness_contract/log_query_predicate_archive",
+      "reason": "production OS query and parser match the independent archive manifest",
+      "state": "completed",
+      "status": "pass",
+      "system_sleep_ms": 0
+    }
+  ],
+  "completion": {
+    "completed": 10,
+    "selected": 10,
+    "skipped": 0,
+    "unrun": 0
+  },
+  "configuration": {
+    "app_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/dist/PolicyWitness.app",
+    "out_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed",
+    "pw_bin": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "quiet": false
+  },
+  "counts": {
+    "fail": 0,
+    "pass": 10,
+    "skip": 0,
+    "total": 10
+  },
+  "duration_ms": 12572,
+  "finished_at_unix_ms": 1792689818681,
+  "harness_errors": [],
+  "idle_sleep_assertion": {
+    "command": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "-w",
+      "14864"
+    ],
+    "error": null,
+    "launched": true,
+    "running_at_end": true
+  },
+  "invocations": [
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.unit",
+          "reason": "unit tests ok",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/run.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Rust controller and helper unit-test batch",
+          "id": "unit/rust.unit",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.unit"
+        }
+      ],
+      "finished_at_unix_ms": 1792689814229,
+      "harness_errors": [],
+      "index": 0,
+      "report_paths": [
+        "suites/unit/rust.unit/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.unit/artifacts",
+          "duration_ms": 8010,
+          "message": "unit tests ok",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.unit"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689806111,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.fmt",
+          "reason": "rustfmt clean",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/fmt.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Controller crate is rustfmt-clean",
+          "id": "unit/rust.fmt",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.fmt"
+        }
+      ],
+      "finished_at_unix_ms": 1792689814605,
+      "harness_errors": [],
+      "index": 1,
+      "report_paths": [
+        "suites/unit/rust.fmt/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.fmt/artifacts",
+          "duration_ms": 273,
+          "message": "rustfmt clean",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.fmt"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689814230,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.disposition_reds",
+          "reason": "all 4 disposition tests pass; they remain selectable after removing #[ignore]",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/disposition_reds.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "The disposition record's controller tests by exact name (B1 status conflict, E1 projection and withholding); promoted from red",
+          "id": "unit/rust.disposition_reds",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.disposition_reds"
+        }
+      ],
+      "finished_at_unix_ms": 1792689814846,
+      "harness_errors": [],
+      "index": 2,
+      "report_paths": [
+        "suites/unit/rust.disposition_reds/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.disposition_reds/artifacts",
+          "duration_ms": 139,
+          "message": "all 4 disposition tests pass; they remain selectable after removing #[ignore]",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.disposition_reds"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689814606,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.observer_admission",
+          "reason": "observer admission control passed",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/observer_admission.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Observer admission before interpretation, promoted regression control",
+          "id": "unit/rust.observer_admission",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.observer_admission"
+        }
+      ],
+      "finished_at_unix_ms": 1792689815695,
+      "harness_errors": [],
+      "index": 3,
+      "report_paths": [
+        "suites/unit/rust.observer_admission/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.observer_admission/artifacts",
+          "duration_ms": 746,
+          "message": "observer admission control passed",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.observer_admission"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689814846,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.byoxpc_reds",
+          "reason": "all 2 BYOXPC selection tests pass; they remain selectable after removing #[ignore]",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/byoxpc_reds.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "BYOXPC selection controller tests by exact name (a required entitlement key present with value false is refused, naming the worker and the key); promoted from red",
+          "id": "unit/rust.byoxpc_reds",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.byoxpc_reds"
+        }
+      ],
+      "finished_at_unix_ms": 1792689815929,
+      "harness_errors": [],
+      "index": 4,
+      "report_paths": [
+        "suites/unit/rust.byoxpc_reds/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.byoxpc_reds/artifacts",
+          "duration_ms": 132,
+          "message": "all 2 BYOXPC selection tests pass; they remain selectable after removing #[ignore]",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.byoxpc_reds"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689815696,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "unit/rust.read_fresh_reds",
+          "reason": "all 6 read_fresh association tests pass; they remain selectable by exact name",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/unit/read_fresh_reds.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "The read_fresh denial-log association tests by exact name (a matching file-read-data event names the submitted read_fresh attempt as a candidate, alone or ambiguously); promoted from red",
+          "id": "unit/rust.read_fresh_reds",
+          "report_suite": "unit",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "unit",
+          "test_id": "rust.read_fresh_reds"
+        }
+      ],
+      "finished_at_unix_ms": 1792689816227,
+      "harness_errors": [],
+      "index": 5,
+      "report_paths": [
+        "suites/unit/rust.read_fresh_reds/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.read_fresh_reds/artifacts",
+          "duration_ms": 188,
+          "message": "all 6 read_fresh association tests pass; they remain selectable by exact name",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "unit",
+          "test_id": "rust.read_fresh_reds"
+        }
+      ],
+      "requested_suite": "unit",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689815930,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "blackbox_e2e/comparison_controls",
+          "reason": "envelope comparison preserves structure and command semantics",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/comparison_controls.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Envelope comparisons reject structural and command changes while allowing provenance-matched relocation",
+          "id": "blackbox_e2e/comparison_controls",
+          "report_suite": "blackbox_e2e",
+          "requires": [],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "blackbox_e2e",
+          "test_id": "comparison_controls"
+        }
+      ],
+      "finished_at_unix_ms": 1792689817843,
+      "harness_errors": [],
+      "index": 6,
+      "report_paths": [
+        "suites/blackbox_e2e/comparison_controls/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/blackbox_e2e/comparison_controls/artifacts",
+          "duration_ms": 1510,
+          "message": "envelope comparison preserves structure and command semantics",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "blackbox_e2e",
+          "test_id": "comparison_controls"
+        }
+      ],
+      "requested_suite": "blackbox_e2e",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689816228,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "witness_contract/attempt_outcome_matrix_enforced",
+          "reason": "AttemptOutcome enum present, matrix consistent, source_drift enforces",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/attempt_outcome_matrix_enforced.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "attempt outcome matrix enforced",
+          "id": "witness_contract/attempt_outcome_matrix_enforced",
+          "report_suite": "witness_contract",
+          "requires": [],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "witness_contract",
+          "test_id": "attempt_outcome_matrix_enforced"
+        }
+      ],
+      "finished_at_unix_ms": 1792689818075,
+      "harness_errors": [],
+      "index": 7,
+      "report_paths": [
+        "suites/witness_contract/attempt_outcome_matrix_enforced/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/attempt_outcome_matrix_enforced/artifacts",
+          "duration_ms": 125,
+          "message": "AttemptOutcome enum present, matrix consistent, source_drift enforces",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "witness_contract",
+          "test_id": "attempt_outcome_matrix_enforced"
+        }
+      ],
+      "requested_suite": "witness_contract",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689817846,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "witness_contract/log_capture_controls",
+          "reason": "live acceptance distinguishes complete, empty, budget-limited and unexpected outcomes",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/log_capture_controls.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Controlled acceptance and rejection of live capture facts; empty queries and evidenced cutoffs do not excuse malformed replies or failed cleanup",
+          "id": "witness_contract/log_capture_controls",
+          "report_suite": "witness_contract",
+          "requires": [],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "witness_contract",
+          "test_id": "log_capture_controls"
+        }
+      ],
+      "finished_at_unix_ms": 1792689818414,
+      "harness_errors": [],
+      "index": 8,
+      "report_paths": [
+        "suites/witness_contract/log_capture_controls/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/log_capture_controls/artifacts",
+          "duration_ms": 231,
+          "message": "live acceptance distinguishes complete, empty, budget-limited and unexpected outcomes",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "witness_contract",
+          "test_id": "log_capture_controls"
+        }
+      ],
+      "requested_suite": "witness_contract",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689818077,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    },
+    {
+      "case_results": [
+        {
+          "context": "standard",
+          "id": "witness_contract/log_query_predicate_archive",
+          "reason": "production OS query and parser match the independent archive manifest",
+          "state": "completed",
+          "status": "pass",
+          "system_sleep_ms": 0
+        }
+      ],
+      "cases": [
+        {
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/log_query_predicate_archive.sh"
+          ],
+          "context": "standard",
+          "default": true,
+          "depends_on": [],
+          "description": "Required committed archive: real log show must preserve the independent positive message multiset and exclude unrelated PID digits before parsing; missing fixture or tool access fails",
+          "id": "witness_contract/log_query_predicate_archive",
+          "report_suite": "witness_contract",
+          "requires": [
+            "cargo"
+          ],
+          "selection": "requested",
+          "skip_reasons": [],
+          "suite": "witness_contract",
+          "test_id": "log_query_predicate_archive"
+        }
+      ],
+      "finished_at_unix_ms": 1792689818679,
+      "harness_errors": [],
+      "index": 9,
+      "report_paths": [
+        "suites/witness_contract/log_query_predicate_archive/report.json"
+      ],
+      "reports": [
+        {
+          "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/log_query_predicate_archive/artifacts",
+          "duration_ms": 160,
+          "message": "production OS query and parser match the independent archive manifest",
+          "notes": [],
+          "schema_version": 1,
+          "status": "pass",
+          "suite": "witness_contract",
+          "test_id": "log_query_predicate_archive"
+        }
+      ],
+      "requested_suite": "witness_contract",
+      "returncode": 0,
+      "started_at_unix_ms": 1792689818416,
+      "state": "exited",
+      "system_sleep_error": null,
+      "system_sleep_ms": 0
+    }
+  ],
+  "ok": true,
+  "plan": {
+    "cases": [
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/run.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Rust controller and helper unit-test batch",
+        "id": "unit/rust.unit",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.unit"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/fmt.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Controller crate is rustfmt-clean",
+        "id": "unit/rust.fmt",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.fmt"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/disposition_reds.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "The disposition record's controller tests by exact name (B1 status conflict, E1 projection and withholding); promoted from red",
+        "id": "unit/rust.disposition_reds",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.disposition_reds"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/observer_admission.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Observer admission before interpretation, promoted regression control",
+        "id": "unit/rust.observer_admission",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.observer_admission"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/byoxpc_reds.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "BYOXPC selection controller tests by exact name (a required entitlement key present with value false is refused, naming the worker and the key); promoted from red",
+        "id": "unit/rust.byoxpc_reds",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.byoxpc_reds"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/unit/read_fresh_reds.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "The read_fresh denial-log association tests by exact name (a matching file-read-data event names the submitted read_fresh attempt as a candidate, alone or ambiguously); promoted from red",
+        "id": "unit/rust.read_fresh_reds",
+        "report_suite": "unit",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "unit",
+        "test_id": "rust.read_fresh_reds"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/blackbox_e2e/comparison_controls.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Envelope comparisons reject structural and command changes while allowing provenance-matched relocation",
+        "id": "blackbox_e2e/comparison_controls",
+        "report_suite": "blackbox_e2e",
+        "requires": [],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "blackbox_e2e",
+        "test_id": "comparison_controls"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/witness_contract/attempt_outcome_matrix_enforced.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "attempt outcome matrix enforced",
+        "id": "witness_contract/attempt_outcome_matrix_enforced",
+        "report_suite": "witness_contract",
+        "requires": [],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "witness_contract",
+        "test_id": "attempt_outcome_matrix_enforced"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/witness_contract/log_capture_controls.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Controlled acceptance and rejection of live capture facts; empty queries and evidenced cutoffs do not excuse malformed replies or failed cleanup",
+        "id": "witness_contract/log_capture_controls",
+        "report_suite": "witness_contract",
+        "requires": [],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "witness_contract",
+        "test_id": "log_capture_controls"
+      },
+      {
+        "command": [
+          "bash",
+          "tests/suites/witness_contract/log_query_predicate_archive.sh"
+        ],
+        "context": "standard",
+        "default": true,
+        "depends_on": [],
+        "description": "Required committed archive: real log show must preserve the independent positive message multiset and exclude unrelated PID digits before parsing; missing fixture or tool access fails",
+        "id": "witness_contract/log_query_predicate_archive",
+        "report_suite": "witness_contract",
+        "requires": [
+          "cargo"
+        ],
+        "selection": "requested",
+        "skip_reasons": [],
+        "suite": "witness_contract",
+        "test_id": "log_query_predicate_archive"
+      }
+    ],
+    "configuration": {
+      "app_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/dist/PolicyWitness.app",
+      "out_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed",
+      "pw_bin": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+      "quiet": false
+    },
+    "containing_suites": {
+      "blackbox_e2e": [
+        "blackbox_e2e/comparison_controls"
+      ],
+      "unit": [
+        "unit/rust.unit",
+        "unit/rust.fmt",
+        "unit/rust.disposition_reds",
+        "unit/rust.observer_admission",
+        "unit/rust.byoxpc_reds",
+        "unit/rust.read_fresh_reds"
+      ],
+      "witness_contract": [
+        "witness_contract/attempt_outcome_matrix_enforced",
+        "witness_contract/log_capture_controls",
+        "witness_contract/log_query_predicate_archive"
+      ]
+    },
+    "schema_version": 1,
+    "selection": {
+      "cases": [
+        "witness_contract/log_capture_controls",
+        "witness_contract/log_query_predicate_archive",
+        "witness_contract/attempt_outcome_matrix_enforced",
+        "blackbox_e2e/comparison_controls"
+      ],
+      "mode": "explicit",
+      "suites": [
+        "unit"
+      ]
+    }
+  },
+  "reports": [
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.unit/artifacts",
+      "duration_ms": 8010,
+      "message": "unit tests ok",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.unit"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.fmt/artifacts",
+      "duration_ms": 273,
+      "message": "rustfmt clean",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.fmt"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.disposition_reds/artifacts",
+      "duration_ms": 139,
+      "message": "all 4 disposition tests pass; they remain selectable after removing #[ignore]",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.disposition_reds"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.observer_admission/artifacts",
+      "duration_ms": 746,
+      "message": "observer admission control passed",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.observer_admission"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.byoxpc_reds/artifacts",
+      "duration_ms": 132,
+      "message": "all 2 BYOXPC selection tests pass; they remain selectable after removing #[ignore]",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.byoxpc_reds"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/unit/rust.read_fresh_reds/artifacts",
+      "duration_ms": 188,
+      "message": "all 6 read_fresh association tests pass; they remain selectable by exact name",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "unit",
+      "test_id": "rust.read_fresh_reds"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/blackbox_e2e/comparison_controls/artifacts",
+      "duration_ms": 1510,
+      "message": "envelope comparison preserves structure and command semantics",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "blackbox_e2e",
+      "test_id": "comparison_controls"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/attempt_outcome_matrix_enforced/artifacts",
+      "duration_ms": 125,
+      "message": "AttemptOutcome enum present, matrix consistent, source_drift enforces",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "witness_contract",
+      "test_id": "attempt_outcome_matrix_enforced"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/log_capture_controls/artifacts",
+      "duration_ms": 231,
+      "message": "live acceptance distinguishes complete, empty, budget-limited and unexpected outcomes",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "witness_contract",
+      "test_id": "log_capture_controls"
+    },
+    {
+      "artifacts_dir": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-removed/suites/witness_contract/log_query_predicate_archive/artifacts",
+      "duration_ms": 160,
+      "message": "production OS query and parser match the independent archive manifest",
+      "notes": [],
+      "schema_version": 1,
+      "status": "pass",
+      "suite": "witness_contract",
+      "test_id": "log_query_predicate_archive"
+    }
+  ],
+  "requested_cases": [
+    "witness_contract/log_capture_controls",
+    "witness_contract/log_query_predicate_archive",
+    "witness_contract/attempt_outcome_matrix_enforced",
+    "blackbox_e2e/comparison_controls"
+  ],
+  "requested_suites": [
+    "unit"
+  ],
+  "run_id": "20261022T172326Z_aee470fa",
+  "schema_version": 1,
+  "started_at_unix_ms": 1792689806109,
+  "suites": {
+    "blackbox_e2e": {
+      "fail": 0,
+      "pass": 1,
+      "skip": 0,
+      "total": 1
+    },
+    "unit": {
+      "fail": 0,
+      "pass": 6,
+      "skip": 0,
+      "total": 6
+    },
+    "witness_contract": {
+      "fail": 0,
+      "pass": 3,
+      "skip": 0,
+      "total": 3
+    }
+  },
+  "terminal": true
+}

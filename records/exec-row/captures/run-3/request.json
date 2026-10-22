@@ -1,0 +1,70 @@
+{
+  "schema_version": 5,
+  "specimen_id": "attempt_kind_existing_probe",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny mach-lookup (global-name \"com.apple.logd\")) (deny sysctl-read (sysctl-name \"kern.osrelease\")) (deny process-exec (literal \"/usr/bin/true\")) (deny file-read-data (literal \"/private/tmp/pw-ak-614fb009fb83/denied_data\"))"
+  },
+  "probe_plan": [
+    {
+      "step_id": "mach",
+      "sandbox_check": {
+        "operation": "mach-lookup",
+        "filter": {
+          "kind": "global_name",
+          "value": "com.apple.logd"
+        }
+      },
+      "attempt": {
+        "kind": "mach_lookup",
+        "action": "bootstrap_look_up",
+        "target": "com.apple.logd"
+      }
+    },
+    {
+      "step_id": "sysctl",
+      "sandbox_check": {
+        "operation": "sysctl-read",
+        "filter": {
+          "kind": "sysctl_name",
+          "value": "kern.osrelease"
+        }
+      },
+      "attempt": {
+        "kind": "sysctl",
+        "action": "read",
+        "target": "kern.osrelease"
+      }
+    },
+    {
+      "step_id": "exec",
+      "sandbox_check": {
+        "operation": "process-exec*",
+        "filter": {
+          "kind": "path",
+          "value": "/usr/bin/true"
+        }
+      },
+      "attempt": {
+        "kind": "exec",
+        "action": "spawn",
+        "target": "/usr/bin/true"
+      }
+    },
+    {
+      "step_id": "read",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-ak-614fb009fb83/denied_data"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "/private/tmp/pw-ak-614fb009fb83/denied_data"
+      }
+    }
+  ]
+}

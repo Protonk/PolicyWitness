@@ -1,0 +1,40 @@
+==> [selection] unit/rust.unit
+==> [unit/rust.unit] start
+==> [unit/rust.unit] cargo test --bins (unit tests)
+==> [unit/rust.unit] pass: unit tests ok
+==> [selection] unit/rust.fmt
+==> [unit/rust.fmt] start
+==> [unit/rust.fmt] cargo fmt -- --check (controller crate)
+==> [unit/rust.fmt] pass: rustfmt clean
+==> [selection] unit/rust.disposition_reds
+==> [unit/rust.disposition_reds] start
+==> [unit/rust.disposition_reds] run the exact disposition tests, including ignored ones (B1, E1)
+==> [unit/rust.disposition_reds] pass: all 4 disposition tests pass; they remain selectable after removing #[ignore]
+==> [selection] unit/rust.observer_admission
+==> [unit/rust.observer_admission] start
+==> [unit/rust.observer_admission] pass: observer admission control passed
+==> [selection] unit/rust.byoxpc_reds
+==> [unit/rust.byoxpc_reds] start
+==> [unit/rust.byoxpc_reds] run the exact BYOXPC selection tests, including ignored ones (false-valued keys)
+==> [unit/rust.byoxpc_reds] pass: all 2 BYOXPC selection tests pass; they remain selectable after removing #[ignore]
+==> [selection] unit/rust.read_fresh_reds
+==> [unit/rust.read_fresh_reds] start
+==> [unit/rust.read_fresh_reds] run the exact read_fresh association tests, including ignored ones
+==> [unit/rust.read_fresh_reds] pass: all 6 read_fresh association tests pass; they remain selectable by exact name
+==> [selection] blackbox_e2e/comparison_controls
+==> [blackbox_e2e/comparison_controls] start
+==> [blackbox_e2e/comparison_controls] reject structural and command changes while allowing corroborated relocation
+==> [blackbox_e2e/comparison_controls] pass: envelope comparison preserves structure and command semantics
+==> [selection] witness_contract/attempt_outcome_matrix_enforced
+==> [witness_contract/attempt_outcome_matrix_enforced] start
+==> [witness_contract/attempt_outcome_matrix_enforced] AttemptOutcome enum exists and source_drift enforces a matrix row per constant
+==> [witness_contract/attempt_outcome_matrix_enforced] pass: AttemptOutcome enum present, matrix consistent, source_drift enforces
+==> [selection] witness_contract/log_capture_controls
+==> [witness_contract/log_capture_controls] start
+==> [witness_contract/log_capture_controls] require collection and cleanup facts for completed queries and budget cutoffs; reject unsupported excuses
+==> [witness_contract/log_capture_controls] pass: live acceptance distinguishes complete, empty, budget-limited and unexpected outcomes
+==> [selection] witness_contract/log_query_predicate_archive
+==> [witness_contract/log_query_predicate_archive] start
+==> [witness_contract/log_query_predicate_archive] pass: production OS query and parser match the independent archive manifest
+Test run summary: /private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/49e1b04c-73fc-4955-8923-0088928ff412/scratchpad/pw-exec-row.vfLIhI/tests/out/runs/exec-row-observed-spelling/run.json
+exit 0
