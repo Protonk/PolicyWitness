@@ -82,7 +82,7 @@ Use [the contained probe helper](lib/shim_probe.py) for any by-hand probe of
 `SDKROOT` or `DEVELOPER_DIR`. Start the helper with those
 variables absent and pass the tested values through `--env`, for example:
 
-    env -u SDKROOT -u DEVELOPER_DIR /usr/bin/python3 -I -B tests/lib/shim_probe.py \
+    env -u SDKROOT -u DEVELOPER_DIR tests/lib/python.sh -I tests/lib/shim_probe.py \
       --fixture /private/tmp/pw-sdk-probe-new --env SDKROOT=/missing.sdk -- /usr/bin/git --version
 
 Use a fresh fixture. The helper refuses unless its containment checks pass;

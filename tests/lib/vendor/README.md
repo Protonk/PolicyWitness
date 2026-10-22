@@ -1,9 +1,9 @@
 # Vendored libraries
 
-Third-party code the build helpers import, kept unmodified so the system
-`/usr/bin/python3` (3.9) can run them with nothing installed during a build.
-Python 3.9 has no `tomllib`, and markdown-it-py 3.0.0 is the last release that
-supports it.
+Third-party code the build helpers import, kept unmodified so that a build
+installs nothing and the helpers, which start with `-S`, import only from the
+tree. `tomli` stays because Cargo 1.94 and later read TOML 1.1 in
+`.cargo/config.toml` and Python's `tomllib` reads TOML 1.0 only.
 
 | Library | Version | Used by | Source | License |
 | --- | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ supports it.
 The package files are the wheel's `tomli/` directory byte for byte; the
 license is the wheel's `licenses/LICENSE`. To update, replace the files from a
 newer wheel whose digest matches PyPI's, record the version and digest here,
-and run the Cargo configuration controls under `/usr/bin/python3`.
+and run the Cargo configuration controls through `tests/lib/python.sh`.
 
 `markdown_it/` and `mdurl/` are their wheels' package directories byte for
 byte, with each wheel's license files from its `.dist-info` directory placed in
@@ -22,5 +22,4 @@ the package. Each wheel's `RECORD` is kept here as
 `markdown_it_py-3.0.0.RECORD` and `mdurl-0.1.2.RECORD`. The
 `source_drift/markdown_reader` case compares every vendored file with its
 `RECORD` digest and refuses an import of either package anywhere except
-`docs/markdown_reader.py`, which loads them only from this directory. Moving to
-a newer markdown-it-py needs a newer Python than `/usr/bin/python3`.
+`docs/markdown_reader.py`, which loads them only from this directory.

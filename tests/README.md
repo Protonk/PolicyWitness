@@ -213,11 +213,14 @@ execution gets a checkout-busy error before any cache or distribution
 mutation, even with a different output path. A direct build hands itself to
 `tests/lib/checkout_lock.sh`, the shell front end that records the caller's
 `SDKROOT`, `CPATH`, `LIBRARY_PATH`, `MANPATH` and `LC_CTYPE` as an exact
-environment witness and starts the developer directory's Python directly,
-with locale coercion disabled. The CLI owner and build session start refuse
-a missing or changed witness; neither restores values. Nested front ends
-witness their own caller. The dispatcher resolves the same direct Python
-independently and records no witness; cases that build use the front end.
+environment witness and starts the pinned Python directly, with locale
+coercion disabled. The CLI owner and build session start refuse a missing or
+changed witness; neither restores values. Nested front ends witness their
+own caller. The dispatcher resolves the same pinned Python independently and
+records no witness, and every case resolves it again through `testlib.sh`,
+so leaf checkers and their children start no shim; cases that build use the
+front end. The interpreter is Homebrew's `python@3.14` at its keg path, as
+[the build guide](../docs/BUILD.md#the-checkout-lock) describes.
 The hold lasts until the last compiler or tool that holds the descriptor
 exits, even when the owner and the script are killed first. A standalone Cargo
 invocation against the managed `controller/target/` goes through the same
@@ -331,7 +334,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | --- | --- | --- | --- | --- |
 | `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script, and a translated-build refusal control that needs Rosetta. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins, Rosetta alone for the translated-build control; offline release controls vary. | [Suite](suites/preflight/README.md) |
 | `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
-| `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
+| `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures, the interpreter boundary at a case and its child, and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
 | `unit` | Baseline | Rust controller/helper contracts, orchestration calls, envelope shape and formatting. Constructed inputs cover interpretation and refusal branches. | Cargo and rustfmt. | [Suite](suites/unit/README.md) |
 | `runner_unit` | Baseline + opt-in | Swift host admission, drivers, lifecycle and evidence encoding; actual transfer replies cross Rust/Python readers. Constructed build-receipt layouts need only Python. Internal SKIP/FAIL output fails the wrapper. | Swift; driver case also needs clang, Cargo and a signed app, without XPC. Launch-descriptor ownership controls require the signed worker. Isolated host setup faults, descriptor collisions and opt-in oracle-sensitivity, confirmed-reap and exec-reader mutations use Swift/clang without the app. | [Suite](suites/runner_unit/README.md) |
