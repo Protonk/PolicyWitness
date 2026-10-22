@@ -143,9 +143,9 @@ def ordinary(out):
 
 
 def protections(out):
-    for name in ('legacy', 'pin', 'wrong_owner', 'overlap'):
+    for name in ('omitted_release', 'pin', 'wrong_owner', 'overlap'):
         repo, _, battery, new, _ = fixture(out, name)
-        if name == 'legacy':
+        if name == 'omitted_release':
             change_entry(repo, battery, lambda e: e.pop('release'))
         elif name == 'pin':
             change_entry(repo, battery, lambda e: e.update(release=None))
@@ -185,16 +185,14 @@ def protections(out):
 
 def checkpoint_policy(out):
     repo, old, battery, new, current = fixture(out, 'checkpoint-policy')
-    # Explicitly migrated entries expire even when the older release predates
-    # portable bundles. Cleanup does not back up every old development run.
-    record = retention.read_object(old / 'release.json')
-    record.pop('test_evidence')
-    retention.atomic_json(old / 'release.json', record)
-    shutil.rmtree(old / release_runs.BUNDLE)
-    legacy = repo / 'tests/out/release-acceptance/run-0-9-0'
-    (legacy / 'owner.json').unlink()
-    (legacy / 'acceptance.lock').unlink()
-    change_entry(repo, legacy, lambda e: e.update(run_id='nested-accept-0.9.0'))
+    # Cleanup does not back up every old development run. Acceptance output
+    # without its owner record and lifetime lock is not recognized: it is kept
+    # with its reason, and its retention entry stays.
+    unrecognized = repo / 'tests/out/release-acceptance/run-0-9-0'
+    (unrecognized / 'owner.json').unlink()
+    (unrecognized / 'acceptance.lock').unlink()
+    change_entry(repo, unrecognized, lambda e: e.update(run_id='nested-accept-0.9.0'))
+    unrecognized_inventory = artifact.inventory(unrecognized)
     history = artifact.inventory(old)
     failed = local_run(repo, 'old-failed', 120, 121, ok=False)
     abandoned = local_run(repo, 'abandoned', 130)
@@ -224,11 +222,14 @@ def checkpoint_policy(out):
     with retention.checkout_lock(repo):
         retention.write_index(repo, value)
     result = release_rotate.rotate(new, root=repo, apply=True)
-    assert all(not p.exists() for p in (battery, legacy, failed, abandoned, ambiguous, finished_cleanup))
+    assert all(not p.exists() for p in (battery, failed, abandoned, ambiguous, finished_cleanup))
     assert all(p.is_dir() for p in (current, recent, pending, registry, unmanaged, newest, tied))
     assert stray.read_text() == '{}'
     assert result['newest'] == ['runs/newest-failed', 'runs/same-recorded-completion']
-    assert len(retention.read_object(repo / 'tests/RETAINED.json')['runs']) == 2
+    assert artifact.inventory(unrecognized) == unrecognized_inventory
+    assert dict(path='release-acceptance/run-0-9-0', reason='acceptance ownership has no lifetime lock') in result['kept'], result['kept']
+    retained = retention.read_object(repo / 'tests/RETAINED.json')['runs']
+    assert len(retained) == 3 and [e['run_id'] for e in retained if e['path'] == 'release-acceptance/run-0-9-0'] == ['nested-accept-0.9.0']
     assert artifact.inventory(old) == history
 
 

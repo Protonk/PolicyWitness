@@ -130,8 +130,8 @@
         "full",
         "partial"
       ],
-      "reads": "IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment; every nonempty SDKROOT, inherited or supplied on the command line, is validated by sdk_guard.sh while parsing the Makefile before any recipe",
-      "writes": "nothing; runs build.sh with them",
+      "reads": "IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment; every nonempty SDKROOT, inherited or supplied on the command line, is validated by sdk_guard.sh while parsing the Makefile before any recipe. /usr/bin/make is itself a developer-tool shim and that SDK check runs xcrun, both before build.sh and its native builder check, and both run translated when make does",
+      "writes": "nothing; runs build.sh with them, which a translated make starts translated",
       "refusals": [],
       "sources": [
         {
@@ -172,9 +172,10 @@
         "full",
         "partial"
       ],
-      "reads": "BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts",
+      "reads": "hw.optional.arm64 and sysctl.proc_translated, each read by /usr/sbin/sysctl from the script's own shell before anything else runs (--help included): the build proceeds only on 1 and 0, and an empty value or a failed probe refuses; then BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits after the knobs are validated, before any other check); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts",
       "writes": "the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else",
       "refusals": [
+        "native_builder_required",
         "knob_value",
         "unknown_argument",
         "missing_tree_input",
@@ -185,6 +186,10 @@
         "sdk_request_invalid"
       ],
       "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "this build runs only natively on Apple Silicon"
+        },
         {
           "path": "build.sh",
           "symbol": "must be 0 or 1"
@@ -228,6 +233,18 @@
         {
           "path": "tests/suites/source_drift/contract.py",
           "symbol": "test_build_refuses_a_stand_in_developer_directory_before_any_python",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_builder_it_cannot_confirm_before_anything_else",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_unconfirmed_machine",
           "form": "test",
           "coverage": "behavioral"
         }
@@ -1463,6 +1480,51 @@
     }
   ],
   "refusals": [
+    {
+      "id": "native_builder_required",
+      "message": "this build runs only natively on Apple Silicon (hw.optional.arm64=${NATIVE_ARM64}, sysctl.proc_translated=${NATIVE_TRANSLATED})",
+      "kind": "script",
+      "steps": [
+        "admission"
+      ],
+      "status": "2",
+      "variants": [
+        "full",
+        "partial"
+      ],
+      "sources": [
+        {
+          "path": "build.sh",
+          "symbol": "this build runs only natively on Apple Silicon"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/source_drift/build_rules.py",
+          "symbol": "check_refusals",
+          "form": "rule",
+          "coverage": "textual"
+        },
+        {
+          "path": "tests/suites/source_drift/contract.py",
+          "symbol": "test_build_refuses_a_builder_it_cannot_confirm_before_anything_else",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/build_refusals.py",
+          "symbol": "control_unconfirmed_machine",
+          "form": "test",
+          "coverage": "behavioral"
+        },
+        {
+          "path": "tests/suites/preflight/opt_in/translated_build_refusals.py",
+          "symbol": "control_translated_builder",
+          "form": "test",
+          "coverage": "behavioral"
+        }
+      ]
+    },
     {
       "id": "knob_value",
       "message": "${knob} must be 0 or 1 (got '${!knob}')",
@@ -2971,7 +3033,7 @@
     },
     {
       "id": "meson_target",
-      "message": "output target: the native products are macOS arm64 code, but Meson is configured for host ${host_system} ${host_cpu_family} (the build machine, ${build_system} ${build_cpu_family}, is not constrained)",
+      "message": "output target: the native products are macOS arm64 code, but Meson is configured for host ${host_system} ${host_cpu_family}",
       "kind": "meson",
       "steps": [
         "configure",

@@ -183,6 +183,11 @@ def check_branch_names(out):
 
 FIXTURE_RECORD = None
 FIXTURE_MEMBERS = None
+# The provenance writer's two sealed notes, written out here rather than imported: a schema-2 archive keeps them as sealed.
+MESON_MACHINES_NOTE = ("Meson's host machine is the platform the native products are configured for; its build machine is "
+                       "where Meson reported compiling, a toolchain fact that is not constrained")
+OUTPUT_TARGET_NOTE = ("the fixed target every shipped executable must satisfy, observed per output below; it describes the "
+                      "products, not the machine or processes that built them, and makes no claim about translation")
 
 
 def prepare_provenance_fixture(out):
@@ -199,6 +204,8 @@ def prepare_provenance_fixture(out):
     data['outputs'] = [o for o in data['outputs'] if o['rel_path'] in paths]
     data['signing']['nested'] = [o for o in data['signing']['nested'] if o['rel_path'] in paths]
     data['source'].update(describe='fixture-A', version='0.9.0', build_number='3')
+    data['configuration']['meson_machines']['note'] = MESON_MACHINES_NOTE
+    data['configuration']['output_target']['note'] = OUTPUT_TARGET_NOTE
     FIXTURE_RECORD = data
     FIXTURE_MEMBERS = {path: (app / path).read_bytes() for path in paths}
 
@@ -284,6 +291,38 @@ def make_battery(repo, dist, *, version='0.9.0', **overrides):
     return run_dir
 
 
+def refused_versions(work, dest, record):
+    unbound = work / 'no-provenance-object'
+    shutil.copytree(dest, unbound)
+    (unbound / 'release.json').write_text(json.dumps({k: v for k, v in record.items() if k != 'provenance'}))
+    reject_release(unbound, 'no provenance object')
+    stale = work / 'version-1-record'
+    shutil.copytree(dest, stale)
+    name = 'PolicyWitness-0.9.0.zip'
+    with zipfile.ZipFile(dest / name) as source, zipfile.ZipFile(stale / name, 'w') as target:
+        for info in source.infolist():
+            data = source.read(info)
+            if info.filename == 'PolicyWitness.app/Contents/Resources/Evidence/provenance.json':
+                data = json.dumps(dict(json.loads(data), schema_version=1)).encode()
+                (stale / 'evidence/provenance.json').write_bytes(data)
+            target.writestr(info, data)
+    digest = hashlib.sha256((stale / name).read_bytes()).hexdigest()
+    (stale / 'SHA256SUMS').write_text(''.join(f'{digest if f == name else d}  {f}\n'
+                                             for d, f in (line.split() for line in (stale / 'SHA256SUMS').read_text().splitlines())))
+    provenance = dict(record['provenance'], sha256=hashlib.sha256((stale / 'evidence/provenance.json').read_bytes()).hexdigest())
+    (stale / 'release.json').write_text(json.dumps(dict(record, sha256=digest, provenance=provenance)))
+    reject_release(stale, 'unsupported provenance record')
+
+
+def reject_release(archive, needle):
+    try:
+        release_runs.verify_release(archive)
+    except ValueError as exc:
+        assert needle in str(exc), (archive.name, exc)
+    else:
+        raise AssertionError(f'{archive.name}: verification passed')
+
+
 def check_archive(out):
     work = out / 'archive'
     work.mkdir()
@@ -341,6 +380,14 @@ def check_archive(out):
     assert provenance['path'] == 'evidence/provenance.json' and provenance['sha256'] == hashlib.sha256(member).hexdigest()
     assert provenance['controller_sha256'] == controller != hashlib.sha256(b'#!/bin/sh\n# build B\n').hexdigest()
     assert isinstance(provenance['app_signature'], dict) and 'status' in provenance['app_signature']
+    # The complete schema-2 archive verified with the sealed notes as written, in the ZIP's member and the archived copy.
+    for raw in (member, archived_record.read_bytes()):
+        configuration = json.loads(raw)['configuration']
+        assert configuration['meson_machines']['note'] == MESON_MACHINES_NOTE, configuration['meson_machines']
+        assert configuration['output_target']['note'] == OUTPUT_TARGET_NOTE, configuration['output_target']
+    # Only the current record is read: a release record without its provenance object, and a version 1 record bound
+    # consistently through the ZIP, its checksums and the archived copy, are refused rather than interpreted.
+    refused_versions(work, dest, record)
     # A swapped archived record, a record that differs from the ZIP's, and a changed controller hash are refused on verification.
     original_record, original_release = archived_record.read_bytes(), (dest / 'release.json').read_bytes()
     for name, mutate, needle in (
@@ -566,16 +613,22 @@ def check_publish(out, repo, dest, notes):
             assert release_publish.main([str(dest)]) == 0
         assert stdout.getvalue().startswith('verified https://github.invalid/releases/tag/v0.9.0')
 
-    # Historical releases without a portable bundle remain publishable.
-    legacy = work / 'legacy'
-    shutil.copytree(dest, legacy)
-    historical = json.loads((legacy / 'release.json').read_text())
-    historical.pop('test_evidence')
-    (legacy / 'release.json').write_text(json.dumps(historical))
-    shutil.rmtree(legacy / release_runs.BUNDLE)
-    with patch.object(release_publish, 'run', github):
-        _, created = release_publish.publish(legacy, root=repo)
-    assert not created
+    # An archive without portable test evidence is refused before any push or GitHub operation.
+    bundleless = work / 'bundleless'
+    shutil.copytree(dest, bundleless)
+    unverified = json.loads((bundleless / 'release.json').read_text())
+    unverified.pop('test_evidence')
+    (bundleless / 'release.json').write_text(json.dumps(unverified))
+    shutil.rmtree(bundleless / release_runs.BUNDLE)
+    refusing = GitHub(work / 'bundleless.jsonl')
+    with patch.object(release_publish, 'run', refusing):
+        try:
+            release_publish.publish(bundleless, root=repo)
+        except ValueError as exc:
+            assert 'no verified portable test evidence' in str(exc), exc
+        else:
+            raise AssertionError('an archive without portable test evidence was published')
+    assert not refusing.calls, refusing.calls
 
 
 def main(out):

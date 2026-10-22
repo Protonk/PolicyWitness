@@ -81,7 +81,11 @@ Offline release controls also exercise the release procedure's decision points.
   constructed inputs and disposable directories: SDK admission at shell and
   make entry points; plain and exec-restricted shim-probe profiles, successful
   permitted execution, rejected gate decisions and real nested-sandbox
-  refusal; claims admitted only by a
+  refusal; the combined profile with the fixed unreadable-arm64 rule, whose
+  startup gate keeps the containment checks and requires the arm64 read to
+  exit zero empty inside while the translation read prints 0, an arbitrary
+  rule refused, and constructed missing, wrong, nonzero or incomplete sysctl
+  observations stopping prepare and run before dispatch; claims admitted only by a
   live owner's handoff and refused when stale, closed, malformed, a separate
   open on the lock inode, a wrong nonce or another worktree's, with the real
   holder unchanged and an unheld descriptor never turned into a hold; an
@@ -160,9 +164,9 @@ Offline release controls also exercise the release procedure's decision points.
   replaces both Cargo release areas and keeps other profiles and triples;
   judgments bind to the output triple's release area; target rules are
   attributed to the output triple, not the compiler's host; a lower-precedence
-  target default is recorded as overridden; version 2 records require the
-  output target and are compared with the bytes, and an archived version 1
-  record is read as version 1 only when the reader asks for it.
+  target default is recorded as overridden; records require the output target
+  and are compared with the bytes, and a version 1 record is refused by the
+  shape check and the archive reader alike.
 - `build_guard_controls` runs the unchanged build script in a disposable
   checkout with real Cargo, Meson and signing tools. Tool wrappers replace the
   last checked Cargo or native output with a real Mach-O for a different macOS
@@ -186,7 +190,14 @@ Offline release controls also exercise the release procedure's decision points.
   belong to `build_toolchain_switch_controls`.
 - `build_refusal_controls` runs the unchanged build script in a disposable
   checkout once per refusal the build manifest lists, in each variant the
-  refusal applies to. A fault is arranged beside one boundary: a tracked input
+  refusal applies to. A fault is arranged beside one boundary: an unreadable
+  `hw.optional.arm64` under a sandbox profile, where the native builder
+  refusal is the only output ahead of `--help`, an unknown argument, a bad
+  knob, a missing tracked input, an invalid `SDKROOT` under the helper's
+  combined containment and an independently held lock, with an empty receipt
+  list and the session, caches and distribution unchanged (this exercises the
+  empty value only; a value of `0` or a failed probe rests on the guard's
+  code); a tracked input
   gone, a held lock, a claim without a live owner's handoff or an owner
   killed mid-build, a CLI owner or nested build with a missing or changed
   environment witness, an environment that cannot
@@ -216,18 +227,31 @@ Offline release controls also exercise the release procedure's decision points.
   the worker before it is run; in the assembled bundle with an unlisted file,
   before any signature; at the standalone observer; before the ZIP); a stamp
   naming another target or predating the contract; an x86_64 Meson host
-  through a cross file, and, in the partial variant, an arm64 cross build that
-  packages (Meson sets up no Swift target in a cross configuration); Cargo's report
-  naming another path; an x86_64 target default overridden; the package guard
-  on direct Cargo builds for other targets with its weakenings; and, where
-  Rosetta is present, the whole build run by a translated shell. Copies of the script with a guard removed or moved past its
-  operation, and of the session helper with path admission disabled, must
-  fail the matching control. Opt-in, with the same toolchain and identity requirements
-  as the guard controls.
+  through a cross file; Cargo's report naming another path; an x86_64 target
+  default overridden; and the package guard on direct Cargo builds for other
+  targets with its weakenings. Copies of the script with a guard removed or
+  moved past its operation (the native builder check among them, removed or
+  moved past Python and SDK setup or past the lock front end), and of the
+  session helper with path admission disabled, must fail the matching
+  control. Opt-in, with the same toolchain and identity requirements as the
+  guard controls; it needs no Rosetta.
   It also runs the contained shim installation-request positive control and
   its empty-SDK neighbour, requiring a PID-attributed installation-service
   denial from the unified log. This is the only control deliberately making
   that request; its fixture retains the gate, outputs and raw log queries.
+- `translated_build_refusal_controls` needs Rosetta and nothing else. In a
+  disposable admission fixture with recording wrappers that would fail, a
+  held lock, previous outputs, a session and caches, it runs the unchanged
+  script under `arch -x86_64 /bin/bash` and `make build` under
+  `arch -x86_64 /usr/bin/make`, in both variants, with `SDKROOT` unset or
+  valid: each refuses naming `sysctl.proc_translated=1`, with no wrapped tool
+  call, version probes included, and nothing changed. Under translation the
+  builder refusal also wins over `--help`, an unknown argument, a bad knob, a
+  missing tracked input and an invalid `SDKROOT`; make given an invalid
+  `SDKROOT` refuses at parse time and never enters the script. Invalid SDK
+  requests run under the ordinary shim-probe containment with `arch` inside
+  it. Make's own launch and SDK check precede the script and are outside the
+  receipt claim. Opt-in; missing Rosetta leaves the case unrun.
 - `build_toolchain_switch_controls` builds under the selected developer
   directory and under the Command Line Tools through `DEVELOPER_DIR`, refusing
   reuse across the switch by a field its independent probes of both
@@ -278,11 +302,17 @@ Offline release controls also exercise the release procedure's decision points.
   mismatch without touching the distribution or the retention index, and on
   success must move the attempt, write the checksums and provenance record,
   pack and verify complete test evidence with portable summaries, and retain
-  the acceptance and battery runs. Publication runs `git` for real
+  the acceptance and battery runs. The generated schema-2 record carries the
+  provenance writer's two sealed notes as independent literals, and both the
+  ZIP's member and the archived copy keep them through verification; a release
+  record without a provenance object and a version 1 record bound
+  consistently through the ZIP, its checksums and the archived copy are
+  refused. Publication runs `git` for real
   against the bare remote and a GitHub stand-in: it pushes the tag once,
   creates the release once with the tag verified, downloads every asset back,
   and records origin only when digests and bytes match; a second run verifies
-  without creating, and a mismatch leaves origin unrecorded.
+  without creating, and a mismatch leaves origin unrecorded. An archive
+  without portable test evidence is refused before any `git` or `gh` call.
   Branch-name controls run the actual `build.sh` stamp fragment and release
   preflight at the same commit and checkout path under `main`, `master`,
   `doc-rework` and newly created then renamed branches. Untagged, annotated-tag
@@ -294,9 +324,9 @@ Offline release controls also exercise the release procedure's decision points.
   cleanup keeps the latest release plus the newest completed local output,
   including failed runs and completion-time ties. Older owned development,
   acceptance and abandoned output is removed. Explicit pins, active acceptance,
-  newer unfinished work, pending resource cleanup, unknown output and scratch
-  survive. The new archive must verify; old release entries can expire even
-  without an older portable bundle. Corrupt new archives and symlink redirects
+  newer unfinished work, pending resource cleanup, unknown output (acceptance
+  output without its owner record and lifetime lock among it) and scratch
+  survive. The new archive must verify. Corrupt new archives and symlink redirects
   stop unsafe cleanup. Names, filesystem timestamps and sizes do not choose newest.
   Abrupt child exits after rename, index replacement, partial deletion and
   completed deletion must resume from the journal without deleting a replacement
@@ -357,6 +387,7 @@ Run:
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/build_guard_controls
 ./tests/run.sh --case preflight/build_refusal_controls
+./tests/run.sh --case preflight/translated_build_refusal_controls
 ./tests/run.sh --case preflight/build_toolchain_switch_controls
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls

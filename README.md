@@ -80,13 +80,13 @@ observed.
 
 ## Build and bundle
 
-Building PolicyWitness requires Rust with Cargo and its `aarch64-apple-darwin`
-target (the default on Apple Silicon), Xcode Command Line Tools (or Xcode),
-and Meson and Ninja on `PATH` (`brew install meson ninja`). The build checks
-every executable it produces against that one output target, thin arm64
-macOS code; it does not check which machine runs it, but it does run the
-built worker to compare its identity, so a builder that cannot run arm64
-code cannot complete the signed build.
+Build on an Apple Silicon Mac, natively: the build refuses before anything
+else runs when the machine is not Apple Silicon or the build process is
+translated by Rosetta. Building PolicyWitness requires Rust with Cargo and its
+`aarch64-apple-darwin` target (the default on Apple Silicon), Xcode Command
+Line Tools (or Xcode), and Meson and Ninja on `PATH`
+(`brew install meson ninja`). The build checks every executable it produces
+against that one output target, thin arm64 macOS code.
 The Developer ID Application signing identity must already be in your
 login keychain. From the repository root:
 

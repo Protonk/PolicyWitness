@@ -17,9 +17,7 @@ def output_path(value):
 def acceptance_busy(path):
     lock = path / 'acceptance.lock'
     if not os.path.lexists(lock):
-        if (path / 'owner.json').exists():
-            raise ValueError('acceptance ownership has no lifetime lock')
-        return False  # Legacy acceptance used only nested dispatcher ownership.
+        raise ValueError('acceptance ownership has no lifetime lock')
     fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW)
     try:
         try:
@@ -37,17 +35,9 @@ def describe(path):
     acceptance = path.parent.name == 'release-acceptance'
     if acceptance and acceptance_busy(path):
         raise ValueError('active acceptance')
-    owned = path
-    if acceptance and not os.path.lexists(path / 'owner.json'):
-        # Legacy acceptance must have both its report and genuine nested output.
-        report = retention.read_object(path / 'acceptance.json')
-        if report.get('schema_version') != 1 or type(report.get('ok')) is not bool:
-            raise ValueError('unrecognized legacy acceptance')
-        owned = path / 'tests'
-        retention.bounded_path(path.parents[3], owned)
-    owner = retention.valid_owner(owned)
+    owner = retention.valid_owner(path)
     started, finished = owner['started_at_unix_ms'], None
-    if acceptance and owned == path:
+    if acceptance:
         if owner.get('kind') != 'release_acceptance':
             raise ValueError('unrecognized acceptance owner')
         state = 'interrupted'
@@ -57,9 +47,9 @@ def describe(path):
                 raise ValueError('invalid acceptance completion time')
             state = 'completed'
     else:
-        state = retention.disposition(owned)
+        state = retention.disposition(path)
         if state == 'completed':
-            finished = retention.read_object(owned / 'run.json')['finished_at_unix_ms']
+            finished = retention.read_object(path / 'run.json')['finished_at_unix_ms']
     return dict(run_id=owner['run_id'], started_at_unix_ms=started,
                 finished_at_unix_ms=finished, disposition=state)
 

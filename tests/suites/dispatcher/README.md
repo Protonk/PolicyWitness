@@ -121,6 +121,12 @@ read-only inspection, rejected flags/configuration, symlink output escapes,
 artifact aliases, quiet values, required equipment, unexpected evidence, skip
 contracts, and complete accounting after failures. Whole-tree byte snapshots
 also catch accidental bytecode writes during inspection.
+With a sandbox profile denying execution of `/usr/bin/arch`, the real Rosetta
+probe fails to launch: the case requiring `rosetta` is unrun for missing
+equipment with the probe's denial kept in `run.json`, while an independent
+sibling runs and passes. The denial shows equipment-failure handling, not an
+uninstalled Rosetta. The real catalog must keep `build_refusal_controls` free
+of a `rosetta` requirement and of any dependency on the translated case.
 Split bundles and colliding catalog report paths must be rejected without
 execution or evidence replacement; whole-app and internal controller symlinks
 must preserve the selected bundle in execution receipts.

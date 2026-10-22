@@ -268,11 +268,34 @@ def finish(out, run_id, started, invocations, plan, integrity=None, idle_sleep_a
     return 0 if run['ok'] else 1
 
 
-def requirements(case, config, env, root, cache):
+ROSETTA_PROBE = ('/usr/bin/arch', '-x86_64', '/bin/bash', '-c', '/usr/sbin/sysctl -n sysctl.proc_translated')
+
+
+def rosetta_probe():
+    """Whether x86_64 code runs here under Rosetta: a translated shell must read sysctl.proc_translated as 1.
+
+    Nothing is installed. A launch error, a timeout, a failed probe or another
+    value is missing equipment, and the record keeps the diagnostic."""
+    record = dict(argv=list(ROSETTA_PROBE), status=None, stdout='', stderr='', error=None)
+    try:
+        result = subprocess.run(ROSETTA_PROBE, capture_output=True, text=True, timeout=20)
+        record.update(status=result.returncode, stdout=result.stdout[:200], stderr=result.stderr[:1000])
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        record['error'] = f'{type(exc).__name__}: {exc}'
+    record['ok'] = record['status'] == 0 and record['stdout'] == '1\n'
+    return record
+
+
+def requirements(case, config, env, root, cache, probes=None):
     missing = []
     for name in case['requires']:
         if name not in cache:
-            if name == 'app':
+            if name == 'rosetta':
+                record = rosetta_probe()
+                if probes is not None:
+                    probes[name] = record
+                ok = record['ok']
+            elif name == 'app':
                 ok = Path(config['pw_bin']).is_file() and os.access(config['pw_bin'], os.X_OK)
             elif name == 'worker':
                 worker = Path(config['app_dir']) / 'Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner'
@@ -377,7 +400,7 @@ def execute(root, out, run_id, started, plan, config, scope):
                PW_TEST_RUN_ID=run_id, PW_TEST_QUIET='1' if config['quiet'] else '',
                PYTHONDONTWRITEBYTECODE='1')
     previous_events, previous_reports, seen_cases = b'', {}, {}
-    interrupted, cache, outcomes = False, {}, {}
+    interrupted, cache, outcomes, probes = False, {}, {}, {}
     integrity = None
     if any({'app', 'worker'} & set(c['requires']) for c in plan['cases']):
         integrity = {'app': config['app_dir'], 'valid_before': False, 'unchanged': None,
@@ -406,12 +429,16 @@ def execute(root, out, run_id, started, plan, config, scope):
             group = item['cases']
             group_ids = {c['id'] for c in group}
             try:
-                missing = [] if interrupted else sorted({req for c in group for req in requirements(c, config, env, root, cache)})
+                missing = [] if interrupted else sorted({req for c in group for req in requirements(c, config, env, root, cache, probes)})
             except (OSError, subprocess.TimeoutExpired) as exc:
                 missing = [f'prerequisite check failed: {exc}']
             except KeyboardInterrupt:
                 missing = []
                 interrupted = True
+            # Equipment observed by a probe keeps its raw record beside the invocation that required it.
+            observed = {req: probes[req] for c in group for req in c['requires'] if req in probes}
+            if observed:
+                item['equipment'] = observed
             dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
             failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
             if interrupted or missing or failed_deps:

@@ -14,6 +14,8 @@ from fixture_bundle import bundle, seal
 HOST = Path(os.environ['PW_DISPATCHER_HOST_FIXTURE'])
 
 LITERAL = "literal spaces 'quoted' $(touch CANARY)"
+# Makes the dispatcher's real Rosetta probe fail to launch: equipment-failure handling, not an uninstalled Rosetta.
+DENY_ARCH = '(version 1)(allow default)(deny process-exec (literal "/usr/bin/arch"))'
 
 
 def require(condition, message):
@@ -53,7 +55,7 @@ def main():
 
     def exercise(name, args, expected=(), *, code=0, inspect=False, invalid=False, settings=None,
                  modes=None, codes=(), app=False, corrupt=None, skipped=0, unrun=0,
-                 expected_app=None, diagnostic=None, containing=None, controller=None):
+                 expected_app=None, diagnostic=None, containing=None, controller=None, profile=None):
         work = out / name
         repo = work / 'fixture repo'
         suites = {
@@ -103,7 +105,8 @@ def main():
             if candidate.exists():
                 seal(candidate)
         before = snapshot(repo)
-        result = subprocess.run(['bash', str(repo / 'tests/run.sh'), *args], cwd=work,
+        sandbox = ['/usr/bin/sandbox-exec', '-p', profile] if profile else []
+        result = subprocess.run([*sandbox, 'bash', str(repo / 'tests/run.sh'), *args], cwd=work,
                                 env=env, capture_output=True, timeout=15)
         (work / 'stdout').write_bytes(result.stdout)
         (work / 'stderr').write_bytes(result.stderr)
@@ -277,6 +280,33 @@ def main():
         exercise('quiet_' + value, ['--case', 'probe/first'], ['probe/first'], settings={'PW_TEST_QUIET': value})
     exercise('missing_equipment', ['--suite', 'equipment', '--suite', 'probe'], ['probe/first', 'probe/second'],
              code=1, codes=['not_run', 'unrun_case'], unrun=1)
+
+    def translated_suite(repo):
+        path = repo / 'tests/catalog.json'
+        value = json.loads(path.read_text())
+        value['suites']['translated'] = {'command': ['bash', 'tests/suites/translated/run.sh', LITERAL], 'default': False,
+                                         'requires': ['rosetta'], 'cases': ['refusal']}
+        path.write_text(json.dumps(value))
+        runner = repo / 'tests/suites/translated/run.sh'
+        runner.parent.mkdir(parents=True)
+        shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/selection.sh', runner)
+        runner.chmod(0o755)
+
+    # Rosetta is equipment for the one case that requires it. With the real probe unable to launch arch, that case is
+    # unrun for missing equipment while an independent sibling still runs and passes.
+    exercise('rosetta_unavailable', ['--case', 'translated/refusal', '--case', 'probe/first'], ['probe/first'],
+             code=1, codes=['not_run', 'unrun_case'], unrun=1, corrupt=translated_suite, profile=DENY_ARCH)
+    run = json.loads((out / 'rosetta_unavailable/fixture repo/tests/out/runs/default/run.json').read_text())
+    blocked = next(item for item in run['invocations'] if item['requested_suite'] == 'translated')
+    require(blocked['blocked_reason'] == "missing prerequisites: ['rosetta']", f'rosetta_unavailable: {blocked["blocked_reason"]}')
+    probe = (blocked.get('equipment') or {}).get('rosetta') or {}
+    require(probe.get('ok') is False and probe.get('argv') == ['/usr/bin/arch', '-x86_64', '/bin/bash', '-c',
+                                                               '/usr/sbin/sysctl -n sysctl.proc_translated']
+            and 'Operation not permitted' in (probe.get('error') or '') + probe.get('stderr', ''),
+            f'rosetta_unavailable: the probe record lacks its execution-denial diagnostic: {probe}')
+    results = {case['id']: case for case in run['case_results']}
+    require(results['translated/refusal']['state'] == 'unrun' and results['probe/first']['status'] == 'pass',
+            f'rosetta_unavailable: wrong case results: {results}')
     for mode, codes, unrun in [('fail', ['suite_exit'], 0), ('silent', ['empty_suite', 'unrun_case'], 1),
                              ('crash', ['suite_exit', 'unrun_case'], 1), ('wrong', ['unselected_case', 'unrun_case'], 1),
                              ('duplicate', ['case_start', 'case_end'], 0), ('skip_unknown', ['unexpected_skip'], 0)]:
@@ -311,6 +341,12 @@ def main():
              'dispatcher/accounting_controls'} <= default_ids,
             'ordinary controls/contracts missing from the real default battery')
     full = real_list('--all')['cases']
+    by_id = {case['id']: case for case in full}
+    general, translated = by_id['preflight/build_refusal_controls'], by_id['preflight/translated_build_refusal_controls']
+    require('rosetta' not in general['requires'] and translated['id'] not in general['depends_on'],
+            'the general build refusal case must stay runnable without Rosetta')
+    require(translated['requires'] == ['rosetta'] and translated['default'] is False and not translated['depends_on'],
+            'the translated build refusal case must require only Rosetta and stay opt-in')
     opt = real_list('--suite', 'opt_in')['cases']
     # Independent controls include a transitive default dependency. The old
     # equality incorrectly treated every expanded dependency as opt-in membership.

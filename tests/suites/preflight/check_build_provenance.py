@@ -731,6 +731,68 @@ class ShimContainmentTests(unittest.TestCase):
                 self.assertFalse((fixture / 'invocation.json').exists())
         self.assertTrue(shim_probe.gate_errors({}))
 
+    def test_constructed_sysctl_gate_refusals_stop_dispatch_and_prepare(self):
+        from unittest import mock
+        base = dict(outside=dict(complete=True, status=0, stdout='UniqueID: 0\n'),
+                    inside=dict(complete=True, status=70, stdout=''),
+                    permitted=dict(complete=True, status=0, stdout=''))
+        sysctl = dict(sysctl_outside={'hw.optional.arm64': dict(complete=True, status=0, stdout='1\n'),
+                                      'sysctl.proc_translated': dict(complete=True, status=0, stdout='0\n')},
+                      sysctl_inside={'hw.optional.arm64': dict(complete=True, status=0, stdout=''),
+                                     'sysctl.proc_translated': dict(complete=True, status=0, stdout='0\n')})
+        self.assertEqual(shim_probe.gate_errors(dict(base, **sysctl), unreadable_arm64=True), [])
+        self.assertTrue(shim_probe.gate_errors(base, unreadable_arm64=True), 'the sysctl observations are required')
+        faults = [('missing inside records', 'sysctl_inside', None, None),
+                  ('missing arm64 record', 'sysctl_inside', 'hw.optional.arm64', None),
+                  ('readable arm64 inside', 'sysctl_inside', 'hw.optional.arm64', dict(complete=True, status=0, stdout='1\n')),
+                  ('nonzero arm64 read', 'sysctl_inside', 'hw.optional.arm64', dict(complete=True, status=1, stdout='')),
+                  ('profile not applied', 'sysctl_inside', 'hw.optional.arm64', dict(complete=True, status=71, stdout='')),
+                  ('incomplete arm64 read', 'sysctl_inside', 'hw.optional.arm64', dict(complete=False, status=None, stdout='')),
+                  ('translated inside', 'sysctl_inside', 'sysctl.proc_translated', dict(complete=True, status=0, stdout='1\n')),
+                  ('unreadable outside', 'sysctl_outside', 'hw.optional.arm64', dict(complete=True, status=0, stdout='')),
+                  ('failed translation read outside', 'sysctl_outside', 'sysctl.proc_translated', dict(complete=True, status=1, stdout=''))]
+        for index, (label, where, name, value) in enumerate(faults):
+            observed = copy.deepcopy(sysctl)
+            if name is None:
+                observed.pop(where)
+            elif value is None:
+                observed[where].pop(name)
+            else:
+                observed[where][name] = value
+            self.assertTrue(shim_probe.gate_errors(dict(base, **observed), unreadable_arm64=True), label)
+            for mode in ('prepare', 'run'):
+                fixture = self.work / f'sysctl-{index}-{mode}'
+                with mock.patch.object(shim_probe, 'execute', side_effect=[base[k] for k in ('outside', 'inside', 'permitted')]) as execute, \
+                        mock.patch.object(shim_probe, 'sysctl_checks', return_value=observed) as checks:
+                    with self.assertRaises(shim_probe.ContainmentError, msg=label):
+                        if mode == 'prepare':
+                            shim_probe.prepare(fixture, extra_rules=[shim_probe.UNREADABLE_ARM64])
+                        else:
+                            shim_probe.run(fixture, ['/usr/bin/true'], extra_rules=[shim_probe.UNREADABLE_ARM64])
+                    self.assertEqual((execute.call_count, checks.call_count), (3, 1), 'a refused gate dispatched the requested command')
+                self.assertFalse((fixture / 'invocation.json').exists())
+
+    def test_combined_profile_keeps_containment_and_reads_arm64_empty(self):
+        fixture = self.work / 'combined'
+        prefix = shim_probe.prepare(fixture, extra_rules=[shim_probe.UNREADABLE_ARM64])
+        report = json.loads((fixture / 'containment.json').read_text())
+        checks = report['checks']
+        self.assertEqual(report['errors'], [])
+        self.assertIn('UniqueID: 0', checks['outside']['stdout'])
+        self.assertIn('eServerError', checks['inside']['stderr'] + checks['inside']['stdout'])
+        self.assertEqual(checks['permitted']['status'], 0)
+        self.assertEqual({name: (r['complete'], r['status'], r['stdout']) for name, r in checks['sysctl_outside'].items()},
+                         {'hw.optional.arm64': (True, 0, '1\n'), 'sysctl.proc_translated': (True, 0, '0\n')})
+        # The denied read exits zero and prints nothing: the build guard must refuse the missing value, not a failure.
+        self.assertEqual({name: (r['complete'], r['status'], r['stdout']) for name, r in checks['sysctl_inside'].items()},
+                         {'hw.optional.arm64': (True, 0, ''), 'sysctl.proc_translated': (True, 0, '0\n')})
+        text = Path(prefix[-1]).read_text()
+        self.assertIn('(deny mach-lookup)(deny file-write*)', text)
+        self.assertTrue(text.rstrip('\n').endswith(shim_probe.UNREADABLE_ARM64), text)
+        with self.assertRaisesRegex(ValueError, 'not a fixed restrictive rule'):
+            shim_probe.prepare(self.work / 'arbitrary', extra_rules=['(allow mach-lookup)'])
+        self.assertFalse((self.work / 'arbitrary/contained.sb').exists())
+
     def test_profiles_apply_and_keep_exec_restrictions(self):
         for restricted in (False, True):
             fixture = self.work / str(restricted)
@@ -2621,29 +2683,16 @@ class RecordTests(unittest.TestCase):
         next(o for o in rehashed['outputs'] if o['rel_path'] == 'Contents/MacOS/sbpl-check')['sha256'] = hashlib.sha256(fat.read_bytes()).hexdigest()
         with self.assertRaisesRegex(ValueError, 'architectures or container'):
             prov.read_zip_record(archive(rehashed, members, 'one-slice-fat.zip'))
-        # An earlier build's record is read only on request, as its own version describes it; nothing is supplied to it.
-        historical = copy.deepcopy(record)
-        historical['schema_version'] = 1
-        for output in historical['outputs']:
-            output.pop('architectures')
-            output.pop('container')
-        for name in ('output_target', 'meson_machines'):
-            historical['configuration'].pop(name)
-        historical['configuration']['build_directories'].pop('cargo_target_release')
-        historical['configuration']['build_directories']['fresh_mode']['replacement'].pop('cargo_target_release')
-        historical['toolchain']['rustc']['selection'].pop('target')
-        self.assertEqual(prov.record_shape_problems(historical), [], 'a version 1 record is valid as version 1')
+        # Only the current schema is read: a version 1 record is refused, not interpreted, and nothing is supplied to an
+        # incomplete current one.
+        stale = dict(copy.deepcopy(record), schema_version=1)
+        self.assertEqual(prov.record_shape_problems(stale), [f'record.schema_version is not {prov.SCHEMA_VERSION}'])
         with self.assertRaisesRegex(ValueError, 'unsupported provenance record'):
-            prov.read_zip_record(archive(historical, name='historical.zip'))
-        data, _ = prov.read_zip_record(archive(historical, name='historical.zip'), historical=True)
-        self.assertEqual(json.loads(data), historical, 'the historical record is returned byte for byte, never completed')
-        mixed = copy.deepcopy(record)
-        mixed['schema_version'] = 1
-        self.assertTrue(prov.record_shape_problems(mixed), 'version 1 is closed: it carries no output target fields')
+            prov.read_zip_record(archive(stale, name='version-1.zip'))
         missing = copy.deepcopy(record)
         missing['outputs'][0].pop('architectures')
         with self.assertRaisesRegex(ValueError, 'invalid provenance record'):
-            prov.read_zip_record(archive(missing, name='incomplete.zip'), historical=True)
+            prov.read_zip_record(archive(missing, name='incomplete.zip'))
 
     def test_the_producer_validates_before_sealing(self):
         app = self.app('producer')

@@ -1,8 +1,9 @@
 """Drive the unchanged build script through every refusal the manifest lists, with real toolchains and signatures.
 
 One disposable checkout of the working tree serves every control. A control
-arranges one fault beside the boundary the refusal guards: an environment the
-script cannot build in, a held checkout lock, a stamp that is missing,
+arranges one fault beside the boundary the refusal guards: a builder the
+script cannot confirm as native, an environment the script cannot build in, a
+held checkout lock, a stamp that is missing,
 malformed or describes another toolchain, a redirected Cargo directory, a
 cache path fresh mode cannot admit, a source that does not compile, or a file
 a tool wrapper removes, moves, truncates, rewrites or replaces right before or
@@ -29,6 +30,7 @@ import re
 import shutil
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -261,6 +263,9 @@ class Checkout:
         self.prefix = ''
         self.records = []
         self.wrong_worker = None
+        # Prepared once and kept unchanged through every run that uses them, the mutation stages included.
+        self.unreadable_arm64 = None
+        self.contained_unreadable_arm64 = None
 
     @staticmethod
     def wrappers(directory, names):
@@ -527,6 +532,110 @@ def control_none(co, variant):
     assert not any(f for r in build.receipts for f in r['fired']), build.receipts
     assert co.canary not in (build.app / RECORD).read_text()
     assert co.canary not in (build.app / artifact.MANIFEST).read_text()
+    return build
+
+
+NATIVE_REFUSAL = 'this build runs only natively on Apple Silicon (hw.optional.arm64={arm64}, sysctl.proc_translated={translated})'
+UNREADABLE_ARM64 = NATIVE_REFUSAL.format(arm64='<empty>', translated='0')
+
+
+def cache_inventory(root):
+    """The session, the stamp and the cache directories two levels deep, by kind, size, inode and modification time,
+    observed without the build's helpers: a write, a replacement or a removal shows."""
+    out = {}
+    for relative in ('builddir', 'controller/target'):
+        top = root / relative
+        for path in [top, *(top.glob('*') if top.is_dir() else ()), *(top.glob('*/*') if top.is_dir() else ())]:
+            try:
+                info = path.lstat()
+            except FileNotFoundError:
+                out[str(path.relative_to(root))] = None
+                continue
+            out[str(path.relative_to(root))] = [stat.S_IFMT(info.st_mode), info.st_size, info.st_ino, info.st_mtime_ns]
+    for relative in (SESSION, STAMP):
+        path = root / relative
+        out[relative + ':sha256'] = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+    return out
+
+
+def unreadable_arm64_profile(co):
+    """A sandbox profile that only makes hw.optional.arm64 unreadable, checked once before use: inside it a shell's read
+    exits zero and prints nothing while sysctl.proc_translated still reads 0."""
+    if co.unreadable_arm64 is None:
+        profile = co.work / 'unreadable-arm64.sb'
+        profile.write_text('(version 1)(allow default)' + shim_probe.UNREADABLE_ARM64 + '\n')
+        prefix = ['/usr/bin/sandbox-exec', '-f', str(profile)]
+        observed = {}
+        for name, expected in shim_probe.SYSCTL_EXPECTED['sysctl_inside'].items():
+            result = subprocess.run(prefix + ['/bin/bash', '-c', shim_probe.SYSCTL_SHELL, 'sysctl-probe', name],
+                                    capture_output=True, text=True, timeout=30)
+            observed[name] = dict(status=result.returncode, stdout=result.stdout, stderr=result.stderr)
+            assert (result.returncode, result.stdout) == (0, expected), ('the profile does not give the expected read', name, observed)
+        save(co.out / 'unreadable-arm64-profile.json', dict(profile=profile.read_text(), observed=observed))
+        co.unreadable_arm64 = prefix
+    return co.unreadable_arm64
+
+
+def contained_unreadable_arm64(co):
+    """The shim-probe containment with the fixed unreadable-arm64 rule added by the helper, gated by the helper before use."""
+    if co.contained_unreadable_arm64 is None:
+        co.contained_unreadable_arm64 = shim_probe.prepare(co.work / 'unreadable-arm64-contained', extra_rules=[shim_probe.UNREADABLE_ARM64])
+    return co.contained_unreadable_arm64
+
+
+def refused_by_builder(build, caches, lock, record):
+    """The native builder refusal and nothing after it: no usage, banner or other refusal, no wrapped tool call (version
+    probes included), the previous distribution and the caches as they were, and the independent holder's lock as it was."""
+    check(build, 2, UNREADABLE_ARM64)
+    assert build.stdout == '', (build.name, build.stdout[-2000:])
+    assert build.stderr.strip().splitlines() == ['ERROR: ' + UNREADABLE_ARM64], (build.name, build.stderr[-2000:])
+    assert build.receipts == [], (build.name, build.receipts)
+    preserved(build)
+    assert cache_inventory(build.root) == caches, (build.name, 'the refusal changed the session or a cache')
+    assert lock.stat().st_ino == record[0] and lock.read_bytes() == record[1], (build.name, 'the holder lock was replaced or rewritten')
+    assert not lock_free(build.root), (build.name, 'the independent holder lost the lock')
+    assert not shim_probe.installation_requests(build.output), (build.name, build.output[-2000:])
+
+
+def control_unconfirmed_machine(co, variant):
+    """With hw.optional.arm64 unreadable (the read exits zero and prints nothing) and sysctl.proc_translated reading 0,
+    the unchanged script refuses before anything else runs, while an independent holder keeps the checkout lock: the
+    refusal precedes the lock front end, which would report the busy lock. Under the same unreadable read, the builder
+    refusal also wins over --help, an unknown argument, a bad knob, a missing tracked input and an invalid SDKROOT; the
+    invalid SDK runs under the helper's validated containment with the same rule, so a displaced guard meets the SDK
+    refusal there without reaching an installer. This exercises the empty-value path only: an arm64 value of 0 and a
+    probe's nonzero exit rest on the guard's code, and no Intel Mac is involved."""
+    plain = unreadable_arm64_profile(co)
+    contained = contained_unreadable_arm64(co)
+    script = str(co.root / 'build.sh')
+    lock = co.root / 'tests/.checkout.lock'
+    fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        os.ftruncate(fd, 0)
+        os.write(fd, b'{"pid": 0, "started_at_unix_ms": 0, "nonce": "native-builder-control"}\n')
+        record = (os.fstat(fd).st_ino, lock.read_bytes())
+        caches = cache_inventory(co.root)
+        # Valid knobs, arguments, tracked inputs and SDK selection: only the builder check and the held lock stand ahead.
+        build = co.build('native_builder_required-lock', variant, argv=plain + ['/bin/bash', script], holder_alive=True)
+        refused_by_builder(build, caches, lock, record)
+        invalid = '/private/tmp/pw-no-such-sdk-' + os.urandom(4).hex()
+        build = co.build('native_builder_required-invalid_sdk', variant, env=dict(SDKROOT=invalid),
+                         argv=contained + ['/bin/bash', script], holder_alive=True)
+        refused_by_builder(build, caches, lock, record)
+        for label, args, env in (('help', ['--help'], {}), ('unknown_argument', ['--bogus'], {}),
+                                 ('knob', [], dict(BUILD_XPC='2')), ('missing_tree_input', [], {})):
+            parked = co.keep_aside('Info.plist') if label == 'missing_tree_input' else None
+            try:
+                build = co.build(f'native_builder_required-{label}', variant, env=env, argv=plain + ['/bin/bash', script, *args],
+                                 holder_alive=True)
+            finally:
+                if parked is not None:
+                    co.restore_aside('Info.plist')
+            refused_by_builder(build, caches, lock, record)
+    finally:
+        os.close(fd)
+    assert lock_free(co.root)
     return build
 
 
@@ -2488,33 +2597,21 @@ def control_builddir_target_mismatch(co, variant):
 
 def control_meson_target(co, variant):
     """Meson configured for another host machine is refused by meson.build's output-target assertion at setup, before
-    anything compiles and before a stamp is published: here a cross file naming an x86_64 macOS host, appended by the tool
-    wrapper to the script's own `meson setup`, which is the host a Meson running translated selects by default. A cross
-    file naming the arm64 macOS host is a cross build and is not refused for being one: that build packages arm64
-    outputs. It runs in the partial variant only, because Meson 1.12.1 sets up no Swift target in any cross
-    configuration; the source_drift Meson control covers the same assertion directly. A fresh native build restores the
-    directory."""
-    cross = {}
-    for family in ('x86_64', 'aarch64'):
-        cross[family] = co.work / f'cross-{family}.ini'
-        cross[family].write_text("[binaries]\nc = 'cc'\nswift = 'swiftc'\n[host_machine]\nsystem = 'darwin'\n"
-                                 f"cpu_family = '{family}'\ncpu = '{family}'\nendian = 'little'\n")
+    anything compiles and before a stamp is published. A cross file naming an x86_64 macOS host, appended by the tool
+    wrapper to the script's own `meson setup`, is only the technique that produces the configuration; the source_drift
+    Meson control covers the same assertion directly. A fresh native build restores the directory."""
+    cross = co.work / 'cross-x86_64.ini'
+    cross.write_text("[binaries]\nc = 'cc'\nswift = 'swiftc'\n[host_machine]\nsystem = 'darwin'\n"
+                     "cpu_family = 'x86_64'\ncpu = 'x86_64'\nendian = 'little'\n")
     refused = co.build('meson_target-x86_64-host', variant, fresh='1',
-                       hooks=[hook('cross-x86_64', 'meson', append=['--cross-file', str(cross['x86_64'])], first='setup')])
+                       hooks=[hook('cross-x86_64', 'meson', append=['--cross-file', str(cross)], first='setup')])
     check(refused, 1, 'Assert failed: output target: the native products are macOS arm64 code, but Meson is configured for host '
-                      'darwin x86_64 (the build machine, darwin aarch64, is not constrained)', where='output',
+                      'darwin x86_64\n', where='output',
           present=('Configuring native build (meson setup, fresh directory)',), absent=('Compiling native executables', 'Assembling app bundle'))
     fired_once(refused, 'cross-x86_64')
     assert not (co.root / STAMP).exists(), 'a refused setup published a stamp'
     no_calls(refused, 'codesign', 'cp')
     preserved(refused)
-    if variant == 'partial':
-        crossed = co.build('meson_target-arm64-cross', variant, fresh='1',
-                           hooks=[hook('cross-arm64', 'meson', append=['--cross-file', str(cross['aarch64'])], first='setup')])
-        passing(co, crossed, variant)
-        fired_once(crossed, 'cross-arm64')
-        assert 'Build type: cross build' in crossed.stdout, crossed.stdout[-3000:]
-        assert crossed.session['meson_machines']['host'] == dict(system='darwin', cpu_family='aarch64')
     restored = co.build('meson_target-native-fresh', variant, fresh='1')
     passing(co, restored, variant)
     assert 'Build type: native build' in restored.stdout
@@ -2573,26 +2670,8 @@ def control_cargo_package_target_guard(co, variant):
     return None
 
 
-def control_translated_builder(co, variant):
-    """Where Rosetta is available, the unchanged script run by a translated shell (`arch -x86_64 /bin/bash`) reaches the
-    output target checks with no translation-policy refusal and packages a signed full build of arm64 outputs. The
-    universal tools it starts directly (Python, git, xcrun and codesign) run translated too; Cargo and Meson, whose
-    launchers have no x86_64 slice here, run natively, so this is not a translated Meson. Without Rosetta the case is
-    recorded as not established, a gap in builder-compatibility evidence rather than a pass."""
-    probe = subprocess.run(['/usr/bin/arch', '-x86_64', '/usr/sbin/sysctl', '-n', 'sysctl.proc_translated'], capture_output=True, text=True, timeout=60)
-    equipment = dict(argv=probe.args, returncode=probe.returncode, stdout=probe.stdout.strip(), stderr=probe.stderr.strip()[:400])
-    save(co.out / f'{co.prefix}translated-builder-equipment.json', equipment)
-    if probe.returncode != 0 or probe.stdout.strip() != '1':
-        print('translated builder: Rosetta is not available here; builder compatibility under translation is not established', flush=True)
-        return None
-    build = co.build('translated-builder', variant, argv=['/usr/bin/arch', '-x86_64', '/bin/bash', str(co.root / 'build.sh')])
-    passing(co, build, variant)
-    for banner in ('Checking the assembled code against the output target', 'Creating zip (for notarization)'):
-        assert banner in build.stdout, banner
-    return build
-
-
 CONTROLS = [
+    ('native_builder_required', ('full', 'partial'), control_unconfirmed_machine),
     ('missing_tree_input', ('full', 'partial'), control_missing_tree_input),
     ('checkout_busy', ('full', 'partial'), control_checkout_busy),
     ('lock_claim_invalid', ('full', 'partial'), control_lock_claim_invalid),
@@ -2643,7 +2722,6 @@ SEQUENCES = [
     ('cargo_selection_sequence', control_cargo_selection_sequence),
     ('sdk_requests', control_sdk_requests),
     ('cargo_package_target_guard', control_cargo_package_target_guard),
-    ('translated_builder', control_translated_builder),
 ]
 
 
@@ -2703,9 +2781,27 @@ OUTPUT_TARGET_HELPER = 'tests/lib/output_target.py'
 ARCHITECTURE_EQUALITY = "    if observation['architectures'] != [ARCHITECTURE]:\n"
 CONTAINER_RULE = "    if observation['container'] != CONTAINER:\n        found.append("
 MESON_TARGET_ASSERTION = ("assert(host_machine.system() == 'darwin' and host_machine.cpu_family() == 'aarch64',\n"
-                          "  'output target: the native products are macOS arm64 code, but Meson is configured for host @0@ @1@ "
-                          "(the build machine, @2@ @3@, is not constrained)'.format(\n"
-                          "    host_machine.system(), host_machine.cpu_family(), build_machine.system(), build_machine.cpu_family()))\n")
+                          "  'output target: the native products are macOS arm64 code, but Meson is configured for host @0@ @1@'.format(\n"
+                          "    host_machine.system(), host_machine.cpu_family()))\n")
+NATIVE_GUARD = ('if NATIVE_ARM64="$(/usr/sbin/sysctl -n hw.optional.arm64)"; then\n'
+                '  NATIVE_ARM64="${NATIVE_ARM64:-<empty>}"\n'
+                'else\n'
+                '  NATIVE_ARM64="<failed: status $?>"\n'
+                'fi\n'
+                'if NATIVE_TRANSLATED="$(/usr/sbin/sysctl -n sysctl.proc_translated)"; then\n'
+                '  NATIVE_TRANSLATED="${NATIVE_TRANSLATED:-<empty>}"\n'
+                'else\n'
+                '  NATIVE_TRANSLATED="<failed: status $?>"\n'
+                'fi\n'
+                'if [[ "${NATIVE_ARM64}" != "1" || "${NATIVE_TRANSLATED}" != "0" ]]; then\n'
+                '  echo "ERROR: this build runs only natively on Apple Silicon (hw.optional.arm64=${NATIVE_ARM64}, '
+                'sysctl.proc_translated=${NATIVE_TRANSLATED})" 1>&2\n'
+                '  exit 2\n'
+                'fi\n'
+                'unset NATIVE_ARM64 NATIVE_TRANSLATED\n')
+PYTHON_START = 'source "${ROOT_DIR}/tests/lib/python_start.sh"\n'
+LOCK_FRONT_END = ('  exec /bin/bash "${ROOT_DIR}/tests/lib/checkout_lock.sh" --root "${ROOT_DIR}" -- /bin/bash "${BASH_SOURCE[0]}" "$@"\n'
+                  'fi\n')
 
 
 def _membership(text):
@@ -2730,6 +2826,9 @@ def _admission_disabled(text):
     return text
 
 MUTATIONS = [
+    ('native_builder_required', 'guard removed', lambda t: _remove_block(t, NATIVE_GUARD)),
+    ('native_builder_required', 'guard moved past Python and SDK setup', lambda t: _move_block(t, NATIVE_GUARD, PYTHON_START)),
+    ('native_builder_required', 'guard moved past the lock front end', lambda t: _move_block(t, NATIVE_GUARD, LOCK_FRONT_END)),
     ('missing_cargo_output', 'guard removed', lambda t: _remove_block(t, CARGO_OUTPUT_LOOP)),
     ('ninja_old', 'guard removed', lambda t: _remove_block(t, NINJA_GUARD)),
     ('missing_native_output', 'guard moved past assembly', lambda t: _move_block(t, NATIVE_OUTPUT_LOOP, ASSEMBLY_ANCHOR)),

@@ -26,14 +26,16 @@ checked before compiling and again before signing, when the built worker is
 also asked to report it, so the pair that ships carries the identity of the
 sources in the tree; that the binaries were compiled from those sources rests
 on the build directories' own records, as the last section says. And every
-refusal precedes the step it protects: the tracked inputs are admitted and the
-checkout lock is taken before the first check, the cache paths are admitted
-before the session or any cache is written, the documentation and identity
-checks run before any compile, a reused build directory is validated against
-its stamp before any compile or reconfiguration, each compile is followed by
-its own checks before anything is copied, the assembled bundle's code is
-checked against the output target before the first signature, every bundle
-copy precedes every signature, and the signatures precede the ZIP.
+refusal precedes the step it protects: the builder is confirmed to be a native
+process on Apple Silicon before anything else runs, the tracked inputs are
+admitted and the checkout lock is taken before the first check, the cache
+paths are admitted before the session or any cache is written, the
+documentation and identity checks run before any compile, a reused build
+directory is validated against its stamp before any compile or
+reconfiguration, each compile is followed by its own checks before anything
+is copied, the assembled bundle's code is checked against the output target
+before the first signature, every bundle copy precedes every signature, and
+the signatures precede the ZIP.
 
 What a refusal leaves behind depends on where it fires. A refusal before
 assembly leaves the previous distribution outputs untouched; the build
@@ -75,6 +77,12 @@ the command line, before any recipe. `/usr/bin/make` with a bad inherited
 `SDKROOT` can request Command Line Tools installation before it reads the
 Makefile; repository code cannot guard that launch. Any other make reaches
 the check, including the developer directory's make invoked through `xcrun`.
+
+The native builder check is the script's: `make` reaches it only through the
+recipe. A translated make starts `build.sh` translated, and the script
+refuses; make's own launch as a developer-tool shim and its SDK check have
+already run by then, translated with it. An invalid `SDKROOT` on the make
+command line is refused at parse time, before the script starts.
 
 ## One build in time
 
@@ -123,8 +131,8 @@ writes. A test compares the staged copy itself.
 
 | Id | Banner | Variants | Reads | Writes | Refusals | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment; every nonempty SDKROOT, inherited or supplied on the command line, is validated by sdk_guard.sh while parsing the Makefile before any recipe | nothing; runs build.sh with them | none | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile); [`PW_SDK_REFUSAL`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py); [`test_make_checks_command_line_and_inherited_sdk_before_recipes`](../tests/suites/preflight/check_build_provenance.py) |
-| admission | (none) | both | BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits before any check, after the knobs are validated); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | knob_value, unknown_argument, missing_tree_input, checkout_busy, direct_python_unavailable, environment_witness_missing, environment_witness_changed, sdk_request_invalid | [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py) |
+| make_build | Makefile: [build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app | both | IDENTITY, DIST_DIR and, when the caller set it, PW_FRESH_BUILD from the make command line or environment; every nonempty SDKROOT, inherited or supplied on the command line, is validated by sdk_guard.sh while parsing the Makefile before any recipe. /usr/bin/make is itself a developer-tool shim and that SDK check runs xcrun, both before build.sh and its native builder check, and both run translated when make does | nothing; runs build.sh with them, which a translated make starts translated | none | [`[build] build, sign and embed evidence into $(DIST_DIR)/PolicyWitness.app`](../Makefile); [`PW_SDK_REFUSAL`](../Makefile) | [`check_makefile_entry`](../tests/suites/source_drift/build_rules.py); [`test_make_build_runs_the_script_which_names_the_make_invocation_in_its_identity_refusal`](../tests/suites/source_drift/contract.py); [`test_make_checks_command_line_and_inherited_sdk_before_recipes`](../tests/suites/preflight/check_build_provenance.py) |
+| admission | (none) | both | hw.optional.arm64 and sysctl.proc_translated, each read by /usr/sbin/sysctl from the script's own shell before anything else runs (--help included): the build proceeds only on 1 and 0, and an empty value or a failed probe refuses; then BUILD_XPC, PW_INSPECTION, PW_FRESH_BUILD and the argument list (--help prints the usage and exits after the knobs are validated, before any other check); whether each tracked input the build copies exists; the developer directory xcode-select reports under DEVELOPER_DIR, whose usr/bin/python3 must be executable, resolved again by the shell front end and by the script under the owner; without a claim in the environment, the caller's SDKROOT, CPATH, LIBRARY_PATH, MANPATH and LC_CTYPE, witnessed by the shell front end's builtins, and tests/.checkout.lock, which the owner it starts directly takes before supervising the script again under it; every nonempty caller SDKROOT must resolve through xcrun to an existing SDK directory with a numeric version before the lock front end or any developer-tool shim starts | the owner record in tests/.checkout.lock (pid, start time, acquisition nonce and admission socket identity) for as long as the owner and its protected children hold it; nothing else | native_builder_required, knob_value, unknown_argument, missing_tree_input, checkout_busy, direct_python_unavailable, environment_witness_missing, environment_witness_changed, sdk_request_invalid | [`this build runs only natively on Apple Silicon`](../build.sh); [`must be 0 or 1`](../build.sh); [`checkout_lock.sh`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_checkout_busy`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_build_refuses_a_stand_in_developer_directory_before_any_python`](../tests/suites/source_drift/contract.py); [`test_build_refuses_a_builder_it_cannot_confirm_before_anything_else`](../tests/suites/source_drift/contract.py); [`control_unconfirmed_machine`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | lock | Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock | both | the channel's socket identity matching the acquisition record and its kernel-reported peer PID matching the acquisition owner and the owner's handoff over the channel the claim names: the held descriptor, open on this checkout's lock file, and the acquisition nonce its owner record carries; never the environment alone | nothing | lock_claim_invalid | [`Verifying the checkout lock`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py); [`control_lock_claim_invalid`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | check_limits | Checking limits documentation | both | docs/limits.json and the documents it renders | nothing | stale_limits | [`Checking limits documentation`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
 | check_contract | Checking contract versions | both | docs/contract.json, docs/architecture.json and their generated copies | nothing | stale_contract, stale_architecture | [`Checking contract versions`](../build.sh) | [`check_banner_order`](../tests/suites/source_drift/build_rules.py) |
@@ -175,7 +183,8 @@ arranged so that every refusal follows the banner of the step it protects,
 which is what makes that rule honest. Variants are `full` (`BUILD_XPC=1`) and
 `partial` (`BUILD_XPC=0`); a row marked `both` runs in either, and a row
 marked `fresh mode only` runs only when `PW_FRESH_BUILD=1`. `--help` prints
-the usage and exits before any check, once the knobs are validated. The
+the usage and exits once the native builder check has passed and the knobs
+are validated, before any other check. The
 script prints a warning and continues when the augments directory holds no
 augment. The tables cover refusals; their Reads and Writes columns are
 manually maintained descriptions of each step.
@@ -184,6 +193,16 @@ manually maintained descriptions of each step.
 
 The build depends on these inputs and working state, in the order it meets them.
 
+- **An Apple Silicon Mac, building natively.** Before anything else runs,
+  including `--help`, the script's own shell reads `hw.optional.arm64` and
+  `sysctl.proc_translated` with `/usr/sbin/sysctl` and proceeds only on `1`
+  and `0`. A Rosetta-translated process reads `1` and `1`; an empty value or
+  a probe that fails refuses too, naming both values read. The check
+  describes the process that asks: the universal tools the script starts run
+  natively with it, while a tool installed with only an x86_64 slice would
+  still run translated. The record carries what rustc and Meson report about
+  the machine they ran on (rustc's host triple and Meson's build machine)
+  and nothing about this check.
 - **The tracked inputs.** `Info.plist`, the two entitlement plists, the
   service's `Info.plist`, the service directory and the augments directory
   must exist before the first check; the first absent one is named. A copy
@@ -224,11 +243,7 @@ The build depends on these inputs and working state, in the order it meets them.
   `cargo build --target x86_64-apple-darwin`; `meson.build` asserts that
   Meson's host machine, where the products run, is arm64 macOS, and passes
   `-arch arm64` to every C compile and link and `arm64-apple-macosx<minimum>`
-  as the Swift target. Meson's build machine, where it and the compilers run,
-  is not constrained, so a cross file naming the arm64 macOS host is
-  accepted; a Meson running translated on x86_64 configures an x86_64 host by
-  default and is refused by that assertion, as a target-configuration error
-  and not as a refusal of translation. Then the bytes are checked, never
+  as the Swift target. Then the bytes are checked, never
   executed, at every boundary they could change: each Cargo and Meson output
   after its compile and before its minimum is read (so before the worker is
   run for its identity), every Mach-O the assembled bundle carries, found by
@@ -240,12 +255,8 @@ The build depends on these inputs and working state, in the order it meets them.
   recognizable header, plus additional code discovered by header. A dSYM
   companion is excluded as debug data only when every slice has a complete
   debug header; mixed code/debug containers remain subject to the output rule.
-  The target describes the products only: no check
-  observes or constrains the machine or processes that run the build, and the
-  record makes no claim about translation. The build does run the built
-  worker to compare its identity, so a builder that cannot execute arm64 code
-  cannot complete the signed pipeline even when its compilers produce arm64
-  outputs.
+  The target describes the products, not the machine or processes that built
+  them, and the record makes no claim about translation.
 - **The SDK and the developer directory.** `xcrun --sdk macosx` selects the
   SDK once, under whatever `DEVELOPER_DIR` names, unless the caller's
   `SDKROOT` names an SDK, which `xcrun` resolves instead. The caller's
@@ -341,9 +352,9 @@ The build depends on these inputs and working state, in the order it meets them.
   none, before any mutation. A plain `cargo build` outside the script
   carries none of this; on the toolchain this was observed with, it produced
   executables for an older macOS than the plist declares, which the minimum
-  check would refuse. Its target, though, is the package's own rule: on a
-  host other than Apple Silicon, or with another `--target`, the build script
-  stops it.
+  check would refuse. Its target, though, is the package's own rule: with
+  another `--target` or a configured target default, the build script stops
+  it.
 - **The output directory.** `DIST_DIR`, `dist/` by default; a custom one
   also receives copies of the tracked `dist/README.md` and `dist/AGENTS.md`. Its
   trust and that of the build directories are in the table.
@@ -580,10 +591,11 @@ its policy assertions, so they need the unsandboxed shell.
 
 <!-- BEGIN GENERATED BUILD REFUSALS -->
 <details>
-<summary>57 refusals (17 the script's own, 1 Meson assertion family over 21 options, 1 Meson output-target assertion, 38 propagated from a check or a tool, 0 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
+<summary>58 refusals (18 the script's own, 1 Meson assertion family over 21 options, 1 Meson output-target assertion, 38 propagated from a check or a tool, 0 in the Makefile), with symbol presence and test definition verified and the messages, statuses and steps compared with the script; every refusal has a control that produces it and the baseline is empty; whether a test asserts the row is not verified</summary>
 
 | Id | Message | Steps | Status | Kind | Variants | Coverage | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| native_builder_required | this build runs only natively on Apple Silicon (hw.optional.arm64=${NATIVE_ARM64}, sysctl.proc_translated=${NATIVE_TRANSLATED}) | admission | 2 | script | both | a control produces it | [`this build runs only natively on Apple Silicon`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_builder_it_cannot_confirm_before_anything_else`](../tests/suites/source_drift/contract.py); [`control_unconfirmed_machine`](../tests/suites/preflight/opt_in/build_refusals.py); [`control_translated_builder`](../tests/suites/preflight/opt_in/translated_build_refusals.py) |
 | knob_value | ${knob} must be 0 or 1 (got '${!knob}') | admission | 2 | script | both | a control produces it | [`${knob} must be 0 or 1 (got '${!knob}')`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check`](../tests/suites/source_drift/contract.py) |
 | unknown_argument | unknown argument: $1 | admission | 2 | script | both | a control produces it | [`unknown argument: $1`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_an_unknown_argument_before_any_check`](../tests/suites/source_drift/contract.py) |
 | missing_tree_input | missing tracked build input: ${tree_input} | admission | 2 | script | both | a control produces it | [`missing tracked build input: ${tree_input}`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_missing_tree_input`](../tests/suites/preflight/opt_in/build_refusals.py) |
@@ -619,7 +631,7 @@ its policy assertions, so they need the unsandboxed shell.
 | meson_ninja_missing | meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md | toolchain | 2 | script | both | a control produces it | [`meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_meson_ninja_missing`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | ninja_old | ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md | toolchain | 2 | script | both | a control produces it | [`ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md`](../build.sh) | [`check_refusals`](../tests/suites/source_drift/build_rules.py); [`control_ninja_old`](../tests/suites/preflight/opt_in/build_refusals.py) |
 | meson_policy | fixed native policy: ${name} must be ${expected} (got ${got}); only inspection and xpc are configurable (the assertion family: 21 options, optimization, debug, warning_level, werror, strip, unity, b_ndebug, b_lto, b_coverage, b_pgo, b_bitcode, b_pie, b_staticpic, b_lundef, b_sanitize, c_std, c_args, c_link_args, buildtype, swift_args, swift_link_args) | configure, compile | 1 | meson | both | a control produces it | [`fixed_options`](../meson.build); [`fixed native policy`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`test_meson_policy_assertions_refuse_each_option`](../tests/suites/source_drift/build.py); [`test_bypassing_one_meson_policy_assertion_fails_its_control`](../tests/suites/source_drift/build.py); [`control_meson_policy`](../tests/suites/preflight/opt_in/build_refusals.py) |
-| meson_target | output target: the native products are macOS arm64 code, but Meson is configured for host ${host_system} ${host_cpu_family} (the build machine, ${build_system} ${build_cpu_family}, is not constrained) (the output-target assertion: host darwin aarch64) | configure, compile | 1 | meson | both | a control produces it | [`output target: the native products are macOS arm64 code`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`control_meson_target`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_meson_output_target_assertion_refuses_other_hosts`](../tests/suites/source_drift/build.py) |
+| meson_target | output target: the native products are macOS arm64 code, but Meson is configured for host ${host_system} ${host_cpu_family} (the output-target assertion: host darwin aarch64) | configure, compile | 1 | meson | both | a control produces it | [`output target: the native products are macOS arm64 code`](../meson.build) | [`check_meson_assertions`](../tests/suites/source_drift/build_rules.py); [`control_meson_target`](../tests/suites/preflight/opt_in/build_refusals.py); [`test_meson_output_target_assertion_refuses_other_hosts`](../tests/suites/source_drift/build.py) |
 | stale_limits | stale <copy>; run python3 docs/generate_limits.py | check_limits | 1 | propagated | both | a control produces it | [`generate_limits.py`](../build.sh); [`stale`](../docs/generate_limits.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_stale_guide_before_signing_or_creating_output`](../tests/suites/source_drift/limits.py) |
 | stale_contract | stale <copy>; run python3 docs/generate_contract.py | check_contract | 1 | propagated | both | a control produces it | [`generate_contract.py`](../build.sh); [`stale`](../docs/generate_contract.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_refuses_stale_contract_copy_before_signing_or_creating_output`](../tests/suites/source_drift/contract.py) |
 | stale_architecture | architecture documentation is stale | check_contract | 1 | propagated | both | a control produces it | [`generate_architecture.py`](../build.sh); [`architecture documentation is stale`](../docs/generate_architecture.py) | [`check_propagated_refusals`](../tests/suites/source_drift/build_rules.py); [`test_build_checks_every_generator_before_signing`](../tests/suites/source_drift/generators.py); [`test_build_refuses_a_stale_architecture_copy_before_compiling`](../tests/suites/source_drift/contract.py) |
@@ -709,7 +721,11 @@ Successful sibling builds package both variants.
 The opt-in [`test_build_refusals`](../tests/suites/preflight/opt_in/build_refusals.py)
 control drives the same unchanged script through every refusal the manifest
 lists, in each variant the refusal applies to. One fault at a time is
-arranged beside the guarded boundary: a tracked input gone, a held lock, a
+arranged beside the guarded boundary: an unreadable `hw.optional.arm64` under
+a sandbox profile, refused ahead of `--help`, an unknown argument, a bad knob,
+a missing tracked input, an invalid `SDKROOT` (under the shim-probe
+containment with the same rule) and an independently held lock; a tracked
+input gone, a held lock, a
 claim without a live owner's handoff (stale or closed descriptors, an unheld
 descriptor on the lock inode with a released owner's nonce, another open
 while a real owner holds the lock, a wrong nonce, another checkout) or an
@@ -739,12 +755,9 @@ replaced in the assembled bundle with an unlisted universal file beside it,
 refused before any signature; the standalone observer replaced after the
 seal and the sealed bundle's code after the observer's signature; a stamp
 naming another target or predating the output target contract; a cross
-file giving `meson setup` an x86_64 host, and one giving the arm64 host,
-which builds and packages in the partial variant (Meson itself sets up no
-Swift target in a cross configuration); Cargo's report naming another path; an x86_64
-target default overridden by the explicit target; the package guard on a
-direct Cargo build for other targets; and, where Rosetta is present, the
-whole build run by a translated shell. The forwarding wrappers run the real
+file giving `meson setup` an x86_64 host; Cargo's report naming another path; an x86_64
+target default overridden by the explicit target; and the package guard on a
+direct Cargo build for other targets. The forwarding wrappers run the real
 compilers and record every invocation, distinguishing compilations from
 version probes, and the effective flags the record reports per output are
 compared with the compilations the wrapper received. The same control runs
@@ -776,9 +789,19 @@ A selection sequence then drives the script with retained caches: an
 included file selecting a forwarding compiler, a change to only that file
 refused reuse, a forced `PATH` selecting another compiler, and the encoded
 flags and target rules each rebuilding with the winner recorded. Copies of the script with a guard
-removed or moved past its operation, and a session helper with path
-admission disabled, must fail the matching control, and a successful build
-in each variant is the neighbour that shows the checkout and wrappers build. The opt-in
+removed or moved past its operation (the native builder check removed, or
+moved past Python and SDK setup or past the lock front end), and a session
+helper with path admission disabled, must fail the matching control, and a
+successful build in each variant is the neighbour that shows the checkout
+and wrappers build. The opt-in
+[`control_translated_builder`](../tests/suites/preflight/opt_in/translated_build_refusals.py)
+needs Rosetta and nothing else: in a disposable admission fixture it runs the
+unchanged script under `arch -x86_64 /bin/bash` and `make build` under
+`arch -x86_64 /usr/bin/make`, in both variants, and requires the refusal
+naming `sysctl.proc_translated=1` ahead of every other admission check and a
+held lock, with no wrapped tool call and no session, cache or distribution
+change; a make given an invalid `SDKROOT` refuses at parse time instead.
+The opt-in
 [`test_toolchain_switch`](../tests/suites/preflight/opt_in/build_toolchain_switch.py)
 control makes the switch real: it builds under the selected developer
 directory, is refused reuse under the Command Line Tools by a field its own
@@ -869,36 +892,11 @@ SDKROOT="$(DEVELOPER_DIR=/Library/Developer/CommandLineTools xcrun --sdk macosx 
 meson setup builddir-clt
 ```
 
-Selecting the target is separate from choosing how Meson runs. The setup
-above configures the machine it runs on as the host; a Meson running
-translated on x86_64 therefore configures an x86_64 host and `meson.build`
-refuses it at setup. To configure for Apple Silicon from such an
-environment, name the arm64 macOS host in a cross file, which `meson.build`
-accepts as a cross build; `build.sh` itself performs only the native setup.
-Meson 1.12.1 sets up no Swift target in any cross configuration (it stops
-with an internal error naming a missing `swift_COMPILER` rule, as a minimal
-Swift project shows too), so a cross configuration builds the C targets,
-`-Dxpc=false`, and not the XPC pieces.
-
-```ini
-[binaries]
-c = 'cc'
-swift = 'swiftc'
-
-[host_machine]
-system = 'darwin'
-cpu_family = 'aarch64'
-cpu = 'aarch64'
-endian = 'little'
-```
-
-```sh
-meson setup builddir-arm64 --cross-file arm64-macos.ini -Dinspection=true -Dxpc=false
-```
-
-If unstamped state occupies `builddir/` after such work, the next
-`PW_FRESH_BUILD=1` build replaces it. Swift discovery uses swiftc's default
-module cache, while the targets use the build directory's own. The
+The setup above configures the machine it runs on, an Apple Silicon Mac, as
+the host; `meson.build` refuses any other host at setup. If unstamped state
+occupies `builddir/` after such work, the next `PW_FRESH_BUILD=1` build
+replaces it. Swift discovery uses swiftc's default module cache, while the
+targets use the build directory's own. The
 [comparison tools](../tests/README.md#comparing-native-builds) can record
 effective commands and output metadata after compilation.
 
@@ -1060,8 +1058,8 @@ implements it and the test or rule named by the manifest. Review that test or
 rule to assess coverage of the row. The build
 has <!-- span build.steps -->34<!-- /span --> steps, of
 which <!-- span build.conditional_steps -->1<!-- /span --> runs only in fresh
-mode, <!-- span build.refusals -->57<!-- /span --> refusals, of
-which <!-- span build.covered -->57<!-- /span --> have a control that produces
+mode, <!-- span build.refusals -->58<!-- /span --> refusals, of
+which <!-- span build.covered -->58<!-- /span --> have a control that produces
 them and one is the Meson assertion family
 over <!-- span build.meson_options -->21<!-- /span -->
 options, <!-- span build.signing -->9<!-- /span --> signing calls

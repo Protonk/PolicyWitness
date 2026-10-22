@@ -12,14 +12,12 @@ project('PolicyWitness', 'c',
   default_options: ['buildtype=plain', 'warning_level=0', 'b_ndebug=false'])
 
 # The output target: the native products are macOS code for Apple Silicon.
-# host_machine is the machine they run on; build_machine, where Meson and the
-# compilers run, is not constrained, so a cross file that configures an arm64
-# macOS host is accepted. A configuration whose host is anything else (the
-# default of a Meson running translated on x86_64, say) is refused here, on
-# setup and on every regeneration, before any target is evaluated.
+# host_machine is the machine they run on. A configuration whose host is
+# anything else is refused here, on setup and on every regeneration, before
+# any target is evaluated.
 assert(host_machine.system() == 'darwin' and host_machine.cpu_family() == 'aarch64',
-  'output target: the native products are macOS arm64 code, but Meson is configured for host @0@ @1@ (the build machine, @2@ @3@, is not constrained)'.format(
-    host_machine.system(), host_machine.cpu_family(), build_machine.system(), build_machine.cpu_family()))
+  'output target: the native products are macOS arm64 code, but Meson is configured for host @0@ @1@'.format(
+    host_machine.system(), host_machine.cpu_family()))
 
 # Fixed native policy, checked as effective settings rather than through the
 # buildtype label. Optimization, debug and warning flags are declared per

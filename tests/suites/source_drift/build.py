@@ -462,39 +462,26 @@ class BuildDocumentationTests(unittest.TestCase):
         self.assertTrue(any('b_lto' in p and 'not asserted' in p for p in problems), problems)
 
     def test_meson_output_target_assertion_refuses_other_hosts(self):
-        """meson.build requires an arm64 macOS host machine and leaves the build machine free. A cross file naming an x86_64
-        macOS host is refused at setup by name; an arm64 macOS cross file is a cross build that compiles thin arm64 outputs;
-        a directory configured for x86_64 before the assertion existed is refused by the regeneration its next compile
-        triggers, before anything compiles. With the assertion removed the x86_64 setup succeeds, so the control would fail,
-        and the grounding rule names the missing assertion; a changed requirement is named too. A Meson running translated
-        reaches the same refusal through its default host; no translated Meson is run here."""
+        """meson.build requires an arm64 macOS host machine. A cross file naming an x86_64 macOS host, the technique that
+        produces such a configuration here, is refused at setup by name; a directory configured for x86_64 before the
+        assertion existed is refused by the regeneration its next compile triggers, before anything compiles. With the
+        assertion removed the x86_64 setup succeeds, so the control would fail, and the grounding rule names the missing
+        assertion; a changed requirement is named too."""
         directory = tempfile.TemporaryDirectory(prefix='pw-meson-target-')
         self.addCleanup(directory.cleanup)
         work = Path(directory.name)
-        cross = {}
-        for family in ('x86_64', 'aarch64'):
-            cross[family] = work / f'{family}.ini'
-            cross[family].write_text("[binaries]\nc = 'cc'\n[host_machine]\nsystem = 'darwin'\n"
-                                     f"cpu_family = '{family}'\ncpu = '{family}'\nendian = 'little'\n")
+        cross = work / 'x86_64.ini'
+        cross.write_text("[binaries]\nc = 'cc'\n[host_machine]\nsystem = 'darwin'\n"
+                         "cpu_family = 'x86_64'\ncpu = 'x86_64'\nendian = 'little'\n")
 
-        def setup(source, name, family):
-            return subprocess.run(['meson', 'setup', str(work / name), str(source), '-Dxpc=false', '--cross-file', str(cross[family])],
+        def setup(source, name):
+            return subprocess.run(['meson', 'setup', str(work / name), str(source), '-Dxpc=false', '--cross-file', str(cross)],
                                   capture_output=True, text=True, timeout=300)
-        message = ('Assert failed: output target: the native products are macOS arm64 code, but Meson is configured for host darwin x86_64 '
-                   '(the build machine, darwin aarch64, is not constrained)')
-        refused = setup(ROOT, 'x86_64', 'x86_64')
+        message = 'Assert failed: output target: the native products are macOS arm64 code, but Meson is configured for host darwin x86_64\n'
+        refused = setup(ROOT, 'x86_64')
         self.assertNotEqual(refused.returncode, 0)
         self.assertIn(message, refused.stdout + refused.stderr)
         self.assertFalse((work / 'x86_64/build.ninja').exists(), 'a refused setup left a configured directory')
-        crossed = setup(ROOT, 'aarch64', 'aarch64')
-        self.assertEqual(crossed.returncode, 0, crossed.stdout + crossed.stderr)
-        self.assertIn('Build type: cross build', crossed.stdout)
-        compiled = subprocess.run(['meson', 'compile', '-C', str(work / 'aarch64')], capture_output=True, text=True, timeout=600)
-        self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
-        for name in ('sb_api_validator', 'pw-probe-runner', 'pw-extension-issuer'):
-            header = (work / 'aarch64' / name).read_bytes()[:8]
-            self.assertEqual((header[:4], int.from_bytes(header[4:8], 'little')), (b'\xcf\xfa\xed\xfe', 0x0100000c),
-                             f'{name} is not a thin arm64 Mach-O')
         # A copy of the native sources without the assertion: an x86_64 host configures, the rule names the missing row,
         # and restoring the assertion makes the next compile's regeneration refuse before anything compiles.
         source = work / 'source'
@@ -507,9 +494,9 @@ class BuildDocumentationTests(unittest.TestCase):
         meson = source / 'meson.build'
         text = meson.read_text()
         start = text.index("assert(host_machine.system() == 'darwin'")
-        end = text.index('build_machine.cpu_family()))\n', start) + len('build_machine.cpu_family()))\n')
+        end = text.index('host_machine.cpu_family()))\n', start) + len('host_machine.cpu_family()))\n')
         meson.write_text(text[:start] + text[end:])
-        bypassed = setup(source, 'regenerated', 'x86_64')
+        bypassed = setup(source, 'regenerated')
         self.assertEqual(bypassed.returncode, 0, 'with the assertion removed an x86_64 host configures: the control would fail here')
         self.assertTrue(any('output-target assertion' in p for p in generator.meson_problems(self.manifest, meson.read_text())))
         meson.write_text(text)

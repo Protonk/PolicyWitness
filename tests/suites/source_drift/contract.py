@@ -307,7 +307,8 @@ class ContractVersionTests(unittest.TestCase):
         developer.mkdir()
         profile = root / 'resolver.sb'
         profile.write_text('(version 1)(allow default)(deny mach-lookup)(deny process-exec)'
-                           '(allow process-exec (literal "/bin/bash") (literal "/usr/bin/dirname") (literal "/usr/bin/xcode-select"))')
+                           '(allow process-exec (literal "/bin/bash") (literal "/usr/sbin/sysctl") (literal "/usr/bin/dirname")'
+                           ' (literal "/usr/bin/xcode-select"))')
         env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
         env.update(SDKROOT='', DEVELOPER_DIR=str(developer), PW_PYTHON='/usr/bin/false')
         result = subprocess.run(['/usr/bin/sandbox-exec', '-f', str(profile), '/bin/bash', str(root / 'build.sh')],
@@ -319,6 +320,49 @@ class ContractVersionTests(unittest.TestCase):
         self.assertFalse((root / 'tests/.checkout.lock').exists())
         self.assertFalse((root / 'controller/target').exists())
         self.assertFalse((root / 'dist').exists())
+
+    def test_build_refuses_a_builder_it_cannot_confirm_before_anything_else(self):
+        """The native builder check is the script's first executable block, built from shell builtins and the two absolute
+        sysctl probes, ahead of the knobs, the arguments, the tracked inputs, Python and SDK setup and the lock front end.
+        A profile lets only bash and sysctl execute and denies Mach lookups: with hw.optional.arm64 unreadable, a bad knob,
+        an unknown argument and an invalid SDKROOT, the builder refusal is the only output, so nothing it precedes ran.
+        Without the unreadable read the same native shell passes the check and meets the knob refusal. A probe the profile
+        forbids to execute (status 126) still reaches the diagnostic, both probes named, rather than exiting under set -e."""
+        text = (ROOT / 'build.sh').read_text()
+        body = text.split('set -euo pipefail\n', 1)[1]
+        guard = body[:body.index('\nROOT_DIR=')]
+        code = [line.strip() for line in guard.splitlines() if line.strip() and not line.lstrip().startswith('#')]
+        self.assertTrue(code and code[0].startswith('if NATIVE_ARM64="$(/usr/sbin/sysctl -n hw.optional.arm64)"'), code[:1])
+        self.assertEqual(set(re.findall(r'(?<![\w$])/[\w./-]+', '\n'.join(code))), {'/usr/sbin/sysctl'}, code)
+        for later in ('for knob in BUILD_XPC', 'usage() {', 'for tree_input in', 'source "${ROOT_DIR}/tests/lib/python_start.sh"',
+                      'exec /bin/bash "${ROOT_DIR}/tests/lib/checkout_lock.sh"'):
+            self.assertNotIn(later, guard)
+            self.assertIn(later, body)
+        root = self.checkout(extra=ENTRY_FILES)
+        rules = '(version 1)(allow default)(deny mach-lookup)(deny process-exec)(allow process-exec (literal "/bin/bash") (literal "/usr/sbin/sysctl"))'
+        env = {k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}
+        env.update(BUILD_XPC='2', SDKROOT=str(root / 'missing.sdk'), IDENTITY='')
+
+        def run(profile, *args):
+            path = root / 'native.sb'
+            path.write_text(profile)
+            return subprocess.run(['/usr/bin/sandbox-exec', '-f', str(path), '/bin/bash', str(root / 'build.sh'), *args],
+                                  cwd=root, env=env, capture_output=True, text=True, timeout=30)
+        refused = run(rules + shim_probe.UNREADABLE_ARM64, '--bogus')
+        self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
+        self.assertEqual((refused.stdout, refused.stderr),
+                         ('', 'ERROR: this build runs only natively on Apple Silicon (hw.optional.arm64=<empty>, sysctl.proc_translated=0)\n'))
+        native = run(rules)
+        self.assertEqual(native.returncode, 2, native.stdout + native.stderr)
+        self.assertIn("BUILD_XPC must be 0 or 1 (got '2')", native.stderr)
+        self.assertNotIn('runs only natively', native.stderr)
+        failed = run('(version 1)(allow default)(deny mach-lookup)(deny process-exec (literal "/usr/sbin/sysctl"))')
+        self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
+        self.assertIn('ERROR: this build runs only natively on Apple Silicon (hw.optional.arm64=<failed: status 126>, '
+                      'sysctl.proc_translated=<failed: status 126>)', failed.stderr)
+        self.assertEqual(failed.stdout, '')
+        for path in ('tests/.checkout.lock', 'controller/target', 'dist'):
+            self.assertFalse((root / path).exists(), path)
 
     def test_build_refuses_a_knob_value_other_than_0_or_1_before_any_check(self):
         root = self.checkout(extra=ENTRY_FILES)

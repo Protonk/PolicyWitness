@@ -6,15 +6,14 @@
 | `PolicyWitness.zip` | ZIP from that build; release acceptance is recorded separately. |
 | `PolicyWitness.md` | Standalone user guide from the same build. |
 | `evidence/` | Dated release attempts, each with an index and named command receipts. An archived attempt is moved into its release archive and leaves an `<attempt>.archived` pointer. |
-| `archive/v<version>/` | One preserved release per packaged version, created by `tests/lib/release_archive.py`. `v2.3.0` and `v0.2.3` sit on either side of the version reset: 2.3.0 preceded 0.2.3. |
+| `archive/v<version>/` | One preserved release per packaged version, created by `tests/lib/release_archive.py`. |
 
-Each archive contains a versioned release ZIP, `SHA256SUMS`, the `release.json`
-release record, and supporting `evidence/` (the moved attempt, the
-`provenance.json` record copied out of the accepted ZIP, plus
-`release-notes.md` and `github-release.json` once published); a guide is
-included when it shipped. The release record binds the copied record, the
-final controller hash and the app seal's facts to the ZIP's bytes; archives
-made before the record existed keep their original evidence.
+Each archive contains a versioned release ZIP, the guide, `SHA256SUMS`, the
+`release.json` release record, and supporting `evidence/` (the moved attempt,
+the `provenance.json` record copied out of the accepted ZIP, plus
+`release-notes.md` and `github-release.json` once published). The release
+record binds the copied record, the final controller hash and the app seal's
+facts to the ZIP's bytes.
 Only this README and AGENTS.md are tracked. Artifacts are local and may be absent
 in a fresh checkout. An acceptance result identifies an exact ZIP hash.
 

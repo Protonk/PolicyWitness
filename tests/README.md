@@ -140,7 +140,10 @@ shell test library.
 [shim_probe.py](lib/shim_probe.py) provides contained commands and prepared
 profiles for SDK/developer-directory probes, with a shared detector for sent
 or blocked installation requests; its launch instructions are in
-[AGENTS.md](AGENTS.md#sandboxed-automation-harnesses).
+[AGENTS.md](AGENTS.md#sandboxed-automation-harnesses). From Python, a test can
+add the one fixed rule that makes `hw.optional.arm64` unreadable, so the build's
+native builder check refuses inside the same containment; the profile is then
+also gated on both sysctl reads, outside and inside it.
 
 Relative paths resolve from the repository root regardless of the caller's
 working directory. The effective paths are recorded in `plan.json` and
@@ -326,7 +329,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 
 | Suite | Tier | Coverage and limits | Equipment overview | Reference |
 | --- | --- | --- | --- | --- |
-| `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins; offline release controls vary. | [Suite](suites/preflight/README.md) |
+| `preflight` | Baseline + opt-in | Bundle signatures, layout, evidence hashes and the provenance record against the bytes; offline controls over the lock, stamp, fresh-mode, Cargo-judgment, SDK, signature-display and record readers; release acceptance, publication and cleanup controls; opt-in build guard, refusal and toolchain-switch controls that drive the unchanged build script, and a translated-build refusal control that needs Rosetta. Inspection is read-only; mutations use copies. | App for inspection; clang for the offline helper controls; signing identity and toolchains for opt-ins, Rosetta alone for the translated-build control; offline release controls vary. | [Suite](suites/preflight/README.md) |
 | `source_drift` | Baseline | Source manifests, direct Python ancestry, test registry, documentation contracts, generated copies and their rejection controls. Mechanical agreement does not establish runtime behavior. | Python; Meson for source and build checks. | [Suite](suites/source_drift/README.md) |
 | `shell_helpers` | Baseline | Case setup, command/result logging, wrapper sequencing, prerequisite failures and cleanup ownership through independent controls. | Python and shell; codesign for a prerequisite control. | [Suite](suites/shell_helpers/README.md) |
 | `dispatcher` | Baseline | Selection, execution, reports, cancellation, artifact integrity, retention and locking determine one accounted result. | Python, clang and macOS process/socket observation; no app. | [Suite](suites/dispatcher/README.md) |
@@ -448,9 +451,14 @@ describes the invariants and fixtures.
 ### Equipment checks
 
 The dispatcher checks visible equipment, including app and worker binaries,
-toolchains, a GUI session and a signing identity. It does not preflight XPC
-reachability or log access: a blocked live case runs and fails with evidence,
-while an unconfirmed `gui` prerequisite leaves the case explicitly unrun.
+toolchains, a GUI session, a signing identity and Rosetta. It does not
+preflight XPC reachability or log access: a blocked live case runs and fails
+with evidence, while an unconfirmed `gui` prerequisite leaves the case
+explicitly unrun. `rosetta` holds only when a shell started with
+`arch -x86_64` reads `sysctl.proc_translated` as `1`; a launch error, timeout,
+failure or other value is missing equipment, nothing is installed, and the
+probe's record stays with the invocation in `run.json`. Only
+`preflight/translated_build_refusal_controls` requires it.
 [Automation guidance](AGENTS.md#sandboxed-automation-harnesses) covers diagnosis
 and rerunning under an unsandboxed shell.
 

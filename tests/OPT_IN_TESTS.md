@@ -36,7 +36,7 @@ tests/run.sh --case runner_byoxpc/BBX-001 --list
 
 Execute with `--case`, an owning `--suite`, `--suite opt_in`, or `--all`.
 Selecting a BYOXPC specimen adds `runner_byoxpc/runner_install` as a dependency.
-Required app/toolchain/GUI/signing equipment missing causes a failed run with
+Required app/toolchain/GUI/signing/Rosetta equipment missing causes a failed run with
 explicit unrun selections. Run launchd/XPC tests from an unsandboxed, logged-in
 GUI session. Signing tests accept `PW_BYOXPC_IDENTITY`, then `IDENTITY`, otherwise
 resolve a matching Developer ID from the app's team. Configuration and output
@@ -195,7 +195,11 @@ selection, deduplication, configuration validation, and complete accounting.
   queries. No other control deliberately makes an installation request.
 - **Purpose:** Drive the unchanged build script through every refusal the
   build manifest lists, one disposable fault at a time, in each variant the
-  refusal applies to: a tracked input gone, a held checkout lock, a claim
+  refusal applies to: an unreadable `hw.optional.arm64` under a sandbox
+  profile, whose native builder refusal must be the only output ahead of
+  `--help`, an unknown argument, a bad knob, a missing tracked input, an
+  invalid `SDKROOT` under the helper's combined containment and an
+  independently held lock, a tracked input gone, a held checkout lock, a claim
   without a live owner's handoff or an owner killed mid-build, a build
   launched with a missing or changed environment witness, a developer
   directory without the SDK or without a numeric SDK version, a missing,
@@ -240,14 +244,12 @@ selection, deduplication, configuration validation, and complete accounting.
   the ZIP). Text, empty and truncated-header replacements and missing required
   executables refuse in both variants at the assembled and packaging gates,
   before any signature or the ZIP respectively. A stamp names another target or predates the contract, a cross
-  file gives `meson setup` an x86_64 host and, in the partial variant, another
-  the arm64 host, which builds and packages (Meson 1.12.1 sets up no Swift
-  target in a cross configuration), the controller package's target guard is driven by
+  file gives `meson setup` an x86_64 host, and the controller package's target guard is driven by
   direct Cargo builds for x86_64 and iOS with `--keep-going` (whose standard
   libraries this machine lacks, a recorded limit) and its removal or
-  weakening shown to fail, and, where Rosetta is present, the whole build runs
-  in a translated shell. Mutated copies of the script with
-  a guard removed or moved past its operation, of the session helper
+  weakening shown to fail. Mutated copies of the script with
+  a guard removed or moved past its operation (the native builder check
+  removed, or moved past Python and SDK setup or past the lock front end), of the session helper
   with path admission disabled, of the output check with its predicate
   reduced to arm64 membership, and of `meson.build` without its output-target
   assertion, must fail their control.
@@ -260,14 +262,44 @@ selection, deduplication, configuration validation, and complete accounting.
   keychain access. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
   boundaries, the stamp, fresh mode, path admission, the output target, the
-  lock, its handoff or launch boundaries, the request capture or the generated
-  refusal table.
+  native builder check, the lock, its handoff or launch boundaries, the request
+  capture or the generated refusal table.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
   each build's raw output, status, tool and forwarding-wrapper receipts with
   the hooks that fired and the lock descriptor each compiler held, the
   session, stamp and record copies, the output inventory, the outside-tree
   snapshots of the path controls, the lock lifetime observations, the make
   entrypoint receipts and the mutation results.
+
+### translated build refusal controls
+
+- **Case:** `preflight/translated_build_refusal_controls`
+- **Location:** `tests/suites/preflight/opt_in/translated_build_refusals.py`
+- **Purpose:** Establish the native builder refusal under real translation.
+  In a disposable admission fixture, the unchanged script run by
+  `arch -x86_64 /bin/bash` and `make build` run by `arch -x86_64 /usr/bin/make`
+  refuse naming `sysctl.proc_translated=1` in both variants, with `SDKROOT`
+  unset or valid, ahead of `--help`, an unknown argument, a bad knob, a missing
+  tracked input and an invalid `SDKROOT`, and ahead of an independently held
+  checkout lock. Recording wrappers for cargo, meson, ninja, codesign and cp,
+  first on a fixed `PATH`, must record no call, version probes included; the
+  session, caches and previous distribution output must not change. A make
+  given an invalid `SDKROOT` refuses at parse time without entering the
+  script. Invalid SDK requests run under the ordinary shim-probe containment
+  with `arch` inside it. Make's own launch and SDK check precede the script
+  and are outside the receipt claim.
+- **Resource dependency:** Rosetta, required as `rosetta` equipment: a shell
+  started with `arch -x86_64` must read `sysctl.proc_translated` as `1`.
+  Missing Rosetta leaves the case unrun as an equipment failure; nothing is
+  installed. No app, identity, compiler or signing is needed.
+- **Opt-in reason:** Rosetta is optional on Apple Silicon Macs, and the
+  general refusal controls must stay runnable without it.
+- **When to run:** After changing the native builder check, its position in
+  `build.sh`, the Makefile's build entry or SDK guard, or the `rosetta`
+  equipment probe.
+- **Artifacts:** `<run>/suites/preflight/translated_build_refusal_controls/artifacts/`
+  holds the equipment probe, each run's argv, environment, raw output,
+  receipts and inventory results, and the containment gate.
 
 ### build toolchain switch controls
 

@@ -88,8 +88,11 @@ exhaustive account of private runtime dependencies, and it says so in its
   about the products that makes no claim about the machine or processes that
   built them; Meson's host and build machines as Meson reports them, the host
   being the platform the native products are configured for and the build
-  machine a toolchain fact that is not constrained; the effective
-  `deployment_target` and `sdkroot`, as Cargo's resolved environment gives
+  machine a toolchain fact that is not constrained. The build's admission
+  refuses a builder that is not a native process on Apple Silicon, but the
+  record carries no field for that check: neither note attests it, and the
+  recorded build machine and rustc host remain what the tools reported; the
+  effective `deployment_target` and `sdkroot`, as Cargo's resolved environment gives
   them to the compiler, which must equal the plist's minimum, every output's
   minimum and the selected SDK's path; each build directory's state (`created`
   or `reused`, whether fresh mode replaced it, and what happened to the
@@ -156,15 +159,9 @@ Both readers enforce the helper's [`RECORD_LIMIT`](../tests/lib/build_provenance
 Meson options, toolchain-stamp projections and fresh-mode replacement
 observations have typed fields; fresh-mode observations must agree with the
 knob, directory states and per-target rebuild judgments.
-A record from before this validator that leaves
-a required field null is refused, not reinterpreted.
-
-Versions. The validator describes each schema version separately. A build
-writes version 2, the inspector accepts only version 2, and archiving a new
-release requires it. Verifying an archived release reads the record that
-release's own build sealed: a version 1 record is validated and compared with
-its ZIP as version 1 describes it, without the output target fields it never
-carried, and nothing is supplied to it or rewritten.
+A record that leaves a required field null is refused, not reinterpreted.
+The inspector, archiving and archive verification read only the current
+schema version and refuse any other.
 
 What the hashes mean. A newly calculated output hash identifies the bytes the
 record captured; it does not authenticate their compilation history. A cached
@@ -259,18 +256,17 @@ indexed is refused. Explicit manual pins remain protected exceptions.
 
 Both release retention entries carry `"release": "v<version>"`, making them
 eligible at a later release checkpoint. An omitted or null `release` is an
-explicit pin. Release entries should carry their established tag, including
-entries for older archives without portable bundles. Do not infer ownership
-from directory names or reason text. Absent older rotating entries are retired
-from the index too; absent pins remain protected.
+explicit pin. Release entries should carry their established tag. Do not
+infer ownership from directory names or reason text. Absent older rotating
+entries are retired from the index too; absent pins remain protected.
 
 Older owned runs and acceptance output are disposable at the checkpoint.
 Interrupted or ambiguous output with valid ownership is eligible when it started
 before the new release battery. Newer unfinished work survives until a later
 checkpoint. Acceptance holds a separate lifetime lock through extraction, its
 nested dispatcher, final checks and receipts, so even work outside the nested
-tests stays protected. Legacy acceptance requires a report and valid nested
-dispatcher ownership. Unknown ownership, symlink redirects, explicit pins,
+tests stays protected. Acceptance output without its owner record and lifetime
+lock is unknown ownership. Unknown ownership, symlink redirects, explicit pins,
 overlaps, and pending external-runner cleanup are kept with reported reasons.
 Session removal and registry-recovery receipts must establish cleanup before
 their output can be removed; release cleanup never removes machine services.
@@ -312,9 +308,9 @@ tag if the remote lacks it, creates the GitHub release once from the archived
 assets with `--verify-tag`, reads the release back, downloads every asset,
 compares bytes and digests with `SHA256SUMS`, and only then records the release
 and asset URLs in `release.json` and the reply in `evidence/github-release.json`.
-Re-running it verifies an existing release and creates nothing. Archives that
-declare portable test evidence must pass its verification before any push or
-GitHub operation. It needs an authenticated `gh`; `RELEASE_NOTES=` overrides
+Re-running it verifies an existing release and creates nothing. The archive,
+its portable test evidence included, must pass verification before any push
+or GitHub operation. It needs an authenticated `gh`; `RELEASE_NOTES=` overrides
 the archived notes.
 
 ### Lower-level notarization
@@ -496,16 +492,12 @@ to the local macOS environment and Gatekeeper state at acceptance time.
 `dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
 `release.json` release record, and supporting `evidence/`, including the
 embedded provenance record copied from the accepted ZIP, the portable test
-bundle and the rotation receipt when produced by these helpers. Archives made
-before the record existed keep their original evidence and are never
-backfilled. `make release`
-creates one per version through `tests/lib/release_archive.py`; the two earlier
-examples, `v2.3.0` and `v0.2.3`, were assembled by hand on either side of the
-version reset. The guide is included when it was distributed. Provenance records
-distinguish a verified published asset (`origin.kind: github_release`, written
-by `make publish`) from locally retained material; unknown source commits remain
-null. Check Git separately for the corresponding tag's availability. Original
-command receipts retain their original paths.
+bundle and the rotation receipt when produced by these helpers. `make release`
+creates one per version through `tests/lib/release_archive.py`. Provenance
+records distinguish a verified published asset (`origin.kind: github_release`,
+written by `make publish`) from locally retained material. Check Git separately
+for the corresponding tag's availability. Original command receipts retain
+their original paths.
 
 These artifacts are ignored and local. Recover published assets from their
 recorded release URL and verify their checksums to recover the original signed

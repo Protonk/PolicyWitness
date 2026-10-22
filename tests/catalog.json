@@ -46,7 +46,7 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard, translated-shell builds where Rosetta is present and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects, the native builder refusal under an unreadable hw.optional.arm64 ahead of every other admission check and the held checkout lock; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging",
           "default": false,
           "requires": [
             "app",
@@ -55,6 +55,14 @@
             "meson",
             "clang",
             "swift"
+          ]
+        },
+        {
+          "id": "translated_build_refusal_controls",
+          "description": "Under Rosetta the unchanged build script run by a translated shell and make build run by a translated make refuse at admission naming sysctl.proc_translated=1, in both variants, ahead of --help, bad arguments and knobs, a missing tracked input, an invalid SDK request and a held checkout lock, with no wrapped tool call and no session, cache or distribution change; make given an invalid SDKROOT refuses at parse time without entering the script",
+          "default": false,
+          "requires": [
+            "rosetta"
           ]
         },
         {
@@ -1959,6 +1967,7 @@
         "preflight/signed_artifact_controls",
         "preflight/build_guard_controls",
         "preflight/build_refusal_controls",
+        "preflight/translated_build_refusal_controls",
         "preflight/build_toolchain_switch_controls",
         "runner_exec_inheritance/mutation_controls",
         "smoke/runner_caller_auth",

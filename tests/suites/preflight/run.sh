@@ -108,3 +108,11 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "build refusal controls 
   "${PW_TEST_ARTIFACTS}" "${SIGNING_IDENTITY}"
 test_pass "every manifest refusal fires in its variants before the operation it protects; the fresh-mode state sequence, lock and record limits hold; bypassed and displaced guards fail their control"
 fi
+
+if test_selected translated_build_refusal_controls; then
+test_begin preflight translated_build_refusal_controls
+test_step admission "run the unchanged script and make build translated under Rosetta and observe the native builder refusal at admission"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "translated build refusal controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/opt_in/translated_build_refusals.py" "${PW_TEST_ARTIFACTS}"
+test_pass "a translated build refuses at admission through the script and make, in both variants, before the lock, any tool or any write"
+fi

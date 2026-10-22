@@ -3,6 +3,11 @@
 prepare() gates a profile once and returns a sandbox-exec prefix for shell
 wrappers. The caller owns the fixture and keeps that profile unchanged until
 the last use. run() also dispatches and records the requested command.
+
+A test may add fixed restrictive rules from EXTRA_RULES, never its own policy
+text, through the Python interface only. UNREADABLE_ARM64 makes the build's
+native builder probe read hw.optional.arm64 as empty: the profile is gated
+on that observation too, outside and inside the same profile.
 """
 import argparse
 import json
@@ -17,6 +22,13 @@ import time
 SERVICE = 'com.apple.dt.CommandLineTools.installondemand'
 DSCL = ['/usr/bin/dscl', '.', '-read', '/Users/root', 'UniqueID']
 PHRASES = ('requesting install', 'no install could be requested')
+UNREADABLE_ARM64 = '(deny sysctl-read (sysctl-name "hw.optional.arm64"))'
+EXTRA_RULES = (UNREADABLE_ARM64,)
+# The native builder's two observations, outside the profile and inside it with the arm64 read denied. A denied read
+# exits zero and prints nothing; a translated or failed probe is not that observation.
+SYSCTL_EXPECTED = {'sysctl_outside': {'hw.optional.arm64': '1\n', 'sysctl.proc_translated': '0\n'},
+                   'sysctl_inside': {'hw.optional.arm64': '', 'sysctl.proc_translated': '0\n'}}
+SYSCTL_SHELL = '/usr/sbin/sysctl -n "$1"\nexit $?\n'
 
 
 class ContainmentError(RuntimeError):
@@ -53,7 +65,7 @@ def execute(argv, *, env, cwd, timeout=60):
     return record
 
 
-def gate_errors(results):
+def gate_errors(results, *, unreadable_arm64=False):
     """Decide collected evidence; constructed unit inputs never enter prepare()."""
     errors = []
     for name in ('outside', 'inside', 'permitted'):
@@ -67,12 +79,26 @@ def gate_errors(results):
             errors.append(f'{name}: check failed')
         if name == 'outside' and 'UniqueID: 0' not in result.get('stdout', ''):
             errors.append('outside: missing UniqueID: 0')
+    if unreadable_arm64:
+        for where, expected in SYSCTL_EXPECTED.items():
+            probes = results.get(where)
+            for name, value in expected.items():
+                result = probes.get(name) if isinstance(probes, dict) else None
+                if not isinstance(result, dict) or result.get('complete') is not True or type(result.get('status')) is not int:
+                    errors.append(f'{where}: {name} did not complete')
+                elif result['status'] != 0:
+                    errors.append(f"{where}: {name} exited {result['status']}")
+                elif result.get('stdout') != value:
+                    errors.append(f"{where}: {name} printed {result.get('stdout')!r}, not {value!r}")
     return errors
 
 
-def profile_text(write_paths, exec_allowlist=None):
+def profile_text(write_paths, exec_allowlist=None, extra_rules=()):
     def literal(path):
         return json.dumps(str(Path(path).resolve()))
+    unknown = [rule for rule in extra_rules if rule not in EXTRA_RULES]
+    if unknown:
+        raise ValueError(f'not a fixed restrictive rule: {unknown[0]!r}')
     text = '(version 1)(allow default)(deny mach-lookup)(deny file-write*)'
     text += '(allow file-write* (literal "/dev/null") (literal "/dev/dtracehelper")'
     text += ''.join(' (subpath ' + literal(path) + ')' for path in write_paths) + ')'
@@ -80,10 +106,18 @@ def profile_text(write_paths, exec_allowlist=None):
         allowed = sorted({str(Path(path).resolve()) for path in exec_allowlist} | {'/usr/bin/dscl'})
         text += '(deny process-exec)(allow process-exec'
         text += ''.join(' (literal ' + json.dumps(path) + ')' for path in allowed) + ')'
-    return text + '\n'
+    return text + ''.join(extra_rules) + '\n'
 
 
-def prepare(fixture, *, write_paths=(), exec_allowlist=None, success_command=None):
+def sysctl_checks(prefix, env, cwd):
+    """The native builder's probes run directly outside the profile, and each by a shell inside it."""
+    outside = {name: execute(['/usr/sbin/sysctl', '-n', name], env=env, cwd=cwd) for name in SYSCTL_EXPECTED['sysctl_outside']}
+    inside = {name: execute(prefix + ['/bin/bash', '-c', SYSCTL_SHELL, 'sysctl-probe', name], env=env, cwd=cwd)
+              for name in SYSCTL_EXPECTED['sysctl_inside']}
+    return dict(sysctl_outside=outside, sysctl_inside=inside)
+
+
+def prepare(fixture, *, write_paths=(), exec_allowlist=None, success_command=None, extra_rules=()):
     fixture = Path(fixture).resolve()
     fixture.mkdir(parents=True, exist_ok=True)
     (fixture / 'tmp').mkdir(exist_ok=True)
@@ -93,23 +127,28 @@ def prepare(fixture, *, write_paths=(), exec_allowlist=None, success_command=Non
         success = success_command or ['/usr/bin/xcrun', '--version']
         if str(Path(success[0]).resolve()) not in {str(Path(p).resolve()) for p in exec_allowlist}:
             raise ValueError('the success command must be in the exec allow-list')
+    text = profile_text([fixture, *write_paths], exec_allowlist, tuple(extra_rules))
     profile = fixture / 'contained.sb'
     with profile.open('x') as stream:
-        stream.write(profile_text([fixture, *write_paths], exec_allowlist))
+        stream.write(text)
     prefix = ['/usr/bin/sandbox-exec', '-f', str(profile)]
     env = base_environment(fixture)
     checks = dict(outside=execute(DSCL, env=env, cwd=fixture),
                   inside=execute(prefix + DSCL, env=env, cwd=fixture),
                   permitted=execute(prefix + success, env=env, cwd=fixture))
-    errors = gate_errors(checks)
+    unreadable_arm64 = UNREADABLE_ARM64 in extra_rules
+    if unreadable_arm64:
+        checks.update(sysctl_checks(prefix, env, fixture))
+    errors = gate_errors(checks, unreadable_arm64=unreadable_arm64)
     (fixture / 'containment.json').write_text(json.dumps(dict(checks=checks, errors=errors), indent=2) + '\n')
     if errors:
         raise ContainmentError('containment not established: ' + '; '.join(errors))
     return prefix
 
 
-def run(fixture, argv, *, env=None, write_paths=(), exec_allowlist=None, success_command=None, timeout=60):
-    prefix = prepare(fixture, write_paths=write_paths, exec_allowlist=exec_allowlist, success_command=success_command)
+def run(fixture, argv, *, env=None, write_paths=(), exec_allowlist=None, success_command=None, extra_rules=(), timeout=60):
+    prefix = prepare(fixture, write_paths=write_paths, exec_allowlist=exec_allowlist, success_command=success_command,
+                     extra_rules=extra_rules)
     environment = env if env is not None else base_environment(fixture)
     record = execute(prefix + list(argv), env=environment,
                      cwd=fixture, timeout=timeout)

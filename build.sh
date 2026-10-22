@@ -1,6 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ---- Native builder ----------------------------------------------------------
+# The build runs only natively on Apple Silicon. This shell reads both facts
+# with the two absolute-path probes and builtins before anything else runs:
+# before the knobs, the arguments (--help too), the tracked inputs, Python and
+# SDK setup and the checkout lock front end. A translated process reads
+# hw.optional.arm64 as 1 and sysctl.proc_translated as 1. Both probes run even
+# when the first fails, so the refusal names both observations; an empty value
+# or a failed probe is named as such and refuses. The rule reads this process
+# only: a tool installed with only an x86_64 slice would still run translated.
+if NATIVE_ARM64="$(/usr/sbin/sysctl -n hw.optional.arm64)"; then
+  NATIVE_ARM64="${NATIVE_ARM64:-<empty>}"
+else
+  NATIVE_ARM64="<failed: status $?>"
+fi
+if NATIVE_TRANSLATED="$(/usr/sbin/sysctl -n sysctl.proc_translated)"; then
+  NATIVE_TRANSLATED="${NATIVE_TRANSLATED:-<empty>}"
+else
+  NATIVE_TRANSLATED="<failed: status $?>"
+fi
+if [[ "${NATIVE_ARM64}" != "1" || "${NATIVE_TRANSLATED}" != "0" ]]; then
+  echo "ERROR: this build runs only natively on Apple Silicon (hw.optional.arm64=${NATIVE_ARM64}, sysctl.proc_translated=${NATIVE_TRANSLATED})" 1>&2
+  exit 2
+fi
+unset NATIVE_ARM64 NATIVE_TRANSLATED
+
 # Build and sign PolicyWitness.app with a clear, single-path flow.
 #
 # Inputs (environment variables):
@@ -21,8 +46,9 @@ set -euo pipefail
 # host machine and selects the architecture explicitly, and each output, the
 # assembled bundle and the standalone observer are checked against that target
 # by their bytes before they are copied, signed or packaged. The target
-# describes the products only; which machine or process runs the build is
-# not checked.
+# describes the products; the native builder check above describes this
+# script's own process, and the record carries what rustc and Meson report
+# about the machine they ran on.
 #
 # Native compilation (the C worker and validator, the C shim, the Swift client
 # and host) runs through Meson into the ignored builddir/; meson.build owns the

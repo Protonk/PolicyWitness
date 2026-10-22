@@ -1533,13 +1533,7 @@ static void run_attempt(pw_shm_slot_t *slot, pw_timing_t *timing, uint32_t phase
 /* ---- phase release wait ------------------------------------------------- */
 
 static inline void cpu_relax(void) {
-#if defined(__aarch64__) || defined(__arm64__)
     __asm__ volatile("yield" ::: "memory");
-#elif defined(__x86_64__)
-    __asm__ volatile("pause" ::: "memory");
-#else
-    atomic_signal_fence(memory_order_seq_cst);
-#endif
 }
 
 /* Test-only gates around the sampled decision; the shipped worker compiles

@@ -355,8 +355,16 @@ and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 The `contract_versions` case checks [docs/contract.json](../../../docs/contract.json)
 against every generated copy in code and documents, exercises the real generator in
 a disposable checkout with changed, stale, broken-marker and malformed inputs, and
-proves a stale copy stops the build before signing. Compiled values are compared
-elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
+proves a stale copy stops the build before signing. The same case pins the
+native builder check as `build.sh`'s first executable block, built from
+builtins and the two `/usr/sbin/sysctl` probes ahead of the knobs, arguments,
+tracked inputs, Python and SDK setup and the lock front end. Under a profile
+that lets only bash and sysctl execute and denies Mach lookups, an unreadable
+`hw.optional.arm64` beside a bad knob, an unknown argument and an invalid
+`SDKROOT` yields the builder refusal as the only output; the same native shell
+without that rule passes the check and meets the knob refusal; and a probe the
+profile forbids to execute names both failed probes instead of exiting under
+`set -e`. Compiled values are compared elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
 See [docs/CONTRACT.md](../../../docs/CONTRACT.md).
 
 The `architecture_documentation` case checks
@@ -399,11 +407,11 @@ every asserted option in turn and requires the next regeneration to refuse it
 by name; a bypass control removes one assertion from a disposable copy of
 `meson.build` and shows that option's control failing while the rule names
 the option. The output-target control gives Meson an x86_64 macOS host
-through a cross file and requires setup to refuse it by name, builds an arm64
-cross configuration to thin arm64 outputs, refuses at the regeneration of a
-copy configured for x86_64 before the assertion existed and before anything
-compiles, and shows the setup succeeding and the rule naming the missing row
-when the assertion is removed, and naming a changed host requirement. Agreement is textual: it does not establish that a refusal fires
+through a cross file and requires setup to refuse it by name, refuses at the
+regeneration of a copy configured for x86_64 before the assertion existed and
+before anything compiles, and shows the setup succeeding and the rule naming
+the missing row when the assertion is removed, and naming a changed host
+requirement. Agreement is textual: it does not establish that a refusal fires
 or precedes the operation it protects; the manifest's behavioral and helper
 citations and the baseline carry that distinction, and release preflight
 refuses a grown baseline.

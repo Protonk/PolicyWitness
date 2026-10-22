@@ -103,8 +103,6 @@ import checkout_lock  # noqa: E402
 import output_target  # noqa: E402
 
 SCHEMA_VERSION = 2
-# Records an earlier build sealed, readable only where a reader asks for them explicitly (archived releases).
-HISTORICAL_SCHEMA_VERSIONS = (1,)
 STAMP_SCHEMA_VERSION = 2
 SESSION_SCHEMA_VERSION = 3
 STAMP_NAME = 'pw-toolchain.json'
@@ -1860,7 +1858,7 @@ OBSERVED_COMPILER = obj(dict(configured=obj(dict(command=COMMAND, id=text(), ver
                              observed=obj(dict(status=one_of('ok'), command=COMMAND, identity=text()))))
 PROGRAM = obj(dict(source=text(), command=text(TEXT_LIMIT, nullable=True), overrides=array(text(), 8), file=text(TEXT_LIMIT, nullable=True),
                    disabled=boolean()))
-def selection_shape(version):
+def selection_shape():
     fields = dict(
         files=array(obj(dict(path=text(TEXT_LIMIT), includes=array(obj(dict(path=text(TEXT_LIMIT), optional=boolean(), loaded=boolean())), 64))), 64),
         launcher=obj(dict(kind=one_of('cargo', 'rustup proxy'), toolchain=text(nullable=True))),
@@ -1868,21 +1866,20 @@ def selection_shape(version):
         env_entries=mapping(obj(dict(applied=boolean(), force=boolean(), relative=boolean(), file=text(TEXT_LIMIT, nullable=True))), 256),
         child_environment=obj(dict(SDKROOT=text(TEXT_LIMIT, nullable=True), MACOSX_DEPLOYMENT_TARGET=text(nullable=True),
                                    DEVELOPER_DIR=text(TEXT_LIMIT, nullable=True), RUSTUP_TOOLCHAIN=text(nullable=True),
-                                   path_replaced_by_env=boolean(), rustup_home_replaced_by_env=boolean())))
-    if version >= 2:
-        fields['target'] = obj(dict(source=one_of('--target'), triple=one_of(TRIPLE),
-                                    overrides=array(one_of('CARGO_BUILD_TARGET', 'build.target'), 2)), closed=True)
+                                   path_replaced_by_env=boolean(), rustup_home_replaced_by_env=boolean())),
+        target=obj(dict(source=one_of('--target'), triple=one_of(TRIPLE),
+                        overrides=array(one_of('CARGO_BUILD_TARGET', 'build.target'), 2)), closed=True))
     return obj(fields)
 
 
 WRAPPER = obj(dict(source=text(), command=text(TEXT_LIMIT)), dict(sha256=text(64, HEX64)))
 
 
-def rustc_shape(version):
+def rustc_shape():
     return obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), source=one_of('RUSTC', 'CARGO_BUILD_RUSTC', 'build.rustc', 'default'),
                     identity=text(), release=text(), commit_hash=text(empty=True), host=text(), llvm_version=text(empty=True),
                     wrappers=obj(optional=dict(wrapper=WRAPPER, workspace_wrapper=WRAPPER), closed=True),
-                    selection_environment=mapping(text(TEXT_LIMIT, empty=True), 16), selection=selection_shape(version), selection_note=NOTE))
+                    selection_environment=mapping(text(TEXT_LIMIT, empty=True), 16), selection=selection_shape(), selection_note=NOTE))
 
 
 TOOL = obj(dict(status=one_of('ok'), command=text(TEXT_LIMIT), version=text()))
@@ -1906,13 +1903,12 @@ SIGNATURE = obj(dict(status=one_of('ok'), leaf=text(nullable=True), team=text(nu
                      adhoc=boolean(), developer_id_chain=boolean()))
 
 
-def output_shape(version):
+def output_shape():
     fields = dict(rel_path=text(TEXT_LIMIT), uuid=text(36, UUID), platform=text(8, re.compile(r'\d+')), minos=text(16, VERSION),
                   sdk=text(16, VERSION), tools=array(obj(dict(tool=text(16), version=text(32)), closed=True), TOOLS_LIMIT),
-                  sha256=text(64, HEX64, nullable=True))
-    if version >= 2:
-        fields.update(architectures=array(text(output_target.NAME_LIMIT), output_target.SLICE_LIMIT, empty=False),
-                      container=one_of('thin', 'fat'))
+                  sha256=text(64, HEX64, nullable=True),
+                  architectures=array(text(output_target.NAME_LIMIT), output_target.SLICE_LIMIT, empty=False),
+                  container=one_of('thin', 'fat'))
     return obj(fields, dict(signature=SIGNATURE, note=NOTE, cargo=CARGO_JUDGMENT))
 
 
@@ -1929,7 +1925,7 @@ STAMP_OUTPUT_FIELDS = {'output.system': text(32), 'output.cpu_family': text(32),
                        'output.link_arch': SELECTIONS, 'output.cargo_triple': text(64)}
 
 
-def stamp_projection_shape(version):
+def stamp_projection_shape():
     def check(value, where, problems):
         if isinstance(value, dict) and value.get('status') == 'unavailable':
             obj(dict(status=one_of('unavailable'), reason=NOTE), closed=True)(value, where, problems)
@@ -1942,10 +1938,9 @@ def stamp_projection_shape(version):
         swift = value['scope'].get('xpc') is True
         if swift:
             fields.update({'compilers.swift.command': COMMAND, 'compilers.swift.identity': text()})
-        if version >= 2:
-            fields.update(STAMP_OUTPUT_FIELDS)
-            if swift:
-                fields['output.swift_target'] = SELECTIONS
+        fields.update(STAMP_OUTPUT_FIELDS)
+        if swift:
+            fields['output.swift_target'] = SELECTIONS
         obj(fields, closed=True)(value.get('fields'), where + '.fields', problems)
     return Shape(check)
 
@@ -1959,18 +1954,15 @@ MESON_OPTION_SHAPES['b_sanitize'] = Shape(lambda v, w, p: (text() if isinstance(
 MACHINE = obj(dict(system=text(32), cpu_family=text(32)), closed=True)
 
 
-def cache_areas(version):
-    """The cache areas fresh mode replaces, as the record of that version names them."""
-    areas = (('builddir', BUILDDIR), ('cargo_release', RELEASE))
-    return areas + ((('cargo_target_release', TRIPLE_RELEASE),) if version >= 2 else ())
+# The cache areas fresh mode replaces, as the record names them.
+CACHE_AREAS = (('builddir', BUILDDIR), ('cargo_release', RELEASE), ('cargo_target_release', TRIPLE_RELEASE))
 
 
-def record_shape(version):
-    """The documented record of one schema version. Version 1 is kept exactly for records earlier builds sealed; only
-    readers that ask for historical records accept it."""
+def record_shape():
+    """The documented record of the current schema version."""
     replacement = obj({name: obj(dict(path=one_of(relative), existed=boolean(), removed=boolean()), closed=True)
-                       for name, relative in cache_areas(version)}, closed=True, nullable=True)
-    directories = {name: BUILD_DIRECTORY for name, _ in cache_areas(version)}
+                       for name, relative in CACHE_AREAS}, closed=True, nullable=True)
+    directories = {name: BUILD_DIRECTORY for name, _ in CACHE_AREAS}
     configuration = dict(
         knobs=obj({name: one_of('0', '1') for name in ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD')}, closed=True),
         meson_options=alternatives(('ok', obj(dict(values=obj(optional=MESON_OPTION_SHAPES, closed=True)))), ('unknown', obj())),
@@ -1986,15 +1978,13 @@ def record_shape(version):
                                    fresh_mode=obj(dict(requested=boolean(), replacement=replacement)),
                                    cargo_admission=obj(dict(target_directory=text(TEXT_LIMIT), build_directory=text(TEXT_LIMIT)),
                                                        dict(layout_environment=mapping(text(TEXT_LIMIT, empty=True), 8))))),
-        toolchain_stamp=obj(dict(scope_note=NOTE, projection=stamp_projection_shape(version))))
-    if version >= 2:
-        configuration.update(
-            output_target=obj(dict(system=one_of(output_target.SYSTEM), platform=one_of(output_target.PLATFORM),
-                                   architecture=one_of(output_target.ARCHITECTURE), container=one_of(output_target.CONTAINER),
-                                   cargo_triple=one_of(output_target.CARGO_TRIPLE), note=NOTE), closed=True),
-            meson_machines=obj(dict(host=MACHINE, build=MACHINE, note=NOTE), closed=True))
+        toolchain_stamp=obj(dict(scope_note=NOTE, projection=stamp_projection_shape())),
+        output_target=obj(dict(system=one_of(output_target.SYSTEM), platform=one_of(output_target.PLATFORM),
+                               architecture=one_of(output_target.ARCHITECTURE), container=one_of(output_target.CONTAINER),
+                               cargo_triple=one_of(output_target.CARGO_TRIPLE), note=NOTE), closed=True),
+        meson_machines=obj(dict(host=MACHINE, build=MACHINE, note=NOTE), closed=True))
     return obj(dict(
-        schema_version=one_of(version),
+        schema_version=one_of(SCHEMA_VERSION),
         generated_at=text(32, re.compile(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ')),
         source=obj(dict(commit=text(64), describe=text(), dirty=boolean(), version=text(32, VERSION), build_number=text(16, re.compile(r'\d+')),
                         worker_identity=text(64, HEX64), input_hashes=obj({name: text(64, HEX64) for name in SOURCE_INPUTS}, closed=True))),
@@ -2004,28 +1994,27 @@ def record_shape(version):
             xcode=alternatives(('ok', obj(dict(version=text(), build=text()))),
                                ('unknown', obj(dict(reason=one_of(*FAILURE_KINDS)), dict(returncode=integer(nullable=True))))),
             compilers=obj(dict(c=OBSERVED_COMPILER, swift=Shape(lambda v, w, p: None))),
-            rustc=rustc_shape(version), cargo=TOOL, meson=TOOL, ninja=TOOL)),
+            rustc=rustc_shape(), cargo=TOOL, meson=TOOL, ninja=TOOL)),
         configuration=obj(configuration),
-        outputs=array(output_shape(version), 16, empty=False),
+        outputs=array(output_shape(), 16, empty=False),
         signing=obj(dict(identity=text(), nested=array(obj(dict(rel_path=text(TEXT_LIMIT), leaf=text(nullable=True), team=text(nullable=True),
                                                                 timestamp=boolean()), closed=True), 16), note=NOTE)),
         limits=array(NOTE, 8, empty=False)), closed=True)
 
 
-RECORD_SHAPES = {version: record_shape(version) for version in (*HISTORICAL_SCHEMA_VERSIONS, SCHEMA_VERSION)}
+RECORD_SHAPE = record_shape()
 
 
 def record_shape_problems(record):
-    """Every way a record departs from the documented shape of its schema version: required fields present and not
-    null, exact types, bounds, the variant's compilers and outputs, permitted unknowns only where the field policy
-    allows them, and signing claims that repeat the outputs' own. A version 2 record must also describe every output
-    as the output target and Meson's host machine as the target's. Which versions a reader accepts is the reader's
-    decision; this function only validates a record against its own version."""
+    """Every way a record departs from the documented shape of the current schema version: required fields present and
+    not null, exact types, bounds, the variant's compilers and outputs, permitted unknowns only where the field policy
+    allows them, and signing claims that repeat the outputs' own. Every output must be described as the output target
+    and Meson's host machine as the target's. A record of any other version is refused, never interpreted."""
     version = record.get('schema_version') if type(record) is dict else None
-    if type(version) is not int or version not in RECORD_SHAPES:
-        return [f"record.schema_version is not one of {', '.join(map(str, RECORD_SHAPES))}"]
+    if type(version) is not int or version != SCHEMA_VERSION:
+        return [f'record.schema_version is not {SCHEMA_VERSION}']
     problems = []
-    RECORD_SHAPES[version](record, 'record', problems)
+    RECORD_SHAPE(record, 'record', problems)
     if problems:
         return problems
     full = record['configuration']['knobs']['BUILD_XPC'] == '1'
@@ -2036,7 +2025,7 @@ def record_shape_problems(record):
         problems.append('record.configuration fresh mode disagrees with PW_FRESH_BUILD')
     if fresh['requested'] != (fresh['replacement'] is not None):
         problems.append('record.configuration fresh mode must carry replacement observations exactly when requested')
-    for name, _ in cache_areas(version):
+    for name, _ in CACHE_AREAS:
         directory = directories[name]
         replacement = (fresh['replacement'] or {}).get(name)
         if replacement and (replacement['existed'] != replacement['removed'] or
@@ -2074,13 +2063,12 @@ def record_shape_problems(record):
             problems.append(f'{where}.cargo belongs to the Cargo targets and only to them')
         if fresh['requested'] and output.get('cargo', {}).get('fresh') is True:
             problems.append(f'{where}.cargo.fresh reports reuse in a fresh build')
-        if version >= 2 and (output['architectures'] != [output_target.ARCHITECTURE] or output['container'] != output_target.CONTAINER
-                             or output['platform'] != output_target.PLATFORM):
+        if (output['architectures'] != [output_target.ARCHITECTURE] or output['container'] != output_target.CONTAINER
+                or output['platform'] != output_target.PLATFORM):
             problems.append(f"{where} describes {output['container']} {' '.join(output['architectures'])} for platform "
                             f"{output['platform']}, not the output target (thin {output_target.ARCHITECTURE} for macOS)")
-    if version >= 2:
-        if configuration['meson_machines']['host'] != output_target.MESON_HOST:
-            problems.append("record.configuration.meson_machines.host is not the output target's Meson host machine")
+    if configuration['meson_machines']['host'] != output_target.MESON_HOST:
+        problems.append("record.configuration.meson_machines.host is not the output target's Meson host machine")
     claimed = [(n['rel_path'], n['leaf'], n['team'], n['timestamp']) for n in record['signing']['nested']]
     actual = [(o['rel_path'], o['signature']['leaf'], o['signature']['team'], o['signature']['timestamp']) for o in record['outputs'] if 'signature' in o]
     if claimed != actual:
@@ -2192,16 +2180,14 @@ def record_problems(app, manifest, *, read_metadata=output_metadata, observe=Non
     return problems
 
 
-def read_zip_record(archive, *, historical=False):
+def read_zip_record(archive):
     """The record bytes and controller digest from a release ZIP; no archived code is executed.
 
-    The record must have the documented shape of its schema version, and every
-    nested output it names must hash to its recorded value. Load commands,
-    architectures, containers and signatures are observed on temporary copies of
-    the named executables, never trusted from the record. A new release must
-    carry the current schema; with historical=True, a record an earlier build
-    sealed under a version in HISTORICAL_SCHEMA_VERSIONS is read as that version
-    describes it, and nothing it lacks is compared or supplied."""
+    The record must be of the current schema version with its documented shape,
+    and every nested output it names must hash to its recorded value. Load
+    commands, architectures, containers and signatures are observed on temporary
+    copies of the named executables, never trusted from the record. A record of
+    any other version is refused."""
     import zipfile
     import signer_check
     with zipfile.ZipFile(archive) as zipped:
@@ -2227,8 +2213,7 @@ def read_zip_record(archive, *, historical=False):
             data = json.loads(record.decode('utf-8'))
         except ValueError:
             raise ValueError('the accepted ZIP carries an unreadable provenance record')
-        accepted = (SCHEMA_VERSION, *HISTORICAL_SCHEMA_VERSIONS) if historical else (SCHEMA_VERSION,)
-        if not isinstance(data, dict) or data.get('schema_version') not in accepted:
+        if not isinstance(data, dict) or data.get('schema_version') != SCHEMA_VERSION:
             raise ValueError('the accepted ZIP carries an unsupported provenance record')
         problems = record_shape_problems(data)
         if problems:
@@ -2244,10 +2229,9 @@ def read_zip_record(archive, *, historical=False):
                 metadata = output_metadata(path)
                 if metadata.get('status') != 'ok' or any(metadata.get(k) != output[k] for k in ('uuid', 'platform', 'minos', 'sdk', 'tools')):
                     raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's load commands")
-                if data['schema_version'] >= 2:
-                    observed = output_observation(path)
-                    if any(observed.get(k) != output[k] for k in ('architectures', 'container')):
-                        raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's architectures or container")
+                observed = output_observation(path)
+                if any(observed.get(k) != output[k] for k in ('architectures', 'container')):
+                    raise ValueError(f"the accepted ZIP's {relative} differs from its provenance record's architectures or container")
                 if relative != CONTROLLER:
                     observed = signer_check.signature(path)
                     if not observed.get('readable') or signer_check.facts(observed) != output['signature']:

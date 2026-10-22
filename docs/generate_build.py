@@ -604,7 +604,7 @@ def meson_target_assertions(text):
     """meson.build's output-target assertions: the host system and CPU family each requires, and its message template."""
     found = re.findall(r"assert\(host_machine\.system\(\) == '([a-z0-9_]+)' and host_machine\.cpu_family\(\) == '([a-z0-9_]+)',\s*"
                        r"'([^']+)'\.format\(", text)
-    placeholders = ("${host_system}", "${host_cpu_family}", "${build_system}", "${build_cpu_family}")
+    placeholders = ("${host_system}", "${host_cpu_family}")
     out = []
     for system, family, template in found:
         for index, name in enumerate(placeholders):
