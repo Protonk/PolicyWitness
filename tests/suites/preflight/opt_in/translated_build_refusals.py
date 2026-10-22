@@ -187,7 +187,8 @@ def main(out):
             fixture.release()
             save(out / 'results.json', [{k: v for k, v in r.items() if k not in ('stdout', 'stderr')} for r in fixture.results])
         assert lock_free(fixture.root)
-    print(f'{len(fixture.results)} translated admission runs refused before the lock, any tool or any write')
+    print(f'{len(fixture.results)} translated admission runs refused before checkout-lock acquisition, with no wrapped-tool calls '
+          'and unchanged recorded inventories')
 
 
 if __name__ == '__main__':

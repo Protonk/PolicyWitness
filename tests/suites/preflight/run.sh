@@ -114,5 +114,5 @@ test_begin preflight translated_build_refusal_controls
 test_step admission "run the unchanged script and make build translated under Rosetta and observe the native builder refusal at admission"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "translated build refusal controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/opt_in/translated_build_refusals.py" "${PW_TEST_ARTIFACTS}"
-test_pass "a translated build refuses at admission through the script and make, in both variants, before the lock, any tool or any write"
+test_pass "a translated build refuses at admission through the script and make, in both variants, before checkout-lock acquisition, with no wrapped-tool calls and unchanged recorded inventories"
 fi
