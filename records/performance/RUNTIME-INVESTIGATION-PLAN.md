@@ -74,7 +74,8 @@ reopened by it.
   30 minutes sparingly available, and anything over an hour belongs to a later
   phase in which the operator runs a prepared procedure and returns with the
   results. The procedure therefore ships with configurations sized to those
-  intervals and a wall-clock ceiling that stops it inside them.
+  intervals and a hard wall-clock ceiling, cleanup included, that ends it
+  inside them.
 - **Background servers.** The two the guide mentions are the Codex app-server
   daemon, running from `~/.codex/packages/app-server-daemon/`, and a second
   custom app server that is now stopped. The procedure records the presence
@@ -153,24 +154,31 @@ is re-run silently.
   `warmup: true` in the manifest. They absorb first-exec latency on the new
   binaries and establish that every field in the table is present.
 - **P2, pilot series.** Five rounds of all 11 cells, 55 invocations, about one
-  minute. Checks: every field present for every cell; residuals non-negative
-  and stable; W for `--version` against W for a run; sleep detection reading
+  minute. Checks: every field present for every cell; residuals non-negative;
+  W for `--version` against W for a run; sleep detection reading
   zero; the no-capture back-to-back series free of `already_ran` or XPC errors,
   or showing them, either way recorded.
-- **P3, overlap.** Interactive only. Two no-capture invocations of
+- **P3, overlap.** Interactive only this cycle. Two no-capture invocations of
   `sysctl_read` started together, repeated ten times, to see which of the
   outcomes above a concurrent start produces. The user guide says relative
   scheduling between concurrent runs is not guaranteed; the pilot records what
-  happened, not a rule. It enters the unattended manifest only if P2 shows the
-  sequential series cannot reach the question and the outcomes are stable
-  enough to count.
+  happened, not a rule, and the report carries its ten pairs as pilot
+  observations with that n. No admission rule is needed now. A later cycle
+  may add an overlap series to an unattended manifest only if every pilot
+  pair terminated within the deadline, every outcome fell in a closed set the
+  summarizer classifies (`ok`, `already_ran`, a named XPC error) and the
+  sequential series showed no retirement encounter, which would mean ordinary
+  use cannot reach the question.
 - **P4, procedure controls.** The harness's own verification, listed under
   Verification below.
 
-The pilots decide three things recorded in the brief: which measures survive
-(any field absent or unstable for a cell is dropped for that cell and named),
-the per-invocation cost that sizes the unattended configurations, and whether
-P3 joins the manifest.
+The pilots decide two things recorded in the brief. First, which measures are
+defined for which cells: a measure is dropped for a cell only when its field
+is absent, null, of another type or carries `clock_fault: true`, and the drop
+is named. Variability never drops a measure; it is part of what the
+investigation characterizes, and the summary reports it stratified by the
+outcome words each record carries. Second, the per-invocation cost that sizes
+the unattended configurations.
 
 ### 4. Stage 3: the procedure
 
@@ -208,49 +216,67 @@ Behavior, in order:
 4. For each planned invocation in sequence: write `argv.json`, read both
    monotonic clocks, spawn the controller with stdout and stderr to
    `stdout.json` and `stderr.txt` opened fresh, wait with `wait4` under the
-   configuration's per-invocation deadline, read both clocks, and write
+   invocation's effective deadline (below), read both clocks, and write
    `status.json`: state, exit status or signal, both clock deltas, sleep
    detected, rusage, byte counts. States are `completed` (exited, any status),
-   `harness_timeout` (deadline reached; SIGTERM, then SIGKILL after two
-   seconds, both recorded), `interrupted` (the operator's SIGINT or SIGTERM
+   `harness_timeout` (the effective deadline reached; SIGTERM, then SIGKILL
+   after two seconds, both recorded, with the deadline and its source), `interrupted` (the operator's SIGINT or SIGTERM
    arrived while it ran; the controller is left to finish or is killed, and
    the record says which) and `spawn_failed`. Nothing is retried. A nonzero
    exit is a completed invocation whose envelope says what happened.
-5. Stop when the manifest is exhausted or the configuration's wall-clock
-   ceiling has passed, whichever is first. Unstarted entries are written as
-   `never_started`. On SIGINT the loop finishes the current invocation's
-   record and stops the same way.
+5. Stop when the manifest is exhausted or when less than the cleanup reserve
+   plus the start margin remains before the ceiling, whichever is first.
+   Unstarted entries are written as `never_started` with the reason. On
+   SIGINT the loop finishes the current invocation's record and stops the
+   same way.
 6. Write `conditions-end.json`, release the assertion and record whether it
    was still running, write `run.json` (counts by state, start and end, the
    stop reason) and `SHA256SUMS` over every file in the run directory except
    itself.
 
-Configurations, to be sized from P2's measured per-invocation cost and
-recorded in the brief with their exact counts:
+Each configuration has a ceiling, a hard finish time counted from the
+procedure's start and including cleanup; a cleanup reserve of 10 s inside it;
+and a manifest sized to end by exhaustion at about 80 percent of the ceiling
+at the pilot's per-invocation cost. The ceiling is the backstop, not the
+expected end. Exact counts are set from P2 and recorded in the brief.
 
-| Config | Intended interval | Ceiling | Shape |
-| --- | --- | --- | --- |
-| `pilot` | about one minute | 3 min | P1 then P2 as above |
-| `short` | about 10 minutes | 10 min | Round-robin over the 11 cells, enough rounds to fill about 8 minutes at pilot cost |
-| `standard` | about 30 minutes | 30 min | The same shape, about 25 minutes of rounds |
+| Config | Ceiling, hard finish | Shape |
+| --- | --- | --- |
+| `pilot` | 3 min | P1 then P2 as above |
+| `short` | 10 min | Round-robin over the 11 cells, rounds sized to about 8 minutes |
+| `standard` | 30 min | The same shape, rounds sized to about 24 minutes |
 
-The per-invocation deadline is 300 s in every configuration: above the 240 s
-runner timeout plus the 11 s log allowance and grace, so a harness timeout
-means the controller itself failed to stop. The ceiling makes the stop
-condition legible: the procedure ends no later than ceiling plus one deadline.
+The nominal per-invocation deadline is 300 s: above the 240 s runner timeout
+plus the 11 s log allowance and grace, so a timeout at the nominal deadline
+means the controller itself failed to stop. An invocation's effective deadline
+is the smaller of the nominal deadline and the time remaining before the
+reserve begins, and `status.json` records the effective value with its source,
+`nominal` or `ceiling`, so a kill at the ceiling is never read as a hung
+controller. No invocation starts when less than the reserve plus a start
+margin remains; the margin is 5 s, raised above the pilot's largest W if that
+is higher. Cleanup runs inside the reserve. The procedure's last write
+therefore lands before the ceiling, with one exception the record would show:
+a controller that does not die on SIGKILL. The harness manages only the
+controller; the XPC host and its worker belong to launchd's service tree, and
+a kill at the ceiling leaves them to their own budgets, which the status
+notes.
 
 A companion `records/performance/harness/summarize.py` reads a run directory
 and writes `summary.json` and `summary.md`: manifest reconciled against
-`status.json` files, counts per state, and per cell the n, minimum, median,
-p90 and maximum of each measure, computed from completed invocations only and
-reporting the excluded ones by sequence number and state. It never edits the
+`status.json` files, counts per state, and per cell and per outcome stratum (the record's `stop` words, capture
+status and exit status) the n, minimum, median, p90 and maximum of each
+measure. It computes from completed invocations only, reports every excluded
+invocation by sequence number and state, and counts per cell the measures it
+could not read as `absent`, `invalid` (wrong type or `clock_fault: true`) or
+`inapplicable` (undefined for the cell, as L and L' are under
+`--no-log-capture`). It never edits the
 run directory and refuses a directory whose `SHA256SUMS` does not verify.
 
 ### 5. Stage 4: the operator interval
 
 The brief handed over before the interval contains the exact command, the run
-directory the procedure will create, the number of planned invocations and
-the ceiling, how to interrupt (one Ctrl-C), and the statement that no agent
+directory the procedure will create, the number of planned invocations, the
+ceiling as the hard finish time, how to interrupt (one Ctrl-C), and the statement that no agent
 session should be active while it runs. The operator keeps the Codex
 app-server in whatever state it has at launch; the conditions files record
 that state at both ends. The operator notes anything they observed during the
@@ -274,8 +300,7 @@ report names the missing event and stops there.
 - No instrumented variant. If the pilots show that a question needs one, the
   report says what existing fields cannot establish and leaves the decision.
 - No external runner, no multi-step or multi-phase specimen, no concurrent
-  series in the unattended run unless P3 earns it, no interval over 30
-  minutes.
+  series in the unattended run, no interval over 30 minutes.
 - No throughput estimate for batches. Per-invocation medians under these
   conditions are what the data supports.
 
@@ -313,9 +338,12 @@ under `runs/` and summarized in the brief:
 3. Failure control: a manifest entry whose specimen path is removed after
    copying yields exit 2 with its envelope and stderr retained, no retry, and
    the series continues.
-4. Deadline control: `--pw` pointed at a stand-in that sleeps past a
-   shortened deadline produces `harness_timeout` with both signals recorded;
-   the stand-in is a script in `harness/controls/`, never the app.
+4. Deadline controls: `--pw` pointed at a stand-in that sleeps past a
+   shortened nominal deadline produces `harness_timeout` with source
+   `nominal` and both signals recorded; the same stand-in under a ceiling
+   shorter than the nominal deadline produces source `ceiling`, and the run's
+   last write precedes the ceiling. The stand-in is a script in
+   `harness/controls/`, never the app.
 5. Identity control: `--expect-build` set to another number refuses before any
    directory is created.
 6. `summarize.py` on the pilot directory reproduces the counts and medians the
@@ -346,9 +374,10 @@ Passes that would mislead, and what guards each:
 - The app under `dist/` is rebuilt or replaced before the unattended run. The
   procedure refuses on build number; the brief is reissued for the new build
   or the run waits.
-- P2 finds a field absent, null or unstable for a cell in ways the field's
-  contract does not predict. That is a finding to record, and the cell's
-  measure is dropped from the summary rather than repaired.
+- P2 finds a field absent, null, of another type or clock-faulted for a cell
+  in ways the field's contract does not predict. That is a finding to record,
+  and the cell's measure is dropped from the summary rather than repaired.
+  Wide variability is not such a finding; it stays in the summary.
 - P2 shows the no-capture series meeting `already_ran` or XPC errors. The
   series stays, the outcomes are counted, and the report treats them as the
   first observation on the instancing question rather than as noise.
