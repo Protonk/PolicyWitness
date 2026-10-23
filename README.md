@@ -95,7 +95,7 @@ executable it produces against that one output target, thin arm64 macOS code.
 The Developer ID Application signing identity must already be in your
 login keychain. [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) lists what
 each of these does for the build, the versions the build enforces, and what
-the tests and a release need besides. From the repository root:
+the tests need besides. From the repository root:
 
 ```sh
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'

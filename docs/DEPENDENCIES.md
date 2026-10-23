@@ -1,20 +1,11 @@
 # Build dependencies
 
 What a machine needs to build PolicyWitness from source, and what each
-dependency does for the build. [BUILD.md](BUILD.md) describes how a build
-runs, [SIGNING.md](SIGNING.md#release-procedure) the release procedure and
-[tests/README.md](../tests/README.md) the test commands. What a user needs to
-run the app is in the [user guide](PolicyWitness.md).
-
-Each table separates what the build **enforces** (a check that refuses when
-unmet, with its source) from versions **known to work**. The known-to-work
-values are the toolchain named by the provenance record of a current build on
-the maintainer's machine, and that machine's versions of the few tools the
-record does not cover. Every build embeds its record at
-`Contents/Resources/Evidence/provenance.json` ([the provenance
-record](SIGNING.md#the-provenance-record)), and a build's own record is the
-authoritative statement of what built it. Where nothing enforces a minimum,
-none is claimed.
+dependency does. **Enforced** names the check that refuses when a requirement
+is unmet; **known to work** is the maintainer's current toolchain, not a tested
+minimum, and a built app's [provenance record](SIGNING.md#the-provenance-record)
+names the tools that built it. [BUILD.md](BUILD.md) describes how a build runs;
+[SIGNING.md](SIGNING.md#release-procedure) covers what a release adds.
 
 ## For an ordinary build
 
@@ -40,33 +31,6 @@ required. macOS itself supplies the rest of what the scripts call: `bash`,
 and `log`. The Makefile is a thin layer over `build.sh`, written for the
 `make` 3.81 the Command Line Tools install.
 
-## Conditions no package supplies
-
-- **Native Apple Silicon.** A shell running under Rosetta (`arch -x86_64`) is
-  refused before any other check.
-- **Apple Developer Program membership.** The Developer ID Application
-  certificate and its private key must be in the login keychain of the user
-  who builds. The build selects nothing by itself and accepts no other
-  identity class.
-- **Network access.** Every `codesign --timestamp` call reaches Apple's
-  timestamp service, and Cargo downloads the pinned crates on the first build
-  and after `Cargo.lock` changes. A release also reaches Apple's notary
-  service and GitHub.
-- **An unsandboxed shell.** A restrictive automation sandbox can hide the
-  keychain, block the per-user module cache `swiftc` uses during Meson's Swift
-  discovery, make `codesign --verify` fail for unchanged bytes, and refuse the
-  XPC lookup and unified-log access the live tests need.
-  [BUILD.md](BUILD.md#sandboxed-automation-harnesses) and
-  [AGENTS.md](../AGENTS.md#sandboxed-automation-harnesses) say how to diagnose
-  it.
-- **Homebrew at `/opt/homebrew`.** The interpreter pin is a path under
-  Homebrew's default Apple Silicon prefix; a Homebrew installed elsewhere does
-  not satisfy it.
-- **A git checkout.** The version stamp is the nearest `v*` tag and the commit
-  count. Outside a checkout, `PW_VERSION` and `PW_BUILD_NUMBER` supply them
-  and the describe string and commit read `unknown`. A release refuses
-  anything but a clean checkout at an annotated tag.
-
 ## For the tests
 
 The default battery (`make test` or `tests/run.sh`) runs against the signed app
@@ -91,33 +55,22 @@ Live cases also need a working XPC lookup and unified-log access through
 and fails with evidence. The opt-in cases and their equipment are listed in
 [tests/OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md).
 
-## For a release
+## Conditions no package supplies
 
-`make notarize`, `make release` and `make publish`
-([release procedure](SIGNING.md#release-procedure)) add:
-
-| Dependency | Role in the release | Needed by |
-| --- | --- | --- |
-| `notarytool` with a stored keychain profile | Submits the ZIP to Apple's notary service once and waits for the verdict once; `xcrun notarytool store-credentials <name>` stores App Store Connect credentials under the name `NOTARY_KEYCHAIN_PROFILE` passes | `make notarize` and `make release`, which refuse without the profile name |
-| `stapler`, `spctl` and `ditto` | Staple Apple's ticket, assess the stapled app with Gatekeeper, re-zip it, and extract the final ZIP for acceptance | the notarize chain and `tests/accept-release.sh` |
-| `git` with the release tag and the remote | Preflight requires a clean tree at an annotated `v*` tag that the remote does not already hold under another commit; publication pushes the tag | [release_preflight.py](../tests/lib/release_preflight.py), [release_publish.py](../tests/lib/release_publish.py) |
-| `gh`, authenticated to GitHub | Creates the GitHub release from the archive, downloads every asset back and compares digests before recording the release | `make publish` |
-
-`notarytool` and `stapler` come with Xcode or the Command Line Tools; `gh`
-from Homebrew (`brew install gh`), known to work at 2.102.0.
-
-## Not needed for the build
-
-- **Graphviz (`dot`).** Only [`generate_architecture.py`](generate_architecture.py)
-  and [`generate_build.py`](generate_build.py) use it, to re-render the SVG
-  figures when a document is regenerated. Their `--check` mode, the build and
-  the tests read the SVG stamps and need no Graphviz, and `--skip-svg`
-  regenerates without it. Known to work: 16.1.0.
-- **Full Xcode.** The build uses no Xcode project and the tests no XCTest.
-- **Python packages.** The helpers import only the standard library and this
-  tree; the Markdown parser they use is vendored under `tests/lib/vendor/`.
-  No `pip`, `uv` or virtual environment is involved.
-- **Swift packages.** `Package.swift` declares no dependencies; the crates
-  Cargo fetches are the only code downloaded.
-- **CI.** The repository carries no CI configuration; the checks in this
-  document are the build's own and the local battery's.
+- **Native Apple Silicon.** A shell running under Rosetta (`arch -x86_64`) is
+  refused before any other check.
+- **Apple Developer Program membership.** The Developer ID Application
+  certificate and its private key must be in the login keychain of the user
+  who builds. The build selects nothing by itself and accepts no other
+  identity class.
+- **Network access.** Every `codesign --timestamp` call reaches Apple's
+  timestamp service, and Cargo downloads the pinned crates on the first build
+  and after `Cargo.lock` changes. A release also reaches Apple's notary
+  service and GitHub.
+- **Homebrew at `/opt/homebrew`.** The interpreter pin is a path under
+  Homebrew's default Apple Silicon prefix; a Homebrew installed elsewhere does
+  not satisfy it.
+- **A git checkout.** The version stamp is the nearest `v*` tag and the commit
+  count. Outside a checkout, `PW_VERSION` and `PW_BUILD_NUMBER` supply them
+  and the describe string and commit read `unknown`. A release refuses
+  anything but a clean checkout at an annotated tag.
