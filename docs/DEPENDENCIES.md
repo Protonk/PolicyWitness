@@ -2,10 +2,11 @@
 
 What a machine needs to build PolicyWitness from source, and what each
 dependency does. **Enforced** names the check that refuses when a requirement
-is unmet; **known to work** is the maintainer's current toolchain, not a tested
-minimum, and a built app's [provenance record](SIGNING.md#the-provenance-record)
-names the tools that built it. [BUILD.md](BUILD.md) describes how a build runs;
-[SIGNING.md](SIGNING.md#release-procedure) covers what a release adds.
+is unmet; **known to work** is the toolchain the current build was made with,
+which every built app records in its
+[provenance record](SIGNING.md#the-provenance-record). [BUILD.md](BUILD.md)
+describes how a build runs; [SIGNING.md](SIGNING.md#release-procedure) covers
+what a release adds.
 
 ## For an ordinary build
 
@@ -13,13 +14,13 @@ names the tools that built it. [BUILD.md](BUILD.md) describes how a build runs;
 
 | Dependency | Role in the build | Enforced | Known to work |
 | --- | --- | --- | --- |
-| An Apple Silicon Mac, with the build started from a native shell | Every executable the build delivers is thin arm64 macOS code, and the build script's own process must not run translated | `hw.optional.arm64` must read `1` and `sysctl.proc_translated` `0` before anything else runs ([`this build runs only natively on Apple Silicon`](../build.sh)); Meson refuses a host machine other than arm64 macOS ([`host_machine`](../meson.build)); the controller's build script refuses any Cargo target but `aarch64-apple-darwin` ([`OUTPUT_TRIPLE`](../controller/build.rs)) | macOS 26 |
-| Xcode Command Line Tools, or Xcode | `clang` compiles the C worker, validator, issuer and shim; `swiftc` the XPC host and client (`BUILD_XPC=1`); the macOS SDK, `xcrun`, `dsymutil`, `otool`, `git` (the version stamp) and `make` come from the same installation | `xcrun --sdk macosx`, or the caller's `SDKROOT`, must resolve an SDK with a numeric version ([`SDK_REQUEST`](../build.sh)); Meson must find a C compiler and, for the XPC pieces, a Swift compiler; every output must carry that SDK's version and the `26.0` minimum the plist declares ([`LSMinimumSystemVersion`](../Info.plist), [`check_minimum_macos`](../build.sh), [`sdk_check`](../tests/lib/build_provenance.py)) | Xcode 27.1 with SDK 27.0, Apple clang 21.0.0 and Swift 6.4 |
-| Rust: `cargo` and `rustc` on `PATH` with the `aarch64-apple-darwin` standard library, the default installation on Apple Silicon | Builds `policy-witness`, `sandbox-log-observer` and `sbpl-check`; Cargo fetches the crates `controller/Cargo.lock` pins | Cargo refuses a toolchain older than the manifest's [`rust-version`](../controller/Cargo.toml) of 1.89; when `cargo` is a rustup proxy, `rustup` must be on `PATH` or `RUSTUP_TOOLCHAIN` set so the build can record the toolchain it selects ([`the Cargo launcher cannot be resolved without rustup on PATH or an explicit RUSTUP_TOOLCHAIN`](../tests/lib/cargo_config.py)) | rustc and cargo 1.99.0 through rustup 1.29.1 |
+| An Apple Silicon Mac, with the build started from a native shell | Every executable the build delivers is thin arm64 macOS code, and the build script's own process must not run translated | `hw.optional.arm64` must read `1` and `sysctl.proc_translated` `0` before anything else runs ([`this build runs only natively on Apple Silicon`](../build.sh)); Meson and the controller's build script refuse any other host or target ([`host_machine`](../meson.build), [`OUTPUT_TRIPLE`](../controller/build.rs)) | macOS 26 |
+| Xcode Command Line Tools, or Xcode | `clang` compiles the C worker, validator, issuer and shim; `swiftc` the XPC host and client (`BUILD_XPC=1`); the macOS SDK, `xcrun`, `dsymutil`, `otool`, `git` (the version stamp) and `make` come from the same installation | `xcrun --sdk macosx` must resolve an SDK with a numeric version ([`SDK_REQUEST`](../build.sh)); Meson must find a C compiler and, with the XPC pieces, a Swift compiler; every output must carry that SDK's version and the plist's `26.0` minimum ([`LSMinimumSystemVersion`](../Info.plist), [`sdk_check`](../tests/lib/build_provenance.py)) | Xcode 27.1 with SDK 27.0, Apple clang 21.0.0 and Swift 6.4 |
+| Rust: `cargo` and `rustc` on `PATH` with the `aarch64-apple-darwin` standard library, the default installation on Apple Silicon | Builds `policy-witness`, `sandbox-log-observer` and `sbpl-check`; Cargo fetches the crates `controller/Cargo.lock` pins | Cargo refuses a toolchain older than the manifest's [`rust-version`](../controller/Cargo.toml) of 1.89; a rustup-proxied `cargo` needs `rustup` on `PATH` or `RUSTUP_TOOLCHAIN` set, so the build can record the toolchain ([`launcher`](../tests/lib/cargo_config.py)) | rustc and cargo 1.99.0 through rustup 1.29.1 |
 | Meson | Configures and compiles the native targets under the fixed flag policy of [`fixed_options`](../meson.build) | `meson` on `PATH` ([`meson and ninja are required for the native build`](../build.sh)); [`meson_version`](../meson.build) `>=1.12.1` | 1.12.1 |
 | Ninja | Meson's build backend; its dependency log is what the source-closure check reads after compiling | `ninja` on `PATH` at version 1.13.2 or newer ([`NINJA_MINIMUM`](../build.sh)) | 1.13.2 |
-| Homebrew's `python@3.14` formula | Runs every build helper: the checkout lock, the provenance, output and identity checks, the generated-copy checks, the evidence manifest and the staged guide | Exactly `/opt/homebrew/opt/python@3.14/bin/python3.14`, resolving into a `/opt/homebrew/Cellar/python@3.14/3.14.*` keg and reporting that version when probed; no `PYTHON*` variable may be set other than `PYTHONCOERCECLOCALE`, `PYTHONDONTWRITEBYTECODE` and `PYTHONOPTIMIZE` ([`PW_PYTHON_PIN`](../tests/lib/python_start.sh)). Helpers start with `-B -S` and import only the standard library and this tree, so no packages are installed | 3.14.8 |
-| A Developer ID Application identity in the login keychain | Signs every executable and both bundle seals with the hardened runtime and a secure timestamp | `IDENTITY` must name an identity that `security find-identity -v -p codesigning` lists ([`codesigning identity not found in your keychain`](../build.sh)); after the seal every signature must carry the Developer ID chain, the identity's team and a timestamp ([`executables or seals not signed by`](../tests/lib/signer_check.py)), so an ad hoc or Apple Development identity fails there | |
+| Homebrew's `python@3.14` formula | Runs every build helper, from the checkout lock to the evidence manifest; the helpers import only the standard library and this tree, so no packages are installed | Exactly `/opt/homebrew/opt/python@3.14/bin/python3.14`, resolving into a `/opt/homebrew/Cellar/python@3.14/3.14.*` keg and reporting that version when probed, with no `PYTHON*` variable set beyond the three the helpers own ([`PW_PYTHON_PIN`](../tests/lib/python_start.sh)) | 3.14.8 |
+| A Developer ID Application identity in the login keychain | Signs every executable and both bundle seals with the hardened runtime | `IDENTITY` must name an identity that `security find-identity -v -p codesigning` lists ([`IDENTITY_LISTING`](../build.sh)); every signature must then carry the Developer ID chain, the team and a timestamp ([`signature_problems`](../tests/lib/signer_check.py)), so ad hoc and Apple Development identities fail | |
 
 `brew install meson ninja python@3.14` installs the Homebrew formulae. Rust
 comes from rustup or any installation that puts `cargo` on `PATH`; Homebrew's
@@ -57,8 +58,6 @@ and fails with evidence. The opt-in cases and their equipment are listed in
 
 ## Conditions no package supplies
 
-- **Native Apple Silicon.** A shell running under Rosetta (`arch -x86_64`) is
-  refused before any other check.
 - **Apple Developer Program membership.** The Developer ID Application
   certificate and its private key must be in the login keychain of the user
   who builds. The build selects nothing by itself and accepts no other
@@ -67,9 +66,6 @@ and fails with evidence. The opt-in cases and their equipment are listed in
   timestamp service, and Cargo downloads the pinned crates on the first build
   and after `Cargo.lock` changes. A release also reaches Apple's notary
   service and GitHub.
-- **Homebrew at `/opt/homebrew`.** The interpreter pin is a path under
-  Homebrew's default Apple Silicon prefix; a Homebrew installed elsewhere does
-  not satisfy it.
 - **A git checkout.** The version stamp is the nearest `v*` tag and the commit
   count. Outside a checkout, `PW_VERSION` and `PW_BUILD_NUMBER` supply them
   and the describe string and commit read `unknown`. A release refuses
