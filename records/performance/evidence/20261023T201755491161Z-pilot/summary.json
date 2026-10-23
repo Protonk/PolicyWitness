@@ -1,0 +1,4542 @@
+{
+  "config": "pilot",
+  "counts": {
+    "completed": 70
+  },
+  "counts_match_run": true,
+  "definitions": {
+    "E": "envelope creation stamp only, retained per observation; no duration summary",
+    "L_inner": "shared controller budget start through inner child collection finish",
+    "S": "sentinel elapsed minus excluded_ms",
+    "U": "wait4 user plus system CPU, milliseconds; controller and reaped descendants",
+    "X": "sentinel excluded_ms",
+    "client_residual_including_X": "C-R-S-G; includes phase collection X",
+    "client_residual_without_X": "C-R-S-X-G",
+    "controller_residual": "W-C-L; includes controller log parsing/correlation"
+  },
+  "excluded": [],
+  "execution_context": "interactive",
+  "format_version": 1,
+  "groups": [
+    {
+      "cell": "file_read_deny/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 50,
+          "median": 41,
+          "minimum": 41,
+          "n": 3,
+          "p90": 50
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 853,
+          "median": 638,
+          "minimum": 638,
+          "n": 3,
+          "p90": 853
+        },
+        "L_inner": {
+          "maximum": 850,
+          "median": 635,
+          "minimum": 635,
+          "n": 3,
+          "p90": 850
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 3,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 3,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 107.148,
+          "median": 92.473,
+          "minimum": 92.164,
+          "n": 3,
+          "p90": 107.148
+        },
+        "W": {
+          "maximum": 905.922541,
+          "median": 682.813541,
+          "minimum": 682.689042,
+          "n": 3,
+          "p90": 905.922541
+        },
+        "X": {
+          "maximum": 3,
+          "median": 1,
+          "minimum": 1,
+          "n": 3,
+          "p90": 3
+        },
+        "client_residual_including_X": {
+          "maximum": 32,
+          "median": 23,
+          "minimum": 23,
+          "n": 3,
+          "p90": 32
+        },
+        "client_residual_without_X": {
+          "maximum": 29,
+          "median": 22,
+          "minimum": 22,
+          "n": 3,
+          "p90": 29
+        },
+        "controller_residual": {
+          "maximum": 3.8135409999999865,
+          "median": 3.689041999999972,
+          "minimum": 2.922541000000024,
+          "n": 3,
+          "p90": 3.8135409999999865
+        }
+      },
+      "n": 3,
+      "sequences": [
+        1,
+        6,
+        11
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": true
+    },
+    {
+      "cell": "mach_deny/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 41,
+          "median": 40,
+          "minimum": 38,
+          "n": 3,
+          "p90": 41
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 649,
+          "median": 638,
+          "minimum": 636,
+          "n": 3,
+          "p90": 649
+        },
+        "L_inner": {
+          "maximum": 645,
+          "median": 635,
+          "minimum": 633,
+          "n": 3,
+          "p90": 645
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 11,
+          "n": 3,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 3,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 93.59299999999999,
+          "median": 92.082,
+          "minimum": 91.073,
+          "n": 3,
+          "p90": 93.59299999999999
+        },
+        "W": {
+          "maximum": 691.815666,
+          "median": 680.6615,
+          "minimum": 679.300625,
+          "n": 3,
+          "p90": 691.815666
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 3,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 24,
+          "median": 23,
+          "minimum": 22,
+          "n": 3,
+          "p90": 24
+        },
+        "client_residual_without_X": {
+          "maximum": 23,
+          "median": 22,
+          "minimum": 21,
+          "n": 3,
+          "p90": 23
+        },
+        "controller_residual": {
+          "maximum": 3.6615000000000464,
+          "median": 3.300624999999968,
+          "minimum": 2.8156659999999647,
+          "n": 3,
+          "p90": 3.6615000000000464
+        }
+      },
+      "n": 3,
+      "sequences": [
+        2,
+        7,
+        12
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": true
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 40,
+          "median": 39,
+          "minimum": 39,
+          "n": 3,
+          "p90": 40
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 642,
+          "median": 637,
+          "minimum": 635,
+          "n": 3,
+          "p90": 642
+        },
+        "L_inner": {
+          "maximum": 641,
+          "median": 633,
+          "minimum": 632,
+          "n": 3,
+          "p90": 641
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 3,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 3,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 99.02799999999999,
+          "median": 91.197,
+          "minimum": 88.112,
+          "n": 3,
+          "p90": 99.02799999999999
+        },
+        "W": {
+          "maximum": 684.51225,
+          "median": 679.608958,
+          "minimum": 678.038542,
+          "n": 3,
+          "p90": 684.51225
+        },
+        "X": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "client_residual_including_X": {
+          "maximum": 22,
+          "median": 21,
+          "minimum": 21,
+          "n": 3,
+          "p90": 22
+        },
+        "client_residual_without_X": {
+          "maximum": 22,
+          "median": 21,
+          "minimum": 21,
+          "n": 3,
+          "p90": 22
+        },
+        "controller_residual": {
+          "maximum": 4.038542000000007,
+          "median": 3.5122499999999945,
+          "minimum": 2.6089580000000296,
+          "n": 3,
+          "p90": 4.038542000000007
+        }
+      },
+      "n": 3,
+      "sequences": [
+        3,
+        8,
+        13
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": true
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 42,
+          "median": 42,
+          "minimum": 41,
+          "n": 3,
+          "p90": 42
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 643,
+          "median": 641,
+          "minimum": 641,
+          "n": 3,
+          "p90": 643
+        },
+        "L_inner": {
+          "maximum": 640,
+          "median": 638,
+          "minimum": 638,
+          "n": 3,
+          "p90": 640
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 3,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 3,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 96.058,
+          "median": 92.949,
+          "minimum": 90.931,
+          "n": 3,
+          "p90": 96.058
+        },
+        "W": {
+          "maximum": 687.981208,
+          "median": 685.917458,
+          "minimum": 685.647208,
+          "n": 3,
+          "p90": 687.981208
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 3,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 24,
+          "median": 24,
+          "minimum": 23,
+          "n": 3,
+          "p90": 24
+        },
+        "client_residual_without_X": {
+          "maximum": 23,
+          "median": 23,
+          "minimum": 22,
+          "n": 3,
+          "p90": 23
+        },
+        "controller_residual": {
+          "maximum": 3.9174580000000105,
+          "median": 2.981208000000038,
+          "minimum": 2.647207999999978,
+          "n": 3,
+          "p90": 3.9174580000000105
+        }
+      },
+      "n": 3,
+      "sequences": [
+        4,
+        9,
+        14
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": true
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 41,
+          "median": 41,
+          "minimum": 41,
+          "n": 3,
+          "p90": 41
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 3,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 639,
+          "median": 637,
+          "minimum": 635,
+          "n": 3,
+          "p90": 639
+        },
+        "L_inner": {
+          "maximum": 636,
+          "median": 636,
+          "minimum": 634,
+          "n": 3,
+          "p90": 636
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 3,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 3,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 94.15499999999999,
+          "median": 92.809,
+          "minimum": 91.889,
+          "n": 3,
+          "p90": 94.15499999999999
+        },
+        "W": {
+          "maximum": 683.563583,
+          "median": 681.733333,
+          "minimum": 680.134375,
+          "n": 3,
+          "p90": 683.563583
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 3,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 23,
+          "median": 23,
+          "minimum": 23,
+          "n": 3,
+          "p90": 23
+        },
+        "client_residual_without_X": {
+          "maximum": 22,
+          "median": 22,
+          "minimum": 22,
+          "n": 3,
+          "p90": 22
+        },
+        "controller_residual": {
+          "maximum": 4.134374999999977,
+          "median": 3.733333000000016,
+          "minimum": 3.563582999999994,
+          "n": 3,
+          "p90": 4.134374999999977
+        }
+      },
+      "n": 3,
+      "sequences": [
+        5,
+        10,
+        15
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": true
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 41,
+          "median": 40,
+          "minimum": 39,
+          "n": 5,
+          "p90": 41
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 640,
+          "median": 636,
+          "minimum": 633,
+          "n": 5,
+          "p90": 640
+        },
+        "L_inner": {
+          "maximum": 637,
+          "median": 633,
+          "minimum": 630,
+          "n": 5,
+          "p90": 637
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 95.1,
+          "median": 92.807,
+          "minimum": 87.18999999999998,
+          "n": 5,
+          "p90": 95.1
+        },
+        "W": {
+          "maximum": 684.872916,
+          "median": 679.603792,
+          "minimum": 675.468334,
+          "n": 5,
+          "p90": 684.872916
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 23,
+          "median": 22,
+          "minimum": 21,
+          "n": 5,
+          "p90": 23
+        },
+        "client_residual_without_X": {
+          "maximum": 22,
+          "median": 21,
+          "minimum": 20,
+          "n": 5,
+          "p90": 22
+        },
+        "controller_residual": {
+          "maximum": 4.6037919999999986,
+          "median": 3.468334000000027,
+          "minimum": 2.8856660000000147,
+          "n": 5,
+          "p90": 4.6037919999999986
+        }
+      },
+      "n": 5,
+      "sequences": [
+        16,
+        27,
+        38,
+        49,
+        60
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "mach_deny/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 41,
+          "median": 41,
+          "minimum": 38,
+          "n": 5,
+          "p90": 41
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 641,
+          "median": 640,
+          "minimum": 636,
+          "n": 5,
+          "p90": 641
+        },
+        "L_inner": {
+          "maximum": 639,
+          "median": 637,
+          "minimum": 636,
+          "n": 5,
+          "p90": 639
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 12,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 96.29899999999999,
+          "median": 94.967,
+          "minimum": 94.59699999999998,
+          "n": 5,
+          "p90": 96.29899999999999
+        },
+        "W": {
+          "maximum": 685.664333,
+          "median": 684.644416,
+          "minimum": 678.412417,
+          "n": 5,
+          "p90": 685.664333
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 23,
+          "median": 23,
+          "minimum": 23,
+          "n": 5,
+          "p90": 23
+        },
+        "client_residual_without_X": {
+          "maximum": 22,
+          "median": 22,
+          "minimum": 22,
+          "n": 5,
+          "p90": 22
+        },
+        "controller_residual": {
+          "maximum": 4.412417000000005,
+          "median": 3.664333000000056,
+          "minimum": 3.1875420000000076,
+          "n": 5,
+          "p90": 4.412417000000005
+        }
+      },
+      "n": 5,
+      "sequences": [
+        17,
+        28,
+        39,
+        50,
+        61
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 40,
+          "median": 40,
+          "minimum": 39,
+          "n": 5,
+          "p90": 40
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 647,
+          "median": 642,
+          "minimum": 634,
+          "n": 5,
+          "p90": 647
+        },
+        "L_inner": {
+          "maximum": 643,
+          "median": 640,
+          "minimum": 631,
+          "n": 5,
+          "p90": 643
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 99.00899999999999,
+          "median": 94.92799999999998,
+          "minimum": 88.667,
+          "n": 5,
+          "p90": 99.00899999999999
+        },
+        "W": {
+          "maximum": 689.704291,
+          "median": 685.567,
+          "minimum": 676.862333,
+          "n": 5,
+          "p90": 689.704291
+        },
+        "X": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "client_residual_including_X": {
+          "maximum": 22,
+          "median": 22,
+          "minimum": 21,
+          "n": 5,
+          "p90": 22
+        },
+        "client_residual_without_X": {
+          "maximum": 22,
+          "median": 22,
+          "minimum": 21,
+          "n": 5,
+          "p90": 22
+        },
+        "controller_residual": {
+          "maximum": 4.322374999999965,
+          "median": 3.5670000000000073,
+          "minimum": 2.797625000000039,
+          "n": 5,
+          "p90": 4.322374999999965
+        }
+      },
+      "n": 5,
+      "sequences": [
+        18,
+        29,
+        40,
+        51,
+        62
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 42,
+          "median": 41,
+          "minimum": 41,
+          "n": 5,
+          "p90": 42
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 641,
+          "median": 639,
+          "minimum": 636,
+          "n": 5,
+          "p90": 641
+        },
+        "L_inner": {
+          "maximum": 638,
+          "median": 636,
+          "minimum": 633,
+          "n": 5,
+          "p90": 638
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 95.466,
+          "median": 94.08500000000001,
+          "minimum": 91.946,
+          "n": 5,
+          "p90": 95.466
+        },
+        "W": {
+          "maximum": 685.458375,
+          "median": 684.238208,
+          "minimum": 680.448375,
+          "n": 5,
+          "p90": 685.458375
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 24,
+          "median": 23,
+          "minimum": 23,
+          "n": 5,
+          "p90": 24
+        },
+        "client_residual_without_X": {
+          "maximum": 23,
+          "median": 22,
+          "minimum": 22,
+          "n": 5,
+          "p90": 23
+        },
+        "controller_residual": {
+          "maximum": 4.238207999999986,
+          "median": 3.4483750000000555,
+          "minimum": 2.4583750000000464,
+          "n": 5,
+          "p90": 4.238207999999986
+        }
+      },
+      "n": 5,
+      "sequences": [
+        19,
+        30,
+        41,
+        52,
+        63
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 41,
+          "median": 41,
+          "minimum": 37,
+          "n": 5,
+          "p90": 41
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "L": {
+          "maximum": 641,
+          "median": 637,
+          "minimum": 635,
+          "n": 5,
+          "p90": 641
+        },
+        "L_inner": {
+          "maximum": 638,
+          "median": 634,
+          "minimum": 632,
+          "n": 5,
+          "p90": 638
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 10,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 96.86800000000001,
+          "median": 94.46499999999999,
+          "minimum": 93.04499999999999,
+          "n": 5,
+          "p90": 96.86800000000001
+        },
+        "W": {
+          "maximum": 686.099333,
+          "median": 681.794084,
+          "minimum": 677.597583,
+          "n": 5,
+          "p90": 686.099333
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 24,
+          "median": 23,
+          "minimum": 22,
+          "n": 5,
+          "p90": 24
+        },
+        "client_residual_without_X": {
+          "maximum": 23,
+          "median": 22,
+          "minimum": 21,
+          "n": 5,
+          "p90": 23
+        },
+        "controller_residual": {
+          "maximum": 4.316083000000049,
+          "median": 3.794083999999998,
+          "minimum": 3.48920899999996,
+          "n": 5,
+          "p90": 4.316083000000049
+        }
+      },
+      "n": 5,
+      "sequences": [
+        20,
+        31,
+        42,
+        53,
+        64
+      ],
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 42,
+          "median": 41,
+          "minimum": 41,
+          "n": 5,
+          "p90": 42
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 5.36,
+          "median": 5.244999999999999,
+          "minimum": 5.1339999999999995,
+          "n": 5,
+          "p90": 5.36
+        },
+        "W": {
+          "maximum": 44.283958,
+          "median": 43.964667,
+          "minimum": 43.780292,
+          "n": 5,
+          "p90": 44.283958
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 24,
+          "median": 23,
+          "minimum": 23,
+          "n": 5,
+          "p90": 24
+        },
+        "client_residual_without_X": {
+          "maximum": 23,
+          "median": 22,
+          "minimum": 22,
+          "n": 5,
+          "p90": 23
+        },
+        "controller_residual": {
+          "maximum": 3.031666999999999,
+          "median": 2.9609159999999974,
+          "minimum": 2.2839579999999984,
+          "n": 5,
+          "p90": 3.031666999999999
+        }
+      },
+      "n": 5,
+      "sequences": [
+        21,
+        32,
+        43,
+        54,
+        65
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 39,
+          "median": 39,
+          "minimum": 38,
+          "n": 5,
+          "p90": 39
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 4.425,
+          "median": 4.392999999999999,
+          "minimum": 4.378,
+          "n": 5,
+          "p90": 4.425
+        },
+        "W": {
+          "maximum": 41.320292,
+          "median": 41.170625,
+          "minimum": 41.128709,
+          "n": 5,
+          "p90": 41.320292
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 21,
+          "median": 21,
+          "minimum": 20,
+          "n": 5,
+          "p90": 21
+        },
+        "client_residual_without_X": {
+          "maximum": 20,
+          "median": 20,
+          "minimum": 19,
+          "n": 5,
+          "p90": 20
+        },
+        "controller_residual": {
+          "maximum": 3.1287090000000006,
+          "median": 2.2459169999999986,
+          "minimum": 2.149374999999999,
+          "n": 5,
+          "p90": 3.1287090000000006
+        }
+      },
+      "n": 5,
+      "sequences": [
+        22,
+        33,
+        44,
+        55,
+        66
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 38,
+          "median": 38,
+          "minimum": 37,
+          "n": 5,
+          "p90": 38
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 4.422,
+          "median": 4.399,
+          "minimum": 4.324,
+          "n": 5,
+          "p90": 4.422
+        },
+        "W": {
+          "maximum": 39.922583,
+          "median": 39.846792,
+          "minimum": 39.55375,
+          "n": 5,
+          "p90": 39.922583
+        },
+        "X": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "client_residual_including_X": {
+          "maximum": 20,
+          "median": 20,
+          "minimum": 19,
+          "n": 5,
+          "p90": 20
+        },
+        "client_residual_without_X": {
+          "maximum": 20,
+          "median": 20,
+          "minimum": 19,
+          "n": 5,
+          "p90": 20
+        },
+        "controller_residual": {
+          "maximum": 2.922583000000003,
+          "median": 1.920250000000003,
+          "minimum": 1.7908749999999998,
+          "n": 5,
+          "p90": 2.922583000000003
+        }
+      },
+      "n": 5,
+      "sequences": [
+        23,
+        34,
+        45,
+        56,
+        67
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 40,
+          "median": 39,
+          "minimum": 39,
+          "n": 5,
+          "p90": 40
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 15,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 4.518,
+          "median": 4.4719999999999995,
+          "minimum": 4.382,
+          "n": 5,
+          "p90": 4.518
+        },
+        "W": {
+          "maximum": 41.996875,
+          "median": 41.94175,
+          "minimum": 41.689959,
+          "n": 5,
+          "p90": 41.996875
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 22,
+          "median": 21,
+          "minimum": 21,
+          "n": 5,
+          "p90": 22
+        },
+        "client_residual_without_X": {
+          "maximum": 21,
+          "median": 20,
+          "minimum": 20,
+          "n": 5,
+          "p90": 21
+        },
+        "controller_residual": {
+          "maximum": 2.989834000000002,
+          "median": 2.9278329999999997,
+          "minimum": 1.9968750000000028,
+          "n": 5,
+          "p90": 2.989834000000002
+        }
+      },
+      "n": 5,
+      "sequences": [
+        24,
+        35,
+        46,
+        57,
+        68
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "measures_ms": {
+        "C": {
+          "maximum": 40,
+          "median": 39,
+          "minimum": 38,
+          "n": 5,
+          "p90": 40
+        },
+        "G": {
+          "maximum": 0,
+          "median": 0,
+          "minimum": 0,
+          "n": 5,
+          "p90": 0
+        },
+        "R": {
+          "maximum": 15,
+          "median": 15,
+          "minimum": 13,
+          "n": 5,
+          "p90": 15
+        },
+        "S": {
+          "maximum": 3,
+          "median": 3,
+          "minimum": 3,
+          "n": 5,
+          "p90": 3
+        },
+        "U": {
+          "maximum": 4.483,
+          "median": 4.395,
+          "minimum": 4.326999999999999,
+          "n": 5,
+          "p90": 4.483
+        },
+        "W": {
+          "maximum": 41.986125,
+          "median": 41.764708,
+          "minimum": 40.10225,
+          "n": 5,
+          "p90": 41.986125
+        },
+        "X": {
+          "maximum": 1,
+          "median": 1,
+          "minimum": 1,
+          "n": 5,
+          "p90": 1
+        },
+        "client_residual_including_X": {
+          "maximum": 22,
+          "median": 22,
+          "minimum": 21,
+          "n": 5,
+          "p90": 22
+        },
+        "client_residual_without_X": {
+          "maximum": 21,
+          "median": 21,
+          "minimum": 20,
+          "n": 5,
+          "p90": 21
+        },
+        "controller_residual": {
+          "maximum": 2.9861250000000013,
+          "median": 2.102249999999998,
+          "minimum": 1.7647079999999988,
+          "n": 5,
+          "p90": 2.9861250000000013
+        }
+      },
+      "n": 5,
+      "sequences": [
+        25,
+        36,
+        47,
+        58,
+        69
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "warmup": false
+    },
+    {
+      "cell": "version",
+      "measures_ms": {
+        "U": {
+          "maximum": 1.363,
+          "median": 1.315,
+          "minimum": 1.283,
+          "n": 5,
+          "p90": 1.363
+        },
+        "W": {
+          "maximum": 2.083667,
+          "median": 2.016583,
+          "minimum": 2.001375,
+          "n": 5,
+          "p90": 2.083667
+        }
+      },
+      "n": 5,
+      "sequences": [
+        26,
+        37,
+        48,
+        59,
+        70
+      ],
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "warmup": false
+    }
+  ],
+  "missing_statuses": [],
+  "observations": [
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 169.92700516595505,
+      "envelope_stamp_unix_ms": 1792786676511,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65875,
+      "measures_ms": {
+        "C": 50,
+        "G": 0,
+        "L": 853,
+        "L_inner": 850,
+        "R": 15,
+        "S": 3,
+        "U": 107.148,
+        "W": 905.922541,
+        "X": 3,
+        "client_residual_including_X": 32,
+        "client_residual_without_X": 29,
+        "controller_residual": 2.922541000000024
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 1,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65875
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 169.0205765410792,
+      "envelope_stamp_unix_ms": 1792786677203,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65882,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 649,
+        "L_inner": 645,
+        "R": 15,
+        "S": 3,
+        "U": 93.59299999999999,
+        "W": 691.815666,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 2.8156659999999647
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 2,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65882
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 168.3281734159682,
+      "envelope_stamp_unix_ms": 1792786677889,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65889,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 642,
+        "L_inner": 641,
+        "R": 15,
+        "S": 3,
+        "U": 99.02799999999999,
+        "W": 684.51225,
+        "X": 0,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 21,
+        "controller_residual": 3.5122499999999945
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 3,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65889
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 167.64310291595757,
+      "envelope_stamp_unix_ms": 1792786678575,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65895,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 641,
+        "L_inner": 638,
+        "R": 15,
+        "S": 3,
+        "U": 96.058,
+        "W": 685.917458,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.9174580000000105
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 4,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65895
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 166.95662591606379,
+      "envelope_stamp_unix_ms": 1792786679257,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65903,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 637,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 94.15499999999999,
+        "W": 681.733333,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.733333000000016
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 5,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65903
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 166.27430708310567,
+      "envelope_stamp_unix_ms": 1792786679940,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65910,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 638,
+        "L_inner": 635,
+        "R": 15,
+        "S": 3,
+        "U": 92.473,
+        "W": 682.689042,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.689041999999972
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 6,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65910
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 165.59104962507263,
+      "envelope_stamp_unix_ms": 1792786680620,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65917,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "L": 638,
+        "L_inner": 635,
+        "R": 11,
+        "S": 3,
+        "U": 92.082,
+        "W": 679.300625,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 3.300624999999968
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 7,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65917
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 164.91124883294106,
+      "envelope_stamp_unix_ms": 1792786681299,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65924,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 635,
+        "L_inner": 632,
+        "R": 15,
+        "S": 3,
+        "U": 88.112,
+        "W": 678.038542,
+        "X": 0,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 21,
+        "controller_residual": 4.038542000000007
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 8,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65924
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 164.23267354094423,
+      "envelope_stamp_unix_ms": 1792786681987,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65930,
+      "measures_ms": {
+        "C": 42,
+        "G": 0,
+        "L": 643,
+        "L_inner": 640,
+        "R": 15,
+        "S": 3,
+        "U": 90.931,
+        "W": 687.981208,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 2.981208000000038
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 9,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65930
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 163.54410137515515,
+      "envelope_stamp_unix_ms": 1792786682668,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65938,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 635,
+        "L_inner": 634,
+        "R": 15,
+        "S": 3,
+        "U": 91.889,
+        "W": 680.134375,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 4.134374999999977
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 10,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65938
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 162.86337491613813,
+      "envelope_stamp_unix_ms": 1792786683352,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65945,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 638,
+        "L_inner": 635,
+        "R": 15,
+        "S": 3,
+        "U": 92.164,
+        "W": 682.813541,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.8135409999999865
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 11,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65945
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 162.18001212505624,
+      "envelope_stamp_unix_ms": 1792786684033,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65952,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 636,
+        "L_inner": 633,
+        "R": 15,
+        "S": 3,
+        "U": 91.073,
+        "W": 680.6615,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.6615000000000464
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 12,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65952
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 161.49878216604702,
+      "envelope_stamp_unix_ms": 1792786684713,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65959,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 637,
+        "L_inner": 633,
+        "R": 15,
+        "S": 3,
+        "U": 91.197,
+        "W": 679.608958,
+        "X": 0,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.6089580000000296
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 13,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65959
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 160.81860095798038,
+      "envelope_stamp_unix_ms": 1792786685399,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65965,
+      "measures_ms": {
+        "C": 42,
+        "G": 0,
+        "L": 641,
+        "L_inner": 638,
+        "R": 15,
+        "S": 3,
+        "U": 92.949,
+        "W": 685.647208,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 2.647207999999978
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 14,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65965
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 160.13240654114634,
+      "envelope_stamp_unix_ms": 1792786686083,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65973,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 639,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 92.809,
+        "W": 683.563583,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.563582999999994
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 15,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": true,
+      "worker_pid": 65973
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 159.44818895799108,
+      "envelope_stamp_unix_ms": 1792786686763,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65980,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 634,
+        "L_inner": 631,
+        "R": 15,
+        "S": 3,
+        "U": 91.749,
+        "W": 679.603792,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 4.6037919999999986
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 16,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 65980
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 158.76801704103127,
+      "envelope_stamp_unix_ms": 1792786687449,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65987,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 640,
+        "L_inner": 637,
+        "R": 15,
+        "S": 3,
+        "U": 94.76399999999998,
+        "W": 684.644416,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.6444159999999783
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 17,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 65987
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 158.08279858296737,
+      "envelope_stamp_unix_ms": 1792786688126,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 65994,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 634,
+        "L_inner": 631,
+        "R": 15,
+        "S": 3,
+        "U": 88.667,
+        "W": 676.862333,
+        "X": 0,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.862333000000035
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 18,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 65994
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 157.40537779103033,
+      "envelope_stamp_unix_ms": 1792786688811,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66000,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 639,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 92.277,
+        "W": 684.238208,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 4.238207999999986
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 19,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66000
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 156.72052474995144,
+      "envelope_stamp_unix_ms": 1792786689495,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66008,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 639,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 96.86800000000001,
+        "W": 683.489209,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.48920899999996
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 20,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66008
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 156.03648000000976,
+      "envelope_stamp_unix_ms": 1792786689540,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66015,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 5.1339999999999995,
+        "W": 43.780292,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.780292000000003
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 21,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66015
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.99214529106393,
+      "envelope_stamp_unix_ms": 1792786689581,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66020,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.39,
+        "W": 41.170625,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.170625000000001
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 22,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66020
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.95044166594744,
+      "envelope_stamp_unix_ms": 1792786689621,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66025,
+      "measures_ms": {
+        "C": 37,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.343999999999999,
+        "W": 39.55375,
+        "X": 0,
+        "client_residual_including_X": 19,
+        "client_residual_without_X": 19,
+        "controller_residual": 2.553750000000001
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 23,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66025
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.91037741606124,
+      "envelope_stamp_unix_ms": 1792786689664,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66029,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.47,
+        "W": 41.996875,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 1.9968750000000028
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 24,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66029
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.8678387911059,
+      "envelope_stamp_unix_ms": 1792786689706,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66035,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.483,
+        "W": 41.986125,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.9861250000000013
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 25,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66035
+    },
+    {
+      "cell": "version",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.82531650015153,
+      "envelope_stamp_unix_ms": 1792786689709,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": null,
+      "measures_ms": {
+        "U": 1.2850000000000001,
+        "W": 2.001375
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 26,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "inapplicable",
+        "G": "inapplicable",
+        "L": "inapplicable",
+        "L_inner": "inapplicable",
+        "R": "inapplicable",
+        "S": "inapplicable",
+        "X": "inapplicable",
+        "client_residual_including_X": "inapplicable",
+        "client_residual_without_X": "inapplicable",
+        "controller_residual": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.8228925410658,
+      "envelope_stamp_unix_ms": 1792786690394,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66043,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 640,
+        "L_inner": 637,
+        "R": 15,
+        "S": 3,
+        "U": 94.881,
+        "W": 684.872916,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.872916000000032
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 27,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66043
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 155.13744833297096,
+      "envelope_stamp_unix_ms": 1792786691073,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66050,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "L": 636,
+        "L_inner": 636,
+        "R": 12,
+        "S": 3,
+        "U": 94.59699999999998,
+        "W": 678.412417,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 4.412417000000005
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 28,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66050
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 154.458493916085,
+      "envelope_stamp_unix_ms": 1792786691759,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66057,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 643,
+        "L_inner": 640,
+        "R": 15,
+        "S": 3,
+        "U": 93.40599999999999,
+        "W": 685.797625,
+        "X": 0,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.797625000000039
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 29,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66057
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 153.7721035000868,
+      "envelope_stamp_unix_ms": 1792786692443,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66063,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 638,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 94.864,
+        "W": 682.8975,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.8975000000000364
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 30,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66063
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 153.0886176249478,
+      "envelope_stamp_unix_ms": 1792786693125,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66071,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 637,
+        "L_inner": 634,
+        "R": 15,
+        "S": 3,
+        "U": 93.04499999999999,
+        "W": 681.794084,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.794083999999998
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 31,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66071
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.40624391613528,
+      "envelope_stamp_unix_ms": 1792786693170,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66078,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 5.244999999999999,
+        "W": 43.960916,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.9609159999999974
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 32,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66078
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.36172325001098,
+      "envelope_stamp_unix_ms": 1792786693212,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66083,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.392999999999999,
+        "W": 41.149375,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.149374999999999
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 33,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66083
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.3200737910811,
+      "envelope_stamp_unix_ms": 1792786693252,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66088,
+      "measures_ms": {
+        "C": 37,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.417,
+        "W": 39.922583,
+        "X": 0,
+        "client_residual_including_X": 19,
+        "client_residual_without_X": 19,
+        "controller_residual": 2.922583000000003
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 34,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66088
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.279614625033,
+      "envelope_stamp_unix_ms": 1792786693294,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66092,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.382,
+        "W": 41.689959,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.6899590000000018
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 35,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66092
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.23740091593936,
+      "envelope_stamp_unix_ms": 1792786693337,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66098,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.415,
+        "W": 41.764708,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 1.7647079999999988
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 36,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66098
+    },
+    {
+      "cell": "version",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.19512908300385,
+      "envelope_stamp_unix_ms": 1792786693339,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": null,
+      "measures_ms": {
+        "U": 1.315,
+        "W": 2.016583
+      },
+      "pair": null,
+      "round": 2,
+      "sequence": 37,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "inapplicable",
+        "G": "inapplicable",
+        "L": "inapplicable",
+        "L_inner": "inapplicable",
+        "R": "inapplicable",
+        "S": "inapplicable",
+        "X": "inapplicable",
+        "client_residual_including_X": "inapplicable",
+        "client_residual_without_X": "inapplicable",
+        "controller_residual": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 152.192732000025,
+      "envelope_stamp_unix_ms": 1792786694015,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66104,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 633,
+        "L_inner": 630,
+        "R": 15,
+        "S": 3,
+        "U": 87.18999999999998,
+        "W": 675.468334,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 3.468334000000027
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 38,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66104
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 151.51672962494195,
+      "envelope_stamp_unix_ms": 1792786694700,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66111,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 640,
+        "L_inner": 639,
+        "R": 15,
+        "S": 3,
+        "U": 96.108,
+        "W": 684.187542,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.1875420000000076
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 39,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66111
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 150.8319862911012,
+      "envelope_stamp_unix_ms": 1792786695390,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66118,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 647,
+        "L_inner": 643,
+        "R": 15,
+        "S": 3,
+        "U": 99.00899999999999,
+        "W": 689.704291,
+        "X": 0,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 21,
+        "controller_residual": 3.704291000000012
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 40,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66118
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 150.1416932081338,
+      "envelope_stamp_unix_ms": 1792786696075,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66124,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 640,
+        "L_inner": 637,
+        "R": 15,
+        "S": 3,
+        "U": 95.466,
+        "W": 684.282125,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.282124999999951
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 41,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66124
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 149.45683916611597,
+      "envelope_stamp_unix_ms": 1792786696753,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66132,
+      "measures_ms": {
+        "C": 37,
+        "G": 0,
+        "L": 637,
+        "L_inner": 634,
+        "R": 10,
+        "S": 3,
+        "U": 94.46499999999999,
+        "W": 677.597583,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 3.597582999999986
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 42,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66132
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.77869762503542,
+      "envelope_stamp_unix_ms": 1792786696797,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66139,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 5.159000000000001,
+        "W": 43.964667,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 2.9646669999999986
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 43,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66139
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.7341817501001,
+      "envelope_stamp_unix_ms": 1792786696839,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66144,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.425,
+        "W": 41.320292,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.320292000000002
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 44,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66144
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.69233770808205,
+      "envelope_stamp_unix_ms": 1792786696880,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66149,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.399,
+        "W": 39.846792,
+        "X": 0,
+        "client_residual_including_X": 20,
+        "client_residual_without_X": 20,
+        "controller_residual": 1.8467920000000007
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 45,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66149
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.65197800006717,
+      "envelope_stamp_unix_ms": 1792786696922,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66153,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.4719999999999995,
+        "W": 41.989834,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.989834000000002
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 46,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66153
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.60947174998,
+      "envelope_stamp_unix_ms": 1792786696965,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66159,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.395,
+        "W": 41.887042,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 1.887042000000001
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 47,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66159
+    },
+    {
+      "cell": "version",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.56707524997182,
+      "envelope_stamp_unix_ms": 1792786696967,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": null,
+      "measures_ms": {
+        "U": 1.3539999999999999,
+        "W": 2.071209
+      },
+      "pair": null,
+      "round": 3,
+      "sequence": 48,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "inapplicable",
+        "G": "inapplicable",
+        "L": "inapplicable",
+        "L_inner": "inapplicable",
+        "R": "inapplicable",
+        "S": "inapplicable",
+        "X": "inapplicable",
+        "client_residual_including_X": "inapplicable",
+        "client_residual_without_X": "inapplicable",
+        "controller_residual": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 148.5646014160011,
+      "envelope_stamp_unix_ms": 1792786697645,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66165,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 636,
+        "L_inner": 633,
+        "R": 15,
+        "S": 3,
+        "U": 92.807,
+        "W": 678.005666,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 3.0056660000000193
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 49,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66165
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 147.88600741606206,
+      "envelope_stamp_unix_ms": 1792786698332,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66172,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 641,
+        "L_inner": 638,
+        "R": 15,
+        "S": 3,
+        "U": 96.29899999999999,
+        "W": 685.664333,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.664333000000056
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 50,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66172
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 147.19971341616474,
+      "envelope_stamp_unix_ms": 1792786699018,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66179,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 642,
+        "L_inner": 640,
+        "R": 15,
+        "S": 3,
+        "U": 94.92799999999998,
+        "W": 685.567,
+        "X": 0,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.5670000000000073
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 51,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66179
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 146.51354695810005,
+      "envelope_stamp_unix_ms": 1792786699704,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66185,
+      "measures_ms": {
+        "C": 42,
+        "G": 0,
+        "L": 641,
+        "L_inner": 638,
+        "R": 15,
+        "S": 3,
+        "U": 94.08500000000001,
+        "W": 685.458375,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 2.4583750000000464
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 52,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66185
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 145.82748358300887,
+      "envelope_stamp_unix_ms": 1792786700391,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66193,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 641,
+        "L_inner": 638,
+        "R": 15,
+        "S": 3,
+        "U": 96.15,
+        "W": 686.099333,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 4.0993330000000014
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 53,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66193
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 145.14076808304526,
+      "envelope_stamp_unix_ms": 1792786700436,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66200,
+      "measures_ms": {
+        "C": 42,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 5.36,
+        "W": 44.283958,
+        "X": 1,
+        "client_residual_including_X": 24,
+        "client_residual_without_X": 23,
+        "controller_residual": 2.2839579999999984
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 54,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66200
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 145.0959819999989,
+      "envelope_stamp_unix_ms": 1792786700477,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66205,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.378,
+        "W": 41.128709,
+        "X": 1,
+        "client_residual_including_X": 20,
+        "client_residual_without_X": 19,
+        "controller_residual": 3.1287090000000006
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 55,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66205
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 145.05433820816688,
+      "envelope_stamp_unix_ms": 1792786700518,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66210,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.422,
+        "W": 39.92025,
+        "X": 0,
+        "client_residual_including_X": 20,
+        "client_residual_without_X": 20,
+        "controller_residual": 1.920250000000003
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 56,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66210
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 145.01389449997805,
+      "envelope_stamp_unix_ms": 1792786700560,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66214,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.518,
+        "W": 41.94175,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.941749999999999
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 57,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66214
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 144.97143604094163,
+      "envelope_stamp_unix_ms": 1792786700602,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66220,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.3790000000000004,
+        "W": 41.112041,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.112040999999998
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 58,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66220
+    },
+    {
+      "cell": "version",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 144.92981216614135,
+      "envelope_stamp_unix_ms": 1792786700605,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": null,
+      "measures_ms": {
+        "U": 1.283,
+        "W": 2.007708
+      },
+      "pair": null,
+      "round": 4,
+      "sequence": 59,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "inapplicable",
+        "G": "inapplicable",
+        "L": "inapplicable",
+        "L_inner": "inapplicable",
+        "R": "inapplicable",
+        "S": "inapplicable",
+        "X": "inapplicable",
+        "client_residual_including_X": "inapplicable",
+        "client_residual_without_X": "inapplicable",
+        "controller_residual": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 144.9273559160065,
+      "envelope_stamp_unix_ms": 1792786701286,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66226,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 638,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 95.1,
+        "W": 680.885666,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 2.8856660000000147
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 60,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66226
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 144.24588829115964,
+      "envelope_stamp_unix_ms": 1792786701971,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66233,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 640,
+        "L_inner": 637,
+        "R": 15,
+        "S": 3,
+        "U": 94.967,
+        "W": 684.814,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.8139999999999645
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 61,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66233
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 143.56048658303916,
+      "envelope_stamp_unix_ms": 1792786702654,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66240,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "L": 639,
+        "L_inner": 636,
+        "R": 15,
+        "S": 3,
+        "U": 95.18499999999999,
+        "W": 682.322375,
+        "X": 0,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 21,
+        "controller_residual": 4.322374999999965
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 62,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66240
+    },
+    {
+      "cell": "exec_spawn/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 142.87757854093798,
+      "envelope_stamp_unix_ms": 1792786703335,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66246,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "L": 636,
+        "L_inner": 633,
+        "R": 15,
+        "S": 3,
+        "U": 91.946,
+        "W": 680.448375,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.4483750000000555
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 63,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66246
+    },
+    {
+      "cell": "path_diagnostics_strict/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 142.19654754106887,
+      "envelope_stamp_unix_ms": 1792786704015,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66254,
+      "measures_ms": {
+        "C": 40,
+        "G": 0,
+        "L": 635,
+        "L_inner": 632,
+        "R": 15,
+        "S": 3,
+        "U": 94.064,
+        "W": 679.316083,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 4.316083000000049
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 64,
+      "state": "completed",
+      "stratum": {
+        "capture_status": "captured",
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {},
+      "warmup": false,
+      "worker_pid": 66254
+    },
+    {
+      "cell": "file_read_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.51668920810334,
+      "envelope_stamp_unix_ms": 1792786704060,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66261,
+      "measures_ms": {
+        "C": 41,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 5.307,
+        "W": 44.031667,
+        "X": 1,
+        "client_residual_including_X": 23,
+        "client_residual_without_X": 22,
+        "controller_residual": 3.031666999999999
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 65,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66261
+    },
+    {
+      "cell": "mach_deny/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.47212633304298,
+      "envelope_stamp_unix_ms": 1792786704101,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66266,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.412,
+        "W": 41.245917,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.2459169999999986
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 66,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66266
+    },
+    {
+      "cell": "sysctl_read/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.43036770797335,
+      "envelope_stamp_unix_ms": 1792786704142,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66271,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.324,
+        "W": 39.790875,
+        "X": 0,
+        "client_residual_including_X": 20,
+        "client_residual_without_X": 20,
+        "controller_residual": 1.7908749999999998
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 67,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66271
+    },
+    {
+      "cell": "exec_spawn/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.39004333293997,
+      "envelope_stamp_unix_ms": 1792786704184,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66275,
+      "measures_ms": {
+        "C": 39,
+        "G": 0,
+        "R": 15,
+        "S": 3,
+        "U": 4.4719999999999995,
+        "W": 41.927833,
+        "X": 1,
+        "client_residual_including_X": 21,
+        "client_residual_without_X": 20,
+        "controller_residual": 2.9278329999999997
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 68,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66275
+    },
+    {
+      "cell": "path_diagnostics_strict/no-capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.3475969999563,
+      "envelope_stamp_unix_ms": 1792786704225,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": 66281,
+      "measures_ms": {
+        "C": 38,
+        "G": 0,
+        "R": 13,
+        "S": 3,
+        "U": 4.326999999999999,
+        "W": 40.10225,
+        "X": 1,
+        "client_residual_including_X": 22,
+        "client_residual_without_X": 21,
+        "controller_residual": 2.102249999999998
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 69,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": "reaped_during_grace",
+        "outcome": "ok",
+        "ready_stop": "received",
+        "sentinel_stop": "done",
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "L": "inapplicable",
+        "L_inner": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": 66281
+    },
+    {
+      "cell": "version",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 141.30697033298202,
+      "envelope_stamp_unix_ms": 1792786704228,
+      "error": null,
+      "excluded_reason": null,
+      "host_pid": null,
+      "measures_ms": {
+        "U": 1.363,
+        "W": 2.083667
+      },
+      "pair": null,
+      "round": 5,
+      "sequence": 70,
+      "state": "completed",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": 0,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "inapplicable",
+        "G": "inapplicable",
+        "L": "inapplicable",
+        "L_inner": "inapplicable",
+        "R": "inapplicable",
+        "S": "inapplicable",
+        "X": "inapplicable",
+        "client_residual_including_X": "inapplicable",
+        "client_residual_without_X": "inapplicable",
+        "controller_residual": "inapplicable"
+      },
+      "warmup": false,
+      "worker_pid": null
+    }
+  ],
+  "quantile_method": "nearest-rank p90; median averages middle two for even n",
+  "raw_directory": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot",
+  "raw_evidence": "gitignored; available only in the producing checkout",
+  "run": {
+    "cleanup": {
+      "checksum_order": "run.json is finalized and hashed last",
+      "checksums_hashed": 292,
+      "checksums_total": 292,
+      "elapsed_s": 0.06576216616667807,
+      "reserve_s": 10,
+      "started_at": "2026-10-23T20:18:24.228561+00:00",
+      "state": "complete",
+      "steps": {
+        "assertion": "complete",
+        "checksums": "complete",
+        "conditions": "complete"
+      }
+    },
+    "counts": {
+      "completed": 70
+    },
+    "duration_s": 28.76114979200065,
+    "error": null,
+    "execution_context": "interactive",
+    "exit_status": 0,
+    "finished_at": "2026-10-23T20:18:24.294312+00:00",
+    "format_version": 1,
+    "hard_finish_monotonic_raw": 1449210.995923666,
+    "idle_sleep_assertion": {
+      "argv": [
+        "/usr/bin/caffeinate",
+        "-i",
+        "-w",
+        "65854"
+      ],
+      "exit_status": -15,
+      "launched": true,
+      "pid": 65863,
+      "running_at_end": true
+    },
+    "interrupt": null,
+    "loop_ended_at": "2026-10-23T20:18:24.228505+00:00",
+    "planned": 70,
+    "run_id": "20261023T201755491161Z-pilot",
+    "start_monotonic_raw": 1449030.995923666,
+    "started_at": "2026-10-23T20:17:55.533203+00:00",
+    "stop_reason": "manifest_exhausted"
+  },
+  "run_id": "20261023T201755491161Z-pilot",
+  "unattested": [],
+  "unexpected_statuses": [],
+  "unreadable_by_cell": {
+    "exec_spawn/no-capture": {
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      }
+    },
+    "file_read_deny/no-capture": {
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      }
+    },
+    "mach_deny/no-capture": {
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      }
+    },
+    "path_diagnostics_strict/no-capture": {
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      }
+    },
+    "sysctl_read/no-capture": {
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      }
+    },
+    "version": {
+      "C": {
+        "inapplicable": 5
+      },
+      "G": {
+        "inapplicable": 5
+      },
+      "L": {
+        "inapplicable": 5
+      },
+      "L_inner": {
+        "inapplicable": 5
+      },
+      "R": {
+        "inapplicable": 5
+      },
+      "S": {
+        "inapplicable": 5
+      },
+      "X": {
+        "inapplicable": 5
+      },
+      "client_residual_including_X": {
+        "inapplicable": 5
+      },
+      "client_residual_without_X": {
+        "inapplicable": 5
+      },
+      "controller_residual": {
+        "inapplicable": 5
+      }
+    }
+  }
+}

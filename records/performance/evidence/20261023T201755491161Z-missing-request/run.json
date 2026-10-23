@@ -1,0 +1,45 @@
+{
+  "cleanup": {
+    "checksum_order": "run.json is finalized and hashed last",
+    "checksums_hashed": 23,
+    "checksums_total": 23,
+    "elapsed_s": 0.05934912501834333,
+    "reserve_s": 10,
+    "started_at": "2026-10-23T20:18:25.893087+00:00",
+    "state": "complete",
+    "steps": {
+      "assertion": "complete",
+      "checksums": "complete",
+      "conditions": "complete"
+    }
+  },
+  "counts": {
+    "completed": 3
+  },
+  "duration_s": 1.5005696250591427,
+  "error": null,
+  "execution_context": "interactive",
+  "exit_status": 0,
+  "finished_at": "2026-10-23T20:18:25.952424+00:00",
+  "format_version": 1,
+  "hard_finish_monotonic_raw": 1449089.914618125,
+  "idle_sleep_assertion": {
+    "argv": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "-w",
+      "66300"
+    ],
+    "exit_status": -15,
+    "launched": true,
+    "pid": 66310,
+    "running_at_end": true
+  },
+  "interrupt": null,
+  "loop_ended_at": "2026-10-23T20:18:25.893024+00:00",
+  "planned": 3,
+  "run_id": "20261023T201755491161Z-missing-request",
+  "start_monotonic_raw": 1449059.914618125,
+  "started_at": "2026-10-23T20:18:24.451867+00:00",
+  "stop_reason": "manifest_exhausted"
+}

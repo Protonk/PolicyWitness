@@ -1,0 +1,45 @@
+{
+  "cleanup": {
+    "checksum_order": "run.json is finalized and hashed last",
+    "checksums_hashed": 15,
+    "checksums_total": 15,
+    "elapsed_s": 0.04542650002986193,
+    "reserve_s": 10,
+    "started_at": "2026-10-23T20:16:18.635605+00:00",
+    "state": "complete",
+    "steps": {
+      "assertion": "complete",
+      "checksums": "complete",
+      "conditions": "complete"
+    }
+  },
+  "counts": {
+    "never_started": 3
+  },
+  "duration_s": 0.37623345782049,
+  "error": "TypeError(\"'select.kqueue' object does not support the context manager protocol (missed __exit__ method)\")",
+  "execution_context": "interactive",
+  "exit_status": 1,
+  "finished_at": "2026-10-23T20:16:18.681025+00:00",
+  "format_version": 1,
+  "hard_finish_monotonic_raw": 1448963.767419333,
+  "idle_sleep_assertion": {
+    "argv": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "-w",
+      "65463"
+    ],
+    "exit_status": -15,
+    "launched": true,
+    "pid": 65472,
+    "running_at_end": true
+  },
+  "interrupt": null,
+  "loop_ended_at": "2026-10-23T20:16:18.635551+00:00",
+  "planned": 3,
+  "run_id": "20261023T201617807617Z-interrupt",
+  "start_monotonic_raw": 1448933.767419333,
+  "started_at": "2026-10-23T20:16:18.304799+00:00",
+  "stop_reason": "harness_error"
+}

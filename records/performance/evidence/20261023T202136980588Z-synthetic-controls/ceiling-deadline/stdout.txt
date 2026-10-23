@@ -1,0 +1,2 @@
+{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-ceiling-deadline", "planned": 3}
+{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-ceiling-deadline", "exit_status": 1, "stop_reason": "ceiling"}

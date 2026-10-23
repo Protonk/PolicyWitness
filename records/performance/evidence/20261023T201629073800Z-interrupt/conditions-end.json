@@ -1,0 +1,103 @@
+{
+  "background_servers": {
+    "codex_daemon_matches": [],
+    "custom_server_identity": "not supplied; broad app-server name match only",
+    "inspection_state": "failed",
+    "other_app_server_matches": []
+  },
+  "observed_at": "2026-10-23T20:16:31.360826+00:00",
+  "probes": {
+    "architecture": {
+      "argv": [
+        "/usr/bin/uname",
+        "-m"
+      ],
+      "elapsed_s": 0.0041404590010643005,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "",
+      "stdout": "arm64\n"
+    },
+    "git_head": {
+      "argv": [
+        "/usr/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "elapsed_s": 0.013368334155529737,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\n",
+      "stdout": "6751cbb31fa50291081e4c57190383d72469b085\n"
+    },
+    "git_status": {
+      "argv": [
+        "/usr/bin/git",
+        "status",
+        "--porcelain"
+      ],
+      "elapsed_s": 0.0164280419703573,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\n",
+      "stdout": "?? records/performance/evidence/\n?? records/performance/harness/\n"
+    },
+    "hardware": {
+      "argv": [
+        "/usr/sbin/sysctl",
+        "hw.model",
+        "hw.ncpu",
+        "hw.memsize"
+      ],
+      "elapsed_s": 0.0031643749680370092,
+      "exit_code": 1,
+      "state": "failed",
+      "stderr": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n",
+      "stdout": ""
+    },
+    "os": {
+      "argv": [
+        "/usr/bin/sw_vers"
+      ],
+      "elapsed_s": 0.014820249984040856,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "",
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+    },
+    "power": {
+      "argv": [
+        "/usr/bin/pmset",
+        "-g",
+        "batt"
+      ],
+      "elapsed_s": 0.010313625214621425,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "",
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=26214499)\t100%; finishing charge; 0:00 remaining present: true\n"
+    },
+    "process_names": {
+      "argv": [
+        "/bin/ps",
+        "-axo",
+        "pid=,comm="
+      ],
+      "elapsed_s": 0.0007620831020176411,
+      "error": "[Errno 1] Operation not permitted: '/bin/ps'",
+      "state": "failed"
+    },
+    "thermal": {
+      "argv": [
+        "/usr/bin/pmset",
+        "-g",
+        "therm"
+      ],
+      "elapsed_s": 0.007221999811008573,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "",
+      "stdout": "Error:Failed to get thermal warning level with error code 0xe00002bc\nError: Failed to get performance warning level with error code 0xe00002bc\nError: No CPU power status with error code 0xe00002bc\n"
+    }
+  }
+}

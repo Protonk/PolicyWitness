@@ -1,0 +1,94 @@
+{
+  "background_servers": {
+    "codex_daemon_matches": [],
+    "custom_server_identity": "not supplied; broad app-server name match only",
+    "inspection_state": "timed_out",
+    "other_app_server_matches": []
+  },
+  "observed_at": "2026-10-23T20:21:52.768018+00:00",
+  "probes": {
+    "architecture": {
+      "argv": [
+        "/usr/bin/uname",
+        "-m"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "delayed_control": {
+      "argv": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+        "-B",
+        "-S",
+        "-c",
+        "import time; time.sleep(10)"
+      ],
+      "elapsed_s": 0.3551967500243336,
+      "state": "timed_out",
+      "stderr": "",
+      "stdout": ""
+    },
+    "git_head": {
+      "argv": [
+        "/usr/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "git_status": {
+      "argv": [
+        "/usr/bin/git",
+        "status",
+        "--porcelain"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "hardware": {
+      "argv": [
+        "/usr/sbin/sysctl",
+        "hw.model",
+        "hw.ncpu",
+        "hw.memsize"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "os": {
+      "argv": [
+        "/usr/bin/sw_vers"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "power": {
+      "argv": [
+        "/usr/bin/pmset",
+        "-g",
+        "batt"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "process_names": {
+      "argv": [
+        "/bin/ps",
+        "-axo",
+        "pid=,comm="
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    },
+    "thermal": {
+      "argv": [
+        "/usr/bin/pmset",
+        "-g",
+        "therm"
+      ],
+      "error": "probe set deadline exhausted before launch",
+      "state": "timed_out"
+    }
+  }
+}

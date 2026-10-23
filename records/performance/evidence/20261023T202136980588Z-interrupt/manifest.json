@@ -1,0 +1,98 @@
+{
+  "ceiling_s": 30,
+  "child_environment": {
+    "HOME": "/Users/raccoon",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+  },
+  "cleanup_reserve_s": 10,
+  "config": "control",
+  "control": null,
+  "entries": [
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-interrupt/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00001",
+      "pair": null,
+      "round": 1,
+      "sequence": 1,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-interrupt/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00002",
+      "pair": null,
+      "round": 1,
+      "sequence": 2,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-interrupt/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00003",
+      "pair": null,
+      "round": 1,
+      "sequence": 3,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    }
+  ],
+  "execution_context": "interactive",
+  "format_version": 1,
+  "harness_argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+    "--expect-build",
+    "841",
+    "--config",
+    "control",
+    "--run-id",
+    "20261023T202136980588Z-interrupt",
+    "--note",
+    "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+    "--pw",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py"
+  ],
+  "identity": {
+    "executable": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py",
+    "files": {
+      "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py": "e1dfd6b94fee6ace4fbe33fe811b88608de24e1554387ac50f6bb352d0e81e8c"
+    },
+    "version": {
+      "build": {
+        "commit": "stand-in",
+        "number": "841"
+      },
+      "kind": "version"
+    }
+  },
+  "nominal_s": 300,
+  "note": "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "rounds": 1,
+  "run_id": "20261023T202136980588Z-interrupt",
+  "start_margin_s": 5,
+  "warmup_definition": "3 rounds of the 5 capture cells; version preflight is unmeasured"
+}

@@ -1,0 +1,20 @@
+[
+  "/usr/bin/env",
+  "-i",
+  "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+  "HOME=/Users/raccoon",
+  "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+  "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+  "--expect-build",
+  "841",
+  "--config",
+  "control",
+  "--run-id",
+  "20261023T202136980588Z-nominal-deadline",
+  "--note",
+  "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+  "--pw",
+  "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/controls/sleeper.py",
+  "--nominal-s",
+  ".2"
+]

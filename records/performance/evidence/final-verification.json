@@ -1,0 +1,121 @@
+{
+  "verified_runs": [
+    {
+      "run_id": "20261023T201617807617Z-interrupt",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201629073800Z-ceiling-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201629073800Z-cleanup-exhaustion",
+      "cleanup": "incomplete",
+      "unattested": 23
+    },
+    {
+      "run_id": "20261023T201629073800Z-interrupt",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201629073800Z-nominal-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201705144042Z-ceiling-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201705144042Z-cleanup-exhaustion",
+      "cleanup": "incomplete",
+      "unattested": 23
+    },
+    {
+      "run_id": "20261023T201705144042Z-interrupt",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201705144042Z-nominal-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201755491161Z-missing-request",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201755491161Z-pilot",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T201905645635Z-overlap",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202136980588Z-ceiling-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202136980588Z-cleanup-exhaustion",
+      "cleanup": "incomplete",
+      "unattested": 27
+    },
+    {
+      "run_id": "20261023T202136980588Z-interrupt",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202136980588Z-nominal-deadline",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202250234510Z-live-interrupt",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202250234510Z-missing-request",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202250234510Z-pilot",
+      "cleanup": "complete",
+      "unattested": 0
+    },
+    {
+      "run_id": "20261023T202250234510Z-short-rehearsal",
+      "cleanup": "complete",
+      "unattested": 0
+    }
+  ],
+  "intentional_tamper_copies_rejected": [
+    "20261023T201629073800Z-tamper-copy",
+    "20261023T201705144042Z-tamper-copy",
+    "20261023T202136980588Z-tamper-copy"
+  ],
+  "app_bytes_match_sizing_pilot": true,
+  "python_sources_compile": true,
+  "verified_at": "2026-10-23T20:28:14.212964+00:00",
+  "harness_sha256": {
+    "records/performance/harness/README.md": "55795e705bb6393fa696172b3017403e1b76a5e93fcf360b89ffeeae82bbdc04",
+    "records/performance/harness/configurations.json": "4a6696b8d5b9f78054acb2fc0b2b0437ad4afb4f39606d528c3f0023e4c8c9dd",
+    "records/performance/harness/controls/check.py": "f349e82dea6a36af4c29cb753b4353c95c3ec5184267a8fbf0e5a682792e2289",
+    "records/performance/harness/controls/quick.py": "283a916a8040f0477df0d6651bc136254a9539bdcc11dff736acfafbbd1d2bbb",
+    "records/performance/harness/controls/sleeper.py": "e1dfd6b94fee6ace4fbe33fe811b88608de24e1554387ac50f6bb352d0e81e8c",
+    "records/performance/harness/measure.py": "f81d61cc0c57bf961871cba2e558914ee7701418a8057eed3676d86f15af75b6",
+    "records/performance/harness/summarize.py": "0e837e9184e397bb7367c9a16f1ff45698667ef96c5f7dab578fe912fd9df18b"
+  }
+}

@@ -1,0 +1,16 @@
+[
+  "/usr/bin/env",
+  "-i",
+  "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+  "HOME=/Users/raccoon",
+  "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+  "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+  "--expect-build",
+  "841",
+  "--config",
+  "pilot",
+  "--run-id",
+  "20261023T201755491161Z-pilot",
+  "--note",
+  "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock."
+]

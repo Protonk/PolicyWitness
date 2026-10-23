@@ -11,14 +11,19 @@ Layout:
   investigation follows.
 - `PolicyWitness-Boundaries-Findings.md`: the synthesis of the read-only
   report whose questions the investigation starts from.
+- `RUNTIME-MEASUREMENT-BRIEF.md`: measurement definitions, pilot observations,
+  verification credits and the operator handoff.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
-  their stand-in controls under `harness/controls/`. Added by the plan.
+  their stand-in controls under `harness/controls/` and pilot-sized counts in
+  `harness/configurations.json`.
 - `evidence/<run-id>/`: committed per run: `manifest.json`,
   `conditions-start.json`, `conditions-end.json`, `run.json`, `SHA256SUMS`
   and the summarizer's output. Small, reviewable, enough to interpret a run
   without its raw files.
-- `runs/<run-id>/`: the complete raw output of a run, one directory per
-  invocation with the request copy, argv, stdout, stderr and status. Ignored
+- `evidence/<control-batch>/`: the external terminal transcripts, observed exit
+  statuses and assertion ledger for each bounded control or pilot in that batch.
+- `runs/<run-id>/`: the complete raw output of a run, shared specimen copies
+  and one directory per invocation with argv, stdout, stderr and status. Ignored
   by git and present only in the checkout that produced it; a record that
   cites a raw file says so.
 

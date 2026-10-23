@@ -1,0 +1,220 @@
+{
+  "config": "control",
+  "counts": {
+    "interrupted": 1,
+    "never_started": 2
+  },
+  "counts_match_run": true,
+  "definitions": {
+    "E": "envelope creation stamp only, retained per observation; no duration summary",
+    "L_inner": "shared controller budget start through inner child collection finish",
+    "S": "sentinel elapsed minus excluded_ms",
+    "U": "wait4 user plus system CPU, milliseconds; controller and reaped descendants",
+    "X": "sentinel excluded_ms",
+    "client_residual_including_X": "C-R-S-G; includes phase collection X",
+    "client_residual_without_X": "C-R-S-X-G",
+    "controller_residual": "W-C-L; includes controller log parsing/correlation"
+  },
+  "excluded": [
+    {
+      "reason": "interrupted",
+      "sequence": 1,
+      "state": "interrupted"
+    },
+    {
+      "reason": "never_started",
+      "sequence": 2,
+      "state": "never_started"
+    },
+    {
+      "reason": "never_started",
+      "sequence": 3,
+      "state": "never_started"
+    }
+  ],
+  "execution_context": "interactive",
+  "format_version": 1,
+  "groups": [],
+  "missing_statuses": [],
+  "observations": [
+    {
+      "cell": "file_read_deny/capture",
+      "deadline_source": "ceiling",
+      "effective_deadline_s": 19.934518999885768,
+      "envelope_error": "Expecting value: line 1 column 1 (char 0)",
+      "envelope_stamp_unix_ms": null,
+      "error": null,
+      "excluded_reason": "interrupted",
+      "host_pid": null,
+      "measures_ms": {
+        "U": 12.265,
+        "W": 2084.96725
+      },
+      "pair": null,
+      "round": 1,
+      "sequence": 1,
+      "state": "interrupted",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": null,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": 9
+      },
+      "system_sleep_ms": 0,
+      "unreadable": {
+        "C": "absent",
+        "G": "absent",
+        "L": "absent",
+        "L_inner": "absent",
+        "R": "absent",
+        "S": "absent",
+        "X": "absent",
+        "client_residual_including_X": "absent",
+        "client_residual_without_X": "absent",
+        "controller_residual": "absent"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "mach_deny/capture",
+      "deadline_source": null,
+      "effective_deadline_s": null,
+      "envelope_stamp_unix_ms": null,
+      "error": null,
+      "excluded_reason": "never_started",
+      "host_pid": null,
+      "measures_ms": {},
+      "pair": null,
+      "round": 1,
+      "sequence": 2,
+      "state": "never_started",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": null,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": null,
+      "unreadable": {
+        "C": "absent",
+        "G": "absent",
+        "L": "absent",
+        "L_inner": "absent",
+        "R": "absent",
+        "S": "absent",
+        "U": "absent",
+        "W": "absent",
+        "X": "absent",
+        "client_residual_including_X": "absent",
+        "client_residual_without_X": "absent",
+        "controller_residual": "absent"
+      },
+      "warmup": false,
+      "worker_pid": null
+    },
+    {
+      "cell": "sysctl_read/capture",
+      "deadline_source": null,
+      "effective_deadline_s": null,
+      "envelope_stamp_unix_ms": null,
+      "error": null,
+      "excluded_reason": "never_started",
+      "host_pid": null,
+      "measures_ms": {},
+      "pair": null,
+      "round": 1,
+      "sequence": 3,
+      "state": "never_started",
+      "stratum": {
+        "capture_status": null,
+        "exit_status": null,
+        "grace_stop": null,
+        "outcome": null,
+        "ready_stop": null,
+        "sentinel_stop": null,
+        "term_signal": null
+      },
+      "system_sleep_ms": null,
+      "unreadable": {
+        "C": "absent",
+        "G": "absent",
+        "L": "absent",
+        "L_inner": "absent",
+        "R": "absent",
+        "S": "absent",
+        "U": "absent",
+        "W": "absent",
+        "X": "absent",
+        "client_residual_including_X": "absent",
+        "client_residual_without_X": "absent",
+        "controller_residual": "absent"
+      },
+      "warmup": false,
+      "worker_pid": null
+    }
+  ],
+  "quantile_method": "nearest-rank p90; median averages middle two for even n",
+  "raw_directory": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201629073800Z-interrupt",
+  "raw_evidence": "gitignored; available only in the producing checkout",
+  "run": {
+    "cleanup": {
+      "checksum_order": "run.json is finalized and hashed last",
+      "checksums_hashed": 18,
+      "checksums_total": 18,
+      "elapsed_s": 0.07343925000168383,
+      "reserve_s": 10,
+      "started_at": "2026-10-23T20:16:31.360537+00:00",
+      "state": "complete",
+      "steps": {
+        "assertion": "complete",
+        "checksums": "complete",
+        "conditions": "complete"
+      }
+    },
+    "counts": {
+      "interrupted": 1,
+      "never_started": 2
+    },
+    "duration_s": 2.226303166942671,
+    "error": null,
+    "execution_context": "interactive",
+    "exit_status": 1,
+    "finished_at": "2026-10-23T20:16:31.433965+00:00",
+    "format_version": 1,
+    "hard_finish_monotonic_raw": 1448974.670304708,
+    "idle_sleep_assertion": {
+      "argv": [
+        "/usr/bin/caffeinate",
+        "-i",
+        "-w",
+        "65534"
+      ],
+      "exit_status": -15,
+      "launched": true,
+      "pid": 65543,
+      "running_at_end": true
+    },
+    "interrupt": {
+      "at": "2026-10-23T20:16:29.297488+00:00",
+      "monotonic_raw": 1448944.760128916,
+      "signal": 2
+    },
+    "loop_ended_at": "2026-10-23T20:16:31.360384+00:00",
+    "planned": 3,
+    "run_id": "20261023T201629073800Z-interrupt",
+    "start_monotonic_raw": 1448944.670304708,
+    "started_at": "2026-10-23T20:16:29.207674+00:00",
+    "stop_reason": "interrupt"
+  },
+  "run_id": "20261023T201629073800Z-interrupt",
+  "unattested": [],
+  "unexpected_statuses": [],
+  "unreadable_by_cell": {}
+}

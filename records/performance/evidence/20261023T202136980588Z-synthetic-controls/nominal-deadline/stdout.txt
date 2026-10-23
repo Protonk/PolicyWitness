@@ -1,0 +1,2 @@
+{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-nominal-deadline", "planned": 3}
+{"run_dir": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202136980588Z-nominal-deadline", "exit_status": 0, "stop_reason": "manifest_exhausted"}

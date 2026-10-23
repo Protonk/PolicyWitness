@@ -24,6 +24,12 @@ which clock, before any duration is read as the cost of the activity inside it.
 
 ## Intended result
 
+The prepared handoff and pilot evidence are described in
+[RUNTIME-MEASUREMENT-BRIEF.md](RUNTIME-MEASUREMENT-BRIEF.md).
+The executable procedure is documented in [harness/README.md](harness/README.md).
+All existing runs are interactive pilots or controls; operator measurements
+and the final runtime report remain pending.
+
 A reproducible account of one ordinary invocation of the built-in runner,
 built from the telemetry the shipped envelope already carries plus one
 harness-observed wall clock around the controller process, under conditions
@@ -99,20 +105,30 @@ are elapsed monotonic allowances from `HostWaitClock` in
 | S, sentinel wait | Host starts polling shared memory after the ready wait | Host recognizes `done` or another stop (`sentinel_wait.elapsed_ms`, less `excluded_ms` of phase collection) | Host; monotonic, 2 ms quantum | When the worker published; attempt durations individually |
 | X, phase collection | Host observes phase arrival and begins planning | Collection closes (`sentinel_wait.excluded_ms`, per-phase `validator_subprocess`) | Host; monotonic | Validator spawn versus query time; what `sandbox_check` itself cost |
 | G, exit grace | Host stores `exit_requested` | Host recognizes the reap or exhausts the grace (`exit_grace_wait`) | Host; monotonic, 10 ms quantum | Worker exit time; whether the worker read the request |
-| L, log supervision | Controller starts the observer (`sandbox_log_capture.supervision`) | Collection and processing finish (`supervision.elapsed_ms`) | Controller; `CLOCK_MONOTONIC` budget | OS delivery completeness; which records existed at the time |
-| L', inner log show | Observer spawns `log show` (`observer.data.collection`) | The child exits and output is read (`collection.elapsed_ms`) | Observer; same monotonic deadline | Store open cost versus scan cost separately |
+| L, log supervision | Controller starts the shared collection budget before launching the observer (`sandbox_log_capture.supervision`) | Supervisor finishes collecting/reaping the observer (`supervision.elapsed_ms`), before controller reply parsing and correlation | Controller; `CLOCK_MONOTONIC` budget | Total log processing cost; OS delivery completeness; which records existed at the time |
+| L', inner log collection endpoint | Same controller budget start as L, carried into the observer | Inner child supervision finishes (`observer.data.collection.elapsed_ms`) | Observer; shared `CLOCK_MONOTONIC` budget | A standalone `log show` duration: observer startup is included; store open versus scan cost |
 | E, envelope stamp | Not a span: `generated_at_unix_ms` is read when the envelope value is built | | Controller; Unix wall clock | Print completion; the controller's exit |
 | U, controller CPU | Spawn | Exit (`wait4` rusage) | Harness; kernel accounting for the controller and the children it reaped: client, observer, `log show` | Host, worker, validator and issuer CPU, which launchd's service tree owns |
 
-Two residuals are derived, never measured: C minus (R + S + G) is what the
-client, launchd, host authorization, decode, region setup, spawn, policy
-transfer, assembly and reply cost together, and W minus C minus L is the
-controller's own startup, dossier, render and exit together with the harness's
-spawn cost. A control cell isolates part of the second: `policy-witness
---version` runs the controller without XPC and prints a small envelope, so its
-W is a floor for process startup plus render. Mixing clock domains is avoided
-by never subtracting a host reading from a controller reading in the report
-except where both are named as such.
+Residuals are derived, never measured. C minus (R + S + G) includes X because
+S has had the phase collection excluded; the summary labels that residual
+`client_residual_including_X`. C minus (R + S + X + G), also retained, covers
+the remaining client, launchd, host authorization, decode, region setup,
+spawn, policy transfer, assembly and reply work. W minus C minus L includes
+controller startup, dossier, log reply parsing and correlation, render and
+exit, together with harness spawn and exit-observation cost. When grace was
+explicitly not entered its contribution is zero; missing grace evidence is
+not silently zero. Disabled log capture contributes zero L to the residual,
+while L itself remains inapplicable.
+
+`policy-witness --version` observes startup plus its small version response;
+it is not a mathematical lower bound for every later sample. The residuals
+combine durations from different clocks, with millisecond rounding and
+unproven wall-clock continuity; they do not identify individual component
+costs. Negative residuals remain visible and require interpretation, never
+exclusion merely because of their sign. `log_capture.rs::finish` establishes
+the shared origin of L and L'; neither includes controller parsing after
+supervision returns.
 
 ### 2. Specimens and cells
 
@@ -167,8 +183,8 @@ is re-run silently.
   may add an overlap series to an unattended manifest only if every pilot
   pair terminated within the deadline, every outcome fell in a closed set the
   summarizer classifies (`ok`, `already_ran`, a named XPC error) and the
-  sequential series showed no retirement encounter, which would mean ordinary
-  use cannot reach the question.
+  sequential series showed no retirement encounter. That establishes only
+  that those sampled sequential invocations did not encounter retirement.
 - **P4, procedure controls.** The harness's own verification, listed under
   Verification below.
 
@@ -220,7 +236,8 @@ Behavior, in order:
    `status.json`: state, exit status or signal, both clock deltas, sleep
    detected, rusage, byte counts. States are `completed` (exited, any status),
    `harness_timeout` (the effective deadline reached; SIGTERM, then SIGKILL
-   after two seconds, both recorded, with the deadline and its source), `interrupted` (the operator's SIGINT or SIGTERM
+   after two seconds if still unreaped, signal attempts recorded with the
+   deadline and its source), `interrupted` (the operator's SIGINT or SIGTERM
    arrived while it ran; the controller is left to finish or is killed, and
    the record says which) and `spawn_failed`. Nothing is retried. A nonzero
    exit is a completed invocation whose envelope says what happened.
@@ -237,10 +254,14 @@ Behavior, in order:
    the set under 5 s, written with whatever was collected and a per-probe
    state (`ok`, `timed_out`, `failed`). Then the idle-sleep assertion is
    released and its state recorded. Then `SHA256SUMS`, appended and flushed
-   one file at a time over every file in the run directory except itself,
+   one file at a time over every file in the run directory except itself and
+   the still-provisional `run.json`,
    with the clock checked before each file. Finally `run.json` is rewritten
    atomically with `cleanup.state: "complete"` or `"incomplete"`, each step's
-   outcome, and for checksums the counts hashed and total. If the reserve
+   outcome, and for checksums the counts hashed and total. Its final bytes are
+   hashed and appended to `SHA256SUMS` last, avoiding a stale attestation of
+   the provisional record. A 150 ms final-write allowance is held inside the
+   cleanup budget. If the reserve
    runs out, the remaining steps are skipped, never hurried; nothing already
    written is removed; a partial `SHA256SUMS` attests exactly the files it
    lists; and the final `run.json` write, which is small and always
@@ -376,15 +397,17 @@ under `runs/` and summarized in the brief:
    steps named, a `SHA256SUMS` that attests only the files it lists, exit
    status 3, and a last write before the ceiling.
 
-Of the measurements themselves, what the pilots must show before the
-unattended run is sized: every measure present in every cell where it is
-defined, the `--version` floor below every run's W, residuals non-negative,
-and sleep detection at zero across the pilot.
+Of the measurements themselves, inspect before sizing the unattended run:
+every measure in every cell where it is defined, the `--version` distribution
+alongside each run's W, the signs of the residuals, and sleep detection.
+Undefined or unreadable measures and any negative residuals are named in the
+brief; valid variability remains. Pilot observations that overlapped system
+sleep cannot size the ordinary no-sleep configurations.
 
 Passes that would mislead, and what guards each:
 
-- Spawn cost counted as controller time. The `--version` cell bounds it; the
-  report subtracts nothing but names the floor.
+- Spawn cost counted as controller time. The `--version` cell contextualizes
+  startup; the report does not subtract it from run timings.
 - First-exec latency on the new binaries read as steady-state cost. Warm-up
   invocations are labelled and the summary reports them separately.
 - A quiet interval assumed because no agent was attached. The conditions

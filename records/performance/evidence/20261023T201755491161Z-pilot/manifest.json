@@ -1,0 +1,1220 @@
+{
+  "ceiling_s": 180,
+  "child_environment": {
+    "HOME": "/Users/raccoon",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+  },
+  "cleanup_reserve_s": 10,
+  "config": "pilot",
+  "control": null,
+  "entries": [
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00001",
+      "pair": null,
+      "round": 1,
+      "sequence": 1,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00002",
+      "pair": null,
+      "round": 1,
+      "sequence": 2,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00003",
+      "pair": null,
+      "round": 1,
+      "sequence": 3,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00004",
+      "pair": null,
+      "round": 1,
+      "sequence": 4,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00005",
+      "pair": null,
+      "round": 1,
+      "sequence": 5,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00006",
+      "pair": null,
+      "round": 2,
+      "sequence": 6,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00007",
+      "pair": null,
+      "round": 2,
+      "sequence": 7,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00008",
+      "pair": null,
+      "round": 2,
+      "sequence": 8,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00009",
+      "pair": null,
+      "round": 2,
+      "sequence": 9,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00010",
+      "pair": null,
+      "round": 2,
+      "sequence": 10,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00011",
+      "pair": null,
+      "round": 3,
+      "sequence": 11,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00012",
+      "pair": null,
+      "round": 3,
+      "sequence": 12,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00013",
+      "pair": null,
+      "round": 3,
+      "sequence": 13,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00014",
+      "pair": null,
+      "round": 3,
+      "sequence": 14,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00015",
+      "pair": null,
+      "round": 3,
+      "sequence": 15,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": true
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00016",
+      "pair": null,
+      "round": 1,
+      "sequence": 16,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00017",
+      "pair": null,
+      "round": 1,
+      "sequence": 17,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00018",
+      "pair": null,
+      "round": 1,
+      "sequence": 18,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00019",
+      "pair": null,
+      "round": 1,
+      "sequence": 19,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00020",
+      "pair": null,
+      "round": 1,
+      "sequence": 20,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "file_read_deny/no-capture",
+      "directory": "invocations/00021",
+      "pair": null,
+      "round": 1,
+      "sequence": 21,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "mach_deny/no-capture",
+      "directory": "invocations/00022",
+      "pair": null,
+      "round": 1,
+      "sequence": 22,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "sysctl_read/no-capture",
+      "directory": "invocations/00023",
+      "pair": null,
+      "round": 1,
+      "sequence": 23,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "exec_spawn/no-capture",
+      "directory": "invocations/00024",
+      "pair": null,
+      "round": 1,
+      "sequence": 24,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "path_diagnostics_strict/no-capture",
+      "directory": "invocations/00025",
+      "pair": null,
+      "round": 1,
+      "sequence": 25,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "capture": false,
+      "cell": "version",
+      "directory": "invocations/00026",
+      "pair": null,
+      "round": 1,
+      "sequence": 26,
+      "specimen": null,
+      "specimen_sha256": null,
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00027",
+      "pair": null,
+      "round": 2,
+      "sequence": 27,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00028",
+      "pair": null,
+      "round": 2,
+      "sequence": 28,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00029",
+      "pair": null,
+      "round": 2,
+      "sequence": 29,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00030",
+      "pair": null,
+      "round": 2,
+      "sequence": 30,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00031",
+      "pair": null,
+      "round": 2,
+      "sequence": 31,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "file_read_deny/no-capture",
+      "directory": "invocations/00032",
+      "pair": null,
+      "round": 2,
+      "sequence": 32,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "mach_deny/no-capture",
+      "directory": "invocations/00033",
+      "pair": null,
+      "round": 2,
+      "sequence": 33,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "sysctl_read/no-capture",
+      "directory": "invocations/00034",
+      "pair": null,
+      "round": 2,
+      "sequence": 34,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "exec_spawn/no-capture",
+      "directory": "invocations/00035",
+      "pair": null,
+      "round": 2,
+      "sequence": 35,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "path_diagnostics_strict/no-capture",
+      "directory": "invocations/00036",
+      "pair": null,
+      "round": 2,
+      "sequence": 36,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "capture": false,
+      "cell": "version",
+      "directory": "invocations/00037",
+      "pair": null,
+      "round": 2,
+      "sequence": 37,
+      "specimen": null,
+      "specimen_sha256": null,
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00038",
+      "pair": null,
+      "round": 3,
+      "sequence": 38,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00039",
+      "pair": null,
+      "round": 3,
+      "sequence": 39,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00040",
+      "pair": null,
+      "round": 3,
+      "sequence": 40,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00041",
+      "pair": null,
+      "round": 3,
+      "sequence": 41,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00042",
+      "pair": null,
+      "round": 3,
+      "sequence": 42,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "file_read_deny/no-capture",
+      "directory": "invocations/00043",
+      "pair": null,
+      "round": 3,
+      "sequence": 43,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "mach_deny/no-capture",
+      "directory": "invocations/00044",
+      "pair": null,
+      "round": 3,
+      "sequence": 44,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "sysctl_read/no-capture",
+      "directory": "invocations/00045",
+      "pair": null,
+      "round": 3,
+      "sequence": 45,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "exec_spawn/no-capture",
+      "directory": "invocations/00046",
+      "pair": null,
+      "round": 3,
+      "sequence": 46,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "path_diagnostics_strict/no-capture",
+      "directory": "invocations/00047",
+      "pair": null,
+      "round": 3,
+      "sequence": 47,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "capture": false,
+      "cell": "version",
+      "directory": "invocations/00048",
+      "pair": null,
+      "round": 3,
+      "sequence": 48,
+      "specimen": null,
+      "specimen_sha256": null,
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00049",
+      "pair": null,
+      "round": 4,
+      "sequence": 49,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00050",
+      "pair": null,
+      "round": 4,
+      "sequence": 50,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00051",
+      "pair": null,
+      "round": 4,
+      "sequence": 51,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00052",
+      "pair": null,
+      "round": 4,
+      "sequence": 52,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00053",
+      "pair": null,
+      "round": 4,
+      "sequence": 53,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "file_read_deny/no-capture",
+      "directory": "invocations/00054",
+      "pair": null,
+      "round": 4,
+      "sequence": 54,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "mach_deny/no-capture",
+      "directory": "invocations/00055",
+      "pair": null,
+      "round": 4,
+      "sequence": 55,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "sysctl_read/no-capture",
+      "directory": "invocations/00056",
+      "pair": null,
+      "round": 4,
+      "sequence": 56,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "exec_spawn/no-capture",
+      "directory": "invocations/00057",
+      "pair": null,
+      "round": 4,
+      "sequence": 57,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "path_diagnostics_strict/no-capture",
+      "directory": "invocations/00058",
+      "pair": null,
+      "round": 4,
+      "sequence": 58,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "capture": false,
+      "cell": "version",
+      "directory": "invocations/00059",
+      "pair": null,
+      "round": 4,
+      "sequence": 59,
+      "specimen": null,
+      "specimen_sha256": null,
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json"
+      ],
+      "capture": true,
+      "cell": "file_read_deny/capture",
+      "directory": "invocations/00060",
+      "pair": null,
+      "round": 5,
+      "sequence": 60,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json"
+      ],
+      "capture": true,
+      "cell": "mach_deny/capture",
+      "directory": "invocations/00061",
+      "pair": null,
+      "round": 5,
+      "sequence": 61,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json"
+      ],
+      "capture": true,
+      "cell": "sysctl_read/capture",
+      "directory": "invocations/00062",
+      "pair": null,
+      "round": 5,
+      "sequence": 62,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json"
+      ],
+      "capture": true,
+      "cell": "exec_spawn/capture",
+      "directory": "invocations/00063",
+      "pair": null,
+      "round": 5,
+      "sequence": 63,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json"
+      ],
+      "capture": true,
+      "cell": "path_diagnostics_strict/capture",
+      "directory": "invocations/00064",
+      "pair": null,
+      "round": 5,
+      "sequence": 64,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/file_read_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "file_read_deny/no-capture",
+      "directory": "invocations/00065",
+      "pair": null,
+      "round": 5,
+      "sequence": 65,
+      "specimen": "file_read_deny",
+      "specimen_sha256": "15ec0d652c3130377a2194af39cc638202a7dbd059400d667b2ed019aec518a7",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/mach_deny.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "mach_deny/no-capture",
+      "directory": "invocations/00066",
+      "pair": null,
+      "round": 5,
+      "sequence": 66,
+      "specimen": "mach_deny",
+      "specimen_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/sysctl_read.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "sysctl_read/no-capture",
+      "directory": "invocations/00067",
+      "pair": null,
+      "round": 5,
+      "sequence": 67,
+      "specimen": "sysctl_read",
+      "specimen_sha256": "e83421dfb58590fee32efadb92a7dbf7c0ed1d71ee10999328f8e5dc8e9ee2dd",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/exec_spawn.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "exec_spawn/no-capture",
+      "directory": "invocations/00068",
+      "pair": null,
+      "round": 5,
+      "sequence": 68,
+      "specimen": "exec_spawn",
+      "specimen_sha256": "d830ae6a6c30eb408d37478518ccd4449f161a18f7fa2dadfb886620084bb919",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "run",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T201755491161Z-pilot/specimens/path_diagnostics_strict.json",
+        "--no-log-capture"
+      ],
+      "capture": false,
+      "cell": "path_diagnostics_strict/no-capture",
+      "directory": "invocations/00069",
+      "pair": null,
+      "round": 5,
+      "sequence": 69,
+      "specimen": "path_diagnostics_strict",
+      "specimen_sha256": "74b154265dcca2741de79e96e5b787b62ae250664597e19a01f0c58247c28830",
+      "warmup": false
+    },
+    {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "capture": false,
+      "cell": "version",
+      "directory": "invocations/00070",
+      "pair": null,
+      "round": 5,
+      "sequence": 70,
+      "specimen": null,
+      "specimen_sha256": null,
+      "warmup": false
+    }
+  ],
+  "execution_context": "interactive",
+  "format_version": 1,
+  "harness_argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+    "--expect-build",
+    "841",
+    "--config",
+    "pilot",
+    "--run-id",
+    "20261023T201755491161Z-pilot",
+    "--note",
+    "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock."
+  ],
+  "identity": {
+    "executable": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "files": {
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness": "ad3d4ea5bd53fbb5584d3f283f60de561272a055e04b2518ad75db4b61ddd32b",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client": "5df19a65af3bfb18ece875d92a1751e9f7bfca7d08817cfa1a62a0c9bae51f42",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer": "797281526e8a61089be1d728d22fe8bf227cae873e35c1963fb7e8b6f9c8d1c9",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check": "4b91b2308f8c5e3b2524e278e40877d31faa2ddc8beda133399f3a1c970877d9",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Augments/exec_baseline.sb": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json": "3d662457da65141e2142acae49fe0e9c63a399899c8b7f62ee4840f7f60e1dbf",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/provenance.json": "169b137f0f4f03b55d326f2148897722a20f29c8be442cf3bbd111c2ca6524e2",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json": "7774c1a34287091914c014dd6c5eb4fed9530fa49680feadbcef23a34fd799fb",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "6efb85418e2b3b6bc43d4d515119ab51dd1ff6d2533c6449ae6ab1edbe3ac45c",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer": "81d420b868092d95f2fd7713e14d504b5f3d6c0cd86902c6210db7418aa8b334",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "033b7ec78f2f7f10e6fd01e641c243489bab3e02b7e82fc657df1ce899e1764e",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "19c37e3021499ddca233fb4f0371de22fb41faa55352ba2a26448b16366812f2"
+    },
+    "version": {
+      "build": {
+        "commit": "8b2e5c93b12e637e8f7d21d321efe81c7d76cf04",
+        "describe": "v0.3.2-50-g8b2e5c9",
+        "number": "841",
+        "version": "0.3.2"
+      },
+      "data": {
+        "contract": {
+          "controller_envelope": 7,
+          "request_schema": 5,
+          "response_schema": 23
+        }
+      },
+      "generated_at_unix_ms": 1792786675540,
+      "kind": "version",
+      "result": {
+        "errno": null,
+        "error": null,
+        "exit_code": 0,
+        "normalized_outcome": null,
+        "ok": true,
+        "rc": null,
+        "stderr": null,
+        "stdout": null
+      },
+      "schema_version": 7
+    }
+  },
+  "nominal_s": 300,
+  "note": "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "rounds": 5,
+  "run_id": "20261023T201755491161Z-pilot",
+  "start_margin_s": 5,
+  "warmup_definition": "3 rounds of the 5 capture cells; version preflight is unmeasured"
+}

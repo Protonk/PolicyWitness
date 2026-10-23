@@ -1,0 +1,124 @@
+{
+  "mode": "live",
+  "checks": [
+    {
+      "label": "pilot",
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME=/Users/raccoon",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+        "--expect-build",
+        "841",
+        "--config",
+        "pilot",
+        "--run-id",
+        "20261023T202250234510Z-pilot",
+        "--note",
+        "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock."
+      ],
+      "exit_status": 0,
+      "expected": 0,
+      "elapsed_s": 28.469739916035905,
+      "run_id": "20261023T202250234510Z-pilot"
+    },
+    {
+      "label": "fresh-summary",
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME=/Users/raccoon",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/summarize.py",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261023T202250234510Z-pilot",
+        "--out",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/evidence/20261023T202250234510Z-live-controls/fresh-summary"
+      ],
+      "exit_status": 0,
+      "stdout": "{\"run_id\": \"20261023T202250234510Z-pilot\", \"counts\": {\"completed\": 70}, \"cleanup\": \"complete\", \"unattested\": 0}\n",
+      "stderr": ""
+    },
+    {
+      "label": "missing-request",
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME=/Users/raccoon",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+        "--expect-build",
+        "841",
+        "--config",
+        "control",
+        "--run-id",
+        "20261023T202250234510Z-missing-request",
+        "--note",
+        "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+        "--control",
+        "missing-request"
+      ],
+      "exit_status": 0,
+      "expected": 0,
+      "elapsed_s": 1.585455583059229,
+      "run_id": "20261023T202250234510Z-missing-request"
+    },
+    {
+      "label": "short-rehearsal",
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME=/Users/raccoon",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+        "--expect-build",
+        "841",
+        "--config",
+        "control",
+        "--run-id",
+        "20261023T202250234510Z-short-rehearsal",
+        "--note",
+        "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock.",
+        "--config",
+        "short",
+        "--rounds",
+        "1",
+        "--execution-context",
+        "interactive"
+      ],
+      "exit_status": 0,
+      "expected": 0,
+      "elapsed_s": 3.822923458996229,
+      "run_id": "20261023T202250234510Z-short-rehearsal"
+    },
+    {
+      "label": "live-interrupt",
+      "argv": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/bin:/bin:/usr/sbin:/sbin",
+        "HOME=/Users/raccoon",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/tests/lib/python.sh",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/harness/measure.py",
+        "--expect-build",
+        "841",
+        "--config",
+        "pilot",
+        "--run-id",
+        "20261023T202250234510Z-live-interrupt",
+        "--note",
+        "Harness control or interactive pilot; agent session active. Operator reported AC power, other apps mostly closed, possible calls and screen lock."
+      ],
+      "exit_status": 1,
+      "expected": 1,
+      "elapsed_s": 0.31026549998205155,
+      "run_id": "20261023T202250234510Z-live-interrupt"
+    }
+  ],
+  "started_at": "20261023T202250234510Z",
+  "result": "passed"
+}
