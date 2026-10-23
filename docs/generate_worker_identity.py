@@ -96,7 +96,7 @@ def main():
         value, results = render_all(ROOT)
         stale = [name for name, before, after in results if before != after]
         if args.check and stale:
-            raise ValueError(f"stale {', '.join(stale)}; run python3 docs/generate_worker_identity.py")
+            raise ValueError(f"stale {', '.join(stale)}; run tests/lib/python.sh docs/generate_worker_identity.py")
         if not args.check:
             for name, before, after in results:
                 if before != after:

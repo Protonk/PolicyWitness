@@ -2982,7 +2982,7 @@
     },
     {
       "id": "meson_ninja_missing",
-      "message": "meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md",
+      "message": "meson and ninja are required for the native build (brew install meson ninja); see docs/DEPENDENCIES.md",
       "kind": "script",
       "steps": [
         "toolchain"
@@ -2995,7 +2995,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md"
+          "symbol": "meson and ninja are required for the native build (brew install meson ninja); see docs/DEPENDENCIES.md"
         }
       ],
       "checks": [
@@ -3015,7 +3015,7 @@
     },
     {
       "id": "ninja_old",
-      "message": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md",
+      "message": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/DEPENDENCIES.md",
       "kind": "script",
       "steps": [
         "toolchain"
@@ -3028,7 +3028,7 @@
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md"
+          "symbol": "ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/DEPENDENCIES.md"
         }
       ],
       "checks": [
@@ -3165,7 +3165,7 @@
     },
     {
       "id": "stale_limits",
-      "message": "stale <copy>; run python3 docs/generate_limits.py",
+      "message": "stale <copy>; run tests/lib/python.sh docs/generate_limits.py",
       "kind": "propagated",
       "steps": [
         "check_limits"
@@ -3202,7 +3202,7 @@
     },
     {
       "id": "stale_contract",
-      "message": "stale <copy>; run python3 docs/generate_contract.py",
+      "message": "stale <copy>; run tests/lib/python.sh docs/generate_contract.py",
       "kind": "propagated",
       "steps": [
         "check_contract"
@@ -3325,7 +3325,7 @@
     },
     {
       "id": "stale_identity",
-      "message": "stale <copy>; run python3 docs/generate_worker_identity.py",
+      "message": "stale <copy>; run tests/lib/python.sh docs/generate_worker_identity.py",
       "kind": "propagated",
       "steps": [
         "check_identity"
@@ -3362,7 +3362,7 @@
     },
     {
       "id": "stale_identity_presign",
-      "message": "stale <copy>; run python3 docs/generate_worker_identity.py",
+      "message": "stale <copy>; run tests/lib/python.sh docs/generate_worker_identity.py",
       "kind": "propagated",
       "steps": [
         "presign"

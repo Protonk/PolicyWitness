@@ -93,7 +93,9 @@ starts, and import nothing outside the standard library and this tree. The
 build checks every
 executable it produces against that one output target, thin arm64 macOS code.
 The Developer ID Application signing identity must already be in your
-login keychain. From the repository root:
+login keychain. [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) lists what
+each of these does for the build, the versions the build enforces, and what
+the tests and a release need besides. From the repository root:
 
 ```sh
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
@@ -149,6 +151,7 @@ preserved release archives.
   - Accepted requests and refusal diagnostics: [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md)
 - Implementation details:
   - Build tour, native compilation and signing: [docs/BUILD.md](docs/BUILD.md)
+  - Build dependencies and their roles: [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
   - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)

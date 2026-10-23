@@ -7,7 +7,7 @@ documents and their audiences. These rules supplement the
 ## Editing limits and shared guide content
 
 Edit [limits.json](limits.json) for limit records, then run
-`python3 docs/generate_limits.py` from the repository root. Edit shared limit
+`tests/lib/python.sh docs/generate_limits.py` from the repository root. Edit shared limit
 explanations in [LIMITS.md](LIMITS.md) and shared questions in
 [QUESTIONS.md](QUESTIONS.md); the generator copies both into
 [PolicyWitness.md](PolicyWitness.md). Write links in shared questions as
@@ -21,7 +21,7 @@ fields, refusal names, counts and markers. Put the implementing mechanism under
 beside its source symbol. Put developer-only remarks about a limit in its
 `behavior` field, which only the limits inventory renders.
 
-Run `python3 docs/generate_limits.py --check` after editing. The
+Run `tests/lib/python.sh docs/generate_limits.py --check` after editing. The
 [generator contracts](../tests/suites/source_drift/README.md#generator-contracts)
 describe manifest validation, copying, staging and prose checks. For changes to
 limits themselves, follow the

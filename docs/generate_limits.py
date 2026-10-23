@@ -441,7 +441,7 @@ def main():
                 detail = "; ".join(problem for name, text in sources
                                    for problem in span_problems(text, "limits", span_values(limits), name))
                 raise ValueError(f"stale {', '.join(stale)}; " + (f"{detail}; " if detail else "")
-                                 + "run python3 docs/generate_limits.py")
+                                 + "run tests/lib/python.sh docs/generate_limits.py")
             if args.stage_guide is not None:
                 if not args.stage_guide.is_file() or args.stage_guide.read_bytes() != guide_bytes:
                     args.stage_guide.write_bytes(guide_bytes)

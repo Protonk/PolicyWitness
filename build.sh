@@ -147,7 +147,7 @@ for knob in BUILD_XPC PW_INSPECTION PW_FRESH_BUILD; do
   esac
 done
 
-# The Ninja minimum docs/BUILD.md states; meson.build states Meson's own.
+# The Ninja minimum docs/DEPENDENCIES.md states; meson.build states Meson's own.
 NINJA_MINIMUM="1.13.2"
 
 usage() {
@@ -497,13 +497,13 @@ done
 # /usr/lib/libsandbox.dylib); the validator does not.
 echo "==> Checking the native toolchain (meson, ninja ${NINJA_MINIMUM} or newer)"
 if ! command -v meson >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
-  echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md" 1>&2
+  echo "ERROR: meson and ninja are required for the native build (brew install meson ninja); see docs/DEPENDENCIES.md" 1>&2
   exit 2
 fi
 NINJA_VERSION="$(ninja --version)"
 if ! "${PW_PYTHON}" -B -S -P -c 'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)' \
     "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then
-  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2
+  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/DEPENDENCIES.md" 1>&2
   exit 2
 fi
 if [[ -f "${MESON_BUILD_DIR}/build.ninja" ]]; then

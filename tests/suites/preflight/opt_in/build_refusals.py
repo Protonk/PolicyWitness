@@ -1499,7 +1499,7 @@ def control_cargo_target_reused(co, variant):
 def control_meson_ninja_missing(co, variant):
     """A PATH with Cargo and the system tools but neither meson nor ninja."""
     build = co.build('meson_ninja_missing', variant, bin_dir=co.bin_without_meson, homebrew=False)
-    check(build, 2, 'meson and ninja are required for the native build (brew install meson ninja); see docs/SIGNING.md',
+    check(build, 2, 'meson and ninja are required for the native build (brew install meson ninja); see docs/DEPENDENCIES.md',
           present=('Building Rust controller + tools', 'Checking the native toolchain'),
           absent=('Configuring native build', 'Compiling native executables', 'Assembling app bundle'))
     assert len(build.calls('cargo', 'build')) == 1, build.receipts
@@ -1511,7 +1511,7 @@ def control_meson_ninja_missing(co, variant):
 def control_ninja_old(co, variant):
     """A ninja that reports a version below the minimum the script states."""
     build = co.build('ninja_old', variant, hooks=[hook('old-ninja', 'ninja', args=['--version'], respond=dict(stdout='1.0.0\n', status=0))])
-    check(build, 2, f'ninja 1.0.0 is older than the {co.ninja_minimum} minimum; see docs/SIGNING.md',
+    check(build, 2, f'ninja 1.0.0 is older than the {co.ninja_minimum} minimum; see docs/DEPENDENCIES.md',
           present=('Checking the native toolchain',),
           absent=('Configuring native build', 'Compiling native executables', 'Assembling app bundle'))
     # The stamp check observes ninja's version when the directory is configured; the toolchain step's probe refuses.
@@ -2766,7 +2766,7 @@ CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BI
                      'done\n')
 NINJA_GUARD = ('if ! "${PW_PYTHON}" -B -S -P -c \'import sys; v, m = (tuple(int(p) for p in a.split(".")) for a in sys.argv[1:3]); sys.exit(0 if v >= m else 1)\' \\\n'
                '    "${NINJA_VERSION}" "${NINJA_MINIMUM}"; then\n'
-               '  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/SIGNING.md" 1>&2\n'
+               '  echo "ERROR: ninja ${NINJA_VERSION} is older than the ${NINJA_MINIMUM} minimum; see docs/DEPENDENCIES.md" 1>&2\n'
                '  exit 2\n'
                'fi\n')
 NATIVE_OUTPUT_LOOP = ('for native_bin in "${NATIVE_OUTPUTS[@]}"; do\n'

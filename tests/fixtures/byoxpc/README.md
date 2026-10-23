@@ -42,7 +42,7 @@ registry record's `bundle_path`, shown by `runner reconcile`, locates staging
 when original output is gone. Cleanup can be resumed directly with:
 
 ```sh
-python3 tests/fixtures/byoxpc/session.py cleanup /path/to/policy-witness /private/tmp/pw-byoxpc-<id>/session.json
+tests/lib/python.sh tests/fixtures/byoxpc/session.py cleanup /path/to/policy-witness /private/tmp/pw-byoxpc-<id>/session.json
 ```
 
 Cleanup searches both active and pending-cleanup registry collections and uses

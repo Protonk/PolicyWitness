@@ -6,7 +6,7 @@ The build also stages `dist/PolicyWitness.md` (or the corresponding path under
 `DIST_DIR`) as the standalone user guide. It checks the generated limits before
 compilation and again before copying the guide from `docs/PolicyWitness.md`.
 Stale documentation stops the build; regenerate it with
-`python3 docs/generate_limits.py` and review the changes before building.
+`tests/lib/python.sh docs/generate_limits.py` and review the changes before building.
 Distribute that staged guide with the release ZIP from the same build.
 The tracked [dist README](../dist/README.md) describes the output directory;
 builds also copy its README and AGENTS.md into a custom `DIST_DIR`.

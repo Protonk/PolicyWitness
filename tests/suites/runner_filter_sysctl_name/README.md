@@ -48,7 +48,7 @@ These controls need only Python 3 and run in the default battery through this
 suite. They can also be run directly:
 
 ```sh
-/usr/bin/python3 tests/suites/runner_filter_sysctl_name/checker_controls.py tests/out/filter-controls
+tests/lib/python.sh tests/suites/runner_filter_sysctl_name/checker_controls.py tests/out/filter-controls
 ```
 
 ## Fixtures and artifacts

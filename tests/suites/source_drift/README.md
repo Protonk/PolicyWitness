@@ -139,7 +139,7 @@ coverage. Admission rows carry `refusal_field`, the exact
 `admission_failure.field` text, and each `control` begins with Fixed, Flag,
 Derived or Not enforced.
 
-`python3 docs/generate_limits.py --check` validates the manifest, source and
+`tests/lib/python.sh docs/generate_limits.py --check` validates the manifest, source and
 check references, generated tables, copied guide sections and the guide's
 internal links. The shared sections contain every limit and shared question
 without requiring companion files or web pages. `--stage-guide PATH` performs

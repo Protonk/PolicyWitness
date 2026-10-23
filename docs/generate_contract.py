@@ -139,7 +139,7 @@ def main():
         stale = [rel for rel, before, after in results if before != after]
         if args.check:
             if stale:
-                raise ValueError(f"stale {', '.join(stale)}; run python3 docs/generate_contract.py")
+                raise ValueError(f"stale {', '.join(stale)}; run tests/lib/python.sh docs/generate_contract.py")
         else:
             for rel, before, after in results:
                 if before != after:

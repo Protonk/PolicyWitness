@@ -45,8 +45,9 @@ Run from the repository root:
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 ```
 
-Use [the build guide](docs/BUILD.md) for prerequisites, settings, cache
-compatibility and diagnostics; `make help` lists the operator commands.
+Use [the dependency list](docs/DEPENDENCIES.md) for prerequisites and
+[the build guide](docs/BUILD.md) for settings, cache compatibility and
+diagnostics; `make help` lists the operator commands.
 `PW_FRESH_BUILD=1` replaces the build caches, and a changed compiler or SDK
 needs it once. Adding or moving a native source requires updating its Meson
 target. Build and test checks diagnose source-list, bundle inventory, signing

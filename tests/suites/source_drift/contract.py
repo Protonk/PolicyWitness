@@ -294,7 +294,7 @@ class ContractVersionTests(unittest.TestCase):
         result, destination = self.build(root, {'IDENTITY': ''})
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('Checking host/worker identity', result.stdout)
-        self.assertIn('stale tests/lib/contract.py; run python3 docs/generate_worker_identity.py', result.stderr)
+        self.assertIn('stale tests/lib/contract.py; run tests/lib/python.sh docs/generate_worker_identity.py', result.stderr)
         self.assertNotIn('Build stamp', result.stdout)
         self.assertNotIn('Building Rust', result.stdout)
         self.assertEqual({name: (root / name).read_bytes() for name in before}, before)
