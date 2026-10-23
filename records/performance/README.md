@@ -1,7 +1,8 @@
 # Runtime performance records
 
 Records of the runtime investigation of PolicyWitness as a running program,
-and the evidence behind them. The first built-in-runner cycle is complete.
+and the evidence behind them. The first built-in-runner cycle and two
+log-observer pilots are complete.
 Any later work's associated `*-PLAN.md` carries links between these records
 and proposed work, as `records/AGENTS.md` requires; indexes name records
 without linking to them.
@@ -16,6 +17,14 @@ Layout:
   verification credits and the operator handoff.
 - `RUNTIME-INVESTIGATION-REPORT.md`: the completed first-cycle findings,
   operator-run measurements, pilot comparison and unresolved boundaries.
+- `PolicyWitness-Log-Observer-Investigation.md`: the log-observer investigation's
+  questions about supplementary-collection cost and delayed retrieval.
+- `LOG-OBSERVER-INVESTIGATION-PLAN.md`: the current collection-path audit and
+  executed log-observer pilot procedure, with the associated report link.
+- `LOG-OBSERVER-INVESTIGATION-REPORT.md`: two completed log-observer pilots,
+  historical-query costs and fixed-event retrieval comparisons.
+- `log-observer/`: the pinned pilot configuration, bounded query procedure,
+  content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
   their stand-in controls under `harness/controls/` and pilot-sized counts in
   `harness/configurations.json`.

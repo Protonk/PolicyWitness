@@ -1,0 +1,693 @@
+{
+  "config": {
+    "ceiling_s": 180,
+    "child_environment": {
+      "HOME": "/Users/raccoon",
+      "LANG": "C",
+      "LC_ALL": "C",
+      "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+    },
+    "cleanup_reserve_s": 10,
+    "dependencies": {
+      "controller/src/bin/sandbox-log-observer.rs": "b537b6e9a746fefb046cca6a0003cc5b2ff16842effa248de9a650edb30495e0",
+      "controller/src/log_capture.rs": "633b1cfbc734994d10ae4f0e0351cd9e2fd0ebfefc9c55b90bfeeeba72a36217",
+      "controller/src/log_show.rs": "e1982ab1eac0de5b1a09b027af32abf1aec308bfb88483c42ce100c075afd2c0",
+      "controller/src/run_flow.rs": "011d3f20b7e3e8337728315faa04c4f84779f4021365a60265ba1d34937d1b2a",
+      "controller/src/runner_client.rs": "9632183c7dcdfc71a96e5dc46ce8528f724b3ba8b4d11f2926bb7bf3c960c80b",
+      "controller/src/sandbox_log.rs": "2c0969893f8dc308c2212fdb9c24a3247b1881c918c31f2308a9c38f4685fb28",
+      "records/performance/harness/measure.py": "f81d61cc0c57bf961871cba2e558914ee7701418a8057eed3676d86f15af75b6",
+      "records/performance/log-observer/pilot.py": "742fe834c4a4647193a45701a2b868b20b67468d639775326ae0eccde339412d",
+      "records/performance/log-observer/summarize.py": "22e3ae3f6fa2fd72471517d99fb942dde899351f1eab81000e41f55ffcc9cb9f",
+      "tests/fixtures/pw_runner/specimen_mach_deny.json": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+      "tests/lib/python.sh": "26e9cd52f1f90bc6cfc1422b41282927417fd42cf9422a93909b28ebd5ebb92d",
+      "tests/lib/python_start.sh": "af3119ffadc74ccfd951522088386d0275c2e19bc98249c9e3861240777399c9"
+    },
+    "format_version": 1,
+    "historical_anchor": {
+      "capture_status": "captured",
+      "file": "invocations/00002/stdout.json",
+      "original_deny_events": 1,
+      "original_observed_lines": 17,
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "raw_directory": "records/performance/runs/20261023T212050Z-short-b841",
+      "sha256": "cc931b6fc427b4fbe1a2220f6322838b9ffaa6f3b7bbc0e96a3fabf6b244f542",
+      "window": {
+        "end": "2026-10-23 21:20:53+0000",
+        "ended_at_unix_ms": 1792790450967,
+        "kind": "runner_client_span",
+        "pad_seconds": 2,
+        "start": "2026-10-23 21:20:48+0000",
+        "started_at_unix_ms": 1792790450930
+      }
+    },
+    "historical_selection": {
+      "deny_event_count_frequencies_by_specimen": {
+        "exec_spawn": {
+          "0": 132
+        },
+        "file_read_deny": {
+          "0": 16,
+          "1": 116
+        },
+        "mach_deny": {
+          "0": 5,
+          "1": 127
+        },
+        "path_diagnostics_strict": {
+          "0": 20,
+          "1": 112
+        },
+        "sysctl_read": {
+          "0": 132
+        }
+      },
+      "reason": "existing fixture with 127/132 prior captures retaining a parsed denial",
+      "specimen": "mach_deny",
+      "verified_capture_envelopes": 660
+    },
+    "identity": {
+      "executable": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+      "files": {
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness": "ad3d4ea5bd53fbb5584d3f283f60de561272a055e04b2518ad75db4b61ddd32b",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client": "5df19a65af3bfb18ece875d92a1751e9f7bfca7d08817cfa1a62a0c9bae51f42",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer": "797281526e8a61089be1d728d22fe8bf227cae873e35c1963fb7e8b6f9c8d1c9",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check": "4b91b2308f8c5e3b2524e278e40877d31faa2ddc8beda133399f3a1c970877d9",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Augments/exec_baseline.sb": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json": "3d662457da65141e2142acae49fe0e9c63a399899c8b7f62ee4840f7f60e1dbf",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/provenance.json": "169b137f0f4f03b55d326f2148897722a20f29c8be442cf3bbd111c2ca6524e2",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json": "7774c1a34287091914c014dd6c5eb4fed9530fa49680feadbcef23a34fd799fb",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "6efb85418e2b3b6bc43d4d515119ab51dd1ff6d2533c6449ae6ab1edbe3ac45c",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer": "81d420b868092d95f2fd7713e14d504b5f3d6c0cd86902c6210db7418aa8b334",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "033b7ec78f2f7f10e6fd01e641c243489bab3e02b7e82fc657df1ce899e1764e",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "19c37e3021499ddca233fb4f0371de22fb41faa55352ba2a26448b16366812f2"
+      },
+      "version": {
+        "build": {
+          "commit": "8b2e5c93b12e637e8f7d21d321efe81c7d76cf04",
+          "describe": "v0.3.2-50-g8b2e5c9",
+          "number": "841",
+          "version": "0.3.2"
+        },
+        "data": {
+          "contract": {
+            "controller_envelope": 7,
+            "request_schema": 5,
+            "response_schema": 23
+          }
+        },
+        "generated_at_unix_ms": 1792796526930,
+        "kind": "version",
+        "result": {
+          "errno": null,
+          "error": null,
+          "exit_code": 0,
+          "normalized_outcome": null,
+          "ok": true,
+          "rc": null,
+          "stderr": null,
+          "stdout": null
+        },
+        "schema_version": 7
+      }
+    },
+    "prepared_at": "2026-10-23T23:02:06.991482+00:00",
+    "sources_match_build": {
+      "argv": [
+        "/usr/bin/git",
+        "diff",
+        "8b2e5c93b12e637e8f7d21d321efe81c7d76cf04",
+        "--",
+        "controller",
+        "runner"
+      ],
+      "elapsed_s": 0.01138970791362226,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\n",
+      "stdout": ""
+    },
+    "system_log_sha256": "f2acce6f0b52aa187f5976544e34b2fa002913d1edebb1cc111ff47ccc11680d",
+    "version_probe": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+        "--version"
+      ],
+      "elapsed_s": 0.005425249924883246,
+      "exit_code": 0,
+      "state": "ok",
+      "stderr": "",
+      "stdout": "{\n  \"build\": {\n    \"commit\": \"8b2e5c93b12e637e8f7d21d321efe81c7d76cf04\",\n    \"describe\": \"v0.3.2-50-g8b2e5c9\",\n    \"number\": \"841\",\n    \"version\": \"0.3.2\"\n  },\n  \"data\": {\n    \"contract\": {\n      \"controller_envelope\": 7,\n      \"request_schema\": 5,\n      \"response_schema\": 23\n    }\n  },\n  \"generated_at_unix_ms\": 1792796526930,\n  \"kind\": \"version\",\n  \"result\": {\n    \"errno\": null,\n    \"error\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"ok\": true,\n    \"rc\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  },\n  \"schema_version\": 7\n}\n"
+    }
+  },
+  "entries": [
+    {
+      "block": 1,
+      "condition": "original",
+      "directory": "invocations/001",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 1
+    },
+    {
+      "block": 1,
+      "condition": "original",
+      "directory": "invocations/002",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 2
+    },
+    {
+      "block": 1,
+      "condition": "wide_60s",
+      "directory": "invocations/003",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:53+0000"
+      },
+      "sequence": 3
+    },
+    {
+      "block": 1,
+      "condition": "wide_60s",
+      "directory": "invocations/004",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:53+0000"
+      },
+      "sequence": 4
+    },
+    {
+      "block": 1,
+      "condition": "earlier_same_width",
+      "directory": "invocations/005",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:19:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:48+0000"
+      },
+      "sequence": 5
+    },
+    {
+      "block": 1,
+      "condition": "earlier_same_width",
+      "directory": "invocations/006",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:19:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:48+0000"
+      },
+      "sequence": 6
+    },
+    {
+      "block": 1,
+      "condition": "literal_prefilter",
+      "directory": "invocations/007",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage CONTAINS[c] \"Sandbox:\" AND (eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\")",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 7
+    },
+    {
+      "block": 1,
+      "condition": "literal_prefilter",
+      "directory": "invocations/008",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage CONTAINS[c] \"Sandbox:\" AND (eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\")",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 8
+    },
+    {
+      "block": 1,
+      "condition": "no_match",
+      "directory": "invocations/009",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "FALSEPREDICATE",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 9
+    },
+    {
+      "block": 1,
+      "condition": "no_match",
+      "directory": "invocations/010",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "FALSEPREDICATE",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 10
+    },
+    {
+      "block": 1,
+      "condition": "all_pw_workers",
+      "directory": "invocations/011",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\([0-9]+\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 11
+    },
+    {
+      "block": 1,
+      "condition": "all_pw_workers",
+      "directory": "invocations/012",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\([0-9]+\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 12
+    },
+    {
+      "block": 2,
+      "condition": "all_pw_workers",
+      "directory": "invocations/013",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\([0-9]+\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 13
+    },
+    {
+      "block": 2,
+      "condition": "all_pw_workers",
+      "directory": "invocations/014",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\([0-9]+\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 14
+    },
+    {
+      "block": 2,
+      "condition": "no_match",
+      "directory": "invocations/015",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "FALSEPREDICATE",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 15
+    },
+    {
+      "block": 2,
+      "condition": "no_match",
+      "directory": "invocations/016",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "FALSEPREDICATE",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 16
+    },
+    {
+      "block": 2,
+      "condition": "literal_prefilter",
+      "directory": "invocations/017",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage CONTAINS[c] \"Sandbox:\" AND (eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\")",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 17
+    },
+    {
+      "block": 2,
+      "condition": "literal_prefilter",
+      "directory": "invocations/018",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage CONTAINS[c] \"Sandbox:\" AND (eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\")",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 18
+    },
+    {
+      "block": 2,
+      "condition": "earlier_same_width",
+      "directory": "invocations/019",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:19:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:48+0000"
+      },
+      "sequence": 19
+    },
+    {
+      "block": 2,
+      "condition": "earlier_same_width",
+      "directory": "invocations/020",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:19:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:48+0000"
+      },
+      "sequence": 20
+    },
+    {
+      "block": 2,
+      "condition": "wide_60s",
+      "directory": "invocations/021",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:53+0000"
+      },
+      "sequence": 21
+    },
+    {
+      "block": 2,
+      "condition": "wide_60s",
+      "directory": "invocations/022",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:19:53+0000"
+      },
+      "sequence": 22
+    },
+    {
+      "block": 2,
+      "condition": "original",
+      "directory": "invocations/023",
+      "kind": "cost",
+      "method": "direct",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 23
+    },
+    {
+      "block": 2,
+      "condition": "original",
+      "directory": "invocations/024",
+      "kind": "cost",
+      "method": "observer",
+      "query": {
+        "end": "2026-10-23 21:20:53+0000",
+        "pid": 67952,
+        "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(67952\\\\)([ \\\\t]+.*)?\"",
+        "start": "2026-10-23 21:20:48+0000"
+      },
+      "sequence": 24
+    },
+    {
+      "block": 1,
+      "cohort": "repeated",
+      "directory": "invocations/025",
+      "event": "b1-repeated",
+      "kind": "specimen",
+      "sequence": 25
+    },
+    {
+      "block": 1,
+      "cohort": "repeated",
+      "directory": "invocations/026",
+      "event": "b1-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 0,
+      "ordinal": 1,
+      "sequence": 26
+    },
+    {
+      "block": 1,
+      "cohort": "repeated",
+      "directory": "invocations/027",
+      "event": "b1-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 2,
+      "ordinal": 2,
+      "sequence": 27
+    },
+    {
+      "block": 1,
+      "cohort": "repeated",
+      "directory": "invocations/028",
+      "event": "b1-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 10,
+      "ordinal": 3,
+      "sequence": 28
+    },
+    {
+      "block": 1,
+      "cohort": "first_0",
+      "directory": "invocations/029",
+      "event": "b1-first_0",
+      "kind": "specimen",
+      "sequence": 29
+    },
+    {
+      "block": 1,
+      "cohort": "first_0",
+      "directory": "invocations/030",
+      "event": "b1-first_0",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 0,
+      "ordinal": 1,
+      "sequence": 30
+    },
+    {
+      "block": 1,
+      "cohort": "first_2",
+      "directory": "invocations/031",
+      "event": "b1-first_2",
+      "kind": "specimen",
+      "sequence": 31
+    },
+    {
+      "block": 1,
+      "cohort": "first_2",
+      "directory": "invocations/032",
+      "event": "b1-first_2",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 2,
+      "ordinal": 1,
+      "sequence": 32
+    },
+    {
+      "block": 1,
+      "cohort": "first_10",
+      "directory": "invocations/033",
+      "event": "b1-first_10",
+      "kind": "specimen",
+      "sequence": 33
+    },
+    {
+      "block": 1,
+      "cohort": "first_10",
+      "directory": "invocations/034",
+      "event": "b1-first_10",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 10,
+      "ordinal": 1,
+      "sequence": 34
+    },
+    {
+      "block": 2,
+      "cohort": "first_10",
+      "directory": "invocations/035",
+      "event": "b2-first_10",
+      "kind": "specimen",
+      "sequence": 35
+    },
+    {
+      "block": 2,
+      "cohort": "first_10",
+      "directory": "invocations/036",
+      "event": "b2-first_10",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 10,
+      "ordinal": 1,
+      "sequence": 36
+    },
+    {
+      "block": 2,
+      "cohort": "first_2",
+      "directory": "invocations/037",
+      "event": "b2-first_2",
+      "kind": "specimen",
+      "sequence": 37
+    },
+    {
+      "block": 2,
+      "cohort": "first_2",
+      "directory": "invocations/038",
+      "event": "b2-first_2",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 2,
+      "ordinal": 1,
+      "sequence": 38
+    },
+    {
+      "block": 2,
+      "cohort": "first_0",
+      "directory": "invocations/039",
+      "event": "b2-first_0",
+      "kind": "specimen",
+      "sequence": 39
+    },
+    {
+      "block": 2,
+      "cohort": "first_0",
+      "directory": "invocations/040",
+      "event": "b2-first_0",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 0,
+      "ordinal": 1,
+      "sequence": 40
+    },
+    {
+      "block": 2,
+      "cohort": "repeated",
+      "directory": "invocations/041",
+      "event": "b2-repeated",
+      "kind": "specimen",
+      "sequence": 41
+    },
+    {
+      "block": 2,
+      "cohort": "repeated",
+      "directory": "invocations/042",
+      "event": "b2-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 0,
+      "ordinal": 1,
+      "sequence": 42
+    },
+    {
+      "block": 2,
+      "cohort": "repeated",
+      "directory": "invocations/043",
+      "event": "b2-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 2,
+      "ordinal": 2,
+      "sequence": 43
+    },
+    {
+      "block": 2,
+      "cohort": "repeated",
+      "directory": "invocations/044",
+      "event": "b2-repeated",
+      "kind": "availability",
+      "method": "direct",
+      "nominal_delay_s": 10,
+      "ordinal": 3,
+      "sequence": 44
+    }
+  ],
+  "execution_context": "interactive",
+  "format_version": 1,
+  "harness_argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "records/performance/log-observer/pilot.py",
+    "run",
+    "--note",
+    "Interactive pilot; agent active. Operator authorized this three-minute pilot and one further pilot if justified, and reports the machine will be quiet. Prior operator account: AC connected. Current power and process conditions are measured at endpoints; intervening system activity is unobserved."
+  ],
+  "note": "Interactive pilot; agent active. Operator authorized this three-minute pilot and one further pilot if justified, and reports the machine will be quiet. Prior operator account: AC connected. Current power and process conditions are measured at endpoints; intervening system activity is unobserved.",
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "run_id": "20261023T233408639400Z-log-pilot-b841"
+}

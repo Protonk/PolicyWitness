@@ -1,0 +1,43 @@
+{
+  "cleanup": {
+    "checksum_order": "run.json is finalized and hashed last",
+    "checksums_hashed": 192,
+    "checksums_total": 192,
+    "elapsed_s": 0.04827745910733938,
+    "reserve_s": 10,
+    "started_at": "2026-10-23T22:59:14.901858+00:00",
+    "state": "complete",
+    "steps": {
+      "assertion": "complete",
+      "checksums": "complete",
+      "conditions": "complete"
+    }
+  },
+  "counts": {
+    "completed": 44
+  },
+  "duration_s": 0.6034418749623001,
+  "error": null,
+  "exit_status": 0,
+  "finished_at": "2026-10-23T22:59:14.950126+00:00",
+  "hard_finish_monotonic_raw": 1458889.821999083,
+  "idle_sleep_assertion": {
+    "argv": [
+      "/usr/bin/caffeinate",
+      "-i",
+      "-w",
+      "79507"
+    ],
+    "exit_status": -15,
+    "launched": true,
+    "pid": 79538,
+    "running_at_end": true
+  },
+  "interrupt": null,
+  "loop_ended_at": "2026-10-23T22:59:14.901853+00:00",
+  "planned": 44,
+  "run_id": "20261023T225913935740Z-log-driver-standin",
+  "start_monotonic_raw": 1458709.821999083,
+  "started_at": "2026-10-23T22:59:14.348488+00:00",
+  "stop_reason": "manifest_exhausted"
+}

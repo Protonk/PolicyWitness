@@ -1,0 +1,56 @@
+{
+  "state": "interrupted",
+  "started_at": "2026-10-23T23:02:55.845059+00:00",
+  "wall_start_ns": 1792796575845063000,
+  "clocks_start": {
+    "monotonic_raw_ns": 1458931320098541,
+    "uptime_raw_ns": 765036693364541
+  },
+  "signals": [
+    {
+      "signal": 9,
+      "result": "sent"
+    }
+  ],
+  "exit_code": -9,
+  "streams": {
+    "stdout": {
+      "read": 8,
+      "retained": 8,
+      "eof": false,
+      "limit": 4096
+    },
+    "stderr": {
+      "read": 0,
+      "retained": 0,
+      "eof": false,
+      "limit": 4096
+    }
+  },
+  "cleanup": "group_absent",
+  "timing_endpoint": "wall_ms includes pipe handling, wait4 and group-absence probing; process_wall_ms ends at wait4",
+  "popen_enter_monotonic_raw": 1458931.320244375,
+  "popen_enter_wall_ns": 1792796575845210000,
+  "pid": 79972,
+  "spawn_return_monotonic_raw": 1458931.321702041,
+  "wait4_monotonic_raw": 1458931.439608625,
+  "cpu_user_s": 0.00951,
+  "cpu_system_s": 0.004108,
+  "group_probe": {
+    "signal": 0,
+    "result": "failed",
+    "errno": 3
+  },
+  "ended_at": "2026-10-23T23:02:55.964595+00:00",
+  "wall_end_ns": 1792796575964600000,
+  "clocks_end": {
+    "monotonic_raw_ns": 1458931439640250,
+    "uptime_raw_ns": 765036812906375
+  },
+  "cutoff": "interrupted",
+  "wall_ms": 119.541709,
+  "process_wall_ms": 119.36424998566508,
+  "sleep_gap_ns": -125,
+  "sleep_detected": false,
+  "clock_fault": false
+}

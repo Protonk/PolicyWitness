@@ -1,0 +1,12 @@
+{
+  "observation_source": "exec_command/write_stdin tool completion in this conversation",
+  "terminal_exit_status": 0,
+  "terminal_output": {
+    "raw_output": "records/performance/runs/20261023T233408639400Z-log-pilot-b841",
+    "exit_status": 0,
+    "stop_reason": "manifest_exhausted"
+  },
+  "execution_context": "interactive, outside automation sandbox; agent active",
+  "operator_account": "The operator authorized the pilot and one more if needed, and said the machine would be quiet.",
+  "followup_reason": null
+}

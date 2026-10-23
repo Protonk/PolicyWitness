@@ -1,0 +1,104 @@
+{
+  "started_at": "2026-10-23T22:59:13.936338+00:00",
+  "raw_directory": "records/performance/runs/20261023T225913935740Z-log-preparation-controls",
+  "live_queries": 0,
+  "live_specimen_executions": 0,
+  "checks": [
+    {
+      "name": "schedule",
+      "result": "passed",
+      "detail": {
+        "cost_queries": 24,
+        "fresh_events": 8,
+        "availability_queries": 12,
+        "second_block_reverses_order": true
+      }
+    },
+    {
+      "name": "query_and_identity",
+      "result": "passed",
+      "detail": "production historical predicate/window agree; no fallback PID; backwards span refused"
+    },
+    {
+      "name": "ordinary_capture",
+      "result": "passed",
+      "detail": "exact stdout/stderr, EOF, wait4 and group absence"
+    },
+    {
+      "name": "nonzero_preserved",
+      "result": "passed",
+      "detail": null
+    },
+    {
+      "name": "deadline",
+      "result": "passed",
+      "detail": "partial stdout survives; owned group killed and absent within cleanup allowance"
+    },
+    {
+      "name": "output_limit",
+      "result": "passed",
+      "detail": "64 bytes retained, 65th byte witnesses overflow"
+    },
+    {
+      "name": "inherited_writer",
+      "result": "passed",
+      "detail": "leader exit retained until deadline/group signal; child writer removed"
+    },
+    {
+      "name": "interrupt",
+      "result": "passed",
+      "detail": "actual SIGINT recorded; partial output retained and owned group absent"
+    },
+    {
+      "name": "launch_failure",
+      "result": "passed",
+      "detail": null
+    },
+    {
+      "name": "record_comparison",
+      "result": "passed",
+      "detail": "empty, additions/removals, duplicates, order and byte differences remain distinguishable"
+    },
+    {
+      "name": "reader_integrity_and_outcomes",
+      "result": "passed",
+      "detail": "failed observer/exit0 retained, incomplete cleanup and uncovered files reported, mismatch refused"
+    },
+    {
+      "name": "full_driver_standin",
+      "result": "passed",
+      "detail": {
+        "raw_directory": "records/performance/runs/20261023T225913935740Z-log-driver-standin",
+        "observations": 44,
+        "availability_queries": 12,
+        "comparison_pairs": 4,
+        "integrity": {
+          "verified_files": 192,
+          "unattested": []
+        },
+        "cleanup": {
+          "checksum_order": "run.json is finalized and hashed last",
+          "checksums_hashed": 192,
+          "checksums_total": 192,
+          "elapsed_s": 0.04827745910733938,
+          "reserve_s": 10,
+          "started_at": "2026-10-23T22:59:14.901858+00:00",
+          "state": "complete",
+          "steps": {
+            "assertion": "complete",
+            "checksums": "complete",
+            "conditions": "complete"
+          }
+        }
+      }
+    }
+  ],
+  "sources": {
+    "records/performance/log-observer/check.py": "cb1ebf7b5236242ffbefaec81f71ece1196513a9282f7d5e45e990f7deeca54f",
+    "records/performance/log-observer/pilot.py": "01dc0999377435a8b82ec1a48a5c3bc1fb953c37c46430dcb0ad0752df8694ec",
+    "records/performance/log-observer/summarize.py": "9848dc62e87691f74df11dc4369b6bf8df11ebd83f428f8185d5d2869841a9be",
+    "records/performance/harness/measure.py": "f81d61cc0c57bf961871cba2e558914ee7701418a8057eed3676d86f15af75b6"
+  },
+  "result": "passed",
+  "finished_at": "2026-10-23T22:59:14.967681+00:00"
+}

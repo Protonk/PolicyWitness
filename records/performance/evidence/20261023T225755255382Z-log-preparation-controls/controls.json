@@ -1,0 +1,76 @@
+{
+  "started_at": "2026-10-23T22:57:55.255719+00:00",
+  "raw_directory": "records/performance/runs/20261023T225755255382Z-log-preparation-controls",
+  "live_queries": 0,
+  "live_specimen_executions": 0,
+  "checks": [
+    {
+      "name": "schedule",
+      "result": "passed",
+      "detail": {
+        "cost_queries": 24,
+        "fresh_events": 8,
+        "availability_queries": 12,
+        "second_block_reverses_order": true
+      }
+    },
+    {
+      "name": "query_and_identity",
+      "result": "passed",
+      "detail": "production historical predicate/window agree; no fallback PID; backwards span refused"
+    },
+    {
+      "name": "ordinary_capture",
+      "result": "passed",
+      "detail": "exact stdout/stderr, EOF, wait4 and group absence"
+    },
+    {
+      "name": "nonzero_preserved",
+      "result": "passed",
+      "detail": null
+    },
+    {
+      "name": "deadline",
+      "result": "passed",
+      "detail": "partial stdout survives; owned group killed and absent within cleanup allowance"
+    },
+    {
+      "name": "output_limit",
+      "result": "passed",
+      "detail": "64 bytes retained, 65th byte witnesses overflow"
+    },
+    {
+      "name": "inherited_writer",
+      "result": "passed",
+      "detail": "leader exit retained until deadline/group signal; child writer removed"
+    },
+    {
+      "name": "interrupt",
+      "result": "passed",
+      "detail": "actual SIGINT recorded; partial output retained and owned group absent"
+    },
+    {
+      "name": "launch_failure",
+      "result": "passed",
+      "detail": null
+    },
+    {
+      "name": "record_comparison",
+      "result": "passed",
+      "detail": "empty, additions/removals, duplicates, order and byte differences remain distinguishable"
+    },
+    {
+      "name": "reader_integrity_and_outcomes",
+      "result": "passed",
+      "detail": "failed observer/exit0 retained, incomplete cleanup and uncovered files reported, mismatch refused"
+    }
+  ],
+  "sources": {
+    "records/performance/log-observer/check.py": "9937e8ec9f51ed5830673e63d0e5b7b97fa21a7b6c11c056dc0ba2b85bc8be17",
+    "records/performance/log-observer/pilot.py": "64770a7ae4fe6d31e54e79e34d5cccbce501089ca5bf32642f1f463a7f24567d",
+    "records/performance/log-observer/summarize.py": "0dec4f409b5db060aa38b5c97d7236bd47cc2aaf6e7d150ca8d568476ff7919e",
+    "records/performance/harness/measure.py": "f81d61cc0c57bf961871cba2e558914ee7701418a8057eed3676d86f15af75b6"
+  },
+  "result": "passed",
+  "finished_at": "2026-10-23T22:57:55.664364+00:00"
+}
