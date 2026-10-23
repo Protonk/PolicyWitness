@@ -29,3 +29,7 @@ docs/__pycache__/
 
 # Stable checkout advisory lock; never remove while held.
 /tests/.checkout.lock
+
+# Raw runtime measurement output; the committed per-run evidence is
+# records/performance/evidence/ (records/performance/README.md).
+/records/performance/runs/

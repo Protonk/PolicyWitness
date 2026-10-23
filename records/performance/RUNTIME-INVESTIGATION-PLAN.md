@@ -1,0 +1,365 @@
+# Runtime investigation, first cycle: the built-in runner under existing telemetry
+
+Plan for the investigation that
+[PolicyWitness-Runtime-Exploration-Guide.md](PolicyWitness-Runtime-Exploration-Guide.md)
+calls for, scoped to one cycle. The questions come from
+[PolicyWitness-Boundaries-Findings.md](PolicyWitness-Boundaries-Findings.md),
+whose source text is the read-only report of 2026-10-23 at
+`.tmp/READ-ONLY-PERF-REPORT.md`, a scratch file available only in the local
+checkout. Prepared 2026-10-23 at `35a4987`.
+
+## Problem
+
+PolicyWitness has never been timed as a running program. The only numbers
+about its runtime are the medians the read-only report mined from test-battery
+envelopes: a client span near 49 ms, a unified-log scan near 800 ms, host waits
+of 10 to 15 ms that end `received` on the first poll. Those numbers describe
+battery runs of earlier builds, under the harness's own conditions, read out of
+fields whose start and end events the report did not establish. The synthesis
+shows that several events an envelope describes do not coincide: the host
+replying, the controller receiving, log collection ending, the worker being
+reaped, the envelope being printed. A credible account of runtime behavior has
+to say which of those events each number sits between, who observed it and on
+which clock, before any duration is read as the cost of the activity inside it.
+
+## Intended result
+
+A reproducible account of one ordinary invocation of the built-in runner,
+built from the telemetry the shipped envelope already carries plus one
+harness-observed wall clock around the controller process, under conditions
+the operator can hold constant and the record can describe. It consists of:
+
+- A measurement brief naming each measure's start event, end event, observer,
+  clock domain and what the duration does not establish.
+- A standalone procedure the operator launches from a normal terminal, which
+  runs a fixed manifest of invocations against a named executable, preserves
+  every raw output and status, and stops on its own.
+- Raw evidence for every invocation, kept locally, and committed manifests,
+  conditions, terminal records, checksums and summaries per run.
+- A runtime report separating observed facts, interpretations and unresolved
+  questions, with sample sizes and variability for each claim.
+
+PolicyWitness is not modified. No speedup is proposed. The report may conclude
+that a cost is real and necessary, or that the retained fields cannot locate
+an event the question needs.
+
+## Decisions already taken
+
+These were settled with the operator before this plan was written and are not
+reopened by it.
+
+- **Executable.** The app under `dist/` was rebuilt from clean `8b2e5c9` on
+  2026-10-23 at 19:31:34Z: version 0.3.2, build 841, describe
+  `v0.3.2-50-g8b2e5c9`, `dirty: false`, signed with the Developer ID. The
+  earlier build 838 carried `586ddd4-dirty` and was replaced so that no
+  measurement inherits an inferred source identity. The build is the default
+  inspection flavour, Swift at `-Onone -g`, Rust at `opt-level=1` with debug
+  info and frame pointers, C helpers at `-O2`; releases use the same default,
+  so this flavour is the one users run. Its binaries are new files, and their
+  first executions carry Gatekeeper's first-exec latency; the pilot's warm-up
+  invocations exist for that reason and stay labelled as such.
+- **Evidence home.** Everything about this investigation lives under
+  `records/performance/`. The procedure and its summaries, each run's
+  manifest, conditions, terminal record and checksums are committed. Raw
+  per-invocation output goes under `records/performance/runs/`, which
+  `.gitignore` excludes; the records that cite it state that it is local-only,
+  as [records/AGENTS.md](../AGENTS.md) requires. The layout is in
+  [README.md](README.md).
+- **Scope.** Built-in runner only. No external (BYOXPC) runner is installed on
+  this machine, and installing one would create a user-scope LaunchAgent, a
+  registry entry and removal obligations that outlive the session. The
+  throttle floor, re-acquisition and external caller authorization questions
+  wait for a later cycle.
+- **Operator time.** Unattended intervals of about 10 minutes are easy, about
+  30 minutes sparingly available, and anything over an hour belongs to a later
+  phase in which the operator runs a prepared procedure and returns with the
+  results. The procedure therefore ships with configurations sized to those
+  intervals and a wall-clock ceiling that stops it inside them.
+- **Background servers.** The two the guide mentions are the Codex app-server
+  daemon, running from `~/.codex/packages/app-server-daemon/`, and a second
+  custom app server that is now stopped. The procedure records the presence
+  of both by process name at start and end and does not change them.
+
+## Approach
+
+### 1. What one invocation retains, and what the harness adds
+
+The envelope's timing-bearing fields were confirmed in a battery envelope from
+`tests/out/runs/release-0.3.2-default` and in source. Each measure below names
+the events it sits between. "Host" means the XPC service process; its waits
+are elapsed monotonic allowances from `HostWaitClock` in
+[CWorker.swift](../../runner/Sources/PWRunnerCore/CWorker.swift).
+
+| Measure | Starts | Ends | Observer and clock | Does not establish |
+| --- | --- | --- | --- | --- |
+| W, harness wall span | Harness reads its clock immediately before spawning `policy-witness` | Harness collects the controller's exit | Harness; `CLOCK_MONOTONIC_RAW` with a `CLOCK_UPTIME_RAW` pair for sleep detection, as the dispatcher does | Anything about stages inside; includes spawn cost, controller startup, dossier, render, and the whole log scan |
+| C, client span | Controller reads wall clock before spawning the Swift client (`runner_client.started_at_unix_ms`) | Controller reads it after collecting the client's exit (`ended_at_unix_ms`) | Controller; Unix wall clock in ms | Host launch time separately from client startup; nothing about clock continuity in between |
+| R, ready wait | Host finishes writing policy bytes and starts polling the ready pipe | Host recognizes a byte, EOF, error or deadline (`runner_subprocess.ready_wait`) | Host; monotonic, 10 ms sleep quantum | Compile duration; the byte's arrival time within the quantum |
+| S, sentinel wait | Host starts polling shared memory after the ready wait | Host recognizes `done` or another stop (`sentinel_wait.elapsed_ms`, less `excluded_ms` of phase collection) | Host; monotonic, 2 ms quantum | When the worker published; attempt durations individually |
+| X, phase collection | Host observes phase arrival and begins planning | Collection closes (`sentinel_wait.excluded_ms`, per-phase `validator_subprocess`) | Host; monotonic | Validator spawn versus query time; what `sandbox_check` itself cost |
+| G, exit grace | Host stores `exit_requested` | Host recognizes the reap or exhausts the grace (`exit_grace_wait`) | Host; monotonic, 10 ms quantum | Worker exit time; whether the worker read the request |
+| L, log supervision | Controller starts the observer (`sandbox_log_capture.supervision`) | Collection and processing finish (`supervision.elapsed_ms`) | Controller; `CLOCK_MONOTONIC` budget | OS delivery completeness; which records existed at the time |
+| L', inner log show | Observer spawns `log show` (`observer.data.collection`) | The child exits and output is read (`collection.elapsed_ms`) | Observer; same monotonic deadline | Store open cost versus scan cost separately |
+| E, envelope stamp | Not a span: `generated_at_unix_ms` is read when the envelope value is built | | Controller; Unix wall clock | Print completion; the controller's exit |
+| U, controller CPU | Spawn | Exit (`wait4` rusage) | Harness; kernel accounting for the controller and the children it reaped: client, observer, `log show` | Host, worker, validator and issuer CPU, which launchd's service tree owns |
+
+Two residuals are derived, never measured: C minus (R + S + G) is what the
+client, launchd, host authorization, decode, region setup, spawn, policy
+transfer, assembly and reply cost together, and W minus C minus L is the
+controller's own startup, dossier, render and exit together with the harness's
+spawn cost. A control cell isolates part of the second: `policy-witness
+--version` runs the controller without XPC and prints a small envelope, so its
+W is a floor for process startup plus render. Mixing clock domains is avoided
+by never subtracting a host reading from a controller reading in the report
+except where both are named as such.
+
+### 2. Specimens and cells
+
+The five single-step fixtures under `tests/fixtures/pw_runner/` are the
+specimen set: `file_read_deny` (allow default, one denied read),
+`mach_deny` (a denied bootstrap lookup), `sysctl_read` (allowed sysctl),
+`exec_spawn` (allowed spawn of `/usr/bin/true`, the exec budgets and child
+reap) and `path_diagnostics_strict` (deny default, the profile that can deny
+the worker's own exit). They reach different attempt kinds and both policy
+defaults with one step each, so phase and step counts do not vary across
+cells. Multi-step and multi-phase plans are out of scope this cycle.
+
+Each specimen runs in two modes, with log capture (the default) and with
+`--no-log-capture`. With the `--version` control that is 11 cells. The
+procedure copies each fixture into the run directory at start and runs the
+copies, records their SHA-256 in the manifest, and passes only the request
+path and the mode flag; every other setting is the CLI default, including the
+240,000 ms runner timeout and the 10,000 ms log allowance.
+
+Cells are interleaved in a fixed round-robin order, one invocation of each
+cell per round, so that drift across the interval reaches every cell alike;
+the manifest records each invocation's sequence number for order analysis.
+Invocations start as soon as the previous one has exited and its files are
+closed. In the no-capture cells the next client reaches launchd some tens of
+milliseconds after the previous host replied, inside or near the 50 ms host
+exit delay (`host_exit_delay` in [LIMITS.md](../../docs/LIMITS.md)), so this
+series incidentally observes whether consecutive built-in runs ever meet a
+retiring host: an `already_ran` refusal, an XPC error, or neither. That is the
+synthesis's F3 instancing question, probed by ordinary sequential use rather
+than by a constructed overlap.
+
+### 3. Stage 2: interactive pilots
+
+Pilots run from this session against build 841, each bounded to a few minutes
+of machine time, each producing a complete run directory of its own so nothing
+is re-run silently.
+
+- **P1, warm-up.** Three invocations of each cell with capture, labelled
+  `warmup: true` in the manifest. They absorb first-exec latency on the new
+  binaries and establish that every field in the table is present.
+- **P2, pilot series.** Five rounds of all 11 cells, 55 invocations, about one
+  minute. Checks: every field present for every cell; residuals non-negative
+  and stable; W for `--version` against W for a run; sleep detection reading
+  zero; the no-capture back-to-back series free of `already_ran` or XPC errors,
+  or showing them, either way recorded.
+- **P3, overlap.** Interactive only. Two no-capture invocations of
+  `sysctl_read` started together, repeated ten times, to see which of the
+  outcomes above a concurrent start produces. The user guide says relative
+  scheduling between concurrent runs is not guaranteed; the pilot records what
+  happened, not a rule. It enters the unattended manifest only if P2 shows the
+  sequential series cannot reach the question and the outcomes are stable
+  enough to count.
+- **P4, procedure controls.** The harness's own verification, listed under
+  Verification below.
+
+The pilots decide three things recorded in the brief: which measures survive
+(any field absent or unstable for a cell is dropped for that cell and named),
+the per-invocation cost that sizes the unattended configurations, and whether
+P3 joins the manifest.
+
+### 4. Stage 3: the procedure
+
+`records/performance/harness/measure.py`, run on the pinned interpreter the
+repository already requires:
+
+```sh
+tests/lib/python.sh records/performance/harness/measure.py \
+  --config short --expect-build 841 --out records/performance/runs
+```
+
+`tests/lib/python.sh` resolves Homebrew's `python@3.14` at its keg path and
+refuses otherwise; the harness imports only the standard library. It takes no
+input from the environment beyond the working directory, which it records, and
+asks no questions.
+
+Behavior, in order:
+
+1. Refuse before starting if the app at `dist/PolicyWitness.app` reports a
+   build number other than `--expect-build`, if the output run directory
+   exists, or if any fixture is missing. The app is never built or changed by
+   the procedure.
+2. Create `runs/<run-id>/` with `run-id` as `<UTC stamp>-<config>-b<build>`.
+   Write `owner.json` (pid, start wall time, both monotonic readings), copy
+   the specimens, write `manifest.json` listing every planned invocation with
+   sequence number, cell, specimen hash, argv and the configuration's bounds,
+   then `conditions-start.json`: `sw_vers`, `uname -m`, `hw.model`, `hw.ncpu`,
+   `hw.memsize`, power source and thermal pressure from `pmset`, the app's
+   `--version` envelope, `git rev-parse HEAD` and `git status --porcelain`
+   when git is available, the presence of the two background servers by
+   process name, and the idle-sleep assertion's launch record.
+3. Hold a `caffeinate -i -w <pid>` assertion in its own session, as the test
+   dispatcher does, and record whether it launched. This blocks idle sleep
+   only; it changes no configuration.
+4. For each planned invocation in sequence: write `argv.json`, read both
+   monotonic clocks, spawn the controller with stdout and stderr to
+   `stdout.json` and `stderr.txt` opened fresh, wait with `wait4` under the
+   configuration's per-invocation deadline, read both clocks, and write
+   `status.json`: state, exit status or signal, both clock deltas, sleep
+   detected, rusage, byte counts. States are `completed` (exited, any status),
+   `harness_timeout` (deadline reached; SIGTERM, then SIGKILL after two
+   seconds, both recorded), `interrupted` (the operator's SIGINT or SIGTERM
+   arrived while it ran; the controller is left to finish or is killed, and
+   the record says which) and `spawn_failed`. Nothing is retried. A nonzero
+   exit is a completed invocation whose envelope says what happened.
+5. Stop when the manifest is exhausted or the configuration's wall-clock
+   ceiling has passed, whichever is first. Unstarted entries are written as
+   `never_started`. On SIGINT the loop finishes the current invocation's
+   record and stops the same way.
+6. Write `conditions-end.json`, release the assertion and record whether it
+   was still running, write `run.json` (counts by state, start and end, the
+   stop reason) and `SHA256SUMS` over every file in the run directory except
+   itself.
+
+Configurations, to be sized from P2's measured per-invocation cost and
+recorded in the brief with their exact counts:
+
+| Config | Intended interval | Ceiling | Shape |
+| --- | --- | --- | --- |
+| `pilot` | about one minute | 3 min | P1 then P2 as above |
+| `short` | about 10 minutes | 10 min | Round-robin over the 11 cells, enough rounds to fill about 8 minutes at pilot cost |
+| `standard` | about 30 minutes | 30 min | The same shape, about 25 minutes of rounds |
+
+The per-invocation deadline is 300 s in every configuration: above the 240 s
+runner timeout plus the 11 s log allowance and grace, so a harness timeout
+means the controller itself failed to stop. The ceiling makes the stop
+condition legible: the procedure ends no later than ceiling plus one deadline.
+
+A companion `records/performance/harness/summarize.py` reads a run directory
+and writes `summary.json` and `summary.md`: manifest reconciled against
+`status.json` files, counts per state, and per cell the n, minimum, median,
+p90 and maximum of each measure, computed from completed invocations only and
+reporting the excluded ones by sequence number and state. It never edits the
+run directory and refuses a directory whose `SHA256SUMS` does not verify.
+
+### 5. Stage 4: the operator interval
+
+The brief handed over before the interval contains the exact command, the run
+directory the procedure will create, the number of planned invocations and
+the ceiling, how to interrupt (one Ctrl-C), and the statement that no agent
+session should be active while it runs. The operator keeps the Codex
+app-server in whatever state it has at launch; the conditions files record
+that state at both ends. The operator notes anything they observed during the
+interval in a short text file beside the run directory, or notes that they
+observed nothing.
+
+### 6. Stage 5: analysis and the report
+
+Analysis begins only on a run whose `run.json` exists and whose checksums
+verify. The report, a record under `records/performance/`, gives for each
+claim the cells and n behind it, the measure by its letter and events, the
+spread, and the states excluded. It compares the pilot series with the
+unattended series and reports disagreement as such. Interpretations and open
+questions are separated as the guide requires. It proposes no change; if an
+event the synthesis asks about cannot be located in the retained fields, the
+report names the missing event and stops there.
+
+### Where this stops
+
+- No change to PolicyWitness's source, profiles, limits, schemas or build.
+- No instrumented variant. If the pilots show that a question needs one, the
+  report says what existing fields cannot establish and leaves the decision.
+- No external runner, no multi-step or multi-phase specimen, no concurrent
+  series in the unattended run unless P3 earns it, no interval over 30
+  minutes.
+- No throughput estimate for batches. Per-invocation medians under these
+  conditions are what the data supports.
+
+## Alternatives rejected
+
+- **Reuse `tests/lib/run_capture.py` as the harness.** It captures one CLI
+  invocation well, but it is test infrastructure with harness intervention
+  semantics, and importing it would make the procedure depend on the test
+  library's conventions and on `tests/out/` ownership rules it was written
+  for. A small standalone script with the same artifact discipline is simpler
+  for an operator to read and run.
+- **Run under the test dispatcher.** The dispatcher owns `tests/out/runs/`,
+  takes the checkout lock and reports pass or fail per case. The measurements
+  have no pass criterion, and their evidence belongs beside the records that
+  cite it.
+- **Timing `log show` directly across window widths and predicates.** The
+  report's F1 asks for it, but it measures the OS tool outside PolicyWitness's
+  ordinary work. The observer's standalone mode would keep it inside the app,
+  yet `run` does not use that mode. Deferred; L and L' from ordinary runs come
+  first.
+- **A tracing or sampling profiler on the host.** It would answer the residual
+  questions, and it would also change the conditions it observes and need
+  separate approval as instrumentation.
+
+## Verification
+
+Of the procedure, before handover, each as its own small run directory kept
+under `runs/` and summarized in the brief:
+
+1. The `pilot` configuration completes from a shell started with `env -i` plus
+   `PATH` and `HOME` only, so nothing in this session's environment is a
+   dependency.
+2. Interrupt control: Ctrl-C during a pilot leaves `run.json` with one
+   `interrupted` and the rest `never_started`, and `SHA256SUMS` verifies.
+3. Failure control: a manifest entry whose specimen path is removed after
+   copying yields exit 2 with its envelope and stderr retained, no retry, and
+   the series continues.
+4. Deadline control: `--pw` pointed at a stand-in that sleeps past a
+   shortened deadline produces `harness_timeout` with both signals recorded;
+   the stand-in is a script in `harness/controls/`, never the app.
+5. Identity control: `--expect-build` set to another number refuses before any
+   directory is created.
+6. `summarize.py` on the pilot directory reproduces the counts and medians the
+   session read by hand, from a fresh shell.
+
+Of the measurements themselves, what the pilots must show before the
+unattended run is sized: every measure present in every cell where it is
+defined, the `--version` floor below every run's W, residuals non-negative,
+and sleep detection at zero across the pilot.
+
+Passes that would mislead, and what guards each:
+
+- Spawn cost counted as controller time. The `--version` cell bounds it; the
+  report subtracts nothing but names the floor.
+- First-exec latency on the new binaries read as steady-state cost. Warm-up
+  invocations are labelled and the summary reports them separately.
+- A quiet interval assumed because no agent was attached. The conditions
+  files and the background-server presence checks are the record; the report
+  claims only what they show.
+- Identical envelopes read as identical runs. Durations are compared per
+  measure and per clock domain; equality of final JSON is not a claim of this
+  investigation.
+- An unattended series that silently measured a different app. The identity
+  refusal and the `--version` envelope in `conditions-start.json` pin it.
+
+## What would require reconsideration
+
+- The app under `dist/` is rebuilt or replaced before the unattended run. The
+  procedure refuses on build number; the brief is reissued for the new build
+  or the run waits.
+- P2 finds a field absent, null or unstable for a cell in ways the field's
+  contract does not predict. That is a finding to record, and the cell's
+  measure is dropped from the summary rather than repaired.
+- P2 shows the no-capture series meeting `already_ran` or XPC errors. The
+  series stays, the outcomes are counted, and the report treats them as the
+  first observation on the instancing question rather than as noise.
+- The pilot's per-invocation cost is far from the report's medians, so the
+  `short` and `standard` shapes no longer fit their intervals. Resize from the
+  measurement and say so; do not trim the ceiling.
+- System sleep is detected during a run. Affected invocations are flagged in
+  the summary and excluded from medians by state, with the count reported.
+
+## Closeout
+
+When the report is committed, delete this plan. The two source documents, the
+harness, the committed evidence per run and the report remain under
+`records/performance/`; the `.gitignore` entry for `runs/` remains.
