@@ -859,6 +859,8 @@ def control_environment_witness_changed(co, variant):
     check(build, 2, 'environment witness differs for CPATH', absent=('Verifying the checkout lock',))
     assert not build.receipts and (session.read_bytes() if session.exists() else None) == kept
     preserved(build)
+    # The same refusal from a coerced locale names the coercion, not the front end.
+    control_environment_witness_coerced(co, variant)
     return build
 
 
@@ -2696,7 +2698,6 @@ CONTROLS = [
     ('lock_claim_invalid', ('full', 'partial'), control_lock_claim_invalid),
     ('environment_witness_missing', ('full', 'partial'), control_environment_witness_missing),
     ('environment_witness_changed', ('full', 'partial'), control_environment_witness_changed),
-    ('environment_witness_coerced', ('full', 'partial'), control_environment_witness_coerced),
     ('sdk_unavailable', ('full', 'partial'), control_sdk_unavailable),
     ('sdk_version_unreadable', ('full', 'partial'), control_sdk_version_unreadable),
     ('builddir_stamp_missing', ('full', 'partial'), control_builddir_stamp_missing),
