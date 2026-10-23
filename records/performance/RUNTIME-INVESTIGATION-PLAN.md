@@ -229,10 +229,28 @@ Behavior, in order:
    Unstarted entries are written as `never_started` with the reason. On
    SIGINT the loop finishes the current invocation's record and stops the
    same way.
-6. Write `conditions-end.json`, release the assertion and record whether it
-   was still running, write `run.json` (counts by state, start and end, the
-   stop reason) and `SHA256SUMS` over every file in the run directory except
-   itself.
+6. Cleanup, inside the reserve and ordered by what cannot be reconstructed
+   later. First `run.json`, written atomically with the loop's terminal facts
+   (counts by state, start and end, stop reason) and `cleanup.state:
+   "started"`, so the loop's outcome is on disk before anything else runs.
+   Then `conditions-end.json`, each probe under a 2 s subprocess timeout and
+   the set under 5 s, written with whatever was collected and a per-probe
+   state (`ok`, `timed_out`, `failed`). Then the idle-sleep assertion is
+   released and its state recorded. Then `SHA256SUMS`, appended and flushed
+   one file at a time over every file in the run directory except itself,
+   with the clock checked before each file. Finally `run.json` is rewritten
+   atomically with `cleanup.state: "complete"` or `"incomplete"`, each step's
+   outcome, and for checksums the counts hashed and total. If the reserve
+   runs out, the remaining steps are skipped, never hurried; nothing already
+   written is removed; a partial `SHA256SUMS` attests exactly the files it
+   lists; and the final `run.json` write, which is small and always
+   performed, names what was skipped. Per-invocation records never depend on
+   cleanup: each `status.json` is written when its invocation exits. The
+   procedure exits 0 when the manifest was exhausted and cleanup completed,
+   1 when the loop was ended by the ceiling or an interrupt with cleanup
+   complete, 3 when cleanup is incomplete, and 2 when it refused before
+   creating anything. The pilot records how long cleanup took, and the brief
+   states it beside the reserve.
 
 Each configuration has a ceiling, a hard finish time counted from the
 procedure's start and including cleanup; a cleanup reserve of 10 s inside it;
@@ -270,7 +288,10 @@ invocation by sequence number and state, and counts per cell the measures it
 could not read as `absent`, `invalid` (wrong type or `clock_fault: true`) or
 `inapplicable` (undefined for the cell, as L and L' are under
 `--no-log-capture`). It never edits the
-run directory and refuses a directory whose `SHA256SUMS` does not verify.
+run directory. It verifies every entry `SHA256SUMS` lists and refuses on a
+mismatch; files the list does not cover are reported as `unattested`, and a
+run whose `cleanup.state` is `incomplete` is summarized with that state and
+the skipped steps carried into the summary.
 
 ### 5. Stage 4: the operator interval
 
@@ -285,8 +306,9 @@ observed nothing.
 
 ### 6. Stage 5: analysis and the report
 
-Analysis begins only on a run whose `run.json` exists and whose checksums
-verify. The report, a record under `records/performance/`, gives for each
+Analysis begins only on a run whose `run.json` exists and whose listed
+checksums verify; an incomplete cleanup is carried into the report as a
+condition of that run, not repaired. The report, a record under `records/performance/`, gives for each
 claim the cells and n behind it, the measure by its letter and events, the
 spread, and the states excluded. It compares the pilot series with the
 unattended series and reports disagreement as such. Interpretations and open
@@ -348,6 +370,11 @@ under `runs/` and summarized in the brief:
    directory is created.
 6. `summarize.py` on the pilot directory reproduces the counts and medians the
    session read by hand, from a fresh shell.
+7. Cleanup-exhaustion control: a control flag that delays the conditions
+   probes, under a reserve shortened below that delay, leaves the first
+   `run.json` facts intact, `cleanup.state: "incomplete"` with the skipped
+   steps named, a `SHA256SUMS` that attests only the files it lists, exit
+   status 3, and a last write before the ceiling.
 
 Of the measurements themselves, what the pilots must show before the
 unattended run is sized: every measure present in every cell where it is
