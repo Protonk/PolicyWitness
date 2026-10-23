@@ -12,7 +12,8 @@
     "X": "sentinel excluded_ms",
     "client_residual_including_X": "C-R-S-G; includes phase collection X",
     "client_residual_without_X": "C-R-S-X-G",
-    "controller_residual": "W-C-L; includes controller log parsing/correlation"
+    "controller_residual": "W-C-L; includes controller log parsing/correlation",
+    "runner_result_pid": "source runner_result.pid; worker after launch, potentially host before launch; not a host identity observation"
   },
   "excluded": [
     {
@@ -32,7 +33,7 @@
     }
   ],
   "execution_context": "interactive",
-  "format_version": 1,
+  "format_version": 2,
   "groups": [],
   "missing_statuses": [],
   "observations": [
@@ -44,13 +45,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": "harness_timeout",
-      "host_pid": null,
       "measures_ms": {
         "U": 12.074,
         "W": 2239.000417
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 1,
       "state": "harness_timeout",
       "stratum": {
@@ -86,13 +87,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": "harness_timeout",
-      "host_pid": null,
       "measures_ms": {
         "U": 24.387,
         "W": 2241.131833
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 2,
       "state": "harness_timeout",
       "stratum": {
@@ -128,13 +129,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": "harness_timeout",
-      "host_pid": null,
       "measures_ms": {
         "U": 29.782,
         "W": 2238.149833
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 3,
       "state": "harness_timeout",
       "stratum": {

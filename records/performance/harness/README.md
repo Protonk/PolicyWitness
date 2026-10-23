@@ -93,6 +93,9 @@ mixed-clock residuals and wide variability remain visible. `summary.json`
 contains each observation, sequence, stratum and measure as well as aggregate
 minimum, median, nearest-rank p90 and maximum. The envelope stamp E is retained
 per observation and is not summarized as a duration.
+Summary format 2 calls the source `runner_result.pid` field `runner_result_pid`:
+after worker launch it identifies the worker; early refusal paths can use the
+host PID. It is not an independent host-identity observation.
 
 Harness controls run in fresh directories and retain external terminal
 transcripts, exit statuses and assertion results under `evidence/`:

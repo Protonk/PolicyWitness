@@ -1,0 +1,11 @@
+{
+  "clocks": {
+    "monotonic_raw_ns": 1452805657714833,
+    "uptime_raw_ns": 760024917238000
+  },
+  "cwd": "/Users/raccoon/Desktop/Security/PolicyWitness",
+  "execution_context": "operator",
+  "pid": 67917,
+  "run_id": "20261023T212050Z-short-b841",
+  "started_at": "2026-10-23T21:20:50.140496+00:00"
+}

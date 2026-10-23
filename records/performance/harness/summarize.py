@@ -163,7 +163,9 @@ def summarize(directory):
                 row['envelope_error'] = str(exc)
         row['stratum'] = strata(envelope, status)
         row['envelope_stamp_unix_ms'] = get(envelope, 'generated_at_unix_ms')
-        row['host_pid'] = get(envelope, 'data', 'runner_result', 'pid')
+        # This is the worker PID after a worker launch; early refusals can use
+        # the host PID. Preserve the source field's name without assigning a role.
+        row['runner_result_pid'] = get(envelope, 'data', 'runner_result', 'pid')
         row['worker_pid'] = get(envelope, 'data', 'runner_result', 'runner_subprocess', 'pid')
         row['error'] = get(envelope, 'result', 'error')
         row['measures_ms'], row['unreadable'] = measures(entry, status, envelope)
@@ -189,7 +191,7 @@ def summarize(directory):
         group['measures_ms'] = {key: distribution(values) for key, values in group.pop('values').items()}
     expected = {e['directory'] + '/status.json' for e in manifest['entries']}
     actual = {p.relative_to(directory).as_posix() for p in (directory / 'invocations').glob('*/status.json')}
-    return {'format_version': 1, 'run_id': run['run_id'], 'raw_directory': str(directory),
+    return {'format_version': 2, 'run_id': run['run_id'], 'raw_directory': str(directory),
             'raw_evidence': 'gitignored; available only in the producing checkout',
             'config': manifest['config'], 'execution_context': manifest['execution_context'],
             'run': run, 'counts': dict(states), 'counts_match_run': dict(states) == run['counts'],
@@ -203,7 +205,8 @@ def summarize(directory):
                             'client_residual_without_X': 'C-R-S-X-G',
                             'controller_residual': 'W-C-L; includes controller log parsing/correlation',
                             'U': 'wait4 user plus system CPU, milliseconds; controller and reaped descendants',
-                            'E': 'envelope creation stamp only, retained per observation; no duration summary'}}
+                            'E': 'envelope creation stamp only, retained per observation; no duration summary',
+                            'runner_result_pid': 'source runner_result.pid; worker after launch, potentially host before launch; not a host identity observation'}}
 
 
 def markdown(summary):

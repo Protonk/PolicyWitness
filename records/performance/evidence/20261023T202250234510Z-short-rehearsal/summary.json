@@ -12,11 +12,12 @@
     "X": "sentinel excluded_ms",
     "client_residual_including_X": "C-R-S-G; includes phase collection X",
     "client_residual_without_X": "C-R-S-X-G",
-    "controller_residual": "W-C-L; includes controller log parsing/correlation"
+    "controller_residual": "W-C-L; includes controller log parsing/correlation",
+    "runner_result_pid": "source runner_result.pid; worker after launch, potentially host before launch; not a host identity observation"
   },
   "excluded": [],
   "execution_context": "interactive",
-  "format_version": 1,
+  "format_version": 2,
   "groups": [
     {
       "cell": "file_read_deny/capture",
@@ -1021,7 +1022,6 @@
       "envelope_stamp_unix_ms": 1792787001197,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67179,
       "measures_ms": {
         "C": 40,
         "G": 0,
@@ -1038,6 +1038,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67179,
       "sequence": 1,
       "state": "completed",
       "stratum": {
@@ -1061,7 +1062,6 @@
       "envelope_stamp_unix_ms": 1792787001876,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67186,
       "measures_ms": {
         "C": 41,
         "G": 0,
@@ -1078,6 +1078,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67186,
       "sequence": 2,
       "state": "completed",
       "stratum": {
@@ -1101,7 +1102,6 @@
       "envelope_stamp_unix_ms": 1792787002528,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67193,
       "measures_ms": {
         "C": 37,
         "G": 0,
@@ -1118,6 +1118,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67193,
       "sequence": 3,
       "state": "completed",
       "stratum": {
@@ -1141,7 +1142,6 @@
       "envelope_stamp_unix_ms": 1792787003215,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67210,
       "measures_ms": {
         "C": 41,
         "G": 0,
@@ -1158,6 +1158,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67210,
       "sequence": 4,
       "state": "completed",
       "stratum": {
@@ -1181,7 +1182,6 @@
       "envelope_stamp_unix_ms": 1792787003891,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67265,
       "measures_ms": {
         "C": 41,
         "G": 0,
@@ -1198,6 +1198,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67265,
       "sequence": 5,
       "state": "completed",
       "stratum": {
@@ -1221,7 +1222,6 @@
       "envelope_stamp_unix_ms": 1792787003936,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67272,
       "measures_ms": {
         "C": 41,
         "G": 0,
@@ -1236,6 +1236,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67272,
       "sequence": 6,
       "state": "completed",
       "stratum": {
@@ -1262,7 +1263,6 @@
       "envelope_stamp_unix_ms": 1792787003975,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67277,
       "measures_ms": {
         "C": 36,
         "G": 0,
@@ -1277,6 +1277,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67277,
       "sequence": 7,
       "state": "completed",
       "stratum": {
@@ -1303,7 +1304,6 @@
       "envelope_stamp_unix_ms": 1792787004015,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67282,
       "measures_ms": {
         "C": 37,
         "G": 0,
@@ -1318,6 +1318,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67282,
       "sequence": 8,
       "state": "completed",
       "stratum": {
@@ -1344,7 +1345,6 @@
       "envelope_stamp_unix_ms": 1792787004058,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67286,
       "measures_ms": {
         "C": 40,
         "G": 0,
@@ -1359,6 +1359,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67286,
       "sequence": 9,
       "state": "completed",
       "stratum": {
@@ -1385,7 +1386,6 @@
       "envelope_stamp_unix_ms": 1792787004100,
       "error": null,
       "excluded_reason": null,
-      "host_pid": 67292,
       "measures_ms": {
         "C": 39,
         "G": 0,
@@ -1400,6 +1400,7 @@
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": 67292,
       "sequence": 10,
       "state": "completed",
       "stratum": {
@@ -1426,13 +1427,13 @@
       "envelope_stamp_unix_ms": 1792787004103,
       "error": null,
       "excluded_reason": null,
-      "host_pid": null,
       "measures_ms": {
         "U": 1.413,
         "W": 2.248709
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 11,
       "state": "completed",
       "stratum": {

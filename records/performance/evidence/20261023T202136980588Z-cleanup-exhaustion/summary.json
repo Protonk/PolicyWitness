@@ -12,11 +12,12 @@
     "X": "sentinel excluded_ms",
     "client_residual_including_X": "C-R-S-G; includes phase collection X",
     "client_residual_without_X": "C-R-S-X-G",
-    "controller_residual": "W-C-L; includes controller log parsing/correlation"
+    "controller_residual": "W-C-L; includes controller log parsing/correlation",
+    "runner_result_pid": "source runner_result.pid; worker after launch, potentially host before launch; not a host identity observation"
   },
   "excluded": [],
   "execution_context": "interactive",
-  "format_version": 1,
+  "format_version": 2,
   "groups": [
     {
       "cell": "file_read_deny/capture",
@@ -127,13 +128,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": null,
-      "host_pid": null,
       "measures_ms": {
         "U": 13.134,
         "W": 14.692542
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 1,
       "state": "completed",
       "stratum": {
@@ -168,13 +169,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": null,
-      "host_pid": null,
       "measures_ms": {
         "U": 12.937999999999999,
         "W": 14.602125
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 2,
       "state": "completed",
       "stratum": {
@@ -209,13 +210,13 @@
       "envelope_stamp_unix_ms": null,
       "error": null,
       "excluded_reason": null,
-      "host_pid": null,
       "measures_ms": {
         "U": 12.982000000000001,
         "W": 14.624208
       },
       "pair": null,
       "round": 1,
+      "runner_result_pid": null,
       "sequence": 3,
       "state": "completed",
       "stratum": {

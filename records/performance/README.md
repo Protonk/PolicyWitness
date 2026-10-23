@@ -1,9 +1,10 @@
 # Runtime performance records
 
 Records of the runtime investigation of PolicyWitness as a running program,
-and the evidence behind them. The active `*-PLAN.md` here carries the links
-between these records and the work they propose, as `records/AGENTS.md`
-requires; nothing else links to a record.
+and the evidence behind them. The first built-in-runner cycle is complete.
+Any later work's associated `*-PLAN.md` carries links between these records
+and proposed work, as `records/AGENTS.md` requires; indexes name records
+without linking to them.
 
 Layout:
 
@@ -13,6 +14,8 @@ Layout:
   report whose questions the investigation starts from.
 - `RUNTIME-MEASUREMENT-BRIEF.md`: measurement definitions, pilot observations,
   verification credits and the operator handoff.
+- `RUNTIME-INVESTIGATION-REPORT.md`: the completed first-cycle findings,
+  operator-run measurements, pilot comparison and unresolved boundaries.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
   their stand-in controls under `harness/controls/` and pilot-sized counts in
   `harness/configurations.json`.

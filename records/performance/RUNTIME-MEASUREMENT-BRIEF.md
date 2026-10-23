@@ -1,9 +1,10 @@
 # Build 841: measurement brief and operator handoff
 
-The standalone harness is ready for an operator-run interval. All observations
-so far were made with an agent session active; none is an unattended baseline.
-PolicyWitness, its build and its five source fixtures are unchanged. The final
-runtime report remains pending the operator's measurements.
+This brief records the pilot measurements and procedure used for the completed
+first operator-run interval. PolicyWitness, its build and its five source
+fixtures are unchanged. The first cycle's findings are in
+`RUNTIME-INVESTIGATION-REPORT.md`; the pilot observations below remain distinct
+from the operator-run measurements.
 
 ## Executable and conditions
 
@@ -112,12 +113,16 @@ zero work. The retained fields cannot decompose compilation, validator startup,
 query execution or log-store opening.
 
 Overlap pilot `20261023T201905645635Z-overlap` contains ten pairs of concurrent
-no-capture `sysctl_read` invocations: 20 completed `ok` observations, 20
-distinct recorded host PIDs and 20 distinct worker PIDs, with no XPC error,
+no-capture `sysctl_read` invocations: 20 completed `ok` observations and 20
+distinct worker PIDs, with no XPC error,
 `already_ran`, missing applicable measure or sleep exclusion. Its W median was
 43.911 ms and p90 44.632 ms. Pair members are concurrent observations, not
 independent repetitions. This establishes only what these ten pairs did;
 overlap remains interactive-only and is absent from operator manifests.
+
+On this successful path `runner_result.pid` is the worker PID. It cannot
+establish a separate count of host processes. Summary format 2 preserves that
+field as `runner_result_pid` without assigning it a host role.
 
 All raw directories are under `records/performance/runs/`, gitignored and
 available only in this checkout. The corresponding `evidence/<run-id>/`
