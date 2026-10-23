@@ -47,11 +47,16 @@ The custom server's exact executable name was unavailable; an empty broad
 `app-server` match does not establish its absence. Endpoint observations do
 not establish constant conditions throughout the interval.
 
-The operator launched the prepared procedure and later reported “I wasn’t
-observing.” There is consequently no human observation of calls or other
-intervening activity, and no claim that the machine was undisturbed. The idle
-sleep assertion launched, was still running at cleanup, and was released.
-Screen locking and display dimming were allowed.
+The operator was away for most of the interval and returned when the run was
+nearly finished. They report leaving the machine plugged in, waking it on
+return, starting no applications, and having fewer than ten idle terminal
+tabs with no other intentional application activity. This account does not
+establish the absence of background work. Activity while they were away
+remains unobserved. The idle-sleep assertion launched, was still running at
+cleanup, and was released. Screen locking and display dimming were allowed.
+No detected system sleep during invocations does not exclude display waking,
+unlocking or other user interaction; the operator's waking description does
+not identify which of those events occurred.
 
 The complete raw directory is `records/performance/runs/20261023T212050Z-short-b841/`;
 it is gitignored and available only in the producing checkout. Committed
@@ -193,11 +198,15 @@ for each cell in every quarter. First-to-last-quarter W medians were:
 In every specimen cell, quarter-median R was 12 ms in quarters 1–3 and 15 ms
 in quarter 4; S was respectively 2 ms and 3 ms. Thus the late operator series
 returns to the pilot's median host-wait values without changing outcome words.
-The mechanism of that change is unresolved. Scheduling, timer behavior or
-other workload differences are possible interpretations, not established
-causes. The fixed order and absence of continuous environment observations
+The operator's reported return and waking interaction near the end is a
+possible explanatory condition. No exact interaction timestamp is available,
+so it cannot be aligned with the timing shift, and its causal contribution
+is not established. The mechanism remains unresolved: scheduling, timer
+behavior or other workload differences are also possible interpretations.
+Starting no applications does not establish that system/session work was
+unchanged. The fixed order and absence of continuous environment observations
 prevent separating those explanations. All four quarter distributions remain
-in the analysis; none is discarded as noise.
+in the analysis; none is excluded on the basis of the retrospective account.
 
 ## Instancing observations and PID correction
 

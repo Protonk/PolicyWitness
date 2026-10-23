@@ -1,8 +1,18 @@
 # Operator observation
 
-After the run, the operator reported: “I wasn’t observing.”
+The operator was not observing most of the interval and returned when the run
+was nearly finished. They report that the machine remained plugged into power,
+that they woke it on returning, and that they did not start any applications.
+They describe fewer than ten idle terminal tabs and no other intentional
+application activity. This is an operator account, not a census of background
+processes or CPU activity.
 
-No observations of calls, other activity, or power changes during the interval
-were supplied. This is not a report that no interruptions occurred. The
-start/end condition records and per-invocation clocks are the available
-machine observations.
+The operator suggested that their late waking interaction might explain the
+timing shift. No exact interaction timestamp was supplied, and the account
+does not distinguish display/session activity from actual system sleep/wake.
+The harness detected no system sleep during invocations; that observation
+does not exclude display waking, unlocking or other user interaction.
+
+Activity while the operator was away remains unobserved. The reported late
+interaction is a possible explanatory condition, not an established cause,
+and no measurements are excluded on its basis.
