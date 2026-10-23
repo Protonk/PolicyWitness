@@ -1,7 +1,8 @@
 # Sourced by each shell entry point and by testlib.sh; never trust an inherited PW_PYTHON.
 # The helpers run on Homebrew's python@3.14 at its keg path, the one interpreter the
-# pin below names. pw_python_start checks the path, the keg its real path lies in and
-# the version that keg names, refuses any PYTHON* variable the helpers do not own, and
+# pin below names. pw_python_start resolves the executable's symlinks, checks the keg
+# its real file lies in and the version that keg names, refuses any PYTHON* variable
+# the helpers do not own, and
 # exports PW_PYTHON with PYTHONCOERCECLOCALE=0 so the interpreter preserves the
 # caller's locale environment. pw_python_probe, which the entry points run once,
 # starts the interpreter in isolation and compares the version it reports. Helpers
@@ -18,7 +19,7 @@ PW_PYTHON_CELLAR=/opt/homebrew/Cellar/python@3.14
 # Status 2 and an ERROR line name the refusal: python_environment_set, direct Python
 # unavailable, or python_version_mismatch.
 pw_python_start() {
-  local path="${1:-${PW_PYTHON_PIN}}" cellar="${2:-${PW_PYTHON_CELLAR}}" name directory keg
+  local path="${1:-${PW_PYTHON_PIN}}" cellar="${2:-${PW_PYTHON_CELLAR}}" name real keg
   for name in "${!PYTHON@}"; do
     case "${name}" in
       PYTHONCOERCECLOCALE|PYTHONDONTWRITEBYTECODE|PYTHONOPTIMIZE) ;;
@@ -31,16 +32,17 @@ pw_python_start() {
     echo "ERROR: direct Python unavailable: ${path} is not an executable file (brew install python@3.14)" >&2
     return 2
   fi
-  # Resolve the directory physically with builtins: the opt link leads into the Cellar keg.
-  if ! directory="$(cd -P "${path%/*}" 2>/dev/null && pwd -P)"; then
-    echo "ERROR: direct Python unavailable: the directory of ${path} cannot be resolved" >&2
+  # Resolve every symlink of the executable itself: the opt link leads into the Cellar keg, and the keg's bin entry
+  # is itself a link into the framework. The real file is what runs, so it is what the keg check and the record see.
+  if ! real="$(/usr/bin/readlink -f "${path}" 2>/dev/null)" || [[ -z "${real}" || ! -f "${real}" ]]; then
+    echo "ERROR: direct Python unavailable: ${path} cannot be resolved to a real file" >&2
     return 2
   fi
-  if [[ "${directory}" != "${cellar}/"*/* ]]; then
-    echo "ERROR: direct Python unavailable: ${path} resolves to ${directory}, not inside ${cellar} (brew install python@3.14)" >&2
+  if [[ "${real}" != "${cellar}/"*/* ]]; then
+    echo "ERROR: direct Python unavailable: ${path} resolves to ${real}, not inside ${cellar} (brew install python@3.14)" >&2
     return 2
   fi
-  keg="${directory#"${cellar}"/}"
+  keg="${real#"${cellar}"/}"
   keg="${keg%%/*}"
   if [[ ! "${keg}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(_[0-9]+)?$ ]]; then
     echo "ERROR: python_version_mismatch: ${cellar}/${keg} does not name a Python version; ${PW_PYTHON_REQUIRED} is required" >&2
@@ -52,7 +54,7 @@ pw_python_start() {
     return 2
   fi
   PW_PYTHON="${path}"
-  PW_PYTHON_REALPATH="${directory}/${path##*/}"
+  PW_PYTHON_REALPATH="${real}"
   export PW_PYTHON PW_PYTHON_REALPATH PW_PYTHON_VERSION PYTHONCOERCECLOCALE=0
 }
 

@@ -17,10 +17,16 @@ import json, os, subprocess, sys
 NAMES = %r
 child = subprocess.run(['/usr/bin/env', '-0'], capture_output=True).stdout.decode()
 seen = dict(entry.split('=', 1) for entry in child.split('\\0') if entry)
+# A Python child started the way checkers start theirs reports its own identity and import path.
+grandchild = subprocess.run([sys.executable, '-B', '-S', '-P', '-c',
+                             'import json, os, sys; print(json.dumps(dict(executable=os.path.realpath(sys.executable), '
+                             'site_loaded="site" in sys.modules, sys_path=[os.path.realpath(p) if p else p for p in sys.path], '
+                             'prefix=os.path.realpath(sys.prefix))))'], capture_output=True, text=True)
 record = dict(executable=os.path.realpath(sys.executable), version=list(sys.version_info[:2]),
               own={n: os.environ.get(n) for n in NAMES}, child={n: seen.get(n) for n in NAMES},
               site_loaded='site' in sys.modules, sys_path=[os.path.realpath(p) if p else p for p in sys.path],
-              prefix=os.path.realpath(sys.prefix), cwd=os.getcwd())
+              prefix=os.path.realpath(sys.prefix), cwd=os.getcwd(),
+              python_child=json.loads(grandchild.stdout) if grandchild.returncode == 0 else dict(error=grandchild.stderr[-400:]))
 with open(os.environ['PW_PROBE_RECEIPT'], 'w') as stream:
     json.dump(record, stream)
 ''' % (NAMES,)
@@ -45,7 +51,7 @@ def minimal_env(work):
                 __CF_USER_TEXT_ENCODING=os.environ.get('__CF_USER_TEXT_ENCODING', f'0x{os.getuid():X}:0x0:0x0'))
 
 
-def check_record(name, record, repo, *, outside_checkout):
+def check_record(name, record, repo, *, outside_checkout, declared):
     require(record['own'] == {n: None for n in NAMES}, f'{name}: the leaf inherited {record["own"]}')
     require(record['child'] == {n: None for n in NAMES}, f'{name}: the child inherited {record["child"]}')
     require(record['version'] == [3, 14], f'{name}: interpreter {record["version"]} is not 3.14')
@@ -54,8 +60,16 @@ def check_record(name, record, repo, *, outside_checkout):
     outside = [p for p in record['sys_path'] if not (p.startswith(record['prefix'] + '/') or p.startswith(str(repo) + '/'))]
     require(not outside, f'{name}: sys.path reaches outside the interpreter and the tree: {outside}; '
                          'the resolver starts helpers with -S (and -P for inline starts) and refuses PYTHON* so nothing else is an input')
+    child = record['python_child']
+    require('error' not in child, f'{name}: the Python child did not report: {child}')
+    require(child['executable'] == record['executable'], f'{name}: the Python child ran {child["executable"]}, not {record["executable"]}')
+    require(child['site_loaded'] is False, f'{name}: the Python child imported site; children start with -S too')
+    child_outside = [p for p in child['sys_path'] if not (p.startswith(child['prefix'] + '/') or p.startswith(str(repo) + '/'))]
+    require(not child_outside, f'{name}: the Python child reaches outside the interpreter and the tree: {child_outside}')
     if outside_checkout:
         require(not record['cwd'].startswith(str(repo)), f'{name}: the probe ran inside the checkout, which would hide a missing -P')
+    require(declared.get('realpath') == record['executable'],
+            f'{name}: the report declares {declared.get("realpath")} but the case ran {record["executable"]}')
 
 
 def main():
@@ -96,9 +110,9 @@ def main():
                 require(receipt.exists(), f'{name}: the leaf wrote no receipt')
                 # The dispatcher runs every case from the checkout root; a direct suite runs from the work directory,
                 # outside the checkout, so an inline start without -P would show there.
-                check_record(name, json.loads(receipt.read_text()), repo, outside_checkout=entry == 'direct_suite')
                 report = json.loads((child_out / 'suites/probe/boundary/report.json').read_text())
                 declared = report.get('interpreter') or {}
+                check_record(name, json.loads(receipt.read_text()), repo, outside_checkout=entry == 'direct_suite', declared=declared)
                 require(declared.get('realpath', '').startswith(KEG) and declared.get('version', '').startswith('3.14.'),
                         f'{name}: the report declares {declared}')
                 if entry == 'dispatcher':

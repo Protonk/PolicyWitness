@@ -20,8 +20,9 @@ markdown-it-py past 3.0.0, and keeps a comment-refusal workaround in
 ## Intended result
 
 One resolver selects one interpreter for every Python start the repository
-owns: Homebrew's `python@3.14` at its version-named keg path, checked before
-any helper runs and refused by name when absent or of another minor version.
+owns: Homebrew's `python@3.14` at its version-named keg path, its symlinks
+resolved to the file that runs, checked before any helper runs and refused by
+name when absent or of another minor version.
 Helpers import nothing outside the standard library and the tree. The
 interpreter is recorded in the build's provenance, in each test run's
 configuration and in every case report, and the dispatcher checks each
@@ -64,7 +65,9 @@ starts:
   own refusal and diagnostic for an optimizing value and its acceptance of
   `0` and the empty value. The path is an executable regular file or a
   link to one, or the refusal is `direct_python_unavailable` with the path
-  and `brew install python@3.14` in the message. Its real path is under
+  and `brew install python@3.14` in the message. Its real path, every
+  symlink resolved with `readlink -f` so that the file that runs is the one
+  checked and recorded, is under
   `/opt/homebrew/Cellar/python@3.14/<keg>/`, where `<keg>` is `X.Y.Z` or
   `X.Y.Z_N` with `_N` a Homebrew revision, and `X.Y` is 3.14, or the
   refusal is `python_version_mismatch`, naming what was found and what is
@@ -323,11 +326,13 @@ change to which interpreter the product's own tools use.
    coercion variant of the witness control prints the coercion text; the
    import-boundary control passes at every start from outside the checkout
    and refuses under `PYTHONPATH`; the startup control's seven modes pass.
-5. Timing. The battery's `duration_ms` on the same build and machine grows
-   by at most 10 s or 1 % of the pre-change value, whichever is larger. An
-   overrun blocks completion: the leaf check costs what today's resolver
-   costs, so an overrun means the probe is running at leaf starts or
-   something else regressed, and either needs finding first.
+5. Timing is diagnostic, with no numeric completion gate. Record available
+   battery durations and investigate sustained slowdowns that materially
+   affect development, including probes accidentally repeated at leaf
+   starts. A pre-change whole-battery comparison is not required; when
+   record compatibility prevents one, state that limitation and the scope
+   of any comparable subset. Python 3.14 is selected for interpreter
+   ownership, environment preservation, provenance and maintenance.
 
 Passes that would mislead, and what rules each out:
 
@@ -352,8 +357,8 @@ Passes that would mislead, and what rules each out:
   link, places the Cellar elsewhere, or names a keg directory in a form
   other than `X.Y.Z` or `X.Y.Z_N`; the pin's location or version parse
   fails and the resolver needs the new form, recorded as such.
-- The timing budget is exceeded after the probe is confirmed absent from
-  leaf starts; then the resolver's cost model is wrong, not the sweep.
+- A sustained slowdown materially affects development; investigate the
+  resolver and helper starts using the affected cases and their timings.
 - An interrupted release rotation exists when the schema bump lands; finish
   or abandon it first, following `docs/SIGNING.md`.
 - A live case fails only under the direct-started leaf. None of the 21

@@ -43,16 +43,35 @@ def shim_problems(name, lines):
     return out
 
 
+START = re.compile(r'(?<![^\s("])\$\{PW_PYTHON\}"?')
+WORD = re.compile(r'"[^"]*"|\'[^\']*\'|[^\s)|;&]+')
+
+
+def words_after(text):
+    """The words that follow an interpreter start in raw shell text, quotes removed, up to the end of its command."""
+    words = []
+    for match in WORD.finditer(text):
+        word = match.group()
+        if word in ('&&', '||', '<<'):
+            break
+        words.append(word[1:-1] if word[:1] in '"\'' and word[-1:] == word[:1] and len(word) > 1 else word)
+    return words
+
+
 def start_problems(name, lines):
-    """Every ${PW_PYTHON} start carries -B -S, then -P when what follows is - or -c; nothing else before the script."""
+    """Every ${PW_PYTHON} start carries -B -S, then -P when what follows is - or -c; nothing else before the script.
+
+    Starts are found in the raw text, so one inside a quoted command substitution, where the shell lexer sees a
+    single assignment word, is checked like any other."""
     out = []
     for number, line in enumerate(lines, 1):
-        words = words_of(line)
-        for index, word in enumerate(words):
-            if word != INTERPRETER:
-                continue
-            flags = words[index + 1:index + 3]
-            rest = words[index + 3:index + 5]
+        stripped = line.lstrip()
+        if stripped.startswith('#'):
+            continue
+        for match in START.finditer(line):
+            words = words_after(line[match.end():])
+            flags = words[0:2]
+            rest = words[2:4]
             if flags != ['-B', '-S']:
                 out.append(f'{name}:{number}: a ${{PW_PYTHON}} start carries -B -S first, found {flags}')
                 continue
@@ -140,12 +159,16 @@ class DirectPythonTests(unittest.TestCase):
                                 "python3 -c 'import sys\nprint(sys.version)'",
                                 '"${PW_PYTHON}" -B helper.py', '"${PW_PYTHON}" -B -S -P helper.py',
                                 '"${PW_PYTHON}" -B -S -I helper.py', '"${PW_PYTHON}" -B -S - <<\'PY\'',
-                                '"${PW_PYTHON}" -B -S -c "print(1)"'):
+                                '"${PW_PYTHON}" -B -S -c "print(1)"',
+                                'answer="$("${PW_PYTHON}" -B -P -c \'print(1)\')"',
+                                'answer="$("${PW_PYTHON}" -B -S -c \'print(1)\')"',
+                                'if ! answer="$("${PW_PYTHON}" -S -B "${ROOT_DIR}/helper.py" "$1" 2>/dev/null)"; then :; fi'):
                     path.write_text(original + '\n' + command + '\n')
                     self.assertTrue(any(name in p for p in check(root)), (name, command))
                 path.write_text(original + '\n# python3 and /usr/bin/python3 are forbidden ancestry\n')
                 self.assertEqual(check(root), [])
-                path.write_text(original + '\n"${PW_PYTHON}" -B -S helper.py\n"${PW_PYTHON}" -B -S -P -c "print(1)"\n')
+                path.write_text(original + '\n"${PW_PYTHON}" -B -S helper.py\n"${PW_PYTHON}" -B -S -P -c "print(1)"\n'
+                                'answer="$("${PW_PYTHON}" -B -S -P -c \'print(1)\')"\nreply="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/helper.py" x 2>&1)"\n')
                 self.assertEqual(check(root), [])
                 path.write_text(original)
             for name in PROBING:

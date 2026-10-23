@@ -466,8 +466,8 @@ before any Python runs. Each of `build.sh`, the front end, `tests/run.sh`,
 functions, never trusting an inherited `PW_PYTHON`. `pw_python_start`
 selects Homebrew's `python@3.14` at
 `/opt/homebrew/opt/python@3.14/bin/python3.14`, the one path the pin names,
-and checks with shell builtins that it is an executable file whose real
-directory lies in a `python@3.14` keg naming a 3.14 version (a Homebrew
+and checks that it is an executable file whose real path, every symlink
+resolved, lies in a `python@3.14` keg naming a 3.14 version (a Homebrew
 revision suffix such as `3.14.8_1` is allowed; the recorded version is the
 upstream `3.14.8`); it refuses with status 2 as `direct Python unavailable`
 or `python_version_mismatch`, and refuses as `python_environment_set` when

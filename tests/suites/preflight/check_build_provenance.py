@@ -192,7 +192,7 @@ WRAPPER = textwrap.dedent('''
               'while not os.path.exists(sys.argv[1]) and time.monotonic() < deadline:\\n'
               '    time.sleep(0.05)\\n')
     fds = checkout_lock.inherited_fds() if mode == 'pass' else ()
-    child = subprocess.Popen([sys.executable, '-B', '-c', waiter, release], pass_fds=fds)
+    child = subprocess.Popen([sys.executable, '-B', '-S', '-P', '-c', waiter, release], pass_fds=fds)
     with open(report, 'w') as stream:
         json.dump(dict(wrapper=os.getpid(), grandchild=child.pid, passed=list(fds)), stream)
     child.wait()
@@ -211,7 +211,7 @@ FAKE_OWNER = textwrap.dedent('''
         env.pop(name, None)
         env['PW_ENV_WITNESS_' + name] = 'u'
     env.update(PW_CHECKOUT_LOCK_ROOT=root, PW_CHECKOUT_LOCK_NONCE=record['nonce'], PW_CHECKOUT_LOCK_CHANNEL=str(end.fileno()))
-    subprocess.Popen([sys.executable, '-B', client, sys.argv[1], root, result, release], env=env, pass_fds=(end.fileno(),))
+    subprocess.Popen([sys.executable, '-B', '-S', client, sys.argv[1], root, result, release], env=env, pass_fds=(end.fileno(),))
     end.close()
     message, fds, _, _ = socket.recv_fds(server, 65536, 4)
     print('received', flush=True)
@@ -279,7 +279,7 @@ class LockTests(unittest.TestCase):
                 print('REFUSED: ' + str(exc))
         '''))
         with checkout_lock.owned(self.root, env=clean_env()):
-            result = subprocess.run([PYTHON, '-B', str(impostor), LIB, str(self.root)], capture_output=True, text=True, timeout=5)
+            result = subprocess.run([PYTHON, '-B', '-S', str(impostor), LIB, str(self.root)], capture_output=True, text=True, timeout=5)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('REFUSED: the channel was not created by the acquisition owner', result.stdout)
             self.assertFalse(lock_free(self.root))
@@ -324,7 +324,7 @@ class LockTests(unittest.TestCase):
                 except checkout_lock.Refusal:
                     result.write_text('refused')
         '''))
-        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', str(nested), LIB, str(self.root), str(ready), str(proceed), str(result)],
+        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', '-S', str(nested), LIB, str(self.root), str(ready), str(proceed), str(result)],
                                  env=clean_env(), start_new_session=True)
         try:
             wait_for(ready.exists)
@@ -362,15 +362,15 @@ class LockTests(unittest.TestCase):
             import checkout_lock
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], pass_fds=checkout_lock.inherited_fds())
+            child = subprocess.Popen([sys.executable, '-B', '-S', '-P', '-c', 'import time; time.sleep(30)'], pass_fds=checkout_lock.inherited_fds())
             with open(sys.argv[2], 'w') as stream:
                 json.dump([os.getpid(), child.pid], stream)
             time.sleep(30)
         '''))
         for signum in (signal.SIGINT, signal.SIGTERM):
             report = self.work / f'stubborn-{signum}.json'
-            owner = subprocess.Popen([PYTHON, '-B', '-c', launcher, LIB, '--root', str(self.root), '--',
-                                      PYTHON, '-B', str(stubborn), LIB, str(report)], env=witnessed(clean_env()), start_new_session=True)
+            owner = subprocess.Popen([PYTHON, '-B', '-S', '-P', '-c', launcher, LIB, '--root', str(self.root), '--',
+                                      PYTHON, '-B', '-S', str(stubborn), LIB, str(report)], env=witnessed(clean_env()), start_new_session=True)
             pids = []
             try:
                 wait_for(report.exists)
@@ -428,7 +428,7 @@ class LockTests(unittest.TestCase):
                 raise SystemExit(2)
         ''')
         env = dict(clean_env(), **claim)
-        result = subprocess.run([PYTHON, '-B', '-c', script], pass_fds=pass_fds, env=env, capture_output=True, text=True, timeout=60)
+        result = subprocess.run([PYTHON, '-B', '-S', '-P', '-c', script], pass_fds=pass_fds, env=env, capture_output=True, text=True, timeout=60)
         return result.returncode, result.stdout.strip() + result.stderr.strip()
 
     def test_claims_are_admitted_only_by_a_live_owners_handoff(self):
@@ -502,7 +502,7 @@ class LockTests(unittest.TestCase):
         for mode in ('exit', 'killed'):
             with self.subTest(owner=mode):
                 result, release = self.work / f'{mode}.json', self.work / f'{mode}.release'
-                process = subprocess.Popen([PYTHON, '-B', str(owner), LIB, str(self.root), mode, str(client), str(result), str(release)],
+                process = subprocess.Popen([PYTHON, '-B', '-S', str(owner), LIB, str(self.root), mode, str(client), str(result), str(release)],
                                            env=clean_env(), stdout=subprocess.PIPE, text=True)
                 try:
                     self.assertEqual(process.stdout.readline().strip(), 'received', 'the owner never received the request')
@@ -527,7 +527,7 @@ class LockTests(unittest.TestCase):
         """Kill the owner and the wrapper while a grandchild runs; what an outside observer sees."""
         report, release = self.work / f'{mode}-pids.json', self.work / f'{mode}.release'
         wrapper = self.script('wrapper.py', WRAPPER)
-        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', str(wrapper), LIB, mode, str(release), str(report)],
+        owner = subprocess.Popen([*self.launcher, PYTHON, '-B', '-S', str(wrapper), LIB, mode, str(release), str(report)],
                                  env=clean_env(), start_new_session=True)
         observed = {}
         try:
@@ -603,7 +603,7 @@ class LockTests(unittest.TestCase):
         caller.update(CPATH='', LIBRARY_PATH=os.fsdecode(bytes(range(1, 256))) + '\n', MANPATH='spaced dir/man\n')
         report = ('import json, os, sys; sys.path.insert(0, sys.argv[1]); import checkout_lock; '
                   'print(json.dumps(checkout_lock.verify_environment(), sort_keys=True))')
-        command = shlex.join([PYTHON, '-B', '-c', report, LIB])
+        command = shlex.join([PYTHON, '-B', '-S', '-P', '-c', report, LIB])
         nested = command + '; CPATH=/inner/include ' + shlex.join(self.launcher) + ' ' + command
         result = subprocess.run([*self.launcher, '/bin/bash', '-c', nested], env=caller, capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -617,7 +617,7 @@ class LockTests(unittest.TestCase):
 
     def test_witness_refusals_precede_lock_writes(self):
         caller = {k: v for k, v in clean_env().items() if k not in NAMES}
-        cli = [PYTHON, '-B', f'{LIB}/checkout_lock.py', '--root', str(self.root), '--', '/usr/bin/true']
+        cli = [PYTHON, '-B', '-S', f'{LIB}/checkout_lock.py', '--root', str(self.root), '--', '/usr/bin/true']
         for name in NAMES:
             for fault in ('missing', 'changed', 'malformed'):
                 env = witnessed(caller)
@@ -797,6 +797,8 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(path, PINNED_PYTHON)
         self.assertRegex(version, r'^3\.14\.\d+$')
         self.assertTrue(real.startswith('/opt/homebrew/Cellar/python@3.14/'), real)
+        self.assertEqual(real, os.path.realpath(real), 'the recorded real path still contains a symlink')
+        self.assertEqual(real, os.path.realpath(PINNED_PYTHON))
 
     def test_a_revision_suffixed_keg_is_accepted_with_its_upstream_version(self):
         cellar, binary = self.keg('3.14.8_1')
@@ -806,15 +808,22 @@ class ResolverTests(unittest.TestCase):
         result = self.resolve(str(opt / 'python@3.14/bin/python3.14'), str(cellar))
         self.assertEqual(result.returncode, 0, result.stderr)
         path, version, real = result.stdout.split()
-        self.assertEqual((version, real), ('3.14.8', str(binary)))
+        self.assertEqual((version, real), ('3.14.8', os.path.realpath(binary)))
 
     def test_the_path_checks_refuse_by_name_without_starting_anything(self):
         cellar, _ = self.keg('3.14.8')
         _, other_minor = self.keg('3.15.0')
         _, unversioned = self.keg('HEAD')
         _, unexecutable = self.keg('3.14.9', executable=False)
+        outside = self.work / 'outside-python'
+        outside.write_text('#!/bin/bash\nexit 0\n')
+        outside.chmod(0o755)
+        escaping = cellar / '3.14.7/bin/python3.14'
+        escaping.parent.mkdir(parents=True)
+        escaping.symlink_to(outside)
         for label, path, needle in (
                 ('missing', str(self.work / 'missing/python3.14'), 'direct Python unavailable'),
+                ('a symlink escaping its keg', str(escaping), 'direct Python unavailable'),
                 ('not executable', str(unexecutable), 'direct Python unavailable'),
                 ('outside the cellar', '/usr/bin/true', 'direct Python unavailable'),
                 ('another minor', str(other_minor), 'python_version_mismatch'),
@@ -986,7 +995,7 @@ class ShimContainmentTests(unittest.TestCase):
         marker = self.work / 'ran'
         outer = self.work / 'outer.sb'
         outer.write_text('(version 1)(allow default)\n')
-        argv = ['/usr/bin/sandbox-exec', '-f', str(outer), PYTHON, '-B', str(ROOT / 'tests/lib/shim_probe.py'),
+        argv = ['/usr/bin/sandbox-exec', '-f', str(outer), PYTHON, '-B', '-S', str(ROOT / 'tests/lib/shim_probe.py'),
                 '--fixture', str(fixture), '--', '/usr/bin/touch', str(marker)]
         result = shim_probe.execute(argv, env=clean_env(), cwd=self.work)
         (self.work / 'outer-result.json').write_text(json.dumps(result, indent=2))
@@ -1152,7 +1161,7 @@ class ProbeTests(unittest.TestCase):
         review = prov.probe(['/bin/sh', '-c', 'head -c 8192 /dev/zero >&2; echo tool 1.0'], stderr_limit=64)
         self.assertEqual((review['kind'], review['stream']), ('output_overflow', 'stderr'))
         # Both streams active at once, each under its cap: no deadlock, and stdout is complete.
-        both = prov.probe([PYTHON, '-c', 'import sys\nfor i in range(15):\n    sys.stdout.write("o" * 4000); sys.stdout.flush()\n'
+        both = prov.probe([PYTHON, '-B', '-S', '-P', '-c', 'import sys\nfor i in range(15):\n    sys.stdout.write("o" * 4000); sys.stdout.flush()\n'
                                          '    sys.stderr.write("e" * 4000); sys.stderr.flush()\n'], limit=65536, stderr_limit=65536)
         self.assertEqual((both['status'], len(both['text']), both['stderr_bytes']), ('ok', 60000, 60000))
         exact = prov.probe(['/bin/sh', '-c', 'head -c 65536 /dev/zero | tr "\\\\0" a'], limit=65536)
