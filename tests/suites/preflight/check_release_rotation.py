@@ -179,6 +179,47 @@ def portable(out):
     reject(lambda: release_runs.verify_release(copy), 'checksum mismatch')
 
 
+def battery_contract(out):
+    """Reject a complete all-selection run even with empty explicit selectors in either format."""
+    for schema in (1, 2):
+        work = out / f'battery-contract-{schema}'
+        work.mkdir()
+        repo = make_repo(work)
+        if schema == 1:
+            archive, acceptance, battery = make_legacy_release(repo, '0.9.0')
+        else:
+            archive, acceptance = make_release(repo, '0.9.0')
+            battery = acceptance / 'tests'
+        record, manifest = release_runs.verify_release(archive)
+        run = retention.read_object(battery / 'run.json')
+        run['plan']['selection']['mode'] = 'all'
+        retention.atomic_json(battery / 'run.json', run)
+        runs = {role: (repo / 'tests/out' / value['retained']['path'], value['retained'])
+                for role, value in manifest['runs'].items()}
+        shutil.rmtree(archive / release_runs.BUNDLE)
+        if schema == 1:
+            reference = legacy_pack(archive / release_runs.BUNDLE, tag=record['tag'],
+                                    source=record['source_commit'], runs=runs)
+        else:
+            with retention.checkout_lock(repo):
+                reference = release_runs.pack(archive / release_runs.BUNDLE, tag=record['tag'],
+                                              source=record['source_commit'], runs=runs,
+                                              battery=('acceptance', 'tests/run.json'))
+        record['test_evidence'] = reference
+        retention.atomic_json(archive / 'release.json', record)
+        reject(lambda: release_runs.verify_release(archive), 'not the default selection')
+        if schema == 2:
+            # Malformed references must produce a refusal, not an uncaught TypeError.
+            record['battery'] = None
+            retention.atomic_json(archive / 'release.json', record)
+            reject(lambda: release_runs.verify_release(archive), 'does not support the release')
+            manifest = retention.read_object(archive / release_runs.BUNDLE / 'manifest.json')
+            manifest['battery']['path'] = 'acceptance.json'
+            retention.atomic_json(archive / release_runs.BUNDLE / 'manifest.json', manifest)
+            reject(lambda: release_runs.verify_bundle(archive / release_runs.BUNDLE),
+                   'must be acceptance/tests/run.json')
+
+
 def ordinary(out):
     repo, old, previous, new, current = fixture(out, 'ordinary')
     loose = local_run(repo, 'zzz-old-development', 120, 121)
@@ -483,6 +524,7 @@ def atomic_and_locking(out):
 def main(out):
     out.mkdir(parents=True, exist_ok=True)
     portable(out)
+    battery_contract(out)
     ordinary(out)
     protections(out)
     checkpoint_policy(out)

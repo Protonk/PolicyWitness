@@ -280,6 +280,7 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
                    requested_cases=[], requested_suites=[], harness_errors=[],
                    artifact_integrity=dict(app=str(extraction / 'PolicyWitness.app'), unchanged=True, valid_before=True))
         run['plan']['cases'] = [dict(id='fixture/' + str(i)) for i in range(3)]
+        run['plan']['selection'] = dict(mode='default', cases=[], suites=[])
         run['case_results'] = [dict(id=c['id'], state='completed', status='pass') for c in run['plan']['cases']]
         if battery_change is not None:
             battery_change(run)
@@ -472,6 +473,7 @@ def check_archive(out):
             ('skipped', lambda run: (run.update(completion=dict(selected=3, completed=2, skipped=1, unrun=0)),
                                      run['case_results'][2].update(state='skipped', status='skip')), None, 'skips'),
             ('selection', lambda run: run.update(requested_suites=['smoke']), None, 'default selection'),
+            ('all', lambda run: run['plan']['selection'].update(mode='all'), None, 'default selection'),
             ('changed_app', lambda run: run['artifact_integrity'].update(app='/nowhere/PolicyWitness.app'), None, 'extracted app'),
             ('mutated', lambda run: run['artifact_integrity'].update(unchanged=False), None, 'unchanged'),
             ('hash', None, hash_change, binding),

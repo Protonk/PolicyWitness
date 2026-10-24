@@ -97,6 +97,7 @@ class Tools:
             completion=dict(selected=3, completed=3, skipped=0, unrun=0),
             counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3}, harness_errors=[],
             requested_cases=[], requested_suites=[],
+            plan=dict(selection=dict(mode='default', cases=[], suites=[])),
             artifact_integrity=dict(app=str(app), unchanged=True, valid_before=True),
             case_results=[dict(id=case, status='pass', state='completed') for case in cases])
         if self.mode == 'skipped':
@@ -105,6 +106,8 @@ class Tools:
             summary['completion'].update(completed=2, unrun=1)
         if self.mode == 'selected':
             summary['requested_cases'] = ['smoke/specimen_file_read_deny']
+        if self.mode == 'all':
+            summary['plan']['selection']['mode'] = 'all'
         (output / 'run.json').write_text(json.dumps(summary))
         for case, leaf in zip(cases[:2], ('policy_witness.run.stdout.json', 'run.json')):
             path = output / 'suites' / case / 'artifacts' / leaf

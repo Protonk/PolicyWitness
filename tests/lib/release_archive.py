@@ -108,7 +108,8 @@ def battery_record(root, acceptance_run, accepted, final_inventory):
         problems.append('battery has failures, skips, unrun cases or harness errors')
     if not completion.get('selected') or completion.get('completed') != completion.get('selected'):
         problems.append('battery did not complete every selected case')
-    if run.get('requested_cases') or run.get('requested_suites'):
+    if (run.get('requested_cases') or run.get('requested_suites')
+            or (run.get('plan') or {}).get('selection', {}).get('mode') != 'default'):
         problems.append('battery must be the default selection')
     integrity = run.get('artifact_integrity') or {}
     if integrity.get('unchanged') is not True or integrity.get('valid_before') is not True:

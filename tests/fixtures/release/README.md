@@ -13,6 +13,13 @@ are checked by the existing opt-in signed-artifact controls. The release helpers
 accept a Python-only command injection boundary; their CLIs always use the real
 tools and expose no bypass flags.
 
+`live_battery.py` is the build-refusal driver's integration equipment. It
+uses controlled notarization, staple-validation and Gatekeeper responses
+while the real acceptance helper extracts a real build ZIP, inspects its
+signatures and runs the real default battery once. It preserves the nested
+reports and independently repeats the complete inventory comparison. It
+does not establish notarization or Gatekeeper acceptance.
+
 `publish_tools.py` stands in for `gh` in `preflight/release_publish_controls`.
 It records every invocation, passes `git` through to a real local bare remote,
 simulates release creation, listing and asset download, and can report a wrong

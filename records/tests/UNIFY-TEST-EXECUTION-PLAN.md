@@ -315,13 +315,22 @@ Code.
 - Compatibility requirement. The six archives under `dist/archive/`
   (`v0.2.7` to `v0.3.3`, local to this checkout) carry manifest
   `schema_version: 1` with the separate `acceptance` and `battery` roles and
-  a battery `original_path` under `runs/`. They must keep verifying through
-  `release_runs.verify_release` and `verify_bundle`, which `make publish`
-  runs again on every invocation, and an interrupted rotation whose journal
+  a battery `original_path` under `runs/`. Their evidence bundles must keep
+  verifying through `verify_bundle`; `release_runs.verify_release`, which
+  `make publish` runs again on every invocation, must preserve its existing
+  acceptance and refusal outcomes. An interrupted rotation whose journal
   references a separate battery must still resume through
   `release_rotate.py --apply`. The verifiers and rotation dispatch on the
   manifest's schema version; no historical archive, journal or retention
   entry is rewritten, and the new packer writes only the nested format.
+  Review correction, 2026-10-24: the original requirement that all six full
+  releases pass was based on their test-evidence schema alone. Read-only
+  comparison with the pre-implementation verifier at `dd352cd` establishes
+  that v0.2.7, v0.2.8 and v0.3.0 already lack the required build-provenance
+  object, and v0.3.1 and v0.3.2 carry an unsupported build-provenance version.
+  Both verifiers refuse them for those same reasons. All six evidence bundles
+  verify, and v0.3.3 passes full verification outside the automation sandbox.
+  This change does not relax the independent build-provenance requirements.
 - `Makefile`: `release` drops the battery lines; the help card's `notarize`
   and `release` entries say the acceptance runs the default battery against
   the final ZIP's contents.
@@ -351,8 +360,9 @@ likewise. `docs/DEPENDENCIES.md` is unaffected.
 
 Verification. `tests/run.sh --suite preflight` minus the opt-in members, that
 is the four release control cases by `--case`; the default battery; then
-`release_runs.verify_release` run read-only over each of the six local
-archives, which must pass unchanged. The real chain cannot be rehearsed
+`verify_bundle` run read-only over all six local archives, which must pass
+unchanged, and `release_runs.verify_release` compared with its pre-change
+outcomes as described above. The real chain cannot be rehearsed
 without a notarization submission, which is the
 user's step; the first `make release` after this stage is the live evidence,
 and its archive must verify (`release_runs.verify_release`) and publish. To
@@ -396,7 +406,7 @@ extraction-to-extraction equality.
 | Prerequisites, skips, unrun cases and failures stay visible with consistent completion effects | Unchanged dispatcher code; `dispatcher/selection_controls` and `accounting_controls` pass; acceptance refuses skips and unrun cases as the archive does |
 | Guidance, release procedure and implementation agree | The stage 2 and 3 documentation edits; `source_drift` passes, including the new rules |
 | Verification exercises the real entry paths and detects bypasses | Real scripts are invoked in `shell_helpers/controls`; the real `release_accept.accept` runs under the release controls with argument and timeout assertions; the opt-in driver runs the real acceptance battery once against a real build ZIP |
-| Existing archives stay verifiable and interrupted rotations resumable | `verify_release` passes on the six local archives unchanged; the publish and rotation controls exercise schema 1 and schema 2 fixtures, including a resumed rotation whose journal names a separate battery |
+| Existing evidence bundles stay verifiable and interrupted rotations resumable | `verify_bundle` passes on all six local archives unchanged; full verification preserves the baseline outcomes documented in Stage 3; the publish and rotation controls exercise schema 1 and schema 2 fixtures, including a resumed rotation whose journal names a separate battery |
 
 ## Decisions
 

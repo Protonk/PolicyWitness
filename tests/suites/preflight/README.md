@@ -46,7 +46,7 @@ Offline release controls also exercise the release procedure's decision points.
   dynamic lookups or library-internal calls, so it complements the
   [timing controls](../runner_c_worker_harness/README.md) rather than
   establishing usable time. Host and validator clocks are not inspected here.
-- Never executes `policy-witness` or the runner.
+- Artifact inspection never executes `policy-witness` or the runner.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.
 
@@ -235,6 +235,11 @@ Offline release controls also exercise the release procedure's decision points.
   session helper with path admission disabled, must fail the matching
   control. Opt-in, with the same toolchain and identity requirements as the
   guard controls; it needs no Rosetta.
+  A final release-battery sequence builds a fresh full ZIP and runs real
+  acceptance with the real default battery against its extracted app. Only
+  notarization, staple validation and Gatekeeper responses are controlled;
+  extraction, signatures, case execution and the full inventory comparison
+  remain real. The nested output is copied intact into the case's artifacts.
   It also runs the contained shim installation-request positive control and
   its empty-SDK neighbour, requiring a PID-attributed installation-service
   denial from the unified log. This is the only control deliberately making
@@ -309,7 +314,9 @@ Offline release controls also exercise the release procedure's decision points.
   must be a passing default-selection run against the extracted app whose
   recorded inventory equals a fresh extraction of the ZIP in full: a changed
   file hash and a single changed mode bit are each refused by name, as are a
-  failed, skipped, selected or mutated battery. The generated schema-2 record carries the
+  failed, skipped, selected or mutated battery. Selection checks include the
+  recorded plan mode: an all-case run has empty explicit selectors but is not
+  a default run. Both archive formats reject that substitution. The generated schema-2 record carries the
   provenance writer's two sealed notes as independent literals, and both the
   ZIP's member and the archived copy keep them through verification; a release
   record without a provenance object and a version 1 record bound

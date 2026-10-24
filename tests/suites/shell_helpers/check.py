@@ -143,16 +143,25 @@ def refusal_controls(out):
     direct_existed = direct.exists()
     passed = []
     for name, script, selectable in SCRIPTS:
-        for mode in (('refused', 'with_context') if selectable else ('refused',)):
+        modes = ['refused', 'missing_cases', 'missing_events', 'missing_output', 'empty_cases']
+        if selectable:
+            modes.append('with_context')
+        for mode in modes:
             label = f'refusal_{name}_{mode}'
             work = out / label
             work.mkdir()
             child_out = work / 'child out'
             env = {key: value for key, value in os.environ.items() if not key.startswith('PW_TEST_')}
             env['PW_APP_DIR'] = str(work / 'absent.app')
-            if mode == 'with_context':
+            if mode != 'refused':
                 env.update(PW_TEST_CASES='no_such_case', PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
                            PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=label)
+                missing = {'missing_cases': 'PW_TEST_CASES', 'missing_events': 'PW_TEST_EVENTS',
+                           'missing_output': 'PW_TEST_OUT_DIR'}.get(mode)
+                if missing:
+                    del env[missing]
+                if mode == 'empty_cases':
+                    env['PW_TEST_CASES'] = ''
             before = sorted(p.name for p in work.iterdir())
             result = subprocess.run(['bash', str(ROOT / script)], env=env, cwd=work,
                                     stdin=subprocess.DEVNULL, capture_output=True, timeout=60)
@@ -161,7 +170,7 @@ def refusal_controls(out):
             (work / 'exit.json').write_text(json.dumps({'script': script, 'mode': mode, 'returncode': result.returncode}) + '\n')
             after = sorted(p.name for p in work.iterdir() if p.name not in ('stdout', 'stderr', 'exit.json'))
             assert direct.exists() == direct_existed, f'{label}: tests/out/runs/direct was created'
-            if mode == 'refused':
+            if mode != 'with_context':
                 assert result.returncode == 2, (label, result.returncode, result.stderr)
                 assert REFUSAL.encode() in result.stderr and b'tests/run.sh --case' in result.stderr, (label, result.stderr)
                 assert script.encode() in result.stderr, (label, result.stderr)

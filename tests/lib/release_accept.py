@@ -44,7 +44,8 @@ def battery_problems(run, app):
         problems.append('skipped or unrun cases')
     if run.get('harness_errors'):
         problems.append('harness errors')
-    if run.get('requested_cases') or run.get('requested_suites'):
+    if (run.get('requested_cases') or run.get('requested_suites')
+            or (run.get('plan') or {}).get('selection', {}).get('mode') != 'default'):
         problems.append('a selection other than the default battery')
     if (run.get('configuration') or {}).get('app_dir') != str(app):
         problems.append('a tested app other than the extracted one')

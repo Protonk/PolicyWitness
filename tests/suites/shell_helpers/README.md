@@ -98,7 +98,8 @@ missing, naming `tests/run.sh --case SUITE/ID`, before any directory, event or
 report exists. The `controls` case drives four real scripts this way: the
 `unit` suite command, the `blackbox_e2e/BBX-001` script and the BYOXPC wrapper,
 each gated at `test_selected`, and the `sandbox_extensions_native` command,
-which begins its case at once. Each refuses without the context and writes
+which begins its case at once. Each refuses with all context absent, each
+required variable individually absent, or an empty selection, and writes
 nothing, and the retired default output directory is never created; the three selectable
 scripts run with the context and a selection they do not own, exit 0 without a
 refusal and still write nothing. Controls that start a case script themselves

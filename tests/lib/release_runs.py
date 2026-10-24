@@ -89,6 +89,8 @@ def battery_source(manifest):
         declared = manifest.get('battery')
         if not isinstance(declared, dict):
             raise ValueError('a schema 2 evidence manifest declares its battery')
+        if declared != dict(role='acceptance', path='tests/run.json'):
+            raise ValueError('a schema 2 battery must be acceptance/tests/run.json')
         return declared.get('role'), declared.get('path')
     return ('battery', 'run.json') if 'battery' in manifest.get('runs', {}) else None
 
@@ -211,17 +213,21 @@ def verify_release(archive):
         role, relative = source
         battery = retention.read_object(archive / BUNDLE / 'battery.json')
         entry = manifest['runs'][role]['retained']
+        reference = record.get('battery')
+        if not isinstance(reference, dict):
+            raise ValueError('archived battery does not support the release')
         if manifest.get('schema_version') == 2:
             original = entry['path'] + '/' + str(PurePosixPath(relative).parent)
-            consistent = record['battery']['original_path'] == original
+            consistent = reference.get('original_path') == original
         else:
             consistent = battery.get('run_id') == entry['run_id']
-        if (not isinstance(record.get('battery'), dict) or record['battery'].get('path') != BUNDLE + '/battery.json'
+        if (reference.get('path') != BUNDLE + '/battery.json'
                 or battery.get('ok') is not True or battery.get('terminal') is not True
-                or record['battery'].get('run_id') != battery.get('run_id') or not consistent
+                or reference.get('run_id') != battery.get('run_id') or not consistent
                 or entry.get('release') != tag or entry['source'] != record['source_commit']):
             raise ValueError('archived battery does not support the release')
-        if battery.get('requested_cases') or battery.get('requested_suites'):
+        if (battery.get('requested_cases') or battery.get('requested_suites')
+                or (battery.get('plan') or {}).get('selection', {}).get('mode') != 'default'):
             raise ValueError('archived battery is not the default selection')
     elif record.get('battery') is not None:
         raise ValueError('missing archived battery evidence')

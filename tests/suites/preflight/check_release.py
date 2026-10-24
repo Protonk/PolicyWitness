@@ -128,7 +128,7 @@ def check(out):
         completed.append('notary_' + mode)
 
     for mode in ('valid', 'missing_helper', 'stale_manifest', 'missing_staple',
-                 'xpc_failure', 'skipped', 'unrun', 'selected', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
+                 'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
         source = work / 'PolicyWitness.app'
@@ -181,7 +181,7 @@ def check(out):
                                  source=None, app_inventory='before.json')
             assert record['battery']['completion'] == dict(selected=3, completed=3, skipped=0, unrun=0), record['battery']
             assert record['battery']['run_id'] == 'release-fixture' and record['battery']['elapsed_seconds'] == 12.5, record['battery']
-        if mode == 'selected':
+        if mode in ('selected', 'all'):
             assert any('a selection other than the default battery' in e for e in record['errors']), record['errors']
         if mode == 'unrun':
             assert any('skipped or unrun cases' in e for e in record['errors']), record['errors']
@@ -194,7 +194,7 @@ def check(out):
         if record.get('extraction_dir'):
             assert not Path(record['extraction_dir']).exists(), 'extraction was not cleaned up'
         executed = [a for a in tools.calls if a[0] == 'bash']
-        assert bool(executed) is (mode in ('valid', 'xpc_failure', 'skipped', 'unrun', 'selected', 'timeout', 'wrong_runner', 'mutated_app'))
+        assert bool(executed) is (mode in ('valid', 'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app'))
         assert all(a[1:] == [str(ROOT / 'tests/run.sh')] for a in executed), executed
         if mode == 'mutated_app':
             assert set(json.loads((work / 'changes.json').read_text())) == {'Contents/Info.plist'}

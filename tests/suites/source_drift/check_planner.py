@@ -197,6 +197,7 @@ def registry_scenarios(repo, out):
     without a README and one the catalog lacks are each named by the real checker."""
     checker = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py')]
     wrapper = repo / 'tests/suites/smoke/run.sh'
+    nested = repo / 'tests/suites/smoke/retired/run.sh'
     stray = repo / 'tests/suites/stray_suite'
 
     def write_wrapper():
@@ -206,10 +207,16 @@ def registry_scenarios(repo, out):
         stray.mkdir()
         (stray / 'notes.txt').write_text('a directory under tests/suites is a suite directory\n')
 
+    def nested_wrapper():
+        nested.parent.mkdir()
+        nested.write_text('#!/usr/bin/env bash\nexit 0\n')
+
     receipts = []
     for name, setup, expected, diagnostic in [
         ('registry-wrapper-script', write_wrapper, 1, 'tests/suites/smoke/run.sh is not a case command'),
         ('registry-wrapper-removed', wrapper.unlink, 0, None),
+        ('registry-nested-wrapper', nested_wrapper, 1, 'tests/suites/smoke/retired/run.sh is not a case command'),
+        ('registry-nested-wrapper-removed', lambda: shutil.rmtree(nested.parent), 0, None),
         ('registry-directory-without-readme', stray_without_readme, 1, 'tests/suites/stray_suite/ has no README.md'),
         ('registry-directory-outside-catalog', lambda: (stray / 'README.md').write_text('# stray_suite\n'),
          1, 'suite directories and catalog disagree'),

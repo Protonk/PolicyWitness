@@ -266,9 +266,9 @@ def check_run_scripts_are_catalog_commands() -> list[str]:
     suite's cases, outside the dispatcher's selection and accounting."""
     commands = catalog_commands()
     problems: list[str] = []
-    for name in sorted(suite_directories()):
-        script = f"tests/suites/{name}/run.sh"
-        if (REPO_ROOT / script).exists() and script not in commands:
+    for path in sorted(SUITES_DIR.rglob('run.sh')):
+        script = path.relative_to(REPO_ROOT).as_posix()
+        if script not in commands:
             problems.append(f"  catalog: {script} is not a case command; cases run only through tests/run.sh")
     return problems
 

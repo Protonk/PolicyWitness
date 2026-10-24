@@ -1952,6 +1952,40 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     return None
 
 
+def control_release_battery(co, variant):
+    """Run real acceptance and the default battery once against a real build ZIP.
+
+    The copied checkout needs a local source index for the default battery's
+    disposable source fixtures. Only Apple responses are controlled; no app,
+    signature inspector, test command or test result is replaced.
+    """
+    # Refusal sequences deliberately leave caches and fixture inputs behind.
+    # Give the battery a fresh source snapshot, independent of those sequences.
+    with tempfile.TemporaryDirectory(prefix='pw-release-battery-', dir='/private/tmp') as temporary:
+        fresh = Checkout(Path(temporary), co.identity, co.out)
+        git = ['git', '-C', str(fresh.root), '-c', 'user.name=Control',
+               '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false']
+        subprocess.run([*git, 'init', '-q'], check=True)
+        subprocess.run([*git, 'add', '.'], check=True)
+        subprocess.run([*git, 'commit', '-qm', 'rehearsal source snapshot'], check=True)
+        build = fresh.build('release-battery', 'full', fresh='1')
+        passing(fresh, build, 'full')
+        acceptance = fresh.root / 'tests/out/release-acceptance/live-battery'
+        evidence = co.out / 'release-battery'
+        environment = {key: value for key, value in fresh.base_env.items() if not key.startswith('PW_')}
+        environment['IDENTITY'] = co.identity
+        try:
+            status, _, stderr = command(evidence / 'driver', [
+                'bash', fresh.root / 'tests/lib/python.sh', fresh.root / 'tests/fixtures/release/live_battery.py',
+                build.dist / 'PolicyWitness.zip', acceptance], cwd=fresh.root, env=environment, timeout=7500)
+            assert status == 0, stderr[-4000:]
+        finally:
+            if acceptance.exists():
+                shutil.copytree(acceptance, evidence / 'acceptance', symlinks=True)
+                assert artifact.inventory(acceptance) == artifact.inventory(evidence / 'acceptance')
+    return build
+
+
 def cargo_configuration(co, files):
     """Write Cargo configuration files below the disposable checkout (the build's invocation directory); returns a remover."""
     written = []
@@ -2733,6 +2767,7 @@ SEQUENCES = [
     ('cargo_selection_sequence', control_cargo_selection_sequence),
     ('sdk_requests', control_sdk_requests),
     ('cargo_package_target_guard', control_cargo_package_target_guard),
+    ('release_battery', control_release_battery),
 ]
 
 

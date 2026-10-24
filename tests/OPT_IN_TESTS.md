@@ -255,20 +255,24 @@ selection, deduplication, configuration validation and complete accounting.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
-  still needs the timestamp service and an unsandboxed shell. No app is
-  launched and nothing is submitted to Apple.
+  still needs the timestamp service and an unsandboxed shell. The final
+  release-battery sequence launches the built app through real acceptance
+  and the default battery. Notarization, staple validation and Gatekeeper
+  responses are controlled locally; nothing is submitted to Apple.
 - **Opt-in reason:** Runs many builds, several of them fresh, and signs with
-  keychain access. The source checkout's caches and distribution are untouched.
+  keychain access, then runs the default battery against an extracted build
+  ZIP. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
   boundaries, the stamp, fresh mode, path admission, the output target, the
   native builder check, the lock, its handoff or launch boundaries, the request
-  capture or the generated refusal table.
+  capture, the generated refusal table or release-acceptance orchestration.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
   each build's raw output, status, tool and forwarding-wrapper receipts with
   the hooks that fired and the lock descriptor each compiler held, the
   session, stamp and record copies, the output inventory, the outside-tree
   snapshots of the path controls, the lock lifetime observations, the make
-  entrypoint receipts and the mutation results.
+  entrypoint receipts, the mutation results and the complete acceptance
+  output from the release-battery sequence.
 
 ### translated build refusal controls
 
