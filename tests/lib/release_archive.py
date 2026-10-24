@@ -4,13 +4,16 @@ The archive holds the exact accepted ZIP renamed with its version, the staged
 guide from the same build, SHA256SUMS, release.json and the attempt's receipts
 moved under evidence/ (a `<attempt>.archived` pointer stays behind). The attempt
 must record an accepted notarization and a passed archive acceptance of the same
-bytes, and the ZIP must be stamped exactly at the annotated tag v<version>. A
-completed default battery run against the final app is packed beside the
-acceptance run, with portable summaries and a verified file inventory. Both
-working runs are retained and explicitly opt into release rotation.
+bytes, and the ZIP must be stamped exactly at the annotated tag v<version>. The
+acceptance's nested default battery run must have passed against the extracted
+app, whose inventory must equal a fresh extraction of the archived ZIP in full,
+modes included. The acceptance directory, battery inside, is packed with
+portable summaries and a verified file inventory, retained, and explicitly opts
+into release rotation.
 Publishing is the separate release_publish.py step, which fills `origin` afterwards.
 """
 import argparse
+import contextlib
 import hashlib
 import json
 from pathlib import Path
@@ -67,27 +70,35 @@ def find_latest(dist):
     return matches[0]
 
 
-def outer_seal_facts(final):
-    """The app seal's facts read from the accepted ZIP's own bytes, never from a working app."""
-    with tempfile.TemporaryDirectory(prefix='pw-archive-seal-', dir='/private/tmp') as temporary:
+@contextlib.contextmanager
+def extracted_final(final):
+    """The accepted ZIP's own app, extracted fresh under /private/tmp for the archive's reading of it."""
+    with tempfile.TemporaryDirectory(prefix='pw-archive-final-', dir='/private/tmp') as temporary:
         result = subprocess.run(['/usr/bin/ditto', '-x', '-k', str(final), temporary], capture_output=True, text=True, timeout=120)
         if result.returncode != 0:
-            raise ValueError(f'the accepted ZIP could not be extracted for its seal facts: {result.stderr.strip()}')
+            raise ValueError(f'the accepted ZIP could not be extracted: {result.stderr.strip()}')
         app = Path(temporary) / 'PolicyWitness.app'
         if not app.is_dir():
             raise ValueError('the accepted ZIP holds no PolicyWitness.app')
-        try:
-            found = signer_check.signature(app)
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            return dict(status='unreadable', detail=str(exc)[:200])
+        yield app
+
+
+def outer_seal_facts(app):
+    """The app seal's facts read from the accepted ZIP's own bytes, never from a working app."""
+    try:
+        found = signer_check.signature(app)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return dict(status='unreadable', detail=str(exc)[:200])
     chain = found['authorities'][1:]
     return dict(status='ok', leaf=found['leaf'], team=found['team'], timestamp=bool(found['timestamp']),
                 runtime=bool(found['runtime']), authorities=found['authorities'][:4],
                 developer_id_chain=bool(chain) and chain[-1] == signer_check.APPLE_ROOT and signer_check.DEVELOPER_ID_CA in chain)
 
 
-def battery_record(root, dist, battery):
-    path = retention.bounded_path(root, battery)
+def battery_record(root, acceptance_run, accepted, final_inventory):
+    """The acceptance's nested default battery: a passing default run against the extracted
+    app, whose recorded inventory equals the archived ZIP's fresh extraction in full."""
+    path = retention.bounded_path(root, acceptance_run / 'tests')
     run = retention.read_object(path / 'run.json')
     problems = []
     if run.get('ok') is not True or run.get('terminal') is not True:
@@ -95,20 +106,30 @@ def battery_record(root, dist, battery):
     counts, completion = run.get('counts') or {}, run.get('completion') or {}
     if counts.get('fail') or completion.get('skipped') or completion.get('unrun') or run.get('harness_errors'):
         problems.append('battery has failures, skips, unrun cases or harness errors')
+    if not completion.get('selected') or completion.get('completed') != completion.get('selected'):
+        problems.append('battery did not complete every selected case')
     if run.get('requested_cases') or run.get('requested_suites'):
         problems.append('battery must be the default selection')
     integrity = run.get('artifact_integrity') or {}
     if integrity.get('unchanged') is not True or integrity.get('valid_before') is not True:
         problems.append('battery did not confirm an unchanged, valid app')
-    if integrity.get('app') != str((Path(dist) / 'PolicyWitness.app').resolve()):
-        problems.append('battery did not run against the final app')
+    extraction = accepted.get('extraction_dir')
+    if not isinstance(extraction, str) or integrity.get('app') != str(Path(extraction) / 'PolicyWitness.app'):
+        problems.append('battery did not run against the extracted app')
     if retention.disposition(path) != 'completed':
         problems.append('battery has no matching managed completion record')
+    inventory = 'artifact-integrity/before.json'
+    tested = retention.read_object(path / inventory) if (path / inventory).is_file() else None
+    # Full equality: every path's mode, every file's hash, every symlink's
+    # target. Both sides are extractions of the same ZIP by the same tool, so a
+    # difference, a mode bit included, is a defect or tampering.
+    if tested != final_inventory:
+        problems.append('battery inventory differs from the archived ZIP extraction')
+    if (acceptance_run / 'before.json').is_file() and retention.read_object(acceptance_run / 'before.json') != tested:
+        problems.append('battery inventory differs from the acceptance inventory')
     if problems:
         raise ValueError('; '.join(problems))
-    inventory = 'artifact-integrity/before.json'
-    return dict(path=str(path.relative_to(root / 'tests/out')), run_id=run['run_id'],
-                app_inventory=inventory if (path / inventory).is_file() else None)
+    return dict(path=str(path.relative_to(root / 'tests/out')), run_id=run['run_id'], app_inventory=inventory)
 
 
 def retain(root, entries):
@@ -127,13 +148,13 @@ def retain(root, entries):
     return added
 
 
-def archive(attempt, *, dist, root=ROOT, notes=None, battery=None):
+def archive(attempt, *, dist, root=ROOT, notes=None):
     root = Path(root).resolve()
     with retention.checkout_lock(root):
-        return archive_locked(attempt, dist=dist, root=root, notes=notes, battery=battery)
+        return archive_locked(attempt, dist=dist, root=root, notes=notes)
 
 
-def archive_locked(attempt, *, dist, root, notes, battery):
+def archive_locked(attempt, *, dist, root, notes):
     retention.load_index(root)
     attempt, record, acceptance, notarization = load_attempt(attempt)
     dist = release_runs.real_path(dist)
@@ -150,10 +171,12 @@ def archive_locked(attempt, *, dist, root, notes, battery):
         problems.append('final ZIP bytes differ from the accepted archive')
     # The archived provenance and the final controller hash come from the accepted
     # ZIP's own bytes, read here and verified again before the rename below.
-    record_bytes, controller_hash, seal_facts = None, None, None
+    record_bytes, controller_hash, seal_facts, final_inventory = None, None, None, None
     try:
         record_bytes, controller_hash = build_provenance.read_zip_record(final)
-        seal_facts = outer_seal_facts(final)
+        with extracted_final(final) as extracted:
+            seal_facts = outer_seal_facts(extracted)
+            final_inventory = inventory(extracted)
     except (ValueError, KeyError, OSError, zipfile.BadZipFile) as exc:
         problems.append(f'accepted ZIP provenance: {exc}')
     guide = final.parent / 'PolicyWitness.md'
@@ -190,22 +213,18 @@ def archive_locked(attempt, *, dist, root, notes, battery):
         acceptance_entry = dict(
             path=str(acceptance_run.relative_to(root / 'tests/out')),
             run_id=acceptance_owner['run_id'],
-            reason=f'PolicyWitness {version} release ZIP acceptance: signatures, staple, Gatekeeper, allow and '
-                   f'deny witnesses, and unchanged archive and extracted app; archived as {tag}.',
+            reason=f'PolicyWitness {version} release ZIP acceptance: signatures, staple, Gatekeeper, the default '
+                   f'battery against the extracted app with no skips, unrun cases or harness errors, and unchanged '
+                   f'archive and extracted app; archived as {tag}.',
             source=commit, app_inventory='before.json' if (acceptance_run / 'before.json').is_file() else None,
             release=tag)
     except (ValueError, OSError, KeyError) as exc:
         problems.append(f'acceptance run is not readable: {exc}')
         acceptance_entry = None
-    battery_entry = None
-    if battery is not None:
+    battery_found = None
+    if acceptance_entry is not None and final_inventory is not None:
         try:
-            found = battery_record(root, dist, battery)
-            battery_entry = dict(path=found['path'], run_id=found['run_id'],
-                                 reason=f'PolicyWitness {version} release validation: the default battery passed '
-                                        f'against the final stapled app with no skips, unrun cases or harness '
-                                        f'errors and an unchanged app; archived as {tag}.',
-                                 source=commit, app_inventory=found['app_inventory'], release=tag)
+            battery_found = battery_record(root, acceptance_run, accepted, final_inventory)
         except (ValueError, OSError, KeyError) as exc:
             problems.append(f'battery run rejected: {exc}')
     if notes is not None and not Path(notes).is_file():
@@ -214,7 +233,7 @@ def archive_locked(attempt, *, dist, root, notes, battery):
         raise ValueError('; '.join(problems))
 
     name = f'PolicyWitness-{version}.zip'
-    entries = [entry for entry in (acceptance_entry, battery_entry) if entry is not None]
+    entries = [acceptance_entry]
     retention.index_paths(root, dict(schema_version=1, runs=entries))
     existing = retention.read_object(root / 'tests/RETAINED.json')['runs']
     for entry in entries:
@@ -233,15 +252,13 @@ def archive_locked(attempt, *, dist, root, notes, battery):
         submitted_sha256=record.get('submitted_sha256'),
         acceptance=dict(path=release_runs.BUNDLE + '/acceptance.json',
                         original_path=acceptance_entry['path'] + '/acceptance.json', ok=True, sha256=final_hash),
-        battery=None if battery_entry is None else dict(path=release_runs.BUNDLE + '/battery.json',
-                        original_path=battery_entry['path'], run_id=battery_entry['run_id']),
+        battery=dict(path=release_runs.BUNDLE + '/battery.json',
+                     original_path=battery_found['path'], run_id=battery_found['run_id']),
         receipts=receipts, notes=[],
         provenance=dict(path='evidence/provenance.json', sha256=hashlib.sha256(record_bytes).hexdigest(),
                         controller_sha256=controller_hash, app_signature=seal_facts,
                         note='the embedded record as the accepted ZIP carries it; the controller hash and the seal facts are read from the same ZIP'))
     runs = {'acceptance': (acceptance_run, acceptance_entry)}
-    if battery_entry:
-        runs['battery'] = (root / 'tests/out' / battery_entry['path'], battery_entry)
     # Stage and verify the complete archive before exposing it or changing any
     # retention. A failed copy leaves all original evidence available.
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -263,8 +280,8 @@ def archive_locked(attempt, *, dist, root, notes, battery):
         if notes is not None:
             shutil.copy2(notes, evidence / 'release-notes.md')
         (evidence / 'provenance.json').write_bytes(record_bytes)
-        archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE,
-                                                    tag=tag, source=commit, runs=runs)
+        archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE, tag=tag, source=commit,
+                                                    runs=runs, battery=('acceptance', 'tests/run.json'))
         retention.atomic_json(staged / 'release.json', archived)
         release_runs.verify_release(staged)
         release_runs.sync_tree(staged)
@@ -284,7 +301,6 @@ def main(argv=None):
     parser.add_argument('--latest', action='store_true',
                         help='select the one attempt that accepted the current final ZIP')
     parser.add_argument('--dist', default='dist', type=Path, help='distribution directory')
-    parser.add_argument('--battery', type=Path, help='completed default battery run against the final app')
     parser.add_argument('--notes', type=Path, help='release notes to archive as evidence/release-notes.md')
     args = parser.parse_args(argv)
     if bool(args.attempt) == args.latest:
@@ -292,7 +308,7 @@ def main(argv=None):
     dist = args.dist if args.dist.is_absolute() else ROOT / args.dist
     try:
         attempt = find_latest(dist) if args.latest else args.attempt
-        dest, added = archive(attempt, dist=dist, root=ROOT, notes=args.notes, battery=args.battery)
+        dest, added = archive(attempt, dist=dist, root=ROOT, notes=args.notes)
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
         parser.exit(1, f'STOP: {exc}\n')
     print(dest)

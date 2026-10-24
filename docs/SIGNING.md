@@ -212,10 +212,13 @@ make publish VERSION=0.2.4
 ```
 
 `make release` runs the preflight, then the `make notarize` chain below (a
-fresh build, sign, submit, wait, staple, validate, re-zip, accept), then the
-full default battery against the stapled app into
-`tests/out/runs/release-<version>-default`, then `tests/lib/release_archive.py`,
-which archives the accepted release under `dist/archive/v<version>/`. The
+fresh build, sign, submit, wait, staple, validate, re-zip, accept), then
+`tests/lib/release_archive.py`, which archives the accepted release under
+`dist/archive/v<version>/`. Acceptance is where the tests run: it extracts the
+final ZIP and runs the full default battery against the extracted app through
+`tests/run.sh` with no selectors, the same command and selection as `make
+test`, into the acceptance's own `tests/` directory. There is no second battery
+and no release-specific selection. The
 release build is fresh: `notarize` passes `PW_FRESH_BUILD=1` to its recursive
 `make build`, so `builddir/`, `controller/target/release/` and
 `controller/target/aarch64-apple-darwin/release/` are replaced and Cargo
@@ -224,40 +227,47 @@ rebuilds every shipped target, and a caller's conflicting
 refused before anything builds rather than overridden silently. Archiving
 stages the ZIP, guide, checksums, original command receipts, notes, the
 provenance record read out of the accepted ZIP and complete test evidence,
-verifies the copy including the record's binding to the ZIP, and exposes the
-completed archive by rename. The attempt's receipts end up under
+verifies the copy including the record's binding to the ZIP, requires the
+battery's recorded inventory of the extracted app to equal a fresh extraction
+of the archived ZIP in full (every mode, hash and symlink target), and exposes
+the completed archive by rename. The attempt's receipts end up under
 `evidence/`, with a `<attempt>.archived` pointer under `dist/evidence/`.
-The acceptance and battery working directories are added to `tests/RETAINED.json`.
+The acceptance working directory, battery inside, is added to `tests/RETAINED.json`.
 Finally, `tests/lib/release_rotate.py` removes eligible older working test output
 as described below. Commit the resulting retention index change.
-The build, acceptance, the battery, archiving and rotation each hold the
+The build, acceptance (with its battery), archiving and rotation each hold the
 checkout lock for their own duration; `make release` holds no outer lock, so
 run no other build or battery in the checkout while it runs. The notarization
 submission is the only remote step in `make release`.
 
 ### Portable test evidence and release cleanup
 
-Each archive contains `evidence/test-runs/runs.tar.gz`, with the full acceptance
-directory under `acceptance/` and the default battery under `battery/` when
-provided. Its `manifest.json` records the original retention entries, per-file
-hashes, modes, symlink targets, and checksums of the compressed archive and
-standalone summaries. `release.json` binds that manifest by SHA-256. Its
-`acceptance.path` and `battery.path` resolve to summaries within the release
-archive; `original_path` records the former location under `tests/out`.
-Original command receipts retain their original paths. Verification reads the
-portable copy directly, independently of the working test directories.
+Each archive contains `evidence/test-runs/runs.tar.gz` with the full acceptance
+directory under `acceptance/`, the default battery's dispatcher run nested at
+`acceptance/tests/`. Its `manifest.json` (`schema_version` 2) records the
+retention entry, per-file hashes, modes and symlink targets, which file inside
+the acceptance is the battery summary, and checksums of the compressed archive
+and the standalone `acceptance.json` and `battery.json` summaries.
+`release.json` binds that manifest by SHA-256. Its `acceptance.path` and
+`battery.path` resolve to summaries within the release archive;
+`original_path` records the former location under `tests/out`. Archives
+through 0.3.3 carry `schema_version` 1 with the battery as a separate
+`battery/` role and a separate retained run; they verify, publish and rotate
+unchanged, and nothing rewrites them. Original command receipts retain their
+original paths. Verification reads the portable copy directly, independently
+of the working test directories.
 
 Successful release packaging is the automatic cleanup checkpoint. Test output
 accumulates during development until the next packaged release or explicit
 manual pruning.
 
-Cleanup keeps the new release's working acceptance and battery plus the newest
+Cleanup keeps the new release's working acceptance, battery inside, plus the newest
 completed local output under `tests/out/runs/` or `tests/out/release-acceptance/`.
 The recorded completion timestamp determines newest, including failed runs;
 ties are all kept. Starting cleanup for an older release while a newer one is
 indexed is refused. Explicit manual pins remain protected exceptions.
 
-Both release retention entries carry `"release": "v<version>"`, making them
+The release retention entry carries `"release": "v<version>"`, making it
 eligible at a later release checkpoint. An omitted or null `release` is an
 explicit pin. Release entries should carry their established tag. Do not
 infer ownership from directory names or reason text. Absent older rotating
@@ -322,9 +332,11 @@ the archived notes.
 you already built and tested the app: the caches are replaced and every
 shipped target is compiled, and a `PW_FRESH_BUILD` value other than `1`
 supplied by the caller refuses the chain before the build. Its last step
-establishes release acceptance by testing the actual final ZIP. It reports
-preflight findings as warnings and continues, so a rehearsal still records
-what it stamps. For an already-built ZIP, use the individual steps below.
+establishes release acceptance by running the default battery against the
+actual final ZIP's contents, so a rehearsal is a complete rehearsal and takes
+the battery's duration. It
+reports preflight findings as warnings and continues, so a rehearsal still
+records what it stamps. For an already-built ZIP, use the individual steps below.
 
 ```sh
 make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
@@ -349,9 +361,8 @@ directories hold raw receipts. Missing steps have no recorded result.
 | Staple | Attaches Apple's ticket to the app | `stapler staple` succeeds |
 | Validate | Reads the stapled app | Staple validation and Gatekeeper assessment succeed |
 | Re-zip | Replaces ZIP with the stapled app | ZIP creation succeeds |
-| Accept archive | Extracts a disposable copy and runs checks | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 |
-| Battery (`make release`) | Runs the default battery against the stapled app | `run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
-| Archive (`make release`) | Verifies staged assets, receipts, the record copied from the accepted ZIP with the final controller hash and seal facts, and portable test evidence; retains working runs | `dist/archive/v<version>/release.json` with `origin: null` and a `provenance` object bound to the ZIP |
+| Accept archive | Extracts a disposable copy, checks it, and runs the default battery against it through `tests/run.sh` with no selectors under its fixed two-hour bound | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 and a `battery` summary; the nested `tests/run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
+| Archive (`make release`) | Verifies staged assets, receipts, the record copied from the accepted ZIP with the final controller hash and seal facts, the battery's inventory against a fresh extraction of the ZIP, and portable test evidence; retains the acceptance run | `dist/archive/v<version>/release.json` with `origin: null`, a `provenance` object bound to the ZIP and a `battery` naming the nested run |
 | Cleanup (`make release`) | Keeps the release and newest local evidence; retires older owned output under the checkout lock | `evidence/rotation.json` records a completed transaction |
 | Publish (`make publish`) | Pushes the tag, creates the release, verifies uploads | `release.json` records `origin` and `evidence/github-release.json` exists |
 
@@ -475,16 +486,24 @@ recorded output and stop; retrying that individual command is a manual decision.
 `bash tests/accept-release.sh PATH/TO/PolicyWitness.zip` requires an explicit ZIP.
 It records the hash, checks archive layout, and extracts with `ditto` under
 `/private/tmp`. It checks the extracted app's signatures and manifest, validates
-its staple, assesses Gatekeeper, and runs two existing contracts through its own
-controller and bundled standard XPC runner: an allowed read and a denied read.
-It verifies both cases completed successfully and preserves all test evidence.
-Neither case signs anything, installs an external runner, or rebuilds the app.
-Inherited `PW_*` settings cannot select a local fallback build.
+its staple, assesses Gatekeeper, and runs the default battery against the
+extracted app through `tests/run.sh` with no selectors, the one test interface
+under its ordinary selection and accounting. The battery must pass with no
+skipped or unrun cases, no harness errors and an unchanged app, and its two
+specimen envelopes must name the bundled standard runner. The battery runs under
+a fixed two-hour bound, `BATTERY_TIMEOUT_SECONDS` in `tests/lib/release_accept.py`;
+the receipt in `execution/command.json` records the bound and the elapsed time,
+and expiry fails acceptance while keeping whatever the dispatcher wrote. The
+bound is an initial operational ceiling, revised from recorded elapsed times. Nothing in the battery signs, installs an external runner
+or rebuilds the app, because those cases are not default members. Inherited
+`PW_*` settings cannot select a local fallback build.
 
 The input ZIP and extracted app must remain unchanged throughout acceptance.
 The temporary extraction is removed; reports, command outputs, and inventories
-remain in a fresh `tests/out/release-acceptance/run-*` directory. That directory
-is printed, and `acceptance.json` binds the result to the final archive hash.
+remain in a fresh `tests/out/release-acceptance/run-*` directory with the
+battery's dispatcher output under its `tests/`. That directory
+is printed, and `acceptance.json` binds the result to the final archive hash
+and summarizes the battery.
 With `--evidence-dir`, a small `acceptance.json` pointer in the release attempt
 records that report's location, result and final hash; test evidence stays under
 `tests/out/release-acceptance/` and follows the existing retention rules.

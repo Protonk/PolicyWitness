@@ -272,9 +272,12 @@ Offline release controls also exercise the release procedure's decision points.
   wrapper builds the stubs with `tests/fixtures/dispatcher/build.sh` into the
   case artifacts and names them in `PW_DISPATCHER_HOST_FIXTURE`.
   They cover missing helpers, stale evidence, missing staples, failed XPC runs,
-  skipped cases, wrong runner provenance, mutation, and corrupt ZIPs, while a
-  usable local source app remains untouched. Real signature semantics are covered
-  separately by `signed_artifact_controls`.
+  skipped and unrun cases, a battery that is not the default selection, a
+  battery that exceeds its fixed two-hour bound (acceptance fails and the nested
+  output is retained), wrong runner provenance, mutation, and corrupt ZIPs,
+  while a usable local source app remains untouched. The execution stand-in
+  requires the one test interface with no selectors and the recorded bound.
+  Real signature semantics are covered separately by `signed_artifact_controls`.
   Evidence controls exercise custom distribution paths, shared named steps,
   archive identity, refusal of repeated submissions/commands, preservation of
   failed receipts, and links to the separate archive-acceptance output.
@@ -302,7 +305,11 @@ Offline release controls also exercise the release procedure's decision points.
   mismatch without touching the distribution or the retention index, and on
   success must move the attempt, write the checksums and provenance record,
   pack and verify complete test evidence with portable summaries, and retain
-  the acceptance and battery runs. The generated schema-2 record carries the
+  the acceptance run with the default battery nested inside it. The battery
+  must be a passing default-selection run against the extracted app whose
+  recorded inventory equals a fresh extraction of the ZIP in full: a changed
+  file hash and a single changed mode bit are each refused by name, as are a
+  failed, skipped, selected or mutated battery. The generated schema-2 record carries the
   provenance writer's two sealed notes as independent literals, and both the
   ZIP's member and the archived copy keep them through verification; a release
   record without a provenance object and a version 1 record bound
@@ -332,6 +339,11 @@ Offline release controls also exercise the release procedure's decision points.
   completed deletion must resume from the journal without deleting a replacement
   at the original path. Competing processes must respect the stable checkout
   lock, and a failed atomic index replacement must preserve its prior bytes.
+  Both evidence formats are exercised: a previous release in the separate-battery
+  format (schema 1, as releases through 0.3.3 were archived) verifies, has its
+  acceptance and battery retired by the current archiver's rotation, and still
+  verifies unchanged afterwards; a rotation driven by a schema 1 archive plans
+  from its battery summary and resumes after an interrupted rename.
 
 ## Fixtures
 

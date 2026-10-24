@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import zipfile
 
+ROOT = Path(__file__).resolve().parents[3]
 ID = '11111111-2222-3333-4444-555555555555'
 
 
@@ -64,6 +65,11 @@ class Tools:
             return
         if argv[0] != 'bash':
             raise AssertionError(f'unexpected release command: {argv}')
+        # The one test interface with no selectors: the default battery, nothing narrower.
+        if argv[1:] != [str(ROOT / 'tests/run.sh')]:
+            raise AssertionError(f'release acceptance did not run the default battery through tests/run.sh: {argv}')
+        if timeout != 7200:
+            raise AssertionError(f'release acceptance bound is not the recorded 7200 s: {timeout}')
         app = Path(env['PW_APP_DIR'])
         if not str(app).startswith('/private/tmp/pw-release-'):
             raise AssertionError('execution used a local fallback app')
@@ -74,14 +80,33 @@ class Tools:
             raise RuntimeError('controlled case failure')
         output = Path(env['PW_TEST_OUT_DIR'])
         output.mkdir()
-        cases = ['smoke/specimen_file_read_deny', 'witness_contract/happy_path_baseline']
-        summary = dict(run_id='release-fixture', ok=True, configuration={'app_dir': str(app)},
-            completion=dict(selected=2, completed=2, skipped=0, unrun=0),
-            case_results=[dict(id=case, status='pass') for case in cases])
+        timed_out = self.mode == 'timeout'
+        # The real bounded command's receipt: the limit and the elapsed time.
+        (out / 'command.json').write_text(json.dumps(dict(
+            argv=argv, timeout_seconds=timeout, returncode=None if timed_out else 0, timed_out=timed_out,
+            interrupted=False, elapsed_seconds=7201.0 if timed_out else 12.5)))
+        if timed_out:
+            # What a dispatcher killed before finalizing leaves behind: ownership, no terminal record.
+            (output / 'owner.json').write_text(json.dumps(dict(
+                schema_version=1, run_id='release-fixture', out_dir=str(output), started_at_unix_ms=1)))
+            raise RuntimeError(f'command timed out; remote work may still be pending; see {out}')
+        cases = ['smoke/specimen_file_read_deny', 'witness_contract/happy_path_baseline', 'fixture/third_default_case']
+        summary = dict(schema_version=1, run_id='release-fixture', terminal=True, ok=True,
+            started_at_unix_ms=1, finished_at_unix_ms=2, duration_ms=1,
+            configuration={'app_dir': str(app)},
+            completion=dict(selected=3, completed=3, skipped=0, unrun=0),
+            counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3}, harness_errors=[],
+            requested_cases=[], requested_suites=[],
+            artifact_integrity=dict(app=str(app), unchanged=True, valid_before=True),
+            case_results=[dict(id=case, status='pass', state='completed') for case in cases])
         if self.mode == 'skipped':
-            summary['completion'].update(completed=1, skipped=1)
+            summary['completion'].update(completed=2, skipped=1)
+        if self.mode == 'unrun':
+            summary['completion'].update(completed=2, unrun=1)
+        if self.mode == 'selected':
+            summary['requested_cases'] = ['smoke/specimen_file_read_deny']
         (output / 'run.json').write_text(json.dumps(summary))
-        for case, leaf in zip(cases, ('policy_witness.run.stdout.json', 'run.json')):
+        for case, leaf in zip(cases[:2], ('policy_witness.run.stdout.json', 'run.json')):
             path = output / 'suites' / case / 'artifacts' / leaf
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps({'data': {'specimen': {'runner_provenance': {

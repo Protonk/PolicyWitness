@@ -128,7 +128,7 @@ def check(out):
         completed.append('notary_' + mode)
 
     for mode in ('valid', 'missing_helper', 'stale_manifest', 'missing_staple',
-                 'xpc_failure', 'skipped', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
+                 'xpc_failure', 'skipped', 'unrun', 'selected', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
         source = work / 'PolicyWitness.app'
@@ -170,18 +170,32 @@ def check(out):
         record = json.loads((work / 'acceptance.json').read_text())
         assert result == (0 if mode == 'valid' else 1), (mode, record)
         assert record['ok'] is (mode == 'valid')
+        assert 'selected_cases' not in record, 'acceptance names its own case list'
+        assert record['battery']['timeout_seconds'] == 7200, record['battery']
         if mode == 'valid':
             line = next(line for line in (work / 'stdout').read_text().splitlines()
                         if line.startswith('Suggested tests/RETAINED.json entry: '))
             entry = json.loads(line.split(': ', 1)[1])
             assert entry == dict(path=str(work.relative_to(ROOT / 'tests/out')),
-                                 run_id='release-fixture', reason='Release ZIP acceptance',
+                                 run_id='release-fixture', reason='Release ZIP acceptance with the default battery',
                                  source=None, app_inventory='before.json')
+            assert record['battery']['completion'] == dict(selected=3, completed=3, skipped=0, unrun=0), record['battery']
+            assert record['battery']['run_id'] == 'release-fixture' and record['battery']['elapsed_seconds'] == 12.5, record['battery']
+        if mode == 'selected':
+            assert any('a selection other than the default battery' in e for e in record['errors']), record['errors']
+        if mode == 'unrun':
+            assert any('skipped or unrun cases' in e for e in record['errors']), record['errors']
+        if mode == 'timeout':
+            # Expiry fails acceptance, records the limit and the elapsed time, and keeps what the dispatcher wrote.
+            assert any('timed out' in e for e in record['errors']), record['errors']
+            assert record['battery']['timed_out'] is True and record['battery']['elapsed_seconds'] == 7201.0, record['battery']
+            assert (work / 'tests/owner.json').is_file(), 'the interrupted nested output was not retained'
         assert archive.read_bytes() == initial and fingerprint(source) == source_before
         if record.get('extraction_dir'):
             assert not Path(record['extraction_dir']).exists(), 'extraction was not cleaned up'
         executed = [a for a in tools.calls if a[0] == 'bash']
-        assert bool(executed) is (mode in ('valid', 'xpc_failure', 'skipped', 'wrong_runner', 'mutated_app'))
+        assert bool(executed) is (mode in ('valid', 'xpc_failure', 'skipped', 'unrun', 'selected', 'timeout', 'wrong_runner', 'mutated_app'))
+        assert all(a[1:] == [str(ROOT / 'tests/run.sh')] for a in executed), executed
         if mode == 'mutated_app':
             assert set(json.loads((work / 'changes.json').read_text())) == {'Contents/Info.plist'}
         completed.append('archive_' + mode)

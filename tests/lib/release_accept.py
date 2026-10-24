@@ -1,4 +1,4 @@
-"""Accept one final release ZIP by inspecting and exercising its extracted app."""
+"""Accept one final release ZIP: inspect its extracted app and run the default battery against it."""
 import argparse
 import json
 import os
@@ -16,7 +16,44 @@ import release_evidence
 from release_commands import command, save
 
 ROOT = Path(__file__).resolve().parents[2]
-CASES = ('smoke/specimen_file_read_deny', 'witness_contract/happy_path_baseline')
+# The battery's bound: an initial operational ceiling, revised from recorded
+# elapsed times. The receipt records the limit and the elapsed time; expiry
+# fails acceptance and keeps whatever the dispatcher wrote.
+BATTERY_TIMEOUT_SECONDS = 7200
+# Default members whose envelopes name the runner that served them; acceptance
+# reads them out of the battery to require the bundled standard runner.
+PROVENANCE_ENVELOPES = ('smoke/specimen_file_read_deny/artifacts/policy_witness.run.stdout.json',
+                        'witness_contract/happy_path_baseline/artifacts/run.json')
+
+
+def battery_summary(run):
+    return dict(run_id=run.get('run_id'), completion=run.get('completion'),
+                started_at_unix_ms=run.get('started_at_unix_ms'), finished_at_unix_ms=run.get('finished_at_unix_ms'),
+                duration_ms=run.get('duration_ms'))
+
+
+def battery_problems(run, app):
+    """Why a nested run is not a passing default battery against the extracted app; empty when it is."""
+    problems = []
+    completion = run.get('completion') or {}
+    if run.get('ok') is not True or run.get('terminal') is not True:
+        problems.append('the run did not pass')
+    if not completion.get('selected') or completion.get('completed') != completion.get('selected'):
+        problems.append('not every selected case completed')
+    if completion.get('skipped') or completion.get('unrun'):
+        problems.append('skipped or unrun cases')
+    if run.get('harness_errors'):
+        problems.append('harness errors')
+    if run.get('requested_cases') or run.get('requested_suites'):
+        problems.append('a selection other than the default battery')
+    if (run.get('configuration') or {}).get('app_dir') != str(app):
+        problems.append('a tested app other than the extracted one')
+    integrity = run.get('artifact_integrity') or {}
+    if integrity.get('valid_before') is not True or integrity.get('unchanged') is not True:
+        problems.append('an invalid or changed app')
+    if any(c.get('status') != 'pass' for c in run.get('case_results') or []):
+        problems.append('a case that did not pass')
+    return problems
 
 
 def archive_layout(archive):
@@ -38,7 +75,8 @@ def archive_layout(archive):
 
 def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
     retention.replacement_allowed(ROOT, out / 'tests', retention.load_index(ROOT))
-    report = dict(schema_version=1, archive=str(archive), ok=False, errors=[], selected_cases=list(CASES))
+    report = dict(schema_version=2, archive=str(archive), ok=False, errors=[],
+                  battery=dict(timeout_seconds=BATTERY_TIMEOUT_SECONDS))
     save(out / 'acceptance.json', report)
     staging, app, before = None, None, None
     completed = False
@@ -65,27 +103,39 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
         run_out = out / 'tests'
         env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(run_out), PYTHONDONTWRITEBYTECODE='1')
-        argv = ['bash', ROOT / 'tests/run.sh']
-        for case in CASES:
-            argv.extend(['--case', case])
-        invoke(out / 'execution', argv, timeout=180, env=env, cwd=ROOT)
+        # The default battery through the one test interface, with no selectors:
+        # release production selects exactly as ordinary development does.
+        invoke(out / 'execution', ['bash', ROOT / 'tests/run.sh'], timeout=BATTERY_TIMEOUT_SECONDS, env=env, cwd=ROOT)
         run = json.loads((run_out / 'run.json').read_bytes())
-        expected = dict(selected=2, completed=2, skipped=0, unrun=0)
-        if (run.get('ok') is not True or run.get('completion') != expected
-                or run.get('configuration', {}).get('app_dir') != str(app)
-                or {c['id'] for c in run.get('case_results', [])} != set(CASES)
-                or any(c.get('status') != 'pass' for c in run['case_results'])):
-            raise ValueError('release cases did not pass against the extracted app; see tests/run.json')
+        report['battery'].update(battery_summary(run))
+        problems = battery_problems(run, app)
+        if problems:
+            raise ValueError('the default battery did not pass against the extracted app: '
+                             + '; '.join(problems) + '; see tests/run.json')
         # Both specimens must actually have used the bundled standard runner.
-        for relative in ('smoke/specimen_file_read_deny/artifacts/policy_witness.run.stdout.json',
-                         'witness_contract/happy_path_baseline/artifacts/run.json'):
-            envelope = json.loads((run_out / 'suites' / relative).read_bytes())
+        for relative in PROVENANCE_ENVELOPES:
+            path = run_out / 'suites' / relative
+            if not path.is_file():
+                raise ValueError(f'release specimen evidence missing from the battery: {relative}')
+            envelope = json.loads(path.read_bytes())
             if ((envelope.get('data') or {}).get('specimen') or {}).get('runner_provenance', {}).get('runner_kind') != 'standard':
                 raise ValueError(f'release specimen did not use the standard runner: {relative}')
         completed = True
     except (OSError, ValueError, KeyError, TypeError, RuntimeError, zipfile.BadZipFile, KeyboardInterrupt) as exc:
         report['errors'].append(str(exc) or 'interrupted')
     finally:
+        # The receipt and whatever the dispatcher wrote stay with the acceptance,
+        # passed, failed or timed out.
+        try:
+            receipt = out / 'execution/command.json'
+            if receipt.is_file():
+                record = json.loads(receipt.read_bytes())
+                report['battery'].update(elapsed_seconds=record.get('elapsed_seconds'), timed_out=record.get('timed_out'))
+            nested = out / 'tests/run.json'
+            if 'run_id' not in report['battery'] and nested.is_file():
+                report['battery'].update(battery_summary(json.loads(nested.read_bytes())))
+        except (OSError, ValueError) as exc:
+            report['errors'].append(f'battery receipt unreadable: {exc}')
         try:
             if before is not None:
                 after = artifact.inventory(app)
@@ -110,7 +160,7 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
     if report['ok']:
         run_id = retention.valid_owner(out)['run_id'] if (out / 'owner.json').exists() else run['run_id']
         entry = dict(path=str(out.relative_to(ROOT / 'tests/out')), run_id=run_id,
-                     reason='Release ZIP acceptance', source=None, app_inventory='before.json')
+                     reason='Release ZIP acceptance with the default battery', source=None, app_inventory='before.json')
         print('Suggested tests/RETAINED.json entry: ' + json.dumps(entry, sort_keys=True), flush=True)
     for error in report['errors']:
         print(f'STOP: {error}', file=sys.stderr)

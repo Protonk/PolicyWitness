@@ -16,6 +16,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
+import artifact
 import release_archive
 import release_evidence
 import release_preflight
@@ -216,7 +217,10 @@ def fixture_record(build):
     return data
 
 
-def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True):
+def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True, record=True,
+              battery_change=None, inventory_change=None):
+    """A distribution with an accepted attempt. The acceptance carries the nested default
+    battery; battery_change mutates its run.json and inventory_change the tested inventory."""
     # Rotation controls import this fixture directly, without this module's
     # main(). Prepare its independent Mach-O members for every entrypoint.
     if FIXTURE_MEMBERS is None:
@@ -253,42 +257,40 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         (session / step / 'command.json').write_text(json.dumps(dict(
             argv=[step], timeout_seconds=1, returncode=0, timed_out=False, interrupted=False, elapsed_seconds=0.1)))
     run_dir = repo / 'tests/out/release-acceptance' / ('run-' + version.replace('.', '-'))
+    # The tested inventory is what the archive's own fresh extraction of this ZIP yields.
+    extraction = Path('/private/tmp/pw-release-fixture-' + version.replace('.', '-'))
+    with release_archive.extracted_final(archive) as extracted:
+        tested = artifact.inventory(extracted)
+    if inventory_change is not None:
+        inventory_change(tested)
     with retention.acceptance_output(repo, run_dir) as owner:
         owner['run_id'] = 'accept-' + version
-        (run_dir / 'before.json').write_text('{}\n')
-        completed_output(run_dir / 'tests')
-        for name in ('owner.json', 'run.json'):
-            path = run_dir / 'tests' / name
-            value = json.loads(path.read_text())
-            value['run_id'] = 'nested-accept-' + version
-            path.write_text(json.dumps(value))
+        (run_dir / 'before.json').write_text(json.dumps(tested))
+        nested = run_dir / 'tests'
+        completed_output(nested)
+        (nested / 'artifact-integrity').mkdir()
+        (nested / 'artifact-integrity/before.json').write_text(json.dumps(tested))
+        nested_owner = json.loads((nested / 'owner.json').read_text())
+        nested_owner['run_id'] = 'nested-accept-' + version
+        (nested / 'owner.json').write_text(json.dumps(nested_owner))
+        run = json.loads((nested / 'run.json').read_text())
+        run.update(schema_version=1, run_id='nested-accept-' + version, ok=True, terminal=True,
+                   counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3},
+                   completion=dict(selected=3, completed=3, skipped=0, unrun=0),
+                   requested_cases=[], requested_suites=[], harness_errors=[],
+                   artifact_integrity=dict(app=str(extraction / 'PolicyWitness.app'), unchanged=True, valid_before=True))
+        run['plan']['cases'] = [dict(id='fixture/' + str(i)) for i in range(3)]
+        run['case_results'] = [dict(id=c['id'], state='completed', status='pass') for c in run['plan']['cases']]
+        if battery_change is not None:
+            battery_change(run)
+        (nested / 'run.json').write_text(json.dumps(run))
         (run_dir / 'acceptance.json').write_text(json.dumps(dict(
-            schema_version=1, archive=str(archive), ok=True, errors=[],
+            schema_version=2, archive=str(archive), ok=True, errors=[], extraction_dir=str(extraction),
+            battery=dict(run_id=run['run_id'], completion=run['completion'], timeout_seconds=7200, elapsed_seconds=1.0),
             sha256_before=hashlib.sha256(archive.read_bytes()).hexdigest(),
             sha256_after=hashlib.sha256(archive.read_bytes()).hexdigest())))
     release_evidence.record_acceptance(session, run_dir / 'acceptance.json')
     return dist, session
-
-
-def make_battery(repo, dist, *, version='0.9.0', **overrides):
-    run_dir = repo / 'tests/out/runs' / f'release-{version}-default'
-    (run_dir / 'artifact-integrity').mkdir(parents=True)
-    (run_dir / 'artifact-integrity/before.json').write_text('{}\n')
-    completed_output(run_dir)
-    owner = json.loads((run_dir / 'owner.json').read_text())
-    owner['run_id'] = 'battery-' + version
-    (run_dir / 'owner.json').write_text(json.dumps(owner))
-    run = json.loads((run_dir / 'run.json').read_text())
-    run.update(schema_version=1, run_id=owner['run_id'], ok=True, terminal=True,
-               counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3},
-               completion=dict(selected=3, completed=3, skipped=0, unrun=0),
-               requested_cases=[], requested_suites=[], harness_errors=[],
-               artifact_integrity=dict(app=str((dist / 'PolicyWitness.app').resolve()), unchanged=True, valid_before=True))
-    run['plan']['cases'] = [dict(id='fixture/' + str(i)) for i in range(3)]
-    run['case_results'] = [dict(id=c['id'], state='completed', status='pass') for c in run['plan']['cases']]
-    run.update(overrides)
-    (run_dir / 'run.json').write_text(json.dumps(run))
-    return run_dir
 
 
 def refused_versions(work, dest, record):
@@ -329,7 +331,6 @@ def check_archive(out):
     repo = make_repo(work)
     git(repo, 'tag', '-a', 'v0.9.0', '-m', 'PolicyWitness 0.9.0')
     dist, session = make_dist(repo)
-    battery = make_battery(repo, dist)
     notes = work / 'notes.md'
     notes.write_text('PolicyWitness 0.9.0 fixture notes\n')
     # A non-accepted decoy attempt must not confuse --latest.
@@ -337,7 +338,7 @@ def check_archive(out):
     attempt_name = session.name
 
     assert release_archive.find_latest(dist) == session
-    dest, added = release_archive.archive(session, dist=dist, root=repo, notes=notes, battery=battery)
+    dest, added = release_archive.archive(session, dist=dist, root=repo, notes=notes)
     assert dest == dist / 'archive/v0.9.0'
     expected = {'PolicyWitness-0.9.0.zip', 'PolicyWitness.md', 'SHA256SUMS', 'release.json', 'evidence'}
     assert {p.name for p in dest.iterdir()} == expected, sorted(p.name for p in dest.iterdir())
@@ -355,20 +356,24 @@ def check_archive(out):
     assert record['sha256'] == sums['PolicyWitness-0.9.0.zip'] and record['notarization_submission_id'].startswith('00000000')
     assert record['acceptance'] == dict(path=release_runs.BUNDLE + '/acceptance.json',
                                       original_path='release-acceptance/run-0-9-0/acceptance.json', ok=True, sha256=record['sha256'])
+    # The battery is the acceptance's nested dispatcher run, bound by inventory to the ZIP.
     assert record['battery'] == dict(path=release_runs.BUNDLE + '/battery.json',
-                                   original_path='runs/release-0.9.0-default', run_id='battery-0.9.0')
+                                   original_path='release-acceptance/run-0-9-0/tests', run_id='nested-accept-0.9.0')
     assert [r['archived_path'] for r in record['receipts']] == [
         'evidence/notarization', 'evidence/staple', 'evidence/staple-validation', 'evidence/gatekeeper',
         'evidence/re-zip', 'evidence/acceptance.json', 'evidence/release.json']
     assert all(r['original_path'].startswith('dist/evidence/' + attempt_name) for r in record['receipts'])
-    assert [e['path'] for e in added] == ['release-acceptance/run-0-9-0', 'runs/release-0.9.0-default']
+    assert [e['path'] for e in added] == ['release-acceptance/run-0-9-0']
     assert added[0]['run_id'] == 'accept-0.9.0' and added[0]['app_inventory'] == 'before.json'
-    assert added[1]['app_inventory'] == 'artifact-integrity/before.json'
     assert all(e['release'] == 'v0.9.0' for e in added)
-    assert all(e['source'] == record['source_commit'] and '0.9.0' in e['reason'] for e in added)
+    assert all(e['source'] == record['source_commit'] and '0.9.0' in e['reason'] and 'default battery' in e['reason'] for e in added)
     retained = retention.load_index(repo)
-    assert retained == [repo / 'tests/out/release-acceptance/run-0-9-0', repo / 'tests/out/runs/release-0.9.0-default']
-    release_runs.verify_release(dest)
+    assert retained == [repo / 'tests/out/release-acceptance/run-0-9-0']
+    _, manifest = release_runs.verify_release(dest)
+    assert manifest['schema_version'] == 2 and set(manifest['runs']) == {'acceptance'}, manifest
+    assert manifest['battery'] == dict(role='acceptance', path='tests/run.json'), manifest['battery']
+    assert set(manifest['summaries']) == {'acceptance.json', 'battery.json'}
+    assert json.loads((dest / release_runs.BUNDLE / 'battery.json').read_text())['run_id'] == 'nested-accept-0.9.0'
     # The archived record and the final controller hash are A's, read from the accepted ZIP; the working app is B.
     with zipfile.ZipFile(dest / 'PolicyWitness-0.9.0.zip') as zipped:
         member = zipped.read('PolicyWitness.app/Contents/Resources/Evidence/provenance.json')
@@ -435,13 +440,12 @@ def check_archive(out):
         repo2 = make_repo(scenario)
         git(repo2, 'tag', '-a', 'v0.9.0', '-m', 'PolicyWitness 0.9.0')
         dist2, session2 = make_dist(repo2)
-        battery2 = make_battery(repo2, dist2)
         if mutate is not None:
             mutate(repo2, dist2, session2)
         before = sorted(str(p.relative_to(dist2)) for p in dist2.rglob('*'))
         retained_before = (repo2 / 'tests/RETAINED.json').read_text()
         try:
-            release_archive.archive(session2, dist=dist2, root=repo2, battery=battery2,
+            release_archive.archive(session2, dist=dist2, root=repo2,
                                     notes=None if mutate is not None else scenario / 'absent.md')
         except ValueError as exc:
             assert needle in str(exc), (name, exc)
@@ -450,24 +454,35 @@ def check_archive(out):
         assert sorted(str(p.relative_to(dist2)) for p in dist2.rglob('*')) == before, name
         assert (repo2 / 'tests/RETAINED.json').read_text() == retained_before, name
 
-    # Battery evidence must be a passing, unchanged, default run against the final app.
-    for name, overrides, needle in [
-            ('failed', dict(ok=False), 'not a completed passing run'),
-            ('skipped', dict(completion=dict(selected=3, completed=2, skipped=1, unrun=0)), 'skips'),
-            ('selection', dict(requested_suites=['smoke']), 'default selection'),
-            ('changed_app', dict(artifact_integrity=dict(app='/nowhere/PolicyWitness.app', unchanged=True, valid_before=True)), 'final app'),
-            ('mutated', dict(artifact_integrity=dict(app=str((dist / 'PolicyWitness.app').resolve()), unchanged=False, valid_before=True)), 'unchanged')]:
+    # The nested battery must be a passing, unchanged, default run against the extracted
+    # app, and its recorded inventory must equal the archived ZIP's fresh extraction in
+    # full: a changed hash and a single changed mode bit are both refused by name.
+    def first_file(tested):
+        return next(k for k, v in tested.items() if 'sha256' in v)
+
+    def hash_change(tested):
+        tested[first_file(tested)]['sha256'] = '0' * 64
+
+    def mode_bit(tested):
+        tested[first_file(tested)]['mode'] ^= 0o001
+
+    binding = 'battery inventory differs from the archived ZIP extraction'
+    for name, battery_change, inventory_change, needle in [
+            ('failed', lambda run: run.update(ok=False), None, 'not a completed passing run'),
+            ('skipped', lambda run: (run.update(completion=dict(selected=3, completed=2, skipped=1, unrun=0)),
+                                     run['case_results'][2].update(state='skipped', status='skip')), None, 'skips'),
+            ('selection', lambda run: run.update(requested_suites=['smoke']), None, 'default selection'),
+            ('changed_app', lambda run: run['artifact_integrity'].update(app='/nowhere/PolicyWitness.app'), None, 'extracted app'),
+            ('mutated', lambda run: run['artifact_integrity'].update(unchanged=False), None, 'unchanged'),
+            ('hash', None, hash_change, binding),
+            ('mode_bit', None, mode_bit, binding)]:
         scenario = out / 'archive' / f'battery_{name}'
         scenario.mkdir()
         repo3 = make_repo(scenario)
         git(repo3, 'tag', '-a', 'v0.9.0', '-m', 'PolicyWitness 0.9.0')
-        dist3, session3 = make_dist(repo3)
-        if name == 'changed_app':
-            battery3 = make_battery(repo3, dist3, **overrides)
-        else:
-            battery3 = make_battery(repo3, dist3, **overrides)
+        dist3, session3 = make_dist(repo3, battery_change=battery_change, inventory_change=inventory_change)
         try:
-            release_archive.archive(session3, dist=dist3, root=repo3, battery=battery3)
+            release_archive.archive(session3, dist=dist3, root=repo3)
         except ValueError as exc:
             assert 'battery run rejected' in str(exc) and needle in str(exc), (name, exc)
         else:
@@ -482,7 +497,7 @@ def check_archive(out):
     dist5, session5 = make_dist(repo5, record=False)
     before = sorted(str(p.relative_to(dist5)) for p in dist5.rglob('*'))
     try:
-        release_archive.archive(session5, dist=dist5, root=repo5, battery=make_battery(repo5, dist5))
+        release_archive.archive(session5, dist=dist5, root=repo5)
     except ValueError as exc:
         assert 'carries no provenance record' in str(exc), exc
     else:

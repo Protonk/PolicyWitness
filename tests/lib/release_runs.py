@@ -2,6 +2,11 @@
 
 Archive members are inspected as streams, never extracted. Symlinks are recorded
 without following them. Original paths remain provenance, not archive lookups.
+
+Two bundle formats verify. Schema 1, written through release 0.3.3, packs the
+acceptance directory and a separate battery run as two roles. Schema 2 packs
+the acceptance directory alone and declares the battery as the dispatcher run
+nested inside it (`tests/run.json`); the packer writes only schema 2.
 """
 import hashlib
 import os
@@ -41,28 +46,35 @@ def real_path(path):
     return path
 
 
-def pack(destination, *, tag, source, runs):
-    """Caller holds the checkout lock. runs maps roles to (directory, entry)."""
+def pack(destination, *, tag, source, runs, battery):
+    """Caller holds the checkout lock. runs maps roles to (directory, entry); battery is
+    (role, relative path) naming the dispatcher run.json inside that role."""
+    role, relative = battery
     snapshots = {}
-    for role, (path, entry) in runs.items():
+    for name, (path, entry) in runs.items():
         real_path(path)
-        snapshots[role] = dict(retained=entry, inventory=artifact.inventory(path))
+        snapshots[name] = dict(retained=entry, inventory=artifact.inventory(path))
+    if role not in runs or relative not in snapshots[role]['inventory'] or 'sha256' not in snapshots[role]['inventory'][relative]:
+        raise ValueError('the battery summary is not a file inside its run')
     destination.mkdir()
     archive = destination / 'runs.tar.gz'
     with tarfile.open(archive, 'x:gz', dereference=False) as zipped:
-        for role, (path, _) in runs.items():
-            zipped.add(path, arcname=role)
+        for name, (path, _) in runs.items():
+            zipped.add(path, arcname=name)
     summaries = {}
-    for role, (path, _) in runs.items():
-        name = 'acceptance.json' if role == 'acceptance' else 'run.json'
-        target = destination / (role + '.json')
-        shutil.copy2(path / name, target)
-        if artifact.digest(target) != snapshots[role]['inventory'][name]['sha256']:
-            raise ValueError(f'{role} summary changed while archiving')
-        summaries[target.name] = artifact.digest(target)
-    manifest = dict(schema_version=1, tag=tag, source_commit=source,
+    copies = [(name + '.json', path / ('acceptance.json' if name == 'acceptance' else 'run.json'),
+               snapshots[name]['inventory']['acceptance.json' if name == 'acceptance' else 'run.json'])
+              for name, (path, _) in runs.items()]
+    copies.append(('battery.json', runs[role][0] / relative, snapshots[role]['inventory'][relative]))
+    for name, origin, entry in copies:
+        target = destination / name
+        shutil.copy2(origin, target)
+        if artifact.digest(target) != entry['sha256']:
+            raise ValueError(f'{name} changed while archiving')
+        summaries[name] = artifact.digest(target)
+    manifest = dict(schema_version=2, tag=tag, source_commit=source,
                     archive=archive.name, sha256=artifact.digest(archive),
-                    runs=snapshots, summaries=summaries)
+                    runs=snapshots, battery=dict(role=role, path=relative), summaries=summaries)
     retention.atomic_json(destination / 'manifest.json', manifest)
     verify_bundle(destination)
     for role, (path, _) in runs.items():
@@ -71,11 +83,23 @@ def pack(destination, *, tag, source, runs):
     return dict(path=BUNDLE + '/manifest.json', sha256=artifact.digest(destination / 'manifest.json'))
 
 
+def battery_source(manifest):
+    """The role and in-role path of the battery summary a bundle manifest declares, or None."""
+    if manifest.get('schema_version') == 2:
+        declared = manifest.get('battery')
+        if not isinstance(declared, dict):
+            raise ValueError('a schema 2 evidence manifest declares its battery')
+        return declared.get('role'), declared.get('path')
+    return ('battery', 'run.json') if 'battery' in manifest.get('runs', {}) else None
+
+
 def verify_bundle(destination):
     destination = real_path(destination)
     manifest = retention.read_object(destination / 'manifest.json')
-    if (manifest.get('schema_version') != 1 or manifest.get('archive') != 'runs.tar.gz'
-            or set(manifest.get('runs', {})) not in ({'acceptance'}, {'acceptance', 'battery'})):
+    schema, roles = manifest.get('schema_version'), set(manifest.get('runs', {}))
+    if manifest.get('archive') != 'runs.tar.gz' or not (
+            (schema == 1 and roles in ({'acceptance'}, {'acceptance', 'battery'}) and 'battery' not in manifest)
+            or (schema == 2 and roles == {'acceptance'})):
         raise ValueError('invalid release test evidence manifest')
     archive = real_path(destination / 'runs.tar.gz')
     if artifact.digest(archive) != manifest['sha256']:
@@ -109,16 +133,21 @@ def verify_bundle(destination):
             found[member.name] = entry
     if found != expected:
         raise ValueError('release test evidence differs from its file inventory')
-    expected_summaries = {role + '.json' for role in manifest['runs']}
-    if set(manifest.get('summaries', {})) != expected_summaries:
+    sources = {role + '.json': (role, 'acceptance.json' if role == 'acceptance' else 'run.json') for role in manifest['runs']}
+    battery = battery_source(manifest)
+    if schema == 2:
+        role, relative = battery
+        inventory = manifest['runs'].get(role, {}).get('inventory', {})
+        if not isinstance(relative, str) or 'sha256' not in inventory.get(relative, {}):
+            raise ValueError('release test evidence names no battery summary inside its runs')
+        sources['battery.json'] = battery
+    if set(manifest.get('summaries', {})) != set(sources):
         raise ValueError('release test evidence summaries are incomplete')
-    for role, run in manifest['runs'].items():
-        name = role + '.json'
+    for name, (role, relative) in sources.items():
         summary = real_path(destination / name)
-        source = 'acceptance.json' if role == 'acceptance' else 'run.json'
         if (artifact.digest(summary) != manifest['summaries'][name]
-                or manifest['summaries'][name] != run['inventory'][source]['sha256']):
-            raise ValueError(f'{role} summary checksum mismatch')
+                or manifest['summaries'][name] != manifest['runs'][role]['inventory'][relative]['sha256']):
+            raise ValueError(f'{name[:-5]} summary checksum mismatch')
     return manifest
 
 
@@ -177,14 +206,23 @@ def verify_release(archive):
             or accepted.get('ok') is not True or accepted.get('sha256_before') != record['sha256']
             or accepted.get('sha256_after') != record['sha256']):
         raise ValueError('archived acceptance does not support the ZIP')
-    if 'battery' in manifest['runs']:
+    source = battery_source(manifest)
+    if source is not None:
+        role, relative = source
         battery = retention.read_object(archive / BUNDLE / 'battery.json')
-        entry = manifest['runs']['battery']['retained']
-        if (record['battery']['path'] != BUNDLE + '/battery.json' or battery.get('ok') is not True
-                or battery.get('terminal') is not True or battery.get('run_id') != entry['run_id']
-                or entry.get('release') != tag or entry['source'] != record['source_commit']
-                or record['battery']['run_id'] != entry['run_id']):
+        entry = manifest['runs'][role]['retained']
+        if manifest.get('schema_version') == 2:
+            original = entry['path'] + '/' + str(PurePosixPath(relative).parent)
+            consistent = record['battery']['original_path'] == original
+        else:
+            consistent = battery.get('run_id') == entry['run_id']
+        if (not isinstance(record.get('battery'), dict) or record['battery'].get('path') != BUNDLE + '/battery.json'
+                or battery.get('ok') is not True or battery.get('terminal') is not True
+                or record['battery'].get('run_id') != battery.get('run_id') or not consistent
+                or entry.get('release') != tag or entry['source'] != record['source_commit']):
             raise ValueError('archived battery does not support the release')
+        if battery.get('requested_cases') or battery.get('requested_suites'):
+            raise ValueError('archived battery is not the default selection')
     elif record.get('battery') is not None:
         raise ValueError('missing archived battery evidence')
     return record, manifest

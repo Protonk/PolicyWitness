@@ -2,8 +2,10 @@
 
 `tools.py` is an independent tool stand-in for `preflight/release_controls`.
 It supplies raw Apple responses, records every invocation, extracts actual small
-fixture ZIPs, and supplies controlled test reports. It never signs, submits to
-Apple, invokes PW, or imports the release implementation.
+fixture ZIPs, and supplies controlled default-battery reports and receipts; it
+refuses any test command other than `tests/run.sh` with no selectors and any
+bound other than the recorded one. It never signs, submits to Apple, invokes
+PW, or imports the release implementation.
 
 The checker retains real manifest, archive-layout, and inventory checks; only
 signature verification is modeled as successful there. Actual signature semantics

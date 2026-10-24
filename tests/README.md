@@ -101,15 +101,17 @@ restored before the final inventory.
 [Opt-in cases](OPT_IN_TESTS.md) are selectable by exact case, owning suite,
 `--suite opt_in`, or `--all`.
 
-Release ZIP acceptance is a separate explicit command:
-`bash tests/accept-release.sh dist/PolicyWitness.zip`. It inspects a temporary
-extraction, checks the staple and Gatekeeper assessment, runs the existing allow
-and deny contracts through the extracted controller, and records the ZIP hash
-and before/after integrity. It never builds or signs. `make release` runs it as
-part of the notarization chain, then runs the default battery against the final
-app and archives the release; `make publish` publishes an archived release. See
-[docs/SIGNING.md](../docs/SIGNING.md) for the complete release procedure and the
-handling of delayed or uncertain Apple replies.
+Release ZIP acceptance is a release-stage artifact check, not a test entry
+point: `bash tests/accept-release.sh dist/PolicyWitness.zip` inspects a
+temporary extraction, checks the staple and Gatekeeper assessment, runs the
+default battery against the extracted app through `tests/run.sh` with no
+selectors into its own `tests/` directory, and records the ZIP hash and
+before/after integrity. It never builds or signs, and it selects nothing of its
+own. `make release` runs it as part of the notarization chain and archives the
+release, binding the battery's app inventory to the ZIP; `make publish`
+publishes an archived release. See [docs/SIGNING.md](../docs/SIGNING.md) for
+the complete release procedure and the handling of delayed or uncertain Apple
+replies.
 
 ## Configuration
 

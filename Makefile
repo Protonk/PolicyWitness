@@ -11,9 +11,10 @@
 #             tests/out/runs/default. Does not build.
 #   prune     Preview eligible test runs; APPLY=1 removes them. Nothing else.
 #   notarize  The rehearsable lower-level chain: preflight report, fresh build,
-#             submit, staple, validate, Gatekeeper, re-zip, accept the final ZIP.
-#   release   The whole procedure: strict preflight, notarize, battery, archive,
-#             rotate older test output. Spends one notarization submission.
+#             submit, staple, validate, Gatekeeper, re-zip, accept the final ZIP
+#             (the default battery runs inside acceptance, against its contents).
+#   release   The whole procedure: strict preflight, notarize, archive, rotate
+#             older test output. Spends one notarization submission.
 #   publish   Push the tag and create the GitHub release from an archive.
 #
 # Variables (set on the command line, e.g. make release NOTARY_KEYCHAIN_PROFILE=...)
@@ -45,8 +46,8 @@
 #   Bare make prints this card; make build builds.
 #   Every target is phony; make tracks no outputs here.
 #   Python helpers run through tests/lib/python.sh, never the /usr/bin/python3 shim.
-#   Multi-line recipes run under one `set -eu` shell so $$release_evidence, $$version
-#   and $$battery survive across lines and the first failure stops the chain.
+#   Multi-line recipes run under one `set -eu` shell so $$release_evidence and
+#   $$version survive across lines and the first failure stops the chain.
 #   release calls notarize, and notarize calls build, through $(MAKE) rather than
 #   prerequisites so each target's guards and preflight run before anything builds.
 #   $(if $(RELEASE_NOTES),...) passes --notes only when notes were given.
@@ -54,7 +55,7 @@
 #   last line ("Error N").
 #
 # Boundaries
-#   build.sh, acceptance, the battery, archiving and rotation each hold
+#   build.sh, acceptance (with its battery), archiving and rotation each hold
 #   tests/.checkout.lock for their own duration; a build and a battery in one
 #   checkout are mutually exclusive, and release holds no outer lock of its own.
 #   Only notarize and publish send anything: notarize uploads the ZIP to Apple
@@ -172,9 +173,10 @@ notarize:
 # dirty, untagged or already-archived tree stops here, before any build or
 # notarization submission; its success report is discarded because notarize
 # prints the same stamp moments later. The version comes from the annotated tag
-# the preflight verified, never from VERSION. The battery runs against the
-# stapled app into its own run directory; release_archive.py stages and verifies
-# the archive and retains both runs; release_rotate.py then retires older
+# the preflight verified, never from VERSION. The default battery ran inside
+# acceptance, against the final ZIP's extracted contents; release_archive.py
+# stages and verifies the archive, binds that battery to the ZIP by inventory
+# and retains the acceptance run; release_rotate.py then retires older
 # working test output. A rotation failure leaves the release complete: resume
 # with `tests/lib/python.sh tests/lib/release_rotate.py $(DIST_DIR)/archive/v<version> --apply`.
 # Commit the tests/RETAINED.json change afterwards either way.
@@ -188,14 +190,11 @@ release:
 	@echo "==> [release] strict preflight for $(DIST_DIR)"
 	@tests/lib/python.sh tests/lib/release_preflight.py --dist "$(DIST_DIR)" >/dev/null
 	@$(MAKE) notarize
-# One shell from here: the version and battery path must reach every step.
+# One shell from here: the version must reach every step.
 	@set -eu; \
 	  version="$$(tests/lib/python.sh tests/lib/release_preflight.py --dist "$(DIST_DIR)" --format version)"; \
-	  battery="tests/out/runs/release-$$version-default"; \
-	  echo "==> [release] default battery against $(DIST_DIR)/PolicyWitness.app -> $$battery"; \
-	  PW_APP_DIR="$(DIST_DIR)/PolicyWitness.app" PW_TEST_OUT_DIR="$$battery" ./tests/run.sh; \
 	  echo "==> [release] archive $(DIST_DIR)/archive/v$$version"; \
-	  tests/lib/python.sh tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" --battery "$$battery" \
+	  tests/lib/python.sh tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" \
 	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",); \
 	  echo "==> [release] clean up older working test output"; \
 	  tests/lib/python.sh tests/lib/release_rotate.py "$(DIST_DIR)/archive/v$$version" --apply
