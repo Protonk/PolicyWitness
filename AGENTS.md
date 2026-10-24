@@ -25,6 +25,10 @@ Describe current behavior. Don't add change-history notes to docs — `git log`
 is authoritative. Put directory descriptions in READMEs and working rules in
 `AGENTS.md` files, as described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Wording
+
+Prefer literal descriptions of operations over adversarial metaphors. Describe tests, inputs, or system behavior as "attacks," "exploits," or similar when they actually constitute those things, and only then. Established technical terminology is welcome, including terminology shared with offensive security. Never substitute euphemisms for precise descriptions of mechanisms, vulnerabilities, or actual adversarial behavior.
+
 ## Core ideas
 
 - **One-way sandbox per process**: preserve a fresh host and worker per specimen; never reuse a sandboxed process.
