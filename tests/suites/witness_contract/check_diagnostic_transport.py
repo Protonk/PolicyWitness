@@ -16,7 +16,7 @@ INPUTS = json.loads((ROOT / 'tests/fixtures/diagnostic_transport/cases.json').re
 
 
 def run(pw, output, request):
-    with RunCapture(pw, output, request, cli_args=['--no-log-capture']) as capture:
+    with RunCapture(pw, output, request, cli_args=[]) as capture:
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
     assert not consumer.validate(envelope), consumer.validate(envelope)

@@ -72,7 +72,7 @@ def main():
                 assert before == seed, f'{name}: could not restore file {i}'
 
             with RunCapture(pw, artifacts, specimen,
-                            cli_args=['--no-log-capture', '--timeout-ms', '15000']) as run:
+                            cli_args=['--timeout-ms', '15000']) as run:
                 rc = run.wait(timeout=20)
                 # Establish actual effects before decoding any claimed effects.
                 after = [path.read_bytes() for path in paths]

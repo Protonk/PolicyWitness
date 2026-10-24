@@ -30,7 +30,7 @@ def main():
                         'attempt': {'kind': 'exec', 'action': 'spawn', 'target': TARGET}}
                        for step_id in ids],
     }
-    run = RunCapture(pw, out / 'run', specimen, cli_args=['--timeout-ms', '120000', '--no-log-capture'])
+    run = RunCapture(pw, out / 'run', specimen, cli_args=['--timeout-ms', '120000'])
     with run:
         rc = run.wait(timeout=150)
         envelope = run.load_json()

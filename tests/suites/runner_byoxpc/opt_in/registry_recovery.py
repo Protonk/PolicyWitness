@@ -95,7 +95,7 @@ try:
     specimen = staging / 'pending.json'
     save(specimen, dict(schema_version=5, specimen_id='pending', policy=dict(format='sbpl', sbpl_source='(version 1)\n(allow default)'),
                        runner=dict(mode='byoxpc', service=service), probe_plan=[]))
-    rejected = command(['run', specimen, '--no-log-capture'], code=2)
+    rejected = command(['run', specimen], code=2)
     assert b'external runner is pending installation' in rejected.stderr + rejected.stdout
     remove(service, skip=True)
     observations.append('skip-bootstrap completes installation; pending status and specimen rejection; pending removal')

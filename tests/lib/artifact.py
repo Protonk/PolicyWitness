@@ -33,7 +33,7 @@ NM = '/usr/bin/nm'
 CONTROLLER = 'Contents/MacOS/policy-witness'
 SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
-    ('pw-runner-client', 'sandbox-log-observer', 'sbpl-check')),
+    ('pw-runner-client', 'sbpl-check')),
     *(SERVICE + '/Contents/MacOS/' + name for name in
       ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer'))]
 MANIFEST = 'Contents/Resources/Evidence/manifest.json'

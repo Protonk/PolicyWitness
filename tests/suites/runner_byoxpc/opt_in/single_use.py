@@ -40,7 +40,7 @@ def launch(name, hang=0, direct=False):
     if hang: spec['_test_overrides'] = dict(worker_post_apply_hang_ms=hang)
     path = out / (name + '.specimen.json'); path.write_text(json.dumps(spec, indent=2)+'\n')
     with (out/(name+'.json')).open('w') as stdout, (out/(name+'.stderr')).open('w') as stderr:
-        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', '30000', '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000']
+        argv = [str(Path(pw).parent / 'pw-runner-client'), 'run', '--timeout-ms', '30000', '--mach-service', service, str(path)] if direct else [pw, 'run', str(path), '--timeout-ms', '30000']
         process = subprocess.Popen(argv,
             stdout=stdout, stderr=stderr, start_new_session=True)
     processes.append(process)

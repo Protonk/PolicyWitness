@@ -23,7 +23,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 import consumer
 from run_capture import RunCapture
-from log_capture_contract import check_live_capture
 
 SESSION = None
 
@@ -187,13 +186,13 @@ def host_handoff(directory):
         save(directory / 'host-handoff.json', receipt)
 
 
-def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measure_margin=False, **expectations):
+def run_case(pw, out, name, request, *, refused=False, measure_margin=False, **expectations):
     if SESSION:
         request['runner'] = dict(mode='byoxpc', service=SESSION['service_name'])
         (out / name).mkdir(parents=True, exist_ok=True)
         host_handoff(out / name)
     run = RunCapture(pw, out / name, request,
-                     cli_args=['--timeout-ms', '120000'] + ([] if capture_logs else ['--no-log-capture']))
+                     cli_args=['--timeout-ms', '120000'])
     with run:
         rc = run.wait(timeout=150)
         envelope = run.load_json()
@@ -237,12 +236,6 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measu
             assert client['stdout_bytes_received'] + profile_allowance <= maximum, 'reply plus a maximal receipt exceeds the synthesized maximum'
             observation.update(profile_allowance_bytes=profile_allowance,
                                budget_over_reply=round(client['capture_limit_bytes'] / client['stdout_bytes_received'], 3))
-        if capture_logs:
-            capture = data['sandbox_log_capture']
-            live_result = check_live_capture(envelope)
-            observation['live_result'] = live_result
-            observation.update(observer_reply_bytes=capture.get('stdout_bytes_received'),
-                               observer_capture_status=capture['capture_status'])
     print(f"{name}: {client['stdout_bytes_received']} reply bytes; refused at admission={refused}", flush=True)
     return observation
 
@@ -259,7 +252,7 @@ def main():
         plain = targets_under(root / 'plain')
         escaped = targets_under(root / 'escaped', escaped=True)
         observations.append(run_case(pw, out, 'denied_ascii', specimen(plain, plain, denied=True),
-                                     denied=True, capture_logs=True))
+                                     denied=True))
         observations.append(run_case(pw, out, 'allowed_escaped', specimen(escaped, escaped)))
         # Maximal admitted independent queries: every 511-byte escaped path is an
         # existing file, so predictions resolve, while the attempts read the plain set.

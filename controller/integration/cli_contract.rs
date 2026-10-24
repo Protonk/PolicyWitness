@@ -101,76 +101,43 @@ fn version_flag_reports_build_stamp_and_contract_versions() {
 }
 
 #[test]
-fn log_timeout_flag_and_disabled_capture_keep_execution_available() {
+fn execution_omits_retired_collection_and_rejects_its_options() {
     if !integration_enabled() {
         return;
     }
     let bin = require_pw_bin();
     let request = repo_root().join("tests/fixtures/pw_runner/specimen_file_read_deny.json");
-    for disabled in [false, true] {
-        let mut args = vec!["run", request.to_str().unwrap(), "--log-timeout-ms", "1"];
-        if disabled {
-            args.push("--no-log-capture");
-        }
-        let out = run_pw(&bin, &args);
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
+    let out = run_pw(&bin, &["run", request.to_str().unwrap()]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(
+        envelope["data"]["runner_result"]["steps"][0]["sandbox_check"]["outcome"],
+        "deny"
+    );
+    assert!(envelope["data"]["runner_result"]["steps"][0]["attempt"].is_object());
+    assert!(envelope["data"].get("sandbox_log_capture").is_none());
+    let diagnostics = &envelope["data"]["runner_sandbox_diagnostics"];
+    assert!(diagnostics.get("correlation_status").is_none());
+    assert!(
+        diagnostics
+            .get("permission_failures_without_record")
+            .is_none()
+    );
+    for flag in ["--no-log-capture", "--log-timeout-ms"] {
+        let out = run_pw(&bin, &["run", "/definitely-absent-specimen", flag]);
+        assert_eq!(out.status.code(), Some(2));
         let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
         assert_eq!(
-            envelope["data"]["runner_result"]["steps"][0]["sandbox_check"]["outcome"],
-            "deny"
+            envelope["result"]["error"],
+            format!("unknown argument: {flag}")
         );
-        assert!(envelope["data"]["runner_result"]["steps"][0]["attempt"].is_object());
-        let capture = &envelope["data"]["sandbox_log_capture"];
-        if disabled {
-            assert!(capture.is_null());
-            assert_eq!(
-                envelope["data"]["runner_sandbox_diagnostics"]["correlation_status"],
-                "not_attempted"
-            );
-            assert!(
-                envelope["data"]["runner_sandbox_diagnostics"]["permission_failures_without_record"]
-                    .is_null()
-            );
-        } else {
-            assert_eq!(capture["supervision"]["budget"]["timeout_ms"], 1);
-            assert_eq!(capture["supervision"]["budget"]["timeout_source"], "cli");
-            if capture["capture_status"] != "captured" {
-                assert_eq!(
-                    envelope["data"]["runner_sandbox_diagnostics"]["correlation_status"],
-                    "unavailable"
-                );
-                assert!(capture["step_denies"].is_null());
-            }
-        }
-    }
-    for invalid in ["0", "-1", "unlimited", "18446744073709551615"] {
-        let out = run_pw(
-            &bin,
-            &[
-                "run",
-                "/definitely-absent-specimen",
-                "--no-log-capture",
-                "--log-timeout-ms",
-                invalid,
-            ],
-        );
-        assert!(!out.status.success());
-        let envelope: serde_json::Value =
-            serde_json::from_slice(&out.stdout).expect("CLI admission error envelope");
-        assert!(
-            envelope["result"]["error"]
-                .as_str()
-                .unwrap()
-                .contains("invalid value for --log-timeout-ms")
-        );
-        assert_eq!(envelope["result"]["exit_code"], 2);
         assert!(envelope["data"]["runner_result"].is_null());
         assert!(envelope["data"]["runner_client"].is_null());
-        assert!(envelope["data"]["specimen"].is_object());
+        assert!(envelope["data"].get("sandbox_log_capture").is_none());
     }
 }
 
@@ -181,7 +148,7 @@ fn specimen_smoke_file_read_deny() {
     }
     let bin = require_pw_bin();
 
-    // Sandboxed harnesses can block XPC lookup or unified log access; rerun from
+    // Sandboxed harnesses can block XPC lookup; rerun from
     // a normal Terminal if failures look environment-related.
 
     let specimen = repo_root()
@@ -597,10 +564,7 @@ fn sandbox_check_path_diagnostics_lists_forms_equal_to_input() {
         .to_string(),
     )
     .unwrap();
-    let out = run_pw(
-        &bin,
-        &["run", specimen.to_str().unwrap(), "--no-log-capture"],
-    );
+    let out = run_pw(&bin, &["run", specimen.to_str().unwrap()]);
     assert!(out.status.success(), "specimen failed");
     let envelope: serde_json::Value =
         serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
@@ -663,10 +627,7 @@ fn path_diagnostics_preserves_native_unicode_spelling() {
         .to_string(),
     )
     .unwrap();
-    let output = run_pw(
-        &bin,
-        &["run", request.to_str().unwrap(), "--no-log-capture"],
-    );
+    let output = run_pw(&bin, &["run", request.to_str().unwrap()]);
     assert!(output.status.success());
     let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     let step = &envelope["data"]["runner_result"]["steps"][0];

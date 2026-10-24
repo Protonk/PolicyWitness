@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
                        'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(target)}}]}
         if overrides:
             request['_test_overrides'] = overrides
-        with RunCapture(pw, out / mode, request, cli_args=['--no-log-capture']) as capture:
+        with RunCapture(pw, out / mode, request, cli_args=[]) as capture:
             rc = capture.wait(timeout=30)
             envelope = capture.load_json()
         assert not consumer.validate(envelope), consumer.validate(envelope)

@@ -1374,46 +1374,6 @@
       ]
     },
     {
-      "id": "sign_observer",
-      "banners": [
-        "Codesigning observer tool (not embedded)"
-      ],
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "reads": "controller/target/aarch64-apple-darwin/release/sandbox-log-observer, checked against the output target at this boundary before it is signed",
-      "writes": "that executable's signature, in place, and its observation into the build session",
-      "refusals": [
-        "output_target_mismatch",
-        "provenance_probe_failed",
-        "lock_claim_invalid",
-        "cache_path_unsafe",
-        "sign_target_not_macho",
-        "codesign_failed"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "Codesigning observer tool (not embedded)"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_banner_order",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/opt_in/build_refusals.py",
-          "symbol": "control_output_target_mismatch",
-          "form": "test",
-          "coverage": "behavioral"
-        }
-      ]
-    },
-    {
       "id": "guide",
       "banners": [
         "Staging checked user guide"
@@ -1685,7 +1645,6 @@
         "assembled",
         "presign",
         "evidence",
-        "sign_observer",
         "zip"
       ],
       "status": "2",
@@ -2372,7 +2331,6 @@
         "native_check",
         "assembled",
         "presign",
-        "sign_observer",
         "zip"
       ],
       "status": "2",
@@ -2438,7 +2396,6 @@
         "assembled",
         "presign",
         "evidence",
-        "sign_observer",
         "zip"
       ],
       "status": "2",
@@ -3663,7 +3620,6 @@
         "cargo",
         "native_check",
         "assembled",
-        "sign_observer",
         "zip"
       ],
       "status": "1",
@@ -3714,8 +3670,7 @@
       "kind": "script",
       "steps": [
         "sign_tools",
-        "sign_services",
-        "sign_observer"
+        "sign_services"
       ],
       "status": "2",
       "variants": [
@@ -3750,8 +3705,7 @@
       "steps": [
         "sign_tools",
         "sign_services",
-        "seal",
-        "sign_observer"
+        "seal"
       ],
       "status": "1",
       "variants": [
@@ -4030,44 +3984,6 @@
       ]
     },
     {
-      "id": "sig_observer",
-      "target": "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer",
-      "kind": "signature",
-      "entitlements": null,
-      "loop": null,
-      "step": "sign_tools",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "flags": [
-        "--force",
-        "--options",
-        "runtime",
-        "--timestamp"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_signing",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_inventory",
-          "form": "rule",
-          "coverage": "textual"
-        }
-      ]
-    },
-    {
       "id": "sig_sbpl_check",
       "target": "${APP_BUNDLE}/Contents/MacOS/sbpl-check",
       "kind": "signature",
@@ -4274,44 +4190,6 @@
         {
           "path": "build.sh",
           "symbol": "-s \"${IDENTITY}\" \"${APP_BUNDLE}\""
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_signing",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_inventory",
-          "form": "rule",
-          "coverage": "textual"
-        }
-      ]
-    },
-    {
-      "id": "sig_observer_standalone",
-      "target": "${SANDBOX_LOG_OBSERVER_BIN}",
-      "kind": "signature",
-      "entitlements": null,
-      "loop": null,
-      "step": "sign_observer",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "flags": [
-        "--force",
-        "--options",
-        "runtime",
-        "--timestamp"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "sign_macho \"${SANDBOX_LOG_OBSERVER_BIN}\""
         }
       ],
       "checks": [
@@ -4671,7 +4549,6 @@
         "--target",
         "--target-dir",
         "--message-format",
-        "--bin",
         "--bin",
         "--bin"
       ]
@@ -5328,41 +5205,6 @@
       ]
     },
     {
-      "id": "inv_build_provenance_output_check_observer",
-      "command": "tests/lib/build_provenance.py output-check --root",
-      "step": "sign_observer",
-      "variants": [
-        "full",
-        "partial"
-      ],
-      "sources": [
-        {
-          "path": "build.sh",
-          "symbol": "--stage observer"
-        }
-      ],
-      "checks": [
-        {
-          "path": "tests/suites/source_drift/build_rules.py",
-          "symbol": "check_invocations",
-          "form": "rule",
-          "coverage": "textual"
-        },
-        {
-          "path": "tests/suites/preflight/check_build_provenance.py",
-          "symbol": "test_helper_subcommands_are_the_ones_the_script_invokes",
-          "form": "test",
-          "coverage": "helper"
-        },
-        {
-          "path": "tests/suites/preflight/check_build_provenance.py",
-          "symbol": "test_the_build_gate_records_each_stage_and_refuses_any_departure",
-          "form": "test",
-          "coverage": "helper"
-        }
-      ]
-    },
-    {
       "id": "inv_guide",
       "command": "docs/generate_limits.py --stage-guide",
       "step": "guide",
@@ -5558,7 +5400,7 @@
       "path": "dist/ (DIST_DIR)",
       "facts": {
         "Trusted as": "the output directory; the previous app, ZIP and guide are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed one after another at assembly with nothing preserved",
-        "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of observer signing, guide staging or ZIP creation"
+        "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of guide staging or ZIP creation"
       },
       "sources": [
         {

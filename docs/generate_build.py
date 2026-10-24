@@ -743,8 +743,6 @@ def bundle_paths(manifest, model, root):
             found = [f"Contents/XPCServices/{svc}.xpc/" + target[len("${svc_bundle}/"):] for svc in services]
         elif target == "${svc_bundle}" and kind == "seal" and entry["loop"] == "XPC_SERVICE_NAMES":
             found = [mains[svc] for svc in services]
-        elif target == "${SANDBOX_LOG_OBSERVER_BIN}":
-            continue  # outside the bundle
         else:
             problems.append(f"signing {entry['id']}: target {target!r} is not a bundle path the inventory rule can expand")
         for variant in entry["variants"]:

@@ -12,6 +12,8 @@ explanations in [LIMITS.md](LIMITS.md) and shared questions in
 [QUESTIONS.md](QUESTIONS.md); the generator copies both into
 [PolicyWitness.md](PolicyWitness.md). Write links in shared questions as
 `PolicyWitness.md#anchor` so the copied guide can resolve them internally.
+The historical archive reference in QUESTIONS is an explicit external-link
+exception; the guide must remain usable without that destination.
 Author scalar spans outside generated regions; the generator renders them
 before copying the shared prose.
 

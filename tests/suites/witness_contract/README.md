@@ -186,90 +186,12 @@ Shared black-box checks collect both prediction failures rather than stopping
 after the first mismatch. `RunCapture` retains each request, raw envelope,
 stderr, and capture metadata under `matching/` and `swapped/`; these directories
 also contain expectations, byte snapshots, and diagnostics. The case needs the
-built app and live XPC; missing equipment fails. Log capture is disabled.
+built app and live XPC; missing equipment fails.
 
 Run it independently with:
 
 ```sh
 tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt_target
-```
-
-## Deny capture covers the run
-
-`deny_capture_covers_the_run` denies one read, holds two `/bin/sleep` exec
-children to the worker's exec deadline, then denies another read. Its allowed
-metadata queries are independent of those read attempts; all validator queries
-use `SANDBOX_CHECK_NO_REPORT` and produce no denial records.
-The native attempts, worker exit and elapsed span are mandatory witnesses.
-One denied read goes through a symlinked directory: the policy names the
-resolved path, the attempt names the link, and the host's
-`attempt.path_diagnostics` must resolve the link form to the denied path. A
-returned record for that step must be admitted through the host form, never
-the submitted target.
-`capture.window` retains the raw client milliseconds and requests
-`floor(client start) - 2 s` through `ceil(client end) + 2 s`, with `pad_seconds: 2`.
-The observer must mirror those bounds without a trailing lookback. Returned
-read-denial records must lie in the padded interval and name the expected
-candidate step. A complete empty query is valid; early/late record availability
-is recorded and does not determine whether this case passes. These checks do
-not establish retrieval completeness or complete OS delivery.
-
-The retired ten-second query ends at the unpadded, rounded client end and checks
-its own invocation. Timestamp parsing establishes membership in each interval;
-path names do not establish timing. No record equality or inclusion is required
-between the queries. `observations.json` retains their availability differences,
-including records first seen by the retired query, without inferring their cause.
-Artifacts also include the native run, consumer answers and raw retired reply.
-
-The three live log cases (`deny_capture_covers_the_run`,
-`worker_termination_and_log_correlation`, `max_targets_reply_survives`) share
-[`log_capture_contract.py`](../../lib/log_capture_contract.py). Completed queries
-must have intact replies, matching identities/windows/budgets, finished pipes,
-observed successful exits and confirmed cleanup. Supported timeout/overflow
-requires a cutoff at the identified boundary, the documented deadline or
-limit with its observations, bounded retention and confirmed cleanup. Such
-capture is unavailable for correlation: candidates and missing-record
-diagnostics are null. It is not positive capture coverage. Missing helpers,
-blocked access, malformed complete replies, wrong bounds, unexplained process
-failures and unconfirmed cleanup remain failures. Generic `unavailable` is
-insufficient. `log_capture_controls` supplies complete/early/late/empty replies,
-cutoffs and deliberate corruptions to enforce these distinctions without an app.
-
-Positive preservation coverage is mandatory and independent of live emission:
-
-- Rust window controls run actual argv against `observer.py`'s fixed event
-  timestamps: both padding regions, exact/exterior boundaries, equal spans and
-  rollback. Wrong/missing/trailing bounds withhold correlations without losing
-  diagnostic records.
-- `log_replay_tests.rs` replaces only the inner query command with supplied text,
-  calls the production `log_show.rs` parser/collector, transports a bounded reply
-  through the supervised receiver, and runs real assembly and consumer recovery.
-  Full, early-only, late-only and empty inputs have fixed expected records and
-  candidates. Child/neighbour PIDs, mismatched operation/path and duplicate
-  records cannot gain invented associations; repeated attempts remain ambiguous.
-  Failed inner queries retain intact diagnostics without correlations. Disabled,
-  unavailable, malformed and wrong-window cases preserve execution evidence.
-- The controlled capacity case retains 256 distinct 511-byte targets and all
-  candidate references through the entire replay under the production default
-  allowance. A separate control correlates the maximum event volume against a
-  256-step plan inside that allowance. Both prove capacity for supplied input,
-  not a live-volume bound.
-- Supervisor controls cover both boundaries' byte edges, launch/read/wait/exit
-  faults, hangs and cleanup failures. Owned-group controls check orphan pipes,
-  leader death before a reply, membership, eventual absence and no signals after
-  reaping. Deadline controls preserve execution and bounds under short/long
-  overrides and still bound a permanently stalled query; the log child's
-  1,000 ms report reserve lets an inner deadline arrive as an intact observer
-  reply. JSON expansion,
-  incomplete outer replies and derived-data limits have separate exact oracles.
-- The required archive case tests real OS predicate selection before parsing;
-  suppressing every selected record cannot pass it. Positive replay assertions
-  reject dropped lines/events, invented associations, blanket capture suppression
-  and changed execution answers even though empty live captures are admissible.
-
-```sh
-tests/run.sh --case witness_contract/deny_capture_covers_the_run
-tests/run.sh --suite unit --case witness_contract/log_capture_controls --case witness_contract/log_query_predicate_archive
 ```
 
 ## Create on an existing file
@@ -342,7 +264,7 @@ Both require eligible predictions to be `query_first`; allow/`succeeded` and
 deny/`permission_failure` records stay distinct, with no judgment of agreement.
 
 `max_targets_reply_survives` measures admitted 256-action workloads: denied
-ASCII reads of 511-byte targets with log capture, successful reads of
+ASCII reads of 511-byte targets, successful reads of
 JSON-escaped paths with observed paths, independent 511-byte query paths
 against plain attempt targets, 256 execs with stdout/stderr, and 256 native
 execs with 511-byte escaped executable targets and independent query paths,
@@ -363,12 +285,6 @@ conservative receipt allowance (`2 * 4 * ceil(capture / 3) + 4096`, capture from
 the manifest) and must still fit under the bound; Swift independently tests that
 allowance with maximal slash-heavy bytes. The corpus is evidence that real
 replies stay inside a bound that follows the schema, not the source of the bound.
-The optional deny-log channel follows the shared live-capture rules above:
-complete empty queries and evidenced budget cutoffs are admissible, while native
-runner replies must still survive intact. The separate 256-record supplied-text
-control proves observer/candidate capacity for its fixed corpus; the specimen's
-step count does not bound live log volume.
-
 Four refusal workloads submit 32,768-byte query values or filter/attempt labels.
 Each requires a host-owned `admission_failure` naming the field, no steps and no
 worker or validator subprocess. The label controls place a valid write before
@@ -434,7 +350,7 @@ That suite owns the deliberately empty-plan timeout control;
 ## Attempt in flight at the deadline
 
 `worker_attempt_in_flight_at_deadline` runs three specimens
-under `(version 1) (allow default)` with `--no-log-capture`:
+under `(version 1) (allow default)`:
 
 - `a1`: a FIFO with no writer, then `/etc/hosts`, with `worker_timeout_ms: 2000`.
   Attempt 0 blocks inside the worker until the sentinel deadline; the second
@@ -479,7 +395,7 @@ failures name the recovery path in stderr and preserve the original failure.
 ## Death after the native return, before publication
 
 `worker_killed_before_slot_publication` runs one specimen under
-`(version 1) (allow default)` with `--no-log-capture`: `/etc/hosts`, a `create`
+`(version 1) (allow default)`: `/etc/hosts`, a `create`
 of a fresh file in test-owned staging, then `/etc/hosts` again, with
 `worker_kill_before_publish_slot: 1`. The worker's `open(O_CREAT)` returns and
 the slot's fields are written; the seam then raises SIGKILL before the slot's
@@ -509,7 +425,7 @@ the other. The failure run uses `worker_pre_ready_hang_ms=10000` and
 `worker_timeout_ms=200`: the delay exceeds the fixed 1s ready-byte wait,
 sentinel budget and 1s exit grace by a wide margin. The seam sleeps after
 compilation and optional profile capture, before the ready byte and application;
-it provides no evidence of compilation failure. Both runs disable log capture.
+it provides no evidence of compilation failure.
 
 The failure run must retain its subprocess and both overrides while reporting
 no observed compile/apply return, allow/deny prediction, completed attempt or
@@ -555,29 +471,15 @@ Run with:
 tests/run.sh --case witness_contract/pre_apply_failure_reports_no_policy_verdict
 ```
 
-## Termination and denial-log correlation
+## Worker termination
 
-`worker_termination_and_log_correlation` uses two repeated denied writes with
-independent read queries, then an unrelated self-SIGKILL. Its delay seam gives
-the validator time to answer before the signal. The case retains completed
-attempts and unchanged file bytes, requires `runner_failed`, confirmed signal
-status and no host termination request, and makes no sandbox-cause claim.
-
-The same failure runs with capture disabled and enabled; both retain the same
-execution status. An un-overridden run verifies successful-run capture. Each
-variant also runs with the repeated writes in separate explicit phases, asserting
-phase completion, separate query collections and phase-local query ordering.
-The checker verifies worker identity in observer output, explicit capture/window
-limits and any actual event associations. Repeated attempts reference each event
-once with ambiguous candidate IDs. Completed logs can contain no match, while
-evidenced budget exhaustion must withhold correlation; unexpected collection or cleanup failures fail the case.
-Rust tests deterministically cover populated, missing/mismatched PID, unrelated
-operation, independent query, repeated-attempt and unavailable-capture cases.
-The collector-state controls exercise both request forms: a shared worker PID
-and target across phases still yields ambiguous candidates, while populated,
-empty and failed captures leave serialized execution evidence unchanged.
-Artifacts retain each request, raw envelope, stderr, capture metadata, file bytes
-and `observations.json`. No signed app is altered to steer observer output.
+`worker_termination` runs repeated writes that fail with permission-shaped
+errors beside successful independent read queries, with both probe plans and
+ordered phases. A controlled worker self-signal remains separate from those
+attempts; a successful worker exit supplies the positive control. The case
+checks unchanged target bytes, per-phase release ordering, raw predictions and
+attempts, signal/exit facts, observed reaping, independent consumer recovery
+and execution diagnostics. It asserts that collection fields are absent.
 
 ## Artifacts
 
@@ -637,7 +539,7 @@ requires no retained mutation experiment or acceptance output.
 
 `comparison_matrix` runs the three live specimens of
 [`tests/fixtures/comparison/matrix.json`](../../fixtures/comparison/matrix.json)
-through the CLI with `--no-log-capture`: S (real validator, twenty-three rows),
+through the CLI: S (real validator, twenty-three rows),
 B (the validator steered by `stub_validator.py` through
 `_test_overrides.validator_executable_path` and the I/O deadline seam; its
 records are stub output, so expectations come from submitted scopes and
@@ -683,15 +585,3 @@ The pre-apply case also attempts a real spawn of a nonexistent worker and
 requires unchanged files, no worker or validator subprocess, and no ordering
 object. Once a worker exists but has not published application, ordering is
 all-false with `not_invoked`; no prediction is `query_first`.
-
-## Archive query selection
-
-`log_query_predicate_archive` is a required default case that runs the production
-`log show` command builder against a committed, self-contained `.logarchive`.
-It checks the complete unfiltered corpus, then selected message multiplicities
-before parsing, then independent expected events. It does not depend on new
-live denial emission. Missing/unreadable data, blocked access, timeout, overflow,
-nonzero exit and wrong or empty selection fail; none is an availability skip.
-The Rust test is excluded from the generic unit batch and explicitly selected
-by this case. See [the fixture contract](../../fixtures/deny_capture/README.md)
-for the manifest and producer/reader compatibility requirements.

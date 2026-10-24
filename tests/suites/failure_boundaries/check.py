@@ -22,7 +22,7 @@ def specimen():
 
 
 def run(pw, out, request):
-    with RunCapture(pw, out, request, cli_args=['--no-log-capture']) as capture:
+    with RunCapture(pw, out, request, cli_args=[]) as capture:
         rc = capture.wait(timeout=40)
         envelope = capture.load_json()
     assert envelope['data']['runner_result'] is not None, envelope

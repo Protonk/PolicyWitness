@@ -92,7 +92,7 @@ class Witness:
             request['_test_overrides'] = overrides
         return request
 
-    def run(self, name, request, *, cli_args=('--no-log-capture',), timeout=60, raw=None):
+    def run(self, name, request, *, cli_args=(), timeout=60, raw=None):
         directory = self.out / name
         if raw is not None:
             directory.mkdir(parents=True, exist_ok=True)
@@ -222,7 +222,7 @@ class Witness:
         assert imports['records'] == [] and imports['closure_sha256'] is None
         data = envelope['data']
         assert data['runner_client'] is None and data['runner_result'] is None and data['policy_check'] is None, data.keys()
-        assert data['runner_sandbox_diagnostics'] is None and data['sandbox_log_capture'] is None
+        assert data['runner_sandbox_diagnostics'] is None and 'sandbox_log_capture' not in data
         assert specimen['runner_provenance'] is not None, 'the runner was selected before resolution refused'
         self.no_temp_request('refused')
         self.record('refused', error=envelope['result']['error'])
@@ -253,7 +253,7 @@ class Witness:
         cases.append(('missing_argument', result.returncode, envelope, None))
         # Absent file.
         absent = str(self.out / 'absent.json')
-        result = subprocess.run([str(self.pw), 'run', absent, '--no-log-capture'], capture_output=True, timeout=30)
+        result = subprocess.run([str(self.pw), 'run', absent], capture_output=True, timeout=30)
         cases.append(('absent_file', result.returncode, json.loads(result.stdout), absent))
         # Not JSON, and JSON that is not an object.
         for name, raw in (('not_json', b'{not json'), ('not_object', b'[1, 2]')):
@@ -262,9 +262,15 @@ class Witness:
         # Invalid flag values fail before request selection; D2 requires a null path.
         path = self.out / 'flag-request.json'
         path.write_text(json.dumps(self.specimen('flag')))
-        for flag, value in (('--timeout-ms', 'soon'), ('--log-timeout-ms', '0'), ('--runner-mode', 'invalid')):
+        for flag, value in (('--timeout-ms', 'soon'), ('--runner-mode', 'invalid')):
             result = subprocess.run([str(self.pw), 'run', str(path), flag, value], capture_output=True, timeout=30)
             cases.append(('invalid_flag_' + flag[2:], result.returncode, json.loads(result.stdout), None))
+        # Retired options are unknown arguments; the already supplied path survives.
+        for flag in ('--no-log-capture', '--log-timeout-ms'):
+            result = subprocess.run([str(self.pw), 'run', str(path), flag], capture_output=True, timeout=30)
+            envelope = json.loads(result.stdout)
+            assert envelope['result']['error'] == f'unknown argument: {flag}', envelope
+            cases.append(('retired_flag_' + flag[2:], result.returncode, envelope, str(path)))
         # Built-in selection cannot find an unregistered external runner.
         request = self.specimen('unknown-runner')
         request['runner'] = {'mode': 'byoxpc', 'service': 'com.example.pw.unregistered.' + os.urandom(4).hex()}
@@ -280,7 +286,7 @@ class Witness:
             specimen = self.common(envelope, name)
             assert specimen['request_path'] == path, (name, specimen['request_path'], path)
             data = envelope['data']
-            for key in ('runner_client', 'runner_result', 'policy_check', 'runner_sandbox_diagnostics', 'sandbox_log_capture'):
+            for key in ('runner_client', 'runner_result', 'policy_check', 'runner_sandbox_diagnostics'):
                 assert data[key] is None, (name, key)
             assert 'error' not in data, (name, data.keys())
             if name == 'unknown_runner':

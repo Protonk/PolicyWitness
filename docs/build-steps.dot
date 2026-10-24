@@ -33,7 +33,6 @@ digraph build_steps {
     seal [label="seal\nCodesigning app bundle\n1 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="seal: reads PolicyWitness.entitlements; writes the app seal over everything under Contents/"];
     verify [label="verify\nVerifying signature + entitlements\n1 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="verify: reads the sealed app; writes nothing"];
     signer [label="signer\nChecking every executable's signer\n1 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="signer: reads every regular file under the app's and each service's Contents/MacOS, and the app and service seals, as codesign displays them; writes nothing"];
-    sign_observer [label="sign_observer\nCodesigning observer tool (not embedded)\n6 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="sign_observer: reads controller/target/aarch64-apple-darwin/release/sandbox-log-observer, checked against the output target at this boundary before it is signed; writes that executable's signature, in place, and its observation into the build session"];
     guide [label="guide\nStaging checked user guide\n1 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="guide: reads docs/PolicyWitness.md and its inputs; writes PolicyWitness.md under DIST_DIR"];
     zip [label="zip\nCreating zip (for notarization): …\n4 refusal(s)", URL="BUILD.md#one-build-in-time", tooltip="zip: reads the sealed app, the variant's required executable paths and any additional code found by header checked against the output target again before the ZIP is written; only debug-only dSYM companions are excluded; writes PolicyWitness.zip under DIST_DIR"];
     make_build -> admission;
@@ -69,7 +68,6 @@ digraph build_steps {
     evidence -> seal;
     seal -> verify;
     verify -> signer;
-    signer -> sign_observer;
-    sign_observer -> guide;
+    signer -> guide;
     guide -> zip;
 }

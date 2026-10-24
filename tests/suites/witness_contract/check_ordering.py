@@ -90,7 +90,7 @@ def held_effects(pw, out, bridge, helper, collection_started=None):
                 sandbox_check=dict(operation='process-exec*', filter=dict(kind='path', value=str(helper))),
                 attempt=dict(kind='exec', action='spawn', target=str(helper), args=['--tree', tree.path]))]
         spec = specimen(plan, overrides={'validator_executable_path': str(validator)})
-        run = RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture'])
+        run = RunCapture(pw, out / 'run', spec, cli_args=[])
         try:
             run.start(); ready = gate.accept()
             if collection_started is not None: collection_started()
@@ -160,7 +160,7 @@ def interval(pw, out):
                                       ('recreated', ['unlink', 'create', 'open_read'], True)):
             if exists: target.write_bytes(secrets.token_bytes(64))
             spec = specimen([step(target, a, str(i)) for i, a in enumerate(actions)])
-            with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as run:
+            with RunCapture(pw, out / name, spec, cli_args=[]) as run:
                 rc = run.wait(timeout=20)
                 after = dict(exists=target.exists(), bytes_hex=target.read_bytes().hex() if target.exists() else None)
                 save(run.out / 'effect.json', after)
@@ -204,7 +204,7 @@ def mutation_interval(pw, out, bridge, between_queries):
                         overrides={'validator_executable_path': str(validator)})
         observations = []
         try:
-            with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+            with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
                 # __enter__ starts CLI; the acknowledged query precedes mutation.
                 gate_ready = gate.accept()
                 records = [gate.query()]; gate.emit()
@@ -242,7 +242,7 @@ def ordinary(pw, out, maximum):
         else:
             policy = f'(version 1)(deny default)(allow file-read-data (literal "{paths[0]}"))'
         spec = specimen([step(p, action, str(i)) for i, p in enumerate(paths)], policy)
-        with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+        with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
             rc = run.wait(timeout=30)
             after = [p.read_bytes() for p in paths]
             save(out / 'effects.json', [dict(index=i, before_hex=b.hex(), after_hex=a.hex()) for i, (b, a) in enumerate(zip(seeds, after))])
@@ -264,7 +264,7 @@ def spawn_failed(pw, out):
     target = out / 'target'; seed = secrets.token_bytes(64); target.write_bytes(seed)
     hostile = '/nonexistent/pw-validator-not-real'
     spec = specimen([step(target, 'open_write', 'write')], overrides={'validator_executable_path': hostile})
-    with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+    with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
         rc = run.wait(timeout=20)
         after = target.read_bytes(); save(out / 'effects.json', dict(before_hex=seed.hex(), after_hex=after.hex()))
         assert after and after != seed

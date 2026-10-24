@@ -43,9 +43,9 @@ unset NATIVE_ARM64 NATIVE_TRANSLATED
 #
 # Every executable the build delivers is a thin arm64 Mach-O for macOS: Cargo
 # is given the one output triple below, meson.build requires an arm64 macOS
-# host machine and selects the architecture explicitly, and each output, the
-# assembled bundle and the standalone observer are checked against that target
-# by their bytes before they are copied, signed or packaged. The target
+# host machine and selects the architecture explicitly. Each output and the
+# assembled bundle are checked against that target by their bytes before they
+# are copied, signed or packaged. The target
 # describes the products; the native builder check above describes this
 # script's own process, and the record carries what rustc and Meson report
 # about the machine they ran on.
@@ -128,7 +128,6 @@ CARGO_OUTPUT_TRIPLE="aarch64-apple-darwin"
 CARGO_MESSAGES="${CARGO_TARGET_DIR_PINNED}/pw-build-messages.jsonl"
 BUILD_SESSION="${CARGO_TARGET_DIR_PINNED}/pw-build-session.json"
 RUNNER_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/policy-witness"
-SANDBOX_LOG_OBSERVER_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/sandbox-log-observer"
 SBPL_CHECK_BIN="${CARGO_TARGET_DIR_PINNED}/${CARGO_OUTPUT_TRIPLE}/release/sbpl-check"
 
 # Build knobs: exactly 0 or 1. An unset BUILD_XPC or PW_INSPECTION means 1 and
@@ -446,14 +445,12 @@ PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
   --target-dir "${CARGO_TARGET_DIR_PINNED}" \
   --message-format=json-render-diagnostics \
   --bin policy-witness \
-  --bin sandbox-log-observer \
   --bin sbpl-check \
   > "${CARGO_MESSAGES}"
-CARGO_BUILT="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/cargo_artifacts.py" "${CARGO_MESSAGES}" policy-witness sandbox-log-observer sbpl-check)"
+CARGO_BUILT="$("${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/cargo_artifacts.py" "${CARGO_MESSAGES}" policy-witness sbpl-check)"
 while IFS=$'\t' read -r bin_name bin_path; do
   case "${bin_name}" in
     policy-witness) bin_expected="${RUNNER_BIN}" ;;
-    sandbox-log-observer) bin_expected="${SANDBOX_LOG_OBSERVER_BIN}" ;;
     sbpl-check) bin_expected="${SBPL_CHECK_BIN}" ;;
     *) continue ;;
   esac
@@ -466,19 +463,19 @@ done <<< "${CARGO_BUILT}"
 # Every shipped Cargo output must be an executable file at the pinned path:
 # Cargo's path report and a parsable Mach-O do not establish the permission
 # bit, and a later chmod must not repair an output this build refuses.
-for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
+for rust_bin in "${RUNNER_BIN}" "${SBPL_CHECK_BIN}"; do
   if [[ ! -x "${rust_bin}" ]]; then
     echo "ERROR: expected an executable Cargo output at ${rust_bin}" 1>&2
     exit 2
   fi
 done
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \
-  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"
-for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do
+  "${RUNNER_BIN}" "${SBPL_CHECK_BIN}"
+for rust_bin in "${RUNNER_BIN}" "${SBPL_CHECK_BIN}"; do
   check_minimum_macos "${rust_bin}"
 done
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" cargo-judge --root "${ROOT_DIR}" \
-  --bin policy-witness --bin sandbox-log-observer --bin sbpl-check \
+  --bin policy-witness --bin sbpl-check \
   --require-rebuilt "${PW_FRESH_BUILD}" --rustflags-source "${RUSTFLAGS_SOURCE}"
 
 # ---- Native executables (Meson) ---------------------------------------------
@@ -551,7 +548,7 @@ for native_bin in "${NATIVE_OUTPUTS[@]}"; do
 done
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" stamp-extend --root "${ROOT_DIR}" --xpc "${BUILD_XPC}"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" sdk-check --root "${ROOT_DIR}" --sdk-version "${SDK_VERSION}" \
-  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}" "${NATIVE_OUTPUTS[@]}"
+  "${RUNNER_BIN}" "${SBPL_CHECK_BIN}" "${NATIVE_OUTPUTS[@]}"
 
 # ---- Assemble app bundle ---------------------------------------------------
 
@@ -574,9 +571,6 @@ stamp_info_plist "${APP_BUNDLE}/Contents/Info.plist"
 
 cp "${RUNNER_BIN}" "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
-
-cp "${SANDBOX_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
-chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 
 cp "${SBPL_CHECK_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
@@ -702,7 +696,6 @@ echo "==> Codesigning embedded MacOS tools"
 if [[ "${BUILD_XPC}" == "1" ]]; then
   sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 fi
-sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 
 if [[ "${BUILD_XPC}" == "1" ]]; then
@@ -758,13 +751,6 @@ codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 echo "==> Checking every executable's signer"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/signer_check.py" "${APP_BUNDLE}" "${IDENTITY}"
 
-# Keep the standalone observer tool signed for direct use. Its bytes are checked
-# against the output target again at this boundary: the copy in the bundle was
-# checked, but this file is signed in place.
-echo "==> Codesigning observer tool (not embedded)"
-"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage observer "${SANDBOX_LOG_OBSERVER_BIN}"
-sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
-
 # ---- Package ---------------------------------------------------------------
 
 echo "==> Staging checked user guide"
@@ -784,7 +770,6 @@ DONE:
   - ${APP_BUNDLE}
   - ${ZIP_NAME}
   - ${GUIDE_NAME}
-  - ${SANDBOX_LOG_OBSERVER_BIN}
 
 Next (see docs/SIGNING.md; make notarize builds again, fresh):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'

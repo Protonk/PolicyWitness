@@ -1,6 +1,6 @@
 """Area A of the disposition record plan: live loss of known facts.
 
-Three specimens run through RunCapture with --no-log-capture, all under
+Three specimens run through RunCapture with, all under
 (version 1) (allow default):
 
 - a1: a FIFO with no writer, then /etc/hosts, with worker_timeout_ms 2000.
@@ -46,7 +46,7 @@ from lifecycle_adapter import read_lifecycle, summaries
 from run_capture import RunCapture
 from worker_exit_witness import worker_exit_witness
 
-CLI_ARGS = ['--no-log-capture', '--timeout-ms', '20000']
+CLI_ARGS = ['--timeout-ms', '20000']
 HARNESS_WAIT_SECONDS = 60  # bounded, and longer than the CLI's own deadline
 FIFO_OVERRIDES = {'worker_timeout_ms': 2000}
 GRACE_OVERRIDES = {'worker_timeout_ms': 300, 'worker_post_apply_hang_ms': 800}

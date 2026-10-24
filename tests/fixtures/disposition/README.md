@@ -16,7 +16,6 @@ independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
   while that controller reported `termination_cause: unknown`. Rejection
   controls refuse it before reading claims. It is never an acceptance baseline.
 
-Both carry disabled log capture; log evidence supplies no worker cause.
 `response23/a1_specimen.json` is the exact submitted request for the current
 capture; the two refresh together, as described below.
 Previous-envelope rejection uses constructed controls; superseded acceptance
@@ -24,12 +23,13 @@ captures remain available in Git.
 
 ## Refresh
 
-A `response_schema` bump makes the readers reject the current capture, so a
-new `responseNN/` pair is captured, not edited. Run
+A response or controller-envelope version bump makes the readers reject the
+current capture. Capture a new pair, without editing its contents; the
+`responseNN/` directory names the runner response schema. Run
 `witness_contract/worker_attempt_in_flight_at_deadline` against the final
 candidate and copy `artifacts/a1/run.json` and `artifacts/a1/specimen.json`
 from its case directory here as `responseNN/a1_expected.json` and
-`responseNN/a1_specimen.json`. Bump `schema_version` in
+`responseNN/a1_specimen.json`. For a response schema change, bump `schema_version` in
 `../contract/path_diagnostics.json` (one value per case) and replace
 `../contract/response_shape.json` with the `response_shape.candidate.json`
 that `runner_unit` writes when the golden disagrees. Retain the capture run in

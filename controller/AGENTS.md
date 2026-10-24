@@ -1,6 +1,6 @@
 # Working in `controller/`
 
-Read [README.md](README.md) for the module map, CLI, run lifecycle, log capture
+Read [README.md](README.md) for the module map, CLI, run lifecycle
 and external-runner registry. These rules supplement the [root guidance](../AGENTS.md).
 
 ## Find the relevant contract
@@ -34,20 +34,10 @@ semantic claims from unsupported bodies. Keep request-delivery failures ahead
 of reply interpretation. A successful write is not proof of receipt; an
 independent fallback compile is not evidence of worker progress.
 
-Complete execution before attaching optional log evidence. Preserve
-[field ownership](README.md#execution-and-log-evidence-ownership): collector
-failures, matching events and missing events must not change CLI status, native
-observations, comparisons or disposition. Match against submitted attempts,
-not independent query targets. Keep ambiguous candidates and unmatched events;
-do not turn PID/path matching into causal attribution or absence into allowance.
-
-Preserve the shared monotonic collection deadline and separate wall-clock query
-window. Keep streaming and derived-data limits, bounded diagnostics and cleanup
-observations at both process boundaries. Do not repair truncated JSON into
-evidence or report cleanup from EOF or leader exit alone. Keep group signalling
-within proven ownership and distinguish group absence from a child's observed
-wait. Review [the collection contract](README.md#log-collection-budgets-and-cleanup)
-when changing supervision, parsing or correlation.
+Derive execution diagnostics only from the admitted runner reply and supporting
+native observations. Preserve the raw reply, client timestamps and worker
+identity. Never substitute a host/client PID for missing worker metadata or
+turn permission-shaped failures into sandbox-cause claims.
 
 For registry changes, preserve lock ownership across mutations and launchd
 actions, atomic publication, pending installation and durable cleanup records.
@@ -82,11 +72,10 @@ Select the cases that establish the change:
 | Rust helpers, orchestration or formatting | [unit](../tests/suites/unit/README.md): binary unit tests, controlled dependencies and rustfmt. |
 | Public CLI arguments and envelope behavior | [integration](../tests/suites/integration/README.md); use live suites when the behavior needs XPC or the kernel. |
 | Request/reply admission or evidence interpretation | [failure_boundaries](../tests/suites/failure_boundaries/README.md), [blackbox_e2e](../tests/suites/blackbox_e2e/README.md) consumer controls and affected [witness_contract](../tests/suites/witness_contract/README.md) cases; follow the coordinated runner checks in test guidance. |
-| Log parsing, transport or correlation | Rust supplied-text replay and execution-preservation controls; [archive selection](../tests/suites/witness_contract/README.md#archive-query-selection) for OS predicates; [live capture](../tests/suites/witness_contract/README.md#deny-capture-covers-the-run) for native execution and collection facts. Each establishes a different claim. |
 | Selection, signing, registry or recovery | Rust selection/registry controls and applicable [runner_byoxpc](../tests/suites/runner_byoxpc/README.md) cases, including change-specific controls in the [opt-in registry](../tests/OPT_IN_TESTS.md). |
 | Documentation or generated contracts | [source_drift](../tests/suites/source_drift/README.md), plus behavioral checks when meanings change. |
 
 Use [sandboxed-harness diagnostics](../tests/AGENTS.md#sandboxed-automation-harnesses)
-when XPC, logs, signing or compiler discovery are refused. Retain failed-run
+when XPC, signing or compiler discovery are refused. Retain failed-run
 evidence and external-runner ownership through the shared
 [cleanup procedure](../tests/AGENTS.md#preserve-and-clean-up-output).

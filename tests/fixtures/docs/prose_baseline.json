@@ -17,12 +17,6 @@
       "document": "docs/PolicyWitness.md",
       "invariant": "G9",
       "kind": "literal",
-      "text": "`end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`, with"
-    },
-    {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
       "text": "the key is ten seconds). Three serial runs with a short pause between them"
     },
     {
@@ -30,12 +24,6 @@
       "invariant": "G9",
       "kind": "literal",
       "text": "took about four seconds of wall time in the project's measurement."
-    },
-    {
-      "document": "docs/QUESTIONS.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) are serial and queue behind launchd's respawn throttle, which the generated plist sets to one second."
     },
     {
       "document": "docs/SIGNING.md",
@@ -54,12 +42,6 @@
       "invariant": "G9",
       "kind": "literal",
       "text": "once with `--timeout 5m`, with a 330-second local backstop. The tool does its own"
-    },
-    {
-      "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "`floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client"
     },
     {
       "document": "tests/FAILURE-PROPAGATION-CONTRACT.md",

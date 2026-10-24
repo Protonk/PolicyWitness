@@ -116,7 +116,7 @@ def main():
         ]
         (out / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
         with RunCapture(pw, out, specimen,
-                        cli_args=['--no-log-capture', '--timeout-ms', '15000']) as run:
+                        cli_args=['--timeout-ms', '15000']) as run:
             rc = run.wait(timeout=20)
             # Read the files and their identities before decoding claimed effects.
             after, identities_after = snapshot_files(paths, out, 'after')

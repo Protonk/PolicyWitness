@@ -47,7 +47,7 @@ def main():
             except OSError as exc:
                 direct = {"spawned": False, "errno": exc.errno}
             (out / f"{name}.direct.json").write_text(json.dumps(direct, indent=2) + "\n")
-            with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as run:
+            with RunCapture(pw, out / name, spec, cli_args=[]) as run:
                 records[name] = (direct, run.wait(timeout=20), run.load_json())
 
     steps = {}

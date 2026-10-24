@@ -354,10 +354,9 @@ def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_versio
               'policy_format': 'sbpl', 'sandboxed_after_apply': True, 'steps': reply_steps, 'runner_subprocess': sub}
     diagnostics = {'process_disposition': projections['process_disposition'],
                    'termination_cause': projections['termination_cause'], 'stop_reason': projections['stop_reason'],
-                   'disposition_integrity': 'valid', 'disposition_issues': [],
-                   'correlation_status': 'not_attempted', 'permission_failures_without_record': None}
+                   'disposition_integrity': 'valid', 'disposition_issues': []}
     return {'schema_version': envelope_version, 'kind': 'run', 'result': {'ok': error is None},
-            'data': {'runner_result': runner, 'runner_sandbox_diagnostics': diagnostics, 'sandbox_log_capture': None}}
+            'data': {'runner_result': runner, 'runner_sandbox_diagnostics': diagnostics}}
 
 
 # ---------------------------------------------------------------------------

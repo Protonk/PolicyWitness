@@ -1,3 +1,0 @@
-ProductName:		macOS
-ProductVersion:		14.8.7
-BuildVersion:		23J520

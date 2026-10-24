@@ -161,7 +161,7 @@ def main():
                 dict(step_id='after', sandbox_check=dict(operation='file-write-data',
                     filter=dict(kind='path', value=str(target))),
                     attempt=dict(kind='file', action='open_write', target=str(target)))])
-        run = RunCapture(pw, out, request, cli_args=['--no-log-capture', '--timeout-ms', '30000'])
+        run = RunCapture(pw, out, request, cli_args=['--timeout-ms', '30000'])
         # start() can launch the CLI and then fail while recording metadata.
         # Treat every attempted launch as potentially active until observed.
         launched = True

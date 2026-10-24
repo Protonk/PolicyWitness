@@ -8,13 +8,10 @@ compares the two apps' envelopes recursively. Keys, container types, list
 lengths and scalar types must agree, including empty containers. Only scalar
 values at the explicit field paths below may differ. Each difference is
 reported by class: process identifiers; wall-clock and monotonic times and deadlines;
-durations; the observer's raw log output and deny lines; temporary-copy
-bundle and service names and paths; provenance-matched client executable and
+temporary-copy bundle and service names and paths; provenance-matched client executable and
 service arguments; byte counts affected by longer identifiers; and, with
---across-builds, the four build stamp values. The log predicate may differ only
-in its embedded worker PID, corroborated by the observer's recorded PID.
-The worker identity is compared with --expect-identity when given and must be
-equal otherwise. Everything else, including every comparison record, verdict,
+--across-builds, the four build stamp values. The worker identity is compared
+with --expect-identity when given and must be equal otherwise. Everything else, including every comparison record, verdict,
 attempt outcome and disposition, must be equal.
 
     envelope_compare.py run APP OUT
@@ -44,31 +41,9 @@ VOLATILE = {
         'data.runner_result.pid', 'data.runner_result.runner_subprocess.pid',
         'data.runner_result.steps[].sandbox_check.pid', 'data.runner_result.phases[].validator_subprocess.pid',
         'data.runner_result.steps[].attempt.child_pid',
-        'data.sandbox_log_capture.deny_events[].pid', 'data.sandbox_log_capture.observer.data.pid',
-        'data.sandbox_log_capture.observer.data.deny_events[].pid',
-        'data.sandbox_log_capture.observer.data.collection.cleanup.target',
-        'data.sandbox_log_capture.observer.data.collection.process.pid',
-        'data.sandbox_log_capture.supervision.cleanup.target', 'data.sandbox_log_capture.supervision.process.pid',
     ),
     'time': (
         'generated_at_unix_ms', 'data.runner_client.started_at_unix_ms', 'data.runner_client.ended_at_unix_ms',
-        'data.sandbox_log_capture.window.start', 'data.sandbox_log_capture.window.end',
-        'data.sandbox_log_capture.window.started_at_unix_ms', 'data.sandbox_log_capture.window.ended_at_unix_ms',
-        'data.sandbox_log_capture.observer.data.start', 'data.sandbox_log_capture.observer.data.end',
-        'data.sandbox_log_capture.observer.generated_at_unix_ms',
-        'data.sandbox_log_capture.observer.data.collection.budget.deadline_monotonic_ns',
-        'data.sandbox_log_capture.observer.data.collection.budget.started_monotonic_ns',
-        'data.sandbox_log_capture.supervision.budget.deadline_monotonic_ns',
-        'data.sandbox_log_capture.supervision.budget.started_monotonic_ns',
-    ),
-    'duration': (
-        'data.sandbox_log_capture.observer.data.collection.elapsed_ms', 'data.sandbox_log_capture.supervision.elapsed_ms',
-        'data.sandbox_log_capture.observer.data.duration_ms',
-    ),
-    'observer_log': (
-        'data.sandbox_log_capture.deny_events[].raw_line', 'data.sandbox_log_capture.observer.data.deny_events[].raw_line',
-        'data.sandbox_log_capture.observer.data.log_stdout', 'data.sandbox_log_capture.observer.data.log_stderr',
-        'data.sandbox_log_capture.observer.data.observed_lines',
     ),
     'bundle_identity': (
         'data.runner_result.bundle_id', 'data.specimen.runner_provenance.runner_bundle_id',
@@ -80,15 +55,9 @@ VOLATILE = {
     ),
     'bytes': (
         'data.runner_client.stdout_bytes_received', 'data.runner_client.stdout_bytes_retained',
-        'data.sandbox_log_capture.stdout_bytes_received', 'data.sandbox_log_capture.stdout_bytes_retained',
-        'data.sandbox_log_capture.supervision.stdout.bytes_read', 'data.sandbox_log_capture.supervision.stdout.bytes_retained',
-        'data.sandbox_log_capture.observer.data.collection.stdout.bytes_read',
-        'data.sandbox_log_capture.observer.data.collection.stdout.bytes_retained',
     ),
 }
-STAMPS = ('build.commit', 'build.describe', 'build.number', 'build.version',
-          'data.sandbox_log_capture.observer.build.commit', 'data.sandbox_log_capture.observer.build.describe',
-          'data.sandbox_log_capture.observer.build.number', 'data.sandbox_log_capture.observer.build.version')
+STAMPS = ('build.commit', 'build.describe', 'build.number', 'build.version')
 IDENTITY = 'data.runner_result.runner_subprocess.worker_evidence.abi_identity'
 GENERIC_INDEX = re.compile(r'\[\d+\]')
 
@@ -153,18 +122,6 @@ def client_argument_class(path, candidate, baseline):
     return None
 
 
-def predicate_without_pid(document):
-    predicate = field(document, 'data.sandbox_log_capture.observer.data.predicate')
-    pid = field(document, 'data.sandbox_log_capture.observer.data.pid')
-    if not isinstance(predicate, str) or type(pid) is not int or pid <= 0:
-        return None
-    # The log predicate embeds the worker PID in escaped parentheses. Retain
-    # the rest of the predicate so changed filters cannot pass as PID variation.
-    normalized, count = re.subn(r'(\\+\()' + str(pid) + r'(\\+\))',
-                                lambda m: m[1] + '<worker-pid>' + m[2], predicate)
-    return normalized if count == 1 else None
-
-
 def run_fixtures(app, out):
     out.mkdir(parents=True)
     controller = Path(app) / CONTROLLER
@@ -187,9 +144,6 @@ def classify(path, candidate, baseline):
     for klass, paths in VOLATILE.items():
         if generic in paths:
             return klass
-    if path == 'data.sandbox_log_capture.observer.data.predicate':
-        left, right = predicate_without_pid(candidate), predicate_without_pid(baseline)
-        return 'pid' if left is not None and left == right else None
     return client_argument_class(path, candidate, baseline) if path.startswith('data.runner_client.argv[') else None
 
 

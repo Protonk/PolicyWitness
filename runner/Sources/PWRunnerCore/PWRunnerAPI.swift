@@ -1009,7 +1009,8 @@ func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: St
 // attempt target. `realpath_resolved` follows the leaf; `parent_realpath_resolved`
 // resolves the parent and keeps the leaf literal, the form the kernel names for
 // a created or unlinked path. Neither establishes what the worker's own syscall
-// resolved: they are candidate evidence for deny-log correlation only.
+// resolved: these diagnostics describe later resolution by the host, not the
+// identity of an object accessed by the worker.
 struct PWRunnerAttemptPathDiagnostics: Codable {
     static let formNames = ["realpath_resolved", "parent_realpath_resolved"]
 

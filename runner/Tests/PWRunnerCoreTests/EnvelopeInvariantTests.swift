@@ -209,7 +209,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
         tk.run("top-level pid agrees with runner_subprocess.pid") {
             // The mirror-back contract: top-level pid names the sandboxed
             // worker process when runner_subprocess is present, so consumers
-            // using pid for unified-log correlation reach the worker.
+            // using pid for execution diagnostics reach the worker.
             let result = try replyFixture()
             try expectEqual(result.pid, result.runner_subprocess?.pid)
         }

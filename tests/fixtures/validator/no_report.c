@@ -3,7 +3,7 @@
  * compiled in with a recording sandbox_check: no kernel query, sandbox, child
  * or log is involved, so the check is deterministic. Without the flag a
  * denied prediction writes a kernel deny line against the worker PID, which
- * the deny-log channel cannot tell from the attempt's own line. */
+ * is indistinguishable from the attempt's own line. */
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>

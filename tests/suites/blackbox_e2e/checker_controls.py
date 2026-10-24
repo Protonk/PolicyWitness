@@ -21,49 +21,11 @@ CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from blackbox import envelope_skeleton
-from consumer import denials, lifecycle, select, steps, validate, validate_exec_observation
+from consumer import lifecycle, select, steps, validate, validate_exec_observation
 from lifecycle_adapter import read_lifecycle
 from lifecycle_oracle import check_record
 from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
-
-
-def observer_controls(run):
-    base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
-        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure', 'steps': [], 'phases': []}, ok=False)
-    good = dict(kind='sandbox_log_observer_report', schema_version=contract.CONTROLLER_ENVELOPE,
-                data=dict(observer_schema_version=2, observed_deny=True, deny_events=[]))
-    def wrapped(reply, status='invalid_reply'):
-        d=copy.deepcopy(base)
-        d['data']['sandbox_log_capture']=dict(observer=reply, capture_status=status,
-            observed_deny=None, deny_events=None, blocked_reason=None, step_denies=None)
-        return d
-    run('observer_admitted',wrapped(copy.deepcopy(good),'captured'))
-    faults=[('kind',None),('kind','wrong'),('schema_version',None),('schema_version',True),
-        ('schema_version','7'),('schema_version',7.0),('schema_version',contract.CONTROLLER_ENVELOPE-1),
-        ('schema_version',contract.CONTROLLER_ENVELOPE+1),('inner',3),('inner',True),('inner','2')]
-    for i,(key,value) in enumerate(faults):
-        p=copy.deepcopy(good)
-        if key=='inner': p['data']['observer_schema_version']=value
-        elif value is None: p.pop(key)
-        else: p[key]=value
-        p['data'].update(collection=['unknown',False],observed_deny='poison',blocked_reason={'unknown':0})
-        for status in ('invalid_reply','timeout','overflow','error'):
-            d=wrapped(p,status); before=copy.deepcopy(d)
-            run(f'observer_opaque_{i}_{status}',d)
-            assert d==before
-        d=wrapped(p,'captured'); run(f'observer_bad_status_{i}',d,rejected_by='status requires an admitted observer')
-        d=wrapped(p); d['data']['sandbox_log_capture']['deny_events']=[]
-        run(f'observer_bad_claim_{i}',d,rejected_by='inadmissible observer cannot supply log claims')
-        d['data']['runner_sandbox_diagnostics']=dict(correlation_status='pid_match',permission_failures_without_record=['invented'])
-        got=denials(d)
-        assert got['events'] is None and got['candidates'] is None and got['permission_failures_without_record'] is None
-        assert got['correlation_status']=='unavailable' and got['capture']==d['data']['sandbox_log_capture']
-        run(f'observer_bad_correlation_{i}',d,rejected_by='cannot supply correlation or missing-record claims')
-    p=copy.deepcopy(good); p['data']['observed_deny']='poison'
-    run('observer_admitted_bad_body',wrapped(p,'captured'),rejected_by='observed_deny is string')
-    d=wrapped({'unknown':True}); d['data']['sandbox_log_capture']['tool_exit_code']='poison'
-    run('observer_bad_wrapper',d,rejected_by='tool_exit_code is string')
 
 
 def policy_check_controls(run):
@@ -272,7 +234,6 @@ def consumer_controls(artifacts, current):
     runner(retired)['applied_profile'] = None
     run('retired_profile_field', retired, rejected_by='unknown key reply.applied_profile')
     policy_check_controls(run)
-    observer_controls(run)
     from extension_controls import run_extension_controls
     run_extension_controls(run)
 
@@ -517,7 +478,7 @@ def consumer_controls(artifacts, current):
             runner(broken)['steps'] = [{'attempt': 7, 'comparison': False}]
         errors = validate(broken)
         assert len(errors) == 1 and diagnostic in errors[0], (name, errors)
-        for reader in (steps, lifecycle, denials, read_lifecycle):
+        for reader in (steps, lifecycle, read_lifecycle):
             try:
                 reader(broken)
             except ValueError as exc:
@@ -531,9 +492,9 @@ def consumer_controls(artifacts, current):
         records.append({'control': 'version_' + name, 'rejected': True, 'errors': errors})
     # An envelope without a reply is read under its own version only.
     no_reply = copy.deepcopy(current)
-    no_reply['data'].update(runner_result=None, runner_client=None, runner_sandbox_diagnostics=None, sandbox_log_capture=None)
+    no_reply['data'].update(runner_result=None, runner_client=None, runner_sandbox_diagnostics=None)
     no_reply['result'].update(ok=False, exit_code=2, normalized_outcome='tool_error', error='controlled')
-    run('no_reply_envelope', no_reply, lambda e: require(steps(e) == [] and denials(e)['capture_status'] == 'not_reported', 'absence must not invent evidence'))
+    run('no_reply_envelope', no_reply, lambda e: require(steps(e) == [], 'absence must not invent evidence'))
     bare = copy.deepcopy(runner(current))
     assert not validate(bare), validate(bare)
     assert lifecycle(bare)['reporting'] == 'reported'
@@ -542,44 +503,16 @@ def consumer_controls(artifacts, current):
     assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
     records.append({'control': 'bare_reply_versions', 'rejected': True})
 
-    # The log channel is read in place with candidate references resolved.
-    event = {'pid': runner(current)['runner_subprocess']['pid'], 'operation': 'file-write-data',
-             'path': first(current)['attempt']['requested_path'], 'raw_line': 'controlled denial'}
-    match = {'step_id': 'fs_write_allowed', 'operation': 'file-write-data', 'operation_source': 'submitted_attempt',
-             'requested_kind': 'file', 'requested_action': 'open_write', 'path': event['path'],
-             'path_sources': ['submitted_attempt.target']}
-    window = {'kind': 'runner_client_span', 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500, 'pad_seconds': 2,
-              'start': '1969-12-31 23:59:59+0000', 'end': '1970-01-01 00:00:05+0000'}
-    logged = copy.deepcopy(current)
-    logged['data']['sandbox_log_capture'] = {'capture_status': 'captured', 'window': window,
-        'deny_events': [event, dict(event, pid=99)], 'step_denies': [{'event_index': 0,
-        'candidate_step_ids': ['fs_write_allowed'], 'association': 'candidate', 'matching_evidence': [match]}]}
-    logged['data']['runner_sandbox_diagnostics'].update(correlation_status='pid_match', permission_failures_without_record=[])
-    def candidate(e):
-        d = denials(e)
-        c = d['candidates'][0]
-        require(d['events'] == [event, dict(event, pid=99)], 'unmatched raw events must survive')
-        require(c['event_index'] == 0 and c['event'] == event and c['association'] == 'candidate', 'candidate reference is not unique occurrence')
-        require(c['matching_evidence'] == [match], 'matching provenance must survive')
-        require(d['window'] == window and d['correlation_status'] == 'pid_match', 'capture limits must survive')
-    run('candidate_resolution', logged, candidate)
-    for status, correlation in [('captured', 'no_match'), ('blocked', 'unavailable'),
-                                ('requested_unavailable', 'unavailable'), ('disabled', 'not_attempted')]:
-        absent = copy.deepcopy(logged)
-        absent['data']['runner_sandbox_diagnostics'].update(correlation_status=correlation, permission_failures_without_record=None)
-        absent['data']['sandbox_log_capture'] = (dict(capture_status=status, window=window,
-            deny_events=[dict(event, pid=99)] if status == 'captured' else None,
-            step_denies=[] if status == 'captured' else None,
-            blocked_reason='controlled blockage' if status == 'blocked' else None)
-            if status != 'disabled' else None)
-        def availability(e, status=status, correlation=correlation):
-            d = denials(e)
-            require((d['capture_status'], d['correlation_status']) == (status if status != 'disabled' else 'not_reported', correlation),
-                    'capture states must remain distinct')
-            require(d['candidates'] == ([] if status == 'captured' else None), 'no match and no report differ')
-            if status == 'blocked':
-                require(d['capture']['blocked_reason'] == 'controlled blockage', 'capture detail lost')
-        run('capture_' + status, absent, availability)
+    # Removed fields are rejected under the current envelope, even when null.
+    for key in ('sandbox_log_capture',):
+        retired = copy.deepcopy(current)
+        retired['data'][key] = None
+        run('retired_' + key, retired, rejected_by='unknown key envelope.data.' + key)
+    for key in ('correlation_status', 'permission_failures_without_record'):
+        retired = copy.deepcopy(current)
+        retired['data']['runner_sandbox_diagnostics'][key] = None
+        run('retired_' + key, retired,
+            rejected_by='unknown key envelope.data.runner_sandbox_diagnostics.' + key)
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')
 
 

@@ -16,7 +16,7 @@ seeds = [secrets.token_bytes(64) for _ in paths]
 for path, seed in zip(paths, seeds): path.write_bytes(seed)
 spec = specimen([step(p, 'open_write', str(i)) for i, p in enumerate(paths)],
                 overrides={'validator_executable_path': str(validator)})
-with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
     rc = run.wait(timeout=20)
     after = [p.read_bytes() for p in paths]
     save(out / 'effects.json', [dict(before_hex=b.hex(), after_hex=a.hex()) for b, a in zip(seeds, after)])

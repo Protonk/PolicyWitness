@@ -39,7 +39,7 @@ def capture(pw, out, name, spec, *, expected_rc=0, session_state=None):
     if session_state:
         spec['runner'] = {'mode': 'byoxpc', 'service': session_state['service_name']}
         directory.mkdir(parents=True, exist_ok=True)
-    with RunCapture(pw, directory, spec, cli_args=['--no-log-capture']) as captured:
+    with RunCapture(pw, directory, spec, cli_args=[]) as captured:
         assert captured.wait(timeout=40) == expected_rc, captured.metadata_path
         envelope = captured.load_json()
     errors = consumer.validate(envelope)

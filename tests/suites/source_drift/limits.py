@@ -342,6 +342,12 @@ class LimitsDocumentationTests(unittest.TestCase):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 generator.require_standalone(text, 'example')
 
+        archive = 'https://github.com/Protonk/Observer'
+        generator.require_standalone(f'[archive]({archive})', 'example', external_links=(archive,))
+        for text in (f'[archive]({archive})', f'![image]({archive})', f'<{archive}>'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                generator.require_standalone(text, 'example', external_links=() if text.startswith('[archive]') else (archive,))
+
         def questions(body):
             return f'{generator.QUESTIONS_START}\n{body}\n{generator.QUESTIONS_END}'
         copied = generator.shared_questions(questions('## One?\n\nSee [it](PolicyWitness.md#limits).\n\n```text\n## fenced\n```'))
@@ -459,9 +465,7 @@ class LimitsDocumentationTests(unittest.TestCase):
             'tests/suites/runner_c_worker_harness/check_sysctl.py',
             'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
             'controller/src/run_flow.rs',
-            'controller/src/log_capture.rs',
             'controller/src/bin/sbpl-check.rs',
-            'controller/src/bin/sandbox-log-observer.rs',
             'controller/src/runner_manager.rs',
             'controller/src/runner_commands.rs',
         }

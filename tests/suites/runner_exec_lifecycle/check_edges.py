@@ -43,7 +43,7 @@ def main():
                     filter=dict(kind='path', value=helper)),
                     attempt=dict(kind='exec', action='spawn', target=helper, args=['--tree', control.path])),
                 write_step('after', after)])
-        run = RunCapture(pw, out, request, cli_args=['--no-log-capture', '--timeout-ms', '30000'])
+        run = RunCapture(pw, out, request, cli_args=['--timeout-ms', '30000'])
         launched = True
         run.start()
         pids = control.accept()

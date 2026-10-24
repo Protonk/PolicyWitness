@@ -93,7 +93,7 @@ def check_cli(case, out, pw):
             '_test_overrides': {'validator_executable_path': str(validator)},
         }
         with RunCapture(pw, out, specimen,
-                        cli_args=['--no-log-capture', '--timeout-ms', '15000']) as run:
+                        cli_args=['--timeout-ms', '15000']) as run:
             rc = run.wait(timeout=20)
             # Check real effects before relying on the envelope's attempt claims.
             after = [path.read_bytes() for path in paths]

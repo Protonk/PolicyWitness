@@ -35,7 +35,7 @@ def main():
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan,
                     _test_overrides=dict(validator_executable_path=str(validator), validator_io_timeout_ms=500))
         started = time.monotonic()
-        with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture', '--timeout-ms', '15000']) as run:
+        with RunCapture(pw, out / 'run', spec, cli_args=['--timeout-ms', '15000']) as run:
             rc = run.wait(timeout=20)
             after = [p.read_bytes() for p in paths]
             for i, data in enumerate(after):

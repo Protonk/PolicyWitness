@@ -41,7 +41,7 @@ def main():
                 "attempt": {"kind": "file", "action": "open_write", "target": str(target)},
             }],
         }
-        run = RunCapture(pw, out, spec, cli_args=['--no-log-capture', '--timeout-ms', '30000'])
+        run = RunCapture(pw, out, spec, cli_args=['--timeout-ms', '30000'])
         try:
             run.start()
             pids = control.accept()

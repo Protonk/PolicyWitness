@@ -1,7 +1,7 @@
 # Failure evidence contract
 
 This contract specifies host observations, diagnostic preservation and derived
-comparisons: worker ABI publications, the runner reply and independent log correlation.
+comparisons: worker ABI publications and the runner reply.
 Worker records, diagnostic text, late publications and policy-transfer partial
 outputs preserve independently observed facts through to the CLI.
 
@@ -9,7 +9,7 @@ outputs preserve independently observed facts through to the CLI.
 
 `normalized_outcome` summarizes PW execution. It does not report a policy access
 decision or establish why a signal was delivered. All independently confirmed
-worker slots, validator verdicts, process observations, and captured log events
+worker slots, validator verdicts and process observations
 survive regardless of which observation determines the summary.
 
 In the table, A means an acquire observation of `applied`, D an acquire
@@ -571,7 +571,7 @@ every reader gates on them exactly. Per [docs/CONTRACT.md](../docs/CONTRACT.md)
 the manifest moves with the change that produces them; a rebuilt app must never
 report a response number without carrying the shape that number names.
 
-## Public compatibility and correlation
+## Public compatibility
 
 The response, request and controller envelope are separate public contracts;
 [docs/contract.json](../docs/contract.json) owns their version numbers. Semantic
@@ -582,7 +582,7 @@ That identity is independent of the public JSON versions.
 Steps carry no signal channel; a null per-step `errno` requires key presence.
 
 No outcome spelling claims a sandbox termination cause or a precise
-application failure: signals and PID-matched denials cannot justify the first,
+application failure: signals alone cannot justify the first,
 and an imprecise published status cannot justify the second. The pre-apply
 witness case forbids both spellings outright. `runner_failed` covers
 execution/reporting failure with cause possibly unknown; it does not mean a
@@ -597,66 +597,12 @@ claim about whether an operation started. Synthetic missing predictions retain
 `rc=0` with an explicit result source, missing reason, and null native return.
 
 Worker identity comes only from a positive `runner_subprocess.pid`, never a
-host/client top-level PID. Capture remains available on successful runs.
-`runner_sandbox_diagnostics` describes process disposition and denial
-correlation independently of outcome; `sandbox_log_capture.capture_status`
-keeps disabled (null capture), no worker, and observer availability distinct.
-Correlation status is `not_attempted`, `unavailable`, `no_match`, or
-`pid_match`; `permission_failures_without_record` names the steps whose attempt
-the runner classified as a permission-shaped failure and that no captured event
-names as a candidate, so `no_match` never reads as "nothing was denied" (null
-when correlation was not reached or the reply has no per-step comparisons).
-Abnormal or unconfirmed disposition has `termination_cause` `unknown` unless the
-[worker disposition record](#worker-disposition-record) witnesses host cleanup end to end.
-Application remains separately recorded in `sandboxed_after_apply`.
-
-`step_denies` records `{event_index, candidate_step_ids, association,
-matching_evidence}`; array position is not time order and a match is not a
-cause. One candidate has association
-`candidate`; multiple matching attempts have `ambiguous`. Events are not copied
-per step; the original observer reply and parsed `deny_events` array survive,
-including unmatched events. This does not identify a unique occurrence.
-
-Step correlation requires both PIDs, an exact operation relevant to the submitted
-attempt (kind/action joined by unique step ID), and exact submitted/attempt path
-evidence. Queries are independently routed and never supply that provenance.
-Unknown/missing operations and unusable duplicate-ID joins stay unmatched. No
-wildcard/prefix aliases are used; create accepts both `file-write-create` and
-`file-write-data` because it may open an existing file for writing. The complete
-[operation mapping](../docs/PolicyWitness.md#denial-log-correlation) is part of the
-public contract. An incomplete attempt can still be a candidate: a kernel event
-can precede interrupted publication.
-
-`capture.window` records the scanned interval, the runner client's own span
-rounded outward to whole seconds and padded by <!-- span limits.log_window_pad.value_unit -->2 seconds<!-- /span --> at each end:
-`floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client
-milliseconds are unchanged; `pad_seconds: 2` describes the pad. Supported records in either padding region remain eligible
-for correlation. This allowance for client/archive clock differences promises no
-delivery or exact run membership. The window explicitly reports no structured event
-timestamps, exact run membership, step ordering, or PID-reuse protection. The
-observer mirrors the interval it scanned; any other interval is
-`window_mismatch`, which retains raw observer evidence but never yields
-`step_denies`; correlation is `unavailable`. Reversed client clock
-readings produce `invalid_window`, retaining the raw milliseconds with null
-`start`/`end` and no observer invocation. Ordered endpoints do not establish clock
-continuity. Validator queries use `SANDBOX_CHECK_NO_REPORT` and produce no denial
-records. Repeated attempts and PID reuse still prevent unique attribution, and
-some denied attempts have no available log record. Neither path matching nor
-interval coverage establishes a record's origin or complete log delivery.
-Raw lines remain available. The observer preserves the full remaining target,
-including spaces; it does not shorten a path into a different target. PID
-matching alone never establishes a termination cause or exact run membership.
-
-Collection uses one finite monotonic allowance across the observer and its log
-child, with fixed cleanup grace and streaming byte limits at both boundaries.
-Failed or incomplete captures retain bounded diagnostics, but all candidate
-associations and missing-record diagnostics are null. Execution
-result, CLI exit status, native observations, comparisons and disposition remain
-independent. The [controller collection contract](../controller/README.md#log-collection-budgets-and-cleanup)
-defines cutoff reasons, retained prefixes, ownership and separate child-wait
-versus group-absence observations. Complete empty live queries and evidenced
-budget exhaustion with confirmed cleanup are admissible live outcomes; archive
-selection and supplied-text preservation controls have strict positive oracles.
+host/client top-level PID. `runner_sandbox_diagnostics` describes execution
+and disposition independently of outcome. Abnormal or unconfirmed disposition
+has `termination_cause: unknown` unless the
+[worker disposition record](#worker-disposition-record) witnesses host cleanup
+end to end. Client timestamps retain the raw execution span, even when the
+wall clock moves backwards.
 
 ## Coverage audit and acceptance ownership
 
@@ -683,7 +629,7 @@ reporting obligations and registered test owners.
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
-| `witness_contract/worker_termination_and_log_correlation`; Rust `run_flow::tests`, `sandbox_log::tests`, observer parser tests | CLI ordinary denied writes, repeated attempts, independent read queries, self-signal, capture disabled/enabled and successful-run capture. Constructed captures pin PID, operation, target, ambiguity, window and availability semantics. Parser preserves missing identity and full paths without structured timestamps. | Implemented; optional real logs do not replace deterministic populated-event controls or establish a policy cause |
+| `witness_contract/worker_termination`; Rust `run_flow::tests::execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | CLI failed writes, repeated attempts, independent read queries, self-signal and ordered phases. Constructed replies cross production assembly with raw execution evidence retained. | Independent worker disposal and execution diagnostics; no sandbox-cause attribution |
 | `runner_validator_failure/validator_unavailable_reports_degraded`, `runner_validator_failure/validator_decode_failure_reports_degraded` (also witness suite members) | Real worker attempts plus fixture validator, reversed partial IDs and a missing verdict with its missing reason; malformed JSON is distinct from EOF | Missing prediction reasons and completed failures are independently recoverable; validator lifecycle/UTF-8/structure/association controls are described below |
 
 Real-worker `CWorkerTests` cases guarded by `workerExists()` require
@@ -1055,16 +1001,6 @@ streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
 `policy_too_large` in both helper status and missing-reply note prose.
 
-Log collection instead enforces streaming bounds: <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> observer stdout
-and <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> observer stderr, containing the inner log-show capture of at most <!-- span limits.log_show_stdout.binary -->1 MiB<!-- /span -->
-stdout and <!-- span limits.log_show_stderr.binary -->128 KiB<!-- /span --> stderr. The log child stops <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before the shared
-deadline so the observer's report can be delivered before the controller's own
-deadline. Its received counts describe actual reads, including
-at most one excess byte that detects a stream overflow, not the total output
-the stopped producer might have emitted. No JSON fragment recovery is attempted.
-An intact failed reply can retain diagnostic events, without correlation. These
-are stream and derived-data bounds, not a peak-process-memory guarantee.
-
 Readiness, bounded policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
 stages. The worker has a separate local exec attempt budget; no end-to-end
@@ -1107,24 +1043,16 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 `read_error` or `poll_error`. EOF describes observed collection completion, not
 validity of all received frames. Decoding faults coexist with these observations.
 
-All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->152 MiB<!-- /span -->
-per runner-client stream, <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream, and streaming limits
-of <!-- span limits.log_observer_output.binary -->32 MiB<!-- /span --> stdout / <!-- span limits.log_observer_stderr.binary -->128 KiB<!-- /span --> stderr for the observer. Received/retained byte counts
-precede lossy context conversion; log collection's counts are actual bounded
-reads, while the other receivers count fully collected buffers.
+The controller's runner-client and sbpl-check receivers use the same
+original-byte JSON parser with explicit retention budgets: <!-- span limits.controller_output.binary -->152 MiB<!-- /span --> per runner-client stream and <!-- span limits.policy_helper_output.binary -->8 MiB<!-- /span --> per sbpl-check stream.
+Received/retained byte counts precede lossy context conversion and count fully
+collected buffers. These are retention limits, not peak-memory bounds.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper
 `status="invalid_reply"` means parsed JSON is not a supported helper envelope
 (the helper kind, the current controller envelope version and a nonempty
 `result.normalized_outcome`); the parsed output is retained unchanged and no
 verdict is derived from it.
-The observer uses `capture_status="invalid_reply"` when parsed JSON lacks the
-required observation, identity, metadata or supervision shape. An interrupted
-outer reply keeps only its bounded raw prefix. Receiver completeness does not
-imply that the OS delivered every denial, and a stream limit is not a bound on
-the process's total memory.
-
 Deny plus EPERM/EACCES is a `permission_failure` observation beside a deny
 answer; the record relates the submitted scopes and never assigns the cause. A
 separate query target is `different_submitted`. The direct DAC control remains
@@ -1155,11 +1083,11 @@ causal relationship between the retained records.
 Legitimate per-step diagnostics with clean transport retain the existing run
 semantics; an unfamiliar name alone does not create a run failure.
 
-Rust subprocess controls compare complete received JSON for all three capture
+Rust subprocess controls compare complete received JSON for both capture
 paths, including unfamiliar diagnostics beside fixture-supplied failed reports. Local
 truncation precludes parsing and cannot be mistaken for diagnostic rejection.
 These helper controls test receiver transport; they do not manufacture real
-XPC loss, helper compilation failure or kernel log output. The normal worker
+XPC loss, helper compilation failure. The normal worker
 success/failure controls continue to establish native attribution separately.
 
 See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture boundaries and
@@ -1177,7 +1105,6 @@ and the signed app must be restored before acceptance.
 | Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from any outcome judgment |
 | Query time → attempt time; host and two children | Application → closed query collection → host release → worker acknowledgement → attempts; eligible uniquely associated native records acquire query_first | External state can change during the interval; earlier attempts can affect later attempts | Established order for eligible records, without stable state or runtime identity claims |
 | Path enrichment → query/attempt; runner host | Host resolves submitted query path after the orchestrator returns | Worker unlinks the path before host resolution; host and sandboxed worker can resolve differently | Later host diagnostic, never an earlier validator/worker observation |
-| Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates; predictions are queried with `SANDBOX_CHECK_NO_REPORT`, so they produce no records | Repeated attempts, PID reuse, whole-second capture bounds and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
 | Test control → runtime interpretation; test harness and PW | Controls can establish expected meanings independently of the classifier | Direct unsandboxed execution or a fixture oracle is not an observation available in a normal PW envelope | Credit controlled interpretation separately from native observation; no test knowledge silently becomes runtime attribution |
 
 ### The record
@@ -1357,8 +1284,7 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   validates `observation`, the two relations and `order` against the raw
   channel fields and `ordering`. The goldens are allowlists, not required
   sets: absence is allowed.
-- Controller: `permission_failures_without_record` reads
-  `comparison.observation`; `validate_disposition` also checks the lifecycle
+- Controller: `validate_disposition` checks the lifecycle
   entries in `comparison.limitations`, and failed validation withholds the
   projected disposition and termination cause. Every semantic projection runs
   behind the response-version gate.
@@ -1392,14 +1318,7 @@ label.
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the
    sandbox. The envelope does not establish that sandbox enforcement caused a
-   particular attempt's failure. A candidate association records a match
-   between a captured denial's PID, operation and path and a submitted
-   attempt; it does not establish that the attempt produced that record or
-   that the denial caused its failure. When correlation is available and the
-   reply carries comparisons, `permission_failures_without_record` lists
-   permission-failing steps without a candidate in this capture. Missing
-   candidates establish neither absence of denial records from the OS log
-   store nor absence of sandbox enforcement.
+   particular attempt's failure.
 4. A `path` query, or an attempt whose mapped filter is `path`, never
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
@@ -1533,7 +1452,7 @@ Semantic readers of runner responses and controller envelopes accept exactly
 the versions in [docs/contract.json](../docs/CONTRACT.md): the Swift decoder
 and encoder, the Rust controller (`unsupported_runner_response`,
 `malformed_runner_response`, with the reply retained and no runner-derived
-diagnostics or log capture; a delivery failure takes precedence as
+diagnostics; a delivery failure takes precedence as
 `tool_error`), and `tests/lib/consumer.py` (`unsupported`). Raw transport
 (`pw-runner-client` and the Rust capture) retains received bytes without
 interpreting them. Retained test output and release acceptance artifacts keep

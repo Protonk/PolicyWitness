@@ -7,8 +7,7 @@ and receiving release from the host. Each step records available results, missin
 observations, submitted-scope relations and ordering. The controller adds
 request identity, source hashes, imports, runner and app provenance, host
 facts and hashes of selected binaries outside the app manifest. Retain the
-specimen alongside the envelope for the full input. Optional log capture adds
-kernel denial records with candidate associations. The
+specimen alongside the envelope for the full input. The
 [comparison reading rules](#reading-a-comparison-record) explain how to interpret
 the channels together.
 
@@ -123,17 +122,25 @@ Yes, for a bounded file-read experiment. A fresh issuer outside the specimen san
 
 A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged that phase's host release, which precedes its actions. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. Earlier actions in the phase, including consumption or release, can change what a later attempt encounters. Use another phase for a new query collection; neither interval is a common state snapshot.
 
-### How do I read the denial log?
+### Can PolicyWitness collect sandbox-denial logs?
 
-As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator queries `sandbox_check` with `SANDBOX_CHECK_NO_REPORT`, so a denial record naming the worker PID comes from an attempt, never from a prediction. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
+No. Earlier versions included a best-effort unified-log observer. The observer
+and its former PolicyWitness integration are archived at
+[Protonk/Observer](https://github.com/Protonk/Observer). The archive is
+unmaintained and available for independent adaptation. Sandbox-denial logs
+are incomplete and do not, by themselves, establish why a particular operation
+failed.
 
 ### How long does a run take?
 
-One runner client span plus, by default, one unified-log scan, plus the controller's own startup and output. Your reply records the first two: the runner's work is `data.runner_client.ended_at_unix_ms` minus `started_at_unix_ms`, and the scan is `data.sandbox_log_capture.supervision.elapsed_ms`.
+A run includes the runner client span plus the controller's startup,
+preparation and output. `data.runner_client.ended_at_unix_ms` minus
+`started_at_unix_ms` records the client's wall-clock span; clock adjustments
+can affect that difference.
 
 ### Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's respawn throttle, which the generated plist sets to one second.
+Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs. If an experiment depends on timing, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's configured respawn throttle.
 
 <!-- END COPIED QUESTIONS -->
 
@@ -290,7 +297,7 @@ cat > "$PW_EXTENSION_DIR/request.json" <<JSON
   ]
 }
 JSON
-"$PW" run "$PW_EXTENSION_DIR/request.json" --no-log-capture > "$PW_EXTENSION_DIR/run.json"
+"$PW" run "$PW_EXTENSION_DIR/request.json" > "$PW_EXTENSION_DIR/run.json"
 ```
 
 Inspect `extensions`, `extension_events`, `phases` and `steps` under
@@ -354,7 +361,7 @@ cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
   ]
 }
 JSON
-"$PW" run "$PW_EXAMPLE_DIR/request.json" --no-log-capture > "$PW_EXAMPLE_DIR/run.json"
+"$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json"
 test -f "$PW_EXAMPLE_DIR/created"
 ```
 
@@ -372,7 +379,7 @@ sed -e 's|/created"|/refused"|g' \
     -e 's|"format": "sbpl",|"format": "sbpl", "capture_compiled_profiel": true,|' \
     "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/typo.json"
 PW_REFUSAL_RC=0
-"$PW" run "$PW_EXAMPLE_DIR/typo.json" --no-log-capture > "$PW_EXAMPLE_DIR/refusal.json" || PW_REFUSAL_RC=$?
+"$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json" || PW_REFUSAL_RC=$?
 test "$PW_REFUSAL_RC" -eq 1
 test ! -e "$PW_EXAMPLE_DIR/refused"
 ```
@@ -774,15 +781,14 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   lead to cleanup or missing results; the readiness hint can expire while the
   run continues. The nominal release margin has no expiry of its own.
 - Queries and transport describe query sizes and received output. The rows
-  identify rejected queries, truncated output and unavailable parsing or
-  correlation. Truncated JSON is not parsed as a complete reply.
-- Evidence capture bounds optional evidence: deny-log records, child output and
+  identify rejected queries, truncated output and unavailable parsing. Truncated JSON is not parsed as a complete reply.
+- Evidence capture bounds optional evidence: child output and
   compiled-object receipts. Excess can retain a prefix with a truncation marker
-  or make capture or correlation unavailable, as the row describes. Attempt
+  or make capture unavailable, as the row describes. Attempt
   status and `sandbox_check` verdicts are unchanged by these evidence limits.
 - Diagnostic helpers lists the limits of `sbpl-check`, which runs only after an
-  XPC error, and of the log observer's streaming mode. Neither is the normal
-  admission path, and the helper's import inventory does not control how
+  XPC error. This is independent of the normal admission path, and the
+  helper's import inventory does not control how
   `libsandbox` resolves or compiles imports.
 
 <!-- BEGIN GENERATED LIMITS -->
@@ -846,12 +852,6 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
 | Informative reply size bound (`runner_reply_maximum`) | 52,595,368 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 159,383,552 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
-| Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
-| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
-| Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes from `log show` stderr, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
-| Log observer stderr (`log_observer_stderr`) | 131,072 bytes | Raw bytes from observer stderr, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
-| Observer JSON structure (`log_reply_structure`) | 262,144 items | Opening object/array delimiters, commas and colons outside quoted strings in the observer reply. Excess retains bounded raw diagnostic text with unavailable parsing and correlation. | Fixed. |
-| Observer echoed metadata (`log_observer_metadata`) | 4,096 UTF-8 bytes | Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID. Oversized arguments are rejected; oversized reply metadata leaves correlation unavailable. | Fixed. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 | Validator reply frame (`validator_reply_frame`) | 8,192 bytes | UTF-8 bytes in one NDJSON frame, before parsing. An overlong frame is rejected with bounded context; earlier complete records remain. | Fixed. |
@@ -871,14 +871,6 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Padding at each end of the runner client's span after rounding outward to whole seconds. The scan covers `floor(start) - 2 seconds` through `ceil(end) + 2 seconds`, including both pads. Raw client timestamps are unchanged; reversed endpoints prevent collection. | Fixed; `window.pad_seconds` records it. |
-| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Default elapsed monotonic allowance for log collection, including startup and processing. Actual costs appear in `data.sandbox_log_capture.supervision.elapsed_ms` and `observer.data.collection.elapsed_ms`. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. Standalone `show` uses the same default. | Flag `--log-timeout-ms`: a positive integer of milliseconds that fits a monotonic deadline plus the cleanup grace, validated before the runner starts even with `--no-log-capture`. |
-| Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Elapsed monotonic allowance for observing log-process cleanup after collection stops. Early failures start the grace immediately. The allowance expires no later than the original collection deadline plus this grace. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed. |
-| Log report reserve (`log_report_reserve`) | 1,000 milliseconds | Allowance withheld from the log query within `log_collection_timeout`. The observer's report can arrive after the query times out. Collection allowances at or below this reserve leave no query time. The reserve does not guarantee an intact report; interruption leaves bounded transport diagnostics. | Fixed; `supervision.reserve_ms` records 0 at the observer boundary and this value under `observer.data.collection`. |
-| Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed. |
-| Candidate associations (`log_candidate_count`) | 4,096 items | Total event-to-step candidates, including ambiguous matches. Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic. | Fixed. |
-| Candidate allocation allowance (`log_candidate_bytes`) | 8,388,608 bytes | Total candidate charge: six times the sum of twice the step-ID byte length plus the path, operation, kind and action byte lengths, plus 1,024 bytes per candidate. Excess reports the `association_bytes` cutoff, discards associations and withholds correlation. | Fixed. |
-| Steps admitted to correlation (`log_correlation_steps`) | 256 items | Each of the submitted plan and returned step arrays. Excess withholds log correlation; execution evidence is unchanged. | Fixed. |
 | Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance. Excess output is not retained. | Fixed. |
 | Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
 | Optional compiled-object capture (`compiled_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
@@ -894,7 +886,6 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed. |
 | sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Import depth in the helper inventory, starting at 0. Depth 8 is the first depth replaced by a depth-limit diagnostic. The affected branch stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
 | sbpl-check import inventory count (`helper_import_count`) | 64 records | Import-inventory records, including unresolved and error records. Repeated files or names are listed once. Further inventory stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
-| Log observer stream text (`observer_stream_text`) | 1,048,576 bytes | Streaming helper mode only (`--duration` or `--follow`): retained nonempty log lines after the prelude, with one LF per line. Only whole lines that fit are retained. The first overflowing line sets `log_truncated` and ends text retention. Deny-event arrays and JSONL emission continue. The normal CLI log-show path does not use this cap. | Fixed. `--no-log-capture` disables the CLI's log collection, not this helper mode. |
 
 <!-- END GENERATED LIMITS -->
 
@@ -931,14 +922,6 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   budget it applied in `capture_limit_bytes` (`controller_output`,
   `policy_helper_output`). Output beyond it is marked truncated, and a
   truncated JSON stream is not parsed as a reply.
-- Log limits change evidence only. The byte caps on `log show` and the
-  observer (`log_show_stdout`, `log_show_stderr`, `log_observer_output`,
-  `log_observer_stderr`) and the event and candidate counts (`log_deny_events`,
-  `log_candidate_count`, `log_candidate_bytes`) are fixed; when one is
-  exceeded, the capture keeps a bounded prefix and withholds correlation.
-  `--log-timeout-ms` changes only the time allowance, `log_collection_timeout`.
-  Attempt results and `sandbox_check` verdicts never change because of a log
-  limit, and the plan's step count does not bound how much the OS log holds.
 - One refusal names the first failing field. When a specimen exceeds several
   admission limits, the order is: top-level metadata (`specimen_id`,
   `request_label`), extension declaration count and declaration strings, then
@@ -969,13 +952,6 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
   observed. A worker that dies first leaves the step's exec details
   unpublished, which establishes neither that no child spawned nor that cleanup
   succeeded.
-- What the deny-log capture covers. The requested window is the runner
-  client's own span, rounded outward to whole seconds and padded by
-  `log_window_pad` at each end; `window.start`, `window.end` and
-  `window.pad_seconds` record it, and reversed wall-clock endpoints prevent the
-  scan. Captured records name the worker's process name and PID. Denials inside
-  exec children and prediction queries contribute no captured records. A
-  missing record never establishes that an operation was allowed.
 
 <!-- END COPIED LIMITS -->
 
@@ -990,7 +966,7 @@ identify compatibility.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 23, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 23, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1002,8 +978,7 @@ prints: its `schema_version` is the controller envelope, `result` summarizes
 the run, and `data` carries the reply unchanged as `runner_result` beside the
 specimen dossier (`specimen`), the client transport (`runner_client`), the
 fallback compilation (`policy_check`), the controller's projections
-(`runner_sandbox_diagnostics`), the optional log capture
-(`sandbox_log_capture`) and `timeout_ms`. Readers that interpret either
+(`runner_sandbox_diagnostics`) and `timeout_ms`. Readers that interpret either
 document accept exactly the current numbers; another version is reported as
 unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
 
@@ -1578,14 +1553,7 @@ Read the channels' results, relations and order with these rules:
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the
    sandbox. The envelope does not establish that sandbox enforcement caused a
-   particular attempt's failure. A candidate association records a match
-   between a captured denial's PID, operation and path and a submitted
-   attempt; it does not establish that the attempt produced that record or
-   that the denial caused its failure. When correlation is available and the
-   reply carries comparisons, `permission_failures_without_record` lists
-   permission-failing steps without a candidate in this capture. Missing
-   candidates establish neither absence of denial records from the OS log
-   store nor absence of sandbox enforcement.
+   particular attempt's failure.
 4. A `path` query, or an attempt whose mapped filter is `path`, never
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
@@ -1643,12 +1611,6 @@ jq '.data.runner_result.steps[]
              or (.sandbox_check.outcome | IN("allow", "deny") | not))
     | {step_id, outcome: .sandbox_check.outcome, missing_reason: .sandbox_check.missing_reason,
        limitations: .comparison.limitations}' run.json
-```
-
-Permission-shaped failures without a candidate in this capture:
-
-```sh
-jq '.data.runner_sandbox_diagnostics.permission_failures_without_record' run.json
 ```
 
 ### path_diagnostics
@@ -1715,9 +1677,7 @@ with the literal leaf appended: the path the kernel names for a created or
 unlinked entry, or for a symlink acted on itself. Either is null when the host
 cannot derive it (a missing leaf has no leaf-followed form; a relative path has
 no parent form). Neither establishes what the worker's own syscall resolved,
-and neither changes the attempt or its comparison. Deny-log
-correlation admits these forms as candidate evidence under their provenance;
-see [Denial-log correlation](#denial-log-correlation).
+and neither changes the attempt or its comparison.
 
 Capture the sandbox_check argument quickly:
 
@@ -1931,8 +1891,7 @@ combinations:
   (`child_exit_code` and its bounded output); it does not change the run's
   `normalized_outcome`.
 
-  Exec children have their own PIDs; deny-log correlation covers the worker
-  PID only (see [Denial-log correlation](#denial-log-correlation)).
+  Exec children have their own PIDs and separate subprocess observations.
 
 Other attempt combinations refuse the whole specimen before worker or validator
 creation. A non-null `args` field is accepted only for `exec/spawn`, including
@@ -1987,125 +1946,9 @@ not the exec descendants.
 ### Common flags
 
 - `--timeout-ms <n>`: runner RPC timeout
-- `--log-timeout-ms <n>`: log collection allowance, default <!-- span limits.log_collection_timeout.value_unit -->10,000 milliseconds<!-- /span -->. Positive
-  integer milliseconds only; no unlimited value. Invalid values fail before
-  running the specimen, including with `--no-log-capture`. A larger value buys
-  waiting time only: the specimen, the scan interval and the byte budgets are
-  unchanged. Log availability remains dependent on the OS.
-- `--no-log-capture`: skip the unified-log (`log show`) deny scan. Archive access
-  has been observed to cost seconds even for short spans. Pass this when you
-  don't consume `data.sandbox_log_capture`; it is then `null` and
-  `correlation_status` is `not_attempted`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 - `--version`: print a `kind="version"` envelope with the build stamp and the
   wire contract versions this build speaks
-
-Log collection is bounded in time and size. Observer startup, `log show` and
-result processing share one monotonic deadline, followed by a fixed <!-- span limits.log_cleanup_grace.value_unit -->1,000 milliseconds<!-- /span -->
-cleanup grace; the `log show` child itself stops <!-- span limits.log_report_reserve.value_unit -->1,000 milliseconds<!-- /span --> before that deadline
-so the observer can deliver its report. Byte limits are listed under
-[Evidence capture](#evidence-capture); a small specimen can still exceed one
-because admission does not bound OS log volume. `sandbox_log_capture.supervision`
-records the controller's observer wait and owned-group cleanup, and
-`observer.data.collection` records the observer's own log child; both report
-the effective timeout and its source, elapsed time, per-stream byte counts and
-limits, and a `cutoff` reason. `deadline` reports as `capture_status: "timeout"`;
-`output_overflow`, `event_overflow`, `json_structure_overflow` and
-`correlation_overflow` as `overflow`; `launch_error` as `requested_unavailable`;
-`process_exit` as `error` (or `blocked` for a recognized log-access refusal);
-and `clock_error`, `pipe_setup_error`, `read_error`, `decode_error`,
-`wait_error`, `pipe_open_after_exit` and `cleanup_unconfirmed` as `capture_error`.
-`processing_cutoff` names a controller-side parsing or correlation limit.
-`group_absent` requires an observed absent group after cleanup; a timeout or
-overflow status alone does not establish that cleanup succeeded.
-
-Any incomplete capture withholds correlation: `step_denies` and
-`permission_failures_without_record` are null and `correlation_status` is
-`unavailable`, while bounded diagnostics and any intact observer reply survive.
-A successful complete empty query remains distinct. Neither case changes native
-attempts, predictions, execution result or process disposition.
-
-For a slower machine, select a larger finite allowance per run:
-
-```sh
-$PW run request.json --log-timeout-ms 30000
-```
-
-Retain each invocation as a separate observation, including earlier failures.
-
-### Denial-log correlation
-
-`sandbox_log_capture.window` separates raw client milliseconds
-(`started_at_unix_ms`, `ended_at_unix_ms`) from the UTC query bounds (`start`,
-`end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`, with
-`pad_seconds` recording the pad. The observer mirrors the interval it scanned;
-a reply for any other interval is `window_mismatch` rather than `captured`: its
-parsed events remain inspectable, but `step_denies` is null and correlation is
-`unavailable`. If the client's wall-clock end precedes its
-start, capture is `invalid_window`: raw milliseconds survive, `start`/`end` are
-null and the observer is not invoked. The pad allows for client/archive clock
-differences, and supported records in either padding region remain eligible
-candidates.
-Structured event timestamps, step ordering and PID-reuse protection remain
-unavailable; array position is not proof of execution order. Ordered endpoints
-do not prove clock continuity during execution.
-
-The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
-It never substitutes a host/client PID. `sandbox_log_capture.capture_status`
-says how the capture ended; `runner_sandbox_diagnostics` reports
-`correlation_status` (`not_attempted`, `unavailable`, `no_match`, `pid_match`)
-beside the process disposition fields described under
-[Shape and schema_version](#shape-and-schema_version).
-`permission_failures_without_record` lists the step IDs whose attempt the
-runner classified as a permission-shaped failure and that no captured event
-names as a candidate (null unless correlation reached `pid_match` or `no_match`
-and the reply carries per-step comparisons). A non-empty list means this
-capture yielded no candidate for the reported permission-shaped failures.
-A record can exist in the OS log store under another path form, such as a
-resolved symlink; the list describes this capture's matching result.
-
-Step associations under
-`sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
-association, matching_evidence}`. Events, including unmatched ones, remain in
-`deny_events`; associations refer to them by index. A single candidate uses `association="candidate"`;
-multiple candidates use `"ambiguous"`.
-
-Step matching requires a positive worker PID matching the event, an exact
-operation relevant to the submitted attempt joined by unique step ID, and an
-exact target/path match. Targets come from the submitted attempt,
-its requested and worker-observed paths, and the host's after-orchestration
-`attempt.path_diagnostics` forms; each admitted source is named in
-`matching_evidence.path_sources`, the host forms as
-`runner_host.after_orchestration.<form>`. A kernel record names the resolved
-path, so a target reached through a symlink (such as `/etc/hosts`) correlates
-through `realpath_resolved`, and a created or unlinked entry through
-`parent_realpath_resolved`. Host forms require a valid compact block with that
-exact observer and stage, and an input equal to both the submitted target and
-the reported requested path. Invalid blocks contribute no host path matches;
-independent submitted, requested and observed paths remain eligible.
-Supported operations are:
-
-| Attempt | Relevant event operations |
-| --- | --- |
-| file open_read/read_fresh/access | file-read-data |
-| file open_write | file-write-data |
-| file create | file-write-create or file-write-data |
-| file unlink | file-write-unlink |
-| mach_lookup bootstrap_look_up | mach-lookup |
-| sysctl read | sysctl-read |
-| exec spawn | process-exec, worker PID only |
-
-There are no wildcard or prefix aliases. Missing/unknown operations or ambiguous
-step-ID joins stay unmatched. Create can create a new file or open an existing
-one for writing. A missing completed attempt does not prevent a candidate
-association: a denial can precede interrupted publication.
-
-Validator `sandbox_check` queries use `SANDBOX_CHECK_NO_REPORT` and produce no
-denial records. A matching target still does not prove that a record came from
-its paired attempt: repeated attempts and PID reuse prevent unique attribution,
-and a PID match can reflect an ordinary denied probe followed by an unrelated
-self-signal or crash. Some denied attempts have no available log record;
-requesting the full interval does not guarantee complete delivery.
 
 ### Running specimens in parallel
 
@@ -2117,14 +1960,9 @@ with the native return code (see the
 the separate budgets in the [limits inventory](#limits): client RPC expiry
 produces `xpc_timeout`, while a delivered host sentinel-timeout reply reports
 `runner_timeout`. Worker or validator limits can also leave incomplete
-observations; read the available lifecycle evidence. Denial records are
-matched to the worker by PID inside the padded window with no protection
-against PID reuse: heavy process churn makes a reused PID inside that window
-more plausible, so read candidate associations under
-[Denial-log correlation](#denial-log-correlation) with that in mind. The
-denial log's shared channel is described in the
-[Questions](#can-i-evaluate-specimens-in-parallel), and the pacing of one
-installed external runner under [External runners](#external-runners-byoxpc).
+observations; read the available lifecycle evidence. See
+[External runners](#external-runners-byoxpc) for the pacing of one installed
+external runner.
 
 ### Troubleshooting
 
@@ -2134,11 +1972,8 @@ installed external runner under [External runners](#external-runners-byoxpc).
 - BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
 - `normalized_outcome` is `runner_failed`: inspect the published-state diagnostic
   and independent `runner_subprocess` observations. A signal or missing report
-  may leave the underlying cause unknown. Completed predictions, attempts and
-  captured denial events remain usable for their own claims.
-- `data.runner_sandbox_diagnostics` separates process disposition from capture
-  status and correlation. Capture can be disabled, unavailable, or captured
-  without a match. Successful runs also retain capture. See [Denial-log correlation](#denial-log-correlation).
+  may leave the underlying cause unknown. Completed predictions and attempts
+  remain usable for their own claims.
 - `normalized_outcome` is `worker_spawn_failed`: the host could not
   `posix_spawn` the worker. Verify the bundle is signed and on a writable
   filesystem; `pgrep -fl PWRunner` should show no stragglers.
@@ -2184,7 +2019,7 @@ none qualified). Each contains `runner_client`, the unchanged refusal in
 identity for PID reuse. The replacement's executable is uncollected. These
 records identify the refusing host, not the client holding its claim.
 Only the final attempt supplies the ordinary runner result, client capture,
-deny-log interval and downstream observations. On deadline exhaustion that
+execution evidence and downstream observations. On deadline exhaustion that
 final result is the last refusal, also retained in the acquisition array.
 
 

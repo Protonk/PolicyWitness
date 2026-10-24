@@ -70,8 +70,8 @@ VALUE_OWNERS = {
     'tests/suites/runner_abi_layout/limits.py',
     'tests/suites/runner_c_worker_harness/check_sysctl.py',
     'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
-    'controller/src/run_flow.rs', 'controller/src/log_capture.rs',
-    'controller/src/bin/sbpl-check.rs', 'controller/src/bin/sandbox-log-observer.rs',
+    'controller/src/run_flow.rs',
+    'controller/src/bin/sbpl-check.rs',
     'controller/src/runner_manager.rs', 'controller/src/runner_commands.rs',
 }
 
@@ -338,15 +338,15 @@ def update_guide_questions(text, questions_document):
                          + "\n\n" + GUIDE_QUESTIONS_END)
 
 
-def require_standalone(text, what):
-    # The copied sections use inline links only, and must need no companion
-    # files or web pages. Reject reference definitions and autolinks rather
-    # than assuming they can be resolved in a standalone release asset.
+def require_standalone(text, what, *, external_links=()):
+    # Copied sections need no companion files. Explicit historical references
+    # may point outside the guide; they are not dependencies for using PW.
+    # Keep reference definitions, autolinks and external images out of copies.
     document = markdown_reader.parse(text, what)
     if document.references or any(link.autolink for link in document.links):
         raise ValueError(f"{what} must use inline internal links only")
     for link in document.links:
-        if not link.target.startswith("#"):
+        if not link.target.startswith("#") and (link.image or link.target not in external_links):
             raise ValueError(f"{what} depend on another document: {link.target}")
 
 
@@ -372,7 +372,8 @@ def validate_guide(text, limits):
     questions = text[begin + len(GUIDE_QUESTIONS_START):finish - len(GUIDE_QUESTIONS_END)]
     if not any(heading.level == 3 for heading in markdown_reader.parse(questions, "copied questions").headings):
         raise ValueError("guide must contain at least one copied question")
-    require_standalone(questions, "copied questions")
+    require_standalone(questions, "copied questions",
+                       external_links=("https://github.com/Protonk/Observer",))
     begin, finish = block_bounds(text, GUIDE_RULES_START, GUIDE_RULES_END)
     rules = text[begin + len(GUIDE_RULES_START):finish - len(GUIDE_RULES_END)]
     if not numbered(markdown_reader.parse(rules, "copied reading rules")):

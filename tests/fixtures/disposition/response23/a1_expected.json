@@ -1,12 +1,13 @@
 {
   "build": {
-    "commit": "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a",
-    "describe": "v0.3.0-52-gfcc3558-dirty",
-    "number": "674",
-    "version": "0.3.0"
+    "commit": "9e091d9c2134c5a83e58374561177e555ec12fb8",
+    "describe": "v0.3.2-58-g9e091d9-dirty",
+    "number": "849",
+    "version": "0.3.2"
   },
   "data": {
     "policy_check": null,
+    "runner_acquisition": [],
     "runner_client": {
       "argv": [
         "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
@@ -18,13 +19,13 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1792249678133,
+      "ended_at_unix_ms": 1792802495848,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 932,
         "error": null
       },
-      "started_at_unix_ms": 1792249675086,
+      "started_at_unix_ms": 1792802492805,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -74,7 +75,7 @@
             ],
             "ordinal": 1,
             "phase_id": "main",
-            "pid": 71306,
+            "pid": 56764,
             "probe_bytes_expected": 238,
             "probe_bytes_written": 238,
             "reaped": true,
@@ -83,10 +84,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
+                "filter_value": "/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
                 "operation": "file-read-data",
                 "outcome": "allow",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-ga42yceg/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
                 "rc": 0,
                 "step_id": "fifo"
               },
@@ -108,7 +109,7 @@
           }
         }
       ],
-      "pid": 71305,
+      "pid": 56763,
       "policy_format": "sbpl",
       "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
       "rc": 1,
@@ -251,13 +252,13 @@
         "exit_grace_wait": {
           "budget_ms": 1000,
           "clock_fault": false,
-          "elapsed_ms": 1001,
+          "elapsed_ms": 1000,
           "stop": "exhausted"
         },
         "exit_requested": true,
         "grace_end": "exhausted",
         "partial_steps": true,
-        "pid": 71305,
+        "pid": 56763,
         "poll_stop_reason": "sentinel_deadline",
         "ready_byte_received": true,
         "ready_wait": {
@@ -281,7 +282,7 @@
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "33890392b9337f128a06b89b7d831192e5e8d809f0a5f41613e8745c2d9c9eb9",
+          "abi_identity": "1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -336,7 +337,7 @@
             "observed_path": null,
             "outcome": "no_completed_result",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -347,7 +348,7 @@
             "rc": -1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
+            "requested_path": "/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
             "result_source": "synthetic"
           },
           "comparison": {
@@ -366,20 +367,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
-              "input": "/private/tmp/pw-in-flight-ga42yceg/blocker.fifo",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-gbw_51zg/blocker.fifo",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 71305,
+            "pid": 56763,
             "rc": 0,
             "result_source": "validator"
           },
@@ -455,7 +456,7 @@
               "same_as_input": [],
               "stage": "after_orchestration"
             },
-            "pid": 71305,
+            "pid": 56763,
             "rc": 0,
             "result_source": "validator"
           },
@@ -467,15 +468,12 @@
       }
     },
     "runner_sandbox_diagnostics": {
-      "correlation_status": "not_attempted",
       "disposition_integrity": "valid",
       "disposition_issues": [],
-      "permission_failures_without_record": null,
       "process_disposition": "signaled",
       "stop_reason": "sentinel_deadline",
       "termination_cause": "host_sentinel_deadline"
     },
-    "sandbox_log_capture": null,
     "specimen": {
       "app_provenance": {
         "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
@@ -510,7 +508,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/safe-wait-repair-live-fixtures-20261017/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/observer-retirement-final-01/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -550,7 +548,7 @@
     },
     "timeout_ms": 20000
   },
-  "generated_at_unix_ms": 1792249678134,
+  "generated_at_unix_ms": 1792802495849,
   "kind": "run",
   "result": {
     "errno": null,
@@ -562,5 +560,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 7
+  "schema_version": 8
 }

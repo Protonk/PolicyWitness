@@ -74,7 +74,7 @@ def import_problems(root, paths):
 
 def tracked_python(root=ROOT):
     listed = subprocess.run(['git', 'ls-files', '*.py'], cwd=root, capture_output=True, text=True, check=True)
-    return listed.stdout.split()
+    return [name for name in listed.stdout.split() if (root / name).is_file()]
 
 
 def parse(text):

@@ -200,7 +200,7 @@ def prepare_provenance_fixture(out):
     data = json.loads((app / fixture_bundle.RECORD).read_text())
     data['configuration']['knobs']['BUILD_XPC'] = '0'
     data['toolchain']['compilers']['swift'] = dict(status='not applicable', reason='partial build: the XPC pieces were not compiled')
-    paths = ('Contents/MacOS/policy-witness', 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check')
+    paths = ('Contents/MacOS/policy-witness', 'Contents/MacOS/sbpl-check')
     data['outputs'] = [o for o in data['outputs'] if o['rel_path'] in paths]
     data['signing']['nested'] = [o for o in data['signing']['nested'] if o['rel_path'] in paths]
     data['source'].update(describe='fixture-A', version='0.9.0', build_number='3')

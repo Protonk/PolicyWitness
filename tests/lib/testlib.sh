@@ -379,11 +379,6 @@ skip_sandbox_restriction() {
   test_skip "runner unavailable due to sandbox restriction (see artifacts)" "${data_json}"
 }
 
-skip_sandbox_log_observer_unavailable() {
-  local data_json="${1:-}"
-  test_skip "sandbox-log-observer unavailable on this host (see artifacts)" "${data_json}"
-}
-
 has_gui_launchd_domain() {
   local uid
   uid="$(/usr/bin/id -u 2>/dev/null || true)"

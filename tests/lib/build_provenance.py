@@ -144,13 +144,12 @@ ALLOWED_ENV = ('BUILD_XPC', 'PW_INSPECTION', 'PW_FRESH_BUILD', 'DEVELOPER_DIR', 
                'PW_VERSION', 'PW_BUILD_NUMBER')
 SUBCOMMANDS = ('session-start', 'stamp-check', 'fresh-remove', 'cargo-admit', 'cargo-judge', 'stamp-publish',
                'stamp-extend', 'sdk-check', 'output-check', 'worker-identity', 'inspect')
-OUTPUT_STAGES = ('cargo', 'native', 'assembled', 'observer', 'packaging')
+OUTPUT_STAGES = ('cargo', 'native', 'assembled', 'packaging')
 CONTROLLER = 'Contents/MacOS/policy-witness'
 SERVICE = 'Contents/XPCServices/PWRunner.xpc'
-TOP_HELPERS = ('pw-runner-client', 'sandbox-log-observer', 'sbpl-check')
+TOP_HELPERS = ('pw-runner-client', 'sbpl-check')
 NESTED_HELPERS = ('pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')
 CARGO_TARGETS = {'Contents/MacOS/policy-witness': 'policy-witness',
-                 'Contents/MacOS/sandbox-log-observer': 'sandbox-log-observer',
                  'Contents/MacOS/sbpl-check': 'sbpl-check'}
 
 
@@ -1737,7 +1736,7 @@ TEXT_LIMIT = 2000
 FAILURE_KINDS = ('launch_failed', 'timeout', 'nonzero_exit', 'empty_output', 'malformed_output', 'output_overflow', 'oversized_output')
 FULL_OUTPUTS = (CONTROLLER, *('Contents/MacOS/' + n for n in TOP_HELPERS), SERVICE + '/Contents/MacOS/PWRunner',
                 *(SERVICE + '/Contents/MacOS/' + n for n in NESTED_HELPERS))
-PARTIAL_OUTPUTS = (CONTROLLER, 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check')
+PARTIAL_OUTPUTS = (CONTROLLER, 'Contents/MacOS/sbpl-check')
 
 
 class Shape:

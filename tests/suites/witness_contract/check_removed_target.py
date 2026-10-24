@@ -29,7 +29,7 @@ def main():
             'attempt': {'kind': 'file', 'action': 'unlink', 'target': str(target)},
         }],
     }
-    with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+    with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
         rc = run.wait(timeout=30)
         try:
             target.lstat()

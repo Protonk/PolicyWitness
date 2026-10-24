@@ -9,10 +9,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // three times the synthesized maximal reply (docs/limits.json
 // runner_reply_maximum, computed by runner_unit from the field-complete reply
 // fixture with every string at its limit), rounded up to a whole 4 MiB.
-// Observer capture enforces independent streaming budgets in log_capture.
 pub const RUNNER_CAPTURE_BYTES: usize = 152 * 1024 * 1024;
 pub const HELPER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
-pub const OBSERVER_CAPTURE_BYTES: usize = crate::log_capture::OBSERVER_STDOUT_BYTES;
 
 /// The controller's observation of writing a request to a child's stdin: how
 /// many bytes the pipe accepted and the first write error, if any. An accepted

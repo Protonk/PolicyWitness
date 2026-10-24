@@ -190,7 +190,6 @@
           "nodes": [
             "controller",
             "client",
-            "observer",
             "sbpl_check"
           ]
         },
@@ -208,8 +207,7 @@
           "id": "os",
           "label": "macOS",
           "nodes": [
-            "launchd",
-            "log_show"
+            "launchd"
           ]
         }
       ],
@@ -519,67 +517,6 @@
             {
               "path": "runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift",
               "symbol": "runPhaseProtocolTests",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "observer",
-          "label": "sandbox-log-observer",
-          "kind": "executable",
-          "facts": {
-            "Language": "Rust",
-            "Where": "app top level",
-            "Started by": "the controller, after execution completes, in its own process group",
-            "Sandboxed": "no",
-            "Native sandbox API": "none",
-            "Lifetime": "one scan"
-          },
-          "sources": [
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "capture_sandbox_logs_with_timeout"
-            },
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "process_group"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_deny_capture_window.py",
-              "symbol": "checked_reads",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "log_show",
-          "label": "log show",
-          "kind": "os",
-          "facts": {
-            "Language": "OS",
-            "Where": "/usr/bin/log",
-            "Started by": "the observer",
-            "Sandboxed": "no",
-            "Native sandbox API": "none",
-            "Lifetime": "one query"
-          },
-          "sources": [
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "Command::new(\"/usr/bin/log\")"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "both_raw_streams_are_bounded_at_exact_edges",
               "form": "test"
             }
           ]
@@ -1057,70 +994,6 @@
           ]
         },
         {
-          "id": "T10",
-          "from": "controller",
-          "to": "observer",
-          "kind": "spawn",
-          "label": "spawn in its own process group after execution; budget on argv; JSON report on stdout",
-          "short": "spawn, own process group",
-          "sources": [
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "capture_sandbox_logs_with_timeout"
-            },
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "capture_with_ops"
-            },
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "process_group"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_deny_capture_window.py",
-              "symbol": "checked_reads",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "T11",
-          "from": "observer",
-          "to": "log_show",
-          "kind": "spawn",
-          "label": "log show over the padded client span; text on stdout, bounded",
-          "short": "log show",
-          "sources": [
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "Command::new(\"/usr/bin/log\")"
-            },
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "capture_sandbox_logs_with_timeout"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "run_span_window_floors_start_ceils_end_and_never_collapses",
-              "form": "test"
-            },
-            {
-              "path": "controller/src/log_capture.rs",
-              "symbol": "both_raw_streams_are_bounded_at_exact_edges",
-              "form": "test"
-            }
-          ]
-        },
-        {
           "id": "T12",
           "from": "controller",
           "to": "sbpl_check",
@@ -1246,7 +1119,6 @@
           "nodes": [
             "held_request",
             "envelope",
-            "observer_report",
             "helper_envelope"
           ]
         },
@@ -1510,48 +1382,6 @@
             {
               "path": "controller/src/run_flow.rs",
               "symbol": "envelope_shape_golden_agrees_with_the_manifest",
-              "form": "test"
-            },
-            {
-              "path": "tests/lib/consumer.py",
-              "symbol": "_validate_observer_reply",
-              "form": "control"
-            },
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "observer_admission_precedes_all_body_interpretation",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/blackbox_e2e/checker_controls.py",
-              "symbol": "observer_controls",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "observer_report",
-          "label": "observer report (nested envelope)",
-          "kind": "record",
-          "facts": {
-            "Owner": "the observer",
-            "Form": "envelope frame; its own observer_schema_version (OBSERVER_SCHEMA_VERSION) inside"
-          },
-          "sources": [
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "OBSERVER_SCHEMA_VERSION"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/check_deny_capture_window.py",
-              "symbol": "checked_reads",
               "form": "test"
             }
           ]
@@ -2068,61 +1898,6 @@
             {
               "path": "tests/suites/blackbox_e2e/disposition_controls.py",
               "symbol": "rust_wrapper_controls",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "B8",
-          "from": "observer_report",
-          "to": "envelope",
-          "kind": "guard",
-          "label": "nested unchanged; log evidence never changes execution evidence",
-          "short": "nested unchanged",
-          "note": "The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.",
-          "sources": [
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "attach_sandbox_logs"
-            },
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "admitted_observer"
-            },
-            {
-              "path": "controller/src/bin/sandbox-log-observer.rs",
-              "symbol": "OBSERVER_SCHEMA_VERSION"
-            }
-          ],
-          "checks": [
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "collector_states_preserve_the_serialized_execution_half",
-              "form": "test"
-            },
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "phased_collector_states_preserve_execution_and_ambiguous_candidates",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/witness_contract/worker_termination_and_log_correlation.sh",
-              "symbol": "worker_termination_and_log_correlation",
-              "form": "test"
-            },
-            {
-              "path": "tests/lib/consumer.py",
-              "symbol": "_validate_observer_reply",
-              "form": "control"
-            },
-            {
-              "path": "controller/src/sandbox_log.rs",
-              "symbol": "observer_admission_precedes_all_body_interpretation",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/blackbox_e2e/checker_controls.py",
-              "symbol": "observer_controls",
               "form": "test"
             }
           ]
@@ -6724,7 +6499,6 @@
             "x1",
             "x2",
             "x3",
-            "x4",
             "x5"
           ]
         }
@@ -9181,36 +8955,6 @@
           ]
         },
         {
-          "id": "x4",
-          "label": "Controller denial-log\ncandidates",
-          "kind": "external",
-          "facts": {
-            "Inventory ID": "X4",
-            "Acquired by": "attach_sandbox_logs",
-            "When": "Outside worker; collector surrounds execution",
-            "Held across": "Envelope",
-            "Release / teardown action": "Owning host/controller object lifetime",
-            "Authority": "External log collection and correlation",
-            "Reaches exec children": "No worker-to-child transfer",
-            "Role": "External evidence"
-          },
-          "sources": [
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "attach_sandbox_logs"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "worker_termination_and_log_correlation",
-              "form": "test",
-              "scope": "Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available."
-            }
-          ],
-          "note": "Candidate association, not worker-native cause"
-        },
-        {
           "id": "x5",
           "label": "Compiler receipt in dossier",
           "kind": "external",
@@ -10383,37 +10127,6 @@
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
-            }
-          ]
-        },
-        {
-          "id": "W55",
-          "from": "x2",
-          "to": "x4",
-          "kind": "joins",
-          "label": "Controller associates external log candidates with run evidence",
-          "sources": [
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "attach_sandbox_logs"
-            },
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "finish_sandbox_log_capture"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/witness_contract/run.sh",
-              "symbol": "worker_termination_and_log_correlation",
-              "form": "test",
-              "scope": "Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available."
-            },
-            {
-              "path": "controller/src/run_flow.rs",
-              "symbol": "observer_windows_survive_association_serialization_and_consumer_recovery",
-              "form": "test",
-              "scope": "Constructed observer events acquire the expected candidate step through production association/serialization; invalid windows withhold candidates, including on signaled runs."
             }
           ]
         }

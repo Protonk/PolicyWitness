@@ -1,6 +1,6 @@
 """Death after the native return and before publication withholds the result.
 
-One specimen under (version 1) (allow default) with --no-log-capture:
+One specimen under (version 1) (allow default) with:
 
 - prefix: open_read /etc/hosts. Completes and must survive.
 - created: create <staging>/created.txt with worker_kill_before_publish_slot: 1.
@@ -33,7 +33,7 @@ from lifecycle_adapter import read_lifecycle, summaries
 from run_capture import RunCapture
 from worker_exit_witness import worker_exit_witness
 
-CLI_ARGS = ['--no-log-capture', '--timeout-ms', '20000']
+CLI_ARGS = ['--timeout-ms', '20000']
 HARNESS_WAIT_SECONDS = 60
 # The seam ends the worker within the attempt; the sentinel is a bound, not the trigger.
 OVERRIDES = {'worker_kill_before_publish_slot': 1, 'worker_timeout_ms': 5000}

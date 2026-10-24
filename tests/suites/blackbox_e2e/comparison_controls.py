@@ -128,17 +128,6 @@ def main():
     run('boolean_is_not_number', lambda d: set_field(d, payload + '.retained', True),
         baseline=opaque, rejected=payload + '.retained')
 
-    predicate = 'data.sandbox_log_capture.observer.data.predicate'
-    def change_pid(document):
-        observer = document['data']['sandbox_log_capture']['observer']['data']
-        observer['predicate'] = observer['predicate'].replace(str(observer['pid']), '12345')
-        observer['pid'] = 12345
-    run('predicate_pid', change_pid)
-    run('predicate_filter', lambda d: set_field(d, predicate, 'TRUEPREDICATE'), rejected=predicate)
-    def wrong_pid(document):
-        observer = document['data']['sandbox_log_capture']['observer']['data']
-        observer['predicate'] = observer['predicate'].replace(str(observer['pid']), '99999')
-    run('predicate_wrong_pid', wrong_pid, rejected=predicate)
     identity = 'data.runner_result.runner_subprocess.worker_evidence.abi_identity'
     run('expected_identity', lambda d: set_field(d, identity, 'a' * 64),
         options=('--expect-identity', 'a' * 64))

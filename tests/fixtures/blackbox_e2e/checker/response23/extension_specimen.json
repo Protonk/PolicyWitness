@@ -8,7 +8,7 @@
   "extensions": [
     {
       "token_ref": "token",
-      "target": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+      "target": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
     }
   ],
   "phases": [
@@ -21,13 +21,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
           }
         },
         {
@@ -49,13 +49,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
           }
         },
         {
@@ -76,13 +76,13 @@
             "operation": "file-read-data",
             "filter": {
               "kind": "path",
-              "value": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+              "value": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
             }
           },
           "attempt": {
             "kind": "file",
             "action": "read_fresh",
-            "target": "/private/tmp/pw-extension-targets-go6evcwb/extension-target"
+            "target": "/private/tmp/pw-extension-targets-09hdqakg/extension-target"
           }
         }
       ]

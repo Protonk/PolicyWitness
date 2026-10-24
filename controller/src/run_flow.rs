@@ -3,12 +3,11 @@
 //! The controller reads the request, parses the app evidence manifest once,
 //! selects a runner, collects the specimen dossier, delivers the held request
 //! string to the Swift client on stdin, gates the reply on its response
-//! version, and attaches best-effort evidence (sandbox logs, the fallback
-//! helper compilation on `xpc_error`).
+//! version, and records independent fallback compilation on `xpc_error`.
 //!
 //! Published worker preparation/application failures are runner_failed. The
 //! fallback sbpl-check reports only its own compilation, not missing worker
-//! progress or the cause of a lost reply. Unified-log capture is optional.
+//! progress or the cause of a lost reply.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -25,7 +24,6 @@ use crate::dossier::{
 };
 use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
-use crate::log_capture::LogTimeout;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::request_patch::{RequestError, parse_request, validate_request_version};
 use crate::runner_acquisition::{NativeObserver, ProcessObserver, RefusedAttempt, acquire};
@@ -35,11 +33,6 @@ use crate::runner_select::{
     RunnerConnectionKind, parse_runner_selector_value, resolve_runner_target_with_registry,
     runner_provenance_from_target, strip_runner_selector,
 };
-use crate::sandbox_log::{
-    SandboxLogCapture, SandboxLogWindow, bounded_step_denies, capture_sandbox_logs_with_timeout,
-    worker_pid,
-};
-
 const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 
 /// `data` of a `kind: "run"` envelope: the dossier plus the execution records.
@@ -62,43 +55,15 @@ struct ExecutionData {
 struct RunData {
     #[serde(flatten)]
     execution: ExecutionData,
-    sandbox_log_capture: Option<SandboxLogCapture>,
-    runner_sandbox_diagnostics: Option<RunnerSandboxDiagnostics>,
+    runner_sandbox_diagnostics: Option<RunnerExecutionDiagnostics>,
 }
 
-// Completed before any optional collector runs. Log processing only borrows
-// runner evidence and returns LogEvidence; it cannot rewrite this value.
+// Execution result and diagnostics are derived only from the admitted reply.
 struct CompletedExecution {
     data: ExecutionData,
     diagnostics: RunnerExecutionDiagnostics,
     result: json_contract::JsonResult,
     exit_code: i32,
-}
-
-struct LogEvidence {
-    capture: Option<SandboxLogCapture>,
-    diagnostics: RunnerLogDiagnostics,
-}
-
-#[derive(Serialize)]
-struct RunnerSandboxDiagnostics {
-    #[serde(flatten)]
-    execution: RunnerExecutionDiagnostics,
-    #[serde(flatten)]
-    logs: RunnerLogDiagnostics,
-}
-
-#[derive(Serialize)]
-struct RunnerLogDiagnostics {
-    pub correlation_status: &'static str,
-    /// Step IDs whose attempt the runner itself classified as a permission-shaped
-    /// failure and that no captured event names as a candidate. A non-empty
-    /// list means this capture yielded no candidate for denials the attempts
-    /// reported, not that nothing was denied; it makes no claim about the OS
-    /// log store (a record can exist under another path form, such as a
-    /// resolved symlink) and never says why. Null when correlation was not
-    /// possible or the reply carries no per-step comparison.
-    pub permission_failures_without_record: Option<Vec<String>>,
 }
 
 /// The version gate for a received runner reply.
@@ -161,8 +126,7 @@ fn compiled_profile_problem(reply: &Value) -> Option<&'static str> {
     None
 }
 
-/// `data` for an envelope written without log collection: the dossier and
-/// whatever execution records exist, every other key null.
+/// The dossier and any execution records available before reply admission.
 fn execution_only(
     specimen: Specimen,
     timeout_ms: Option<u64>,
@@ -179,7 +143,6 @@ fn execution_only(
             runner_acquisition: Vec::new(),
             request_failure: None,
         },
-        sandbox_log_capture: None,
         runner_sandbox_diagnostics: None,
     }
 }
@@ -409,8 +372,6 @@ struct Parsed {
     request_path: Option<PathBuf>,
     timeout_ms: u64,
     runner_mode_arg: Option<String>,
-    no_log_capture: bool,
-    log_timeout: LogTimeout,
 }
 
 enum Arguments {
@@ -425,8 +386,6 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
         request_path: None,
         timeout_ms: DEFAULT_TIMEOUT_MS,
         runner_mode_arg: None,
-        no_log_capture: false,
-        log_timeout: LogTimeout::default(),
     };
     let mut idx = 0usize;
     while idx < args.len() {
@@ -451,19 +410,6 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
                 parsed.timeout_ms = value.max(1);
                 idx += 2;
             }
-            "--log-timeout-ms" => {
-                let Some(value) = args.get(idx + 1).and_then(|s| s.to_str()) else {
-                    return Arguments::Error(
-                        parsed.request_path,
-                        "missing value for --log-timeout-ms".to_string(),
-                    );
-                };
-                match LogTimeout::parse(value) {
-                    Ok(timeout) => parsed.log_timeout = timeout,
-                    Err(e) => return Arguments::Error(None, e),
-                }
-                idx += 2;
-            }
             "--runner-mode" => {
                 let Some(value) = args.get(idx + 1).and_then(|s| s.to_str()) else {
                     return Arguments::Error(
@@ -486,10 +432,6 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
                 }
                 parsed.runner_mode_arg = Some(value.to_string());
                 idx += 2;
-            }
-            "--no-log-capture" => {
-                parsed.no_log_capture = true;
-                idx += 1;
             }
             _ => return Arguments::Error(parsed.request_path, format!("unknown argument: {arg}")),
         }
@@ -734,14 +676,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
                 runner_acquisition,
                 request_failure: None,
             });
-            let (result, data, exit_code) = attach_sandbox_logs(
-                execution,
-                &request_value,
-                parsed.no_log_capture,
-                |pid, process, window| {
-                    capture_sandbox_logs_with_timeout(pid, process, window, parsed.log_timeout)
-                },
-            );
+            let (result, data, exit_code) = execution_envelope(execution);
             return envelope(result, &data, exit_code);
         }
     };
@@ -796,207 +731,12 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
     }
 }
 
-// This is the production assembly seam. The collector receives only its query
-// inputs; log processing has read-only execution evidence and returns only
-// log-owned fields. Flattening merges the two channels into the existing wire
-// shape without granting either channel ownership of the other's fields.
-fn attach_sandbox_logs(
-    execution: CompletedExecution,
-    request: &Value,
-    disabled: bool,
-    collect: impl FnOnce(i64, &str, SandboxLogWindow) -> Result<SandboxLogCapture, String>,
-) -> (json_contract::JsonResult, RunData, i32) {
-    let logs = collect_log_evidence(
-        execution.data.runner_result.as_ref(),
-        request,
-        execution.data.runner_client.as_ref(),
-        disabled,
-        collect,
-    );
+fn execution_envelope(execution: CompletedExecution) -> (json_contract::JsonResult, RunData, i32) {
     let data = RunData {
         execution: execution.data,
-        sandbox_log_capture: logs.capture,
-        runner_sandbox_diagnostics: Some(RunnerSandboxDiagnostics {
-            execution: execution.diagnostics,
-            logs: logs.diagnostics,
-        }),
+        runner_sandbox_diagnostics: Some(execution.diagnostics),
     };
     (execution.result, data, execution.exit_code)
-}
-
-fn collect_log_evidence(
-    runner: Option<&Value>,
-    request: &Value,
-    client: Option<&RunnerClientRun>,
-    disabled: bool,
-    collect: impl FnOnce(i64, &str, SandboxLogWindow) -> Result<SandboxLogCapture, String>,
-) -> LogEvidence {
-    let mut capture = if disabled {
-        None
-    } else {
-        // The log window is the client span; the worker PID comes from the reply.
-        match (worker_pid(runner), client) {
-            (Some(pid), Some(client)) => {
-                let window = SandboxLogWindow::runner_client_span(
-                    client.started_at_unix_ms,
-                    client.ended_at_unix_ms,
-                );
-                Some(
-                    collect(i64::from(pid), "pw-probe-runner", window.clone()).unwrap_or_else(
-                        |err| SandboxLogCapture {
-                            window,
-                            capture_status: "requested_unavailable".into(),
-                            tool_exit_code: 1,
-                            blocked_reason: None,
-                            output: crate::utils::JsonOutputCapture::unavailable(
-                                err,
-                                crate::utils::OBSERVER_CAPTURE_BYTES,
-                            ),
-                            observer: None,
-                            observed_deny: None,
-                            deny_events: None,
-                            step_denies: None,
-                            supervision: None,
-                            processing_cutoff: None,
-                        },
-                    ),
-                )
-            }
-            _ => None,
-        }
-    };
-    let diagnostics = finish_sandbox_log_capture(runner, request, disabled, &mut capture);
-    LogEvidence {
-        capture,
-        diagnostics,
-    }
-}
-
-// Association and log diagnostics share one availability gate; retained events
-// from a failed capture or without an authoritative PID cannot gain candidates.
-fn finish_sandbox_log_capture(
-    runner: Option<&Value>,
-    request: &Value,
-    disabled: bool,
-    capture: &mut Option<SandboxLogCapture>,
-) -> RunnerLogDiagnostics {
-    if let Some(capture) = capture.as_mut() {
-        capture.step_denies = None;
-        if !disabled && worker_pid(runner).is_some() && capture.capture_status == "captured" {
-            if let (Some(steps), Some(events)) = (
-                runner
-                    .and_then(|r| r.get("steps"))
-                    .and_then(Value::as_array),
-                capture.deny_events.as_ref(),
-            ) {
-                let phase_plan: Vec<Value> = request
-                    .get("phases")
-                    .and_then(Value::as_array)
-                    .into_iter()
-                    .flatten()
-                    .filter_map(|p| p.get("actions").and_then(Value::as_array))
-                    .flatten()
-                    .filter(|a| a.get("attempt").is_some())
-                    .cloned()
-                    .collect();
-                let plan = request.get("probe_plan").and_then(Value::as_array);
-                match bounded_step_denies(
-                    steps,
-                    plan.map(Vec::as_slice).unwrap_or(&phase_plan),
-                    events,
-                    worker_pid(runner),
-                    capture.supervision.as_ref().map(|r| r.budget),
-                ) {
-                    Ok(associations) => capture.step_denies = Some(associations),
-                    Err(cutoff) => {
-                        capture.capture_status = if cutoff.reason == "deadline" {
-                            "timeout"
-                        } else {
-                            "overflow"
-                        }
-                        .into();
-                        capture.processing_cutoff = Some(cutoff);
-                    }
-                }
-            }
-        }
-    }
-    log_diagnostics(runner, disabled, capture.as_ref())
-}
-
-// Execution disposition and optional log correlation are separate observations.
-// No outcome gate, host/client PID fallback, or causal interpretation of a match.
-
-fn log_diagnostics(
-    runner: Option<&Value>,
-    disabled: bool,
-    capture: Option<&SandboxLogCapture>,
-) -> RunnerLogDiagnostics {
-    let pid = worker_pid(runner);
-    let captured = capture.map_or(false, |c| c.capture_status == "captured");
-    let events = capture.and_then(|c| c.deny_events.as_ref());
-    let pid_match = match (pid, events) {
-        (Some(pid), Some(events)) if captured => events.iter().any(|e| e.pid == Some(pid)),
-        _ => false,
-    };
-    let correlation_status = if disabled || pid.is_none() {
-        "not_attempted"
-    } else if !captured || events.is_none() {
-        "unavailable"
-    } else if pid_match {
-        "pid_match"
-    } else {
-        "no_match"
-    };
-    let permission_failures_without_record =
-        if matches!(correlation_status, "pid_match" | "no_match") {
-            permission_failures_without_record(runner, capture)
-        } else {
-            None
-        };
-    RunnerLogDiagnostics {
-        correlation_status,
-        permission_failures_without_record,
-    }
-}
-
-// The runner's own per-step classification is the only input: a step counts
-// when `comparison.observation` is `permission_failure`. Candidate membership
-// comes from the associations already computed for this capture. A reply whose
-// steps carry no comparison cannot be classified and yields null.
-fn permission_failures_without_record(
-    runner: Option<&Value>,
-    capture: Option<&SandboxLogCapture>,
-) -> Option<Vec<String>> {
-    let steps = runner?.get("steps")?.as_array()?;
-    if !steps.is_empty()
-        && !steps
-            .iter()
-            .any(|s| s.pointer("/comparison/observation").is_some())
-    {
-        return None;
-    }
-    let recorded: std::collections::HashSet<&str> = capture
-        .and_then(|c| c.step_denies.as_ref())
-        .map(|associations| {
-            associations
-                .iter()
-                .flat_map(|a| a.candidate_step_ids.iter().map(String::as_str))
-                .collect()
-        })
-        .unwrap_or_default();
-    Some(
-        steps
-            .iter()
-            .filter(|s| {
-                s.pointer("/comparison/observation").and_then(Value::as_str)
-                    == Some("permission_failure")
-            })
-            .filter_map(|s| s.get("step_id").and_then(Value::as_str))
-            .filter(|id| !recorded.contains(id))
-            .map(str::to_string)
-            .collect(),
-    )
 }
 
 #[cfg(test)]
@@ -1004,13 +744,10 @@ mod tests {
     use super::*;
     use crate::disposition::integrity_issue;
     use crate::reply_fixtures::*;
-    use crate::sandbox_log::{SandboxDenyEvent, capture_sandbox_logs, match_step_denies};
     use crate::utils::{JsonOutputCapture, RequestDelivery};
     use serde_json::json;
 
-    include!("log_replay_tests.rs");
-
-    /// Fixed host facts: execution bytes are compared across collector states.
+    /// Fixed host facts for constructed execution envelopes.
     fn host() -> HostFacts {
         HostFacts {
             macos_version: Some("14.0".into()),
@@ -1064,94 +801,22 @@ mod tests {
         }
     }
 
-    fn diagnostics_with_logs(
-        runner: Option<&Value>,
-        disabled: bool,
-        capture: Option<&SandboxLogCapture>,
-    ) -> RunnerSandboxDiagnostics {
-        RunnerSandboxDiagnostics {
-            execution: execution_diagnostics(runner),
-            logs: log_diagnostics(runner, disabled, capture),
-        }
-    }
-
-    fn event(pid: Option<i32>) -> SandboxDenyEvent {
-        SandboxDenyEvent {
-            pid,
-            process: Some("pw-probe-runner".into()),
-            operation: Some("file-write-data".into()),
-            path: Some("/attempt".into()),
-            raw_line: Some("ordinary denied write before unrelated self-signal".into()),
-        }
-    }
-
-    fn capture_with(status: &str, events: Vec<SandboxDenyEvent>) -> SandboxLogCapture {
-        SandboxLogCapture {
-            window: SandboxLogWindow::runner_client_span(0, 1),
-            capture_status: status.into(),
-            tool_exit_code: 0,
-            blocked_reason: None,
-            output: crate::utils::JsonOutputCapture::unavailable(
-                String::new(),
-                crate::utils::OBSERVER_CAPTURE_BYTES,
-            ),
-            observer: None,
-            observed_deny: Some(!events.is_empty()),
-            deny_events: Some(events),
-            step_denies: None,
-            supervision: None,
-            processing_cutoff: None,
-        }
-    }
-
-    /// The independent consumer: every envelope must validate under the
-    /// current contract, and the log channel is read through `denials`.
-    fn consume(envelopes: &[Value]) -> Vec<Value> {
-        use std::io::Write;
-        use std::process::{Command, Stdio};
-        let mut child = Command::new("/usr/bin/python3")
-            .args(["-B", "-c", "import json, sys; sys.path.insert(0, sys.argv[1]); from consumer import validate, denials; es = json.load(sys.stdin); errors = [validate(e) for e in es]; assert not any(errors), errors; print(json.dumps([denials(e) for e in es]))"])
-            .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
-            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(&serde_json::to_vec(envelopes).unwrap())
-            .unwrap();
-        let output = child.wait_with_output().unwrap();
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        let answers: Vec<Value> = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(answers.len(), envelopes.len());
-        answers
-    }
-
-    const DATA_KEYS: [&str; 8] = [
+    const DATA_KEYS: [&str; 7] = [
         "policy_check",
         "runner_acquisition",
         "runner_client",
         "runner_result",
         "runner_sandbox_diagnostics",
-        "sandbox_log_capture",
         "specimen",
         "timeout_ms",
     ];
-    const DIAGNOSTIC_KEYS: [&str; 7] = [
-        "correlation_status",
+    const DIAGNOSTIC_KEYS: [&str; 5] = [
         "disposition_integrity",
         "disposition_issues",
-        "permission_failures_without_record",
         "process_disposition",
         "stop_reason",
         "termination_cause",
     ];
-    const LOG_OWNED_DIAGNOSTICS: [&str; 2] =
-        ["correlation_status", "permission_failures_without_record"];
-
     fn keys(value: &Value) -> Vec<&str> {
         value
             .as_object()
@@ -1161,28 +826,70 @@ mod tests {
             .collect()
     }
 
-    /// The envelope with the log channel and its diagnostics removed: what must
-    /// stay byte-identical across collector states.
-    fn execution_bytes(wire: &Value) -> Vec<u8> {
-        let mut value = wire.clone();
-        value
-            .as_object_mut()
-            .unwrap()
-            .remove("generated_at_unix_ms");
-        value["data"]
-            .as_object_mut()
-            .unwrap()
-            .remove("sandbox_log_capture");
-        for key in LOG_OWNED_DIAGNOSTICS {
-            assert!(
-                value["data"]["runner_sandbox_diagnostics"]
-                    .as_object_mut()
-                    .unwrap()
-                    .remove(key)
-                    .is_some()
-            );
+    #[test]
+    fn execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields() {
+        let rows = vec![
+            step("a", "open_write", "/attempt", "permission_failure"),
+            fresh_open_permission_failure("fresh", "/fresh"),
+            incomplete_step("pending", "open_read", "/pending"),
+        ];
+        for phased in [false, true] {
+            let mut steps = rows.clone();
+            if phased {
+                for (i, row) in steps.iter_mut().enumerate() {
+                    row["phase_id"] = json!(format!("phase{i}"));
+                }
+            }
+            let success = reply_with("ok", None, steps.clone());
+            let failed = reply_with("runner_failed", Some(9), steps);
+            let mut no_pid = success.clone();
+            no_pid["runner_subprocess"]
+                .as_object_mut()
+                .unwrap()
+                .remove("pid");
+            for (runner, code, disposition, cause) in [
+                (Some(success.clone()), 0, "clean_exit", Value::Null),
+                (Some(failed), 1, "signaled", json!("host_sentinel_deadline")),
+                (Some(no_pid), 0, "no_worker", Value::Null),
+                (
+                    Some(reporting_failed(success)),
+                    1,
+                    "clean_exit",
+                    Value::Null,
+                ),
+                (None, 1, "no_worker", Value::Null),
+            ] {
+                let execution = complete_execution(execution_data(runner.clone()));
+                let client = serde_json::to_value(&execution.data.runner_client).unwrap();
+                let (result, data, exit_code) = execution_envelope(execution);
+                let wire: Value = serde_json::from_str(
+                    &json_contract::render_envelope("run", result, &data).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(exit_code, code);
+                assert_eq!(wire["result"]["exit_code"], code);
+                assert_eq!(wire["data"]["runner_result"], json!(runner));
+                assert_eq!(wire["data"]["runner_client"], client);
+                assert_eq!(keys(&wire["data"]), DATA_KEYS);
+                let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
+                assert_eq!(keys(diagnostics), DIAGNOSTIC_KEYS);
+                assert_eq!(diagnostics["process_disposition"], disposition);
+                assert_eq!(diagnostics["termination_cause"], cause);
+            }
         }
-        serde_json::to_vec(&value).unwrap()
+    }
+
+    #[test]
+    fn removed_collection_options_are_unknown_before_execution() {
+        for flag in ["--no-log-capture", "--log-timeout-ms"] {
+            match parse_arguments(&["/r.json".into(), flag.into()]) {
+                Arguments::Error(Some(path), error) => {
+                    assert_eq!(path, PathBuf::from("/r.json"));
+                    assert_eq!(error, format!("unknown argument: {flag}"));
+                }
+                _ => panic!("retired flag accepted: {flag}"),
+            }
+        }
     }
 
     #[test]
@@ -1200,12 +907,8 @@ mod tests {
                 } else {
                     malformed.clone()
                 };
-                let (result, data, code) = attach_sandbox_logs(
-                    complete_execution(execution_data(Some(reply.clone()))),
-                    &json!({"probe_plan": []}),
-                    true,
-                    |_, _, _| panic!("logs disabled"),
-                );
+                let (result, data, code) =
+                    execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
                 let wire: Value = serde_json::from_str(
                     &json_contract::render_envelope("run", result, &data).unwrap(),
                 )
@@ -1267,12 +970,8 @@ mod tests {
                     _ => "runner_timeout",
                 }
             );
-            let (result, data, code) = attach_sandbox_logs(
-                complete_execution(execution_data(Some(reply.clone()))),
-                &json!({"probe_plan":[]}),
-                true,
-                |_, _, _| panic!("logs disabled"),
-            );
+            let (result, data, code) =
+                execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
             assert_eq!(code, 1);
             let wire: Value = serde_json::from_str(
                 &json_contract::render_envelope("run", result, &data).unwrap(),
@@ -1429,12 +1128,8 @@ if e['data']['runner_result']['specimen_id']=='refused' and e['data']['runner_re
             let path = std::path::Path::new(&directory).join(format!("worker-clock-{name}.json"));
             let reply: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
             assert_eq!(reply["normalized_outcome"], outcome, "{name}");
-            let (result, data, code) = attach_sandbox_logs(
-                complete_execution(execution_data(Some(reply.clone()))),
-                &json!({"probe_plan":[]}),
-                true,
-                |_, _, _| panic!("logs disabled"),
-            );
+            let (result, data, code) =
+                execution_envelope(complete_execution(execution_data(Some(reply.clone()))));
             assert_eq!(code, if outcome == "ok" { 0 } else { 1 }, "{name}");
             let wire: Value = serde_json::from_str(
                 &json_contract::render_envelope("run", result, &data).unwrap(),
@@ -1530,464 +1225,8 @@ else:
     }
 
     #[test]
-    fn collector_states_preserve_the_serialized_execution_half() {
-        collector_state_controls(false);
-    }
-
-    #[test]
-    fn phased_collector_states_preserve_execution_and_ambiguous_candidates() {
-        collector_state_controls(true);
-    }
-
-    fn collector_state_controls(phased: bool) {
-        // Independent native observations with two indistinguishable candidates
-        // and one permission failure that has no matching captured path.
-        let request = json!({"probe_plan": [
-            {"step_id": "a", "attempt": {"kind": "file", "action": "open_write", "target": "/attempt"}},
-            {"step_id": "b", "attempt": {"kind": "file", "action": "open_write", "target": "/attempt"}},
-            {"step_id": "silent", "attempt": {"kind": "file", "action": "open_write", "target": "/silent"}}
-        ]});
-        let plan = request["probe_plan"].as_array().unwrap().clone();
-        let request = if phased {
-            json!({"phases": [
-                {"phase_id": "earlier", "actions": [plan[0].clone()]},
-                {"phase_id": "later", "actions": [plan[1].clone(), plan[2].clone()]}
-            ]})
-        } else {
-            request
-        };
-        let mut steps = vec![
-            step("a", "open_write", "/attempt", "permission_failure"),
-            step("b", "open_write", "/attempt", "permission_failure"),
-            step("silent", "open_write", "/silent", "permission_failure"),
-        ];
-        if phased {
-            for (index, step) in steps.iter_mut().enumerate() {
-                step["phase_id"] = json!(if index == 0 { "earlier" } else { "later" });
-            }
-        }
-        let runner = reply_with("ok", None, steps.clone());
-        let failed = reply_with("runner_failed", Some(9), steps.clone());
-        let mut no_pid = runner.clone();
-        no_pid["pid"] = json!(42); // A matching host/client PID is not authoritative.
-        no_pid["runner_subprocess"]
-            .as_object_mut()
-            .unwrap()
-            .remove("pid");
-        let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response23/a1_expected.json"
-        ))
-        .unwrap();
-        let no_comparisons = reporting_failed(runner.clone());
-        let cases = [
-            (Some(runner), 0, "clean_exit", Value::Null, true),
-            (
-                Some(failed),
-                1,
-                "signaled",
-                json!("host_sentinel_deadline"),
-                true,
-            ),
-            (Some(no_pid), 0, "no_worker", Value::Null, true),
-            (
-                Some(fixture["data"]["runner_result"].clone()),
-                1,
-                "signaled",
-                json!("host_sentinel_deadline"),
-                false,
-            ),
-            (Some(no_comparisons), 1, "clean_exit", Value::Null, false),
-            (None, 1, "no_worker", Value::Null, false),
-        ];
-        for (runner, expected_exit, disposition, cause, permission_steps) in cases {
-            let mut baseline = None;
-            for state in [
-                "events",
-                "empty",
-                "unrelated",
-                "blocked",
-                "error",
-                "capture_error",
-                "parse_error",
-                "invalid_reply",
-                "window_mismatch",
-                "invalid_window",
-                "requested_unavailable",
-                "timeout",
-                "overflow",
-                "disabled",
-            ] {
-                let execution = complete_execution(execution_data(runner.clone()));
-                let client = serde_json::to_value(&execution.data.runner_client).unwrap();
-                let pid = worker_pid(runner.as_ref());
-                let disabled = state == "disabled";
-                let mut invoked = false;
-                let (result, data, exit_code) = attach_sandbox_logs(
-                    execution,
-                    &request,
-                    disabled,
-                    |actual_pid, name, window| {
-                        invoked = true;
-                        assert_eq!(Some(actual_pid), pid.map(i64::from));
-                        assert_eq!(name, "pw-probe-runner");
-                        assert_eq!(
-                            (window.started_at_unix_ms, window.ended_at_unix_ms),
-                            (1_000, 2_500)
-                        );
-                        if state == "requested_unavailable" {
-                            return Err("controlled collector launch failure".into());
-                        }
-                        let status = match state {
-                            "events" | "empty" | "unrelated" => "captured",
-                            other => other,
-                        };
-                        let events = match state {
-                            "empty" => vec![],
-                            "unrelated" => vec![event(Some(99))],
-                            // Every failed capture deliberately retains a matching
-                            // diagnostic event. Status, not event presence, gates it.
-                            _ => vec![event(Some(99)), event(pid)],
-                        };
-                        let mut capture = capture_with(status, events);
-                        capture.window = window;
-                        capture.observer = Some(json!({"data": {"diagnostic": "retained reply"}}));
-                        // Reject precomputed/stale associations supplied by a collector.
-                        capture.step_denies = Some(match_step_denies(
-                            runner
-                                .as_ref()
-                                .and_then(|r| r["steps"].as_array())
-                                .map(Vec::as_slice)
-                                .unwrap_or(&[]),
-                            &plan,
-                            capture.deny_events.as_ref().unwrap(),
-                            pid,
-                        ));
-                        Ok(capture)
-                    },
-                );
-                assert_eq!(invoked, !disabled && pid.is_some(), "{state}");
-                assert_eq!(exit_code, expected_exit, "{state}");
-                let text = json_contract::render_envelope("run", result, &data).unwrap();
-                let wire: Value = serde_json::from_str(&text).unwrap();
-                assert_eq!(wire["schema_version"], json_contract::SCHEMA_VERSION);
-                assert_eq!(wire["result"]["exit_code"], expected_exit, "{state}");
-                assert_eq!(wire["result"]["ok"], expected_exit == 0, "{state}");
-                assert_eq!(
-                    wire["data"]["runner_result"],
-                    runner.clone().unwrap_or(Value::Null),
-                    "{state}"
-                );
-                assert_eq!(wire["data"]["runner_client"], client, "{state}");
-                assert_eq!(
-                    keys(&wire["data"]),
-                    DATA_KEYS,
-                    "internal ownership structs must not change the data wire shape",
-                );
-                assert!(wire["data"].get("error").is_none());
-                let diag = &wire["data"]["runner_sandbox_diagnostics"];
-                assert_eq!(
-                    keys(diag),
-                    DIAGNOSTIC_KEYS,
-                    "internal ownership structs must not change the diagnostics wire shape",
-                );
-                assert_eq!(diag["process_disposition"], disposition, "{state}");
-                assert_eq!(diag["termination_cause"], cause, "{state}");
-                let cap = &wire["data"]["sandbox_log_capture"];
-                if disabled || pid.is_none() {
-                    assert!(cap.is_null());
-                    assert_eq!(diag["correlation_status"], "not_attempted");
-                    assert!(diag["permission_failures_without_record"].is_null());
-                } else if matches!(state, "events" | "empty" | "unrelated") {
-                    assert_eq!(cap["capture_status"], "captured");
-                    assert_eq!(
-                        diag["correlation_status"],
-                        if state == "events" {
-                            "pid_match"
-                        } else {
-                            "no_match"
-                        }
-                    );
-                    if permission_steps {
-                        assert_eq!(
-                            diag["permission_failures_without_record"],
-                            if state == "events" {
-                                json!(["silent"])
-                            } else {
-                                json!(["a", "b", "silent"])
-                            }
-                        );
-                        if state == "events" {
-                            assert_eq!(cap["step_denies"].as_array().unwrap().len(), 1);
-                            assert_eq!(cap["step_denies"][0]["event_index"], 1);
-                            assert_eq!(
-                                cap["step_denies"][0]["candidate_step_ids"],
-                                json!(["a", "b"])
-                            );
-                            assert_eq!(cap["step_denies"][0]["association"], "ambiguous");
-                        } else {
-                            assert_eq!(cap["step_denies"], json!([]));
-                        }
-                    } else {
-                        // Classified steps yield an empty list; withheld
-                        // comparisons yield null, never an invented list.
-                        let classified = runner.as_ref().map_or(false, |r| {
-                            r["steps"].as_array().map_or(false, |steps| {
-                                steps
-                                    .iter()
-                                    .any(|s| s.pointer("/comparison/observation").is_some())
-                            })
-                        });
-                        assert_eq!(
-                            diag["permission_failures_without_record"],
-                            if classified { json!([]) } else { Value::Null },
-                            "{state}"
-                        );
-                    }
-                } else {
-                    assert_eq!(cap["capture_status"], state);
-                    assert_eq!(diag["correlation_status"], "unavailable");
-                    assert!(cap["step_denies"].is_null());
-                    assert!(diag["permission_failures_without_record"].is_null());
-                    if state != "requested_unavailable" {
-                        assert_eq!(cap["deny_events"][1]["pid"], pid.unwrap());
-                        assert_eq!(cap["observer"]["data"]["diagnostic"], "retained reply");
-                    }
-                }
-                // Remove only the two log-owned diagnostic fields and the log
-                // subtree. Everything else must be byte-identical across states.
-                let bytes = execution_bytes(&wire);
-                if let Some(baseline) = &baseline {
-                    assert_eq!(&bytes, baseline, "execution changed under {state}");
-                } else {
-                    baseline = Some(bytes);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
-        use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
-        let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response23/a1_expected.json"
-        ))
-        .unwrap();
-        let runner = native["data"]["runner_result"].clone();
-        let mut baseline = None;
-        for (script, expected) in [
-            ("import time; time.sleep(60)", "timeout"),
-            ("import os; os.write(1,b'x'*33554433)", "overflow"),
-            ("import os; os.write(2,b'e'*131073)", "overflow"),
-            ("import sys; sys.exit(7)", "error"),
-            (
-                "import os,signal; os.kill(os.getpid(),signal.SIGTERM)",
-                "error",
-            ),
-            ("print('{broken')", "parse_error"),
-        ] {
-            let (result, data, code) = attach_sandbox_logs(
-                complete_execution(execution_data(Some(runner.clone()))),
-                &json!({"probe_plan":[]}),
-                false,
-                |pid, process, window| {
-                    let mut command = std::process::Command::new("/usr/bin/python3");
-                    command.args(["-c", script]);
-                    let budget = LogTimeout {
-                        milliseconds: if expected == "timeout" { 150 } else { 3000 },
-                        source: TimeoutSource::Cli,
-                    }
-                    .start()
-                    .unwrap();
-                    let raw = log_capture::capture(&mut command, budget, Boundary::Observer);
-                    Ok(crate::sandbox_log::parse_supervised_observer(
-                        raw, window, pid, process,
-                    ))
-                },
-            );
-            assert_eq!(code, 1);
-            let wire: Value = serde_json::from_str(
-                &json_contract::render_envelope("run", result, &data).unwrap(),
-            )
-            .unwrap();
-            assert_eq!(wire["data"]["runner_result"], runner);
-            let capture = &wire["data"]["sandbox_log_capture"];
-            assert_eq!(capture["capture_status"], expected);
-            assert_eq!(capture["supervision"]["cleanup"]["outcome"], "group_absent");
-            assert!(capture["step_denies"].is_null());
-            let diag = &wire["data"]["runner_sandbox_diagnostics"];
-            assert_eq!(diag["correlation_status"], "unavailable");
-            assert!(diag["permission_failures_without_record"].is_null());
-            let bytes = execution_bytes(&wire);
-            if let Some(baseline) = &baseline {
-                assert_eq!(&bytes, baseline, "{expected}");
-            } else {
-                baseline = Some(bytes);
-            }
-        }
-    }
-
-    #[test]
-    fn retained_events_without_worker_identity_never_acquire_associations() {
-        let request = json!({"probe_plan": [{"step_id": "s", "attempt": {
-            "kind": "file", "action": "open_write", "target": "/attempt"}}]});
-        for sub in [
-            Value::Null,
-            json!({"pid": 0}),
-            json!({"pid": -1}),
-            json!({"pid": 4_294_967_338_u64}),
-        ] {
-            let runner = json!({"pid": 42, "runner_subprocess": sub, "steps": [{"step_id": "s",
-                "comparison": {"observation": "permission_failure"}}]});
-            let mut capture = capture_with("captured", vec![event(Some(42))]);
-            capture.step_denies = Some(match_step_denies(
-                runner["steps"].as_array().unwrap(),
-                request["probe_plan"].as_array().unwrap(),
-                capture.deny_events.as_ref().unwrap(),
-                Some(42),
-            ));
-            assert_eq!(capture.step_denies.as_ref().unwrap().len(), 1);
-            let mut capture = Some(capture);
-            let diagnostics =
-                finish_sandbox_log_capture(Some(&runner), &request, false, &mut capture);
-            assert!(capture.as_ref().unwrap().step_denies.is_none());
-            assert_eq!(
-                capture
-                    .as_ref()
-                    .unwrap()
-                    .deny_events
-                    .as_ref()
-                    .unwrap()
-                    .len(),
-                1
-            );
-            assert_eq!(diagnostics.correlation_status, "not_attempted");
-            assert!(diagnostics.permission_failures_without_record.is_none());
-        }
-    }
-
-    #[test]
-    fn no_match_is_distinguished_by_unrecorded_permission_failures() {
-        fn plan(ids: &[&str]) -> Value {
-            json!({"probe_plan": ids.iter().map(|id| json!({"step_id": id, "attempt": {
-                "kind": "file", "action": "open_write", "target": format!("/{id}")}})).collect::<Vec<_>>()})
-        }
-        fn denied(path: &str) -> SandboxDenyEvent {
-            let mut e = event(Some(42));
-            e.path = Some(path.into());
-            e
-        }
-        let ids = ["recorded", "silent", "fine"];
-        let request = plan(&ids);
-        let runner = reply_with(
-            "ok",
-            None,
-            vec![
-                step("recorded", "open_write", "/recorded", "permission_failure"),
-                step("silent", "open_write", "/silent", "permission_failure"),
-                step("fine", "open_write", "/fine", "succeeded"),
-            ],
-        );
-        // One denial recorded, one not: only the silent one is listed.
-        let mut cap = Some(capture_with("captured", vec![denied("/recorded")]));
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap);
-        assert_eq!(diag.correlation_status, "pid_match");
-        assert_eq!(
-            diag.permission_failures_without_record,
-            Some(vec!["silent".to_string()])
-        );
-        // No record at all: no_match names the denials the attempts reported.
-        let mut cap = Some(capture_with("captured", vec![event(Some(99))]));
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap);
-        assert_eq!(diag.correlation_status, "no_match");
-        assert_eq!(
-            diag.permission_failures_without_record,
-            Some(vec!["recorded".to_string(), "silent".to_string()])
-        );
-        let wire = serde_json::to_value(&diag).unwrap();
-        assert_eq!(
-            wire["permission_failures_without_record"],
-            json!(["recorded", "silent"])
-        );
-        // Nothing permission-shaped: the list is empty, not null.
-        let clean = reply_with(
-            "ok",
-            None,
-            vec![
-                step("fine", "open_write", "/fine", "succeeded"),
-                step("other", "open_write", "/other", "other_failure"),
-            ],
-        );
-        let mut cap = Some(capture_with("captured", vec![]));
-        let diag = finish_sandbox_log_capture(Some(&clean), &request, false, &mut cap);
-        assert_eq!(diag.permission_failures_without_record, Some(vec![]));
-        // Comparisons withheld by a reporting failure, uncorrelated or disabled:
-        // null, never an invented list.
-        let withheld = reporting_failed(runner.clone());
-        let mut cap = Some(capture_with("captured", vec![]));
-        let diag = finish_sandbox_log_capture(Some(&withheld), &request, false, &mut cap);
-        assert_eq!(diag.correlation_status, "no_match");
-        assert_eq!(diag.permission_failures_without_record, None);
-        for (status, disabled) in [
-            ("error", false),
-            ("window_mismatch", false),
-            ("captured", true),
-        ] {
-            let mut cap = Some(capture_with(status, vec![]));
-            let diag = finish_sandbox_log_capture(Some(&runner), &request, disabled, &mut cap);
-            assert_ne!(diag.correlation_status, "no_match", "{status}");
-            assert_eq!(diag.permission_failures_without_record, None, "{status}");
-        }
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut None);
-        assert_eq!(diag.correlation_status, "unavailable");
-        assert_eq!(diag.permission_failures_without_record, None);
-    }
-
-    #[test]
     fn argument_errors_are_reported_before_any_runner_or_specimen_work() {
-        for value in [
-            "0",
-            "-1",
-            "+1",
-            "1.5",
-            "unlimited",
-            "18446744073709551615",
-            "18446744073709551616",
-        ] {
-            for disabled in [false, true] {
-                let mut args = vec!["--log-timeout-ms".into(), value.into()];
-                if disabled {
-                    args.push("--no-log-capture".into());
-                }
-                match parse_arguments(&args) {
-                    Arguments::Error(None, error) => assert!(
-                        error.contains("invalid value for --log-timeout-ms"),
-                        "{error}"
-                    ),
-                    _ => panic!("{value}: accepted"),
-                }
-            }
-        }
-        match parse_arguments(&[
-            "--log-timeout-ms".into(),
-            "1".into(),
-            "--no-log-capture".into(),
-        ]) {
-            Arguments::Run(parsed) => {
-                assert!(parsed.no_log_capture);
-                assert!(parsed.request_path.is_none());
-                assert_eq!(parsed.timeout_ms, DEFAULT_TIMEOUT_MS);
-            }
-            _ => panic!("valid finite timeout must pass option admission"),
-        }
-        match parse_arguments(&["--log-timeout-ms".into()]) {
-            Arguments::Error(None, error) => assert!(error.contains("missing value")),
-            _ => panic!("missing value accepted"),
-        }
-        for (flag, value) in [
-            ("--timeout-ms", "invalid"),
-            ("--log-timeout-ms", "0"),
-            ("--runner-mode", "invalid"),
-        ] {
+        for (flag, value) in [("--timeout-ms", "invalid"), ("--runner-mode", "invalid")] {
             assert!(
                 matches!(
                     parse_arguments(&["/r.json".into(), flag.into(), value.into()]),
@@ -2024,7 +1263,6 @@ else:
             .collect();
         let actual = std::collections::BTreeMap::from([
             ("client_rpc_wait", DEFAULT_TIMEOUT_MS),
-            ("log_window_pad", crate::sandbox_log::LOG_WINDOW_PAD_SECONDS),
             (
                 "controller_output",
                 crate::utils::RUNNER_CAPTURE_BYTES as u64,
@@ -2032,10 +1270,6 @@ else:
             (
                 "policy_helper_output",
                 crate::utils::HELPER_CAPTURE_BYTES as u64,
-            ),
-            (
-                "log_observer_output",
-                crate::utils::OBSERVER_CAPTURE_BYTES as u64,
             ),
         ]);
         assert_eq!(owned, actual);
@@ -2047,840 +1281,6 @@ else:
             assert_eq!(text.len(), len.min(cap));
             assert_eq!(truncated, len > cap);
         }
-    }
-
-    #[test]
-    fn observer_windows_survive_association_serialization_and_consumer_recovery() {
-        use crate::sandbox_log::parse_observer_output;
-        use std::os::unix::process::ExitStatusExt;
-        use std::process::{ExitStatus, Output};
-
-        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
-        let good = json!({"start": window.start, "end": window.end, "last": null});
-        let mut replies = vec![("matching", good.clone(), "captured")];
-        for (name, field, value) in [
-            ("wrong_start", "start", json!("1970-01-01 00:00:02+0000")),
-            ("wrong_end", "end", json!("1970-01-01 00:00:04+0000")),
-            ("trailing", "last", json!("10s")),
-            ("null_start", "start", Value::Null),
-        ] {
-            let mut reply = good.clone();
-            reply[field] = value;
-            replies.push((name, reply, "window_mismatch"));
-        }
-        for field in ["start", "end"] {
-            let mut reply = good.clone();
-            reply.as_object_mut().unwrap().remove(field);
-            replies.push((field, reply, "window_mismatch"));
-        }
-        replies.push(("missing_bounds", json!({"last": "10s"}), "window_mismatch"));
-        replies.push(("clock_rollback", Value::Null, "invalid_window"));
-
-        let request = json!({"probe_plan": [{"step_id": "s", "attempt": {
-            "kind": "file", "action": "open_write", "target": "/attempt"}}]});
-        let events = json!([{"pid": 42, "process": "pw-probe-runner", "operation": "file-write-data",
-            "path": "/attempt", "raw_line": "retained observer evidence"}]);
-        let mut envelopes = Vec::new();
-        for signaled in [false, true] {
-            let outcome = if signaled { "runner_failed" } else { "ok" };
-            let runner = reply_with(
-                outcome,
-                signaled.then_some(9),
-                vec![step("s", "open_write", "/attempt", "permission_failure")],
-            );
-            for (name, bounds, expected_status) in &replies {
-                let mut observer = json!({"kind":"sandbox_log_observer_report", "schema_version":crate::json_contract::SCHEMA_VERSION, "data": bounds});
-                let mut capture = Some(if *expected_status == "invalid_window" {
-                    capture_sandbox_logs(
-                        42,
-                        "pw-probe-runner",
-                        SandboxLogWindow::runner_client_span(5_000, 4_000),
-                    )
-                    .unwrap()
-                } else {
-                    observer["data"]["observer_schema_version"] = json!(2);
-                    observer["data"]["observed_deny"] = json!(true);
-                    observer["data"]["deny_events"] = events.clone();
-                    let out = Output {
-                        status: ExitStatus::from_raw(0),
-                        stdout: serde_json::to_vec(&observer).unwrap(),
-                        stderr: vec![],
-                    };
-                    parse_observer_output(&out, window.clone())
-                });
-                let execution = complete_execution(execution_data(Some(runner.clone())));
-                let (result, data, exit_code) =
-                    attach_sandbox_logs(execution, &request, false, |_, _, _| {
-                        Ok(capture.take().unwrap())
-                    });
-                assert_eq!(exit_code, i32::from(signaled));
-                let text = json_contract::render_envelope("run", result, &data).unwrap();
-                let wire: Value = serde_json::from_str(&text).unwrap();
-                assert_eq!(wire["result"]["ok"], !signaled);
-                assert_eq!(wire["result"]["normalized_outcome"], outcome);
-                assert_eq!(wire["data"]["runner_result"], runner);
-                let cap = &wire["data"]["sandbox_log_capture"];
-                let diag = &wire["data"]["runner_sandbox_diagnostics"];
-                assert_eq!(cap["capture_status"], *expected_status, "{name}");
-                if *expected_status == "invalid_window" {
-                    assert!(cap["observer"].is_null() && cap["deny_events"].is_null());
-                    assert!(cap["window"]["start"].is_null() && cap["window"]["end"].is_null());
-                    assert_eq!(cap["window"]["started_at_unix_ms"], 5_000);
-                    assert_eq!(cap["window"]["ended_at_unix_ms"], 4_000);
-                } else {
-                    assert_eq!(cap["observer"], observer);
-                    assert_eq!(cap["deny_events"], events);
-                    assert_eq!(cap["observed_deny"], true);
-                }
-                if *expected_status == "captured" {
-                    assert_eq!(cap["step_denies"][0]["candidate_step_ids"], json!(["s"]));
-                    assert_eq!(diag["correlation_status"], "pid_match");
-                } else {
-                    assert!(
-                        cap["step_denies"].is_null(),
-                        "{name}: no candidate from unusable interval"
-                    );
-                    assert_eq!(diag["correlation_status"], "unavailable");
-                }
-                envelopes.push(wire);
-            }
-        }
-        // The real independent consumer reads serialized production output.
-        let answers = consume(&envelopes);
-        for (wire, recovered) in envelopes.iter().zip(answers) {
-            let cap = &wire["data"]["sandbox_log_capture"];
-            let diag = &wire["data"]["runner_sandbox_diagnostics"];
-            assert_eq!(recovered["capture"], *cap);
-            assert_eq!(recovered["window"], cap["window"]);
-            assert_eq!(recovered["events"], cap["deny_events"]);
-            assert_eq!(recovered["capture_status"], cap["capture_status"]);
-            assert_eq!(recovered["diagnostics"], *diag);
-            assert_eq!(recovered["correlation_status"], diag["correlation_status"]);
-            if cap["capture_status"] == "captured" {
-                assert_eq!(recovered["candidates"][0]["event"], events[0]);
-                assert_eq!(
-                    recovered["candidates"][0]["candidate_step_ids"],
-                    json!(["s"])
-                );
-            } else {
-                assert!(recovered["candidates"].is_null());
-                assert_eq!(recovered["association_reporting"], "not_reported");
-            }
-        }
-    }
-
-    // Fresh-read log association through observer parsing, assembly,
-    // serialization and the independent consumer. Each fresh open failed with
-    // EPERM and its query names another operation and target. Expected capture,
-    // correlation and association values are literals from the documented
-    // contract; none is derived from the matcher or an operation mapping.
-    fn fresh_read_action(id: &str, action: &str) -> Value {
-        json!({"step_id": id,
-            "sandbox_check": {"operation": "file-write-data", "filter": {"kind": "path", "value": "/query"}},
-            "attempt": {"kind": "file", "action": action, "target": "/attempt"}})
-    }
-
-    fn fresh_read_event(pid: i32, operation: &str, path: &str) -> Value {
-        json!({"pid": pid, "process": "pw-probe-runner", "operation": operation, "path": path,
-            "raw_line": format!("fixture {pid} {operation} {path}")})
-    }
-
-    /// One fresh-read step `s`, submitted through `probe_plan` or one phase.
-    fn fresh_read_fixture(phased: bool) -> (Value, Value) {
-        let mut step = fresh_open_permission_failure("s", "/attempt");
-        let request = if phased {
-            step["phase_id"] = json!("fresh");
-            json!({"phases": [{"phase_id": "fresh", "actions": [fresh_read_action("s", "read_fresh")]}]})
-        } else {
-            json!({"probe_plan": [fresh_read_action("s", "read_fresh")]})
-        };
-        (request, reply_with("ok", None, vec![step]))
-    }
-
-    /// The open-read step with its query moved to the fresh-read fixture's
-    /// separate scope.
-    fn open_read_with_separate_query(id: &str) -> Value {
-        let mut step = step(id, "open_read", "/attempt", "permission_failure");
-        step["sandbox_check"] = query("open_write", "/query");
-        step["comparison"]["operation_relation"] = json!("different");
-        step["comparison"]["target_relation"] = json!("different_submitted");
-        step
-    }
-
-    /// Matching evidence for a submitted file attempt on `/attempt` whose reply
-    /// supplies the requested path and both host forms equal to the input.
-    fn fresh_read_evidence(id: &str, action: &str) -> Value {
-        json!({"step_id": id, "operation": "file-read-data", "operation_source": "submitted_attempt",
-            "requested_kind": "file", "requested_action": action, "path": "/attempt",
-            "path_sources": ["submitted_attempt.target", "attempt.requested_path",
-                "runner_host.after_orchestration.realpath_resolved",
-                "runner_host.after_orchestration.parent_realpath_resolved"]})
-    }
-
-    /// One serialized envelope with constructed observer output for the
-    /// requested window. `None` disables capture; the collector must not run.
-    fn fresh_read_envelope(
-        request: &Value,
-        runner: &Value,
-        log: Option<(&Value, &Value)>,
-    ) -> (Value, Value) {
-        use crate::sandbox_log::parse_observer_output;
-        use std::os::unix::process::ExitStatusExt;
-        use std::process::{ExitStatus, Output};
-
-        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
-        let observer = log.map(|(bounds, events)| {
-            let mut data = bounds.clone();
-            data["observer_schema_version"] = json!(2);
-            data["observed_deny"] = json!(!events.as_array().unwrap().is_empty());
-            data["deny_events"] = events.clone();
-            json!({"kind": "sandbox_log_observer_report",
-                "schema_version": crate::json_contract::SCHEMA_VERSION, "data": data})
-        });
-        let mut invoked = false;
-        let execution = complete_execution(execution_data(Some(runner.clone())));
-        let (result, data, exit_code) = attach_sandbox_logs(
-            execution,
-            request,
-            observer.is_none(),
-            |pid, name, requested| {
-                invoked = true;
-                assert_eq!((pid, name), (42, "pw-probe-runner"));
-                assert_eq!(requested, window);
-                let out = Output {
-                    status: ExitStatus::from_raw(0),
-                    stdout: serde_json::to_vec(observer.as_ref().unwrap()).unwrap(),
-                    stderr: vec![],
-                };
-                Ok(parse_observer_output(&out, requested))
-            },
-        );
-        assert_eq!(
-            invoked,
-            observer.is_some(),
-            "collector runs only with capture enabled"
-        );
-        assert_eq!(exit_code, 0);
-        let text = json_contract::render_envelope("run", result, &data).unwrap();
-        (
-            serde_json::from_str(&text).unwrap(),
-            observer.unwrap_or(Value::Null),
-        )
-    }
-
-    /// Execution evidence that no log variant may change.
-    fn assert_fresh_read_execution(wire: &Value, runner: &Value, baseline: &[u8], name: &str) {
-        assert_eq!(wire["result"]["ok"], true, "{name}");
-        assert_eq!(wire["result"]["exit_code"], 0, "{name}");
-        assert_eq!(wire["result"]["normalized_outcome"], "ok", "{name}");
-        assert_eq!(wire["data"]["runner_result"], *runner, "{name}");
-        assert_eq!(
-            wire["data"]["runner_result"]["runner_subprocess"]["pid"], 42,
-            "{name}"
-        );
-        for step in wire["data"]["runner_result"]["steps"].as_array().unwrap() {
-            let attempt = &step["attempt"];
-            if attempt["requested_action"] == "read_fresh" {
-                assert_eq!(
-                    attempt["fresh_read"],
-                    json!({"open_rc": -1, "open_errno": 1})
-                );
-                assert_eq!(
-                    (&attempt["rc"], &attempt["errno"], &attempt["outcome"]),
-                    (&json!(-1), &json!(1), &json!("read_failed"))
-                );
-            }
-            assert_eq!(step["comparison"]["observation"], "permission_failure");
-            assert_eq!(step["comparison"]["observation_basis"], "permission_errno");
-        }
-        let diag = &wire["data"]["runner_sandbox_diagnostics"];
-        assert_eq!(diag["process_disposition"], "clean_exit", "{name}");
-        assert!(diag["termination_cause"].is_null(), "{name}");
-        assert_eq!(
-            execution_bytes(wire),
-            baseline,
-            "execution changed under {name}"
-        );
-    }
-
-    /// Capture admission, window and retained evidence, checked apart from
-    /// any candidate.
-    fn assert_fresh_read_capture(
-        wire: &Value,
-        observer: &Value,
-        status: &str,
-        events: &Value,
-        name: &str,
-    ) {
-        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
-        let cap = &wire["data"]["sandbox_log_capture"];
-        assert_eq!(cap["capture_status"], status, "{name}");
-        assert_eq!(
-            cap["observer"], *observer,
-            "{name}: admitted observer reply retained"
-        );
-        assert_eq!(cap["observer"]["data"]["observer_schema_version"], 2);
-        assert_eq!(cap["window"]["started_at_unix_ms"], 1_000, "{name}");
-        assert_eq!(cap["window"]["ended_at_unix_ms"], 2_500, "{name}");
-        assert_eq!(cap["window"]["start"], json!(window.start), "{name}");
-        assert_eq!(cap["window"]["end"], json!(window.end), "{name}");
-        assert_eq!(cap["deny_events"], *events, "{name}: events retained");
-        assert_eq!(
-            cap["observed_deny"],
-            !events.as_array().unwrap().is_empty(),
-            "{name}"
-        );
-    }
-
-    /// The relevant event through the whole path. Capture, retained evidence,
-    /// execution and consumer validation come first; the candidate assertion
-    /// carries the registered red message.
-    fn assert_fresh_read_candidates(
-        request: &Value,
-        runner: &Value,
-        expected: Value,
-        missing_message: &str,
-    ) {
-        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
-        let good = json!({"start": window.start, "end": window.end, "last": null});
-        let events = json!([fresh_read_event(42, "file-read-data", "/attempt")]);
-        let (disabled, _) = fresh_read_envelope(request, runner, None);
-        let (wire, observer) = fresh_read_envelope(request, runner, Some((&good, &events)));
-        assert_fresh_read_execution(&wire, runner, &execution_bytes(&disabled), "relevant");
-        assert_fresh_read_capture(&wire, &observer, "captured", &events, "relevant");
-        let diag = &wire["data"]["runner_sandbox_diagnostics"];
-        assert_eq!(diag["correlation_status"], "pid_match");
-        let answers = consume(&[disabled, wire.clone()]);
-        let cap = &wire["data"]["sandbox_log_capture"];
-        assert_eq!(
-            cap["step_denies"][0]["candidate_step_ids"], expected[0]["candidate_step_ids"],
-            "{missing_message}"
-        );
-        assert_eq!(cap["step_denies"], expected, "exact association list");
-        assert_eq!(diag["permission_failures_without_record"], json!([]));
-        let recovered = &answers[1];
-        assert_eq!(recovered["correlation_status"], "pid_match");
-        assert_eq!(recovered["permission_failures_without_record"], json!([]));
-        assert_eq!(recovered["events"], events);
-        let mut resolved = expected;
-        resolved[0]["event"] = events[0].clone();
-        assert_eq!(recovered["candidates"], resolved);
-    }
-
-    #[test]
-    fn fresh_read_candidate_survives_probe_plan_assembly() {
-        let (request, runner) = fresh_read_fixture(false);
-        assert_fresh_read_candidates(
-            &request,
-            &runner,
-            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
-                "matching_evidence": [fresh_read_evidence("s", "read_fresh")]}]),
-            "read_fresh red [envelope, probe_plan]: the relevant event names no candidate for s",
-        );
-    }
-
-    #[test]
-    fn fresh_read_candidate_survives_phased_assembly() {
-        let (request, runner) = fresh_read_fixture(true);
-        assert_fresh_read_candidates(
-            &request,
-            &runner,
-            json!([{"event_index": 0, "candidate_step_ids": ["s"], "association": "candidate",
-                "matching_evidence": [fresh_read_evidence("s", "read_fresh")]}]),
-            "read_fresh red [envelope, phases]: the relevant event names no candidate for s",
-        );
-    }
-
-    #[test]
-    fn repeated_fresh_reads_share_one_ambiguous_event() {
-        // Neither the event nor phase ownership identifies one occurrence.
-        let request = json!({"phases": [
-            {"phase_id": "earlier", "actions": [fresh_read_action("s1", "read_fresh")]},
-            {"phase_id": "later", "actions": [fresh_read_action("s2", "read_fresh")]}
-        ]});
-        let mut steps = vec![
-            fresh_open_permission_failure("s1", "/attempt"),
-            fresh_open_permission_failure("s2", "/attempt"),
-        ];
-        steps[0]["phase_id"] = json!("earlier");
-        steps[1]["phase_id"] = json!("later");
-        assert_fresh_read_candidates(
-            &request,
-            &reply_with("ok", None, steps),
-            json!([{"event_index": 0, "candidate_step_ids": ["s1", "s2"], "association": "ambiguous",
-                "matching_evidence": [fresh_read_evidence("s1", "read_fresh"),
-                    fresh_read_evidence("s2", "read_fresh")]}]),
-            "read_fresh red [envelope, repeated phases]: the relevant event names neither s1 nor s2",
-        );
-    }
-
-    #[test]
-    fn open_read_and_fresh_read_share_one_ambiguous_event() {
-        let request = json!({"probe_plan": [
-            fresh_read_action("o", "open_read"),
-            fresh_read_action("f", "read_fresh")
-        ]});
-        let steps = vec![
-            open_read_with_separate_query("o"),
-            fresh_open_permission_failure("f", "/attempt"),
-        ];
-        assert_fresh_read_candidates(
-            &request,
-            &reply_with("ok", None, steps),
-            json!([{"event_index": 0, "candidate_step_ids": ["o", "f"], "association": "ambiguous",
-                "matching_evidence": [fresh_read_evidence("o", "open_read"),
-                    fresh_read_evidence("f", "read_fresh")]}]),
-            "read_fresh red [envelope, mixed open_read]: the relevant event names o but not f",
-        );
-    }
-
-    #[test]
-    fn fresh_read_absent_irrelevant_and_unusable_log_evidence_stay_distinct() {
-        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
-        let good = json!({"start": window.start, "end": window.end, "last": null});
-        let mut wrong = good.clone();
-        wrong["start"] = json!("1970-01-01 00:00:02+0000");
-        // (name, bounds and events, capture status, correlation status,
-        // step_denies, permission_failures_without_record)
-        let rows = [
-            (
-                "empty",
-                Some((&good, json!([]))),
-                "captured",
-                "no_match",
-                json!([]),
-                json!(["s"]),
-            ),
-            (
-                "other_pid",
-                Some((
-                    &good,
-                    json!([fresh_read_event(99, "file-read-data", "/attempt")]),
-                )),
-                "captured",
-                "no_match",
-                json!([]),
-                json!(["s"]),
-            ),
-            (
-                "unrelated_operation",
-                Some((
-                    &good,
-                    json!([fresh_read_event(42, "file-read-metadata", "/attempt")]),
-                )),
-                "captured",
-                "pid_match",
-                json!([]),
-                json!(["s"]),
-            ),
-            (
-                "unrelated_path",
-                Some((
-                    &good,
-                    json!([fresh_read_event(42, "file-read-data", "/unrelated")]),
-                )),
-                "captured",
-                "pid_match",
-                json!([]),
-                json!(["s"]),
-            ),
-            (
-                "wrong_window",
-                Some((
-                    &wrong,
-                    json!([fresh_read_event(42, "file-read-data", "/attempt")]),
-                )),
-                "window_mismatch",
-                "unavailable",
-                Value::Null,
-                Value::Null,
-            ),
-            (
-                "disabled",
-                None,
-                "",
-                "not_attempted",
-                Value::Null,
-                Value::Null,
-            ),
-        ];
-        for phased in [false, true] {
-            let (request, runner) = fresh_read_fixture(phased);
-            let (disabled, _) = fresh_read_envelope(&request, &runner, None);
-            let baseline = execution_bytes(&disabled);
-            let mut envelopes = Vec::new();
-            for (name, log, status, correlation, step_denies, missing) in &rows {
-                let (wire, observer) =
-                    fresh_read_envelope(&request, &runner, log.as_ref().map(|(b, e)| (*b, e)));
-                assert_fresh_read_execution(&wire, &runner, &baseline, name);
-                let cap = &wire["data"]["sandbox_log_capture"];
-                let diag = &wire["data"]["runner_sandbox_diagnostics"];
-                match log {
-                    Some((_, events)) => {
-                        assert_fresh_read_capture(&wire, &observer, status, events, name);
-                        assert_eq!(cap["step_denies"], *step_denies, "{name}");
-                    }
-                    None => assert!(cap.is_null(), "{name}: no capture object"),
-                }
-                assert_eq!(diag["correlation_status"], *correlation, "{name}");
-                assert_eq!(
-                    diag["permission_failures_without_record"], *missing,
-                    "{name}"
-                );
-                envelopes.push(wire);
-            }
-            let answers = consume(&envelopes);
-            for ((name, log, status, correlation, step_denies, missing), recovered) in
-                rows.iter().zip(&answers)
-            {
-                assert_eq!(recovered["correlation_status"], *correlation, "{name}");
-                assert_eq!(
-                    recovered["permission_failures_without_record"], *missing,
-                    "{name}"
-                );
-                assert_eq!(recovered["candidates"], *step_denies, "{name}");
-                match log {
-                    Some((_, events)) => {
-                        assert_eq!(recovered["capture_status"], *status, "{name}");
-                        assert_eq!(recovered["events"], *events, "{name}");
-                    }
-                    None => {
-                        assert_eq!(recovered["capture_status"], "not_reported");
-                        assert!(recovered["events"].is_null());
-                    }
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn padded_records_survive_assembly_and_consumer_recovery() {
-        use crate::sandbox_log::{observer_argv, parse_observer_output};
-        use std::process::Command;
-
-        // Native permission failures and expected event subsets are specified
-        // independently of the timestamp-selection fixture and matching code.
-        let paths = [
-            "/before",
-            "/lower-bound",
-            "/start-pad",
-            "/start-slack",
-            "/early",
-            "/short-tail",
-            "/short-pad",
-            "/short-bound",
-            "/late",
-            "/end-slack",
-            "/end-pad",
-            "/upper-bound",
-            "/after",
-        ];
-        let plan: Vec<_> = paths
-            .iter()
-            .map(|path| {
-                json!({"step_id": path,
-            "attempt": {"kind":"file", "action":"open_read", "target":path}})
-            })
-            .collect();
-        let request = json!({"probe_plan":plan});
-        let runner = reply_with(
-            "ok",
-            None,
-            paths
-                .iter()
-                .map(|path| step(path, "open_read", path, "permission_failure"))
-                .collect(),
-        );
-        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../tests/fixtures/deny_capture/observer.py");
-        let mut envelopes = Vec::new();
-        for (start, end, expected) in [
-            (
-                1_999,
-                22_001,
-                vec![
-                    "/lower-bound",
-                    "/start-pad",
-                    "/start-slack",
-                    "/early",
-                    "/short-tail",
-                    "/short-pad",
-                    "/short-bound",
-                    "/late",
-                    "/end-slack",
-                    "/end-pad",
-                    "/upper-bound",
-                ],
-            ),
-            (
-                1_999,
-                2_001,
-                vec![
-                    "/lower-bound",
-                    "/start-pad",
-                    "/start-slack",
-                    "/early",
-                    "/short-tail",
-                    "/short-pad",
-                    "/short-bound",
-                ],
-            ),
-            (
-                13_000,
-                23_000,
-                vec!["/late", "/end-slack", "/end-pad", "/upper-bound"],
-            ),
-            (40_000, 50_000, vec![]),
-        ] {
-            let mut execution = execution_data(Some(runner.clone()));
-            let client = execution.runner_client.as_mut().unwrap();
-            client.started_at_unix_ms = start;
-            client.ended_at_unix_ms = end;
-            let (result, data, code) = attach_sandbox_logs(
-                complete_execution(execution),
-                &request,
-                false,
-                |pid, process, window| {
-                    let argv = observer_argv("observer".into(), pid, process, &window).unwrap();
-                    let out = Command::new("/usr/bin/python3")
-                        .arg(&fixture)
-                        .args(&argv[1..])
-                        .output()
-                        .unwrap();
-                    assert!(
-                        out.status.success(),
-                        "{}",
-                        String::from_utf8_lossy(&out.stderr)
-                    );
-                    Ok(parse_observer_output(&out, window))
-                },
-            );
-            assert_eq!(code, 0);
-            let wire: Value = serde_json::from_str(
-                &json_contract::render_envelope("run", result, &data).unwrap(),
-            )
-            .unwrap();
-            assert_eq!(wire["data"]["runner_result"], runner);
-            let cap = &wire["data"]["sandbox_log_capture"];
-            assert_eq!(cap["capture_status"], "captured");
-            assert_eq!(cap["window"]["pad_seconds"], 2);
-            let events = cap["deny_events"].as_array().unwrap();
-            assert_eq!(
-                events
-                    .iter()
-                    .map(|e| e["path"].as_str().unwrap())
-                    .collect::<Vec<_>>(),
-                expected
-            );
-            assert_eq!(cap["observer"]["data"]["deny_events"], cap["deny_events"]);
-            let candidates = cap["step_denies"].as_array().unwrap();
-            assert_eq!(candidates.len(), expected.len());
-            for (index, path) in expected.iter().enumerate() {
-                assert_eq!(candidates[index]["event_index"], index);
-                assert_eq!(candidates[index]["candidate_step_ids"], json!([path]));
-                assert_eq!(candidates[index]["association"], "candidate");
-                assert_eq!(candidates[index]["matching_evidence"][0]["path"], *path);
-            }
-            let diag = &wire["data"]["runner_sandbox_diagnostics"];
-            assert_eq!(
-                diag["correlation_status"],
-                if expected.is_empty() {
-                    "no_match"
-                } else {
-                    "pid_match"
-                }
-            );
-            assert_eq!(
-                diag["permission_failures_without_record"],
-                json!(
-                    paths
-                        .iter()
-                        .filter(|p| !expected.contains(p))
-                        .collect::<Vec<_>>()
-                )
-            );
-            envelopes.push(wire);
-        }
-        let answers = consume(&envelopes);
-        for (wire, recovered) in envelopes.iter().zip(answers) {
-            let cap = &wire["data"]["sandbox_log_capture"];
-            assert_eq!(recovered["capture"], *cap);
-            assert_eq!(recovered["window"], cap["window"]);
-            assert_eq!(recovered["events"], cap["deny_events"]);
-            assert_eq!(
-                recovered["diagnostics"],
-                wire["data"]["runner_sandbox_diagnostics"]
-            );
-            let candidates = recovered["candidates"].as_array().unwrap();
-            assert_eq!(
-                candidates.len(),
-                cap["step_denies"].as_array().unwrap().len()
-            );
-            for (candidate, original) in candidates
-                .iter()
-                .zip(cap["step_denies"].as_array().unwrap())
-            {
-                assert_eq!(
-                    candidate["candidate_step_ids"],
-                    original["candidate_step_ids"]
-                );
-                assert_eq!(
-                    candidate["matching_evidence"],
-                    original["matching_evidence"]
-                );
-                assert_eq!(
-                    candidate["event"],
-                    cap["deny_events"][original["event_index"].as_u64().unwrap() as usize]
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn incomplete_attempt_retains_independent_prediction_and_event_beside_the_record() {
-        let runner = reply_with(
-            "runner_failed",
-            Some(9),
-            vec![incomplete_step("s", "open_write", "/attempt")],
-        );
-        let before = runner.clone();
-        let plan = [json!({"step_id": "s", "attempt": {
-            "kind": "file", "action": "open_write", "target": "/attempt"}})];
-        let cap = capture_with("captured", vec![event(Some(42))]);
-        let associations = match_step_denies(
-            runner["steps"].as_array().unwrap(),
-            &plan,
-            cap.deny_events.as_ref().unwrap(),
-            Some(42),
-        );
-        assert_eq!(associations.len(), 1);
-        assert_eq!(associations[0].event_index, 0);
-        assert_eq!(associations[0].candidate_step_ids, ["s"]);
-        assert_eq!(associations[0].association, "candidate");
-        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-        // The denial does not explain the signal; the record's witnessed host
-        // cleanup does, and the incomplete slot is a lifecycle fact beside it.
-        assert_eq!(diag.execution.process_disposition, "signaled");
-        assert_eq!(
-            diag.execution.termination_cause,
-            Some("host_sentinel_deadline")
-        );
-        assert_eq!(diag.execution.disposition_integrity, Some("valid"));
-        assert_eq!(diag.logs.correlation_status, "pid_match");
-        assert_eq!(runner, before);
-        assert_eq!(cap.deny_events.as_ref().unwrap().len(), 1);
-        assert_eq!(
-            runner["steps"][0]["comparison"]["limitations"],
-            json!(["attempt:lifecycle_unresolved"])
-        );
-    }
-
-    #[test]
-    fn ordinary_denial_and_unrelated_signal_remain_separate_observations() {
-        let runner = worker("runner_failed", Some(9));
-        let original = runner.clone();
-        let cap = capture_with("captured", vec![event(Some(99)), event(Some(42))]);
-        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-        assert_eq!(diag.execution.process_disposition, "signaled");
-        assert_eq!(
-            diag.execution.termination_cause,
-            Some("host_sentinel_deadline")
-        );
-        assert_eq!(diag.logs.correlation_status, "pid_match");
-        assert_eq!(cap.deny_events.as_ref().unwrap().len(), 2);
-        assert_eq!(runner, original);
-    }
-
-    #[test]
-    fn capture_conditions_do_not_change_execution_status_or_cause() {
-        let runner = worker("runner_failed", Some(9));
-        let original = runner.clone();
-        for (disabled, status, expected_correlation) in [
-            (true, "captured", "not_attempted"),
-            (false, "blocked", "unavailable"),
-            (false, "error", "unavailable"),
-            (false, "requested_unavailable", "unavailable"),
-            (false, "captured", "no_match"),
-        ] {
-            let cap = capture_with(status, vec![]);
-            let diag = diagnostics_with_logs(Some(&runner), disabled, Some(&cap));
-            assert_eq!(diag.logs.correlation_status, expected_correlation);
-            assert_eq!(diag.execution.process_disposition, "signaled");
-            assert_eq!(
-                diag.execution.termination_cause,
-                Some("host_sentinel_deadline")
-            );
-            assert_eq!(runner, original);
-        }
-    }
-
-    #[test]
-    fn refused_host_attempts_never_extend_the_admitted_log_window() {
-        let mut data = execution_data(Some(worker("ok", None)));
-        let client = data.runner_client.as_mut().unwrap();
-        client.started_at_unix_ms = 50_000;
-        client.ended_at_unix_ms = 51_000;
-        data.runner_acquisition = vec![crate::runner_acquisition::tests::shape_attempt()];
-        let mut called = false;
-        attach_sandbox_logs(
-            complete_execution(data),
-            &json!({}),
-            false,
-            |pid, _, window| {
-                called = true;
-                assert_eq!(pid, 42);
-                assert_eq!(window.started_at_unix_ms, 50_000);
-                assert_eq!(window.ended_at_unix_ms, 51_000);
-                Ok(capture_with("captured", vec![]))
-            },
-        );
-        assert!(called);
-    }
-
-    #[test]
-    fn successful_run_keeps_correlations_without_a_termination_cause() {
-        let runner = worker("ok", None);
-        let cap = capture_with("captured", vec![event(Some(42))]);
-        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-        assert_eq!(diag.execution.process_disposition, "clean_exit");
-        assert_eq!(diag.execution.stop_reason.as_deref(), Some("done"));
-        assert_eq!(diag.logs.correlation_status, "pid_match");
-        assert_eq!(diag.execution.termination_cause, None);
-        assert_eq!(runner["normalized_outcome"], "ok");
-    }
-
-    #[test]
-    fn no_worker_never_uses_host_or_client_pid() {
-        for outcome in ["bad_request", "xpc_error", "worker_spawn_failed"] {
-            let runner =
-                json!({"pid": 42, "normalized_outcome": outcome, "runner_subprocess": null});
-            let cap = capture_with("captured", vec![event(Some(42))]);
-            let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-            assert_eq!(diag.execution.process_disposition, "no_worker");
-            assert_eq!(diag.execution.disposition_integrity, None);
-            assert_eq!(diag.logs.correlation_status, "not_attempted");
-            assert!(diag.logs.permission_failures_without_record.is_none());
-        }
-    }
-
-    #[test]
-    fn missing_mismatched_pid_and_unavailable_events_never_supply_a_correlation() {
-        let runner = worker("runner_failed", Some(9));
-        for (status, expected) in [
-            ("captured", "no_match"),
-            ("blocked", "unavailable"),
-            ("parse_error", "unavailable"),
-        ] {
-            let cap = capture_with(status, vec![event(None), event(Some(99))]);
-            let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-            assert_eq!(diag.logs.correlation_status, expected, "{status}");
-        }
-        let mut cap = capture_with("captured", vec![]);
-        cap.deny_events = None;
-        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
-        assert_eq!(diag.logs.correlation_status, "unavailable");
-        let diag = diagnostics_with_logs(Some(&runner), false, None);
-        assert_eq!(diag.logs.correlation_status, "unavailable");
     }
 
     // ---- D5: the reply version gate ----------------------------------------
@@ -3000,7 +1400,7 @@ else:
             _ => panic!("malformed version admitted"),
         }
         // The refusal envelope retains the capture and the reply unchanged, with
-        // no policy check, no log channel and no diagnostics.
+        // no policy check or diagnostics.
         let data = execution_only(specimen(), Some(7), Some(broken), Some(unsupported.clone()));
         let text = json_contract::render_envelope(
             "run",
@@ -3017,7 +1417,7 @@ else:
         );
         assert!(wire["data"]["runner_client"]["request_delivery"]["error"].is_string());
         assert!(wire["data"]["policy_check"].is_null());
-        assert!(wire["data"]["sandbox_log_capture"].is_null());
+        assert!(wire["data"].get("sandbox_log_capture").is_none());
         assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
         assert_eq!(wire["data"]["timeout_ms"], 7);
         assert_eq!(wire["result"]["exit_code"], 2);
@@ -3131,7 +1531,6 @@ else:
             "policy_check",
             "runner_client",
             "runner_result",
-            "sandbox_log_capture",
             "runner_sandbox_diagnostics",
             "timeout_ms",
         ] {
@@ -3636,8 +2035,7 @@ else:
                 value["policy"]["augments"] = json!(["unknown_augment"]);
                 let bytes = serde_json::to_vec(&value).unwrap();
                 fs::write(&request, &bytes).unwrap();
-                let observed =
-                    observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+                let observed = observe(&app, None, &[request.to_str().unwrap()]);
                 assert!(observed.calls.is_empty());
                 let (wire, code) = envelope_of(&observed.output);
                 assert_eq!(code, 1);
@@ -3672,7 +2070,7 @@ else:
             let app = synthetic_app(&root);
             let manifest_path = install_manifest(&app, ManifestState::Valid);
             let request = request_file(&root, None);
-            let observed = observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+            let observed = observe(&app, None, &[request.to_str().unwrap()]);
             assert_eq!(observed.loads, vec![manifest_path.clone()]);
             assert_eq!(observed.calls.len(), 1);
             let call = &observed.calls[0];
@@ -3716,10 +2114,10 @@ else:
                 wire["data"]["runner_client"]["request_delivery"]["bytes_written"],
                 2
             );
-            assert!(wire["data"]["sandbox_log_capture"].is_null());
+            assert!(wire["data"].get("sandbox_log_capture").is_none());
             assert_eq!(
-                wire["data"]["runner_sandbox_diagnostics"]["correlation_status"],
-                "not_attempted"
+                keys(&wire["data"]["runner_sandbox_diagnostics"]),
+                DIAGNOSTIC_KEYS
             );
             fs::remove_dir_all(&root).unwrap();
         }
@@ -3738,8 +2136,7 @@ else:
                 let app = synthetic_app(&root);
                 let manifest_path = install_manifest(&app, state);
                 let request = request_file(&root, None);
-                let observed =
-                    observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+                let observed = observe(&app, None, &[request.to_str().unwrap()]);
                 assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
                 assert!(observed.calls.is_empty(), "{label}: zero client calls");
                 let (wire, exit_code) = envelope_of(&observed.output);
@@ -3781,7 +2178,7 @@ else:
             let app = synthetic_app(&root);
             install_manifest(&app, ManifestState::Valid);
             let request = request_file(&root, None);
-            let args = [request.to_str().unwrap(), "--no-log-capture"];
+            let args = [request.to_str().unwrap()];
             let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
             for (label, reply, outcome) in [
                 (
@@ -3855,12 +2252,7 @@ else:
             let observed = observe(
                 &app,
                 Some(&registry),
-                &[
-                    request.to_str().unwrap(),
-                    "--no-log-capture",
-                    "--timeout-ms",
-                    "7000",
-                ],
+                &[request.to_str().unwrap(), "--timeout-ms", "7000"],
             );
             assert_eq!(observed.loads, vec![manifest_path.clone()]);
             assert_eq!(observed.calls.len(), 1);
@@ -3952,11 +2344,7 @@ else:
                 let record = record(&bundle, &["com.apple.security.cs.allow-jit"]);
                 let registry = registry_fixture(&root, vec![record.clone()]);
                 let request = byoxpc_request(&root, &["com.apple.security.cs.allow-jit"]);
-                let observed = observe(
-                    &app,
-                    Some(&registry),
-                    &[request.to_str().unwrap(), "--no-log-capture"],
-                );
+                let observed = observe(&app, Some(&registry), &[request.to_str().unwrap()]);
                 assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
                 // The valid external runner receives the held request despite
                 // the manifest failure.
@@ -4042,11 +2430,7 @@ else:
             ];
             for (label, runner, expected) in cases {
                 let request = request_file(&root, Some(runner));
-                let observed = observe(
-                    &app,
-                    Some(&registry),
-                    &[request.to_str().unwrap(), "--no-log-capture"],
-                );
+                let observed = observe(&app, Some(&registry), &[request.to_str().unwrap()]);
                 assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
                 assert!(observed.calls.is_empty(), "{label}");
                 let (wire, exit_code) = envelope_of(&observed.output);
@@ -4101,7 +2485,7 @@ else:
                 ("no path", vec![], "missing <request.json>"),
                 (
                     "absent file",
-                    vec![missing.to_str().unwrap(), "--no-log-capture"],
+                    vec![missing.to_str().unwrap()],
                     "request.json not found",
                 ),
             ] {
@@ -4132,19 +2516,14 @@ else:
     // records its shape per object path; the runner reply inside it is opaque
     // here because `response_shape.json` records that shape. The nested
     // helper envelopes are hand-built here and checked against the same golden
-    // by the helpers' own tests (`sandbox-log-observer.rs`, `sbpl-check.rs`).
+    // by the helper's own tests (`sbpl-check.rs`).
     mod envelope_shape {
         use super::*;
         use crate::dossier::{AppProvenance, Augmentation, BinaryRecord, Imports, PolicyDossier};
         use crate::evidence::{VerifyMismatch, VerifyReport};
-        use crate::log_capture::{
-            Boundary, CleanupObservation, CollectionBudget, Cutoff, ProcessObservation,
-            StreamObservation, Supervision, SyscallObservation, TimeoutSource,
-        };
         use crate::policy_check::PolicyCheckCapture;
         use crate::runner_manager::{RunnerEntitlements, RunnerSignature};
         use crate::runner_select::RunnerTarget;
-        use crate::sandbox_log::{SandboxLogMatchEvidence, SandboxLogStepDeny, SandboxLogWindow};
         use crate::sbpl_imports::ImportRecord;
         use crate::utils::JsonOutputCapture;
 
@@ -4177,81 +2556,6 @@ else:
             }
         }
 
-        fn stream() -> StreamObservation {
-            StreamObservation {
-                limit_bytes: 1024,
-                bytes_read: 2,
-                bytes_retained: 2,
-                eof: true,
-                truncated: false,
-                read_error: Some("constructed".into()),
-            }
-        }
-
-        fn cutoff() -> Cutoff {
-            Cutoff {
-                reason: "deadline".into(),
-                stream: Some("stdout".into()),
-                limit: Some(1024),
-                observed: Some(1025),
-                detail: Some("constructed".into()),
-            }
-        }
-
-        fn supervision(boundary: Boundary) -> Supervision {
-            Supervision {
-                boundary,
-                budget: CollectionBudget {
-                    timeout_ms: 10_000,
-                    timeout_source: TimeoutSource::Default,
-                    started_monotonic_ns: 1,
-                    deadline_monotonic_ns: 2,
-                },
-                reserve_ms: 1_000,
-                elapsed_ms: 150,
-                cutoff: Some(cutoff()),
-                stdout: stream(),
-                stderr: stream(),
-                process: ProcessObservation {
-                    pid: Some(42),
-                    exit_observed: true,
-                    reaped: true,
-                    exit_code: Some(0),
-                    term_signal: Some(9),
-                    wait_error: Some("constructed".into()),
-                },
-                cleanup: CleanupObservation {
-                    scope: "process_group".into(),
-                    target: Some(42),
-                    grace_ms: 1_000,
-                    ownership: "owned".into(),
-                    signal: Some(9),
-                    signal_result: Some(SyscallObservation {
-                        rc: -1,
-                        errno: Some(1),
-                    }),
-                    signal_before_reap: true,
-                    ownership_released: true,
-                    group_probe: Some(SyscallObservation {
-                        rc: -1,
-                        errno: Some(3),
-                    }),
-                    outcome: "group_absent".into(),
-                    detail: Some("constructed".into()),
-                },
-            }
-        }
-
-        fn deny_event() -> SandboxDenyEvent {
-            SandboxDenyEvent {
-                pid: Some(42),
-                process: Some("pw-probe-runner".into()),
-                operation: Some("file-read-data".into()),
-                path: Some("/private/etc/hosts".into()),
-                raw_line: Some("constructed deny line".into()),
-            }
-        }
-
         fn import_record() -> ImportRecord {
             ImportRecord {
                 name: "system.sb".into(),
@@ -4266,26 +2570,6 @@ else:
         fn nested_envelope(kind: &str, data: Value) -> Value {
             let text = json_contract::render_envelope(kind, full_result(), &data).unwrap();
             serde_json::from_str(&text).unwrap()
-        }
-
-        /// The observer's report with every field present, in the frame the
-        /// observer prints; `sandbox-log-observer.rs` compares its own emitted
-        /// shape with the golden subtree this fixture records.
-        fn observer_report() -> Value {
-            nested_envelope(
-                "sandbox_log_observer_report",
-                json!({
-                    "observer_schema_version": 2, "mode": "show", "duration_ms": 1,
-                    "stop_on_pid_exit": false, "plan_id": "p", "row_id": "r", "correlation_id": "c",
-                    "pid": 42, "process_name": "pw-probe-runner", "predicate": "constructed",
-                    "start": "2026-01-01 00:00:00+0000", "end": "2026-01-01 00:00:05+0000", "last": "1m",
-                    "log_rc": 0, "log_stdout": "", "log_stderr": "", "log_error": "constructed",
-                    "blocked_reason": "constructed", "log_truncated": false, "observed_lines": 1,
-                    "observed_deny": true,
-                    "deny_events": [serde_json::to_value(deny_event()).unwrap()],
-                    "collection": serde_json::to_value(supervision(Boundary::LogShow)).unwrap(),
-                }),
-            )
         }
 
         /// The fallback compilation's envelope with every field present;
@@ -4459,54 +2743,15 @@ else:
                         "expected_schema": json_contract::REQUEST_SCHEMA_VERSION}),
                     ),
                 },
-                sandbox_log_capture: Some(SandboxLogCapture {
-                    window: SandboxLogWindow {
-                        kind: "runner_client_span",
-                        started_at_unix_ms: 1_000,
-                        ended_at_unix_ms: 2_500,
-                        pad_seconds: 2,
-                        start: Some("1969-12-31 23:59:59+0000".into()),
-                        end: Some("1970-01-01 00:00:05+0000".into()),
-                    },
-                    capture_status: "captured".into(),
-                    tool_exit_code: 0,
-                    blocked_reason: Some("constructed".into()),
-                    output: capture(crate::utils::OBSERVER_CAPTURE_BYTES),
-                    observer: Some(observer_report()),
-                    observed_deny: Some(true),
-                    deny_events: Some(vec![deny_event()]),
-                    step_denies: Some(vec![SandboxLogStepDeny {
-                        event_index: 0,
-                        candidate_step_ids: vec!["s".into()],
-                        association: "candidate".into(),
-                        matching_evidence: vec![SandboxLogMatchEvidence {
-                            step_id: "s".into(),
-                            operation: "file-read-data".into(),
-                            operation_source: "submitted_attempt",
-                            requested_kind: "file".into(),
-                            requested_action: "open_read".into(),
-                            path: "/private/etc/hosts".into(),
-                            path_sources: vec!["submitted_attempt.target".into()],
-                        }],
-                    }]),
-                    supervision: Some(supervision(Boundary::Observer)),
-                    processing_cutoff: Some(cutoff()),
-                }),
-                runner_sandbox_diagnostics: Some(RunnerSandboxDiagnostics {
-                    execution: RunnerExecutionDiagnostics {
-                        process_disposition: "clean_exit",
-                        termination_cause: Some("host_sentinel_deadline"),
-                        stop_reason: Some("done".into()),
-                        disposition_integrity: Some("valid"),
-                        disposition_issues: vec![integrity_issue(
-                            "missing_record",
-                            "constructed".into(),
-                        )],
-                    },
-                    logs: RunnerLogDiagnostics {
-                        correlation_status: "pid_match",
-                        permission_failures_without_record: Some(vec!["s".into()]),
-                    },
+                runner_sandbox_diagnostics: Some(RunnerExecutionDiagnostics {
+                    process_disposition: "clean_exit",
+                    termination_cause: Some("host_sentinel_deadline"),
+                    stop_reason: Some("done".into()),
+                    disposition_integrity: Some("valid"),
+                    disposition_issues: vec![integrity_issue(
+                        "missing_record",
+                        "constructed".into(),
+                    )],
                 }),
             };
             data.execution.runner_acquisition[0].runner_client =

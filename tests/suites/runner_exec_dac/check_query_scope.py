@@ -91,7 +91,7 @@ def main():
             spec = {'schema_version': 5, 'specimen_id': 'native-exec-' + name,
                     'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)' + policy},
                     'probe_plan': steps}
-            with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as run:
+            with RunCapture(pw, out / name, spec, cli_args=[]) as run:
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']

@@ -136,11 +136,8 @@ Combined faults must remain visible; reordering steps must add only the order
 diagnostic without losing actual failures or inventing others. Declare supported
 skips narrowly and validate the remaining evidence before taking them.
 
-Default cases must not generate or download replacement fixtures. In particular,
-`witness_contract/log_query_predicate_archive` requires the committed
-[archive and manifest](fixtures/deny_capture/README.md); missing data or
-incompatible readers must fail explicitly. Follow fixture-owned build and
-refresh procedures when deliberately updating inputs.
+Default cases must not generate or download replacement fixtures. Follow
+fixture-owned build and refresh procedures when deliberately updating inputs.
 
 ## Evaluate and reuse evidence
 

@@ -44,9 +44,7 @@ the run times out. Expectations are supplied by the test, not PW's response.
 - An explicit `runner_result.steps == []` and no validator subprocess metadata.
   Optional subprocess fields may be absent or null.
 
-The run uses `--no-log-capture`: the test reads only `runner_result`
-fields, and skipping the post-run `log show` scan keeps it independent of the
-host's unified-log archive size. The 20-second client timeout and 25-second
+The 20-second client timeout and 25-second
 harness wait are outer bounds, separate from the worker deadline under test.
 
 ## Fixtures

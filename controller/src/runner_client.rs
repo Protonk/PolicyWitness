@@ -96,8 +96,7 @@ pub fn run_pw_runner_client(
 }
 
 /// The recorded span brackets the child's whole lifetime: `started` is taken
-/// before the spawn and `ended` after the exit is collected. Deny-log capture
-/// requests this wall-clock span and rejects reversed endpoints. Two readings
+/// before the spawn and `ended` after the exit is collected. Two readings
 /// do not establish clock continuity throughout execution.
 fn run_client_stdin(
     argv: &[OsString],
@@ -360,8 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn backwards_clock_readings_are_retained_without_a_log_scan() {
-        use crate::sandbox_log::{SandboxLogWindow, capture_sandbox_logs, observer_argv};
+    fn backwards_clock_readings_are_retained() {
         let argv = vec![OsString::from("/usr/bin/true")];
         for (started, ended) in [(5_000, 4_000), (5_999, 5_001)] {
             let mut readings = [started, ended].into_iter();
@@ -374,19 +372,6 @@ mod tests {
                 (started, ended)
             );
             assert_eq!(run.exit_code, 0);
-            let window =
-                SandboxLogWindow::runner_client_span(run.started_at_unix_ms, run.ended_at_unix_ms);
-            assert_eq!(window.pad_seconds, 2);
-            assert!(window.start.is_none() && window.end.is_none());
-            assert!(observer_argv("observer".into(), 42, "pw-probe-runner", &window).is_err());
-            // A unit-test binary has no bundle helper to resolve. This must
-            // return without even resolving, let alone spawning, the observer.
-            let capture = capture_sandbox_logs(42, "pw-probe-runner", window).unwrap();
-            assert_eq!(capture.capture_status, "invalid_window");
-            assert!(capture.observer.is_none());
-            assert!(capture.deny_events.is_none() && capture.observed_deny.is_none());
-            assert!(capture.output.stdout_bytes_received.is_none());
-            assert!(capture.output.stderr.contains("wall clock moved backwards"));
         }
     }
 

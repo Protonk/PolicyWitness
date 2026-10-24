@@ -46,7 +46,7 @@ faults, child disposition and the file change have their own observations; their
 coexistence with the transcript records establishes no causal relationship.
 
 Rust receiver controls use real subprocess bytes at the production parsing
-functions for runner-client, sbpl-check and log-observer output. They preserve
+functions for runner-client and sbpl-check output. They preserve
 both JSON diagnostics alongside a fixture-supplied failed report and contrast that
 with locally truncated valid JSON. They do not force a real XPC loss or modify
 shipped helpers to manufacture failures.

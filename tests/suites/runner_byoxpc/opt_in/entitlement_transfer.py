@@ -33,7 +33,7 @@ def run(name, service, target, *, required=None, code=0):
     path = out / (name + '.specimen.json')
     path.write_text(json.dumps(spec, indent=2) + '\n')
     before = target.read_bytes()
-    result = subprocess.run([pw, 'run', str(path), '--no-log-capture', '--timeout-ms', '30000'], capture_output=True, timeout=60, env=dict(os.environ, PW_RUNNER_REGISTRY=registries[service]))
+    result = subprocess.run([pw, 'run', str(path), '--timeout-ms', '30000'], capture_output=True, timeout=60, env=dict(os.environ, PW_RUNNER_REGISTRY=registries[service]))
     (out / (name + '.json')).write_bytes(result.stdout)
     (out / (name + '.stderr')).write_bytes(result.stderr)
     assert result.returncode == code, (name, result.returncode, result.stderr)

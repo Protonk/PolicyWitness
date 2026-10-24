@@ -51,7 +51,7 @@ def main():
             effects.record(before, work, 'before')
             effects.expect_absent(before)
             spec = specimen_for(name, helper, marker, allow_write)
-            with RunCapture(pw, work / 'run', spec, cli_args=['--no-log-capture']) as run:
+            with RunCapture(pw, work / 'run', spec, cli_args=[]) as run:
                 rc = run.wait(timeout=30)
             after = effects.snapshot(marker)
             effects.record(after, work, 'after')

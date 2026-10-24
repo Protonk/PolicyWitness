@@ -28,7 +28,7 @@ def run_cli(pw, helper, out):
     request = out / 'specimen.json'
     request.write_text(json.dumps(specimen, indent=2) + '\n')
     with (out / 'run.json').open('wb') as stdout, (out / 'pw.stderr').open('wb') as stderr:
-        run = subprocess.run([pw, 'run', str(request), '--no-log-capture', '--timeout-ms', '15000'],
+        run = subprocess.run([pw, 'run', str(request), '--timeout-ms', '15000'],
                              stdout=stdout, stderr=stderr, timeout=20)
     assert run.returncode == 0, f'CLI exited {run.returncode}'
     envelope = json.loads((out / 'run.json').read_text())

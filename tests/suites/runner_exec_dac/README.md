@@ -54,7 +54,7 @@ Native operation-set changes fail these controls for review, rather than silentl
 accepting an unsupported mapping.
 
 Run `tests/run.sh --suite runner_exec_dac` outside an automation sandbox
-(request escalation there). No `_test_overrides` or log capture is used.
+(request escalation there). No `_test_overrides` are used.
 Missing builds or failed controls fail the test.
 
 `RunCapture` retains `specimen.json`, `run.json`, `pw.stderr`, and `capture.json`

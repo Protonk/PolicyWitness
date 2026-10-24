@@ -30,7 +30,7 @@ import subprocess
 from seal_tool import fingerprint, seal as seal_paths
 
 FILES = ['Contents/MacOS/' + name for name in
-         ('policy-witness', 'pw-runner-client', 'sbpl-check', 'sandbox-log-observer')]
+         ('policy-witness', 'pw-runner-client', 'sbpl-check')]
 XPC = 'Contents/XPCServices/PWRunner.xpc'
 FILES += [XPC + '/Contents/MacOS/' + name for name in
           ('PWRunner', 'pw-probe-runner', 'sb_api_validator', 'pw-extension-issuer')]
@@ -46,7 +46,7 @@ def seal(app):
     seal_paths(app, [app, app / XPC, *(app / name for name in FILES)])
 
 
-CARGO_TARGETS = {'Contents/MacOS/policy-witness', 'Contents/MacOS/sandbox-log-observer', 'Contents/MacOS/sbpl-check'}
+CARGO_TARGETS = {'Contents/MacOS/policy-witness', 'Contents/MacOS/sbpl-check'}
 ZERO = '0' * 64
 LINKER_SIGNED = dict(status='ok', leaf=None, team=None, timestamp=False, runtime=False, adhoc=True, developer_id_chain=False)
 

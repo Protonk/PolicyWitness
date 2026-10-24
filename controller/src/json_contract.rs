@@ -1,7 +1,7 @@
 //! The envelope frame: the outer JSON object every controller-family binary
 //! prints (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
-//! `data`). `policy-witness` uses this file as a module; `sbpl-check` and
-//! `sandbox-log-observer` compile the same file in by `#[path]`, so one frame
+//! `data`). `policy-witness` uses this file as a module; `sbpl-check`
+//! includes it by `#[path]`, so one frame
 //! and one version (`SCHEMA_VERSION`) cover the family. Keys are sorted so
 //! envelopes are stable for diffing and hashing.
 
@@ -10,7 +10,7 @@ use serde_json::{Map, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 /// The accepted request contract, independent of implementation revisions.
 pub const REQUEST_SCHEMA_VERSION: u32 = 5;
 /// The one runner response schema this controller reads; any other version is refused.
@@ -124,62 +124,6 @@ pub fn render_envelope<T: Serialize>(
     serde_json::to_string_pretty(&value).map_err(|e| format!("failed to encode JSON: {e}"))
 }
 
-#[allow(dead_code)]
-pub fn render_envelope_compact<T: Serialize>(
-    kind: &str,
-    result: JsonResult,
-    data: &T,
-) -> Result<String, String> {
-    let value = envelope_value(kind, result, data)?;
-    serde_json::to_string(&value).map_err(|e| format!("failed to encode JSON: {e}"))
-}
-
-/// Bounded serialization for the optional observer report. Existing runner and
-/// helper rendering keeps its own contract. The caller also bounds its strings,
-/// arrays and metadata before constructing the envelope Value.
-#[allow(dead_code)]
-pub fn render_envelope_limited<T: Serialize>(
-    kind: &str,
-    result: JsonResult,
-    data: &T,
-    pretty: bool,
-    limit: usize,
-) -> Result<String, String> {
-    struct LimitedOutput {
-        bytes: Vec<u8>,
-        limit: usize,
-    }
-    impl std::io::Write for LimitedOutput {
-        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-            if bytes.len() > self.limit.saturating_sub(self.bytes.len()) {
-                return Err(std::io::Error::other(format!(
-                    "observer serialization_overflow: limit={}, retained={}, attempted={}",
-                    self.limit,
-                    self.bytes.len(),
-                    self.bytes.len().saturating_add(bytes.len())
-                )));
-            }
-            self.bytes.extend_from_slice(bytes);
-            Ok(bytes.len())
-        }
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-    let value = envelope_value(kind, result, data)?;
-    let mut output = LimitedOutput {
-        bytes: Vec::new(),
-        limit,
-    };
-    let serialized = if pretty {
-        serde_json::to_writer_pretty(&mut output, &value)
-    } else {
-        serde_json::to_writer(&mut output, &value)
-    };
-    serialized.map_err(|e| format!("failed to encode bounded JSON: {e}"))?;
-    String::from_utf8(output.bytes).map_err(|e| format!("JSON encoder returned invalid UTF-8: {e}"))
-}
-
 pub fn print_envelope<T: Serialize>(
     kind: &str,
     result: JsonResult,
@@ -193,13 +137,7 @@ pub fn print_envelope<T: Serialize>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::Serialize;
     use serde_json::json;
-
-    #[derive(Serialize)]
-    struct Dummy {
-        label: String,
-    }
 
     fn result_ok() -> JsonResult {
         JsonResult {
@@ -215,25 +153,13 @@ mod tests {
     }
 
     #[test]
-    fn compact_envelope_is_single_line() {
-        let payload = Dummy {
-            label: "ok".to_string(),
-        };
-        let text = render_envelope_compact("dummy", result_ok(), &payload).expect("render");
-        assert!(!text.contains('\n'));
-        let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
-        assert_eq!(parsed["kind"], "dummy");
-        assert_eq!(parsed["schema_version"], SCHEMA_VERSION);
-    }
-
-    #[test]
     fn envelope_keys_are_sorted() {
         let payload = json!({
             "z": "last",
             "m": "middle",
             "a": "first"
         });
-        let text = render_envelope_compact("dummy", result_ok(), &payload).expect("render");
+        let text = render_envelope("dummy", result_ok(), &payload).expect("render");
 
         let keys = [
             "\"build\"",
@@ -274,8 +200,8 @@ mod build_stamp_tests {
 
     #[test]
     fn every_envelope_carries_a_complete_build_stamp() {
-        let text = render_envelope_compact("dummy", tests_result_ok(), &serde_json::json!({}))
-            .expect("render");
+        let text =
+            render_envelope("dummy", tests_result_ok(), &serde_json::json!({})).expect("render");
         let parsed: Value = serde_json::from_str(&text).expect("parse");
         let build = parsed["build"].as_object().expect("build object");
         for key in ["version", "number", "describe", "commit"] {

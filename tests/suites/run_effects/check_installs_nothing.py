@@ -83,7 +83,7 @@ def main():
             'attempt': {'kind': 'file', 'action': 'open_read', 'target': '/etc/hosts'},
         }],
     }
-    with RunCapture(pw, out / 'run', spec, cli_args=['--no-log-capture']) as run:
+    with RunCapture(pw, out / 'run', spec, cli_args=[]) as run:
         rc = run.wait(timeout=30)
 
     after = inventory(pw)

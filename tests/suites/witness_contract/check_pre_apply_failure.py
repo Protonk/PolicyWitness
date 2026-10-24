@@ -62,7 +62,7 @@ def no_cause_claim(envelope):
     data = envelope['data']
     runner = data['runner_result']
     assert runner['normalized_outcome'] != 'runner_sandbox_denied', runner
-    assert data['sandbox_log_capture'] is None, 'log capture must be disabled'
+    assert 'sandbox_log_capture' not in data
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None:
         assert isinstance(diagnostics, dict), diagnostics
@@ -224,7 +224,7 @@ def main():
                 # readiness/application; it is not a compiler-failure seam.
                 request['_test_overrides'] = OVERRIDES
             capture = RunCapture(pw, out / name, request,
-                                 cli_args=['--no-log-capture', '--timeout-ms', '20000'])
+                                 cli_args=['--timeout-ms', '20000'])
             # Both runs use the same files, seeds, policy and plan. Seed them
             # before entering RunCapture (which starts the CLI on entry).
             for i, (path, seed) in enumerate(zip(paths, seeds)):
@@ -275,7 +275,7 @@ def main():
         # pre-spawn boundary as well as the published-worker pre-apply gap.
         request = dict(specimen, _test_overrides={'worker_executable_path': '/nonexistent/pw-no-worker'})
         for path, seed in zip(paths, seeds): path.write_bytes(seed)
-        with RunCapture(pw, out / 'no_worker', request, cli_args=['--no-log-capture']) as run:
+        with RunCapture(pw, out / 'no_worker', request, cli_args=[]) as run:
             rc = run.wait(timeout=15)
             after = [path.read_bytes() for path in paths]
             (run.out / 'effects.json').write_text(json.dumps({'unchanged': after == seeds}) + '\n')

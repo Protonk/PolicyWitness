@@ -58,6 +58,48 @@
       "source": "3c98b39601f2e475bfbcc7d639c6cdcff79b95af",
       "app_inventory": "artifact-integrity/before.json",
       "release": "v0.3.2"
+    },
+    {
+      "path": "runs/observer-retirement-fixtures-01",
+      "run_id": "20261024T002154Z_27c7b5d3",
+      "reason": "Live envelope-8 fixture captures after retiring unified-log collection; all five owner cases passed against the signed candidate. implementation-source.patch and new-source/ identify the dirty source; build/ preserves the build transcript and session.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/observer-retirement-final-01",
+      "run_id": "20261024T003913Z_bcbf6b3f",
+      "reason": "Live envelope-8 fixture captures after retiring unified-log collection; all final regression cases and five capture owners passed against the final signed candidate. implementation-source.patch and new-source/ identify the dirty source; build/ preserves the build transcript and session.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/observer-retirement-default-01",
+      "run_id": "20261024T002236Z_57366913",
+      "reason": "Observer retirement default battery: 194 cases passed; one stale log-timeout dossier assertion failed. The corrected assertion and final candidate passed the 22-case observer-retirement-final-01 run. That run preserves acceptance-review.json and source snapshots explaining evidence reuse.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/observer-retirement-build-controls-01",
+      "run_id": "20261024T004246Z_22248f9e",
+      "reason": "Observer retirement: signed-artifact controls, all 21 build-order controls and refreshed-fixture readers passed. Refusal controls stopped at a one-item tuple error in their helper inventory, corrected before observer-retirement-refusals-02/03.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/observer-retirement-refusals-02",
+      "run_id": "20261024T004655Z_15d8ce55",
+      "reason": "Observer retirement refusal controls: retained environmental failure. Inherited LC_ALL=C.UTF-8 defeated the intended LANG=C coercion; a direct probe established this and observer-retirement-refusals-03 reran without that override.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/observer-retirement-refusals-03",
+      "run_id": "20261024T004922Z_dcdbfd3c",
+      "reason": "Observer retirement: complete build refusal, state-sequence and guard-mutation controls passed with LC_ALL unset so the intentional LANG=C coercion control can operate. Final candidate unchanged.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

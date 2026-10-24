@@ -39,7 +39,7 @@ def main():
                         attempt=dict(kind='file', action='create', target=str(effect)))])
 
         def cli(name, specimen, *, accepted=False, error='', args=(), failure=None, raw=None, prediction=None):
-            capture = RunCapture(pw, out / name, specimen, cli_args=['--no-log-capture', *args])
+            capture = RunCapture(pw, out / name, specimen, cli_args=[*args])
             if raw is not None:
                 capture.request_path.write_text(raw)
             original = capture.request_path.read_bytes()
@@ -119,7 +119,7 @@ def main():
         interrupted = copy.deepcopy(base)
         interrupted['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
         interrupted['_test_overrides'] = {'worker_post_apply_kill_signal': 9}
-        with RunCapture(pw, out / 'capture_worker_death', interrupted, cli_args=['--no-log-capture']) as run:
+        with RunCapture(pw, out / 'capture_worker_death', interrupted, cli_args=[]) as run:
             assert run.wait(timeout=30) != 0
             reply = run.load_json()['data']['runner_result']
         assert reply['sandboxed_after_apply'] is True, reply

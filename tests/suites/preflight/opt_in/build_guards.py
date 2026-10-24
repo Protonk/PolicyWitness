@@ -156,7 +156,7 @@ def test_build_guards(out, identity):
                                           note='the wrong-SDK fixture is linked with the selected SDK and a distinct LC_BUILD_VERSION sdk; '
                                                'the wrong-architecture fixtures carry the minimum and the selected SDK'))
 
-        cargo_outputs = [root / build_provenance.TRIPLE_RELEASE / name for name in ('policy-witness', 'sandbox-log-observer', 'sbpl-check')]
+        cargo_outputs = [root / build_provenance.TRIPLE_RELEASE / name for name in ('policy-witness', 'sbpl-check')]
         for variant, xpc in (('full', '1'), ('partial', '0')):
             meson_outputs = [root / 'builddir' / name for name in ('sb_api_validator', 'pw-probe-runner', 'pw-extension-issuer')]
             if xpc == '1':
@@ -279,11 +279,10 @@ def test_build_guards(out, identity):
                             assert config['codesign']['target'] in signed, (signed, config['codesign']['target'])
                         if fault != 'none':
                             assert "Checking every executable's signer" in stdout, stdout
-                            for banner in ('Codesigning observer tool (not embedded)', 'Staging checked user guide', 'Creating zip'):
+                            for banner in ('Staging checked user guide', 'Creating zip'):
                                 assert banner not in stdout, stdout
                             assert not (dist / 'PolicyWitness.zip').exists()
                             assert not (dist / 'PolicyWitness.md').exists()
-                            assert str(root / build_provenance.TRIPLE_RELEASE / 'sandbox-log-observer') not in signed, signed
                         else:
                             assert status == 0, (name, status, stderr[-4000:])
                             assert 'DONE:' in stdout

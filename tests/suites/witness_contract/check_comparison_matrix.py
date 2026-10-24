@@ -33,7 +33,7 @@ FIXTURE_DIR = Path(__file__).resolve().parents[2] / 'fixtures/comparison'
 FIXTURE = json.loads((FIXTURE_DIR / 'matrix.json').read_text())
 STUB = FIXTURE_DIR / 'stub_validator.py'
 WITNESS = b'independent witness\n'
-CLI_ARGS = ['--no-log-capture']
+CLI_ARGS = []
 
 
 def expand(value, root):

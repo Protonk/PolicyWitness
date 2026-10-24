@@ -299,7 +299,7 @@ def main():
                            'paths': paths, 'seeds': seeds, 'out': artifacts}
                 witnesses.append(witness)
                 run = RunCapture(pw, artifacts, spec,
-                                 cli_args=['--no-log-capture', '--timeout-ms', '30000'])
+                                 cli_args=['--timeout-ms', '30000'])
                 runs.append(run)
                 resources.callback(run.close)
                 file_bytes(witness, 'before')

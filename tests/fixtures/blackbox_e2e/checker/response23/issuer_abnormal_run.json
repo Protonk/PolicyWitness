@@ -1,12 +1,13 @@
 {
   "build": {
-    "commit": "fcc3558cfc25a34c6a36efbb74d4f1ef69f58a7a",
-    "describe": "v0.3.0-52-gfcc3558-dirty",
-    "number": "674",
-    "version": "0.3.0"
+    "commit": "9e091d9c2134c5a83e58374561177e555ec12fb8",
+    "describe": "v0.3.2-58-g9e091d9-dirty",
+    "number": "849",
+    "version": "0.3.2"
   },
   "data": {
     "policy_check": null,
+    "runner_acquisition": [],
     "runner_client": {
       "argv": [
         "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
@@ -18,19 +19,19 @@
         "com.policywitness.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 159383552,
-      "ended_at_unix_ms": 1792249684674,
+      "ended_at_unix_ms": 1792802502269,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 2469,
         "error": null
       },
-      "started_at_unix_ms": 1792249684145,
+      "started_at_unix_ms": 1792802501749,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 13891,
-      "stdout_bytes_retained": 13891,
+      "stdout_bytes_received": 13890,
+      "stdout_bytes_retained": 13890,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
@@ -109,7 +110,7 @@
           "identity": {
             "device": 16777233,
             "gid": 0,
-            "inode": 21017519,
+            "inode": 109951677,
             "mode": 33188,
             "uid": 501
           },
@@ -119,11 +120,11 @@
             "egid": 20,
             "errno": 0,
             "euid": 501,
-            "executable_path": "/private/tmp/pw-extension-control-i69vq_xj/issuer",
+            "executable_path": "/private/tmp/pw-extension-control-7vp6noie/issuer",
             "exit_code": 87,
             "gid": 20,
             "native_nonnull": true,
-            "pid": 71515,
+            "pid": 57026,
             "reaped": true,
             "result_published": true,
             "token_length": 220,
@@ -131,8 +132,8 @@
             "wait_errors": []
           },
           "preparation_status": "prepared",
-          "resolved_target": "/private/tmp/pw-extension-control-i69vq_xj/target",
-          "submitted_target": "/private/tmp/pw-extension-control-i69vq_xj/target",
+          "resolved_target": "/private/tmp/pw-extension-control-7vp6noie/target",
+          "submitted_target": "/private/tmp/pw-extension-control-7vp6noie/target",
           "token_ref": "token"
         }
       ],
@@ -170,7 +171,7 @@
             ],
             "ordinal": 1,
             "phase_id": "p0",
-            "pid": 71517,
+            "pid": 57028,
             "probe_bytes_expected": 142,
             "probe_bytes_written": 142,
             "reaped": true,
@@ -179,10 +180,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+                "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-i69vq_xj/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"before\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-7vp6noie/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "before"
               }
@@ -224,7 +225,7 @@
             ],
             "ordinal": 2,
             "phase_id": "p1",
-            "pid": 71518,
+            "pid": 57029,
             "probe_bytes_expected": 142,
             "probe_bytes_written": 142,
             "reaped": true,
@@ -233,10 +234,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+                "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-i69vq_xj/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"during\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-7vp6noie/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "during"
               }
@@ -277,7 +278,7 @@
             ],
             "ordinal": 3,
             "phase_id": "p2",
-            "pid": 71519,
+            "pid": 57030,
             "probe_bytes_expected": 141,
             "probe_bytes_written": 141,
             "reaped": true,
@@ -286,10 +287,10 @@
                 "errno": 0,
                 "filter_type": "PATH",
                 "filter_type_id": 1,
-                "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+                "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
                 "operation": "file-read-data",
                 "outcome": "deny",
-                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-i69vq_xj/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"after\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-extension-control-7vp6noie/target\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
                 "rc": 1,
                 "step_id": "after"
               }
@@ -300,7 +301,7 @@
           }
         }
       ],
-      "pid": 71516,
+      "pid": 57027,
       "policy_format": "sbpl",
       "policy_sha256": "5359b3d015c676f8987b816a94e33d436621737a450e158e37be9718ce24449a",
       "rc": 0,
@@ -533,32 +534,32 @@
         "exit_grace_wait": {
           "budget_ms": 1000,
           "clock_fault": false,
-          "elapsed_ms": 12,
+          "elapsed_ms": 0,
           "stop": "reaped_during_grace"
         },
         "exit_requested": true,
         "grace_end": "reaped_during_grace",
         "partial_steps": false,
-        "pid": 71516,
+        "pid": 57027,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "ready_wait": {
           "budget_ms": 1000,
           "clock_fault": false,
-          "elapsed_ms": 226,
+          "elapsed_ms": 233,
           "stop": "received"
         },
         "reaped": true,
         "sentinel_wait": {
           "budget_ms": 120000,
           "clock_fault": false,
-          "elapsed_ms": 18,
-          "excluded_ms": 10,
+          "elapsed_ms": 17,
+          "excluded_ms": 9,
           "stop": "done"
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "33890392b9337f128a06b89b7d831192e5e8d809f0a5f41613e8745c2d9c9eb9",
+          "abi_identity": "1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -613,7 +614,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -624,7 +625,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "requested_path": "/private/tmp/pw-extension-control-7vp6noie/target",
             "result_source": "worker"
           },
           "comparison": {
@@ -641,20 +642,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-i69vq_xj/target",
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-7vp6noie/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 71516,
+            "pid": 57027,
             "rc": 1,
             "result_source": "validator"
           },
@@ -690,7 +691,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -701,7 +702,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "requested_path": "/private/tmp/pw-extension-control-7vp6noie/target",
             "result_source": "worker"
           },
           "comparison": {
@@ -718,20 +719,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-i69vq_xj/target",
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-7vp6noie/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 71516,
+            "pid": 57027,
             "rc": 1,
             "result_source": "validator"
           },
@@ -767,7 +768,7 @@
             "observed_path": null,
             "outcome": "read_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved",
@@ -778,7 +779,7 @@
             "rc": -1,
             "requested_action": "read_fresh",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "requested_path": "/private/tmp/pw-extension-control-7vp6noie/target",
             "result_source": "worker"
           },
           "comparison": {
@@ -795,20 +796,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-extension-control-i69vq_xj/target",
+            "filter_value": "/private/tmp/pw-extension-control-7vp6noie/target",
             "native_rc": 1,
             "operation": "file-read-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-i69vq_xj/target",
-              "input": "/private/tmp/pw-extension-control-i69vq_xj/target",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-extension-control-7vp6noie/target",
+              "input": "/private/tmp/pw-extension-control-7vp6noie/target",
               "observer": "runner_host",
               "same_as_input": [
                 "realpath_resolved"
               ],
               "stage": "after_orchestration"
             },
-            "pid": 71516,
+            "pid": 57027,
             "rc": 1,
             "result_source": "validator"
           },
@@ -816,20 +817,17 @@
         }
       ],
       "test_overrides": {
-        "issuer_executable_path": "/private/tmp/pw-extension-control-i69vq_xj/issuer",
-        "worker_executable_path": "/private/tmp/pw-extension-control-i69vq_xj/worker"
+        "issuer_executable_path": "/private/tmp/pw-extension-control-7vp6noie/issuer",
+        "worker_executable_path": "/private/tmp/pw-extension-control-7vp6noie/worker"
       }
     },
     "runner_sandbox_diagnostics": {
-      "correlation_status": "not_attempted",
       "disposition_integrity": "valid",
       "disposition_issues": [],
-      "permission_failures_without_record": null,
       "process_disposition": "clean_exit",
       "stop_reason": "done",
       "termination_cause": null
     },
-    "sandbox_log_capture": null,
     "specimen": {
       "app_provenance": {
         "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
@@ -837,18 +835,18 @@
       },
       "binaries": {
         "issuer": {
-          "actual_sha256": "cad5a629837d8c226974dc9a34715a61cbf53a95a450a2cd9441023f8ec4a7b0",
-          "baseline_sha256": "132083fc382c38d875764bd70f9dba7536be4cc13adeaa5fef4404b8286bdc05",
-          "path": "/private/tmp/pw-extension-control-i69vq_xj/issuer",
+          "actual_sha256": "8d6bdf407908d8cf94b06e3ef9c6b701d9bed9c34d79f39c9124d9607c7c0492",
+          "baseline_sha256": "aeb1a9502eeed02abe5d2fbbaa7f4e3125757bce272f3961b386373281be9dd5",
+          "path": "/private/tmp/pw-extension-control-7vp6noie/issuer",
           "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer",
           "verification": "mismatch"
         },
         "service": null,
         "validator": null,
         "worker": {
-          "actual_sha256": "1e3008ebd77d89ea482201d65bc0696c9d1bc97ee8c5af7357e46354c561dc12",
-          "baseline_sha256": "cdfdbf9ca4b05dec3345e9c67d6b6e9651e863809a539cf48464ef963cf75c1d",
-          "path": "/private/tmp/pw-extension-control-i69vq_xj/worker",
+          "actual_sha256": "c497b616057361ab45a4bf46a60a655fc9aa5f9c1477d2780a2aa31e7d3c5109",
+          "baseline_sha256": "c4dfff785f9486559815ccc6879b3e758445c7754e65049f7974920295b69f00",
+          "path": "/private/tmp/pw-extension-control-7vp6noie/worker",
           "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
           "verification": "mismatch"
         }
@@ -876,7 +874,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/safe-wait-repair-live-fixtures-20261017/suites/witness_contract/extension_combinations/artifacts/M01/specimen.json",
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/observer-retirement-final-01/suites/witness_contract/extension_combinations/artifacts/M01/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -916,7 +914,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1792249684674,
+  "generated_at_unix_ms": 1792802502270,
   "kind": "run",
   "result": {
     "errno": null,
@@ -928,5 +926,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 7
+  "schema_version": 8
 }

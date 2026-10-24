@@ -3,7 +3,7 @@
 Public CLI contract for two overlapping specimens through the bundled runner.
 Both use identical random step IDs, distinct specimen IDs, stderr markers and
 file targets, and opposite allow/deny patterns. No `_test_overrides`, worker ABI,
-production imports, log capture, or external runner installation are used.
+production imports or external runner installation are used.
 
 The shared exec fixture holds each run at its first step. The observer obtains
 helper PIDs from kernel socket credentials and follows libproc parentage to

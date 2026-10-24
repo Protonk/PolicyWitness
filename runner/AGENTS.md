@@ -127,10 +127,8 @@ separate from claims about the specimen's policy.
 
 ## Sandboxed automation harnesses
 
-A restrictive automation sandbox can prevent XPC lookup before the host starts
-or block unified-log access after execution succeeds. Lookup diagnostics can
-include `NSCocoaErrorDomain` 4099 or error 159; log access can report
-`log: Cannot run while sandboxed`. Inspect the diagnostic, request escalation
+A restrictive automation sandbox can prevent XPC lookup before the host starts.
+Lookup diagnostics can include `NSCocoaErrorDomain` 4099 or error 159. Inspect the diagnostic, request escalation
 and rerun the same failing command once outside the automation sandbox,
 keeping the inspected artifact unchanged. A permission-shaped failure alone
 does not establish its cause. For signing, signature verification or compiler
@@ -142,9 +140,3 @@ When the harness blocks XPC lookup before host launch, the envelope reports
 `data.policy_check` establishes only whether the policy compiles; it says nothing
 about worker execution. An `xpc_error` alone does not establish that the harness
 caused it; use the diagnostic and the unsandboxed retry.
-
-Log access can fail even when execution succeeds. A
-`sandbox_log_capture.capture_status` of `blocked` with
-`blocked_reason: "Cannot run while sandboxed"` leaves the execution result
-unchanged and makes log correlation unavailable. Use `--no-log-capture` when
-log capture is unnecessary for the runner behavior being investigated.

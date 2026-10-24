@@ -76,4 +76,4 @@ default to `tests/out/runs/direct`.
 
 Included in the default battery. The live cases need the built app and XPC;
 the exec case also needs the macOS C toolchain; the controls need only
-Python 3. Unified log capture is disabled; it is not this suite's oracle.
+Python 3.

@@ -7,7 +7,7 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 5, response schema 23, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 5, response schema 23, controller envelope 8. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
@@ -15,7 +15,7 @@ Current wire contracts: request schema 5, response schema 23, controller envelop
 | --- | --- | --- |
 | request schema (`request_schema`) | 5 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 23 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 7 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 8 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -35,16 +35,12 @@ Current wire contracts: request schema 5, response schema 23, controller envelop
   `data.specimen` is the dossier: request path, policy augmentation and
   imports, host facts, runner and app provenance, and hashes of any selected
   binary the app manifest does not describe; the raw runner reply, transport,
-  diagnostics and log capture stay beside it. The same number versions the
+  diagnostics stay beside it. The same number versions the
   **envelope frame**: the outer object every controller-family binary prints
   (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
   `data`). It is rendered by [json_contract.rs](../controller/src/json_contract.rs),
-  which `sbpl-check` and `sandbox-log-observer` compile in by `#[path]`. The
-  frame therefore also appears on the helper envelopes the controller nests
-  unchanged: `data.policy_check.envelope` from `sbpl-check` and
-  `data.sandbox_log_capture.observer` from `sandbox-log-observer`. Inside the
-  observer's frame, `data.observer_schema_version` identifies the observer's
-  own report; the two numbers name different things and move independently.
+  which `sbpl-check` includes by `#[path]`. The frame also appears on the
+  helper envelope retained unchanged at `data.policy_check.envelope`.
 
 ## Supported versions
 
@@ -247,8 +243,7 @@ separate responsibilities. The hash is not a security authentication mechanism.
 
 This exact-match requirement is confined to the jointly built host/worker pair.
 The external runner XPC protocol and JSON request/response/envelope contracts
-retain their own boundaries. Validator diagnostic JSON and observer reports
-also keep their own contracts; they are consumed independently of this memory
+retain their own boundaries. Validator diagnostic JSON keeps its own contract; it is consumed independently of this memory
 interface.
 
 ## Shape goldens
@@ -264,8 +259,8 @@ the real builders); `runner_unit` compares the current collection with it.
 field-complete `kind: "run"` envelope a Rust unit test renders with every
 optional object populated; the reply inside it is opaque to that golden because
 the reply golden owns it, and the nested helper envelopes it carries
-(`data.policy_check.envelope`, `data.sandbox_log_capture.observer`) are
-compared with the helpers' own emitted shapes by their unit tests.
+(`data.policy_check.envelope`) is
+compared with the helper's own emitted shape by its unit tests.
 The JSON shape checks distinguish added fields (no bump needed), removed or
 changed-type fields (bump first), and a manifest that already moved while its
 golden is behind. A difference writes a candidate into the case's artifacts.

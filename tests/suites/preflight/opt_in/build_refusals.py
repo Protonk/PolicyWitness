@@ -47,14 +47,14 @@ import shim_probe
 WRAPPER = ROOT / 'tests/fixtures/build_refusals/tools.py'
 FORWARD = ROOT / 'tests/fixtures/build_refusals/forward.py'
 WRONG_WORKER = ROOT / 'tests/fixtures/build_refusals/wrong_worker.c'
-WRAPPED = ('cargo', 'meson', 'ninja', 'codesign', 'cp')
+WRAPPED = ('cargo', 'meson', 'ninja', 'codesign', 'cp', 'echo')
 VARIANTS = {'full': '1', 'partial': '0'}
 IDENTITY_INPUT = 'runner/Package.swift'   # a digest input Meson never compiles
 VALIDATOR_SOURCE = 'controller/tools/sb_api_validator/sb_api_validator.c'   # compiled, but not a digest input
 RUST_BIN_SOURCE = 'controller/src/bin/sbpl-check.rs'
 TREE_INPUTS = ('Info.plist', 'PolicyWitness.entitlements', 'runner/augments', 'runner/Services/PWRunner',
                'runner/Services/PWRunner/Info.plist', 'runner/Services/PWRunner/Entitlements.plist')
-CARGO_BINS = ('policy-witness', 'sandbox-log-observer', 'sbpl-check')
+CARGO_BINS = ('policy-witness', 'sbpl-check')
 STAMP = 'builddir/pw-toolchain.json'
 SESSION = 'controller/target/pw-build-session.json'
 RECORD = prov.RECORD_PATH
@@ -328,6 +328,13 @@ class Checkout:
                            PW_BUILD_REFUSAL_CONFIG=str(self.config), PW_FORWARD_CONFIG=str(self.forward_config),
                            IDENTITY=self.identity, BUILD_XPC=VARIANTS[variant], PW_INSPECTION='1', PW_FRESH_BUILD=fresh,
                            DIST_DIR=str(dist), PW_VERSION='0.0.0', PW_BUILD_NUMBER='0', CARGO_NET_OFFLINE='true')
+        # Expose the existing shell banners to the tool wrapper so faults can
+        # be placed at the signing and packaging boundaries. Only these test
+        # builds disable Bash's echo builtin; the production script is unchanged.
+        if any(h['tool'] == 'echo' for h in hooks):
+            shell_setup = case / 'banner-hooks.bash'
+            shell_setup.write_text('enable -n echo\n')
+            environment['BASH_ENV'] = str(shell_setup)
         environment.update(env or {})  # a control's settings win over these defaults
         if claim:
             environment.update(claim)
@@ -466,7 +473,7 @@ def fired_once(build, label):
 
 def no_evidence(build):
     for banner in ('Writing evidence manifest', 'Codesigning app bundle', 'Verifying signature', "Checking every executable's signer",
-                   'Codesigning observer tool', 'Staging checked user guide', 'Creating zip'):
+                   'Staging checked user guide', 'Creating zip'):
         assert banner not in build.stdout, (build.name, banner)
     assert not (build.app / 'Contents/Resources/Evidence').exists(), build.name
     assert not (build.dist / 'PolicyWitness.zip').exists(), build.name
@@ -492,7 +499,7 @@ def passing(co, build, variant):
     assert set(build.judgments()) == set(CARGO_BINS), build.judgments()
     outputs = {o['rel_path']: o for o in build.record['outputs']}
     assert outputs['Contents/MacOS/policy-witness']['sha256'] is None, 'the controller hash cannot live inside the sealed record'
-    for name in ('sandbox-log-observer', 'sbpl-check'):
+    for name in ('sbpl-check',):
         relative = 'Contents/MacOS/' + name
         assert outputs[relative]['sha256'] == artifact.digest(build.app / relative)
         assert outputs[relative]['cargo']['fresh'] == build.judgments()[name]['fresh']
@@ -1064,7 +1071,7 @@ def control_lock_lifetime(co, variant):
                   f'--verify --root {shlex.quote(str(co.root))} && echo nested-owned-command-admitted')
         nested = co.build('lifetime-nested', variant, fresh='1', env=dict(CC=str(cc), RUSTC=str(rustc)),
                           argv=[*front_end, '/bin/bash', '-c', script],
-                          hooks=[hook('probe-packaging', 'codesign', [probe_lock(lock, probe_report)], last=str(co.target / 'sandbox-log-observer'))])
+                          hooks=[hook('probe-packaging', 'echo', [probe_lock(lock, probe_report)], args=['==> Staging checked user guide'])])
     finally:
         other_release.touch()
         other_holder.wait(timeout=60)
@@ -1636,7 +1643,7 @@ def control_worker_identity_mismatch(co, variant):
 
 
 def control_sign_target_not_macho(co, variant):
-    """A signing-list target missing or rewritten after the observer is signed: the next sign_macho refuses before codesign."""
+    """A signing-list target missing or rewritten at the signing boundary: sign_macho refuses before codesign."""
     app = co.app(variant, 'sign_target_not_macho-missing')
     build = None
     for label, name, actions in (('missing', 'sign_target_not_macho-missing', [delete(app / 'Contents/MacOS/sbpl-check')]),
@@ -1644,12 +1651,11 @@ def control_sign_target_not_macho(co, variant):
         app = co.app(variant, name)
         target = app / 'Contents/MacOS/sbpl-check'
         actions = actions if actions is not None else [write(target, 'not an executable\n')]
-        build = co.build(name, variant, hooks=[hook('damage-target', 'codesign', actions,
-                                                      last=str(app / 'Contents/MacOS/sandbox-log-observer'), contains='--force')])
+        build = co.build(name, variant, hooks=[hook('damage-target', 'echo', actions, args=['==> Codesigning embedded MacOS tools'])])
         check(build, 2, f'{target} is missing or not a Mach-O; the signing list names only executables',
               present=('Codesigning embedded MacOS tools',), absent=('Codesigning embedded XPC services', 'Writing evidence manifest'))
         fired_once(build, 'damage-target')
-        expected = ([str(app / 'Contents/MacOS/pw-runner-client')] if variant == 'full' else []) + [str(app / 'Contents/MacOS/sandbox-log-observer')]
+        expected = ([str(app / 'Contents/MacOS/pw-runner-client')] if variant == 'full' else [])
         assert build.signed() == expected, (build.signed(), expected)
         assert str(target) not in build.signed(), 'codesign ran on the damaged target'
         no_evidence(build)
@@ -1712,9 +1718,8 @@ def control_verify_failed(co, variant):
                      hooks=[hook('tamper-resource', 'codesign', [append(resource, '\n; tampered\n')], last=str(app), contains='--force')])
     check(build, 1, 'a sealed resource is missing or invalid',
           present=('Codesigning app bundle', 'Verifying signature + entitlements'),
-          absent=("Checking every executable's signer", 'Codesigning observer tool', 'Staging checked user guide', 'Creating zip'))
+          absent=("Checking every executable's signer", 'Staging checked user guide', 'Creating zip'))
     fired_once(build, 'tamper-resource')
-    assert str(co.target / 'sandbox-log-observer') not in build.signed(), build.signed()
     assert not (build.dist / 'PolicyWitness.zip').exists()
     assert not (build.dist / 'PolicyWitness.md').exists()
     # An embedded evidence edit after the seal fails verification: no record is rewritten after sealing.
@@ -1864,10 +1869,10 @@ def control_replaced_cached_output_is_recorded_not_detected(co, variant):
     A change after capture is a different boundary: the inspector refuses it."""
     previous = co.build('replaced_output-baseline', variant)
     passing(co, previous, variant)
-    observer_bytes = (co.target / 'sandbox-log-observer').read_bytes()
+    replacement_bytes = (co.target / 'policy-witness').read_bytes()
     original_hash = artifact.digest(previous.app / 'Contents/MacOS/sbpl-check')
     replacement = co.work / 'replacement-sbpl-check'
-    replacement.write_bytes(observer_bytes)
+    replacement.write_bytes(replacement_bytes)
     replacement.chmod(0o755)
     build = co.build('replaced_output', variant, hooks=[hook('replace-cached', 'cargo', [replace(replacement, co.target / 'sbpl-check')], first='build')])
     try:
@@ -2434,8 +2439,7 @@ def control_output_target_mismatch(co, variant):
     bytes therefore replace the cached unit as well, as a corrupted cache would, newer than its compile so that Cargo
     judges it current, while the truncated file replaces only the output. A copy
     replaced in the assembled bundle, with an unlisted universal file added beside it, refuses before any signature.
-    The standalone observer replaced after the app seal refuses before it is signed, and the sealed bundle's code
-    replaced after that refuses before the ZIP is written."""
+    The sealed bundle's code replaced at packaging refuses before the ZIP is written."""
     message = 'outputs are not thin arm64 Mach-O executables for macOS'
     unrelated = ('is built for macOS', 'disagree with the selected SDK', 'reports identity')
 
@@ -2507,30 +2511,16 @@ def control_output_target_mismatch(co, variant):
     assert subprocess.check_output(['/usr/bin/lipo', '-archs', str(co.target / 'sbpl-check')], text=True).split() == ['arm64'], \
         'the substitution reached the Cargo output instead of the copy'
     removed_previous(build)
-    # The standalone observer, after the app seal and the signer check, before it is signed in place.
-    app = co.app(variant, 'output_target_mismatch-observer')
-    observer = co.target / 'sandbox-log-observer'
-    build = co.build('output_target_mismatch-observer', variant,
-                     hooks=[hook('replace-observer', 'codesign', [replace(co.forbidden('x86_64'), observer)], last=str(app), contains='--force')])
-    try:
-        refused_by_target(build, f'{observer}: architecture x86_64, not exactly arm64')
-        check(build, 1, message, present=("Checking every executable's signer", 'Codesigning observer tool (not embedded)'),
-              absent=('Staging checked user guide', 'Creating zip'))
-        fired_once(build, 'replace-observer')
-        assert str(observer) not in build.signed(), 'the observer was signed before its check'
-        assert not (build.dist / 'PolicyWitness.zip').exists()
-    finally:
-        observer.unlink(missing_ok=True)
-    # The sealed bundle as packaged, after the observer is signed, before the ZIP.
+    # The sealed bundle as packaged, after signer verification, before the ZIP.
     app = co.app(variant, 'output_target_mismatch-packaging')
     sealed = app / 'Contents/MacOS/sbpl-check'
     build = co.build('output_target_mismatch-packaging', variant,
-                     hooks=[hook('replace-sealed', 'codesign', [replace(co.forbidden('arm64e'), sealed)], last=str(observer), contains='--force')])
+                     hooks=[hook('replace-sealed', 'echo', [replace(co.forbidden('arm64e'), sealed)], args=['==> Staging checked user guide'])])
     refused_by_target(build, f'{sealed}: architecture arm64e, not exactly arm64')
     check(build, 1, message, present=('Staging checked user guide', 'Creating zip (for notarization)'))
     fired_once(build, 'replace-sealed')
     assert 'DONE:' not in build.stdout
-    assert str(observer) in build.signed()
+    assert str(app) in build.signed()
     assert not (build.dist / 'PolicyWitness.zip').exists() and (build.dist / 'PolicyWitness.md').exists()
     # A required path does not disappear from either app-wide gate when its header is no longer recognizable.
     # The packaging substitutions happen after signature verification, so only the final output gate protects the ZIP.
@@ -2544,7 +2534,7 @@ def control_output_target_mismatch(co, variant):
             # Augments are copied after the top-level tools' chmod calls in both variants. Removing the target at
             # its own copy would make chmod refuse first, establishing nothing about the assembled output gate.
             boundary = (hook('damage-required', 'cp', actions, first=str(co.root / 'runner/augments' / co.augment)) if stage == 'assembled' else
-                        hook('damage-required', 'codesign', actions, last=str(observer), contains='--force'))
+                        hook('damage-required', 'echo', actions, args=['==> Staging checked user guide']))
             damaged = co.build(name, variant, hooks=[boundary])
             reason = 'unreadable (FileNotFoundError)' if fault == 'missing' else 'not a Mach-O file'
             refused_by_target(damaged, f'{target}: {reason}')
@@ -2556,7 +2546,7 @@ def control_output_target_mismatch(co, variant):
                 assert damaged.signed() == [], damaged.signed()
                 assert 'Codesigning embedded MacOS tools' not in damaged.stdout
             else:
-                assert str(observer) in damaged.signed()
+                assert str(app) in damaged.signed()
                 assert 'Creating zip (for notarization)' in damaged.stdout
     return build
 
@@ -2758,7 +2748,7 @@ def _remove_block(text, block):
     return text.replace(block, '', 1)
 
 
-CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"; do\n'
+CARGO_OUTPUT_LOOP = ('for rust_bin in "${RUNNER_BIN}" "${SBPL_CHECK_BIN}"; do\n'
                      '  if [[ ! -x "${rust_bin}" ]]; then\n'
                      '    echo "ERROR: expected an executable Cargo output at ${rust_bin}" 1>&2\n'
                      '    exit 2\n'
@@ -2794,7 +2784,7 @@ WORKER_IDENTITY = ('"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance
 REQUIRE_REBUILT = '--require-rebuilt "${PW_FRESH_BUILD}"'
 PROVENANCE_HELPER = 'tests/lib/build_provenance.py'
 CARGO_OUTPUT_CHECK = ('"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage cargo \\\n'
-                      '  "${RUNNER_BIN}" "${SANDBOX_LOG_OBSERVER_BIN}" "${SBPL_CHECK_BIN}"\n')
+                      '  "${RUNNER_BIN}" "${SBPL_CHECK_BIN}"\n')
 ASSEMBLED_CHECK = ('echo "==> Checking the assembled code against the output target: ${APP_BUNDLE}"\n'
                    '"${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/lib/build_provenance.py" output-check --root "${ROOT_DIR}" --stage assembled --app "${APP_BUNDLE}"\n')
 FIRST_SIGNATURE = 'sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"\n'

@@ -37,7 +37,7 @@ def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
             'policy_check': None, 'timeout_ms': timeout_ms,
             'runner_client': {'argv': ['constructed-client'], 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500,
                               'exit_code': 0, 'request_delivery': {'bytes_written': 2, 'error': None}},
-            'runner_result': runner, 'sandbox_log_capture': None, 'runner_sandbox_diagnostics': None,
+            'runner_result': runner, 'runner_sandbox_diagnostics': None,
         },
     }
 

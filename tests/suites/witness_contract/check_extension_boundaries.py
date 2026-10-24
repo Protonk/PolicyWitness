@@ -160,7 +160,7 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             spec['_test_overrides']['worker_executable_path'] = str(worker)
         request = out / 'specimen.json'
         write_json(request, spec)
-        command = [pw, 'run', str(request), '--no-log-capture']
+        command = [pw, 'run', str(request)]
         # Unlike ordinary RunCapture, keep output in memory until comparison
         # with the authority-bearing bytes; a product leak must fail without
         # persisting the leaked token in the failure artifact.

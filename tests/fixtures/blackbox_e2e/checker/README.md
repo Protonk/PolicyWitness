@@ -20,8 +20,9 @@ produced it, and each `*_specimen.json` is the exact submitted request.
 
 ## Refresh
 
-A `response_schema` bump makes the readers reject these captures, so a new
-`responseNN/` set is captured, not edited. Run the four cases above against the
+A response or controller-envelope version bump makes the readers reject these
+captures. Capture a new set, without editing its contents; the `responseNN/`
+directory names the runner response schema. Run the four cases above against the
 final candidate and copy from each case's `artifacts/` directory:
 
 - `BBX-001`: `policy_witness.run.stdout.json` as `valid_run.json` and
@@ -33,7 +34,8 @@ final candidate and copy from each case's `artifacts/` directory:
 - `extension_combinations`: `M01/run.json` and `M01/specimen.json` as
   `issuer_abnormal_run.json` and `issuer_abnormal_specimen.json`.
 
-Specimens differ between captures only by temporary paths. Bump
+Specimens differ between captures only by temporary paths. For a response
+schema change, bump
 `schema_version` in `../../contract/path_diagnostics.json` (one value per
 case), replace `../../contract/response_shape.json` with the
 `response_shape.candidate.json` that `runner_unit` writes when the golden

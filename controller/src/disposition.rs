@@ -1,11 +1,15 @@
-//! Worker disposition record validation and projection: the execution half of
-//! `data.runner_sandbox_diagnostics`. Log correlation is a separate observation
-//! and stays with the envelope assembly in run_flow.rs.
+//! Worker disposition record validation and projection for
+//! `data.runner_sandbox_diagnostics`, grounded in native execution observations.
 
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::sandbox_log::worker_pid;
+/// Only spawned-worker metadata identifies the worker; a host/client PID is
+/// never a substitute for a missing worker observation.
+fn worker_pid(result: Option<&Value>) -> Option<i32> {
+    let pid = result?.get("runner_subprocess")?.get("pid")?.as_i64()?;
+    i32::try_from(pid).ok().filter(|pid| *pid > 0)
+}
 
 #[derive(Serialize)]
 pub(crate) struct RunnerExecutionDiagnostics {

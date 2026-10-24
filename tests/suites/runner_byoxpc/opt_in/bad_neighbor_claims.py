@@ -117,7 +117,7 @@ def launch(name, actor, *, hang=0, direct=False, timeout=30000):
     if direct:
         argv = [str(client), 'run', '--timeout-ms', str(timeout), '--mach-service', '--request', '-', service]
     else:
-        argv = [pw, 'run', str(folder / 'specimen.json'), '--no-log-capture', '--timeout-ms', str(timeout)]
+        argv = [pw, 'run', str(folder / 'specimen.json'), '--timeout-ms', str(timeout)]
     record = dict(name=name, actor=actor, direct=direct, argv=argv, folder=str(folder), effect=str(effect),
                   host_states_at_start={h['generation']: generation_state(h['generation'])
                                         for h in watch.snapshot('host') if h['unseen_after_ns'] is None})

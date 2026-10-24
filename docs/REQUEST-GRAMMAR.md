@@ -25,7 +25,7 @@ PW=dist/PolicyWitness.app/Contents/MacOS/policy-witness
 PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-grammar.XXXXXX)
 tests/lib/python.sh tests/lib/request_examples.py create --effect "$PW_EXAMPLE_DIR/created" > "$PW_EXAMPLE_DIR/request.json"
 cat "$PW_EXAMPLE_DIR/request.json"
-"$PW" run "$PW_EXAMPLE_DIR/request.json" --no-log-capture > "$PW_EXAMPLE_DIR/run.json"
+"$PW" run "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/run.json"
 test -f "$PW_EXAMPLE_DIR/created"
 ```
 
@@ -72,7 +72,7 @@ Try the typo with a new, absent effect path:
 
 ```sh
 tests/lib/python.sh tests/lib/request_examples.py capture_typo --effect "$PW_EXAMPLE_DIR/refused" > "$PW_EXAMPLE_DIR/typo.json"
-"$PW" run "$PW_EXAMPLE_DIR/typo.json" --no-log-capture > "$PW_EXAMPLE_DIR/refusal.json"
+"$PW" run "$PW_EXAMPLE_DIR/typo.json" > "$PW_EXAMPLE_DIR/refusal.json"
 PW_EXAMPLE_RC=$?
 test "$PW_EXAMPLE_RC" = 1
 test ! -e "$PW_EXAMPLE_DIR/refused"

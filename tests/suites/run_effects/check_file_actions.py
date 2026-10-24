@@ -110,7 +110,7 @@ def main():
         before = effects.snapshot(target)
         effects.record(before, work, 'before')
         spec = specimen_for(name, action, target, denied_operation)
-        with RunCapture(pw, work / 'run', spec, cli_args=['--no-log-capture']) as run:
+        with RunCapture(pw, work / 'run', spec, cli_args=[]) as run:
             rc = run.wait(timeout=30)
         # Observe the filesystem before consulting PW's report.
         after = effects.snapshot(target)

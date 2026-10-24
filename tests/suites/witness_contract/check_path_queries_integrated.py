@@ -66,7 +66,7 @@ def main():
             request = targets / 'request.json'; save(request,spec); save(case/'specimen.json',spec)
             owner['children_confirmed'] = False
             save(workspace/'owner.json',owner); save(out/'workspace-owner.json',owner)
-            command = [str(pw),'run',str(request),'--no-log-capture']
+            command = [str(pw),'run',str(request)]
             result = subprocess.run(command,capture_output=True,timeout=40)
             (case/'stdout.json').write_bytes(result.stdout); (case/'stderr.txt').write_bytes(result.stderr)
             save(case/'capture.json',dict(argv=command,returncode=result.returncode))

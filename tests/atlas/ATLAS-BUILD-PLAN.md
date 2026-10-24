@@ -196,8 +196,8 @@ than an ordinary PW report can. Do not expand its policy matrix into this route.
 A symlink variation asking whether different spellings reach the same object is
 an unexecuted question, not a promised result.
 
-**Equipment:** `app` and `clang` in the catalog, live XPC and Python; log capture
-is disabled in the case. No external runner installation is needed.
+**Equipment:** `app` and `clang` in the catalog, live XPC and Python.
+No external runner installation is needed.
 
 ### 3. Ordering in a changing world
 
@@ -512,8 +512,8 @@ when an individual checker appears to need less equipment.
 The build and guide describe the supported macOS and signing setup. Missing
 equipment is an explicit outstanding dependency, not a skip that establishes an
 observation. Follow the existing unsandboxed-retry guidance when the automation
-harness refuses XPC, log, signing, or compiler access. No BYOXPC installation is
-needed for the core routes. Keep log collection separate from execution claims.
+harness refuses XPC, signing, or compiler access. No BYOXPC installation is
+needed for the core routes.
 Never unlink the checkout lock, bypass artifact checks, or reuse ambiguous output.
 Store original runs under `tests/out/` and preserve them through the existing
 retention mechanism; `.tmp/atlas/` is the requested location of this plan, not a
@@ -537,10 +537,10 @@ Preserve these local cautions during writing:
 - The shared comparison matrix exercises producer and reader interpretations;
   its reuse is not another independent live observation.
 - A fixture supplying `allow` is not a native prediction. A permission errno,
-  signal, missing output, or matching denial-log candidate does not by itself
+  signal, or missing output does not by itself
   authorize a sandbox-cause claim.
 - The full-region harness uses no-op slots. An exit request, EOF, and observed
-  process exit are different facts. An empty log query cannot prove allowance.
+  process exit are different facts.
 - Some suite prose still describes preallocated exec pipes and a descriptor
   limit raise. The inspected worker acquires exec resources per attempt.
   The descriptor-ceiling control establishes bounded resource use; source

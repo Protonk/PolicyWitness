@@ -37,8 +37,8 @@
  * query as a "Sandbox: <worker>(pid) deny(1) <op> <path>" line attributed to
  * the queried PID, indistinguishable from the line the worker's own attempt
  * produces, and the attempt's line then arrives only as a coalesced
- * "duplicate report". A prediction must never write into the deny-log channel
- * that witnesses the attempt. Verdicts are identical with and without the
+ * "duplicate report". Suppress query reports so predictions do not introduce
+ * denial records attributed to worker attempts. Verdicts are identical with and without the
  * flag (checked live on Darwin 23.6). */
 #ifndef SANDBOX_CHECK_NO_REPORT
 #define SANDBOX_CHECK_NO_REPORT 0x40000000

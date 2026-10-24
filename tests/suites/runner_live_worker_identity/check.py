@@ -38,7 +38,7 @@ def main():
                             "args": ["--hold", socket_path]},
             }],
         }
-        run = RunCapture(pw, out, spec, cli_args=['--no-log-capture'])
+        run = RunCapture(pw, out, spec, cli_args=[])
         with (out / "observer.stderr").open("w") as observer_err:
             observer = subprocess.Popen([observer_bin, "--observe", socket_path, str(allowed), str(denied)],
                                         stdout=subprocess.PIPE, stderr=observer_err, text=True)

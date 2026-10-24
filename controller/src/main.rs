@@ -14,9 +14,6 @@ mod evidence;
 // Shared with the sbpl-check helper through #[path] includes.
 mod host_facts;
 mod json_contract;
-mod log_capture;
-#[cfg(test)]
-mod log_show;
 mod plist;
 mod policy_check;
 #[cfg(test)]
@@ -28,7 +25,6 @@ mod runner_client;
 mod runner_commands;
 mod runner_manager;
 mod runner_select;
-mod sandbox_log;
 mod sbpl_imports;
 mod sbpl_lex;
 #[cfg(test)]

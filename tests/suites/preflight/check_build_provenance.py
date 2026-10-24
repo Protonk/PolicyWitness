@@ -1806,7 +1806,7 @@ class CargoJudgmentTests(unittest.TestCase):
                     profile=dict(opt_level='3', debuginfo=0, debug_assertions=False, overflow_checks=False, test=False),
                     features=[], filenames=[str(executable)], executable=str(executable), fresh=fresh)
 
-    def judge(self, messages, require='0', bins=('policy-witness', 'sandbox-log-observer', 'sbpl-check')):
+    def judge(self, messages, require='0', bins=('policy-witness', 'fixture-helper', 'sbpl-check')):
         path = self.target / 'pw-build-messages.jsonl'
         path.write_text(''.join(json.dumps(m) + '\n' for m in messages))
         argv = ['cargo-judge', '--root', str(self.root),
@@ -1819,7 +1819,7 @@ class CargoJudgmentTests(unittest.TestCase):
 
     def test_cargo_judgments_bind_fingerprints_without_guessing(self):
         messages = [self.unit('policy-witness', 'a' * 16, b'controller bytes'),
-                    self.unit('sandbox-log-observer', 'b' * 16, b'observer bytes', fresh=True, link=False),
+                    self.unit('fixture-helper', 'b' * 16, b'fixture helper bytes', fresh=True, link=False),
                     self.unit('sbpl-check', 'c' * 16, b'check bytes', fingerprint=None)]
         # A stale sibling for another target with the same bytes is never attributed to this unit.
         stale = self.release / 'deps' / ('policy_witness-' + 'd' * 16)
@@ -1831,21 +1831,21 @@ class CargoJudgmentTests(unittest.TestCase):
         self.assertEqual(bound['effective_rustflags'], ['-C', 'opt-level=1'])
         self.assertEqual((bound['rustflags_source']['kind'], bound['rustflags_source']['agrees']), ('RUSTFLAGS (script default)', True))
         self.assertEqual(bound['fingerprint']['binding']['metadata_hash'], 'a' * 16)
-        self.assertEqual(judgments['sandbox-log-observer']['fingerprint']['binding']['how'], 'identical bytes')
-        self.assertIs(judgments['sandbox-log-observer']['fresh'], True)
+        self.assertEqual(judgments['fixture-helper']['fingerprint']['binding']['how'], 'identical bytes')
+        self.assertIs(judgments['fixture-helper']['fresh'], True)
         self.assertEqual(judgments['sbpl-check']['fingerprint']['status'], 'unavailable')
         self.assertNotIn(str(self.root), json.dumps(judgments).replace(prov.redact(str(self.root)), ''), 'exact paths are kept apart from published ones')
         # Fresh mode refuses a reused target, naming it.
         status, _, err, _ = self.judge(messages, require='1')
         self.assertEqual(status, 1)
-        self.assertIn('sandbox-log-observer (reused)', err)
+        self.assertIn('fixture-helper (reused)', err)
         # Ambiguous, malformed, unsupported and oversized fingerprints are explicit limitations, never guesses.
-        (self.release / 'deps' / ('sandbox_log_observer-' + 'e' * 16)).write_bytes(b'observer bytes')
+        (self.release / 'deps' / ('fixture_helper-' + 'e' * 16)).write_bytes(b'fixture helper bytes')
         malformed = self.unit('policy-witness', 'f' * 16, b'controller bytes 2', fingerprint='malformed')
         unsupported = self.unit('sbpl-check', '0' * 16, b'check bytes 2', fingerprint='unsupported')
         status, _, err, judgments = self.judge([malformed, messages[1], unsupported])
         self.assertEqual(status, 0, err)
-        self.assertEqual(judgments['sandbox-log-observer']['fingerprint']['status'], 'ambiguous')
+        self.assertEqual(judgments['fixture-helper']['fingerprint']['status'], 'ambiguous')
         self.assertEqual(judgments['policy-witness']['fingerprint']['status'], 'malformed')
         self.assertEqual(judgments['sbpl-check']['fingerprint']['status'], 'unsupported')
         self.assertIsNone(judgments['sbpl-check']['effective_rustflags'])
@@ -1862,7 +1862,7 @@ class CargoJudgmentTests(unittest.TestCase):
 
     def test_fresh_judgments_are_literal_booleans_bound_to_the_admitted_executable(self):
         valid = {name: self.unit(name, meta * 16, name.encode()) for name, meta in
-                 (('policy-witness', 'a'), ('sandbox-log-observer', 'b'), ('sbpl-check', 'c'))}
+                 (('policy-witness', 'a'), ('fixture-helper', 'b'), ('sbpl-check', 'c'))}
 
         def without(message, key):
             return {k: v for k, v in message.items() if k != key}
@@ -1894,7 +1894,7 @@ class CargoJudgmentTests(unittest.TestCase):
                     self.assertIn('sbpl-check (', err)
                     self.assertEqual(judgments['sbpl-check']['status'], 'unknown')
             # A missing message and contradictory duplicates are unknown, never a default.
-            for label, messages in (('absent', [valid['policy-witness'], valid['sandbox-log-observer']]),
+            for label, messages in (('absent', [valid['policy-witness'], valid['fixture-helper']]),
                                     ('contradictory', [*valid.values(), dict(valid['sbpl-check'], fresh=True)]),
                                     ('duplicated', [*valid.values(), valid['sbpl-check']])):
                 with self.subTest(fault=label, fresh_mode=require):

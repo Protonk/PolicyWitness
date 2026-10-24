@@ -36,7 +36,7 @@ spec = dict(schema_version=contract.REQUEST_SCHEMA, specimen_id='default-locatio
                 attempt=dict(kind='file', action='create', target=str(effect)))])
 path = out / 'specimen.json'
 path.write_text(json.dumps(spec))
-result = subprocess.run([pw, 'run', str(path), '--no-log-capture'], capture_output=True, timeout=60)
+result = subprocess.run([pw, 'run', str(path)], capture_output=True, timeout=60)
 (out / 'run.json').write_bytes(result.stdout)
 (out / 'run.stderr').write_bytes(result.stderr)
 assert result.returncode == 0, result.stderr

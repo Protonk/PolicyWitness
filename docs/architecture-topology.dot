@@ -6,7 +6,6 @@ digraph topology {
         label="app top level"; style=dashed; color="#888888"; fontsize=10;
         controller;
         client;
-        observer;
         sbpl_check;
     }
     subgraph cluster_xpc {
@@ -19,7 +18,6 @@ digraph topology {
     subgraph cluster_os {
         label="macOS"; style=dashed; color="#888888"; fontsize=10;
         launchd;
-        log_show;
     }
     user [shape="plaintext", label="the caller\nuser", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="user: the caller | a shell or a harness; owns the request file and reads the envelope "];
     controller [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="policy-witness\ncontroller", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="controller: policy-witness | Rust; app top level; the caller; no; none; one run "];
@@ -28,8 +26,6 @@ digraph topology {
     worker [shape="box", style="rounded,filled", fillcolor="#ffe2b8", color="#9a5b00", label="pw-probe-runner\nworker", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="worker: pw-probe-runner | C; inside the XPC bundle; the host; yes; applies the specimen policy to itself; sandbox_compile_string, params, sandbox_apply; sandbox_extension_consume and sandbox_extension_release; one specimen; one application and all ordered phases; terminal publication exits without host permission "];
     exec_child [shape="box", style="rounded,filled", fillcolor="#ffe2b8", color="#9a5b00", label="exec helper children\nexec_child", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="exec_child: exec helper children | caller-supplied; the caller's path; the worker; inherit the worker's sandbox; none of PolicyWitness's; the worker bounds collection and leader reap; ordinary completion and worker death can leave same-group descendants alive; escaped descendants are not contained "];
     validator [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sb_api_validator\nvalidator", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="validator: sb_api_validator | C; inside the XPC bundle; the host at each eligible phase arrival; no; sandbox_check; one phase collection "];
-    observer [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sandbox-log-observer\nobserver", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="observer: sandbox-log-observer | Rust; app top level; the controller, after execution completes, in its own process group; no; none; one scan "];
-    log_show [shape="ellipse", style="dashed", color="#666666", label="log show\nlog_show", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="log_show: log show | OS; /usr/bin/log; the observer; no; none; one query "];
     sbpl_check [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sbpl-check\nsbpl_check", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="sbpl_check: sbpl-check | Rust; app top level; the controller, only for an admitted xpc_error reply; no; sandbox_compile_string and params; never applies; one compile "];
     launchd [shape="ellipse", style="dashed", color="#666666", label="launchd\nlaunchd", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="launchd: launchd | OS; system; no; none "];
     issuer [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="pw-extension-issuer\nissuer", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="issuer: pw-extension-issuer | inside the XPC bundle; one declaration before worker creation; confirmed clean reap required for delivery; C; the host; outside the specimen policy; ordinary process authority; sandbox_extension_issue_file "];
@@ -42,8 +38,6 @@ digraph topology {
     validator -> worker [style="dotted", color="#9a5b00", label="T7 sandbox_check(pid)", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T7: sandbox_check against the worker PID, with SANDBOX_CHECK_NO_REPORT |  "];
     worker -> host [style="dashed", color="#2f5597", label="T8 shared-region evidence", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T8: immutable phase arrivals, acknowledgements and completions; numbered releases before actions; separate native call markers/results and fresh-read syscall observations |  "];
     worker -> exec_child [style="bold", color="#222222", label="T9 posix_spawn after apply", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T9: posix_spawn after apply; stdout and stderr pipes into bounded slot buffers |  "];
-    controller -> observer [style="bold", color="#222222", label="T10 spawn, own process group", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T10: spawn in its own process group after execution; budget on argv; JSON report on stdout |  "];
-    observer -> log_show [style="bold", color="#222222", label="T11 log show", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T11: log show over the padded client span; text on stdout, bounded |  "];
     controller -> sbpl_check [style="bold", color="#222222", label="T12 spawn on xpc_error only", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T12: spawn only for an admitted xpc_error reply; held request in; helper envelope out |  "];
     host -> issuer [style="bold", color="#222222", label="T13 spawn issuer; fd 3", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T13: fresh ordinary-authority issuer; fd 3 token mapping, stdio /dev/null, empty environment |  Issuer wait 5,000 milliseconds; cleanup may overrun. Missing capability refuses extension specimens."];
     issuer -> host [style="dashed", color="#2f5597", label="T14 transient token and publication", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T14: native issuance publication and bounded transient token bytes; host owns cleanup and delivery eligibility |  Token storage 16,384 bytes; raw bytes never enter reply fields."];

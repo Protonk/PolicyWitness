@@ -18,7 +18,6 @@ Public functions:
     steps(document)     -> [step, ...]    the reply's steps after the version gate
     select(steps, ...)  -> [step, ...]    steps whose fields equal the given values
     lifecycle(document) -> view           the registered lifecycle account
-    denials(document)   -> dict           the optional log channel, resolved in place
 """
 from copy import deepcopy
 import json
@@ -257,27 +256,6 @@ def _validate_policy_check_reply(capture, path, shape, errors):
     validate_shape(reply, path, shape, errors)
 
 
-def _observer_admitted(reply):
-    data = reply.get('data') if isinstance(reply, dict) else None
-    return isinstance(reply, dict) and reply.get('kind') == 'sandbox_log_observer_report' and \
-        type(reply.get('schema_version')) is int and reply['schema_version'] == contract.CONTROLLER_ENVELOPE and \
-        isinstance(data, dict) and type(data.get('observer_schema_version')) is int and data['observer_schema_version'] == 2
-
-
-def _validate_observer_reply(capture, path, shape, errors):
-    reply = capture['observer']
-    if reply is None:
-        return
-    admitted = _observer_admitted(reply)
-    if not admitted:
-        if capture.get('capture_status') not in ('invalid_reply', 'timeout', 'overflow', 'error'):
-            errors.append('sandbox_log_capture status requires an admitted observer')
-        if any(capture.get(key) is not None for key in ('observed_deny', 'deny_events', 'blocked_reason', 'step_denies')):
-            errors.append('inadmissible observer cannot supply log claims')
-        return
-    validate_shape(reply, path, shape, errors)
-
-
 def validate_shape(value, path, shape, errors):
     """Check one object and everything under it against the golden for its path.
 
@@ -297,9 +275,6 @@ def validate_shape(value, path, shape, errors):
         child_path = f'{path}.{key}'
         if child_path == 'envelope.data.policy_check.envelope':
             _validate_policy_check_reply(value, child_path, shape, errors)
-            continue
-        if child_path == 'envelope.data.sandbox_log_capture.observer':
-            _validate_observer_reply(value, child_path, shape, errors)
             continue
         actual = _json_type(child)
         if child is not None and allowed[key] != 'null' and actual != allowed[key]:
@@ -827,11 +802,6 @@ def _validate_envelope(document):
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
-    capture = data.get('sandbox_log_capture')
-    if isinstance(capture, dict) and capture.get('observer') is not None and not _observer_admitted(capture['observer']):
-        if isinstance(diagnostics, dict) and (diagnostics.get('correlation_status') not in (None,'unavailable') or
-                diagnostics.get('permission_failures_without_record') is not None):
-            errors.append('inadmissible observer cannot supply correlation or missing-record claims')
     return errors
 
 
@@ -925,33 +895,3 @@ def lifecycle(document):
             'malformed': view['malformed'],
             'projections': {k: view['projections'].get(k) for k in
                             ('process_disposition', 'termination_cause', 'stop_reason', 'disposition_integrity')}}
-
-
-def denials(document):
-    """The optional log channel with candidate references resolved in place."""
-    _gate(document)
-    if not is_envelope(document):
-        raise ValueError('denial evidence lives in the controller envelope, not the bare reply')
-    data = document.get('data') or {}
-    capture = data.get('sandbox_log_capture') or {}
-    diagnostics = data.get('runner_sandbox_diagnostics') or {}
-    rejected = capture.get('observer') is not None and not _observer_admitted(capture['observer'])
-    events = None if rejected else capture.get('deny_events')
-    associations = None if rejected else capture.get('step_denies')
-    candidates = None
-    if associations is not None:
-        candidates = []
-        for association in associations:
-            index = association.get('event_index')
-            event = events[index] if isinstance(events, list) and type(index) is int and 0 <= index < len(events) else None
-            candidates.append(dict(association, event=event))
-    return deepcopy({
-        'capture_status': capture.get('capture_status', 'not_reported') if data.get('sandbox_log_capture') is not None else 'not_reported',
-        'correlation_status': 'unavailable' if rejected else diagnostics.get('correlation_status', 'not_reported'),
-        'permission_failures_without_record': None if rejected else diagnostics.get('permission_failures_without_record'),
-        'window': capture.get('window'), 'events': events, 'candidates': candidates,
-        'event_reporting': 'reported' if events is not None else 'not_reported',
-        'association_reporting': 'reported' if associations is not None else 'not_reported',
-        'diagnostics': data.get('runner_sandbox_diagnostics'),
-        'capture': data.get('sandbox_log_capture'),
-    })

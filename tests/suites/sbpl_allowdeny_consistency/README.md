@@ -21,7 +21,7 @@ policy parameter bindings, after restoring both files.
 
 Run `tests/run.sh --suite sbpl_allowdeny_consistency` outside an automation
 sandbox (request escalation there). Missing builds and run failures fail the
-test. Unified log capture is disabled; it is not this test's oracle.
+test.
 
 `RunCapture` retains each specimen, envelope, stderr, and `capture.json` under
 `round0/` and `round1/`. `assert.log` and the separate `.before` / `.after` byte

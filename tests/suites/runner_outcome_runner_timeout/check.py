@@ -121,7 +121,7 @@ def check_cli(variant, pw, out):
         }
         (out / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
         with RunCapture(pw, out, specimen,
-                        cli_args=['--no-log-capture', '--timeout-ms', '20000']) as run:
+                        cli_args=['--timeout-ms', '20000']) as run:
             rc = run.wait(timeout=25)
             after = [path.read_bytes() for path in paths]
             for i, data in enumerate(after):

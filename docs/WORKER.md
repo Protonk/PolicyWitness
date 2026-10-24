@@ -452,7 +452,7 @@ created files and references held by other processes have their own lifetimes.
 *Figure: worker capabilities. Generated from [architecture.json](architecture.json) by [generate_architecture.py](generate_architecture.py); dot source in [worker-capabilities.dot](worker-capabilities.dot). Figure IDs correspond to the table IDs. Sources support the implementation account. Check citations state their assertion scope; remaining facts have source support only. The generator checks source-symbol presence, resolves cited definitions and requires nonempty scope text; the relevance of each assertion is reviewed, not mechanically established.*
 
 <details>
-<summary>Worker capabilities: 83 nodes and 54 edges; source-symbol presence and cited definitions checked</summary>
+<summary>Worker capabilities: 82 nodes and 53 edges; source-symbol presence and cited definitions checked</summary>
 
 #### Worker capabilities nodes
 
@@ -539,7 +539,6 @@ created files and references held by other processes have their own lifetimes.
 | x1 | Validator predictions | external | X1 | planValidatorQueries | Query collection outside worker | Eligible phase and reply | Owning host/controller object lifetime | Live worker PID query through separate validator | No worker-to-child transfer | External evidence | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`comparison_matrix`](../tests/suites/witness_contract/run.sh) — Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens. |  |
 | x2 | Host disposition and comparison | external | X2 | comparisonEvidence | After collection/publication | Reply | Owning host/controller object lifetime | Join worker publications, query records and process observations | No worker-to-child transfer | External evidence | [`comparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`comparison_matrix`](../tests/suites/witness_contract/run.sh) — Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens. |  |
 | x3 | Host path diagnostics | external | X3 | enrichPathDiagnostics | After attempt collection | Reply | Owning host/controller object lifetime | Later path/metadata observations under host authority | No worker-to-child transfer | External evidence | [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`path_query_integrated`](../tests/suites/witness_contract/opt_in/path_query_integrated.sh) — Integrated path-query controls check later host path resolution and its separation from the worker observation. |  |
-| x4 | Controller denial-log candidates | external | X4 | attach_sandbox_logs | Outside worker; collector surrounds execution | Envelope | Owning host/controller object lifetime | External log collection and correlation | No worker-to-child transfer | External evidence | [`attach_sandbox_logs`](../controller/src/run_flow.rs) | [`worker_termination_and_log_correlation`](../tests/suites/witness_contract/run.sh) — Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available. |  |
 | x5 | Compiler receipt in dossier | external | X5 | decodeProfileCapture | Capture before apply; host decode after publication | Reply and optional dossier | Owning host/controller object lifetime | Copy/hash admitted receipt from shared evidence | No worker-to-child transfer | External evidence | [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`max_targets_reply_survives`](../tests/suites/witness_contract/run.sh) — The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply. |  |
 
 #### Worker capabilities edges
@@ -599,7 +598,6 @@ created files and references held by other processes have their own lifetimes.
 | W52 | x1 | x2 | joins | Host joins prediction records to attempt evidence | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`comparison_matrix`](../tests/suites/witness_contract/run.sh) — Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens. |  |
 | W53 | x3 | x2 | joins | Host attaches later path-resolution results | [`enrichPathDiagnostics`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`path_query_integrated`](../tests/suites/witness_contract/opt_in/path_query_integrated.sh) — Integrated path-query controls check later host path resolution and its separation from the worker observation. |  |
 | W54 | s27 | x5 | joins | Host decodes and copies receipt | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_profile_capture.h); [`decodeProfileCapture`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`max_targets_reply_survives`](../tests/suites/witness_contract/run.sh) — The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply. |  |
-| W55 | x2 | x4 | joins | Controller associates external log candidates with run evidence | [`attach_sandbox_logs`](../controller/src/run_flow.rs); [`finish_sandbox_log_capture`](../controller/src/run_flow.rs) | [`worker_termination_and_log_correlation`](../tests/suites/witness_contract/run.sh) — Requires capture availability and worker-disposition facts; candidate association assertions run when native events are available.; [`observer_windows_survive_association_serialization_and_consumer_recovery`](../controller/src/run_flow.rs) — Constructed observer events acquire the expected candidate step through production association/serialization; invalid windows withhold candidates, including on signaled runs. |  |
 
 Notes:
 
@@ -638,7 +636,6 @@ Notes:
 - `n13`: Installed libc allocation and locale internals remain unobserved.
 - `x1`: No transfer into worker; release ordinal is separate
 - `x2`: Host-owned interpretation under evidence contract
-- `x4`: Candidate association, not worker-native cause
 - `x5`: Receipt and applied-policy evidence are distinct
 - `W4`: Source identifies the descriptor-to-mapping operation. L does not independently identify the evidence mapping object.
 - `W51`: A final acquire after confirmed reap can recover an unseen acknowledgement while ownership remained unbroken; successful completion is not required and broken ownership cannot be repaired.

@@ -336,7 +336,6 @@ def main() -> int:
     # Embedded helper tools under Contents/MacOS (signed separately; host-side).
     helper_names = [
         "pw-runner-client",
-        "sandbox-log-observer",
         "sbpl-check",
     ]
     for name in helper_names:

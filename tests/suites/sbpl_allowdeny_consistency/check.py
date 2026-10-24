@@ -43,7 +43,7 @@ def main():
         }
         assert spec["probe_plan"] == fixed_plan
         with RunCapture(pw, out / f"round{round_number}", spec,
-                        cli_args=['--no-log-capture']) as run:
+                        cli_args=[]) as run:
             rc = run.wait(timeout=20)
 
         # Read and preserve the external evidence before consulting PW's report.

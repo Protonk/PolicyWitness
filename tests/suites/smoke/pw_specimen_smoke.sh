@@ -26,7 +26,7 @@ fi
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 render_specimen_with_runner "${SPECIMEN_FIXTURE}" "${SPECIMEN_PATH}"
 
-# Note: sandboxed automation harnesses can block XPC lookup or unified log access.
+# Note: sandboxed automation harnesses can block XPC lookup.
 # If this test fails with those symptoms, rerun from a normal Terminal.
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"

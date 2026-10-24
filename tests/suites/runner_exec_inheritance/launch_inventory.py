@@ -56,7 +56,7 @@ def observe(pw, out, boundary):
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'),
                     probe_plan=[], _test_overrides={key: 20000})
     run = RunCapture(pw, out, specimen,
-                     cli_args=['--no-log-capture', '--timeout-ms', '45000'])
+                     cli_args=['--timeout-ms', '45000'])
     initial = processes()
     (out / 'processes-before.txt').write_text(initial)
     existing = {pid for pid, _ in candidates(initial, flag)}

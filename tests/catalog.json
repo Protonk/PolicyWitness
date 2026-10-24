@@ -270,33 +270,11 @@
           ]
         },
         {
-          "id": "rust.observer_admission",
-          "description": "Observer admission before interpretation, promoted regression control",
-          "command": [
-            "bash",
-            "tests/suites/unit/observer_admission.sh"
-          ],
-          "requires": [
-            "cargo"
-          ]
-        },
-        {
           "id": "rust.byoxpc_reds",
           "description": "BYOXPC selection controller tests by exact name (a required entitlement key present with value false is refused, naming the worker and the key); promoted from red",
           "command": [
             "bash",
             "tests/suites/unit/byoxpc_reds.sh"
-          ],
-          "requires": [
-            "cargo"
-          ]
-        },
-        {
-          "id": "rust.read_fresh_reds",
-          "description": "The read_fresh denial-log association tests by exact name (a matching file-read-data event names the submitted read_fresh attempt as a candidate, alone or ambiguously); promoted from red",
-          "command": [
-            "bash",
-            "tests/suites/unit/read_fresh_reds.sh"
           ],
           "requires": [
             "cargo"
@@ -1433,40 +1411,12 @@
           ]
         },
         {
-          "id": "worker_termination_and_log_correlation",
+          "id": "worker_termination",
           "command": [
             "bash",
-            "tests/suites/witness_contract/worker_termination_and_log_correlation.sh"
+            "tests/suites/witness_contract/worker_termination.sh"
           ],
-          "description": "Independent denied writes and unrelated self-signal; collection/cleanup facts distinguish completed capture from evidenced budget exhaustion"
-        },
-        {
-          "id": "deny_capture_covers_the_run",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/deny_capture_covers_the_run.sh"
-          ],
-          "description": "Native denied reads, one through a symlinked directory, and padded scan bounds; completed empty queries or evidenced budget cutoffs are admissible, returned records and diagnostics must agree"
-        },
-        {
-          "id": "log_capture_controls",
-          "description": "Controlled acceptance and rejection of live capture facts; empty queries and evidenced cutoffs do not excuse malformed replies or failed cleanup",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/log_capture_controls.sh"
-          ],
-          "requires": []
-        },
-        {
-          "id": "log_query_predicate_archive",
-          "description": "Required committed archive: real log show must preserve the independent positive message multiset and exclude unrelated PID digits before parsing; missing fixture or tool access fails",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/log_query_predicate_archive.sh"
-          ],
-          "requires": [
-            "cargo"
-          ]
+          "description": "Independent denied writes and unrelated self-signal preserve worker disposition, reaping, phase ordering and execution evidence"
         },
         {
           "id": "instrumentation_field_rejected",

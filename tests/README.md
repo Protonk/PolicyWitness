@@ -373,7 +373,7 @@ evidence checks pass, including when those cases run through BYOXPC.
 | `runner_exec_lifecycle` | Baseline + opt-in | CLI exec deadlines stop observed helper trees, preserve output and allow later effects; early EOF, surviving descendants and worker death are covered, including an opt-in combined EOF/leader-exit observation. | App, XPC, clang and Python. | [Suite](suites/runner_exec_lifecycle/README.md) |
 | `runner_exec_inheritance` | Baseline + opt-in | Children report isolated environments/descriptors and usable streams; controlled resources and opt-in mutations establish leak detection; opt-in production launch inventory records accessible worker state and observer boundaries; a closed-worker-stderr probe characterizes child delivery. | App/XPC for CLI and launch inventory; clang/Python for worker and mutation controls. | [Suite](suites/runner_exec_inheritance/README.md) |
 | `opt_in` | Opt-in | Selection of all non-default catalog cases. | Varies by case. | [Registry](OPT_IN_TESTS.md) |
-| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption, combined faults and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics, dossier and log correlation; opt-in barrier mutations, BYOXPC dossier and independent native path-query observations. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
+| `witness_contract` | Baseline + opt-in | Per-phase ordering and fresh planning, native extension lifecycle/interruption, combined faults and token confinement, bounded collection, independent query/attempt effects, comparison limits, partial evidence, diagnostics and dossier; opt-in barrier mutations, BYOXPC dossier and independent native path-query observations. | App/XPC and toolchains for live cases; signing/GUI for applicable opt-ins; offline cases vary. | [Suite](suites/witness_contract/README.md) |
 
 ## Shared test infrastructure
 
@@ -455,7 +455,7 @@ describes the invariants and fixtures.
 
 The dispatcher checks visible equipment, including app and worker binaries,
 toolchains, a GUI session, a signing identity and Rosetta. It does not
-preflight XPC reachability or log access: a blocked live case runs and fails
+preflight XPC reachability: a blocked live case runs and fails
 with evidence, while an unconfirmed `gui` prerequisite leaves the case
 explicitly unrun. `rosetta` holds only when a shell started with
 `arch -x86_64` reads `sysctl.proc_translated` as `1`; a launch error, timeout,
@@ -599,7 +599,7 @@ Recovered spawn-failure records retain their numeric codes, paths and
 diagnostic text. Explicit evidence-loss replies omit that record along with
 steps and subprocesses. Controlled scenario expectations stay in the CLI/witness
 cases; Swift tests enforce
-encoding and absence, and Rust tests enforce receiver/correlation preservation.
+encoding and absence, and Rust tests enforce receiver and execution preservation.
 Shared blackbox checks enforce universal version/shape guarantees. The blackbox
 checker controls retain rejected meaning-loss fixtures beside passing controls.
 
@@ -616,8 +616,3 @@ ordering chain. The [failure contract](FAILURE-PROPAGATION-CONTRACT.md#compariso
 names which case owns which rows and invariants. Step identity, independent
 file/process observations, native results and partial-evidence protections
 remain separately asserted.
-
-The default `witness_contract/log_query_predicate_archive` case requires the
-committed [query archive and independent manifest](fixtures/deny_capture/README.md).
-It performs read-only OS queries against that fixture. Missing data or
-incompatible readers fail explicitly.

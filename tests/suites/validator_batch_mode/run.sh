@@ -235,7 +235,7 @@ fi
 # ---- test_id: predictions_do_not_report ------------------------------------
 # Every sandbox_check the validator issues must carry SANDBOX_CHECK_NO_REPORT.
 # Without it a denied prediction writes a kernel deny line against the worker
-# PID that the deny-log channel cannot tell from the attempt's own line, and
+# PID, indistinguishable from the attempt's own line, and
 # the attempt's line then arrives only as a coalesced "duplicate report". The
 # control compiles the production source with a recording sandbox_check, so
 # it needs no kernel query, sandbox or child.
