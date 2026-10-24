@@ -40,6 +40,8 @@ Layout:
 - `PolicyWitness-Phase-Barrier-Investigation.md`: the phase-barrier
   investigation's questions about the worker's wait between arrival and
   release, and its own proceed deadline.
+- `phase-barrier/`: the driver-seam fixture that holds the phase-boundary
+  callback, its schedule runner and reader.
 - `log-observer/`: the pinned pilot configuration, bounded query procedure,
   content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
@@ -47,8 +49,8 @@ Layout:
   `harness/configurations.json`.
 - `evidence/<run-id>/`: committed per run: `manifest.json`,
   `conditions-start.json`, `conditions-end.json`, `run.json`, `SHA256SUMS`
-  and the summarizer's output; host-lifetime runs have `summary.json`,
-  `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
+  and the summarizer's output; host-lifetime and phase-barrier runs have
+  `summary.json`, `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
   without its raw files.
 - `evidence/<control-batch>/`: the external terminal transcripts, observed exit
   statuses and assertion ledger for each bounded control or pilot in that batch.
@@ -58,5 +60,6 @@ Layout:
   cites a raw file says so.
 
 A run identifier is `<UTC stamp>-<config>-b<build number>`; host-lifetime
-runs are `<UTC stamp>-hostlife-<label>`, with the build number in the label. Runs are never
+runs are `<UTC stamp>-hostlife-<label>` and phase-barrier runs
+`<UTC stamp>-phasebarrier-<label>`, with the build number in the label. Runs are never
 overwritten; a procedure that finds its run directory present refuses.

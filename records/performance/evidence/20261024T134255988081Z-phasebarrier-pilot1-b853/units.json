@@ -1,0 +1,991 @@
+[
+  {
+    "calibration_ticks_per_us": 24.01379402259021,
+    "condition": "hold200-boundary",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.211,
+    "harness_elapsed_ms": 343.309125,
+    "hold_requested_ms": 200,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 21,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 205,
+        "excluded_ms": 202,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89057,
+      "reply_worker_pid": 89058,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89058,
+      "worker_ppid": 89057,
+      "worker_start_wall_us": 1792849377128804,
+      "worker_uniqueid": 17368844
+    },
+    "intervals_ms": {
+      "hold_actual": 202.733916,
+      "hold_overshoot": 2.7339159999999936,
+      "hook_entry_to_worker_exit_event": 203.095458,
+      "hook_exit_to_release_call": 0.006334,
+      "hook_exit_to_worker_exit_event": 0.361542,
+      "release_call_to_unlink_event": 0.079875,
+      "run_start_to_hook_entry": 22.585625,
+      "run_total": 228.057375,
+      "unlink_event_to_worker_exit_event": 0.275333
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "boundary",
+    "sequence": 0,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 21.34508333333333,
+      "dense": null,
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.9868528602369965,
+        "cpu_ms": 199.96562500000002,
+        "cycles": 828851650,
+        "exited_by_second_read": false,
+        "instructions": 2432414908,
+        "pcore_cpu_ms": 199.96562500000002,
+        "runnable_ms": 204.41116666666665,
+        "system_ms": 0.2442083333333333,
+        "user_ms": 199.72141666666667,
+        "window_ms": 202.629625
+      },
+      "lifetime_ms_from_children_usage": 224.082
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.009864036257,
+    "condition": "hold800-dense",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 5.648,
+    "harness_elapsed_ms": 928.517333,
+    "hold_requested_ms": 800,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 807,
+        "excluded_ms": 805,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89059,
+      "reply_worker_pid": 89060,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89060,
+      "worker_ppid": 89059,
+      "worker_start_wall_us": 1792849378484040,
+      "worker_uniqueid": 17368846
+    },
+    "intervals_ms": {
+      "hold_actual": 805.049833,
+      "hold_overshoot": 5.049833000000035,
+      "hook_entry_to_worker_exit_event": 805.422292,
+      "hook_exit_to_release_call": 0.006834,
+      "hook_exit_to_worker_exit_event": 0.372459,
+      "release_call_to_unlink_event": 0.0675,
+      "run_start_to_hook_entry": 13.891917,
+      "run_total": 821.638334,
+      "unlink_event_to_worker_exit_event": 0.298125
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "dense",
+    "sequence": 1,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 12.37625,
+      "dense": {
+        "after_hold_span": null,
+        "failed_reads": 0,
+        "hold_span": {
+          "cpu_fraction_of_window": 0.9970480316528297,
+          "cpu_ms": 802.3135416666665,
+          "cycles": 3486464299,
+          "exited_by_second_read": false,
+          "instructions": 10226941580,
+          "pcore_cpu_ms": 802.3135416666665,
+          "runnable_ms": 807.428,
+          "system_ms": 1.1855833333333332,
+          "user_ms": 801.1279583333333,
+          "window_ms": 804.688958
+        },
+        "interval_ms": {
+          "absent": 0,
+          "max": 1.300084,
+          "median": 1.261292,
+          "min": 1.035375,
+          "n": 640,
+          "p90": 1.263833
+        },
+        "last_read_exited": true,
+        "read_cost_us": {
+          "absent": 0,
+          "max": 10.834,
+          "median": 0.834,
+          "min": 0.625,
+          "n": 641,
+          "p90": 1.291
+        },
+        "samples": 641
+      },
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.9999586424106883,
+        "cpu_ms": 804.92175,
+        "cycles": 3498094877,
+        "exited_by_second_read": false,
+        "instructions": 10261097496,
+        "pcore_cpu_ms": 804.92175,
+        "runnable_ms": 807.428,
+        "system_ms": 1.1892916666666664,
+        "user_ms": 803.7324583333333,
+        "window_ms": 804.955041
+      },
+      "lifetime_ms_from_children_usage": 817.419
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.026287732391552,
+    "condition": "hold200-dense",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 1.7,
+    "harness_elapsed_ms": 339.077125,
+    "hold_requested_ms": 200,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 203,
+        "excluded_ms": 200,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89063,
+      "reply_worker_pid": 89064,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89064,
+      "worker_ppid": 89063,
+      "worker_start_wall_us": 1792849380420379,
+      "worker_uniqueid": 17368850
+    },
+    "intervals_ms": {
+      "hold_actual": 200.46825,
+      "hold_overshoot": 0.4682500000000118,
+      "hook_entry_to_worker_exit_event": 200.833917,
+      "hook_exit_to_release_call": 0.007334,
+      "hook_exit_to_worker_exit_event": 0.365667,
+      "release_call_to_unlink_event": 0.065291,
+      "run_start_to_hook_entry": 13.902125,
+      "run_total": 217.09025,
+      "unlink_event_to_worker_exit_event": 0.293042
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "dense",
+    "sequence": 2,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 12.452125,
+      "dense": {
+        "after_hold_span": null,
+        "failed_reads": 0,
+        "hold_span": {
+          "cpu_fraction_of_window": 0.9719182187655282,
+          "cpu_ms": 194.62654166666667,
+          "cycles": 784431959,
+          "exited_by_second_read": false,
+          "instructions": 2301233329,
+          "pcore_cpu_ms": 194.62654166666667,
+          "runnable_ms": 200.00325,
+          "system_ms": 0.48004166666666664,
+          "user_ms": 194.1465,
+          "window_ms": 200.249916
+        },
+        "interval_ms": {
+          "absent": 0,
+          "max": 1.285083,
+          "median": 1.261542,
+          "min": 1.043584,
+          "n": 160,
+          "p90": 1.26675
+        },
+        "last_read_exited": true,
+        "read_cost_us": {
+          "absent": 0,
+          "max": 2.75,
+          "median": 0.917,
+          "min": 0.625,
+          "n": 161,
+          "p90": 1.625
+        },
+        "samples": 161
+      },
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.9713484626260471,
+        "cpu_ms": 194.62654166666667,
+        "cycles": 784431959,
+        "exited_by_second_read": false,
+        "instructions": 2301233329,
+        "pcore_cpu_ms": 194.62654166666667,
+        "runnable_ms": 200.00325,
+        "system_ms": 0.48004166666666664,
+        "user_ms": 194.1465,
+        "window_ms": 200.367375
+      },
+      "lifetime_ms_from_children_usage": 212.902
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.030518074296186,
+    "condition": "hold800-none",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.275,
+    "harness_elapsed_ms": 952.725917,
+    "hold_requested_ms": 800,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 807,
+        "excluded_ms": 804,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89065,
+      "reply_worker_pid": 89066,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89066,
+      "worker_ppid": 89065,
+      "worker_start_wall_us": 1792849381768876,
+      "worker_uniqueid": 17368852
+    },
+    "intervals_ms": {
+      "hold_actual": 804.411292,
+      "hold_overshoot": 4.411292000000003,
+      "hook_entry_to_worker_exit_event": 804.795542,
+      "hook_exit_to_release_call": 0.008,
+      "hook_exit_to_worker_exit_event": 0.38425,
+      "release_call_to_unlink_event": 0.083833,
+      "run_start_to_hook_entry": 13.8445,
+      "run_total": 821.001583,
+      "unlink_event_to_worker_exit_event": 0.292417
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "none",
+    "sequence": 3,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": null,
+      "dense": null,
+      "hold_boundary": null,
+      "lifetime_ms_from_children_usage": 816.372
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.04355214928357,
+    "condition": "deadline250-hold400-boundary",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.381,
+    "harness_elapsed_ms": 562.211625,
+    "hold_requested_ms": 400,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "child_reaped",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "not_entered",
+      "graceWait": null,
+      "orderingProtocolViolations": [],
+      "pollStopReason": "child_reaped",
+      "proceedObserved": false,
+      "proceedOwnershipEstablished": false,
+      "proceedSet": false,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 405,
+        "excluded_ms": 405,
+        "native_errno": null,
+        "stop": "child_reaped"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89082,
+      "reply_worker_pid": 89083,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89083,
+      "worker_ppid": 89082,
+      "worker_start_wall_us": 1792849383727816,
+      "worker_uniqueid": 17368869
+    },
+    "intervals_ms": {
+      "hold_actual": 405.149333,
+      "hold_overshoot": 5.149333000000013,
+      "hook_entry_to_worker_exit_event": 247.9985,
+      "hook_exit_to_release_call": null,
+      "hook_exit_to_worker_exit_event": -157.150833,
+      "release_call_to_unlink_event": null,
+      "run_start_to_hook_entry": 13.658833,
+      "run_total": 419.077916,
+      "unlink_event_to_worker_exit_event": null
+    },
+    "phase": {
+      "acknowledged": false,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": false,
+      "ownershipEstablished": false,
+      "releaseSet": false,
+      "violations": []
+    },
+    "proceed_wait_ms": 250,
+    "round": 0,
+    "sampling": "boundary",
+    "sequence": 4,
+    "slot": {
+      "completed": false,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": true,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 0,
+      "unlink_events": 0,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 12.393041666666665,
+      "dense": null,
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.6114128778310695,
+        "cpu_ms": 247.65841666666665,
+        "cycles": 1036621695,
+        "exited_by_second_read": true,
+        "instructions": 3035081629,
+        "pcore_cpu_ms": 247.65841666666665,
+        "runnable_ms": 250.75258333333332,
+        "system_ms": 0.57725,
+        "user_ms": 247.08116666666666,
+        "window_ms": 405.059209
+      },
+      "lifetime_ms_from_children_usage": 260.05
+    },
+    "worker_failure": {
+      "code": 8,
+      "detail": 250,
+      "errno": null,
+      "index": 0,
+      "native_kind": 0,
+      "native_result": null,
+      "operation": 11
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.034718288741544,
+    "condition": "hold0-boundary",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.128,
+    "harness_elapsed_ms": 128.943333,
+    "hold_requested_ms": 0,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 23,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 2,
+        "excluded_ms": 0,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89084,
+      "reply_worker_pid": 89085,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89085,
+      "worker_ppid": 89084,
+      "worker_start_wall_us": 1792849385301520,
+      "worker_uniqueid": 17368871
+    },
+    "intervals_ms": {
+      "hold_actual": 0.134042,
+      "hold_overshoot": 0.134042,
+      "hook_entry_to_worker_exit_event": 0.7085,
+      "hook_exit_to_release_call": 0.003208,
+      "hook_exit_to_worker_exit_event": 0.574458,
+      "release_call_to_unlink_event": 0.099708,
+      "run_start_to_hook_entry": 24.670208,
+      "run_total": 27.479291,
+      "unlink_event_to_worker_exit_event": 0.471542
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "boundary",
+    "sequence": 5,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 23.256,
+      "dense": null,
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.0,
+        "cpu_ms": 0.0,
+        "cycles": 0,
+        "exited_by_second_read": false,
+        "instructions": 0,
+        "pcore_cpu_ms": 0.0,
+        "runnable_ms": 0.0,
+        "system_ms": 0.0,
+        "user_ms": 0.0,
+        "window_ms": 0.0495
+      },
+      "lifetime_ms_from_children_usage": 23.422
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.036053447069406,
+    "condition": "hold200-none",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.102,
+    "harness_elapsed_ms": 353.615375,
+    "hold_requested_ms": 200,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 205,
+        "excluded_ms": 203,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89086,
+      "reply_worker_pid": 89087,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89087,
+      "worker_ppid": 89086,
+      "worker_start_wall_us": 1792849386436322,
+      "worker_uniqueid": 17368873
+    },
+    "intervals_ms": {
+      "hold_actual": 203.123208,
+      "hold_overshoot": 3.1232080000000053,
+      "hook_entry_to_worker_exit_event": 203.485875,
+      "hook_exit_to_release_call": 0.006125,
+      "hook_exit_to_worker_exit_event": 0.362667,
+      "release_call_to_unlink_event": 0.076,
+      "run_start_to_hook_entry": 13.513292,
+      "run_total": 219.363958,
+      "unlink_event_to_worker_exit_event": 0.280542
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "none",
+    "sequence": 6,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": null,
+      "dense": null,
+      "hold_boundary": null,
+      "lifetime_ms_from_children_usage": 215.673
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  },
+  {
+    "calibration_ticks_per_us": 24.061906507180222,
+    "condition": "hold800-boundary",
+    "driver_result": "success",
+    "exit": 0,
+    "fixture_cpu_during_hold_ms": 0.32,
+    "harness_elapsed_ms": 948.501459,
+    "hold_requested_ms": 800,
+    "host": {
+      "applied": true,
+      "applyRC": 0,
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "done": true,
+      "exitCode": 0,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "orderingProtocolViolations": [],
+      "pollStopReason": "done",
+      "proceedObserved": true,
+      "proceedOwnershipEstablished": true,
+      "proceedSet": true,
+      "readyWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "received"
+      },
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 120000,
+        "clock_fault": false,
+        "elapsed_ms": 807,
+        "excluded_ms": 805,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null
+    },
+    "identified_worker_survived": false,
+    "identity": {
+      "fixture_pid": 89089,
+      "reply_worker_pid": 89090,
+      "worker_parent_is_fixture": true,
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_pid": 89090,
+      "worker_ppid": 89089,
+      "worker_start_wall_us": 1792849387799317,
+      "worker_uniqueid": 17368876
+    },
+    "intervals_ms": {
+      "hold_actual": 805.061583,
+      "hold_overshoot": 5.0615830000000415,
+      "hook_entry_to_worker_exit_event": 805.478542,
+      "hook_exit_to_release_call": 0.008,
+      "hook_exit_to_worker_exit_event": 0.416959,
+      "release_call_to_unlink_event": 0.09825,
+      "run_start_to_hook_entry": 13.728292,
+      "run_total": 821.526542,
+      "unlink_event_to_worker_exit_event": 0.310709
+    },
+    "phase": {
+      "acknowledged": true,
+      "arrived": true,
+      "collectionClosed": true,
+      "completed": true,
+      "ownershipEstablished": true,
+      "releaseSet": true,
+      "violations": []
+    },
+    "proceed_wait_ms": null,
+    "round": 0,
+    "sampling": "boundary",
+    "sequence": 7,
+    "slot": {
+      "completed": true,
+      "errnoVal": 0,
+      "error": null,
+      "rc": 0
+    },
+    "state": "exited",
+    "witness": {
+      "file_after_run": false,
+      "file_at_hook_entry": true,
+      "file_at_hook_exit": true,
+      "release_calls": 1,
+      "unlink_events": 1,
+      "worker_exit_events": 1
+    },
+    "worker_cpu": {
+      "before_hook_entry_ms": 12.389625,
+      "dense": null,
+      "hold_boundary": {
+        "cpu_fraction_of_window": 0.9966584761700963,
+        "cpu_ms": 802.257375,
+        "cycles": 3493516610,
+        "exited_by_second_read": false,
+        "instructions": 10229387263,
+        "pcore_cpu_ms": 802.257375,
+        "runnable_ms": 802.4025,
+        "system_ms": 1.4929583333333332,
+        "user_ms": 800.7644166666666,
+        "window_ms": 804.947125
+      },
+      "lifetime_ms_from_children_usage": 817.464
+    },
+    "worker_failure": null,
+    "worker_processes_after_unit": []
+  }
+]

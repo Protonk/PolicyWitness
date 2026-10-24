@@ -1,0 +1,583 @@
+{
+  "argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "records/performance/host-lifetime/observe.py",
+    "--series",
+    "separated",
+    "--count",
+    "3",
+    "--request",
+    "tests/fixtures/pw_runner/specimen_mach_deny.json",
+    "--label",
+    "phasebarrier-cli-control-b853",
+    "--ceiling-s",
+    "60"
+  ],
+  "baseline_processes": [],
+  "child_env": {
+    "HOME": "/Users/raccoon",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+  },
+  "clock_identity_end": {
+    "mach_continuous_time": 36287169952905,
+    "mach_timebase": [
+      125,
+      3
+    ],
+    "reading": {
+      "mono_ns": 1511965414700875,
+      "wall_ns": 1792849609852397000
+    },
+    "uptime_raw_ns": 789704921980208
+  },
+  "clock_identity_start": {
+    "mach_continuous_time": 36287034682462,
+    "mach_timebase": [
+      125,
+      3
+    ],
+    "reading": {
+      "mono_ns": 1511959778434958,
+      "wall_ns": 1792849604216175000
+    },
+    "uptime_raw_ns": 789699285714208
+  },
+  "conditions_end": {
+    "at": "2026-10-24T13:46:49.852411+00:00",
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "kern.boottime",
+          "vm.loadavg"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nkern.boottime: { sec = 1791337646, usec = 897083 } Tue Oct  6 18:47:26 2026\nvm.loadavg: { 1.59 1.71 1.74 }\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=26214499)\t93%; discharging; 10:44 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 1.7,
+            "name": "logd",
+            "pid": 386,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.5,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.9,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.5,
+            "name": "claude",
+            "pid": 87843,
+            "ppid": 81014
+          },
+          {
+            "cpu_percent": 0.3,
+            "name": "claude",
+            "pid": 74070,
+            "ppid": 63707
+          },
+          {
+            "cpu_percent": 0.2,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.1,
+            "name": "<other>",
+            "pid": 827,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.1,
+            "name": "<other>",
+            "pid": 81372,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.1,
+            "name": "Python",
+            "pid": 89477,
+            "ppid": 89476
+          },
+          {
+            "cpu_percent": 0.1,
+            "name": "<other>",
+            "pid": 88064,
+            "ppid": 88062
+          },
+          {
+            "cpu_percent": 0.0,
+            "name": "<other>",
+            "pid": 89440,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.0,
+            "name": "<other>",
+            "pid": 89439,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.0,
+            "name": "<other>",
+            "pid": 89437,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.0,
+            "name": "<other>",
+            "pid": 89438,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.0,
+            "name": "<other>",
+            "pid": 89436,
+            "ppid": 1
+          }
+        ]
+      }
+    ]
+  },
+  "conditions_start": {
+    "at": "2026-10-24T13:46:44.274911+00:00",
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "kern.boottime",
+          "vm.loadavg"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nkern.boottime: { sec = 1791337646, usec = 897083 } Tue Oct  6 18:47:26 2026\nvm.loadavg: { 1.73 1.74 1.75 }\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=26214499)\t93%; discharging; 10:44 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 17.6,
+            "name": "claude",
+            "pid": 74070,
+            "ppid": 63707
+          },
+          {
+            "cpu_percent": 5.3,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 3.3,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 2.2,
+            "name": "claude",
+            "pid": 87843,
+            "ppid": 81014
+          },
+          {
+            "cpu_percent": 2.2,
+            "name": "claude",
+            "pid": 78018,
+            "ppid": 77980
+          },
+          {
+            "cpu_percent": 2.0,
+            "name": "<other>",
+            "pid": 427,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.3,
+            "name": "<other>",
+            "pid": 452,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.0,
+            "name": "logd",
+            "pid": 386,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.9,
+            "name": "<other>",
+            "pid": 511,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.9,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.7,
+            "name": "<other>",
+            "pid": 89476,
+            "ppid": 74070
+          },
+          {
+            "cpu_percent": 0.5,
+            "name": "codex",
+            "pid": 96824,
+            "ppid": 6163
+          },
+          {
+            "cpu_percent": 0.5,
+            "name": "launchd",
+            "pid": 1,
+            "ppid": 0
+          },
+          {
+            "cpu_percent": 0.2,
+            "name": "<other>",
+            "pid": 461,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.2,
+            "name": "<other>",
+            "pid": 596,
+            "ppid": 1
+          }
+        ]
+      }
+    ]
+  },
+  "count": 3,
+  "end_clocks": {
+    "mono_ns": 1511964162548333,
+    "wall_ns": 1792849608600255000
+  },
+  "ended_utc": "2026-10-24T13:46:49.852361+00:00",
+  "format": 1,
+  "harness_sha256": "6a6fe0847376fd353406aa6cb98c247ba68b6f1444af36800385b3954a946eb5",
+  "identity": {
+    "files": {
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Info.plist": "4b38891bc4886958a015dc43aa0a24564ce9390f395cafd555af4b5118f8b34c",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness": "29f65dee233493f8d23bdb05049c78fbd889fbd6b682780ff06c57d3740d7d4c",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client": "c7c28981e7493b203794a13ac914a81227f83efeae76766c64ce2000b06c4530",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check": "5bda967f6e1bc7555c2bccdeb5ffd47cc5f62530f600460c88fb447ab6b2abbc",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/Info.plist": "b118d961f226353f834977d037945ee94129257acb63548954eed603454ac6e3",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "121527fa8c4aaf0303a9b3b7366bec8f3634dde16892a749fc6284087905c670",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer": "a9602955b15f4c928c67d423a249e511111b160442d97504a4e9cad91b6844fa",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "c8ac685bb0dace6cbaec59b8c65c0af83168ed06dc69f4722f0867defade187c",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "278d69e7e4f35e12c70483337c96fc1efdabeff38ce139678c07735968bf5859"
+    },
+    "probes": [
+      {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+          "--version"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "{\n  \"build\": {\n    \"commit\": \"1bf0341cd06c48122af1635e8aa8cac77517d9e1\",\n    \"describe\": \"v0.3.3\",\n    \"number\": \"853\",\n    \"version\": \"0.3.3\"\n  },\n  \"data\": {\n    \"contract\": {\n      \"controller_envelope\": 8,\n      \"request_schema\": 5,\n      \"response_schema\": 23\n    }\n  },\n  \"generated_at_unix_ms\": 1792849604225,\n  \"kind\": \"version\",\n  \"result\": {\n    \"errno\": null,\n    \"error\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"ok\": true,\n    \"rc\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  },\n  \"schema_version\": 8\n}\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/codesign",
+          "-dvvv",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+        ],
+        "exit": 0,
+        "stderr": "Executable=/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner\nIdentifier=com.policywitness.policy-witness.PWRunner\nFormat=bundle with Mach-O thin (arm64)\nCodeDirectory v=20500 size=7349 flags=0x10000(runtime) hashes=218+7 location=embedded\nHash type=sha256 size=32\nCandidateCDHash sha256=df6ee9bd9d0f00425b69128ef8225d0e2afe2252\nCandidateCDHashFull sha256=df6ee9bd9d0f00425b69128ef8225d0e2afe22522555849e02b8bf95dfa38ce1\nHash choices=sha256\nCMSDigest=df6ee9bd9d0f00425b69128ef8225d0e2afe22522555849e02b8bf95dfa38ce1\nCMSDigestType=2\nCDHash=df6ee9bd9d0f00425b69128ef8225d0e2afe2252\nSignature size=9043\nAuthority=Developer ID Application: Adam Hyland (42D369QV8E)\nAuthority=Developer ID Certification Authority\nAuthority=Apple Root CA\nTimestamp=Oct 23, 2026 at 7:25:26\u202fPM\nInfo.plist entries=11\nTeamIdentifier=42D369QV8E\nRuntime Version=27.0.0\nSealed Resources version=2 rules=13 files=6\nInternal requirements count=1 size=204\n",
+        "stdout": ""
+      },
+      {
+        "argv": [
+          "/usr/bin/codesign",
+          "-dvvv",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client"
+        ],
+        "exit": 0,
+        "stderr": "Executable=/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client\nIdentifier=pw-runner-client\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20500 size=4956 flags=0x10000(runtime) hashes=149+2 location=embedded\nHash type=sha256 size=32\nCandidateCDHash sha256=6a8efe4ab6f2e4174748c88839b6c0d2e2f8ea33\nCandidateCDHashFull sha256=6a8efe4ab6f2e4174748c88839b6c0d2e2f8ea33b090f1c7f47f1dee1570e12f\nHash choices=sha256\nCMSDigest=6a8efe4ab6f2e4174748c88839b6c0d2e2f8ea33b090f1c7f47f1dee1570e12f\nCMSDigestType=2\nCDHash=6a8efe4ab6f2e4174748c88839b6c0d2e2f8ea33\nSignature size=9042\nAuthority=Developer ID Application: Adam Hyland (42D369QV8E)\nAuthority=Developer ID Certification Authority\nAuthority=Apple Root CA\nTimestamp=Oct 23, 2026 at 7:25:26\u202fPM\nInfo.plist=not bound\nTeamIdentifier=42D369QV8E\nRuntime Version=27.0.0\nSealed Resources=none\nInternal requirements count=1 size=176\n",
+        "stdout": ""
+      },
+      {
+        "argv": [
+          "/usr/bin/plutil",
+          "-convert",
+          "json",
+          "-o",
+          "-",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/Info.plist"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "{\"CFBundleShortVersionString\":\"0.3.3\",\"CFBundleIdentifier\":\"com.policywitness.policy-witness.PWRunner\",\"XPCService\":{\"ServiceType\":\"Application\"},\"PWBuildCommit\":\"1bf0341cd06c48122af1635e8aa8cac77517d9e1\",\"CFBundleName\":\"PWRunner\",\"PWRunnerAllowedIdentifiers\":[\"pw-runner-client\",\"com.policywitness.policy-witness\"],\"PWBuildDescribe\":\"v0.3.3\",\"CFBundleExecutable\":\"PWRunner\",\"CFBundlePackageType\":\"XPC!\",\"CFBundleVersion\":\"853\",\"PWRunnerRequireSignedCaller\":true}"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "rev-parse",
+          "HEAD"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "36d6ca4fa6808268f1777ba7a4a7df6cfc8a1aae\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "status",
+          "--porcelain",
+          "--untracked-files=all"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "?? records/performance/evidence/20261024T134255988081Z-phasebarrier-pilot1-b853/run-record.json\n?? records/performance/evidence/20261024T134255988081Z-phasebarrier-pilot1-b853/summary.json\n?? records/performance/evidence/20261024T134255988081Z-phasebarrier-pilot1-b853/units.json\n?? records/performance/evidence/20261024T134557967888Z-phasebarrier-pilot2-b853/run-record.json\n?? records/performance/evidence/20261024T134557967888Z-phasebarrier-pilot2-b853/summary.json\n?? records/performance/evidence/20261024T134557967888Z-phasebarrier-pilot2-b853/units.json\n?? records/performance/phase-barrier/Package.swift\n?? records/performance/phase-barrier/Sources/main.swift\n?? records/performance/phase-barrier/analyze.py\n?? records/performance/phase-barrier/measure.py\n"
+      }
+    ]
+  },
+  "interrupt": null,
+  "launchd_log": {
+    "argv": [
+      "/usr/bin/log",
+      "show",
+      "--start",
+      "2026-10-24 06:46:43",
+      "--end",
+      "2026-10-24 06:46:50",
+      "--info",
+      "--debug",
+      "--style",
+      "ndjson",
+      "--predicate",
+      "(process == \"launchd\" AND (subsystem CONTAINS \"PWRunner\" OR subsystem CONTAINS \"pw-runner-clien\" OR eventMessage CONTAINS \"PWRunner\")) OR (process == \"PWRunner\" AND eventMessage CONTAINS \"invalidated\")"
+    ],
+    "ended": {
+      "mono_ns": 1511965414650583,
+      "wall_ns": 1792849609852347000
+    },
+    "exit": 0,
+    "started": {
+      "mono_ns": 1511964162821291,
+      "wall_ns": 1792849608600528000
+    },
+    "stderr": ""
+  },
+  "observer": {
+    "cpu_system_s": 0.11134699999999999,
+    "cpu_user_s": 0.45178599999999997,
+    "list_errors": 0,
+    "max_poll_gap_ns": 5136209,
+    "poll_gaps_over_5ms": 1,
+    "polls": 3325
+  },
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "request_sha256": "fe7c5e04409f5edf34a88c89ba28461398214d6b25790b7c5ead1b085a84e604",
+  "request_source": "tests/fixtures/pw_runner/specimen_mach_deny.json",
+  "responsible_api": true,
+  "roles": {
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness": "controller",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client": "client",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check": "sbpl_check",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "host",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-extension-issuer": "issuer",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "worker",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "validator"
+  },
+  "series": "separated",
+  "settings": {
+    "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+    "busy_loop": false,
+    "ceiling_s": 60.0,
+    "count": 3,
+    "gap_s": 1.0,
+    "label": "phasebarrier-cli-control-b853",
+    "no_launchd_log": false,
+    "out": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs",
+    "poll_ms": 1.0,
+    "pw_arg": [],
+    "quiesce_deadline_s": 5.0,
+    "recheck_ms": 100.0,
+    "request": "tests/fixtures/pw_runner/specimen_mach_deny.json",
+    "series": "separated",
+    "tail_s": 1.0,
+    "unit_deadline_s": 30.0,
+    "unobserved": false
+  },
+  "start_clocks": {
+    "mono_ns": 1511959778426041,
+    "wall_ns": 1792849604216166000
+  },
+  "started_utc": "2026-10-24T13:46:44.216163+00:00",
+  "still_alive_at_end": [],
+  "stop_reason": "completed",
+  "units": [
+    {
+      "exit_code": 0,
+      "kernel_start_wall_us": 1792849605307519,
+      "label": "0",
+      "note_exit": {
+        "mono_ns": 1511961025287000,
+        "wall_ns": 1792849605463017000
+      },
+      "pid": 89495,
+      "reaped": {
+        "mono_ns": 1511961025292333,
+        "wall_ns": 1792849605463023000
+      },
+      "registration": "kqueue",
+      "rusage": {
+        "maxrss": 7192576,
+        "stime_s": 0.007897,
+        "utime_s": 0.007464999999999999
+      },
+      "spawn_after": {
+        "mono_ns": 1511960870994125,
+        "wall_ns": 1792849605308726000
+      },
+      "spawn_before": {
+        "mono_ns": 1511960869695125,
+        "wall_ns": 1792849605307427000
+      },
+      "uniqueid": 17369275,
+      "unit_dir": "unit-000",
+      "wait_status": 0
+    },
+    {
+      "exit_code": 0,
+      "kernel_start_wall_us": 1792849606465086,
+      "label": "1",
+      "note_exit": {
+        "mono_ns": 1511962090275333,
+        "wall_ns": 1792849606527997000
+      },
+      "pid": 89500,
+      "reaped": {
+        "mono_ns": 1511962090281250,
+        "wall_ns": 1792849606528003000
+      },
+      "registration": "kqueue",
+      "rusage": {
+        "maxrss": 7192576,
+        "stime_s": 0.0058969999999999995,
+        "utime_s": 0.0067079999999999996
+      },
+      "spawn_after": {
+        "mono_ns": 1511962028214708,
+        "wall_ns": 1792849606465938000
+      },
+      "spawn_before": {
+        "mono_ns": 1511962027320458,
+        "wall_ns": 1792849606465043000
+      },
+      "uniqueid": 17369280,
+      "unit_dir": "unit-001",
+      "wait_status": 0
+    },
+    {
+      "exit_code": 0,
+      "kernel_start_wall_us": 1792849607529626,
+      "label": "2",
+      "note_exit": {
+        "mono_ns": 1511963161870000,
+        "wall_ns": 1792849607599584000
+      },
+      "pid": 89505,
+      "reaped": {
+        "mono_ns": 1511963161874041,
+        "wall_ns": 1792849607599588000
+      },
+      "registration": "kqueue",
+      "rusage": {
+        "maxrss": 7192576,
+        "stime_s": 0.007473,
+        "utime_s": 0.007612
+      },
+      "spawn_after": {
+        "mono_ns": 1511963094313166,
+        "wall_ns": 1792849607532028000
+      },
+      "spawn_before": {
+        "mono_ns": 1511963091859833,
+        "wall_ns": 1792849607529575000
+      },
+      "uniqueid": 17369285,
+      "unit_dir": "unit-002",
+      "wait_status": 0
+    }
+  ]
+}
