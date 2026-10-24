@@ -782,6 +782,10 @@
           "description": "A 1.5-second exec attempt budget with 500 ms deadlines kills several helpers at their deadline, then refuses the rest before spawn; done publishes near the budget edge"
         },
         {
+          "id": "first_touch_after_apply",
+          "description": "Seam-built production worker stores into a capture page unbacked at the ready byte and at its applied word before release, after deny-default v1/v2/v3 application; the host reads the word back. Host- and worker-pretouched controls publish but fail the first-touch condition; the shipped worker's resident pages are recorded for these runs only. A failed publication, a failed condition and a failed residency corroboration are reported apart; none alone establishes sandbox causation."
+        },
+        {
           "id": "proceed_never_set",
           "description": "Worker release barrier: proceed never set"
         },

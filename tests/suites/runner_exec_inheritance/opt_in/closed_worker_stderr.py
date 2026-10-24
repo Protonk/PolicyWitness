@@ -264,8 +264,12 @@ def main():
         listener.listen(8)
         abi = equipment / 'abi'
         abi.mkdir()
-        headers = sorted((ROOT / 'controller/tools/pw_probe_runner').glob('*.h'))
-        assert headers, 'no ABI header inputs found'
+        abi_headers = sorted((ROOT / 'controller/tools/pw_probe_runner').glob('*.h'))
+        assert abi_headers, 'no ABI header inputs found'
+        # The harness also includes the first-touch probe header kept beside the
+        # worker_lifecycle fixtures; copy it into the same include directory.
+        probe_header = ROOT / 'tests/fixtures/worker_lifecycle/first_touch_probe.h'
+        headers = abi_headers + [probe_header]
         for path in headers:
             shutil.copy2(path, abi / path.name)
         original = ROOT / 'tests/suites/runner_c_worker_harness/harness.c'
@@ -292,7 +296,8 @@ def main():
                          for source_path, copy_path in copies]
         assert all(item['source_sha256'] == item['copy_sha256'] for item in copied_inputs), 'input copy changed bytes'
         input_counts = dict(original_harness=1, adapted_harness=1, observer_adapter_source=1,
-                            shared_exit_observer=1, abi_headers=len(headers), generated_config=1,
+                            shared_exit_observer=1, abi_headers=len(abi_headers), harness_probe_header=1,
+                            generated_config=1,
                             harness_reap_anchor_matches=anchor_matches, harness_reap_replacements=1)
         save(equipment / 'inputs.json', dict(counts=input_counts, copied_inputs=copied_inputs,
              adapted_harness_sha256=digest(harness_source), config_sha256=digest(config)))

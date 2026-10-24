@@ -5,4 +5,5 @@ OUTPUT="${1:?usage: build.sh <output binary>}"
 mkdir -p "$(dirname "${OUTPUT}")"
 exec /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Werror -O2 -std=c11 \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
+  -I "${ROOT_DIR}/tests/fixtures/worker_lifecycle" \
   "${ROOT_DIR}/tests/suites/runner_c_worker_harness/harness.c" -o "${OUTPUT}"

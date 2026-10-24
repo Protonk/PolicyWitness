@@ -75,8 +75,10 @@ deterministic, and checked into the repo so tests are hermetic.
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
 - `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,
-  cleanup and process-status controls. It never applies a sandbox; tests own
-  cleanup of children deliberately left unreaped by OS-call fault controls.
+  cleanup and process-status controls, which never applies a sandbox, and the
+  first-touch control, production worker source built with a seam that does
+  apply real deny-default profiles. Tests own cleanup of children
+  deliberately left unreaped by OS-call fault controls.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and
   opt-in paths (single-step SBPL cases).
 - `runner_smoke/`: template-based fixtures used by smoke and runner verification.
@@ -140,8 +142,8 @@ through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 
 `worker_lifecycle` includes worker progress/failure/diagnostic and closed-input
-controls plus production C-main native-call/mapping companions and the
-bounded sysctl call-argument control. See its README
+controls plus production C-main native-call/mapping companions, the
+bounded sysctl call-argument control and the first-touch publication control. See its README
 for the attribution and cleanup boundaries.
 
 Validator transcript variants cover invalid UTF-8, incomplete predictions,

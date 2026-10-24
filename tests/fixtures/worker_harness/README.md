@@ -2,7 +2,8 @@
 
 `build.sh <output binary>` compiles the existing
 `tests/suites/runner_c_worker_harness/harness.c` adapter against the current
-worker ABI header. The C-worker suite, exec-inheritance suite, and inheritance
+worker ABI header and the first-touch probe header kept beside the
+`worker_lifecycle` fixtures. The C-worker suite, exec-inheritance suite, and inheritance
 mutation controls share this recipe. Each caller owns its output path and logs;
 the C-worker suite compiles once per invocation. No app or worker is built here.
 

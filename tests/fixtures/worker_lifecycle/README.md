@@ -5,6 +5,16 @@
 Missing equipment fails the required tests. The fixture does not compile or
 apply a sandbox and is not evidence of production failure attribution.
 
+`first_touch_control.c` is separate equipment: the production worker source
+with `PW_TERMINAL_PUBLISHED` defined to store one word at the offset in
+`first_touch_probe.h`, linked against the real libsandbox and applying real
+bare deny-default profiles under `runner_c_worker_harness/first_touch_after_apply`.
+The store runs only after the worker's own `applied` publication. Built with
+`PW_FIRST_TOUCH_WORKER_PRETOUCH`, a constructor backs that page before `main`
+and records it on stderr: the sensitivity control. The harness owns the
+residency samples and the read-back; the suite README states the oracles and
+how to read their failures.
+
 Its stdin text selects completed-report exit 0, exit 17, self-SIGTERM, an ignored
 exit request, a published status-word failure that ignores exit, or no publication.
 It publishes through the ABI's release/acquire protocol. Completed exit/signal

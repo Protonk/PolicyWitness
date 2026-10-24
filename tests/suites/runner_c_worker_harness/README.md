@@ -184,6 +184,101 @@ unified logging, so it is opt-in. Its claims are scoped to the recorded machine
 and implementation; it neither proves an always user-space path nor tests an
 actual system sleep.
 
+### First touch after application
+
+`first_touch_after_apply` asks whether a worker can publish into a page of the
+evidence region that no process backed before it applied its policy. The
+production worker never reaches that path: before `sandbox_apply` it writes
+every page it later publishes into. The case therefore compiles the production
+worker source with its `PW_TERMINAL_PUBLISHED` seam defined to store one word
+into page 200 of the region
+([`first_touch_control.c`](../../fixtures/worker_lifecycle/first_touch_control.c);
+offset and pattern in
+[`first_touch_probe.h`](../../fixtures/worker_lifecycle/first_touch_probe.h)),
+links it against the real libsandbox, and runs it through the harness rows
+`first_touch_v1`, `first_touch_v2` and `first_touch_v3`: bare `(deny default)`
+at each profile version. Those rows skip the harness's page touch, so the
+probe page, which lies inside the compiled-profile capture bytes the worker
+writes only when a capture is requested, has no backing when the worker starts.
+
+`check_first_touch.py` keeps four oracles apart:
+
+- **Condition.** The probe page was unbacked through application: the
+  harness's `mincore` samples over its own mapping before spawn, at the ready
+  byte, and when the worker's `applied` word is first seen all report it
+  non-resident; the ready byte was received; the host did not touch the
+  page; and the page lies inside the capture bytes. The ready byte follows
+  every pre-application write the worker makes to the region and precedes
+  `sandbox_apply`. The `applied` sample is taken before the harness publishes
+  release, while the worker is parked in its release wait, so it is after
+  application by the worker's own word and before any later worker activity;
+  the seam store comes after release and `done`.
+- **Application.** The worker's own record: `applied`, `apply_rc` 0 and `done`.
+- **Enforcement.** The kernel denied the slot's open of `/etc/hosts` (`rc` 1,
+  errno EPERM or EACCES). This corroborates the application record without
+  relying on the worker's word.
+- **Publication.** Decisive: the harness read the pattern back through its
+  own mapping after reap, and the worker exited 0 without a cleanup kill.
+  Residency of the probe page after reap is a separate corroborating
+  assertion, never a substitute for the read-back.
+
+The seam stores only after the worker's own `applied` publication, so a
+compile or apply failure publishes nothing: the publication oracle fails and
+the application and enforcement records say why.
+
+Two sensitivity controls recreate the condition a first-touch probe can get
+wrong, a probe page already backed before application, and require the
+unchanged condition oracle to reject it although the worker publishes the
+correct value:
+
+- `host_pretouched`: the row `first_touch_host_pretouched` backs the probe
+  page from the host before spawn. The before-spawn sample rejects it.
+- `worker_pretouched`: the same source built with
+  `PW_FIRST_TOUCH_WORKER_PRETOUCH`, whose constructor touches the probe page
+  through a private mapping before `main`, so before application, and says so
+  on stderr. The host never touched the page, so only the ready-byte and
+  `applied` samples reject it. This control is also what checks the residency
+  sample's meaning: it passes only while `mincore` reports pages resident in
+  the shared object, whichever process backed them, rather than translations
+  in the sampling process.
+
+The shipped `pw-probe-runner` runs under the same three rows. In those
+executions, one open-read slot per policy, the pages resident at the ready
+byte (0 and 224, the header and evidence pages) were the pages resident at
+`done` and after reap, the probe page stayed unbacked, and the probe word
+stayed zero. That is an observation of these runs, recorded in
+`first-touch-report.json`, not an invariant over every plan or specimen.
+
+Reading a failure:
+
+- A failed **publication** with the condition, application and enforcement
+  oracles satisfied means the sandboxed process's store into a never-backed
+  page did not reach the host mapping, or the process did not survive it;
+  the exit status and signal say which.
+- A failed **condition** means the case did not observe a first touch and
+  establishes nothing either way: the page was backed before application,
+  the ready byte was not received, `applied` was not seen before release, or
+  `mincore` failed. The assertion message names the reason.
+- A failed residency **corroboration** beside a matching read-back means the
+  value landed and `mincore` no longer reports the page; the sensitivity
+  controls show whether the sample's meaning changed.
+- A **shipped-worker** difference means that execution published into a page
+  not resident at the ready byte, or did not apply, get denied and exit 0 as
+  before.
+
+None of these alone establishes that the sandbox caused the behavior. The
+witness for the policy being in force is the denied open; the worker's
+`applied` word is its own record; residency is a kernel report whose meaning
+is checked only by the worker-pretouched control. The case records what was
+observed and leaves the explanation to investigation. `first-touch-report.json`
+is written before any assertion, so a failing run keeps every unit's oracle
+answers, and the first line of `assert.log` names the failing unit and oracle.
+
+Limits: one probe page and one 8-byte store; three bare deny-default
+policies; the first touch after application is exercised only by the ad-hoc
+signed seam build, never by the shipped Developer ID-signed worker, whose own
+pre-application writes keep it off that path in the observed runs.
+
 ### Pre-apply self-defense
 
 The worker refuses or survives bad input before `sandbox_apply`. The
@@ -272,6 +367,10 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
 - A policy-driven `_exit` denial. The suite covers the same host-side
   SIGKILL fallback by withholding `exit_requested`; it does not prove
   that a real SBPL rule can deny `_exit`.
+- A first touch after application by the shipped worker. `first_touch_after_apply`
+  exercises that path only with the ad-hoc signed seam build; the shipped
+  worker's own pre-application writes back every page it publishes into in
+  the executions observed.
 - Silent ABI *semantic* drift. The worker's runtime refusal when the
   header ABI identity disagrees is covered (abi_mismatch), and the
   header has `_Static_assert`s pinning layout sizes at compile time — but
@@ -315,6 +414,14 @@ Each test_id writes:
 - `assert.log`: stdout/stderr of the Python assertion block.
 
 The first case that compiles the harness also retains `build.log`.
+
+`first_touch_after_apply` writes a harness envelope with a `first_touch`
+object per unit (`first_touch_v1.json`, `first_touch_v2.json`,
+`first_touch_v3.json`, `host_pretouched.json`, `worker_pretouched.json`,
+`shipped_v1.json`, `shipped_v2.json`, `shipped_v3.json`) with the worker's
+stderr beside each, the compiler commands and logs for both seam builds,
+`assert.log` and `first-touch-report.json`, the per-unit dispositions and
+resident-page lists the oracles judged.
 
 The release controls exercise `proceed_never_set`, `proceed_late_after_expiry`,
 `proceed_before_applied`, `proceed_delayed_observed_quiescence`,

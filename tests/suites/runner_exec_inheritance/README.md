@@ -112,7 +112,8 @@ child fd-2 `EBADF` observations and a stderr write returning `-1/EBADF`. Missing
 stderr text alone cannot pass. It does not establish that ordinary XPC launches
 supply closed stderr, or that every descriptor arrangement has this result.
 
-Artifacts retain the original and adapted harness sources, ABI headers,
+Artifacts retain the original and adapted harness sources, the ABI headers and
+the first-touch probe header the harness includes,
 observer source and configuration, compiled equipment, commands and hashes,
 worker hashes before/after, raw peer receipts, worker-entry snapshots, worker
 publications and cleanup observations. Connected peer ownership and OS exit

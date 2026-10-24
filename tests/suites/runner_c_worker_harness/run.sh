@@ -839,3 +839,56 @@ if test_selected terminal_erasure; then
     test_fail "terminal erasure control failed" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
   fi
 fi
+
+# ---- test_id: first_touch_after_apply --------------------------------------
+# The production worker compiled with its terminal seam storing into a page
+# no process backed before application, under the harness's skip-touch rows
+# for deny-default versions 1-3; two pre-touched controls the condition
+# oracle must reject although they publish; and the shipped worker under the
+# same rows. check_first_touch.py keeps the oracles apart.
+if test_selected first_touch_after_apply; then
+  test_begin "${PW_TEST_SUITE}" first_touch_after_apply
+  test_step build "compile the production worker with the terminal seam storing into an unbacked capture page"
+  if ! check_prereqs; then
+    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
+  else
+    ensure_harness
+    FT_SOURCE="${ROOT_DIR}/tests/fixtures/worker_lifecycle/first_touch_control.c"
+    FT_WORKER="${PW_TEST_ARTIFACTS}/first-touch-worker"
+    FT_PRETOUCH_WORKER="${PW_TEST_ARTIFACTS}/first-touch-worker.pretouch"
+    FT_CC=(/usr/bin/xcrun --sdk macosx clang -std=c11 -O2 -Wall -Wextra -Wno-deprecated-declarations
+           -I "${ABI_DIR}" -I "${ROOT_DIR}/tests/fixtures/worker_lifecycle")
+    printf '%s\n' "${FT_CC[*]} ${FT_SOURCE} -lsandbox -o ${FT_WORKER}" \
+      "${FT_CC[*]} -DPW_FIRST_TOUCH_WORKER_PRETOUCH=1 ${FT_SOURCE} -lsandbox -o ${FT_PRETOUCH_WORKER}" \
+      >"${PW_TEST_ARTIFACTS}/build-command.txt"
+    test_run_logged "${PW_TEST_ARTIFACTS}/build.log" "first-touch worker build failed" \
+      "${FT_CC[@]}" "${FT_SOURCE}" -lsandbox -o "${FT_WORKER}"
+    test_run_logged "${PW_TEST_ARTIFACTS}/build-pretouch.log" "worker-pretouched control build failed" \
+      "${FT_CC[@]}" -DPW_FIRST_TOUCH_WORKER_PRETOUCH=1 "${FT_SOURCE}" -lsandbox -o "${FT_PRETOUCH_WORKER}"
+    test_step harness "run the three first-touch rows, both pre-touched controls and the shipped worker"
+    run_first_touch_unit() {
+      local label="$1" worker="$2" scenario="$3" rc=0
+      "${HARNESS_BIN}" "${worker}" "${scenario}" \
+        >"${PW_TEST_ARTIFACTS}/${label}.json" 2>"${PW_TEST_ARTIFACTS}/${label}.stderr" || rc=$?
+      if [[ "${rc}" -ne 0 ]]; then
+        test_fail "harness exited rc=${rc} for ${label}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/${label}.stderr\"}"
+      fi
+    }
+    run_first_touch_unit first_touch_v1 "${FT_WORKER}" first_touch_v1
+    run_first_touch_unit first_touch_v2 "${FT_WORKER}" first_touch_v2
+    run_first_touch_unit first_touch_v3 "${FT_WORKER}" first_touch_v3
+    run_first_touch_unit host_pretouched "${FT_WORKER}" first_touch_host_pretouched
+    run_first_touch_unit worker_pretouched "${FT_PRETOUCH_WORKER}" first_touch_v1
+    run_first_touch_unit shipped_v1 "${WORKER_PATH}" first_touch_v1
+    run_first_touch_unit shipped_v2 "${WORKER_PATH}" first_touch_v2
+    run_first_touch_unit shipped_v3 "${WORKER_PATH}" first_touch_v3
+    test_step assert "keep the condition, application, enforcement and publication oracles apart"
+    if "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_first_touch.py" \
+        "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1; then
+      test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"report\":\"${PW_TEST_ARTIFACTS}/first-touch-report.json\"}"
+    else
+      ft_msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
+      test_fail "${ft_msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\"}"
+    fi
+  fi
+fi

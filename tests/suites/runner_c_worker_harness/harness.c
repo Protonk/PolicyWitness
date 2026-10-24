@@ -48,6 +48,7 @@
 #include <unistd.h>
 
 #include "pw_probe_runner_abi.h"
+#include "first_touch_probe.h"
 
 extern char **environ;
 
@@ -146,6 +147,15 @@ typedef struct {
      * valid policy stays valid; PW_SHM_POLICY_BYTES - 1 fills the worker's
      * source buffer exactly and one byte more overflows it. */
     size_t pad_to_bytes;
+
+    /* First-touch controls (first_touch_probe.h). skip_touch leaves every
+     * page the host does not populate unbacked; probe_offset enables the
+     * residency samples and the read-back of the seam-built worker's
+     * post-application store; touch_probe backs the probe page from the host
+     * before spawn, the sensitivity control. */
+    int skip_touch;
+    size_t probe_offset;
+    int touch_probe;
 } scenario_t;
 
 static void populate_happy(pw_shm_slot_t *slots) {
@@ -266,6 +276,15 @@ static const char SCEN_DENY_DEFAULT_POLICY[] =
     "(version 1)\n"
     "(deny default)\n";
 
+/* The same bare deny-default under the version 2 and 3 profile dialects,
+ * whose default also refuses raw system calls, for the first-touch rows. */
+static const char SCEN_DENY_DEFAULT_V2_POLICY[] =
+    "(version 2)\n"
+    "(deny default)\n";
+static const char SCEN_DENY_DEFAULT_V3_POLICY[] =
+    "(version 3)\n"
+    "(deny default)\n";
+
 /* Default-allow with one deny rule whose subpath is taken from the
  * TARGET param. Without sandbox_set_param + a compatible params
  * object, sandbox_compile_string fails because (param "TARGET")
@@ -319,42 +338,42 @@ static const char SCEN_UTF8_POLICY[] =
     "; caf\xc3\xa9 \xe2\x9c\x93\n";
 
 static scenario_t SCENARIOS[] = {
-    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "proceed_without_host_release", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "proceed_without_host_release", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
 
     /* name, policy, step_count, request_exit, populate_slots, populate_params,
      * corrupt_abi, skip_prepared, override_step_count, override_param_count,
      * oversize_policy, temp_target */
-    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                0, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                0, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
     { .name = "terminal_empty_phase", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 0 },
-    { "terminal_exit_without_request",        SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "terminal_exit_without_request",        SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
 
     /* #1 — file attempt kinds with no other execution coverage. */
-    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
 
     /* #2 — pre-apply self-defense / refusal branches. */
-    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
     { .name = "abi_magic_mismatch", .policy = SCEN_ALLOW_DEFAULT_POLICY,
       .step_count = 1, .request_exit = 1, .populate_slots = populate_happy, .corrupt_abi = 2 },
-    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
-    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0 },
+    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
+    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0, 0, 0 },
     /* Expectation pinned at the capacity: the worker's read overflows before
      * EOF and keeps code 2; without the pin the header would refuse the
      * impossible length first. */
@@ -421,6 +440,21 @@ static scenario_t SCENARIOS[] = {
     { .name = "exec_attempt_budget_sequence", .policy = SCEN_ALLOW_DEFAULT_POLICY,
       .step_count = EXEC_SLEEP_SLOTS + 1, .request_exit = 1, .populate_slots = populate_exec_budget,
       .exec_attempt_budget_ms = 1500, .exec_child_deadline_ms = 500, .poll_deadline_ms = 4000 },
+
+    /* #6 — first touch after application. The host skips its page touch, so
+     * the probe page of first_touch_probe.h stays unbacked until the
+     * seam-built worker stores into it after applying. The host-pretouched
+     * row backs that page before spawn. The run script reuses the three
+     * policy rows with the worker-pretouched control and the shipped worker. */
+    { .name = "first_touch_v1", .policy = SCEN_DENY_DEFAULT_POLICY, .step_count = 1,
+      .populate_slots = populate_deny_default, .skip_touch = 1, .probe_offset = PW_FIRST_TOUCH_PROBE_OFFSET },
+    { .name = "first_touch_v2", .policy = SCEN_DENY_DEFAULT_V2_POLICY, .step_count = 1,
+      .populate_slots = populate_deny_default, .skip_touch = 1, .probe_offset = PW_FIRST_TOUCH_PROBE_OFFSET },
+    { .name = "first_touch_v3", .policy = SCEN_DENY_DEFAULT_V3_POLICY, .step_count = 1,
+      .populate_slots = populate_deny_default, .skip_touch = 1, .probe_offset = PW_FIRST_TOUCH_PROBE_OFFSET },
+    { .name = "first_touch_host_pretouched", .policy = SCEN_DENY_DEFAULT_POLICY, .step_count = 1,
+      .populate_slots = populate_deny_default, .skip_touch = 1, .probe_offset = PW_FIRST_TOUCH_PROBE_OFFSET,
+      .touch_probe = 1 },
 };
 static const size_t SCENARIO_COUNT = sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
 
@@ -476,6 +510,46 @@ static void build_temp_path(const scenario_t *scen, char *out, size_t cap) {
 }
 
 /* ---- main ---------------------------------------------------------------- */
+
+/* ---- first-touch residency samples ---------------------------------------
+ * mincore over the host mapping reports pages resident in the shared object
+ * on this kernel, whichever process backed them. The first-touch rows sample
+ * it before spawn, at the ready byte, when the worker's applied word is first
+ * seen and before release, when the poll loop ends, and after reap. The run
+ * script's oracle uses the first three to establish an unbacked probe page
+ * through application and the last to corroborate the read-back value. */
+#define PW_FT_MAX_PAGES 4096u
+typedef struct { int taken, rc, err; unsigned char vec[PW_FT_MAX_PAGES]; } ft_sample_t;
+typedef struct {
+    size_t page_size, pages;
+    ft_sample_t before_spawn, at_ready, at_applied, at_done, after_reap;
+    int done_at_sample;
+    uint64_t value;
+    struct rusage worker_ru;
+} ft_state_t;
+static ft_state_t ft;
+
+static void ft_sample(ft_sample_t *s, void *base) {
+    memset(s, 0, sizeof(*s));
+    s->taken = 1;
+    s->rc = mincore(base, PW_SHM_REGION_BYTES, (char *)s->vec);
+    s->err = s->rc ? errno : 0;
+}
+
+static void ft_emit_sample(const char *key, const ft_sample_t *s, size_t probe_page) {
+    printf("\"%s\":{\"rc\":%d,\"errno\":%d", key, s->taken ? s->rc : -2, s->err);
+    if (s->taken && s->rc == 0) {
+        printf(",\"probe_resident\":%s,\"resident_pages\":[",
+               (s->vec[probe_page] & MINCORE_INCORE) ? "true" : "false");
+        int first = 1;
+        for (size_t page = 0; page < ft.pages; page++) {
+            if (s->vec[page] & MINCORE_INCORE) { printf("%s%zu", first ? "" : ",", page); first = 0; }
+        }
+        printf("]}");
+    } else {
+        printf(",\"probe_resident\":null,\"resident_pages\":null}");
+    }
+}
 
 static int run_scenario(const char *worker_path, const scenario_t *scen);
 
@@ -536,6 +610,16 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     if (base == MAP_FAILED) {
         fprintf(stderr, "harness: mmap: %s\n", strerror(errno));
         return 1;
+    }
+    {
+        long page_size = sysconf(_SC_PAGESIZE);
+        if (page_size <= 0) page_size = 4096;
+        ft.page_size = (size_t)page_size;
+        ft.pages = (PW_SHM_REGION_BYTES + ft.page_size - 1) / ft.page_size;
+        if (ft.pages > PW_FT_MAX_PAGES) {
+            fprintf(stderr, "harness: region of %zu pages exceeds the residency sample capacity\n", ft.pages);
+            return 1;
+        }
     }
     pw_shm_header_t *hdr = (pw_shm_header_t *)base;
     pw_shm_slot_t *slots = (pw_shm_slot_t *)((char *)base + PW_SHM_HEADER_BYTES);
@@ -662,21 +746,26 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     hdr->policy_bytes_expected = scen->expected_override_set
         ? scen->expected_override : (uint32_t)policy_bytes_expected;
 
-    /* The host pre-touches every page it expects the worker to write
-     * after apply, so the post-apply path never depends on lazy
-     * allocation (which a strict sandbox would block). */
-    long page_size = sysconf(_SC_PAGESIZE);
-    if (page_size <= 0) page_size = 4096;
+    /* The host reads and writes back one byte of every page, as the
+     * production host does after its memset. The first-touch rows skip this
+     * so pages the host does not populate stay unbacked. */
     volatile unsigned char *touch = (volatile unsigned char *)base;
-    for (size_t off = 0; off < PW_SHM_REGION_BYTES; off += (size_t)page_size) {
-        touch[off] = touch[off];
+    if (!scen->skip_touch) {
+        for (size_t off = 0; off < PW_SHM_REGION_BYTES; off += ft.page_size) {
+            touch[off] = touch[off];
+        }
+        touch[PW_SHM_REGION_BYTES - 1u] = touch[PW_SHM_REGION_BYTES - 1u];
     }
-    touch[PW_SHM_REGION_BYTES - 1u] = touch[PW_SHM_REGION_BYTES - 1u];
+    /* Sensitivity control: the host backs the probe page before spawn. */
+    if (scen->touch_probe) {
+        touch[scen->probe_offset] = touch[scen->probe_offset];
+    }
 
     /* prepared_unset scenario leaves this at 0 so the worker refuses. */
     if (!scen->skip_prepared) {
         atomic_store_explicit(&hdr->prepared, 1u, memory_order_release);
     }
+    if (scen->probe_offset) ft_sample(&ft.before_spawn, base);
 
     /* Ready pipe + policy pipe. Parent-side ends get FD_CLOEXEC so
      * the addclose dance from earlier broken harness designs isn't
@@ -789,6 +878,10 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         }
     }
     close(ready_pipe[0]);
+    /* The ready byte follows every pre-application write the worker makes to
+     * the region and precedes sandbox_apply; release comes later, in the poll
+     * loop, so this sample precedes any post-application store. */
+    if (scen->probe_offset) ft_sample(&ft.at_ready, base);
 
     /* Poll applied + done. Deadline 2 s (or the scenario's poll_deadline_ms)
      * — generous for any slow compile/apply on first run after rebuild. A
@@ -815,6 +908,9 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
             uint32_t done = atomic_load_explicit(&hdr->done, memory_order_acquire);
             if (applied && !saw_applied) { saw_applied = 1; clock_gettime(CLOCK_MONOTONIC, &applied_time); }
             if (applied && !release_set) {
+                /* The worker has published application and is parked in its
+                 * release wait; nothing of it runs until the store below. */
+                if (scen->probe_offset && !ft.at_applied.taken) ft_sample(&ft.at_applied, base);
                 quiescence_polls++;
                 for (uint32_t slot = 0; slot < scen->step_count; slot++) {
                     if (atomic_load_explicit(&slots[slot].completed, memory_order_acquire)) early_completion = 1;
@@ -841,11 +937,12 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
                 if (scen->proceed_after_expiry) usleep(50000); /* late release cannot revive */
                 break;
             }
-            pid_t w = waitpid(pid, &status, WNOHANG);
+            pid_t w = wait4(pid, &status, WNOHANG, &ft.worker_ru);
             if (w == pid) { worker_reaped = 1; reaped = pid; break; }
             nanosleep(&ts, NULL);
         }
     }
+    if (scen->probe_offset) { ft_sample(&ft.at_done, base); ft.done_at_sample = saw_done; }
 
     /* A late release still cannot revive a refusal after prompt exit. */
     if (scen->proceed_after_expiry && !release_set) {
@@ -874,15 +971,21 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     if (!worker_reaped) {
         struct timespec ts = { .tv_sec = 0, .tv_nsec = 10 * 1000 * 1000 };
         for (int i = 0; i < 100; i++) {
-            reaped = waitpid(pid, &status, WNOHANG);
+            reaped = wait4(pid, &status, WNOHANG, &ft.worker_ru);
             if (reaped == pid) break;
             nanosleep(&ts, NULL);
         }
         if (reaped != pid) {
             kill(pid, SIGKILL);
             sent_sigkill = 1;
-            waitpid(pid, &status, 0);
+            wait4(pid, &status, 0, &ft.worker_ru);
         }
+    }
+    /* First-touch rows: residency after reap, then the probe word. The read
+     * comes second because it backs the page itself. */
+    if (scen->probe_offset) {
+        ft_sample(&ft.after_reap, base);
+        ft.value = *(volatile uint64_t *)((char *)base + scen->probe_offset);
     }
 
     /* Publications can land between the final poll samples and reap. */
@@ -939,6 +1042,29 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     if (published == 1) {
         printf(",\"failure\":{\"operation\":%u,\"code\":%u,\"detail\":%u,\"native_kind\":%u,\"errno_present\":%u}",
                ev->operation, ev->code, ev->detail, ev->native_kind, ev->errno_present);
+    }
+    if (scen->probe_offset) {
+        size_t probe_page = scen->probe_offset / ft.page_size;
+        int inside = scen->probe_offset % ft.page_size == 0
+            && scen->probe_offset >= PW_FIRST_TOUCH_CAPTURE_BYTES_START
+            && scen->probe_offset + ft.page_size <= PW_FIRST_TOUCH_CAPTURE_BYTES_END;
+        printf(",\"first_touch\":{\"probe_offset\":%zu,\"page_size\":%zu,\"probe_page\":%zu,\"region_pages\":%zu",
+               scen->probe_offset, ft.page_size, probe_page, ft.pages);
+        printf(",\"probe_page_inside_capture_bytes\":%s,\"skip_touch\":%d,\"host_touched_probe\":%d",
+               inside ? "true" : "false", scen->skip_touch, scen->touch_probe);
+        printf(",\"pattern\":\"%016llx\",\"value\":\"%016llx\",\"value_match\":%s",
+               (unsigned long long)PW_FIRST_TOUCH_PATTERN, (unsigned long long)ft.value,
+               ft.value == PW_FIRST_TOUCH_PATTERN ? "true" : "false");
+        printf(",\"done_seen_at_done_sample\":%s,\"worker_minflt\":%ld,\"worker_majflt\":%ld,\"samples\":{",
+               ft.done_at_sample ? "true" : "false", ft.worker_ru.ru_minflt, ft.worker_ru.ru_majflt);
+        ft_emit_sample("before_spawn", &ft.before_spawn, probe_page); putc(',', stdout);
+        ft_emit_sample("at_ready", &ft.at_ready, probe_page); putc(',', stdout);
+        ft_emit_sample("at_applied", &ft.at_applied, probe_page); putc(',', stdout);
+        ft_emit_sample("at_done", &ft.at_done, probe_page); putc(',', stdout);
+        ft_emit_sample("after_reap", &ft.after_reap, probe_page);
+        printf("}}");
+    } else {
+        printf(",\"first_touch\":null");
     }
     printf(",\"slots\":[");
     for (uint32_t i = 0; i < scen->step_count; i++) {
