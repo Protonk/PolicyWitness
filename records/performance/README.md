@@ -2,8 +2,8 @@
 
 Records of the runtime investigation of PolicyWitness as a running program,
 and the evidence behind them. The first built-in-runner cycle, two
-log-observer pilots and the host-lifetime, phase-barrier and late-publication
-investigations of build 853 are complete.
+log-observer pilots and the host-lifetime, phase-barrier, late-publication
+and pre-touch investigations of build 853 are complete.
 The first-cycle and log-observer procedures and their source files are
 historical, unmaintained equipment for those runs. They require the recorded pre-retirement application and inputs;
 they are not measurement commands for the maintained application. The
@@ -50,6 +50,15 @@ Layout:
   sentinel-expiry cases, and their reader.
 - `LATE-PUBLICATION-INVESTIGATION-REPORT.md`: what exit grace retains after a
   host sentinel deadline, and what the exit request can interrupt.
+- `PolicyWitness-Pretouch-Investigation.md`: the pre-touch investigation's
+  question about whether touching the evidence region before application
+  decides post-apply publication.
+- `pretouch/`: the host harness and experimental child that vary which pages
+  are touched before application, the test-harness patcher, the schedule
+  runner and reader.
+- `PRETOUCH-INVESTIGATION-REPORT.md`: first-touch stores after bare
+  deny-default application at versions 1–3, the mapping controls and the
+  shipped-worker comparison.
 - `log-observer/`: the pinned pilot configuration, bounded query procedure,
   content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
@@ -57,8 +66,9 @@ Layout:
   `harness/configurations.json`.
 - `evidence/<run-id>/`: committed per run: `manifest.json`,
   `conditions-start.json`, `conditions-end.json`, `run.json`, `SHA256SUMS`
-  and the summarizer's output; host-lifetime, phase-barrier and
-  late-publication runs have `summary.json`, `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
+  and the summarizer's output; host-lifetime, phase-barrier,
+  late-publication and pre-touch runs have `summary.json`, `units.json` and
+  `run-record.json`. Small, reviewable, enough to interpret a run
   without its raw files.
 - `evidence/<control-batch>/`: the external terminal transcripts, observed exit
   statuses and assertion ledger for each bounded control or pilot in that batch.
@@ -69,6 +79,7 @@ Layout:
 
 A run identifier is `<UTC stamp>-<config>-b<build number>`; host-lifetime
 runs are `<UTC stamp>-hostlife-<label>`, phase-barrier runs
-`<UTC stamp>-phasebarrier-<label>` and late-publication runs
-`<UTC stamp>-latepub-<label>`, with the build number in the label. Runs are never
+`<UTC stamp>-phasebarrier-<label>`, late-publication runs
+`<UTC stamp>-latepub-<label>` and pre-touch runs `<UTC stamp>-pretouch-<label>`,
+with the build number in the label. Runs are never
 overwritten; a procedure that finds its run directory present refuses.

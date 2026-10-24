@@ -1,0 +1,1689 @@
+{
+  "argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "records/performance/pretouch/measure.py",
+    "--label",
+    "series1-b853"
+  ],
+  "build": {
+    "clang": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+    "sdk": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "sdk_version": "27.0",
+    "sha256": {
+      ".tmp/pretouch-build/harness_notouch_v1": "9ca586a3f319043d015935704d86a9bef707c1afee465f1d0753eb8cc0e1f309",
+      ".tmp/pretouch-build/harness_notouch_v2": "96c7e4ef64594a9aac899a8328764cac4dcec373b9b408ec8ec6244d0b17d3c1",
+      ".tmp/pretouch-build/harness_notouch_v3": "afb2053ad740f44a189492afe1bcdc1669b99ca7d9acdb296fd012537dca2707",
+      ".tmp/pretouch-build/harness_touch_v1": "d34b0ee0b469fcd3616e408cc0d715db50c8217fec8fa4a2b5cedda35a30e752",
+      ".tmp/pretouch-build/harness_touch_v2": "b361340c5e97ab1fb5efdd2b8268c100413de51b5fc64420034d236c7cabee5b",
+      ".tmp/pretouch-build/harness_touch_v3": "c338f5cd86c26e5197e133d74e883e02e7939da0c269fce95ba90567455c13cd",
+      ".tmp/pretouch-build/pretouch_child": "0005ca2e75acc26f29b34dc099d588c1253444597fe6f219abebac898fd4b53b",
+      ".tmp/pretouch-build/pretouch_harness": "4f5e8c09613b4dd5427fee6591d046f021f5b31422c5510e49b5aaf0938f08a4",
+      ".tmp/pretouch-build/variants/harness_notouch_v1.diff": "305a017a8db3ebbf01491d68493b659ae1ea48b6a35107ede27513d4215d77d0",
+      ".tmp/pretouch-build/variants/harness_notouch_v2.diff": "1254da16332ba3cdad165e10550027fd9e20ff9a970634e9748d5a0985c3b03d",
+      ".tmp/pretouch-build/variants/harness_notouch_v3.diff": "926664c0562303c77cf952b1aaff7087d7589760c7ee37c8681ba92fabe0ef43",
+      ".tmp/pretouch-build/variants/harness_touch_v1.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      ".tmp/pretouch-build/variants/harness_touch_v2.diff": "ba39b42a72f9a6d1db02a465c0d69351a5847c97677f69d3d4139743e39c92bc",
+      ".tmp/pretouch-build/variants/harness_touch_v3.diff": "0e147b4f6dfe6aa4fd2f0139f51d1322531af966e1b8830aedec2cd48cdbdf26",
+      "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": "a2658380610aa6742b2a62e14c7d17abd57d5f9c618ecf7d9685c0486814532d",
+      "dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "c8ac685bb0dace6cbaec59b8c65c0af83168ed06dc69f4722f0867defade187c",
+      "records/performance/pretouch/child.c": "e4b728113d722870862a047f6cfa493e84c022653634066d3aa1b4c74d1ccc24",
+      "records/performance/pretouch/harness.c": "af568f55483112846672cdbeaa55a108de4a5b1b72f40069f1b7eb5b9ed31e09",
+      "records/performance/pretouch/patch_harness.py": "c955aa6498f32913ed4f82ae3b477bf8ce24a4cfac455746fc92308d2ff5f7c1",
+      "records/performance/pretouch/pretouch_shared.h": "c86ed549b26a8eb7f8bcfee59b8ae3108b055e8356143deeffa6e1167ff6f580",
+      "tests/suites/runner_c_worker_harness/harness.c": "1136b305aa612aa69ec71c0c62f7e2c873ecf7e25005e36bc70f9f5a9ace307b"
+    },
+    "worker_version_line": "pw-probe-runner abi_identity=1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c region_bytes=3674768 max_steps=256 slot_bytes=8192"
+  },
+  "child_env": {
+    "HOME": "/Users/raccoon",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+  },
+  "conditions_end": {
+    "at": {
+      "mono_ns": 1522008004998875,
+      "wall_ns": 1792859652414420000
+    },
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/uname",
+          "-a"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Darwin raccoons-MacBook-Air.local 25.6.0 Darwin Kernel Version 25.6.0: Tue Aug 18 17:49:54 PDT 2026; root:xnu-12377.161.15.700.19~2/RELEASE_ARM64_T8142 arm64\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "hw.pagesize",
+          "vm.loadavg",
+          "kern.osversion",
+          "machdep.cpu.brand_string"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nhw.pagesize: 16384\nvm.loadavg: { 3.12 2.08 1.72 }\nkern.osversion: 25G241\nmachdep.cpu.brand_string: Apple M5\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=26214499)\t100%; charged; 0:00 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 18.7,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 16.0,
+            "name": "Python",
+            "pid": 38555,
+            "ppid": 38551
+          },
+          {
+            "cpu_percent": 13.8,
+            "name": "<other>",
+            "pid": 390,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 8.5,
+            "name": "<other>",
+            "pid": 415,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 7.9,
+            "name": "<other>",
+            "pid": 736,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 5.8,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 3.1,
+            "name": "<other>",
+            "pid": 427,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 2.3,
+            "name": "logd",
+            "pid": 386,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 2.0,
+            "name": "<other>",
+            "pid": 1167,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.4,
+            "name": "<other>",
+            "pid": 38183,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.4,
+            "name": "<other>",
+            "pid": 1020,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.4,
+            "name": "<other>",
+            "pid": 462,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 1.0,
+            "name": "claude",
+            "pid": 87843,
+            "ppid": 81014
+          },
+          {
+            "cpu_percent": 1.0,
+            "name": "Python",
+            "pid": 38074,
+            "ppid": 38073
+          },
+          {
+            "cpu_percent": 0.9,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          }
+        ]
+      }
+    ]
+  },
+  "conditions_start": {
+    "at": {
+      "mono_ns": 1521983495205458,
+      "wall_ns": 1792859627904902000
+    },
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/uname",
+          "-a"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Darwin raccoons-MacBook-Air.local 25.6.0 Darwin Kernel Version 25.6.0: Tue Aug 18 17:49:54 PDT 2026; root:xnu-12377.161.15.700.19~2/RELEASE_ARM64_T8142 arm64\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "hw.pagesize",
+          "vm.loadavg",
+          "kern.osversion",
+          "machdep.cpu.brand_string"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nhw.pagesize: 16384\nvm.loadavg: { 1.98 1.77 1.60 }\nkern.osversion: 25G241\nmachdep.cpu.brand_string: Apple M5\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=26214499)\t100%; charged; 0:00 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 30.1,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 28.3,
+            "name": "<other>",
+            "pid": 22942,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 24.8,
+            "name": "<other>",
+            "pid": 390,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 19.7,
+            "name": "Python",
+            "pid": 37074,
+            "ppid": 37072
+          },
+          {
+            "cpu_percent": 13.0,
+            "name": "<other>",
+            "pid": 83031,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 7.3,
+            "name": "<other>",
+            "pid": 415,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 4.8,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 4.7,
+            "name": "<other>",
+            "pid": 736,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 4.5,
+            "name": "<other>",
+            "pid": 427,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 3.5,
+            "name": "claude",
+            "pid": 18380,
+            "ppid": 63707
+          },
+          {
+            "cpu_percent": 2.6,
+            "name": "logd",
+            "pid": 386,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.8,
+            "name": "<other>",
+            "pid": 452,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.8,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.8,
+            "name": "claude",
+            "pid": 87843,
+            "ppid": 81014
+          },
+          {
+            "cpu_percent": 0.7,
+            "name": "launchd",
+            "pid": 1,
+            "ppid": 0
+          }
+        ]
+      }
+    ]
+  },
+  "deny_log": {
+    "argv": [
+      "/usr/bin/log",
+      "show",
+      "--start",
+      "2026-10-24 09:33:43",
+      "--end",
+      "2026-10-24 09:34:17",
+      "--style",
+      "ndjson",
+      "--predicate",
+      "(process == \"kernel\") AND (eventMessage CONTAINS \"pretouch_child\" OR eventMessage CONTAINS \"pw-probe-runner\")"
+    ],
+    "at": {
+      "mono_ns": 1522008038734958,
+      "wall_ns": 1792859652448156000
+    },
+    "end": "2026-10-24 09:34:17",
+    "ended": {
+      "mono_ns": 1522008723993875,
+      "wall_ns": 1792859653133407000
+    },
+    "exit": 0,
+    "start": "2026-10-24 09:33:43",
+    "stderr": ""
+  },
+  "ended": {
+    "mono_ns": 1522008003954875,
+    "wall_ns": 1792859652413377000
+  },
+  "format": 1,
+  "harness_sha256": "caf419c2a19703e0f0fef766cf78eb687aa99921d21db82839e7e3781e82b090",
+  "identity": {
+    "binary_sha256": {
+      "harness_notouch_v1": "9ca586a3f319043d015935704d86a9bef707c1afee465f1d0753eb8cc0e1f309",
+      "harness_notouch_v2": "96c7e4ef64594a9aac899a8328764cac4dcec373b9b408ec8ec6244d0b17d3c1",
+      "harness_notouch_v3": "afb2053ad740f44a189492afe1bcdc1669b99ca7d9acdb296fd012537dca2707",
+      "harness_touch_v1": "d34b0ee0b469fcd3616e408cc0d715db50c8217fec8fa4a2b5cedda35a30e752",
+      "harness_touch_v2": "b361340c5e97ab1fb5efdd2b8268c100413de51b5fc64420034d236c7cabee5b",
+      "harness_touch_v3": "c338f5cd86c26e5197e133d74e883e02e7939da0c269fce95ba90567455c13cd",
+      "pretouch_child": "0005ca2e75acc26f29b34dc099d588c1253444597fe6f219abebac898fd4b53b",
+      "pretouch_harness": "4f5e8c09613b4dd5427fee6591d046f021f5b31422c5510e49b5aaf0938f08a4"
+    },
+    "probes": [
+      {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+          "--version"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "{\n  \"build\": {\n    \"commit\": \"1bf0341cd06c48122af1635e8aa8cac77517d9e1\",\n    \"describe\": \"v0.3.3\",\n    \"number\": \"853\",\n    \"version\": \"0.3.3\"\n  },\n  \"data\": {\n    \"contract\": {\n      \"controller_envelope\": 8,\n      \"request_schema\": 5,\n      \"response_schema\": 23\n    }\n  },\n  \"generated_at_unix_ms\": 1792859627861,\n  \"kind\": \"version\",\n  \"result\": {\n    \"errno\": null,\n    \"error\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"ok\": true,\n    \"rc\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  },\n  \"schema_version\": 8\n}\n"
+      },
+      {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "--version"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "pw-probe-runner abi_identity=1df328dcb8820120e778caa9041c0b9c381d3d6e04f1b5174b43a97a549f929c region_bytes=3674768 max_steps=256 slot_bytes=8192\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "rev-parse",
+          "HEAD"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "1fc9281562f18219e309ec1f5f8d5245d36bb12a\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "status",
+          "--porcelain"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "?? records/performance/PolicyWitness-Pretouch-Investigation.md\n?? records/performance/pretouch/\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/codesign",
+          "-dv",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/pretouch-build/pretouch_child"
+        ],
+        "exit": 0,
+        "stderr": "Executable=/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/pretouch-build/pretouch_child\nIdentifier=pretouch_child\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20400 size=391 flags=0x20002(adhoc,linker-signed) hashes=9+0 location=embedded\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nSealed Resources=none\nInternal requirements=none\n",
+        "stdout": ""
+      },
+      {
+        "argv": [
+          "/usr/bin/codesign",
+          "-dv",
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+        ],
+        "exit": 0,
+        "stderr": "Executable=/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\nIdentifier=pw-probe-runner\nFormat=Mach-O thin (arm64)\nCodeDirectory v=20500 size=347 flags=0x10000(runtime) hashes=5+2 location=embedded\nSignature size=9043\nTimestamp=Oct 23, 2026 at 7:25:26\u202fPM\nInfo.plist=not bound\nTeamIdentifier=42D369QV8E\nRuntime Version=27.0.0\nSealed Resources=none\nInternal requirements count=1 size=176\n",
+        "stdout": ""
+      }
+    ],
+    "source_sha256": {
+      "analyze.py": "6ba44ca6dc5358502c13c4a8ac2b3e32a9a3659710d325d48bdf9fb3ffbd00b3",
+      "build.sh": "f79d9c8efdea287453318d47b68b0a1e2f3658e5ad7395a2cbaca877aa9d6702",
+      "child.c": "e4b728113d722870862a047f6cfa493e84c022653634066d3aa1b4c74d1ccc24",
+      "harness.c": "af568f55483112846672cdbeaa55a108de4a5b1b72f40069f1b7eb5b9ed31e09",
+      "measure.py": "caf419c2a19703e0f0fef766cf78eb687aa99921d21db82839e7e3781e82b090",
+      "patch_harness.py": "c955aa6498f32913ed4f82ae3b477bf8ce24a4cfac455746fc92308d2ff5f7c1",
+      "pretouch_shared.h": "c86ed549b26a8eb7f8bcfee59b8ae3108b055e8356143deeffa6e1167ff6f580"
+    },
+    "worker_sha256": "c8ac685bb0dace6cbaec59b8c65c0af83168ed06dc69f4722f0867defade187c"
+  },
+  "interrupt": null,
+  "many": {
+    "probe_page": 10,
+    "probe_pages": 200,
+    "second_map_page": 215
+  },
+  "never_started": [],
+  "policies": {
+    "allow1": "(version 1)\n(allow default)\n",
+    "deny1": "(version 1)\n(deny default)\n",
+    "deny2": "(version 2)\n(deny default)\n",
+    "deny3": "(version 3)\n(deny default)\n",
+    "noapply": "(version 1)\n(allow default)\n"
+  },
+  "processes_after": [],
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "schedule": [
+    "deny3-none-p1",
+    "deny2-both-p1",
+    "shipped-touch_v2-bare_deny_default",
+    "deny1-child-p1",
+    "noapply-prod-p1",
+    "allow1-child-p1",
+    "deny3-child-p1",
+    "noapply-child-p1",
+    "deny1-prod-p1",
+    "noapply-child-p1",
+    "deny3-both-p1",
+    "deny2-host-p200",
+    "allow1-both-p1",
+    "deny3-host-p1",
+    "allow1-host-p1",
+    "deny2-both-p200",
+    "deny1-none-p200",
+    "deny2-none-p1",
+    "allow1-child-p1",
+    "noapply-none-p1",
+    "deny1-both-p1",
+    "allow1-prod-p1",
+    "allow1-none-p1",
+    "shipped-touch_v3-bare_deny_default",
+    "deny3-none-p1",
+    "deny1-none-p1",
+    "shipped-notouch_v1-happy_default_allow",
+    "deny1-prod-p1",
+    "noapply-prod-p1",
+    "deny3-host-p1",
+    "allow1-prod-p1",
+    "deny2-host-p1",
+    "deny2-child-p1",
+    "allow1-none-p1",
+    "deny3-prod-p1",
+    "allow1-none-p200",
+    "shipped-notouch_v1-max_slots_deny_default",
+    "deny3-prod-p1",
+    "deny3-host-p1",
+    "noapply-host-p1",
+    "noapply-both-p1",
+    "deny3-both-p1",
+    "deny2-both-p1",
+    "deny2-host-p200",
+    "deny2-none-p1",
+    "allow1-none-p200",
+    "allow1-prod-p1",
+    "deny1-both-p1",
+    "deny3-none-p200",
+    "allow1-host-p1",
+    "deny1-prod-p1",
+    "shipped-touch_v2-bare_deny_default",
+    "deny1-host-p1",
+    "deny2-host-p1",
+    "noapply-both-p1",
+    "shipped-notouch_v1-bare_deny_default",
+    "deny2-child-p1",
+    "shipped-touch_v3-bare_deny_default",
+    "deny1-none-p1",
+    "deny1-child-p1",
+    "shipped-notouch_v2-bare_deny_default",
+    "deny3-none-p200",
+    "deny3-prod-p1",
+    "deny2-none-p200",
+    "deny1-none-p1",
+    "shipped-touch_v1-bare_deny_default",
+    "noapply-none-p200",
+    "shipped-notouch_v3-bare_deny_default",
+    "deny1-host-p1",
+    "shipped-touch_v1-bare_deny_default",
+    "deny3-child-p1",
+    "allow1-host-p1",
+    "shipped-touch_v1-max_slots_deny_default",
+    "deny2-child-p1",
+    "deny2-prod-p1",
+    "deny3-none-p1",
+    "deny2-none-p1",
+    "deny2-host-p1",
+    "noapply-prod-p1",
+    "noapply-none-p1",
+    "deny3-both-p1",
+    "noapply-none-p1",
+    "shipped-touch_v1-happy_default_allow",
+    "deny1-host-p1",
+    "deny2-both-p200",
+    "deny3-child-p1",
+    "deny2-prod-p1",
+    "deny2-none-p200",
+    "noapply-host-p1",
+    "shipped-notouch_v3-bare_deny_default",
+    "noapply-host-p1",
+    "deny2-prod-p1",
+    "allow1-both-p1",
+    "noapply-both-p1",
+    "shipped-notouch_v2-bare_deny_default",
+    "allow1-child-p1",
+    "noapply-child-p1",
+    "deny1-both-p1",
+    "allow1-none-p1",
+    "noapply-none-p200",
+    "deny2-both-p1",
+    "allow1-both-p1",
+    "shipped-notouch_v1-bare_deny_default",
+    "deny1-child-p1",
+    "deny1-none-p200"
+  ],
+  "seed": 20261024,
+  "settings": {
+    "ceiling_s": 600.0,
+    "gap_s": 0.2,
+    "label": "series1-b853",
+    "many_repeats": 2,
+    "no_log": false,
+    "no_shipped": false,
+    "out": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs",
+    "seed": 20261024,
+    "single_repeats": 3,
+    "unit_deadline_s": 30.0
+  },
+  "single": {
+    "probe_page": 100,
+    "probe_pages": 1,
+    "second_map_page": 200
+  },
+  "started": {
+    "mono_ns": 1521983495199833,
+    "wall_ns": 1792859627904896000
+  },
+  "stop_reason": "completed",
+  "units": [
+    {
+      "case": "deny3-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "none"
+    },
+    {
+      "case": "deny2-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "both"
+    },
+    {
+      "case": "shipped-touch_v2-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v2"
+    },
+    {
+      "case": "deny1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "child"
+    },
+    {
+      "case": "noapply-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "prod"
+    },
+    {
+      "case": "allow1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "child"
+    },
+    {
+      "case": "deny3-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "child"
+    },
+    {
+      "case": "noapply-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "child"
+    },
+    {
+      "case": "deny1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "prod"
+    },
+    {
+      "case": "noapply-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "child"
+    },
+    {
+      "case": "deny3-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "both"
+    },
+    {
+      "case": "deny2-host-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "host"
+    },
+    {
+      "case": "allow1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "both"
+    },
+    {
+      "case": "deny3-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "host"
+    },
+    {
+      "case": "allow1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-both-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "both"
+    },
+    {
+      "case": "deny1-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "none"
+    },
+    {
+      "case": "deny2-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "none"
+    },
+    {
+      "case": "allow1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "child"
+    },
+    {
+      "case": "noapply-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "none"
+    },
+    {
+      "case": "deny1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "both"
+    },
+    {
+      "case": "allow1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "prod"
+    },
+    {
+      "case": "allow1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-touch_v3-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v3"
+    },
+    {
+      "case": "deny3-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "none"
+    },
+    {
+      "case": "deny1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-notouch_v1-happy_default_allow",
+      "kind": "shipped",
+      "scenario": "happy_default_allow",
+      "variant": "notouch_v1"
+    },
+    {
+      "case": "deny1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "prod"
+    },
+    {
+      "case": "noapply-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "prod"
+    },
+    {
+      "case": "deny3-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "host"
+    },
+    {
+      "case": "allow1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "prod"
+    },
+    {
+      "case": "deny2-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "child"
+    },
+    {
+      "case": "allow1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "none"
+    },
+    {
+      "case": "deny3-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "prod"
+    },
+    {
+      "case": "allow1-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-notouch_v1-max_slots_deny_default",
+      "kind": "shipped",
+      "scenario": "max_slots_deny_default",
+      "variant": "notouch_v1"
+    },
+    {
+      "case": "deny3-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "prod"
+    },
+    {
+      "case": "deny3-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "host"
+    },
+    {
+      "case": "noapply-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "host"
+    },
+    {
+      "case": "noapply-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "both"
+    },
+    {
+      "case": "deny3-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "both"
+    },
+    {
+      "case": "deny2-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "both"
+    },
+    {
+      "case": "deny2-host-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "none"
+    },
+    {
+      "case": "allow1-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "none"
+    },
+    {
+      "case": "allow1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "prod"
+    },
+    {
+      "case": "deny1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "both"
+    },
+    {
+      "case": "deny3-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "none"
+    },
+    {
+      "case": "allow1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "host"
+    },
+    {
+      "case": "deny1-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "prod"
+    },
+    {
+      "case": "shipped-touch_v2-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v2"
+    },
+    {
+      "case": "deny1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "host"
+    },
+    {
+      "case": "noapply-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "both"
+    },
+    {
+      "case": "shipped-notouch_v1-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v1"
+    },
+    {
+      "case": "deny2-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "child"
+    },
+    {
+      "case": "shipped-touch_v3-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v3"
+    },
+    {
+      "case": "deny1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "none"
+    },
+    {
+      "case": "deny1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "child"
+    },
+    {
+      "case": "shipped-notouch_v2-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v2"
+    },
+    {
+      "case": "deny3-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "none"
+    },
+    {
+      "case": "deny3-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "prod"
+    },
+    {
+      "case": "deny2-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "none"
+    },
+    {
+      "case": "deny1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-touch_v1-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v1"
+    },
+    {
+      "case": "noapply-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-notouch_v3-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v3"
+    },
+    {
+      "case": "deny1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "host"
+    },
+    {
+      "case": "shipped-touch_v1-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "touch_v1"
+    },
+    {
+      "case": "deny3-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "child"
+    },
+    {
+      "case": "allow1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "host"
+    },
+    {
+      "case": "shipped-touch_v1-max_slots_deny_default",
+      "kind": "shipped",
+      "scenario": "max_slots_deny_default",
+      "variant": "touch_v1"
+    },
+    {
+      "case": "deny2-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "child"
+    },
+    {
+      "case": "deny2-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "prod"
+    },
+    {
+      "case": "deny3-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "none"
+    },
+    {
+      "case": "deny2-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "none"
+    },
+    {
+      "case": "deny2-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "host"
+    },
+    {
+      "case": "noapply-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "prod"
+    },
+    {
+      "case": "noapply-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "none"
+    },
+    {
+      "case": "deny3-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "both"
+    },
+    {
+      "case": "noapply-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "none"
+    },
+    {
+      "case": "shipped-touch_v1-happy_default_allow",
+      "kind": "shipped",
+      "scenario": "happy_default_allow",
+      "variant": "touch_v1"
+    },
+    {
+      "case": "deny1-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-both-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "both"
+    },
+    {
+      "case": "deny3-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny3",
+      "touch": "child"
+    },
+    {
+      "case": "deny2-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "prod"
+    },
+    {
+      "case": "deny2-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "none"
+    },
+    {
+      "case": "noapply-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "host"
+    },
+    {
+      "case": "shipped-notouch_v3-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v3"
+    },
+    {
+      "case": "noapply-host-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "host"
+    },
+    {
+      "case": "deny2-prod-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "prod"
+    },
+    {
+      "case": "allow1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "both"
+    },
+    {
+      "case": "noapply-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "both"
+    },
+    {
+      "case": "shipped-notouch_v2-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v2"
+    },
+    {
+      "case": "allow1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "child"
+    },
+    {
+      "case": "noapply-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "child"
+    },
+    {
+      "case": "deny1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "both"
+    },
+    {
+      "case": "allow1-none-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "none"
+    },
+    {
+      "case": "noapply-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "noapply",
+      "touch": "none"
+    },
+    {
+      "case": "deny2-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny2",
+      "touch": "both"
+    },
+    {
+      "case": "allow1-both-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "allow1",
+      "touch": "both"
+    },
+    {
+      "case": "shipped-notouch_v1-bare_deny_default",
+      "kind": "shipped",
+      "scenario": "bare_deny_default",
+      "variant": "notouch_v1"
+    },
+    {
+      "case": "deny1-child-p1",
+      "geometry": {
+        "probe_page": 100,
+        "probe_pages": 1,
+        "second_map_page": 200
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "child"
+    },
+    {
+      "case": "deny1-none-p200",
+      "geometry": {
+        "probe_page": 10,
+        "probe_pages": 200,
+        "second_map_page": 215
+      },
+      "kind": "fixture",
+      "policy": "deny1",
+      "touch": "none"
+    }
+  ],
+  "units_run": 105
+}
