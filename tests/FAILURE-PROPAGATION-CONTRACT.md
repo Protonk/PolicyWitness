@@ -1458,9 +1458,11 @@ diagnostics; a delivery failure takes precedence as
 interpreting them. Retained test output and release acceptance artifacts keep
 their bytes. Request admission and the worker ABI follow their own contracts;
 the ABI's equality tripwire is independent.
-Acceptance selects every registered canonical case in [the catalog](catalog.json),
-including opt-ins and both runner contexts; required skips or unrun cases
-prevent completion.
+Every run of these checks selects through `tests/run.sh` by canonical case
+identity in [the catalog](catalog.json); required skips or unrun cases prevent
+completion. Acceptance of a change selects the owners named above, release
+production runs the default battery, and `--all` is the complete registered
+population, including opt-ins and both runner contexts, selected explicitly.
 
 ## Exec collection and cleanup evidence
 

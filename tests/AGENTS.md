@@ -65,9 +65,8 @@ comparison alone cannot establish behavioral equivalence.
 
 ### Verify a limit change
 
-For a limit change, run
-`tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml`
-and `tests/run.sh --suite source_drift --suite runner_abi_layout --suite runner_unit
+For a limit change, run `tests/run.sh --suite unit --suite integration
+--suite source_drift --suite runner_abi_layout --suite runner_unit
 --suite runner_c_worker_harness --suite failure_boundaries` against a normal
 signed build, plus the affected behavior owners in the
 [limits coverage table](../docs/LIMITS.md#grounding-and-coverage).
@@ -171,6 +170,10 @@ a second worktree for concurrent runs; a standalone `cargo test` against the
 managed `controller/target/` runs through `tests/lib/checkout_lock.sh` or with
 isolated output and intermediate directories, as the
 [locking contract](README.md#retention-ownership-and-execution-locking) says.
+Such a command, like a standalone `swift run PWRunnerCoreTests`, is local
+debugging of the crate or package under its own tool's rules; it is not a run
+of the `unit`, `integration` or `runner_unit` case and establishes nothing
+about the battery.
 A worktree is also the way to make a disposable checkout; an rsync copy that
 omits `dist/README.md`, `dist/AGENTS.md` or `.tmp/AGENTS.md` fails the build
 and the drift suite.

@@ -572,6 +572,11 @@ where Cargo keeps intermediate state:
 CARGO_TARGET_DIR=/private/tmp/pw-cargo CARGO_BUILD_BUILD_DIR=/private/tmp/pw-cargo cargo test --manifest-path controller/Cargo.toml
 ```
 
+Either command is local debugging of the crate under Cargo's own rules, as a
+standalone `swift run PWRunnerCoreTests` is for the runner package; neither is
+a run of the `unit`, `integration` or `runner_unit` case, which only
+`tests/run.sh` runs and accounts for.
+
 Direct Meson work uses a separate build directory, as [native
 compilation](#native-compile-with-meson) shows. `make release` holds no outer
 lock of its own: its nested build, acceptance, battery, archive and rotation

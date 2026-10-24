@@ -11,7 +11,8 @@ Rust integration tests that exercise the CLI contract against a built app.
 
 ## Success criteria
 
-- Integration test binary passes (`cargo test --test cli_contract`).
+- The `integration/cli.integration` case passes; it runs `cargo test --test cli_contract`
+  under the dispatcher against the resolved app.
 
 ## Fixtures
 

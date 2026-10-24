@@ -234,7 +234,11 @@ tests/lib/checkout_lock.sh -- cargo test --manifest-path controller/Cargo.toml
 ```
 
 Alternatively isolate both outputs and intermediates (`CARGO_TARGET_DIR` and
-`CARGO_BUILD_BUILD_DIR`) outside the managed areas. Release acceptance, the
+`CARGO_BUILD_BUILD_DIR`) outside the managed areas. Either way, a standalone
+Cargo or Swift command is local debugging of the crate or package under its
+own tool's rules: Cargo skips the two `#[ignore]` tests that only `runner_unit`
+runs, and neither command is a run of any catalog case or produces a
+`run.json`. Release acceptance, the
 battery, archiving and rotation each take the lock in turn; `make release`
 holds no outer lock. Separate worktrees have independent locks. Help and
 `--list` remain available while a build or an execution holds the lock.
