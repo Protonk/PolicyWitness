@@ -1,0 +1,3776 @@
+[
+  {
+    "blocked_before_expiry": true,
+    "case": "grace-exhausted",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "signal",
+            "basis": [
+              "reaped",
+              "term_signal"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 9
+            }
+          },
+          "grace_end": {
+            "answer": "exhausted",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "requested",
+            "basis": [
+              "termination_request"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "request": {
+                "errno": null,
+                "rc": 0,
+                "signal": 9
+              }
+            }
+          },
+          "progress_association": {
+            "answer": "step_index",
+            "basis": [
+              "progress",
+              "plan"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "incomplete",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": false,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": false,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": 0,
+        "operation": 9,
+        "raw": 152043521,
+        "stage": 1
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": false,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": null,
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": null,
+      "exitRequested": true,
+      "graceEnd": "exhausted",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 1001,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "exhausted"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 455,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": 9,
+      "terminationRequest": {
+        "errno": null,
+        "rc": 0,
+        "signal": 9
+      }
+    },
+    "kill": {
+      "errno": 0,
+      "rc": 0,
+      "signal": 9
+    },
+    "kind": "fixture",
+    "reached": "grace_exhausted",
+    "reap_status": 9,
+    "sequence": 0,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 357.03175,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.320791,
+        400.350791
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.355416,
+      "hook_entry": -55.063334,
+      "hook_exit": -0.046584,
+      "kill_call": 1402.149166,
+      "reap_wait_returned": 1403.7745,
+      "worker_exit_event": 1403.7525
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17375937,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96200,
+        "ppid": 96199,
+        "start_wall_us": 1792852292760429,
+        "uniqueid": 17375938
+      },
+      "parent_is_fixture": true,
+      "pid": 96200
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "timely",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "completion",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "done",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": null,
+      "outcome": "ok",
+      "rc": 0
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/001-timely/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "done",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 160,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "timely",
+    "reap_status": 0,
+    "sequence": 1,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 63.077916,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": null,
+      "fifo_release_open_returned": 105.086958,
+      "grace_entry_detected": 105.298083,
+      "hook_entry": -55.014084,
+      "hook_exit": -0.00675,
+      "kill_call": null,
+      "reap_wait_returned": 117.817958,
+      "worker_exit_event": 105.626458
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376058,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96321,
+        "ppid": 96320,
+        "start_wall_us": 1792852295303962,
+        "uniqueid": 17376059
+      },
+      "parent_is_fixture": true,
+      "pid": 96321
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "attempt": {
+      "completed": null,
+      "errno": null,
+      "missing_reason": null,
+      "observed_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/002-cli-late-done/work/attempt.file",
+      "rc": 0,
+      "requested_kind": "file",
+      "slot": null
+    },
+    "case": "cli-late-done",
+    "controller_exit": 1,
+    "controller_ms": 930.659958,
+    "disposition_questions": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "final_status": "exit_code",
+      "grace_end": "reaped_during_grace",
+      "kill_request_and_result": "none",
+      "progress_association": "none",
+      "stop_reason": "sentinel_deadline"
+    },
+    "envelope_outcome": "runner_timeout",
+    "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+    "exit": 1,
+    "fifo_release": {},
+    "kind": "cli",
+    "normalized_outcome": "runner_timeout",
+    "reached": "late_done",
+    "runner_subprocess": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "done_observed": true,
+      "exit_code": 0,
+      "exit_grace_wait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 416,
+        "stop": "reaped_during_grace"
+      },
+      "exit_requested": true,
+      "grace_end": "reaped_during_grace",
+      "partial_steps": false,
+      "poll_stop_reason": "sentinel_deadline",
+      "reaped": true,
+      "sentinel_wait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 403,
+        "excluded_ms": 2,
+        "stop": "sentinel_deadline"
+      },
+      "term_signal": null,
+      "termination_request": null
+    },
+    "sequence": 2,
+    "state": "exited",
+    "step_keys": [
+      "attempt",
+      "comparison",
+      "phase_id",
+      "sandbox_check",
+      "step_id"
+    ],
+    "target_existed_after_run": true,
+    "worker_failure": null,
+    "worker_pid": 96325,
+    "worker_processes_after_unit": [],
+    "worker_progress": {
+      "operation": 10,
+      "raw": 169869312,
+      "stage": 2
+    }
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-slot",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/003-late-slot/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 412,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 451,
+        "excluded_ms": 51,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_slot",
+    "reap_status": 0,
+    "sequence": 3,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 338.023625,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.326791,
+        400.441916
+      ],
+      "fifo_release_open_returned": 805.772583,
+      "grace_entry_detected": 400.460791,
+      "hook_entry": -51.524584,
+      "hook_exit": -0.013334,
+      "kill_call": null,
+      "reap_wait_returned": 812.697125,
+      "worker_exit_event": 806.767333
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376066,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96329,
+        "ppid": 96328,
+        "start_wall_us": 1792852298506590,
+        "uniqueid": 17376067
+      },
+      "parent_is_fixture": true,
+      "pid": 96329
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "attempt": {
+      "completed": null,
+      "errno": null,
+      "missing_reason": null,
+      "observed_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/004-cli-timely/work/attempt.fifo",
+      "rc": 0,
+      "requested_kind": "file",
+      "slot": null
+    },
+    "case": "cli-timely",
+    "controller_exit": 0,
+    "controller_ms": 188.57925,
+    "disposition_questions": {
+      "cleanup_trigger": "completion",
+      "collection_basis": "after_confirmed_reap",
+      "final_status": "exit_code",
+      "grace_end": "reaped_during_grace",
+      "kill_request_and_result": "none",
+      "progress_association": "none",
+      "stop_reason": "done"
+    },
+    "envelope_outcome": "ok",
+    "error": null,
+    "exit": 0,
+    "fifo_release": {
+      "open_end_ms_after_spawn": 151.202416,
+      "open_errno": null,
+      "write_rc": 1
+    },
+    "kind": "cli",
+    "normalized_outcome": "ok",
+    "reached": "timely",
+    "runner_subprocess": {
+      "cleanup_trigger": "completion",
+      "collection_basis": "after_confirmed_reap",
+      "done_observed": true,
+      "exit_code": 0,
+      "exit_grace_wait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 0,
+        "stop": "reaped_during_grace"
+      },
+      "exit_requested": true,
+      "grace_end": "reaped_during_grace",
+      "partial_steps": false,
+      "poll_stop_reason": "done",
+      "reaped": true,
+      "sentinel_wait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 92,
+        "excluded_ms": 1,
+        "stop": "done"
+      },
+      "term_signal": null,
+      "termination_request": null
+    },
+    "sequence": 4,
+    "state": "exited",
+    "step_keys": [
+      "attempt",
+      "comparison",
+      "phase_id",
+      "sandbox_check",
+      "step_id"
+    ],
+    "target_existed_after_run": true,
+    "worker_failure": null,
+    "worker_pid": 96333,
+    "worker_processes_after_unit": [],
+    "worker_progress": {
+      "operation": 10,
+      "raw": 169869312,
+      "stage": 2
+    }
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-slot",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/005-late-slot/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 411,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 453,
+        "excluded_ms": 53,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_slot",
+    "reap_status": 0,
+    "sequence": 5,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 351.812833,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        399.98825,
+        400.094541
+      ],
+      "fifo_release_open_returned": 803.641958,
+      "grace_entry_detected": 400.109833,
+      "hook_entry": -53.685375,
+      "hook_exit": -0.019125,
+      "kill_call": null,
+      "reap_wait_returned": 812.038791,
+      "worker_exit_event": 804.409416
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376073,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96336,
+        "ppid": 96335,
+        "start_wall_us": 1792852301656731,
+        "uniqueid": 17376074
+      },
+      "parent_is_fixture": true,
+      "pid": 96336
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "attempt": {
+      "completed": null,
+      "errno": null,
+      "missing_reason": "slot_incomplete",
+      "observed_path": null,
+      "rc": -1,
+      "requested_kind": "file",
+      "slot": null
+    },
+    "case": "cli-grace-exhausted",
+    "controller_exit": 1,
+    "controller_ms": 1514.2995,
+    "disposition_questions": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "final_status": "signal",
+      "grace_end": "exhausted",
+      "kill_request_and_result": "requested",
+      "progress_association": "step_index",
+      "stop_reason": "sentinel_deadline"
+    },
+    "envelope_outcome": "runner_timeout",
+    "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+    "exit": 1,
+    "fifo_release": {},
+    "kind": "cli",
+    "normalized_outcome": "runner_timeout",
+    "reached": "grace_exhausted",
+    "runner_subprocess": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "done_observed": false,
+      "exit_code": null,
+      "exit_grace_wait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 1001,
+        "stop": "exhausted"
+      },
+      "exit_requested": true,
+      "grace_end": "exhausted",
+      "partial_steps": true,
+      "poll_stop_reason": "sentinel_deadline",
+      "reaped": true,
+      "sentinel_wait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 401,
+        "excluded_ms": 1,
+        "stop": "sentinel_deadline"
+      },
+      "term_signal": 9,
+      "termination_request": {
+        "rc": 0,
+        "signal": 9
+      }
+    },
+    "sequence": 6,
+    "state": "exited",
+    "step_keys": [
+      "attempt",
+      "comparison",
+      "phase_id",
+      "sandbox_check",
+      "step_id"
+    ],
+    "target_existed_after_run": true,
+    "worker_failure": null,
+    "worker_pid": 96340,
+    "worker_processes_after_unit": [],
+    "worker_progress": {
+      "index": 0,
+      "operation": 9,
+      "raw": 152043521,
+      "stage": 1
+    }
+  },
+  {
+    "attempt": {
+      "completed": null,
+      "errno": null,
+      "missing_reason": null,
+      "observed_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/007-cli-late-slot/work/attempt.fifo",
+      "rc": 0,
+      "requested_kind": "file",
+      "slot": null
+    },
+    "case": "cli-late-slot",
+    "controller_exit": 1,
+    "controller_ms": 993.046292,
+    "disposition_questions": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "final_status": "exit_code",
+      "grace_end": "reaped_during_grace",
+      "kill_request_and_result": "none",
+      "progress_association": "none",
+      "stop_reason": "sentinel_deadline"
+    },
+    "envelope_outcome": "runner_timeout",
+    "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+    "exit": 1,
+    "fifo_release": {
+      "open_end_ms_after_spawn": 951.162083,
+      "open_errno": null,
+      "write_rc": 1
+    },
+    "kind": "cli",
+    "normalized_outcome": "runner_timeout",
+    "reached": "late_slot",
+    "runner_subprocess": {
+      "cleanup_trigger": "deadline_expiry",
+      "collection_basis": "after_confirmed_reap",
+      "done_observed": true,
+      "exit_code": 0,
+      "exit_grace_wait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 491,
+        "stop": "reaped_during_grace"
+      },
+      "exit_requested": true,
+      "grace_end": "reaped_during_grace",
+      "partial_steps": false,
+      "poll_stop_reason": "sentinel_deadline",
+      "reaped": true,
+      "sentinel_wait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 401,
+        "excluded_ms": 1,
+        "stop": "sentinel_deadline"
+      },
+      "term_signal": null,
+      "termination_request": null
+    },
+    "sequence": 7,
+    "state": "exited",
+    "step_keys": [
+      "attempt",
+      "comparison",
+      "phase_id",
+      "sandbox_check",
+      "step_id"
+    ],
+    "target_existed_after_run": true,
+    "worker_failure": null,
+    "worker_pid": 96359,
+    "worker_processes_after_unit": [],
+    "worker_progress": {
+      "operation": 10,
+      "raw": 169869312,
+      "stage": 2
+    }
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-slot",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/008-late-slot/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 407,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 455,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_slot",
+    "reap_status": 0,
+    "sequence": 8,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 356.422,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.089917,
+        400.195125
+      ],
+      "fifo_release_open_returned": 805.5455,
+      "grace_entry_detected": 400.21275,
+      "hook_entry": -55.019125,
+      "hook_exit": -0.010708,
+      "kill_call": null,
+      "reap_wait_returned": 807.324125,
+      "worker_exit_event": 807.083792
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376099,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96362,
+        "ppid": 96361,
+        "start_wall_us": 1792852308140619,
+        "uniqueid": 17376100
+      },
+      "parent_is_fixture": true,
+      "pid": 96362
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-done",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/009-late-done/work/attempt.file",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 417,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 455,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_done",
+    "reap_status": 0,
+    "sequence": 9,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 344.426459,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.172417,
+        400.273292
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.281167,
+      "hook_entry": -55.010458,
+      "hook_exit": -0.006,
+      "kill_call": null,
+      "reap_wait_returned": 817.932083,
+      "worker_exit_event": 806.601792
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376101,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96364,
+        "ppid": 96363,
+        "start_wall_us": 1792852310095845,
+        "uniqueid": 17376102
+      },
+      "parent_is_fixture": true,
+      "pid": 96364
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": false,
+    "case": "timely",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "completion",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "done",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": null,
+      "outcome": "ok",
+      "rc": 0
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/010-timely/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 10,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "done",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 159,
+        "excluded_ms": 53,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "timely",
+    "reap_status": 0,
+    "sequence": 10,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": null,
+      "pending_window_ms": 49.4025,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": null,
+      "fifo_release_open_returned": 105.106792,
+      "grace_entry_detected": 105.427542,
+      "hook_entry": -53.651875,
+      "hook_exit": -0.006875,
+      "kill_call": null,
+      "reap_wait_returned": 115.820584,
+      "worker_exit_event": 105.745167
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376103,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96366,
+        "ppid": 96365,
+        "start_wall_us": 1792852312031549,
+        "uniqueid": 17376104
+      },
+      "parent_is_fixture": true,
+      "pid": 96366
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "grace-exhausted",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "signal",
+            "basis": [
+              "reaped",
+              "term_signal"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 9
+            }
+          },
+          "grace_end": {
+            "answer": "exhausted",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "requested",
+            "basis": [
+              "termination_request"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "request": {
+                "errno": null,
+                "rc": 0,
+                "signal": 9
+              }
+            }
+          },
+          "progress_association": {
+            "answer": "step_index",
+            "basis": [
+              "progress",
+              "plan"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "incomplete",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": false,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": false,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": 0,
+        "operation": 9,
+        "raw": 152043521,
+        "stage": 1
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": false,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": null,
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": null,
+      "exitRequested": true,
+      "graceEnd": "exhausted",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 1001,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "exhausted"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 455,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": 9,
+      "terminationRequest": {
+        "errno": null,
+        "rc": 0,
+        "signal": 9
+      }
+    },
+    "kill": {
+      "errno": 0,
+      "rc": 0,
+      "signal": 9
+    },
+    "kind": "fixture",
+    "reached": "grace_exhausted",
+    "reap_status": 9,
+    "sequence": 11,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 361.157542,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.405083,
+        400.522333
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.532833,
+      "hook_entry": -55.017,
+      "hook_exit": -0.008125,
+      "kill_call": 1401.901833,
+      "reap_wait_returned": 1402.832333,
+      "worker_exit_event": 1402.818375
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376105,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96368,
+        "ppid": 96367,
+        "start_wall_us": 1792852313285051,
+        "uniqueid": 17376106
+      },
+      "parent_is_fixture": true,
+      "pid": 96368
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-done",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/012-late-done/work/attempt.file",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 416,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 452,
+        "excluded_ms": 51,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_done",
+    "reap_status": 0,
+    "sequence": 12,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 350.942958,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.201084,
+        400.322375
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.329334,
+      "hook_entry": -51.81075,
+      "hook_exit": -0.019791,
+      "kill_call": null,
+      "reap_wait_returned": 817.235959,
+      "worker_exit_event": 805.671667
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376107,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96370,
+        "ppid": 96369,
+        "start_wall_us": 1792852315817540,
+        "uniqueid": 17376108
+      },
+      "parent_is_fixture": true,
+      "pid": 96370
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": false,
+    "case": "timely",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "completion",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "done",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": null,
+      "outcome": "ok",
+      "rc": 0
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": {
+      "open_errno": 0,
+      "open_fd_valid": true,
+      "write_rc": 1
+    },
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/013-timely/work/attempt.fifo",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "completion",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 12,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "done",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 160,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "done"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "timely",
+    "reap_status": 0,
+    "sequence": 13,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.04899999999999238,
+      "pending_window_ms": 65.56075,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        []
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": null,
+      "fifo_release_open_returned": 105.156375,
+      "grace_entry_detected": 105.79775,
+      "hook_entry": -55.016708,
+      "hook_exit": -0.00925,
+      "kill_call": null,
+      "reap_wait_returned": 118.315542,
+      "worker_exit_event": 105.917375
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376126,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96389,
+        "ppid": 96388,
+        "start_wall_us": 1792852317773656,
+        "uniqueid": 17376127
+      },
+      "parent_is_fixture": true,
+      "pid": 96389
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "grace-exhausted",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "signal",
+            "basis": [
+              "reaped",
+              "term_signal"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 9
+            }
+          },
+          "grace_end": {
+            "answer": "exhausted",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "requested",
+            "basis": [
+              "termination_request"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "request": {
+                "errno": null,
+                "rc": 0,
+                "signal": 9
+              }
+            }
+          },
+          "progress_association": {
+            "answer": "step_index",
+            "basis": [
+              "progress",
+              "plan"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "incomplete",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": false,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": false,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": 0,
+        "operation": 9,
+        "raw": 152043521,
+        "stage": 1
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": false,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": null,
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": null,
+      "exitRequested": true,
+      "graceEnd": "exhausted",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 1001,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "exhausted"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 455,
+        "excluded_ms": 55,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": 9,
+      "terminationRequest": {
+        "errno": null,
+        "rc": 0,
+        "signal": 9
+      }
+    },
+    "kill": {
+      "errno": 0,
+      "rc": 0,
+      "signal": 9
+    },
+    "kind": "fixture",
+    "reached": "grace_exhausted",
+    "reap_status": 9,
+    "sequence": 14,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 342.31525,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        400.102083,
+        400.186958
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.192125,
+      "hook_entry": -55.013334,
+      "hook_exit": -0.006292,
+      "kill_call": 1401.223791,
+      "reap_wait_returned": 1402.198666,
+      "worker_exit_event": 1402.182916
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376128,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96391,
+        "ppid": 96390,
+        "start_wall_us": 1792852319014576,
+        "uniqueid": 17376129
+      },
+      "parent_is_fixture": true,
+      "pid": 96391
+    },
+    "worker_processes_after_unit": []
+  },
+  {
+    "blocked_before_expiry": true,
+    "case": "late-done",
+    "classified": {
+      "disposition": {
+        "issues": [],
+        "questions": {
+          "cleanup_trigger": {
+            "answer": "deadline_expiry",
+            "basis": [
+              "cleanup_trigger",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "collection_basis": {
+            "answer": "after_confirmed_reap",
+            "basis": [
+              "collection_basis"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "final_status": {
+            "answer": "exit_code",
+            "basis": [
+              "reaped",
+              "exit_code"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": {
+              "integer": 0
+            }
+          },
+          "grace_end": {
+            "answer": "reaped_during_grace",
+            "basis": [
+              "grace_end",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "kill_request_and_result": {
+            "answer": "none",
+            "basis": [
+              "termination_request",
+              "exit_requested"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "progress_association": {
+            "answer": "none",
+            "basis": [
+              "progress"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          },
+          "stop_reason": {
+            "answer": "sentinel_deadline",
+            "basis": [
+              "poll_stop_reason"
+            ],
+            "issue": null,
+            "reason": null,
+            "state": "supported",
+            "value": null
+          }
+        },
+        "steps": [
+          {
+            "attempt_support": "supported",
+            "index": 0,
+            "questions": {
+              "step_boundary_reached": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_requested_operation_applicability": {
+                "answer": "supported",
+                "basis": [
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              },
+              "step_result_published": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "issue": null,
+                "reason": null,
+                "state": "supported",
+                "value": null
+              }
+            },
+            "slot": "completed",
+            "step_id": "r1"
+          }
+        ]
+      },
+      "error": "pw-probe-runner sentinel deadline expired; no termination requested",
+      "outcome": "runner_timeout",
+      "rc": 1
+    },
+    "driver_result": "success",
+    "exit": 0,
+    "fifo_release": null,
+    "final": {
+      "applied": true,
+      "done": true,
+      "failure": null,
+      "failure_state": "absent",
+      "phase": {
+        "acknowledged": true,
+        "arrived": true,
+        "collectionClosed": true,
+        "completed": true,
+        "ownershipEstablished": true,
+        "releaseSet": true,
+        "violations": []
+      },
+      "progress": {
+        "index": null,
+        "operation": 10,
+        "raw": 169869312,
+        "stage": 2
+      },
+      "slot": {
+        "callBoundary": false,
+        "completed": true,
+        "errnoVal": 0,
+        "error": null,
+        "observedPath": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs/20261024T143131685570Z-latepub-series1-b853/units/015-late-done/work/attempt.file",
+        "rc": 0
+      }
+    },
+    "host": {
+      "cleanupTrigger": "deadline_expiry",
+      "collectionBasis": "after_confirmed_reap",
+      "exitCode": 0,
+      "exitRequested": true,
+      "graceEnd": "reaped_during_grace",
+      "graceWait": {
+        "budget_ms": 1000,
+        "clock_fault": false,
+        "elapsed_ms": 407,
+        "excluded_ms": null,
+        "native_errno": null,
+        "stop": "reaped_during_grace"
+      },
+      "pollStopReason": "sentinel_deadline",
+      "reaped": true,
+      "sentinelWait": {
+        "budget_ms": 400,
+        "clock_fault": false,
+        "elapsed_ms": 451,
+        "excluded_ms": 51,
+        "native_errno": null,
+        "stop": "sentinel_deadline"
+      },
+      "termSignal": null,
+      "terminationRequest": null
+    },
+    "kill": null,
+    "kind": "fixture",
+    "reached": "late_done",
+    "reap_status": 0,
+    "sequence": 15,
+    "state": "exited",
+    "states": {
+      "before_release": [
+        [
+          1
+        ],
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "cpu_growth_ms_over_pending_window": 0.0,
+      "pending_window_ms": 340.507708,
+      "release_to_expiry_or_exit": [
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    "target_existed_after_run": true,
+    "times_ms_from_release": {
+      "exit_request_bracket": [
+        399.975583,
+        400.108375
+      ],
+      "fifo_release_open_returned": null,
+      "grace_entry_detected": 400.121042,
+      "hook_entry": -51.185083,
+      "hook_exit": -0.008208,
+      "kill_call": null,
+      "reap_wait_returned": 807.8605,
+      "worker_exit_event": 805.853333
+    },
+    "worker": {
+      "identity": {
+        "parent_uniqueid": 17376130,
+        "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "pid": 96393,
+        "ppid": 96392,
+        "start_wall_us": 1792852321568756,
+        "uniqueid": 17376131
+      },
+      "parent_is_fixture": true,
+      "pid": 96393
+    },
+    "worker_processes_after_unit": []
+  }
+]

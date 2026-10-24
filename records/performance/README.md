@@ -2,8 +2,8 @@
 
 Records of the runtime investigation of PolicyWitness as a running program,
 and the evidence behind them. The first built-in-runner cycle, two
-log-observer pilots and the host-lifetime and phase-barrier investigations
-of build 853 are complete.
+log-observer pilots and the host-lifetime, phase-barrier and late-publication
+investigations of build 853 are complete.
 The first-cycle and log-observer procedures and their source files are
 historical, unmaintained equipment for those runs. They require the recorded pre-retirement application and inputs;
 they are not measurement commands for the maintained application. The
@@ -44,6 +44,12 @@ Layout:
   callback, its schedule runner and reader.
 - `PHASE-BARRIER-INVESTIGATION-REPORT.md`: worker CPU during held phase
   boundaries, the deadline-crossing control and measurement limits.
+- `PolicyWitness-Late-Publication-Investigation.md`: the late-publication
+  investigation's questions about evidence published during worker exit grace.
+- `late-publication/`: the driver-seam fixture and CLI schedule for the four
+  sentinel-expiry cases, and their reader.
+- `LATE-PUBLICATION-INVESTIGATION-REPORT.md`: what exit grace retains after a
+  host sentinel deadline, and what the exit request can interrupt.
 - `log-observer/`: the pinned pilot configuration, bounded query procedure,
   content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
@@ -51,8 +57,8 @@ Layout:
   `harness/configurations.json`.
 - `evidence/<run-id>/`: committed per run: `manifest.json`,
   `conditions-start.json`, `conditions-end.json`, `run.json`, `SHA256SUMS`
-  and the summarizer's output; host-lifetime and phase-barrier runs have
-  `summary.json`, `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
+  and the summarizer's output; host-lifetime, phase-barrier and
+  late-publication runs have `summary.json`, `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
   without its raw files.
 - `evidence/<control-batch>/`: the external terminal transcripts, observed exit
   statuses and assertion ledger for each bounded control or pilot in that batch.
@@ -62,6 +68,7 @@ Layout:
   cites a raw file says so.
 
 A run identifier is `<UTC stamp>-<config>-b<build number>`; host-lifetime
-runs are `<UTC stamp>-hostlife-<label>` and phase-barrier runs
-`<UTC stamp>-phasebarrier-<label>`, with the build number in the label. Runs are never
+runs are `<UTC stamp>-hostlife-<label>`, phase-barrier runs
+`<UTC stamp>-phasebarrier-<label>` and late-publication runs
+`<UTC stamp>-latepub-<label>`, with the build number in the label. Runs are never
 overwritten; a procedure that finds its run directory present refuses.

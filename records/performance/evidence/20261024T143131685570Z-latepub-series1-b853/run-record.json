@@ -1,0 +1,432 @@
+{
+  "argv": [
+    "/opt/homebrew/Cellar/python@3.14/3.14.8/bin/python3.14",
+    "records/performance/late-publication/measure.py",
+    "--label",
+    "series1-b853"
+  ],
+  "child_env": {
+    "HOME": "/Users/raccoon",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+  },
+  "cli_cases": {
+    "cli-grace-exhausted": [
+      "fifo",
+      null,
+      null
+    ],
+    "cli-late-done": [
+      "file",
+      800,
+      null
+    ],
+    "cli-late-slot": [
+      "fifo",
+      null,
+      950
+    ],
+    "cli-timely": [
+      "fifo",
+      null,
+      150
+    ]
+  },
+  "conditions_end": {
+    "at": {
+      "mono_ns": 1514678041948125,
+      "wall_ns": 1792852322504858000
+    },
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "vm.loadavg"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nvm.loadavg: { 1.25 1.36 1.42 }\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=26214499)\t100%; finishing charge; 0:00 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 12.1,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 4.9,
+            "name": "codex",
+            "pid": 83831,
+            "ppid": 60446
+          },
+          {
+            "cpu_percent": 4.8,
+            "name": "<other>",
+            "pid": 96297,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 3.2,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 3.1,
+            "name": "<other>",
+            "pid": 736,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 2.7,
+            "name": "claude",
+            "pid": 78018,
+            "ppid": 77980
+          },
+          {
+            "cpu_percent": 1.4,
+            "name": "claude",
+            "pid": 74070,
+            "ppid": 63707
+          },
+          {
+            "cpu_percent": 1.4,
+            "name": "<other>",
+            "pid": 96311,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.8,
+            "name": "<other>",
+            "pid": 415,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.6,
+            "name": "codex",
+            "pid": 96824,
+            "ppid": 6163
+          },
+          {
+            "cpu_percent": 0.6,
+            "name": "<other>",
+            "pid": 452,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.5,
+            "name": "<other>",
+            "pid": 13741,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.4,
+            "name": "<other>",
+            "pid": 1151,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.4,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.4,
+            "name": "launchd",
+            "pid": 1,
+            "ppid": 0
+          }
+        ]
+      }
+    ]
+  },
+  "conditions_start": {
+    "at": {
+      "mono_ns": 1514647254926833,
+      "wall_ns": 1792852291717870000
+    },
+    "probes": [
+      {
+        "argv": [
+          "/usr/bin/sw_vers"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n"
+      },
+      {
+        "argv": [
+          "/usr/sbin/sysctl",
+          "hw.model",
+          "hw.ncpu",
+          "hw.memsize",
+          "vm.loadavg"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "hw.model: Mac17,3\nhw.ncpu: 10\nhw.memsize: 17179869184\nvm.loadavg: { 1.31 1.39 1.43 }\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/pmset",
+          "-g",
+          "batt"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=26214499)\t100%; finishing charge; 0:00 remaining present: true\n"
+      },
+      {
+        "argv": [
+          "/bin/ps",
+          "-axo",
+          "pid,ppid,%cpu,comm",
+          "-r"
+        ],
+        "exit": 0,
+        "note": "raw run.json retains the full snapshot locally",
+        "top_cpu": [
+          {
+            "cpu_percent": 14.3,
+            "name": "<other>",
+            "pid": 1143,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 12.3,
+            "name": "<other>",
+            "pid": 459,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 10.8,
+            "name": "Python",
+            "pid": 96071,
+            "ppid": 96070
+          },
+          {
+            "cpu_percent": 5.9,
+            "name": "claude",
+            "pid": 78018,
+            "ppid": 77980
+          },
+          {
+            "cpu_percent": 5.7,
+            "name": "claude",
+            "pid": 87843,
+            "ppid": 81014
+          },
+          {
+            "cpu_percent": 5.4,
+            "name": "claude",
+            "pid": 74070,
+            "ppid": 63707
+          },
+          {
+            "cpu_percent": 1.2,
+            "name": "<other>",
+            "pid": 427,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.7,
+            "name": "<other>",
+            "pid": 1151,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.7,
+            "name": "logd",
+            "pid": 386,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.6,
+            "name": "<other>",
+            "pid": 452,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.6,
+            "name": "<other>",
+            "pid": 96070,
+            "ppid": 74070
+          },
+          {
+            "cpu_percent": 0.5,
+            "name": "<other>",
+            "pid": 618,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.4,
+            "name": "<other>",
+            "pid": 415,
+            "ppid": 1
+          },
+          {
+            "cpu_percent": 0.4,
+            "name": "launchd",
+            "pid": 1,
+            "ppid": 0
+          },
+          {
+            "cpu_percent": 0.3,
+            "name": "<other>",
+            "pid": 83045,
+            "ppid": 1
+          }
+        ]
+      }
+    ]
+  },
+  "ended": {
+    "mono_ns": 1514678039342208,
+    "wall_ns": 1792852322502253000
+  },
+  "fixture_cases": {
+    "grace-exhausted": [
+      "--target",
+      "fifo"
+    ],
+    "late-done": [
+      "--target",
+      "file",
+      "--hang-ms",
+      "800"
+    ],
+    "late-slot": [
+      "--target",
+      "fifo",
+      "--unblock-after-grace-entry-ms",
+      "400"
+    ],
+    "timely": [
+      "--target",
+      "fifo",
+      "--unblock-after-release-ms",
+      "100"
+    ]
+  },
+  "format": 1,
+  "harness_sha256": "42b6a174374dc31c8e0631aa644dba17c54ba2f02edc21bfac973a2aabc24ecb",
+  "hold_ms": 50,
+  "identity": {
+    "fixture_sha256": "49a740a39b53443f809bc6fe4fc3b475845c088245f05955df67e25fc1caf424",
+    "probes": [
+      {
+        "argv": [
+          "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+          "--version"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "{\n  \"build\": {\n    \"commit\": \"1bf0341cd06c48122af1635e8aa8cac77517d9e1\",\n    \"describe\": \"v0.3.3\",\n    \"number\": \"853\",\n    \"version\": \"0.3.3\"\n  },\n  \"data\": {\n    \"contract\": {\n      \"controller_envelope\": 8,\n      \"request_schema\": 5,\n      \"response_schema\": 23\n    }\n  },\n  \"generated_at_unix_ms\": 1792852291693,\n  \"kind\": \"version\",\n  \"result\": {\n    \"errno\": null,\n    \"error\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"ok\": true,\n    \"rc\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  },\n  \"schema_version\": 8\n}\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "rev-parse",
+          "HEAD"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "3fb99fab5d4788b491c73cc379cd4bfecaf31f43\n"
+      },
+      {
+        "argv": [
+          "/usr/bin/git",
+          "-C",
+          "/Users/raccoon/Desktop/Security/PolicyWitness",
+          "status",
+          "--porcelain"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "stdout": "?? records/performance/PolicyWitness-Late-Publication-Investigation.md\n?? records/performance/late-publication/\n"
+      }
+    ],
+    "source_sha256": {
+      "Package.swift": "78c4f5162be1e84e9d0e3fdc3aad676f3abcde8d6ab9844c1c1ad4db4a33806f",
+      "main.swift": "60b75982f47992e1e6e57ae8dc1edadb353bc77de69377e50ec540f8b01c7381",
+      "measure.py": "42b6a174374dc31c8e0631aa644dba17c54ba2f02edc21bfac973a2aabc24ecb"
+    },
+    "worker_sha256": "c8ac685bb0dace6cbaec59b8c65c0af83168ed06dc69f4722f0867defade187c"
+  },
+  "interrupt": null,
+  "never_started": [],
+  "python": "3.14.8 (main, Sep 30 2026, 17:55:09) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "schedule": [
+    "grace-exhausted",
+    "timely",
+    "cli-late-done",
+    "late-slot",
+    "cli-timely",
+    "late-slot",
+    "cli-grace-exhausted",
+    "cli-late-slot",
+    "late-slot",
+    "late-done",
+    "timely",
+    "grace-exhausted",
+    "late-done",
+    "timely",
+    "grace-exhausted",
+    "late-done"
+  ],
+  "seed": 20261024,
+  "sentinel_ms": 400,
+  "settings": {
+    "ceiling_s": 240.0,
+    "fixture": "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/late-publication-build/out/Products/Debug/LatePublicationProbe",
+    "fixture_repeats": 3,
+    "gap_s": 1.0,
+    "label": "series1-b853",
+    "no_cli": false,
+    "out": "/Users/raccoon/Desktop/Security/PolicyWitness/records/performance/runs",
+    "seed": 20261024,
+    "unit_deadline_s": 15.0
+  },
+  "started": {
+    "mono_ns": 1514647254924000,
+    "wall_ns": 1792852291717869000
+  },
+  "stop_reason": "completed",
+  "units_run": 16,
+  "worker_processes_after": []
+}

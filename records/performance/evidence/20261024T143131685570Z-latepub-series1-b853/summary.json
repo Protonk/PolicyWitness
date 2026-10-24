@@ -1,0 +1,275 @@
+{
+  "attestation": {
+    "listed": 65,
+    "unattested": []
+  },
+  "cases": {
+    "cli:cli-grace-exhausted": {
+      "n": 1,
+      "reached": {
+        "grace_exhausted": 1
+      },
+      "sequences": [
+        6
+      ]
+    },
+    "cli:cli-late-done": {
+      "n": 1,
+      "reached": {
+        "late_done": 1
+      },
+      "sequences": [
+        2
+      ]
+    },
+    "cli:cli-late-slot": {
+      "n": 1,
+      "reached": {
+        "late_slot": 1
+      },
+      "sequences": [
+        7
+      ]
+    },
+    "cli:cli-timely": {
+      "n": 1,
+      "reached": {
+        "timely": 1
+      },
+      "sequences": [
+        4
+      ]
+    },
+    "fixture:grace-exhausted": {
+      "n": 3,
+      "reached": {
+        "grace_exhausted": 3
+      },
+      "sequences": [
+        0,
+        11,
+        14
+      ]
+    },
+    "fixture:late-done": {
+      "n": 3,
+      "reached": {
+        "late_done": 3
+      },
+      "sequences": [
+        9,
+        12,
+        15
+      ]
+    },
+    "fixture:late-slot": {
+      "n": 3,
+      "reached": {
+        "late_slot": 3
+      },
+      "sequences": [
+        3,
+        5,
+        8
+      ]
+    },
+    "fixture:timely": {
+      "n": 3,
+      "reached": {
+        "timely": 3
+      },
+      "sequences": [
+        1,
+        10,
+        13
+      ]
+    }
+  },
+  "fixture_times_ms_from_release": {
+    "grace-exhausted": {
+      "exit_request_bracket": {
+        "absent": 0,
+        "max": 400.522333,
+        "median": 400.350791,
+        "min": 400.186958,
+        "n": 3
+      },
+      "fifo_release_open_returned": {
+        "absent": 3,
+        "n": 0
+      },
+      "grace_entry_detected": {
+        "absent": 0,
+        "max": 400.532833,
+        "median": 400.355416,
+        "min": 400.192125,
+        "n": 3
+      },
+      "kill_call": {
+        "absent": 0,
+        "max": 1402.149166,
+        "median": 1401.901833,
+        "min": 1401.223791,
+        "n": 3
+      },
+      "reap_wait_returned": {
+        "absent": 0,
+        "max": 1403.7745,
+        "median": 1402.832333,
+        "min": 1402.198666,
+        "n": 3
+      },
+      "worker_exit_event": {
+        "absent": 0,
+        "max": 1403.7525,
+        "median": 1402.818375,
+        "min": 1402.182916,
+        "n": 3
+      }
+    },
+    "late-done": {
+      "exit_request_bracket": {
+        "absent": 0,
+        "max": 400.322375,
+        "median": 400.273292,
+        "min": 400.108375,
+        "n": 3
+      },
+      "fifo_release_open_returned": {
+        "absent": 3,
+        "n": 0
+      },
+      "grace_entry_detected": {
+        "absent": 0,
+        "max": 400.329334,
+        "median": 400.281167,
+        "min": 400.121042,
+        "n": 3
+      },
+      "kill_call": {
+        "absent": 3,
+        "n": 0
+      },
+      "reap_wait_returned": {
+        "absent": 0,
+        "max": 817.932083,
+        "median": 817.235959,
+        "min": 807.8605,
+        "n": 3
+      },
+      "worker_exit_event": {
+        "absent": 0,
+        "max": 806.601792,
+        "median": 805.853333,
+        "min": 805.671667,
+        "n": 3
+      }
+    },
+    "late-slot": {
+      "exit_request_bracket": {
+        "absent": 0,
+        "max": 400.441916,
+        "median": 400.195125,
+        "min": 400.094541,
+        "n": 3
+      },
+      "fifo_release_open_returned": {
+        "absent": 0,
+        "max": 805.772583,
+        "median": 805.5455,
+        "min": 803.641958,
+        "n": 3
+      },
+      "grace_entry_detected": {
+        "absent": 0,
+        "max": 400.460791,
+        "median": 400.21275,
+        "min": 400.109833,
+        "n": 3
+      },
+      "kill_call": {
+        "absent": 3,
+        "n": 0
+      },
+      "reap_wait_returned": {
+        "absent": 0,
+        "max": 812.697125,
+        "median": 812.038791,
+        "min": 807.324125,
+        "n": 3
+      },
+      "worker_exit_event": {
+        "absent": 0,
+        "max": 807.083792,
+        "median": 806.767333,
+        "min": 804.409416,
+        "n": 3
+      }
+    },
+    "timely": {
+      "exit_request_bracket": {
+        "absent": 3,
+        "n": 0
+      },
+      "fifo_release_open_returned": {
+        "absent": 0,
+        "max": 105.156375,
+        "median": 105.106792,
+        "min": 105.086958,
+        "n": 3
+      },
+      "grace_entry_detected": {
+        "absent": 0,
+        "max": 105.79775,
+        "median": 105.427542,
+        "min": 105.298083,
+        "n": 3
+      },
+      "kill_call": {
+        "absent": 3,
+        "n": 0
+      },
+      "reap_wait_returned": {
+        "absent": 0,
+        "max": 118.315542,
+        "median": 117.817958,
+        "min": 115.820584,
+        "n": 3
+      },
+      "worker_exit_event": {
+        "absent": 0,
+        "max": 105.917375,
+        "median": 105.745167,
+        "min": 105.626458,
+        "n": 3
+      }
+    }
+  },
+  "mismatched": [],
+  "never_started": [],
+  "order": [
+    "0:fixture:grace-exhausted",
+    "1:fixture:timely",
+    "2:cli:cli-late-done",
+    "3:fixture:late-slot",
+    "4:cli:cli-timely",
+    "5:fixture:late-slot",
+    "6:cli:cli-grace-exhausted",
+    "7:cli:cli-late-slot",
+    "8:fixture:late-slot",
+    "9:fixture:late-done",
+    "10:fixture:timely",
+    "11:fixture:grace-exhausted",
+    "12:fixture:late-done",
+    "13:fixture:timely",
+    "14:fixture:grace-exhausted",
+    "15:fixture:late-done"
+  ],
+  "past_deadline": [],
+  "raw_sha256sums_sha256": "3871b507e2439b9e8371ab5f16effbed181869f15e1d65998fd65587c0e2b491",
+  "run_id": "20261024T143131685570Z-latepub-series1-b853",
+  "stop_reason": "completed",
+  "survivors": [],
+  "units_run": 16,
+  "worker_processes_after_run": []
+}
