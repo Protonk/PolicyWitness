@@ -73,6 +73,17 @@ suite directory to have a README and every `run.sh` under one to be a case
 command the catalog names, and require Baseline suites to have default catalog
 cases. Planner controls add a suite script no case names, a suite directory
 without a README and one the catalog lacks, and each is named.
+
+Two rules keep the one test interface the only one. No repository document may
+show a case script as a command (`bash tests/suites/...`, `./tests/suites/...`,
+a fenced script line, or a sentence telling the reader to run a script path; a
+bare path in a code span is a location) or name the retired direct output
+directory under `tests/out/runs/`; and the Makefile, `tests/accept-release.sh` and the
+release helpers may name no `--suite`, `--case` or `--all` and may invoke
+`tests/run.sh` only without arguments or with `--prune`. Planner controls add
+each form to a document copy, a selector and an argument to the Makefile copy
+and a selector to the acceptance copy, and require each to be named while a
+location span and a comment pass.
 They also lock the `_test_overrides` key table in `runner/README.md` to the
 stored properties of `PWRunnerTestOverrides`, since that table is the only
 documented key list. Property/table agreement does not verify request admission

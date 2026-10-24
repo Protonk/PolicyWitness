@@ -168,6 +168,97 @@ def catalog_commands() -> set[str]:
     return out
 
 
+# Documents that are not the repository's own: investigation records, local
+# archives and evidence, scratch, build state and vendored sources.
+COMMAND_DOCS_EXCLUDED = ('records/', 'dist/archive/', 'dist/evidence/', 'tests/out/', '.tmp/', 'builddir',
+                         'controller/target/', 'tests/lib/vendor/', 'runner/.build/')
+# A case script invoked: `bash tests/suites/...`, `./tests/suites/...`, or a bare script
+# path standing as a command line. A bare path in a code span is a location unless
+# the prose in front of it tells the reader to run it.
+CASE_COMMAND = re.compile(r'(?:^|\s)(?:bash\s+|\./)tests/suites/[A-Za-z0-9_./-]+\.(?:sh|py)(?:\s|$)')
+BARE_CASE_SCRIPT = re.compile(r'^tests/suites/[A-Za-z0-9_./-]+\.sh(?:\s|$)')
+RUN_WORDS = re.compile(r'(?:^|\W)(?:run|runs|invoke|invokes|execute|executes|start|starts)\W*$', re.I)
+RETIRED_DIRECT_OUTPUT = 'runs/direct'
+# The one test interface may appear in release production only without selectors.
+RELEASE_PRODUCTION = ('Makefile', 'tests/accept-release.sh')
+TEST_SELECTORS = ('--suite', '--case', '--all')
+RUN_SH_REMAINDER = re.compile(r"^(?:$|[;\"'\]\\]|--prune\b)")
+
+
+def markdown_documents() -> list[Path]:
+    """Every Markdown document the repository maintains, by walking the tree (the
+    planner's disposable checkout is not a git repository)."""
+    out = []
+    for path in REPO_ROOT.rglob('*.md'):
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        if relative.startswith(COMMAND_DOCS_EXCLUDED) or any(part.startswith('.') for part in path.relative_to(REPO_ROOT).parts):
+            continue
+        out.append(path)
+    return sorted(out)
+
+
+def check_no_direct_case_commands_in_docs() -> list[str]:
+    """No document shows a case script as a command or names the retired direct output.
+
+    A case runs only through tests/run.sh; a documented `bash tests/suites/...`, a
+    `./tests/suites/...`, a fenced script line or a sentence telling the reader to
+    run a script path is a second route in prose."""
+    problems: list[str] = []
+    for path in markdown_documents():
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        try:
+            document = markdown_reader.read(path)
+        except markdown_reader.Refused as error:
+            problems.append(f"  commands: {error}")
+            continue
+        if RETIRED_DIRECT_OUTPUT in document.text:
+            problems.append(f"  commands: {relative} names the retired direct output tests/out/{RETIRED_DIRECT_OUTPUT}")
+        for block in document.blocks:
+            if block.kind != 'fence':
+                continue
+            for line in block.content.splitlines():
+                stripped = line.strip()
+                if CASE_COMMAND.search(stripped) or BARE_CASE_SCRIPT.match(stripped):
+                    problems.append(f"  commands: {relative} shows a case script as a command: {stripped[:80]!r}; "
+                                    "cases run only through tests/run.sh")
+        for inline in document.inlines:
+            pieces = inline.pieces
+            for index, (kind, value) in enumerate(pieces):
+                if kind != 'code':
+                    continue
+                span = value.strip()
+                told_to_run = (index > 0 and pieces[index - 1][0] == 'text' and bool(RUN_WORDS.search(pieces[index - 1][1])))
+                if CASE_COMMAND.search(span) or (BARE_CASE_SCRIPT.match(span) and told_to_run):
+                    problems.append(f"  commands: {relative} shows a case script as a command: {span[:80]!r}; "
+                                    "cases run only through tests/run.sh")
+    return problems
+
+
+def check_release_production_runs_the_default_battery() -> list[str]:
+    """Release production invokes tests/run.sh only without selectors.
+
+    The Makefile, the acceptance entry point and the release helpers may name
+    no `--suite`, `--case` or `--all`, and every `tests/run.sh` they invoke ends
+    the command or continues with `--prune`; comment lines are not commands."""
+    problems: list[str] = []
+    files = [REPO_ROOT / name for name in RELEASE_PRODUCTION] + sorted((REPO_ROOT / 'tests/lib').glob('release_*.py'))
+    for path in files:
+        if not path.is_file():
+            continue
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        for number, line in enumerate(path.read_text().splitlines(), 1):
+            if line.lstrip().startswith('#'):
+                continue
+            for selector in TEST_SELECTORS:
+                if re.search(r'(?<![\w-])' + re.escape(selector) + r'(?![\w-])', line):
+                    problems.append(f"  release: {relative}:{number} names the test selector {selector}; "
+                                    "release production runs tests/run.sh with no selectors")
+            for match in re.finditer(r'tests/run\.sh(.*)$', line):
+                if not RUN_SH_REMAINDER.match(match.group(1).strip()):
+                    problems.append(f"  release: {relative}:{number} runs tests/run.sh with arguments: {line.strip()[:80]!r}")
+    return problems
+
+
 def check_run_scripts_are_catalog_commands() -> list[str]:
     """Every run.sh under a suite directory is a case command the dispatcher launches.
 
@@ -1060,6 +1151,8 @@ def main() -> int:
     problems.extend(guarded(lambda: check_readmes_present()))
     problems.extend(guarded(lambda: check_index_vs_disk()))
     problems.extend(guarded(lambda: check_run_scripts_are_catalog_commands()))
+    problems.extend(guarded(lambda: check_no_direct_case_commands_in_docs()))
+    problems.extend(guarded(lambda: check_release_production_runs_the_default_battery()))
     problems.extend(guarded(lambda: check_baseline_in_catalog_defaults()))
     problems.extend(guarded(lambda: check_runner_outcome_suites_have_matrix_rows()))
     problems.extend(guarded(lambda: check_normalized_outcomes_have_matrix_rows()))

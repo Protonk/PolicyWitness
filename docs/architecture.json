@@ -2972,6 +2972,16 @@
             },
             {
               "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_no_direct_case_commands_in_docs",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_release_production_runs_the_default_battery",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
               "symbol": "check_baseline_in_catalog_defaults",
               "form": "rule"
             },

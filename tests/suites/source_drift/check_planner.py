@@ -29,7 +29,8 @@ def main(out):
              'controller/src/cli.rs', 'controller/README.md', 'docs/ARCHITECTURE.md', 'docs/BUILD.md', 'docs/WORKER.md',
              'tests/fixtures/contract/response_shape.json',
              'tests/fixtures/contract/envelope_shape.json',
-             'tests/suites/source_drift/check.py']
+             'tests/suites/source_drift/check.py',
+             'Makefile', 'tests/accept-release.sh', 'tests/lib/release_accept.py', 'tests/lib/release_archive.py']
     # The C sources are whatever the native expectation names for a C-only configuration,
     # so a new C target cannot be left out of the fixture.
     paths += sorted(set().union(*native_sources.expected(ROOT, xpc=False).values()))
@@ -128,6 +129,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     scenarios += guidance_scenarios(repo)
     scenarios += structure_scenarios(repo)
     scenarios += gap_scenarios(repo)
+    scenarios += route_scenarios(repo)
     originals = {path: (repo / path).read_text()
                  for _, changes, _, _ in scenarios for path in changes}
     receipts = []
@@ -159,6 +161,35 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} source and guidance controls passed')
+
+
+def route_scenarios(repo):
+    """A documented direct route or a release-specific selection is named by the real checker;
+    a location, a comment and the selector-free invocations pass."""
+    readme = Path('tests/README.md')
+    makefile = Path('Makefile')
+    accept = Path('tests/lib/release_accept.py')
+    source = {path: (repo / path).read_text() for path in (readme, makefile, accept)}
+    command = 'commands: tests/README.md shows a case script as a command'
+    recipe = source[makefile].replace('\t@./tests/run.sh --prune\n', '\t@./tests/run.sh --prune\n\t@./tests/run.sh --suite smoke\n', 1)
+    assert recipe != source[makefile], 'fixture requires the prune recipe'
+    arguments = source[makefile].replace('\t@./tests/run.sh --prune\n', '\t@./tests/run.sh --prune\n\t@./tests/run.sh smoke\n', 1)
+    acceptance_line = "        invoke(out / 'execution', ['bash', ROOT / 'tests/run.sh'], timeout=BATTERY_TIMEOUT_SECONDS, env=env, cwd=ROOT)\n"
+    assert source[accept].count(acceptance_line) == 1, 'fixture requires the acceptance invocation'
+    selected = source[accept].replace(acceptance_line, acceptance_line.replace("'tests/run.sh']", "'tests/run.sh', '--case', 'smoke/specimen_file_read_deny']"))
+    return [
+        ('route-fenced-script', {readme: source[readme] + '\n```sh\nbash tests/suites/smoke/pw_specimen_smoke.sh\n```\n'}, 1, command),
+        ('route-fenced-bare-script', {readme: source[readme] + '\n```sh\ntests/suites/unit/fmt.sh\n```\n'}, 1, command),
+        ('route-dot-slash-span', {readme: source[readme] + '\nUse `./tests/suites/unit/fmt.sh` here.\n'}, 1, command),
+        ('route-run-sentence', {readme: source[readme] + '\nRun `tests/suites/unit/fmt.sh` to check formatting.\n'}, 1, command),
+        ('route-location-span', {readme: source[readme] + '\n- **Location:** `tests/suites/unit/fmt.sh`\n'}, 0, None),
+        ('route-direct-output', {readme: source[readme] + '\nOutput lands in `tests/out/runs/direct`.\n'}, 1, 'retired direct output'),
+        ('route-makefile-selector', {makefile: recipe}, 1, 'names the test selector --suite'),
+        ('route-makefile-arguments', {makefile: arguments}, 1, 'runs tests/run.sh with arguments'),
+        ('route-makefile-comment', {makefile: source[makefile] + '\n# tests/run.sh --suite smoke is how a developer selects one suite\n'}, 0, None),
+        ('route-acceptance-selector', {accept: selected}, 1, 'names the test selector --case'),
+        ('route-restored', source, 0, None),
+    ]
 
 
 def registry_scenarios(repo, out):

@@ -111,7 +111,9 @@ for compiler discovery, signing or signature verification.
 ## Add or change tests
 
 Register each case in [catalog.json](catalog.json), with its actual prerequisites,
-default membership, dependencies and any supported skip reason. Keep the
+default membership, dependencies and any supported skip reason. A case is
+reached only through `tests/run.sh`: a wrapper script no case names, a
+documented direct command or a release-specific selection fails the drift suite. Keep the
 [suite map](README.md#suite-coverage), owning suite README, applicable outcome
 coverage and opt-in registry aligned. Put detailed assertions and fixture
 descriptions beside their suite rather than duplicating them in the map.
