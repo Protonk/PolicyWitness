@@ -55,8 +55,7 @@ harness wait are outer bounds, separate from the worker deadline under test.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/runner_outcome_runner_timeout/<test_id>/artifacts/*`
 - Each caller retains `specimen.json`, `expectations.json`, raw `run.json`,

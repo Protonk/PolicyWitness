@@ -155,9 +155,49 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         (repo / path).write_text(source)
         if (ROOT / path).read_text() != source:
             raise AssertionError(f'source controls changed the working input: {path}')
+    receipts += registry_scenarios(repo, out)
     receipts += configured_controls(repo, manifest_original, worker_line, out)
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
     print(f'{len(receipts)} source and guidance controls passed')
+
+
+def registry_scenarios(repo, out):
+    """The suite registry's on-disk side: a run.sh no case names, a suite directory
+    without a README and one the catalog lacks are each named by the real checker."""
+    checker = [sys.executable, '-B', '-S', str(repo / 'tests/suites/source_drift/check.py')]
+    wrapper = repo / 'tests/suites/smoke/run.sh'
+    stray = repo / 'tests/suites/stray_suite'
+
+    def write_wrapper():
+        wrapper.write_text('#!/usr/bin/env bash\nexec bash "$(dirname "$0")/pw_specimen_smoke.sh"\n')
+
+    def stray_without_readme():
+        stray.mkdir()
+        (stray / 'notes.txt').write_text('a directory under tests/suites is a suite directory\n')
+
+    receipts = []
+    for name, setup, expected, diagnostic in [
+        ('registry-wrapper-script', write_wrapper, 1, 'tests/suites/smoke/run.sh is not a case command'),
+        ('registry-wrapper-removed', wrapper.unlink, 0, None),
+        ('registry-directory-without-readme', stray_without_readme, 1, 'tests/suites/stray_suite/ has no README.md'),
+        ('registry-directory-outside-catalog', lambda: (stray / 'README.md').write_text('# stray_suite\n'),
+         1, 'suite directories and catalog disagree'),
+        ('registry-restored', lambda: shutil.rmtree(stray), 0, None),
+    ]:
+        setup()
+        evidence = out / name
+        evidence.mkdir()
+        result = subprocess.run(checker, cwd=repo, capture_output=True, text=True, timeout=30)
+        (evidence / 'stdout').write_text(result.stdout)
+        (evidence / 'stderr').write_text(result.stderr)
+        record = dict(scenario=name, argv=checker, returncode=result.returncode,
+                      expected_returncode=expected, expected_diagnostic=diagnostic)
+        (evidence / 'command.json').write_text(json.dumps(record, indent=2) + '\n')
+        if result.returncode != expected or (diagnostic and diagnostic not in result.stderr):
+            raise AssertionError(f'{name}: unexpected checker result: {record}\n{result.stdout}\n{result.stderr}')
+        receipts.append(record)
+    assert not wrapper.exists() and not stray.exists()
+    return receipts
 
 
 def guidance_scenarios(repo):

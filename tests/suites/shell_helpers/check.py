@@ -58,7 +58,7 @@ def main():
         literal = f'argument with spaces; $(touch "{canary}") "quotes"\nnext line'
         env = dict(os.environ)
         env.pop('PW_BIN', None)
-        env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(child_out),
+        env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(child_out), PW_TEST_CASES=case_id,
                    PW_TEST_EVENTS=str(child_out / 'events.jsonl'), PW_TEST_RUN_ID=f'control_{name}',
                    CONTROL_SUITE=suite, CONTROL_ID=case_id, CONTROL_MODE=name,
                    CONTROL_CONFIG=str(config_path), CONTROL_LITERAL=literal)
@@ -114,8 +114,67 @@ def main():
             assert not (artifacts / logs['later']).exists(), name
         passed.append(name)
         print(f'{name}: ok', flush=True)
+    passed += refusal_controls(out / 'refusal')
     (out / 'controls.json').write_text(json.dumps(passed, indent=2) + '\n')
     print(f'{len(passed)} shell helper controls passed')
+
+
+ROOT = TESTS.parent
+REFUSAL = 'not started by the test dispatcher'
+# Real case scripts, one per library path: a shared suite command, an own
+# script, the BYOXPC wrapper (each gated at test_selected) and a script that
+# begins its case at once (gated at test_begin). None needs the app to refuse.
+SCRIPTS = [('suite_command', 'tests/suites/unit/run.sh', True),
+           ('own_script', 'tests/suites/blackbox_e2e/bbx_001.sh', True),
+           ('byoxpc_wrapper', 'tests/suites/runner_byoxpc/run.sh', True),
+           ('begins_at_once', 'tests/suites/sandbox_extensions_native/run.sh', False)]
+
+
+def refusal_controls(out):
+    """A case script refuses without the dispatcher's context and runs with it.
+
+    Without PW_TEST_CASES, PW_TEST_EVENTS and PW_TEST_OUT_DIR a real script exits 2,
+    names the canonical command, and writes nothing: no report, no event, no
+    output directory, and never tests/out/runs/direct. With the context and a
+    selection it does not own, the same script exits 0 without a refusal and
+    without output, so the refusal is the gate and not a missing equipment."""
+    out.mkdir()
+    direct = ROOT / 'tests/out/runs/direct'
+    direct_existed = direct.exists()
+    passed = []
+    for name, script, selectable in SCRIPTS:
+        for mode in (('refused', 'with_context') if selectable else ('refused',)):
+            label = f'refusal_{name}_{mode}'
+            work = out / label
+            work.mkdir()
+            child_out = work / 'child out'
+            env = {key: value for key, value in os.environ.items() if not key.startswith('PW_TEST_')}
+            env['PW_APP_DIR'] = str(work / 'absent.app')
+            if mode == 'with_context':
+                env.update(PW_TEST_CASES='no_such_case', PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
+                           PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=label)
+            before = sorted(p.name for p in work.iterdir())
+            result = subprocess.run(['bash', str(ROOT / script)], env=env, cwd=work,
+                                    stdin=subprocess.DEVNULL, capture_output=True, timeout=60)
+            (work / 'stdout').write_bytes(result.stdout)
+            (work / 'stderr').write_bytes(result.stderr)
+            (work / 'exit.json').write_text(json.dumps({'script': script, 'mode': mode, 'returncode': result.returncode}) + '\n')
+            after = sorted(p.name for p in work.iterdir() if p.name not in ('stdout', 'stderr', 'exit.json'))
+            assert direct.exists() == direct_existed, f'{label}: tests/out/runs/direct was created'
+            if mode == 'refused':
+                assert result.returncode == 2, (label, result.returncode, result.stderr)
+                assert REFUSAL.encode() in result.stderr and b'tests/run.sh --case' in result.stderr, (label, result.stderr)
+                assert script.encode() in result.stderr, (label, result.stderr)
+                assert after == before, f'{label}: a refused start wrote {after}'
+                assert not child_out.exists(), label
+            else:
+                assert result.returncode == 0, (label, result.returncode, result.stderr)
+                assert REFUSAL.encode() not in result.stderr, (label, result.stderr)
+                assert after == before, f'{label}: an unselected start wrote {after}'
+                assert not child_out.exists() or not any(child_out.rglob('report.json')), label
+            passed.append(label)
+            print(f'{label}: ok', flush=True)
+    return passed
 
 
 if __name__ == '__main__':

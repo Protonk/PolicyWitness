@@ -23,7 +23,9 @@ map and output contracts. These instructions govern test work alongside the
 Use `tests/run.sh` from the repository root for selection, prerequisite checks,
 artifact inspection and complete result accounting. Inspect a selection with
 `--list`; `--all --list` shows the complete catalog. A suite selector includes
-its opt-in members. Direct suite scripts omit the dispatcher's guarantees.
+its opt-in members. Case scripts refuse to start outside the dispatcher;
+`--case SUITE/ID` runs one case, and `make test` is the default battery against
+the distribution app.
 
 The default battery needs a signed app. Build through the
 [signed pipeline](../docs/BUILD.md) when the selected app is absent or stale;

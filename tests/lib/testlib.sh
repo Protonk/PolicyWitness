@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Direct suite scripts and release acceptance reach this library before Python;
-# it resolves the pinned interpreter itself, as the entry points do.
+# Case scripts and release acceptance reach this library before Python; it
+# resolves the pinned interpreter itself, as the entry points do.
 source "$(dirname "${BASH_SOURCE[0]}")/python_start.sh" || exit 2
 pw_python_start || exit 2
 
@@ -42,21 +42,26 @@ PY
   echo "${stamp}_${suffix}"
 }
 
-testlib_init() {
-  local root
-  root="$(testlib_root)"
+# A case script runs only under the dispatcher, which supplies the selection,
+# the event stream and the output directory it will account for. A start that
+# lacks any of them is refused before output exists; tests/run.sh --case
+# SUITE/ID is the way to run one case, and --all --list names every case.
+testlib_require_dispatcher() {
+  local missing=()
+  [[ -n "${PW_TEST_CASES:-}" ]] || missing+=(PW_TEST_CASES)
+  [[ -n "${PW_TEST_EVENTS:-}" ]] || missing+=(PW_TEST_EVENTS)
+  [[ -n "${PW_TEST_OUT_DIR:-}" ]] || missing+=(PW_TEST_OUT_DIR)
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "ERROR: $0 is a PolicyWitness test case and was not started by the test dispatcher (missing ${missing[*]}); run it through tests/run.sh --case SUITE/ID, and use tests/run.sh --all --list to find the case" >&2
+    exit 2
+  fi
+}
 
+testlib_init() {
+  testlib_require_dispatcher
   if [[ -z "${PW_TEST_RUN_ID:-}" ]]; then
     PW_TEST_RUN_ID="$(gen_run_id)"
     export PW_TEST_RUN_ID
-  fi
-  if [[ -z "${PW_TEST_OUT_DIR:-}" ]]; then
-    PW_TEST_OUT_DIR="${root}/tests/out/runs/direct"
-    export PW_TEST_OUT_DIR
-  fi
-  if [[ -z "${PW_TEST_EVENTS:-}" ]]; then
-    PW_TEST_EVENTS="${PW_TEST_OUT_DIR}/events.jsonl"
-    export PW_TEST_EVENTS
   fi
 
   mkdir -p "${PW_TEST_OUT_DIR}/suites"
@@ -168,10 +173,10 @@ test_begin() {
   write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
 }
 
-# Selection belongs at the case boundary, before setup. Direct scripts with no
-# dispatcher selection retain their ordinary whole-script behavior.
+# Selection belongs at the case boundary, before setup. The selection is the
+# dispatcher's; a script started without one is refused here.
 test_selected() {
-  if [[ -z "${PW_TEST_CASES+x}" ]]; then return 0; fi
+  testlib_require_dispatcher
   local selected
   while IFS= read -r selected; do
     if [[ "$selected" == "$1" ]]; then return 0; fi

@@ -43,7 +43,7 @@ kept below the worker's argv bound. Failed builds stop before execution.
 
 ## Development mutation controls
 
-Run `tests/suites/runner_exec_inheritance/opt_in/mutations.sh` to compile and
+Run `tests/run.sh --case runner_exec_inheritance/mutation_controls` to compile and
 exercise three disposable workers under `tests/out`: unchanged source, inherited
 environment, and descriptor isolation disabled. The unchanged worker must pass;
 the other two must fail the ordinary assertions with the specific leak

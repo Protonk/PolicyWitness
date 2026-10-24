@@ -1,8 +1,7 @@
 # Opt-in Tests (dev-only)
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 Opt-in cases are excluded from the default `tests/run.sh` battery. They remain
 part of `--all`; explicit `--suite` selectors include every member of that suite,
@@ -42,8 +41,8 @@ GUI session. Signing tests accept `PW_BYOXPC_IDENTITY`, then `IDENTITY`, otherwi
 resolve a matching Developer ID from the app's team. Configuration and output
 rules are documented in `tests/README.md`.
 
-Direct scripts remain developer entrypoints; use the public dispatcher for
-selection, deduplication, configuration validation, and complete accounting.
+Case scripts refuse to start outside the dispatcher; `tests/run.sh` supplies
+selection, deduplication, configuration validation and complete accounting.
 
 ## Registry (current opt-in tests)
 

@@ -58,8 +58,7 @@ holds for launchd-spawned services and ordinary shells.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/run_effects/<case>/artifacts/*`: per row, `before.*` and
   `after.*` snapshots (raw bytes and a JSON description with digest, size,

@@ -42,8 +42,7 @@ the independent full consumer owns their required-field rejection.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/unit/rust.unit/artifacts/cargo-test-bins.log`
 - `<run>/suites/unit/rust.fmt/artifacts/cargo-fmt-check.log`

@@ -2920,18 +2920,23 @@
           "label": "tests/suites/<name>/",
           "kind": "source",
           "facts": {
-            "Carries": "one run.sh and README per suite"
+            "Carries": "a README per suite and the case scripts the catalog names; no script is an entry point"
           },
           "sources": [
             {
               "path": "tests/suites/source_drift/check.py",
-              "symbol": "suites_with_run_sh"
+              "symbol": "suite_directories"
             }
           ],
           "checks": [
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_index_vs_disk",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_run_scripts_are_catalog_commands",
               "form": "rule"
             }
           ]
@@ -2958,6 +2963,11 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_index_vs_disk",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_run_scripts_are_catalog_commands",
               "form": "rule"
             },
             {
@@ -6840,7 +6850,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -6904,7 +6914,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -6933,7 +6943,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -6962,7 +6972,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -6991,7 +7001,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7020,7 +7030,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7049,7 +7059,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7078,7 +7088,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7107,7 +7117,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7141,7 +7151,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7275,7 +7285,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7684,7 +7694,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7714,7 +7724,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7743,7 +7753,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7781,7 +7791,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -7963,7 +7973,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/max_targets_reply_survives.sh",
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
@@ -8079,7 +8089,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/create_existing_file_preserves_contents.sh",
               "symbol": "create_existing_file_preserves_contents",
               "form": "test",
               "scope": "Pre-existing targets retain their bytes after create-open; this does not exercise absent-target creation."
@@ -8137,7 +8147,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extensions.sh",
               "symbol": "extensions",
               "form": "test",
               "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion."
@@ -8426,7 +8436,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -8455,7 +8465,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -8490,7 +8500,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -8526,7 +8536,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -8638,7 +8648,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -8887,7 +8897,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/comparison_matrix.sh",
               "symbol": "comparison_matrix",
               "form": "test",
               "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
@@ -8917,7 +8927,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/comparison_matrix.sh",
               "symbol": "comparison_matrix",
               "form": "test",
               "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
@@ -8976,7 +8986,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/max_targets_reply_survives.sh",
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
@@ -9261,7 +9271,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/max_targets_reply_survives.sh",
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
@@ -9407,7 +9417,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9516,7 +9526,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9537,7 +9547,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9558,7 +9568,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9579,7 +9589,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9622,7 +9632,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9754,7 +9764,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9775,7 +9785,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/max_targets_reply_survives.sh",
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."
@@ -9838,7 +9848,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/create_existing_file_preserves_contents.sh",
               "symbol": "create_existing_file_preserves_contents",
               "form": "test",
               "scope": "Pre-existing targets retain their bytes after create-open; this does not exercise absent-target creation."
@@ -9859,7 +9869,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extensions.sh",
               "symbol": "extensions",
               "form": "test",
               "scope": "Fresh-read and extension action evidence is compared with independent file bytes and native-call controls; native release is not a revocation assertion."
@@ -9928,7 +9938,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -9953,7 +9963,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/extension_boundaries.sh",
               "symbol": "extension_boundaries",
               "form": "test",
               "scope": "Controlled issuer/worker native-call boundaries, delivery/refusal metadata and token confinement; private library allocation internals remain source-only."
@@ -10077,7 +10087,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/comparison_matrix.sh",
               "symbol": "comparison_matrix",
               "form": "test",
               "scope": "Independent reader checks query/attempt association and phase-order evidence on the submitted comparison specimens."
@@ -10123,7 +10133,7 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/witness_contract/run.sh",
+              "path": "tests/suites/witness_contract/max_targets_reply_survives.sh",
               "symbol": "max_targets_reply_survives",
               "form": "test",
               "scope": "The maximal-metadata workload requires a captured compiled-profile receipt with positive bytecode length in the returned reply."

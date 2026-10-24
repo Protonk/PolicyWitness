@@ -1,8 +1,7 @@
 # runner_filter_local_name
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 Exercises `(mach-lookup, local_name)` with a policy containing a local-name
 deny for `com.apple.logd`. The prediction is explicitly unavailable, while

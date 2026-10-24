@@ -62,6 +62,10 @@ def main():
                     env['PYTHONOPTIMIZE'] = optimization
                 if variable is not None:
                     env[variable] = str(work / 'elsewhere')
+                if entry == 'direct_suite':
+                    # A case script started on its own carries the dispatcher's context;
+                    # the public command refuses these settings and supplies its own.
+                    env.update(PW_TEST_CASES='assertions', PW_TEST_EVENTS=str(child_out / 'events.jsonl'))
                 argv = (['bash', str(repo / 'tests/run.sh'), '--suite', 'probe']
                         if entry == 'dispatcher' else ['bash', str(suite)])
                 result = subprocess.run(argv, env=env, cwd=work, capture_output=True, timeout=15)

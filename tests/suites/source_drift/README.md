@@ -67,8 +67,12 @@ in the dyld shared cache on a current macOS install: none of
 validator bind the library through the linker, so a path's presence or absence
 says nothing about whether a process uses it.
 
-The registry checks also compare catalog suite names with suite directories and
-the coverage table, and require Baseline suites to have default catalog cases.
+The registry checks also compare catalog suite names with the suite directories
+(every directory under `tests/suites/`) and the coverage table, require every
+suite directory to have a README and every `run.sh` under one to be a case
+command the catalog names, and require Baseline suites to have default catalog
+cases. Planner controls add a suite script no case names, a suite directory
+without a README and one the catalog lacks, and each is named.
 They also lock the `_test_overrides` key table in `runner/README.md` to the
 stored properties of `PWRunnerTestOverrides`, since that table is the only
 documented key list. Property/table agreement does not verify request admission
@@ -317,8 +321,7 @@ import of either package anywhere else.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`

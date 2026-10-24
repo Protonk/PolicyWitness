@@ -18,7 +18,8 @@ The check has two halves:
 
 2. Test-registry drift across what should be self-consistent project
    discipline:
-     a. Every tests/suites/<name>/ with run.sh has README.md.
+     a. Every tests/suites/<name>/ has README.md, and every run.sh under
+        one is a case command named by tests/catalog.json.
      b. Every Baseline-tier suite is in tests/catalog.json's default membership.
      c. Every tests/suites/<name>/ has a row in the suite-coverage
         table in tests/README.md, and every table row maps to a real
@@ -135,29 +136,50 @@ def check_meson_source_lists() -> list[str]:
 # Test-registry parsers
 # ---------------------------------------------------------------------------
 
-def suites_with_run_sh() -> set[str]:
+def suite_directories() -> set[str]:
+    """Every directory under tests/suites/ is a suite directory.
+
+    A suite's cases reach the tree only through the catalog, so the directory
+    set is the registry's on-disk side regardless of which scripts a suite
+    holds; an include-only group such as opt_in has a README and no script."""
     out: set[str] = set()
     if not SUITES_DIR.is_dir():
         fail(f"missing suites directory: {SUITES_DIR}")
         sys.exit(2)
     for child in SUITES_DIR.iterdir():
-        if not child.is_dir():
-            continue
-        if (child / "run.sh").exists():
+        if child.is_dir() and child.name != "__pycache__":
             out.add(child.name)
     return out
 
 
 def suites_missing_readme() -> list[str]:
-    out: list[str] = []
-    for child in sorted(SUITES_DIR.iterdir()):
-        if not child.is_dir():
-            continue
-        if not (child / "run.sh").exists():
-            continue
-        if not (child / "README.md").exists():
-            out.append(child.name)
+    return sorted(name for name in suite_directories() if not (SUITES_DIR / name / "README.md").exists())
+
+
+def catalog_commands() -> set[str]:
+    """Repository-relative scripts the catalog names as case commands, after suite inheritance."""
+    groups = json.loads((REPO_ROOT / 'tests/catalog.json').read_text())['suites']
+    out: set[str] = set()
+    for group in groups.values():
+        for case in group.get('cases', []):
+            command = (case if isinstance(case, dict) else {}).get('command', group.get('command'))
+            if isinstance(command, list) and len(command) > 1:
+                out.add(str(command[1]))
     return out
+
+
+def check_run_scripts_are_catalog_commands() -> list[str]:
+    """Every run.sh under a suite directory is a case command the dispatcher launches.
+
+    A suite script that no catalog case names is a second way to run the
+    suite's cases, outside the dispatcher's selection and accounting."""
+    commands = catalog_commands()
+    problems: list[str] = []
+    for name in sorted(suite_directories()):
+        script = f"tests/suites/{name}/run.sh"
+        if (REPO_ROOT / script).exists() and script not in commands:
+            problems.append(f"  catalog: {script} is not a case command; cases run only through tests/run.sh")
+    return problems
 
 
 def default_suites_from_catalog() -> set[str]:
@@ -248,12 +270,12 @@ def parse_attempt_outcomes() -> set[str]:
 
 def check_readmes_present() -> list[str]:
     missing = suites_missing_readme()
-    return [f"  README: tests/suites/{name}/ has run.sh but no README.md" for name in missing]
+    return [f"  README: tests/suites/{name}/ has no README.md" for name in missing]
 
 
 def check_index_vs_disk() -> list[str]:
     problems: list[str] = []
-    on_disk = suites_with_run_sh()
+    on_disk = suite_directories()
     in_index = set(parse_index_rows().keys())
     in_catalog = set(json.loads((REPO_ROOT / 'tests/catalog.json').read_text())['suites'])
     if in_catalog != on_disk:
@@ -282,7 +304,7 @@ def check_baseline_in_catalog_defaults() -> list[str]:
 
 def check_runner_outcome_suites_have_matrix_rows() -> list[str]:
     problems: list[str] = []
-    on_disk = suites_with_run_sh()
+    on_disk = suite_directories()
     matrix = parse_matrix_outcomes()
     for name in sorted(on_disk):
         if not name.startswith("runner_outcome_"):
@@ -1037,6 +1059,7 @@ def main() -> int:
     problems.extend(guarded(lambda: check_meson_source_lists()))
     problems.extend(guarded(lambda: check_readmes_present()))
     problems.extend(guarded(lambda: check_index_vs_disk()))
+    problems.extend(guarded(lambda: check_run_scripts_are_catalog_commands()))
     problems.extend(guarded(lambda: check_baseline_in_catalog_defaults()))
     problems.extend(guarded(lambda: check_runner_outcome_suites_have_matrix_rows()))
     problems.extend(guarded(lambda: check_normalized_outcomes_have_matrix_rows()))
@@ -1063,7 +1086,7 @@ def main() -> int:
         fail("silently in downstream consumers.")
         return 1
 
-    suite_count = len(suites_with_run_sh())
+    suite_count = len(suite_directories())
     outcome_count = len(parse_normalized_outcomes())
     attempt_outcome_count = len(parse_attempt_outcomes())
     pu_pairs = parse_swift_prediction_unavailable_pairs()

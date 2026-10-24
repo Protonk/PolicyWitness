@@ -1,8 +1,7 @@
 # runner_filter_iokit_user_client_class
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 Exercises `(iokit-open-user-client, iokit_user_client_class)` with a policy denying
 `IOSurfaceRootUserClient`. The response must contain exactly the requested `iosurfaceroot_uc`

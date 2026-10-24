@@ -38,8 +38,7 @@ and invoked by the BYOXPC runner suite.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/<suite>/<test_id>/artifacts/*` (suite is `smoke` when run directly).
 - Caller-auth artifacts include signing commands/metadata, modified service plists,

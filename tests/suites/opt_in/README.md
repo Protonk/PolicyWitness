@@ -7,5 +7,4 @@ Inspect with `tests/run.sh --suite opt_in --list`; execute with
 `tests/run.sh --suite opt_in`. `--all` also includes these cases. Missing required
 resources fail with explicit unrun selections; skip policy belongs to each case.
 
-The local `run.sh` forwards to the public command. Artifacts use each case's
-canonical suite and ID, not an `opt_in` report alias.
+Artifacts use each case's canonical suite and ID, not an `opt_in` report alias.

@@ -82,8 +82,7 @@ clang + macOS SDK.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer` — compiled printer binary
 - `<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out` — KEY=VALUE harvest

@@ -10,20 +10,12 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/shell_case'
 
 
-class ChildReceiptsMismatch(AssertionError):
-    def __init__(self, name, actual, expected):
-        super().__init__(name, actual, expected)
-        self.actual = actual
-        self.expected = expected
-
-
 def main():
     out = Path(sys.argv[1]).resolve()
     inventory = []
 
     def exercise(name, children, *, wrapper=None, modes=None, missing=(),
-                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True, selected=None,
-                 wrapper_omission=None):
+                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True, selected=None):
         work = out / name
         repo = work / 'fixture repo'
         library = repo / 'tests/lib/scripts.sh'
@@ -53,19 +45,14 @@ def main():
         env = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
         env.update(CONTROL_SCRIPT_CONFIG=str(config_path), CONTROL_ERREXIT=str(errexit),
                    CONTROL_SCRIPT_DRIVER=str(FIXTURE / 'script_child.py'),
-                   PW_TEST_OUT_DIR=str(repo / 'tests/out'), PW_BIN=str(repo / 'tools/pw'))
+                   PW_TEST_OUT_DIR=str(repo / 'tests/out'), PW_TEST_EVENTS=str(repo / 'tests/out/events.jsonl'),
+                   PW_BIN=str(repo / 'tools/pw'))
         if selected is not None:
             env['PW_TEST_CASES'] = '\n'.join(selected)
         if wrapper:
             path = repo / f'tests/suites/{wrapper}/run.sh'
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path.relative_to(repo), path)
-            if wrapper_omission is not None:
-                assert wrapper == 'witness_contract'
-                line = f'  "${{SUITE_DIR}}/{Path(wrapper_omission).name}"\n'
-                original = path.read_text()
-                assert original.count(line) == 1, (name, wrapper_omission)
-                path.write_text(original.replace(line, ''))
             argv = ['bash', str(path)]
         else:
             argv = ['bash', str(FIXTURE / 'script_group.sh'), str(library),
@@ -82,8 +69,7 @@ def main():
         for record in records:
             assert record['mode'] == config['modes'].get(record['script'], 'pass'), (name, record)
             assert record['argv'] == (['runner', 'remove', '--id', 'fixture-id']
-                                      if record['script'] == 'tools/pw' else ['--suite', 'opt_in']
-                                      if record['script'] == 'tests/run.sh' else []), (name, record)
+                                      if record['script'] == 'tools/pw' else []), (name, record)
         visible = [record for record in records if record['script'] != 'tools/pw']
         stdout = ''.join(f"{record['script']}: {record['mode']}\n" for record in visible).encode()
         assert result.stdout == stdout, (name, result.stdout, stdout)
@@ -112,7 +98,7 @@ def main():
         matched = (actual == expected if ordered else
                    sorted(actual) == sorted(expected) and bool(actual) and actual[0] == expected[0])
         if not matched:
-            raise ChildReceiptsMismatch(name, actual, expected)
+            raise AssertionError((name, actual, expected))
         inventory.append(name)
         print(f'{name}: ok', flush=True)
 
@@ -128,56 +114,14 @@ def main():
                  early_failure=children[1], rc=1)
         exercise(f'empty_errexit{errexit}', [], errexit=errexit, rc=1)
 
-    # Every child the real blackbox_e2e wrapper runs, in its order; a child the
-    # wrapper names but this list omits is missing from the fixture and fails.
-    bbx = ['tests/suites/blackbox_e2e/' + name for name in
-           ('comparison_controls.sh', 'native_comparison_controls.sh', 'checker_controls.sh',
-            'bbx_001.sh', 'bbx_002.sh')]
-    exercise('blackbox_skip', bbx, wrapper='blackbox_e2e', modes={bbx[0]: 'skip'})
-    exercise('blackbox_failure', bbx, wrapper='blackbox_e2e', modes={bbx[1]: 'fail'}, rc=1)
-    exercise('blackbox_missing', bbx, wrapper='blackbox_e2e', missing=[bbx[1]], rc=1)
-    for wrapper, leaf in (('smoke', 'pw_specimen_smoke.sh'),
-                          ('sbpl_allowdeny_consistency', 'sbpl_allowdeny_v1.sh')):
-        child = f'tests/suites/{wrapper}/{leaf}'
-        for mode in ('skip', 'fail'):
-            exercise(f'{wrapper}_{mode}', [child], wrapper=wrapper, modes={child: mode},
-                     rc=17 if mode == 'fail' else 0)
-
-    exercise('opt_in_forward', ['tests/run.sh'], wrapper='opt_in')
-    baseline = 'tests/suites/witness_contract/happy_path_baseline.sh'
-    # The wrapper must run every sibling, including independently cataloged cases.
-    # Derive this inventory from the directory, not the wrapper being checked.
-    witness = [baseline] + sorted(str(path.relative_to(ROOT)) for path in
-                                  (ROOT / 'tests/suites/witness_contract').glob('*.sh')
-                                  if path.name not in ('run.sh', 'happy_path_baseline.sh'))
-    exercise('witness_success', witness, wrapper='witness_contract', ordered=False)
-    exercise('witness_continues', witness, wrapper='witness_contract',
-             modes={baseline: 'fail'}, rc=1, ordered=False)
-    for leaf in ('phases.sh', 'extensions.sh', 'extension_boundaries.sh'):
-        omitted = f'tests/suites/witness_contract/{leaf}'
-        name = f'witness_omits_{Path(leaf).stem}'
-        try:
-            exercise(name, witness, wrapper='witness_contract', wrapper_omission=omitted,
-                     modes={baseline: 'fail'}, rc=1, ordered=False)
-        except ChildReceiptsMismatch as failure:
-            # Only the exact missing receipt counts as rejection. Status, stream,
-            # fixture setup, and all other child observations must still pass.
-            assert failure.expected == witness, (name, failure.expected)
-            assert sorted(failure.actual) == sorted(child for child in witness if child != omitted)
-            assert failure.actual[0] == baseline
-            (out / name / 'rejection.json').write_text(json.dumps({
-                'reason': 'child_receipts_mismatch', 'omitted': omitted,
-                'actual': failure.actual, 'expected': failure.expected,
-            }, indent=2) + '\n')
-            inventory.append(name)
-            print(f'{name}: rejected missing child', flush=True)
-        else:
-            raise AssertionError(f'{name}: wrapper omission escaped the receipt check')
-
+    # The BYOXPC wrapper is a case command: it runs only the dispatcher's selected
+    # leaves, each in its own child, after its own setup gates. Every child here
+    # is a stand-in named like the real one.
     byoxpc = ['tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh',
               'tests/suites/runner_byoxpc/runner_install.sh',
               'tests/suites/smoke/pw_specimen_smoke.sh',
-              'tests/suites/blackbox_menagerie/run.sh', 'tests/suites/blackbox_e2e/run.sh']
+              'tests/suites/blackbox_menagerie/run.sh', 'tests/suites/blackbox_e2e/bbx_001.sh']
+    full = ['runner_auth_external', 'runner_install', 'specimen_file_read_deny', 'core_strict_tmp', 'BBX-001']
     for name, modes, expected, rc in (
         ('success', {}, byoxpc + ['tools/pw'], 0),
         ('auth_failure', {byoxpc[0]: 'fail'}, byoxpc + ['tools/pw'], 1),
@@ -188,15 +132,34 @@ def main():
         ('run_failure', {byoxpc[3]: 'fail'}, byoxpc + ['tools/pw'], 1),
     ):
         exercise(f'byoxpc_{name}', byoxpc, wrapper='runner_byoxpc', modes=modes,
-                 expected=expected, rc=rc)
-    leaves = ['tests/suites/blackbox_e2e/bbx_001.sh', 'tests/suites/blackbox_e2e/bbx_002.sh']
+                 expected=expected, rc=rc, selected=full)
+    leaves = ['tests/suites/blackbox_e2e/bbx_002.sh']
     exercise('byoxpc_selected_leaf', byoxpc + leaves, wrapper='runner_byoxpc',
-             selected=['runner_install', 'BBX-002'], expected=[byoxpc[1], leaves[1], 'tools/pw'])
+             selected=['runner_install', 'BBX-002'], expected=[byoxpc[1], leaves[0], 'tools/pw'])
     exercise('byoxpc_selected_failure_continues', byoxpc + leaves, wrapper='runner_byoxpc',
-             selected=['runner_install', 'BBX-001', 'BBX-002'], modes={leaves[0]: 'fail'},
-             expected=[byoxpc[1], *leaves, 'tools/pw'], rc=1)
+             selected=['runner_install', 'BBX-001', 'BBX-002'], modes={byoxpc[4]: 'fail'},
+             expected=[byoxpc[1], byoxpc[4], leaves[0], 'tools/pw'], rc=1)
     exercise('byoxpc_selected_install_failure', byoxpc + leaves, wrapper='runner_byoxpc',
              selected=['runner_install', 'BBX-002'], modes={byoxpc[1]: 'fail'}, expected=[byoxpc[1]], rc=1)
+    # Without the dispatcher's selection the wrapper refuses before its setup
+    # gate, so no child and no stand-in cleanup runs.
+    work = out / 'byoxpc_without_selection'
+    repo = work / 'fixture repo'
+    (repo / 'tests/lib').mkdir(parents=True)
+    for leaf in ('scripts.sh', 'testlib.sh', 'sdk_guard.sh', 'python_start.sh'):
+        shutil.copyfile(ROOT / 'tests/lib' / leaf, repo / 'tests/lib' / leaf)
+    path = repo / 'tests/suites/runner_byoxpc/run.sh'
+    path.parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / 'tests/suites/runner_byoxpc/run.sh', path)
+    env = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
+    env.update(PW_TEST_OUT_DIR=str(repo / 'tests/out'), PW_BIN=str(repo / 'tools/pw'))
+    result = subprocess.run(['bash', str(path)], cwd=work, env=env, capture_output=True, timeout=15)
+    (work / 'stdout').write_bytes(result.stdout)
+    (work / 'stderr').write_bytes(result.stderr)
+    assert result.returncode == 2 and b'not started by the test dispatcher' in result.stderr, (result.returncode, result.stderr)
+    assert not (repo / 'tests/out').exists() and not (repo / 'tools').exists(), 'the refused wrapper did work'
+    inventory.append('byoxpc_without_selection')
+    print('byoxpc_without_selection: ok', flush=True)
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} script-group controls passed')
 

@@ -34,10 +34,10 @@ disabled. `interpreter_boundary` observes the result from a C locale and a
 working directory outside the checkout: a case and the child it starts see no
 witnessed name, run the pinned 3.14 interpreter from its keg, have not imported
 `site`, and have no `sys.path` entry outside the interpreter and the tree,
-whether the dispatcher or a direct suite script started them; `PYTHONPATH`
-makes both starts refuse before any case work. This protects
-the dispatcher and direct shell suite entry points before case work or output
-initialization. Unset `PYTHONOPTIMIZE` to run tests; empty and `0` values remain
+whether the dispatcher started the case or the case script was started on its
+own with the dispatcher's context; `PYTHONPATH` makes both starts refuse before
+any case work. This protects the dispatcher and every case script before case
+work or output initialization. Unset `PYTHONOPTIMIZE` to run tests; empty and `0` values remain
 valid because they leave assertions enabled. The check uses an explicit branch
 and exits even when sourcing occurs in a conditional with errexit disabled.
 
@@ -89,10 +89,26 @@ directly, independently of the new helpers.
 Artifacts retain each fixture configuration, execution journal, raw wrapper
 output, exit status, logs, events, report, and the passing control inventory.
 
+## Dispatcher context
+
+A case script runs only under `tests/run.sh`. The dispatcher supplies
+`PW_TEST_CASES`, `PW_TEST_EVENTS` and `PW_TEST_OUT_DIR` to every case it
+launches; `test_begin` and `test_selected` refuse with exit 2 when any is
+missing, naming `tests/run.sh --case SUITE/ID`, before any directory, event or
+report exists. The `controls` case drives four real scripts this way: the
+`unit` suite command, the `blackbox_e2e/BBX-001` script and the BYOXPC wrapper,
+each gated at `test_selected`, and the `sandbox_extensions_native` command,
+which begins its case at once. Each refuses without the context and writes
+nothing, and `tests/out/runs/direct` is never created; the three selectable
+scripts run with the context and a selection they do not own, exit 0 without a
+refusal and still write nothing. Controls that start a case script themselves
+supply the same three variables.
+
 ## Python startup
 
-The `python_startup` case runs the real dispatcher and a direct suite in fixture
-repositories under six optimization settings: unset, empty, `0`, `1`, `2`, and
+The `python_startup` case runs the real dispatcher, and the case script on its
+own with the dispatcher's context, in fixture repositories under six
+optimization settings: unset, empty, `0`, `1`, `2`, and
 non-numeric text. Each setting exercises both a passing and a deliberately
 failing assertion checker. Rejected startup must exit 2 before any fixture
 receipt or report is written and preserve all prior output bytes. Accepted
@@ -112,25 +128,19 @@ failed, otherwise 0; an empty list fails. It does not change the caller's shell
 options, synthesize case reports, or interpret a child's explicit skip.
 The top-level dispatcher reconciles the reports that the children emit.
 
-`blackbox_e2e` and `witness_contract` supply their script lists for direct
-invocation. The `opt_in` wrapper forwards to the public catalog selector. `runner_byoxpc` retains its setup gates, environment transitions, and
-cleanup trap while using the helper for child execution. The single-child
-`smoke` and `sbpl_allowdeny_consistency` wrappers use `exec bash` and forward
-the child's exact exit status.
+`runner_byoxpc/run.sh` is the one wrapper: the catalog command for the BYOXPC
+cases that share an installed runner. It retains its setup gates, environment
+transitions and cleanup trap while using the helper to run each selected leaf
+in its own child, and it refuses without the dispatcher's selection.
 
-The `script_groups` case runs both direct helper controls and copies of all six
-real wrappers in isolated repositories. Independent children record execution,
+The `script_groups` case runs both direct helper controls and copies of that
+wrapper in isolated repositories. Independent children record execution,
 arguments, and environment; print distinct stream markers; and exit or skip as
 configured. Controls cover literal paths, order, failure continuation, missing
-and empty inputs, caller/child errexit, single-child status forwarding, and
-BYOXPC setup gates, runner-mode propagation, and cleanup after downstream
-success or failure. BYOXPC installation and removal use harmless stand-ins.
-The witness wrapper must retain its baseline-first ordering and execute every
-sibling script, including independently cataloged cases. The expected inventory
-comes from the directory. Passing children and a failing baseline both preserve
-complete execution. Separate wrapper mutations omit the phase, extension, and
-extension-boundary scripts; each must be rejected for exactly the missing child
-receipt even while the baseline already makes the wrapper exit unsuccessfully.
+and empty inputs, caller/child errexit, and BYOXPC setup gates, runner-mode
+propagation, per-leaf selection, and cleanup after downstream success or
+failure. BYOXPC installation and removal use harmless stand-ins. Without a
+selection the wrapper refuses before its setup gate and runs no child.
 
 Artifacts retain fixture repositories, child receipts, wrapper streams, exit
 statuses, configurations, and the control inventory.

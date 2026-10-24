@@ -484,8 +484,7 @@ and execution diagnostics. It asserts that collection fields are absent.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/witness_contract/<test_id>/artifacts/*`
 

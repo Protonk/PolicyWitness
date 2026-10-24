@@ -50,7 +50,11 @@ def main():
         journal = work / 'receipts.jsonl'
         config_path.write_text(json.dumps({'mode': mode, 'journal': str(journal)}) + '\n')
         env = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
+        # The dispatcher's context: the suite's first two cases are the selection,
+        # so the failure each mode plants is reached in order and nothing later runs.
         env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=mode,
+                   PW_TEST_CASES='happy_default_allow\nbare_deny_default',
+                   PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
                    CONTROL_WORKER_CONFIG=str(config_path), CONTROL_WORKER_DRIVER=str(FIXTURE / 'control.py'))
         result = subprocess.run(['bash', str(repo / 'tests/suites/runner_c_worker_harness/run.sh')],
                                 env=env, cwd=work, capture_output=True, timeout=15)

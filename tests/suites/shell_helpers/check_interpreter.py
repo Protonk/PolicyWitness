@@ -92,6 +92,9 @@ def main():
             child_out = repo / 'tests/out/runs/default'
             receipt = work / 'receipt.json'
             env = dict(minimal_env(work), PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=name, PW_PROBE_RECEIPT=str(receipt))
+            if entry == 'direct_suite':
+                # A case script started on its own carries the dispatcher's context.
+                env.update(PW_TEST_CASES='boundary', PW_TEST_EVENTS=str(child_out / 'events.jsonl'))
             if mode == 'pythonpath':
                 env['PYTHONPATH'] = str(work / 'elsewhere')
             argv = (['bash', str(repo / 'tests/run.sh'), '--suite', 'probe'] if entry == 'dispatcher'

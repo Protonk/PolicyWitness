@@ -1,8 +1,7 @@
 # runner_filter_sysctl_name
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 Exercises `(sysctl-read, sysctl_name)` with a policy denying reads of
 `kern.osrelease`. The prediction is explicitly unavailable, while the real

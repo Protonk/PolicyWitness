@@ -56,12 +56,17 @@ Offline selections, such as `unit` and the menagerie validation controls, do
 not require an app. Each selection's `--list` plan gives its prerequisites.
 Build setup and signing requirements are in [docs/BUILD.md](../docs/BUILD.md).
 
-`tests/run.sh` is the public selection and reporting interface. With no selectors
+`tests/run.sh` is the one interface for running tests. With no selectors
 it runs the default battery. `--all` selects every registered case, including
 opt-ins. Repeated `--suite NAME` and `--case SUITE/CASE` selectors form a union;
 order and repetitions do not change the work. A suite selects all its members,
 including any opt-in members. Case IDs are exact harness identifiers, not
 patterns. Rust and Swift unit methods remain inside their respective batch cases.
+`make test` is the same command with no selectors and `PW_APP_DIR` set to the
+distribution app. The scripts under `tests/suites/` are case commands, not
+entry points: started without the dispatcher's selection, event stream and
+output directory, a case script exits 2 and names this interface, writing
+nothing. `--case SUITE/CASE` runs one case.
 
 `--list` prints the selected plan as JSON, including descriptions, default
 membership, prerequisites, runner contexts, dependencies, and configuration.
@@ -91,12 +96,10 @@ finalization, including after case failures or Ctrl-C. Added, removed, or change
 files, modes, directories, and symlink targets fail the run with a retained diff.
 Inspection never repairs the app or regenerates its evidence.
 These checks do not certify notarization and cannot detect a transient mutation
-restored before the final inventory. Direct suite scripts do not have this guard.
+restored before the final inventory.
 
 [Opt-in cases](OPT_IN_TESTS.md) are selectable by exact case, owning suite,
-`--suite opt_in`, or `--all`. Direct suite scripts
-remain developer entrypoints, but do not provide the public command's planning,
-configuration validation, or completion guarantees.
+`--suite opt_in`, or `--all`.
 
 Release ZIP acceptance is a separate explicit command:
 `bash tests/accept-release.sh dist/PolicyWitness.zip`. It inspects a temporary
@@ -236,8 +239,9 @@ battery, archiving and rotation each take the lock in turn; `make release`
 holds no outer lock. Separate worktrees have independent locks. Help and
 `--list` remain available while a build or an execution holds the lock.
 
-Direct shell entrypoints default to `tests/out/runs/direct`; they do not replace
-output or provide dispatcher ownership/completion guarantees. Release acceptance
+Only the dispatcher creates run output: a case script refuses to start without
+the output directory, event stream and selection the dispatcher supplies, so no
+output exists that the dispatcher does not own. Release acceptance
 keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
 `tests` output passes the same dispatcher checks. An outer `owner.json` and
 `acceptance.lock` protect extraction, tests and finalization as one lifetime;
@@ -388,9 +392,9 @@ live in `shell_helpers`.
 execution, fixture builds through their existing scripts, and Python checker
 invocation. Cases retain their steps, argument lists, artifact paths, and final
 pass statements. A failed stage writes a failed report and exits immediately;
-it does not depend on the wrapper's `set -e`. Direct scripts retain the optional-app
-helpers in `testlib.sh`; the public dispatcher enforces catalog prerequisites and
-rejects undeclared skips. [shell_helpers](suites/shell_helpers/README.md) documents
+it does not depend on the wrapper's `set -e`. The optional-app helpers in
+`testlib.sh` remain for cases that declare their skips; the dispatcher enforces
+catalog prerequisites and rejects undeclared skips. [shell_helpers](suites/shell_helpers/README.md) documents
 the API and independent controls.
 
 `test_begin` exports `PW_TEST_SCRATCH` as the case's `scratch/` path without

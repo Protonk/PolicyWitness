@@ -186,11 +186,11 @@ class DirectPythonTests(unittest.TestCase):
             testlib.write_text(original + '\npw_python_probe || exit 2\n')
             self.assertTrue(any('testlib.sh' in p for p in check(root)))
             testlib.write_text(original)
-            suite = root / 'tests/suites/smoke/run.sh'
+            suite = root / 'tests/suites/unit/run.sh'
             original = suite.read_text()
             for command in ('/usr/bin/python3 - <<\'PY\'', '"${PW_PYTHON}" -B - <<\'PY\'', 'python3 "${ROOT_DIR}/x.py"'):
                 suite.write_text(original + '\n' + command + '\n')
-                self.assertTrue(any('tests/suites/smoke/run.sh' in p for p in check(root)), command)
+                self.assertTrue(any('tests/suites/unit/run.sh' in p for p in check(root)), command)
             suite.write_text(original)
             for name in WRAPPERS:
                 path = root / name

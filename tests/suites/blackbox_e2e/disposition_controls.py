@@ -202,6 +202,7 @@ sys.exit(config['status'])
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_') and k != 'BASH_ENV'}
         env.update(PATH=str(cargo.parent) + os.pathsep + env['PATH'],
                    DISPOSITION_CARGO_FIXTURE=str(config), PW_TEST_OUT_DIR=str(work / 'output'),
+                   PW_TEST_CASES='rust.disposition_reds', PW_TEST_EVENTS=str(work / 'output/events.jsonl'),
                    PW_TEST_RUN_ID='disposition_control')
         result = subprocess.run(['bash', str(repo / wrapper)], env=env, cwd=work,
                                 stdin=subprocess.DEVNULL, capture_output=True, timeout=15)

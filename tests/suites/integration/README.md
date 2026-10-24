@@ -20,8 +20,7 @@ Rust integration tests that exercise the CLI contract against a built app.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/integration/cli.integration/artifacts/cargo-test-integration.log`
 

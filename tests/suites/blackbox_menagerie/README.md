@@ -62,8 +62,7 @@ The controls import neither the shared checker nor production code.
 ## Artifacts
 
 `<run>` is the selected output directory: `tests/out/runs/default` for the
-public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
-default to `tests/out/runs/direct`.
+public command, or the explicit `PW_TEST_OUT_DIR`.
 
 - `<run>/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_menagerie` when run directly).
 - `specimen.rendered.json` contains only submitted probe fields;

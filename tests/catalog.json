@@ -944,7 +944,7 @@
     "sbpl_allowdeny_consistency": {
       "command": [
         "bash",
-        "tests/suites/sbpl_allowdeny_consistency/run.sh"
+        "tests/suites/sbpl_allowdeny_consistency/sbpl_allowdeny_v1.sh"
       ],
       "requires": [
         "app"
@@ -1017,10 +1017,6 @@
       ]
     },
     "run_effects": {
-      "command": [
-        "bash",
-        "tests/suites/run_effects/run.sh"
-      ],
       "requires": [
         "app",
         "clang"

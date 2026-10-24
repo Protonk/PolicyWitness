@@ -38,7 +38,8 @@ def main():
     config.write_text(json.dumps(dict(journal=str(journal), marker='forbidden-build', build_exit=17)) + '\n')
     env = {k: v for k, v in os.environ.items() if not k.startswith('PW_') and k not in ('IDENTITY', 'BASH_ENV')}
     child_out = repo / 'tests/out'
-    env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(child_out),
+    env.update(PW_APP_DIR=str(app), PW_TEST_OUT_DIR=str(child_out), PW_TEST_CASES='order_barrier_mutations',
+               PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
                PW_TEST_RUN_ID='missing_identity', CONTROL_CONFIG=str(config))
     result = subprocess.run(['bash', str(repo / wrapper)], env=env, cwd=out,
                             stdin=subprocess.DEVNULL, capture_output=True, timeout=15)

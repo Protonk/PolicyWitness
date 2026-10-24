@@ -42,7 +42,7 @@ def main():
             setup_receipt = work / 'before-finalizer.json'
             env = {key: value for key, value in os.environ.items() if not key.startswith('PW_TEST_')}
             env.update(PW_TEST_OUT_DIR=str(child_out), PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
-                       PW_TEST_RUN_ID=name, CONTROL_SUITE=suite, CONTROL_ID=case_id,
+                       PW_TEST_CASES=case_id, PW_TEST_RUN_ID=name, CONTROL_SUITE=suite, CONTROL_ID=case_id,
                        CONTROL_OUTSIDE_SCRATCH=str(work / 'outside'),
                        CONTROL_SETUP=setup, CONTROL_CASE_DIR=str(case),
                        CONTROL_REASSIGNED_DIR=str(reassigned), CONTROL_SETUP_RECEIPT=str(setup_receipt),
