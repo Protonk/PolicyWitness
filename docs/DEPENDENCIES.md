@@ -51,9 +51,8 @@ implicit skip ([equipment checks](../tests/README.md#equipment-checks)).
 | A logged-in GUI session | User-scope launchd registration of external runners; checked with `launchctl print gui/<uid>` | `gui`: opt-in BYOXPC cases |
 | Rosetta 2 | One control runs the build script translated and requires the refusal; `softwareupdate --install-rosetta` installs it | `rosetta`: `preflight/translated_build_refusal_controls`, opt-in |
 
-Live cases also need a working XPC lookup through
-`/usr/bin/log`, which the dispatcher does not preflight: a blocked case runs
-and fails with evidence. The opt-in cases and their equipment are listed in
+Live cases also need a working XPC lookup, which the dispatcher does not
+preflight: a blocked case runs and fails with evidence. The opt-in cases and their equipment are listed in
 [tests/OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md).
 
 ## Conditions no package supplies
