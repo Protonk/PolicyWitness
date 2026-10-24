@@ -57,9 +57,7 @@ A `query_first` comparison identifies an eligible native prediction collected be
 No. Earlier versions included a best-effort unified-log observer. The observer
 and its former PolicyWitness integration are archived at
 [Protonk/Observer](https://github.com/Protonk/Observer). The archive is
-unmaintained and available for independent adaptation. Sandbox-denial logs
-are incomplete and do not, by themselves, establish why a particular operation
-failed.
+unmaintained and available for independent adaptation.
 
 ## How long does a run take?
 
