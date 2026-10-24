@@ -1,0 +1,1788 @@
+{
+  "attestation": {
+    "listed": 124,
+    "unattested": []
+  },
+  "by_condition": {
+    "deadline250-hold400-boundary": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.954555435714114,
+          "median": 0.9482177547128658,
+          "min": 0.9413571131414562,
+          "n": 3,
+          "p90": 0.954555435714114
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.489,
+          "median": 0.354,
+          "min": 0.324,
+          "n": 3,
+          "p90": 0.489
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 565.999041,
+          "median": 517.653417,
+          "min": 515.740084,
+          "n": 3,
+          "p90": 565.999041
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 405.10075,
+          "median": 405.072167,
+          "min": 401.0865,
+          "n": 3,
+          "p90": 405.10075
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.6191345342728418,
+          "median": 0.6155591758618111,
+          "min": 0.6149816567065705,
+          "n": 3,
+          "p90": 0.6191345342728418
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 249.28566666666666,
+          "median": 249.05816666666666,
+          "min": 248.24441666666667,
+          "n": 3,
+          "p90": 249.28566666666666
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.100750000000005,
+          "median": 5.072166999999979,
+          "min": 1.086500000000001,
+          "n": 3,
+          "p90": 5.100750000000005
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 249.28566666666666,
+          "median": 249.05816666666666,
+          "min": 248.16474999999997,
+          "n": 3,
+          "p90": 249.28566666666666
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 251.3887083333333,
+          "median": 248.51070833333333,
+          "min": 245.88916666666665,
+          "n": 3,
+          "p90": 251.3887083333333
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 404.984708,
+          "median": 404.974333,
+          "min": 400.953917,
+          "n": 3,
+          "p90": 404.984708
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 249.721167,
+          "median": 249.501333,
+          "min": 248.876041,
+          "n": 3,
+          "p90": 249.721167
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 0,
+          "max": 0.33970775,
+          "median": 0.30475,
+          "min": 0.29920775,
+          "n": 3,
+          "p90": 0.33970775
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 11,
+          "n": 3,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 14.009042,
+          "median": 13.860584,
+          "min": 12.768167,
+          "n": 3,
+          "p90": 14.009042
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 12.436666666666666,
+          "median": 12.350958333333333,
+          "min": 11.4415,
+          "n": 3,
+          "p90": 12.436666666666666
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9962501056762347,
+          "median": 0.9953823009939452,
+          "min": 0.9949926882274499,
+          "n": 3,
+          "p90": 0.9962501056762347
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 261.409,
+          "median": 260.726,
+          "min": 260.68,
+          "n": 3,
+          "p90": 261.409
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 262.621708,
+          "median": 261.991875,
+          "min": 261.707375,
+          "n": 3,
+          "p90": 262.621708
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.120375,
+          "median": 13.115834,
+          "min": 11.986208,
+          "n": 3,
+          "p90": 13.120375
+        }
+      },
+      "n": 3,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"child_reaped\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"not_entered\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": false, \"arrived\": true, \"collectionClosed\": true, \"completed\": false, \"ownershipEstablished\": false, \"releaseSet\": false, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"child_reaped\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": false, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": true, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 0, \"unlink_events\": 0, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "{\"code\": 8, \"detail\": 250, \"errno\": null, \"index\": 0, \"native_kind\": 0, \"native_result\": null, \"operation\": 11}"
+        ]
+      },
+      "sequences": [
+        4,
+        10,
+        19
+      ]
+    },
+    "hold0-boundary": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9583991003077894,
+          "median": 0.9475717549773283,
+          "min": 0.9436581334969731,
+          "n": 5,
+          "p90": 0.9583991003077894
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 5,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.143,
+          "median": 0.125,
+          "min": 0.112,
+          "n": 5,
+          "p90": 0.143
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 135.073,
+          "median": 132.901292,
+          "min": 129.841792,
+          "n": 5,
+          "p90": 135.073
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 0.151583,
+          "median": 0.134417,
+          "min": 0.120625,
+          "n": 5,
+          "p90": 0.151583
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "n": 5,
+          "p90": 0.0
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "n": 5,
+          "p90": 0.0
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 0.151583,
+          "median": 0.134417,
+          "min": 0.120625,
+          "n": 5,
+          "p90": 0.151583
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "n": 5,
+          "p90": 0.0
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "n": 5,
+          "p90": 0.0
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 0.0635,
+          "median": 0.054,
+          "min": 0.047166,
+          "n": 5,
+          "p90": 0.0635
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 0.863375,
+          "median": 0.734791,
+          "min": 0.645542,
+          "n": 5,
+          "p90": 0.863375
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.017709,
+          "median": 0.014708,
+          "min": 0.012167,
+          "n": 5,
+          "p90": 0.017709
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 12,
+          "n": 5,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.116041,
+          "median": 0.10675,
+          "min": 0.094292,
+          "n": 5,
+          "p90": 0.116041
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 14.074291,
+          "median": 13.967542,
+          "min": 13.550417,
+          "n": 5,
+          "p90": 14.074291
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 12.397583333333332,
+          "median": 12.354125,
+          "min": 12.143875,
+          "n": 5,
+          "p90": 12.397583333333332
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.913862671310893,
+          "median": 0.909641546919221,
+          "min": 0.9067846949442269,
+          "n": 5,
+          "p90": 0.913862671310893
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 12.594,
+          "median": 12.528,
+          "min": 12.359,
+          "n": 5,
+          "p90": 12.594
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 13.878708,
+          "median": 13.772458,
+          "min": 13.534375,
+          "n": 5,
+          "p90": 13.878708
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.137791,
+          "median": 13.037667,
+          "min": 12.671,
+          "n": 5,
+          "p90": 13.137791
+        }
+      },
+      "n": 5,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        5,
+        9,
+        16,
+        24,
+        29
+      ]
+    },
+    "hold200-boundary": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9511067364803615,
+          "median": 0.9465353589332518,
+          "min": 0.8841867670191068,
+          "n": 5,
+          "p90": 0.9511067364803615
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 5,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.228,
+          "median": 0.192,
+          "min": 0.179,
+          "n": 5,
+          "p90": 0.228
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 352.863417,
+          "median": 349.66475,
+          "min": 347.45525,
+          "n": 5,
+          "p90": 352.863417
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 205.04825,
+          "median": 205.042917,
+          "min": 204.124709,
+          "n": 5,
+          "p90": 205.04825
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9984664108217621,
+          "median": 0.9953529345351668,
+          "min": 0.9566108092706822,
+          "n": 5,
+          "p90": 0.9984664108217621
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 204.65125,
+          "median": 203.53391666666667,
+          "min": 196.05024999999998,
+          "n": 5,
+          "p90": 204.65125
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.048249999999996,
+          "median": 5.0429169999999885,
+          "min": 4.124708999999996,
+          "n": 5,
+          "p90": 5.048249999999996
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 204.65125,
+          "median": 203.51600000000002,
+          "min": 196.05024999999998,
+          "n": 5,
+          "p90": 204.65125
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 210.0137083333333,
+          "median": 207.693375,
+          "min": 196.05179166666665,
+          "n": 5,
+          "p90": 210.0137083333333
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 204.965583,
+          "median": 204.959167,
+          "min": 204.014209,
+          "n": 5,
+          "p90": 204.965583
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 205.432792,
+          "median": 205.411709,
+          "min": 204.547459,
+          "n": 5,
+          "p90": 205.432792
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.016208,
+          "median": 0.014458,
+          "min": 0.011792,
+          "n": 5,
+          "p90": 0.016208
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 11,
+          "n": 5,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.096167,
+          "median": 0.077667,
+          "min": 0.068916,
+          "n": 5,
+          "p90": 0.096167
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 14.142541,
+          "median": 13.987083,
+          "min": 13.400417,
+          "n": 5,
+          "p90": 14.142541
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 12.452958333333331,
+          "median": 12.388708333333332,
+          "min": 11.615708333333332,
+          "n": 5,
+          "p90": 12.452958333333331
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9954873966410117,
+          "median": 0.9948436897891352,
+          "min": 0.9945214503718666,
+          "n": 5,
+          "p90": 0.9954873966410117
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 217.458,
+          "median": 217.367,
+          "min": 216.552,
+          "n": 5,
+          "p90": 217.458
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 218.564416,
+          "median": 218.44375,
+          "min": 217.718167,
+          "n": 5,
+          "p90": 218.564416
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.170708,
+          "median": 13.099,
+          "min": 12.3185,
+          "n": 5,
+          "p90": 13.170708
+        }
+      },
+      "n": 5,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        0,
+        15,
+        18,
+        26,
+        27
+      ]
+    },
+    "hold200-dense": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9654871586863164,
+          "median": 0.9467523020081551,
+          "min": 0.9446064081355756,
+          "n": 3,
+          "p90": 0.9654871586863164
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 0,
+          "max": 1.0000142773790204,
+          "median": 0.9980676256821945,
+          "min": 0.9971428596100675,
+          "n": 3,
+          "p90": 1.0000142773790204
+        },
+        "dense_interval_median_ms": {
+          "absent": 0,
+          "max": 1.2615210000000001,
+          "median": 1.2615205,
+          "min": 1.261167,
+          "n": 3,
+          "p90": 1.2615210000000001
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 1.756,
+          "median": 1.737,
+          "min": 1.538,
+          "n": 3,
+          "p90": 1.756
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 352.716667,
+          "median": 351.129917,
+          "min": 340.624291,
+          "n": 3,
+          "p90": 352.716667
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 205.030209,
+          "median": 203.324917,
+          "min": 200.894333,
+          "n": 3,
+          "p90": 205.030209
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9974913104745695,
+          "median": 0.9967920082379409,
+          "min": 0.996181037116909,
+          "n": 3,
+          "p90": 0.9974913104745695
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 204.31212499999998,
+          "median": 202.46391666666665,
+          "min": 200.315,
+          "n": 3,
+          "p90": 204.31212499999998
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.0302090000000135,
+          "median": 3.3249169999999992,
+          "min": 0.8943329999999889,
+          "n": 3,
+          "p90": 5.0302090000000135
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 204.30266666666665,
+          "median": 202.46391666666665,
+          "min": 200.315,
+          "n": 3,
+          "p90": 204.30266666666665
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 211.452125,
+          "median": 207.5643333333333,
+          "min": 195.58154166666665,
+          "n": 3,
+          "p90": 211.452125
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 204.969666,
+          "median": 203.240083,
+          "min": 200.818792,
+          "n": 3,
+          "p90": 204.969666
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 205.397084,
+          "median": 203.679334,
+          "min": 201.327333,
+          "n": 3,
+          "p90": 205.397084
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.009833,
+          "median": 0.007,
+          "min": 0.00525,
+          "n": 3,
+          "p90": 0.009833
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 0,
+          "max": 0.35449975,
+          "median": 0.2899585,
+          "min": 0.282625,
+          "n": 3,
+          "p90": 0.35449975
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 11,
+          "n": 3,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.065666,
+          "median": 0.062792,
+          "min": 0.059583,
+          "n": 3,
+          "p90": 0.065666
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.934,
+          "median": 13.675583,
+          "min": 13.156834,
+          "n": 3,
+          "p90": 13.934
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 12.496541666666666,
+          "median": 12.363875,
+          "min": 11.595083333333331,
+          "n": 3,
+          "p90": 12.496541666666666
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9961970654492082,
+          "median": 0.9961359277957467,
+          "min": 0.9951066211634935,
+          "n": 3,
+          "p90": 0.9961970654492082
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 217.51,
+          "median": 215.678,
+          "min": 212.777,
+          "n": 3,
+          "p90": 217.51
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 218.340334,
+          "median": 216.738584,
+          "min": 213.602375,
+          "n": 3,
+          "p90": 218.340334
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.05925,
+          "median": 12.94325,
+          "min": 12.275042,
+          "n": 3,
+          "p90": 13.05925
+        }
+      },
+      "n": 3,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        2,
+        8,
+        22
+      ]
+    },
+    "hold200-none": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.174,
+          "median": 0.13,
+          "min": 0.115,
+          "n": 3,
+          "p90": 0.174
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 352.845416,
+          "median": 351.55875,
+          "min": 348.724625,
+          "n": 3,
+          "p90": 352.845416
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 205.034,
+          "median": 205.022875,
+          "min": 204.291541,
+          "n": 3,
+          "p90": 205.034
+        },
+        "hold_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_cpu_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.033999999999992,
+          "median": 5.022874999999999,
+          "min": 4.291540999999995,
+          "n": 3,
+          "p90": 5.033999999999992
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_runnable_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_window_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 205.392209,
+          "median": 205.388792,
+          "min": 204.847875,
+          "n": 3,
+          "p90": 205.392209
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.013167,
+          "median": 0.005625,
+          "min": 0.004792,
+          "n": 3,
+          "p90": 0.013167
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 11,
+          "min": 11,
+          "n": 3,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.1365,
+          "median": 0.073125,
+          "min": 0.063917,
+          "n": 3,
+          "p90": 0.1365
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.882875,
+          "median": 12.743709,
+          "min": 12.571208,
+          "n": 3,
+          "p90": 13.882875
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9953371042433037,
+          "median": 0.9950136818640772,
+          "min": 0.9924632682552135,
+          "n": 3,
+          "p90": 0.9953371042433037
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 217.408,
+          "median": 216.078,
+          "min": 215.127,
+          "n": 3,
+          "p90": 217.408
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 218.4265,
+          "median": 217.160833,
+          "min": 216.760667,
+          "n": 3,
+          "p90": 218.4265
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.034291,
+          "median": 11.912792,
+          "min": 11.772041,
+          "n": 3,
+          "p90": 13.034291
+        }
+      },
+      "n": 3,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        6,
+        12,
+        20
+      ]
+    },
+    "hold800-boundary": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9736280814012636,
+          "median": 0.9694972698173603,
+          "min": 0.9412139132236323,
+          "n": 5,
+          "p90": 0.9736280814012636
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 5,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.361,
+          "median": 0.31,
+          "min": 0.286,
+          "n": 5,
+          "p90": 0.361
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 952.319834,
+          "median": 947.298917,
+          "min": 930.134333,
+          "n": 5,
+          "p90": 952.319834
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 805.083708,
+          "median": 803.215125,
+          "min": 802.943541,
+          "n": 5,
+          "p90": 805.083708
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9998014442189728,
+          "median": 0.9968630394136413,
+          "min": 0.9949518847426694,
+          "n": 5,
+          "p90": 0.9998014442189728
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 804.8196666666666,
+          "median": 800.9149583333333,
+          "min": 799.1007083333333,
+          "n": 5,
+          "p90": 804.8196666666666
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.0837080000000014,
+          "median": 3.2151249999999436,
+          "min": 2.943540999999982,
+          "n": 5,
+          "p90": 5.0837080000000014
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 804.8196666666666,
+          "median": 800.9051666666667,
+          "min": 799.1007083333333,
+          "n": 5,
+          "p90": 804.8196666666666
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 809.7797083333332,
+          "median": 802.2939583333333,
+          "min": 799.964625,
+          "n": 5,
+          "p90": 809.7797083333332
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 804.9795,
+          "median": 803.126125,
+          "min": 802.832625,
+          "n": 5,
+          "p90": 804.9795
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 805.7955,
+          "median": 804.023291,
+          "min": 803.374708,
+          "n": 5,
+          "p90": 805.7955
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.05675,
+          "median": 0.028625,
+          "min": 0.019459,
+          "n": 5,
+          "p90": 0.05675
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 5,
+          "n": 0
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 23,
+          "median": 22,
+          "min": 12,
+          "n": 5,
+          "p90": 23
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.266375,
+          "median": 0.133166,
+          "min": 0.073375,
+          "n": 5,
+          "p90": 0.266375
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 25.329833,
+          "median": 24.184,
+          "min": 13.941209,
+          "n": 5,
+          "p90": 25.329833
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 23.750791666666665,
+          "median": 22.526875,
+          "min": 12.376375,
+          "n": 5,
+          "p90": 23.750791666666665
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9986426826006932,
+          "median": 0.9986039800653592,
+          "min": 0.9981028888003444,
+          "n": 5,
+          "p90": 0.9986426826006932
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 828.894,
+          "median": 826.436,
+          "min": 815.323,
+          "n": 5,
+          "p90": 828.894
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 830.287208,
+          "median": 827.591334,
+          "min": 816.448583,
+          "n": 5,
+          "p90": 830.287208
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 24.491708,
+          "median": 23.235625,
+          "min": 13.073875,
+          "n": 5,
+          "p90": 24.491708
+        }
+      },
+      "n": 5,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        7,
+        14,
+        23,
+        25,
+        28
+      ]
+    },
+    "hold800-dense": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9557721470373685,
+          "median": 0.9539916984886685,
+          "min": 0.9367594896843515,
+          "n": 3,
+          "p90": 0.9557721470373685
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.996851112844092,
+          "median": 0.9957518749299505,
+          "min": 0.9935989900857131,
+          "n": 3,
+          "p90": 0.996851112844092
+        },
+        "dense_interval_median_ms": {
+          "absent": 0,
+          "max": 1.261083,
+          "median": 1.260958,
+          "min": 1.258875,
+          "n": 3,
+          "p90": 1.261083
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 5.634,
+          "median": 5.418,
+          "min": 5.353,
+          "n": 3,
+          "p90": 5.634
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 933.005,
+          "median": 929.97325,
+          "min": 923.924542,
+          "n": 3,
+          "p90": 933.005
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 805.04725,
+          "median": 800.619917,
+          "min": 800.581084,
+          "n": 3,
+          "p90": 805.04725
+        },
+        "hold_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9998525301694361,
+          "median": 0.9956212130536323,
+          "min": 0.9934898207242662,
+          "n": 3,
+          "p90": 0.9998525301694361
+        },
+        "hold_cpu_ms": {
+          "absent": 0,
+          "max": 804.8504583333333,
+          "median": 797.0019166666666,
+          "min": 795.3422916666666,
+          "n": 3,
+          "p90": 804.8504583333333
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.047249999999963,
+          "median": 0.6199169999999867,
+          "min": 0.5810840000000326,
+          "n": 3,
+          "p90": 5.047249999999963
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 0,
+          "max": 804.8504583333333,
+          "median": 796.9967916666667,
+          "min": 795.2527083333332,
+          "n": 3,
+          "p90": 804.8504583333333
+        },
+        "hold_runnable_ms": {
+          "absent": 0,
+          "max": 806.3974583333332,
+          "median": 802.3855833333332,
+          "min": 796.8615833333332,
+          "n": 3,
+          "p90": 806.3974583333332
+        },
+        "hold_window_ms": {
+          "absent": 0,
+          "max": 804.969167,
+          "median": 800.554042,
+          "min": 800.507167,
+          "n": 3,
+          "p90": 804.969167
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 805.552541,
+          "median": 801.14425,
+          "min": 800.974542,
+          "n": 3,
+          "p90": 805.552541
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.021416,
+          "median": 0.012708,
+          "min": 0.008583,
+          "n": 3,
+          "p90": 0.021416
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 0,
+          "max": 0.4254995,
+          "median": 0.385166,
+          "min": 0.2735415,
+          "n": 3,
+          "p90": 0.4254995
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 12,
+          "n": 3,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.100459,
+          "median": 0.097625,
+          "min": 0.067375,
+          "n": 3,
+          "p90": 0.100459
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 14.232875,
+          "median": 13.918625,
+          "min": 13.794167,
+          "n": 3,
+          "p90": 14.232875
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 0,
+          "max": 12.4895,
+          "median": 12.448375,
+          "min": 12.389541666666666,
+          "n": 3,
+          "p90": 12.4895
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.998630516353572,
+          "median": 0.9986281583068943,
+          "min": 0.9984334325513187,
+          "n": 3,
+          "p90": 0.998630516353572
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 817.454,
+          "median": 813.121,
+          "min": 812.925,
+          "n": 3,
+          "p90": 817.454
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 818.576958,
+          "median": 814.236083,
+          "min": 814.2005,
+          "n": 3,
+          "p90": 818.576958
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.225958,
+          "median": 13.091833,
+          "min": 13.024417,
+          "n": 3,
+          "p90": 13.225958
+        }
+      },
+      "n": 3,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        1,
+        13,
+        17
+      ]
+    },
+    "hold800-none": {
+      "measures": {
+        "before_hook_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "dense_hold_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "dense_interval_median_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "fixture_cpu_during_hold_ms": {
+          "absent": 0,
+          "max": 0.232,
+          "median": 0.213,
+          "min": 0.169,
+          "n": 3,
+          "p90": 0.232
+        },
+        "harness_unit_elapsed_ms": {
+          "absent": 0,
+          "max": 952.83775,
+          "median": 939.066333,
+          "min": 902.161583,
+          "n": 3,
+          "p90": 952.83775
+        },
+        "hold_actual_ms": {
+          "absent": 0,
+          "max": 805.045375,
+          "median": 805.042125,
+          "min": 804.548334,
+          "n": 3,
+          "p90": 805.045375
+        },
+        "hold_cpu_fraction": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_cpu_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_overshoot_ms": {
+          "absent": 0,
+          "max": 5.0453750000000355,
+          "median": 5.0421250000000555,
+          "min": 4.548333999999954,
+          "n": 3,
+          "p90": 5.0453750000000355
+        },
+        "hold_pcore_cpu_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_runnable_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hold_window_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "hook_entry_to_worker_exit_event_ms": {
+          "absent": 0,
+          "max": 805.733084,
+          "median": 805.675625,
+          "min": 805.107959,
+          "n": 3,
+          "p90": 805.733084
+        },
+        "hook_exit_to_release_call_ms": {
+          "absent": 0,
+          "max": 0.01775,
+          "median": 0.01675,
+          "min": 0.012708,
+          "n": 3,
+          "p90": 0.01775
+        },
+        "kernel_exit_stamp_to_exit_event_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "ready_wait_elapsed_ms": {
+          "absent": 0,
+          "max": 12,
+          "median": 12,
+          "min": 12,
+          "n": 3,
+          "p90": 12
+        },
+        "release_call_to_unlink_event_ms": {
+          "absent": 0,
+          "max": 0.142,
+          "median": 0.139417,
+          "min": 0.126167,
+          "n": 3,
+          "p90": 0.142
+        },
+        "run_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 14.209416,
+          "median": 13.834708,
+          "min": 13.021459,
+          "n": 3,
+          "p90": 14.209416
+        },
+        "worker_cpu_before_hook_entry_ms": {
+          "absent": 3,
+          "n": 0
+        },
+        "worker_lifetime_cpu_fraction": {
+          "absent": 0,
+          "max": 0.9989922381873606,
+          "median": 0.9985307759252471,
+          "min": 0.9978649462084593,
+          "n": 3,
+          "p90": 0.9989922381873606
+        },
+        "worker_lifetime_cpu_ms": {
+          "absent": 0,
+          "max": 817.573,
+          "median": 817.142,
+          "min": 816.974,
+          "n": 3,
+          "p90": 817.573
+        },
+        "worker_start_to_exit_event_ms": {
+          "absent": 0,
+          "max": 818.890375,
+          "median": 818.39775,
+          "min": 818.176084,
+          "n": 3,
+          "p90": 818.890375
+        },
+        "worker_start_to_hook_entry_ms": {
+          "absent": 0,
+          "max": 13.157291,
+          "median": 13.068125,
+          "min": 12.722125,
+          "n": 3,
+          "p90": 13.157291
+        }
+      },
+      "n": 3,
+      "outcomes": {
+        "cleanup_trigger": [
+          "\"completion\""
+        ],
+        "collection_basis": [
+          "\"after_confirmed_reap\""
+        ],
+        "exit_code": [
+          "0"
+        ],
+        "grace_end": [
+          "\"reaped_during_grace\""
+        ],
+        "parent_is_fixture": [
+          "true"
+        ],
+        "phase": [
+          "{\"acknowledged\": true, \"arrived\": true, \"collectionClosed\": true, \"completed\": true, \"ownershipEstablished\": true, \"releaseSet\": true, \"violations\": []}"
+        ],
+        "poll_stop": [
+          "\"done\""
+        ],
+        "slot_rc_completed": [
+          "{\"completed\": true, \"errnoVal\": 0, \"error\": null, \"rc\": 0}"
+        ],
+        "survived": [
+          "false"
+        ],
+        "term_signal": [
+          "null"
+        ],
+        "witness": [
+          "{\"file_after_run\": false, \"file_at_hook_entry\": true, \"file_at_hook_exit\": true, \"release_calls\": 1, \"unlink_events\": 1, \"worker_exit_events\": 1}"
+        ],
+        "worker_failure": [
+          "null"
+        ]
+      },
+      "sequences": [
+        3,
+        11,
+        21
+      ]
+    }
+  },
+  "calibration_ticks_per_us": {
+    "absent": 0,
+    "max": 24.07919802837541,
+    "median": 24.030451439869992,
+    "min": 24.016316472977923,
+    "n": 30,
+    "p90": 24.039340439706862
+  },
+  "distinct_worker_generations": 30,
+  "never_started": [],
+  "order": [
+    "0:hold200-boundary",
+    "1:hold800-dense",
+    "2:hold200-dense",
+    "3:hold800-none",
+    "4:deadline250-hold400-boundary",
+    "5:hold0-boundary",
+    "6:hold200-none",
+    "7:hold800-boundary",
+    "8:hold200-dense",
+    "9:hold0-boundary",
+    "10:deadline250-hold400-boundary",
+    "11:hold800-none",
+    "12:hold200-none",
+    "13:hold800-dense",
+    "14:hold800-boundary",
+    "15:hold200-boundary",
+    "16:hold0-boundary",
+    "17:hold800-dense",
+    "18:hold200-boundary",
+    "19:deadline250-hold400-boundary",
+    "20:hold200-none",
+    "21:hold800-none",
+    "22:hold200-dense",
+    "23:hold800-boundary",
+    "24:hold0-boundary",
+    "25:hold800-boundary",
+    "26:hold200-boundary",
+    "27:hold200-boundary",
+    "28:hold800-boundary",
+    "29:hold0-boundary"
+  ],
+  "plan": "measure",
+  "raw_sha256sums_sha256": "2d154b4d83fcdb9c2c0b8de9efa1559b4ba9b30c6d1012a865da1d3592038ee3",
+  "run_id": "20261024T134944618985Z-phasebarrier-measure-b853",
+  "stop_reason": "completed",
+  "survivors": [],
+  "unclean_units": [],
+  "units_run": 30,
+  "worker_processes_after_run": []
+}

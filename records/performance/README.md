@@ -2,8 +2,8 @@
 
 Records of the runtime investigation of PolicyWitness as a running program,
 and the evidence behind them. The first built-in-runner cycle, two
-log-observer pilots and a host-lifetime investigation of build 853 are
-complete.
+log-observer pilots and the host-lifetime and phase-barrier investigations
+of build 853 are complete.
 The first-cycle and log-observer procedures and their source files are
 historical, unmaintained equipment for those runs. They require the recorded pre-retirement application and inputs;
 they are not measurement commands for the maintained application. The
@@ -42,6 +42,8 @@ Layout:
   release, and its own proceed deadline.
 - `phase-barrier/`: the driver-seam fixture that holds the phase-boundary
   callback, its schedule runner and reader.
+- `PHASE-BARRIER-INVESTIGATION-REPORT.md`: worker CPU during held phase
+  boundaries, the deadline-crossing control and measurement limits.
 - `log-observer/`: the pinned pilot configuration, bounded query procedure,
   content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
