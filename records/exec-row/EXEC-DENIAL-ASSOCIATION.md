@@ -1,5 +1,11 @@
 # Exec denial-log association
 
+Historical record of the retired collector. Source and contract links below
+use the pinned pre-retirement archive. The recorded revisions and captured
+bytes retain their original provenance. `live_probe_existing.py` requires
+the former application; maintained PolicyWitness cannot reproduce its log
+observations.
+
 Problem record for the `exec/spawn` row of the controller's denial-log
 eligibility table. The kernel records a denied worker `posix_spawn` under an
 operation name the row does not admit, so a captured exec denial is never
@@ -20,17 +26,17 @@ and are not retained.
 ### What the contract and code say
 
 The user guide's correlation table
-([PolicyWitness.md, "Denial-log correlation"](../../docs/PolicyWitness.md#denial-log-correlation),
+([PolicyWitness.md, "Denial-log correlation"](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/docs/PolicyWitness.md#denial-log-correlation),
 line 2096) states:
 
 ```text
 | exec spawn | process-exec, worker PID only |
 ```
 
-The [failure contract](../../tests/FAILURE-PROPAGATION-CONTRACT.md#public-compatibility-and-correlation)
+The [failure contract](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/FAILURE-PROPAGATION-CONTRACT.md#public-compatibility-and-correlation)
 (line 626) makes that mapping part of the public contract. The controller
 implements it in `attempt_operations`
-([sandbox_log.rs:181](../../controller/src/sandbox_log.rs)):
+([sandbox_log.rs:181](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs)):
 
 ```rust
 (Some("exec"), Some("spawn")) => &["process-exec"],
@@ -41,8 +47,8 @@ wildcard or prefix aliases" (line 2098), and the code comment at
 `sandbox_log.rs:167-168` says the same.
 
 The comparison record uses `process-exec*` for exec, in
-`comparisonEvidence` ([CWorkerOrchestrator.swift:1016](../../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift))
-and the consumer's `ATTEMPT_OPERATIONS` ([consumer.py:72](../../tests/lib/consumer.py)).
+`comparisonEvidence` ([CWorkerOrchestrator.swift:1016](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift))
+and the consumer's `ATTEMPT_OPERATIONS` ([consumer.py:72](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/lib/consumer.py)).
 That table answers a different question: which `sandbox_check` query an attempt
 corresponds to. On the query side, the guide also records that `sandbox_check`
 rejects the bare `process-exec` as `unsupported_operation` and accepts
@@ -121,9 +127,9 @@ failure. It holds one.
 Three artifacts state the bare spelling: the guide table, the Rust row, and one
 line of the log-archive corpus,
 `PWQP: Sandbox: pw-probe-runner(42) deny(1) process-exec /usr/bin/true`
-([query_predicate.json:17](../../tests/fixtures/deny_capture/query_predicate.json)).
+([query_predicate.json:17](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/fixtures/deny_capture/query_predicate.json)).
 That corpus line is a declared message written by the fixture's emitter
-([deny_capture README](../../tests/fixtures/deny_capture/README.md)), not a
+([deny_capture README](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/fixtures/deny_capture/README.md)), not a
 kernel record. The archive was generated on macOS 14.8.7 (`9b09ad9`), and it
 tests OS query selection, not association. The row dates from `0670db1`
 (2026-09-18). The three artifacts agree with one another. Nothing in the
@@ -133,17 +139,17 @@ The tests do not reach the row:
 
 - Every constructed input to the matcher is a file attempt.
   `reply_fixtures::step`, `incomplete_step` and `fresh_open_permission_failure`
-  ([reply_fixtures.rs](../../controller/src/reply_fixtures.rs)) and the
+  ([reply_fixtures.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/reply_fixtures.rs)) and the
   `sandbox_log` test helper `request` (`sandbox_log.rs:1190`) all hardcode
   `kind: "file"`. The supplied-text replay in
-  [log_replay_tests.rs](../../controller/src/log_replay_tests.rs) plans file
+  [log_replay_tests.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/log_replay_tests.rs) plans file
   attempts only.
 - The live correlation checkers plan only `open_read` and `open_write`
-  ([check_deny_capture_window.py:89](../../tests/suites/witness_contract/check_deny_capture_window.py),
-  [check_termination_correlation.py:46](../../tests/suites/witness_contract/check_termination_correlation.py)).
+  ([check_deny_capture_window.py:89](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/suites/witness_contract/check_deny_capture_window.py),
+  [check_termination_correlation.py:46](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/suites/witness_contract/check_termination_correlation.py)).
   They assert associations only for records the OS returns. The comparison
   matrix's live driver runs with `--no-log-capture`
-  ([check_comparison_matrix.py:36](../../tests/suites/witness_contract/check_comparison_matrix.py)).
+  ([check_comparison_matrix.py:36](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/suites/witness_contract/check_comparison_matrix.py)).
 - The readers check associations for consistency with `deny_events` and the
   reply, not for eligibility. `tests/AGENTS.md` keeps consumers independent of
   the production classifier.
@@ -281,7 +287,7 @@ The observed-record test must fail with the message above. Replacing
 `attempt_operations` must flip both results. Remove the worktree with
 `git worktree remove` afterward.
 
-Live capture, against a signed build ([build guide](../../docs/BUILD.md)):
+Live capture, against a signed build ([build guide](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/docs/BUILD.md)):
 
 ```sh
 /usr/bin/python3 -I records/exec-row/live_probe_existing.py \

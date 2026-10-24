@@ -3,6 +3,10 @@
 Status: both authorized pilots are complete. The
 [report](LOG-OBSERVER-INVESTIGATION-REPORT.md) retains their separate results,
 evidence, controls and unresolved questions. No further live run is scheduled.
+The procedure below is historical and requires the original build-841
+environment. Source links use the pinned pre-retirement archive; the maintained
+application has no collector. The harness README states the reproduction
+requirements.
 
 This implements the [investigation brief](PolicyWitness-Log-Observer-Investigation.md).
 The [previous report](RUNTIME-INVESTIGATION-REPORT.md) and
@@ -55,12 +59,12 @@ Source audit:
 
 | Step | Existing source | Measurement consequence |
 | --- | --- | --- |
-| Complete execution, then select worker PID/client interval | [run_flow.rs](../../controller/src/run_flow.rs), `attach_sandbox_logs`, `collect_log_evidence` | Supplementary queries cannot change the native execution evidence. Successful replies expose the worker, not an independent host PID. |
-| Round client milliseconds outward and pad two seconds on each side | [sandbox_log.rs](../../controller/src/sandbox_log.rs), `SandboxLogWindow::runner_client_span` | Query endpoints are wall-clock bounds; backwards spans are invalid. Padding may extend beyond the time an immediate query starts. |
-| Create monotonic budget, launch observer in owned group | [sandbox_log.rs](../../controller/src/sandbox_log.rs), `capture_sandbox_logs_with_timeout` | L starts before observer launch. The controller passes a shared 10 s default budget. |
-| Parse observer arguments, build predicate and `/usr/bin/log show` command | [sandbox-log-observer.rs](../../controller/src/bin/sandbox-log-observer.rs), `sandbox_predicate`, `log_show_command`, `main` | No separate observer-startup or log-spawn duration is exposed. Ordinary query uses syslog style, info/debug, exact bounds and a complete process-name/PID regex. |
-| Spawn log child, read bounded pipes, observe exit and clean up | [log_capture.rs](../../controller/src/log_capture.rs), `capture_with_ops`, `finish` | Inner elapsed L′ ends here and shares the controller budget origin. It does not isolate log execution, store opening or scanning. Inner supervision reserves 1 s for reporting. |
-| Decode and parse log output; serialize observer report | [log_show.rs](../../controller/src/log_show.rs), `capture_show`; observer `main` | This occurs after L′ is recorded. The observer retains raw text plus parsed events. A report with `result.ok: false` can still have process exit 0. |
+| Complete execution, then select worker PID/client interval | [run_flow.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/run_flow.rs), `attach_sandbox_logs`, `collect_log_evidence` | Supplementary queries cannot change the native execution evidence. Successful replies expose the worker, not an independent host PID. |
+| Round client milliseconds outward and pad two seconds on each side | [sandbox_log.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs), `SandboxLogWindow::runner_client_span` | Query endpoints are wall-clock bounds; backwards spans are invalid. Padding may extend beyond the time an immediate query starts. |
+| Create monotonic budget, launch observer in owned group | [sandbox_log.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs), `capture_sandbox_logs_with_timeout` | L starts before observer launch. The controller passes a shared 10 s default budget. |
+| Parse observer arguments, build predicate and `/usr/bin/log show` command | [sandbox-log-observer.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/bin/sandbox-log-observer.rs), `sandbox_predicate`, `log_show_command`, `main` | No separate observer-startup or log-spawn duration is exposed. Ordinary query uses syslog style, info/debug, exact bounds and a complete process-name/PID regex. |
+| Spawn log child, read bounded pipes, observe exit and clean up | [log_capture.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/log_capture.rs), `capture_with_ops`, `finish` | Inner elapsed L′ ends here and shares the controller budget origin. It does not isolate log execution, store opening or scanning. Inner supervision reserves 1 s for reporting. |
+| Decode and parse log output; serialize observer report | [log_show.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/log_show.rs), `capture_show`; observer `main` | This occurs after L′ is recorded. The observer retains raw text plus parsed events. A report with `result.ok: false` can still have process exit 0. |
 | Finish outer supervision, parse/admit observer reply, correlate, assemble envelope | `log_capture.rs::finish`, `sandbox_log.rs::parse_supervised_observer`, `run_flow.rs::finish_sandbox_log_capture` | L ends before controller parsing/correlation. Those operations still consume the shared allowance, but their individual durations are not exposed. |
 
 `captured` requires successful transport, admitted shape/window and completed

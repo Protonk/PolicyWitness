@@ -218,11 +218,9 @@ recommended loop:
    helper failure with no obvious cause, run
    `log stream --predicate 'sender == "Sandbox"' --info` in another
    terminal and re-run the specimen. Kernel deny messages name the
-   denied operation + filter and let you target the augment fix
-   precisely. (Note: the worker doesn't currently surface
-   per-helper-child denies through `data.runner_sandbox_diagnostics`
-   — that's PID-scoped to the worker, not its children — so the
-   `log stream` cross-check is the canonical debugging path.)
+   denied operation + filter and can help narrow the augment fix.
+   Log delivery is incomplete, and a nearby deny message does not
+   by itself establish why a particular helper operation failed.
 
 7. **Pin with tests.** Add e2e cases under
    `tests/suites/runner_use_c_worker/` that drive the augment +

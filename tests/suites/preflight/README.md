@@ -181,8 +181,8 @@ Offline release controls also exercise the release procedure's decision points.
   selected SDK, must be refused by the output target check alone, naming the
   output, before assembly; the minimum and SDK faults must not reach it. The ad hoc and timestamp-less signatures must
   pass deep verification and then fail the signer check, naming the artifact,
-  before the standalone observer is signed, the guide is staged or the ZIP is
-  created; the control inspects each such signature independently before
+  before the guide is staged or the ZIP is created; the control inspects each
+  such signature independently before
   crediting the refusal. Successful siblings must package both variants. Raw
   command and tool receipts survive temporary-checkout cleanup. This case
   requires the full toolchain with one installed SDK and a Developer ID
@@ -222,10 +222,10 @@ Offline release controls also exercise the release procedure's decision points.
   fresh-mode state sequence with interruptions, the canary, replaced-output,
   lock-lifetime, Cargo oracle, Cargo selection and make-entrypoint controls
   described in the opt-in registry. For the output target: outputs outside it
-  substituted at each of the five checked boundaries (after Cargo, including
+  substituted at each of the four checked boundaries (after Cargo, including
   a corrupted cached unit refused again on reuse; after the native compile,
   the worker before it is run; in the assembled bundle with an unlisted file,
-  before any signature; at the standalone observer; before the ZIP); a stamp
+  before any signature; before the ZIP); a stamp
   naming another target or predating the contract; an x86_64 Meson host
   through a cross file; Cargo's report naming another path; an x86_64 target
   default overridden; and the package guard on direct Cargo builds for other

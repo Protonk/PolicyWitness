@@ -164,13 +164,7 @@ envelopes receive current-shape checks and must agree with the capture's copied
 outcome, including unfamiliar outcomes. Previous versions and malformed replies
 are constructed inputs, without historical helper fixtures or schema readers.
 
-Observer controls admit both version markers before nested shape validation,
-retain rejected JSON unchanged, reject recovered log claims and malformed
-wrappers, and continue validating admitted report bodies.
-Constructed captures also check event retention, candidate provenance and
-distinct availability states. The consumer's `denials` command returns capture
-and candidate references separately from execution validation and selection;
-lifecycle projections select only execution diagnostic fields.
+Lifecycle projections select only execution diagnostic fields.
 
 Native extension controls reject invented call/results, missing or mismatched
 token/handle references, phase and disposition association faults, unsupported

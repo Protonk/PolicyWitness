@@ -4,6 +4,8 @@ A sketch of possible responses to the problem in
 [EXEC-DENIAL-ASSOCIATION.md](EXEC-DENIAL-ASSOCIATION.md), for comparison with
 solutions formed independently. It is not an implementation plan. It sets no
 steps, sequence or verification schedule, and nothing here is decided.
+This sketch concerns the retired collector preserved in the unmaintained
+archive; it is not proposed work on the maintained application.
 
 ## What a response has to settle
 

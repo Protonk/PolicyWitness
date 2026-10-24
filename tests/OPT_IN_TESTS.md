@@ -240,8 +240,8 @@ selection, deduplication, configuration validation, and complete accounting.
   target, outputs outside it are substituted at each checked boundary (after
   Cargo, with a corrupted cached unit refused again on reuse; after the native
   compile, before the worker runs; in the assembled bundle beside an unlisted
-  universal file, before any signature; at the standalone observer; before
-  the ZIP). Text, empty and truncated-header replacements and missing required
+  universal file, before any signature; before the ZIP). Text, empty and
+  truncated-header replacements and missing required
   executables refuse in both variants at the assembled and packaging gates,
   before any signature or the ZIP respectively. A stamp names another target or predates the contract, a cross
   file gives `meson setup` an x86_64 host, and the controller package's target guard is driven by

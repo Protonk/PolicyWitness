@@ -61,8 +61,11 @@ Leave parked; the remaining ask is ownership, not visibility.
 
 ### P2 — Preserve more log identity and timing
 
+Historical scope: this entry and its dated review concern the retired observer
+in the archive. They do not propose collector work in maintained PolicyWitness.
+
 **Current burden.** The current denial event in
-[sandbox_log.rs](../controller/src/sandbox_log.rs) has PID, process, operation,
+[sandbox_log.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs) has PID, process, operation,
 path and raw text, without a structured event timestamp. The observation window
 uses rounded, padded wall-clock bounds; repeated operations and PID reuse can
 leave several possible associations.
@@ -85,15 +88,15 @@ termination.
 
 **Fable drive-by comment, 2026-10-22, against `9e574fc`.** The burden stands
 verbatim: `SandboxDenyEvent` in
-[sandbox_log.rs](../controller/src/sandbox_log.rs) carries PID, process,
+[sandbox_log.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs) carries PID, process,
 operation, path and raw line, and the
-[guide](../docs/PolicyWitness.md#denial-log-correlation) still says structured
+[guide](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/docs/PolicyWitness.md#denial-log-correlation) still says structured
 event timestamps, step ordering and PID-reuse protection are unavailable. The
 revisit condition is met, though. The observer runs `log show --style syslog`,
 so every raw line already begins with a timestamp;
-[check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py)
+[check_deny_capture_window.py](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/tests/suites/witness_contract/check_deny_capture_window.py)
 parses it, with a comment that production makes no temporal claim, and a unit
-test in [sandbox-log-observer.rs](../controller/src/bin/sandbox-log-observer.rs)
+test in [sandbox-log-observer.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/bin/sandbox-log-observer.rs)
 asserts the serialized event has no `timestamp` key. The sample and the parsing
 route exist; what is missing is the decision to expose the field, and the
 controls this entry lists for repeated operations, reused PIDs and delayed

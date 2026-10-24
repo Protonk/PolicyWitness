@@ -246,10 +246,10 @@ The build depends on these inputs and working state, in the order it meets them.
   executed, at every boundary they could change: each Cargo and Meson output
   after its compile and before its minimum is read (so before the worker is
   run for its identity), every Mach-O the assembled bundle carries, found by
-  header and not by the names copied in, before the first signature, the
-  standalone observer before it is signed, and the sealed bundle again before
-  the ZIP is written. A reused output is checked on every build like a new
-  one; nothing is thinned or repaired. Both app-wide checks include every
+  header and not by the names copied in, before the first signature, and the
+  sealed bundle again before the ZIP is written. A reused output is checked
+  on every build like a new one; nothing is thinned or repaired. Both app-wide
+  checks include every
   executable required by the build variant, even when missing or lacking a
   recognizable header, plus additional code discovered by header. A dSYM
   companion is excluded as debug data only when every slice has a complete
@@ -732,7 +732,7 @@ output target check must name before assembly (the minimum and SDK faults
 must not reach it either); a helper
 signed ad hoc; and a helper, the service seal or the app seal signed with
 `--timestamp=none`, which deep verification accepts and the signer check
-must name and refuse before observer signing, guide staging or ZIP creation,
+must name and refuse before guide staging or ZIP creation,
 after the control has inspected the signature it actually made. Every
 refusal before assembly leaves previous distribution bytes intact.
 Successful sibling builds package both variants.
@@ -771,10 +771,10 @@ unit (refused, and refused again when the next build reuses it) and by a
 truncated file; a native output replaced by a universal file and the worker
 by a one-slice fat container, refused before the worker is run; a copy
 replaced in the assembled bundle with an unlisted universal file beside it,
-refused before any signature; the standalone observer replaced after the
-seal and the sealed bundle's code after the observer's signature; a stamp
-naming another target or predating the output target contract; a cross
-file giving `meson setup` an x86_64 host; Cargo's report naming another path; an x86_64
+refused before any signature; the sealed bundle's code replaced before
+packaging; a stamp naming another target or predating the output target
+contract; a cross file giving `meson setup` an x86_64 host; Cargo's report
+naming another path; an x86_64
 target default overridden by the explicit target; and the package guard on a
 direct Cargo build for other targets. The forwarding wrappers run the real
 compilers and record every invocation, distinguishing compilations from
@@ -798,9 +798,9 @@ statuses 130 and 143 and leave the lock free; every compilation the real
 Cargo and Meson ran, through forwarding compiler wrappers, held the
 descriptor; a nested build and a nested owned command run under one
 acquisition while an independent worktree is held; and the lock is held
-when the standalone observer is signed. A Cargo oracle builds a scratch crate
-with real Cargo through recording forwarders for each configuration form the
-resolver reads, including the review's counterexamples (an inline table, an
+through packaging. A Cargo oracle builds a scratch crate with real Cargo
+through recording forwarders for each configuration form the resolver reads,
+including the review's counterexamples (an inline table, an
 included `build.rustc`, a forced `[env]` `PATH`), and requires the compilers,
 wrapper chain, working directory and child environment Cargo actually used
 to be the predicted ones, while Cargo fails each graph the resolver refuses.
@@ -940,8 +940,7 @@ executable was a thin arm64 Mach-O for macOS and carried the plist's minimum
 and the selected SDK's version, and the configured source lists and closure
 matched the tree, before assembly began; every Mach-O in the assembled
 bundle, the bundle mains included, was checked against the output target
-again before the first signature. The standalone observer is checked again
-at its own signing, and the sealed bundle again before the ZIP.
+again before the first signature, and the sealed bundle again before the ZIP.
 
 <!-- BEGIN GENERATED BUILD SIGNING -->
 <details>
@@ -965,9 +964,7 @@ with `--force --options runtime --timestamp`, so the timestamp service must be
 reachable; the evidence manifest and the provenance record are written between
 the service seal and the app seal, so the app seal covers them. The dSYM
 bundles beside the Swift executables, including their DWARF files, are sealed
-as resources. The standalone observer under
-`controller/target/aarch64-apple-darwin/release` is signed in place for
-direct use outside the bundle.
+as resources.
 
 The list and the inventory. [`sign_macho`](../build.sh) refuses a missing or
 non-Mach-O target before codesign runs: the list names exactly the executables

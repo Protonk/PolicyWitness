@@ -121,8 +121,7 @@ fixture and internal OS-call controls; `CWorkerTests` uses the real worker for
 deadline followed by voluntary exit and polling-time reaping. `EnvelopeInvariantTests`
 protects the encoded reply shape and the absence of the removed wire keys (`drift`, `deny_signal`, the attempt aliases and the comparison's former fields). The pre-apply CLI
 witness checks forwarding on both failure and success. The classifier tests and live driver controls agree on the
-outcome mapping. Rust correlation tests and the signed CLI retain log
-associations separately from execution status and cause.
+outcome mapping.
 
 | outcome | emitted by | primary coverage | notes |
 | --- | --- | --- | --- |
@@ -181,8 +180,8 @@ record. That record tests preservation of native-result fields; the transcript
 producer does not call `sandbox_check`. The real worker's file change is checked
 independently.
 `DiagnosticTransportTests` supplies direct ABI/validator decoding and Codable
-controls. Rust `unfamiliar_diagnostics_survive_*_capture` tests cover runner,
-helper and observer JSON receivers. These are transport controls; real producer
+controls. Rust `unfamiliar_diagnostics_survive_*_capture` tests cover runner and
+helper JSON receivers. These are transport controls; real producer
 attribution remains covered by `witness_contract/worker_progress_and_failure`,
 `witness_contract/worker_sparse_failure`, and the `failure_boundaries` cases
 listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership).

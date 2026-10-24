@@ -503,16 +503,6 @@ def consumer_controls(artifacts, current):
     assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
     records.append({'control': 'bare_reply_versions', 'rejected': True})
 
-    # Removed fields are rejected under the current envelope, even when null.
-    for key in ('sandbox_log_capture',):
-        retired = copy.deepcopy(current)
-        retired['data'][key] = None
-        run('retired_' + key, retired, rejected_by='unknown key envelope.data.' + key)
-    for key in ('correlation_status', 'permission_failures_without_record'):
-        retired = copy.deepcopy(current)
-        retired['data']['runner_sandbox_diagnostics'][key] = None
-        run('retired_' + key, retired,
-            rejected_by='unknown key envelope.data.runner_sandbox_diagnostics.' + key)
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')
 
 

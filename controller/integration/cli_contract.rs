@@ -101,47 +101,6 @@ fn version_flag_reports_build_stamp_and_contract_versions() {
 }
 
 #[test]
-fn execution_omits_retired_collection_and_rejects_its_options() {
-    if !integration_enabled() {
-        return;
-    }
-    let bin = require_pw_bin();
-    let request = repo_root().join("tests/fixtures/pw_runner/specimen_file_read_deny.json");
-    let out = run_pw(&bin, &["run", request.to_str().unwrap()]);
-    assert!(
-        out.status.success(),
-        "{}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(
-        envelope["data"]["runner_result"]["steps"][0]["sandbox_check"]["outcome"],
-        "deny"
-    );
-    assert!(envelope["data"]["runner_result"]["steps"][0]["attempt"].is_object());
-    assert!(envelope["data"].get("sandbox_log_capture").is_none());
-    let diagnostics = &envelope["data"]["runner_sandbox_diagnostics"];
-    assert!(diagnostics.get("correlation_status").is_none());
-    assert!(
-        diagnostics
-            .get("permission_failures_without_record")
-            .is_none()
-    );
-    for flag in ["--no-log-capture", "--log-timeout-ms"] {
-        let out = run_pw(&bin, &["run", "/definitely-absent-specimen", flag]);
-        assert_eq!(out.status.code(), Some(2));
-        let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-        assert_eq!(
-            envelope["result"]["error"],
-            format!("unknown argument: {flag}")
-        );
-        assert!(envelope["data"]["runner_result"].is_null());
-        assert!(envelope["data"]["runner_client"].is_null());
-        assert!(envelope["data"].get("sandbox_log_capture").is_none());
-    }
-}
-
-#[test]
 fn specimen_smoke_file_read_deny() {
     if !integration_enabled() {
         return;
@@ -199,6 +158,7 @@ fn specimen_smoke_file_read_deny() {
     let step = &steps[0];
     let sb = step.get("sandbox_check").cloned().unwrap_or_default();
     assert_eq!(sb.get("outcome").and_then(|v| v.as_str()), Some("deny"));
+    assert!(step["attempt"].is_object());
 }
 
 static SBPL_CHECK_REQUESTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

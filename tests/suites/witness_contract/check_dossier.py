@@ -222,7 +222,7 @@ class Witness:
         assert imports['records'] == [] and imports['closure_sha256'] is None
         data = envelope['data']
         assert data['runner_client'] is None and data['runner_result'] is None and data['policy_check'] is None, data.keys()
-        assert data['runner_sandbox_diagnostics'] is None and 'sandbox_log_capture' not in data
+        assert data['runner_sandbox_diagnostics'] is None
         assert specimen['runner_provenance'] is not None, 'the runner was selected before resolution refused'
         self.no_temp_request('refused')
         self.record('refused', error=envelope['result']['error'])
@@ -265,12 +265,11 @@ class Witness:
         for flag, value in (('--timeout-ms', 'soon'), ('--runner-mode', 'invalid')):
             result = subprocess.run([str(self.pw), 'run', str(path), flag, value], capture_output=True, timeout=30)
             cases.append(('invalid_flag_' + flag[2:], result.returncode, json.loads(result.stdout), None))
-        # Retired options are unknown arguments; the already supplied path survives.
-        for flag in ('--no-log-capture', '--log-timeout-ms'):
-            result = subprocess.run([str(self.pw), 'run', str(path), flag], capture_output=True, timeout=30)
-            envelope = json.loads(result.stdout)
-            assert envelope['result']['error'] == f'unknown argument: {flag}', envelope
-            cases.append(('retired_flag_' + flag[2:], result.returncode, envelope, str(path)))
+        # An unknown argument preserves the already supplied request path.
+        result = subprocess.run([str(self.pw), 'run', str(path), '--bogus'], capture_output=True, timeout=30)
+        envelope = json.loads(result.stdout)
+        assert envelope['result']['error'] == 'unknown argument: --bogus', envelope
+        cases.append(('unknown_argument', result.returncode, envelope, str(path)))
         # Built-in selection cannot find an unregistered external runner.
         request = self.specimen('unknown-runner')
         request['runner'] = {'mode': 'byoxpc', 'service': 'com.example.pw.unregistered.' + os.urandom(4).hex()}

@@ -880,19 +880,6 @@ mod tests {
     }
 
     #[test]
-    fn removed_collection_options_are_unknown_before_execution() {
-        for flag in ["--no-log-capture", "--log-timeout-ms"] {
-            match parse_arguments(&["/r.json".into(), flag.into()]) {
-                Arguments::Error(Some(path), error) => {
-                    assert_eq!(path, PathBuf::from("/r.json"));
-                    assert_eq!(error, format!("unknown argument: {flag}"));
-                }
-                _ => panic!("retired flag accepted: {flag}"),
-            }
-        }
-    }
-
-    #[test]
     fn malformed_phase_claims_withhold_projection_and_preserve_raw_reply() {
         let mut baseline = worker("ok", None);
         baseline["phases"][0]["collection_status"] = json!("not_reached");
@@ -1417,7 +1404,6 @@ else:
         );
         assert!(wire["data"]["runner_client"]["request_delivery"]["error"].is_string());
         assert!(wire["data"]["policy_check"].is_null());
-        assert!(wire["data"].get("sandbox_log_capture").is_none());
         assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
         assert_eq!(wire["data"]["timeout_ms"], 7);
         assert_eq!(wire["result"]["exit_code"], 2);
@@ -2114,7 +2100,6 @@ else:
                 wire["data"]["runner_client"]["request_delivery"]["bytes_written"],
                 2
             );
-            assert!(wire["data"].get("sandbox_log_capture").is_none());
             assert_eq!(
                 keys(&wire["data"]["runner_sandbox_diagnostics"]),
                 DIAGNOSTIC_KEYS
@@ -2463,7 +2448,7 @@ else:
                 &["--bogus"][..],
                 &["--runner-mode", "machme"],
                 &["--timeout-ms", "soon"],
-                &["/r.json", "--log-timeout-ms", "0"],
+                &["/r.json", "--bogus"],
             ] {
                 let observed = observe(&app, None, args);
                 assert!(observed.loads.is_empty(), "{args:?}");

@@ -99,9 +99,6 @@ def main():
             failed = consumer.select(rows, observation='permission_failure', observation_basis='permission_errno',
                                      operation_relation='different', target_relation='same_submitted')
             assert [s['step_id'] for s in failed] == ids, rows
-            assert 'sandbox_log_capture' not in data
-            assert 'correlation_status' not in diag
-            assert 'permission_failures_without_record' not in diag
             observations.append({'run': name, 'outcome': expected, 'diagnostics': diag})
             (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
             print(f'{name}: disposition and independent failed attempts verified', flush=True)

@@ -3,6 +3,13 @@
 Records of the runtime investigation of PolicyWitness as a running program,
 and the evidence behind them. The first built-in-runner cycle and two
 log-observer pilots are complete.
+The procedures and their source files are historical, unmaintained equipment
+for those runs. They require the recorded pre-retirement application and inputs;
+they are not measurement commands for the maintained application. The
+[archived source tree](https://github.com/Protonk/Observer/tree/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source)
+preserves their former integration. Recorded hashes, commands and evidence
+remain unchanged.
+
 Any later work's associated `*-PLAN.md` carries links between these records
 and proposed work, as `records/AGENTS.md` requires; indexes name records
 without linking to them.
@@ -19,7 +26,7 @@ Layout:
   operator-run measurements, pilot comparison and unresolved boundaries.
 - `PolicyWitness-Log-Observer-Investigation.md`: the log-observer investigation's
   questions about supplementary-collection cost and delayed retrieval.
-- `LOG-OBSERVER-INVESTIGATION-PLAN.md`: the current collection-path audit and
+- `LOG-OBSERVER-INVESTIGATION-PLAN.md`: the recorded collection-path audit and
   executed log-observer pilot procedure, with the associated report link.
 - `LOG-OBSERVER-INVESTIGATION-REPORT.md`: two completed log-observer pilots,
   historical-query costs and fixed-event retrieval comparisons.

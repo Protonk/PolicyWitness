@@ -181,6 +181,10 @@ retain actual outer elapsed times.
 
 ## Operator procedure
 
+This is the historical build-841 procedure. It requires the original
+application and inputs described in the harness README; its capture comparison
+does not run against maintained PolicyWitness.
+
 End active agent sessions, then use a normal Terminal in the repository root.
 The first short interval is sufficient for the next analysis. Keep background
 servers in their launch state and note any observed change or interruption.

@@ -1,5 +1,15 @@
 # Log-observer pilot procedure
 
+Historical, unmaintained equipment for the completed build-841 investigation.
+The live commands below require the former observer and CLI in the
+[archived source tree](https://github.com/Protonk/Observer/tree/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source);
+they do not run against maintained PolicyWitness. The pinned configuration
+also requires the original signed application, source hashes, system log tool
+and local-only raw evidence. The archive preserves source, not those binaries
+or raw records. A new build or query cannot reproduce their original identities
+or guarantee the same log delivery. Do not refresh the configuration to make
+these historical results appear applicable to a new application.
+
 This standalone investigation harness leaves application sources and binaries
 unchanged. `LOG-OBSERVER-INVESTIGATION-PLAN.md` in the parent directory owns the
 questions, schedule, interpretation and limits. The existing runtime harness
@@ -51,7 +61,8 @@ events, or retrieved events with completeness. Raw bytes are local-only,
 gitignored and created with restricted access; summaries are not a portable copy
 of the log records. Review derived evidence before committing it.
 
-The completed two-pilot analysis is reproduced from local raw evidence with:
+The completed two-pilot analysis is reproduced in the original pinned
+environment from local raw evidence with:
 
 ```sh
 tests/lib/python.sh records/performance/log-observer/analyze.py
@@ -60,4 +71,6 @@ tests/lib/python.sh records/performance/log-observer/analyze.py
 It independently recomputes timing spans, compares original bytes, checks
 source/artifact identities and regenerates
 `records/performance/evidence/log-observer-pilot-analysis.json`. It makes no live
-query. The parent `LOG-OBSERVER-INVESTIGATION-REPORT.md` describes the results.
+query. Unlike the summary reader, it also requires the original source and
+application dependencies; it is not runnable in the maintained checkout.
+The parent `LOG-OBSERVER-INVESTIGATION-REPORT.md` describes the results.

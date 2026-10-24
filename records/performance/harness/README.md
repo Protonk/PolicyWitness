@@ -1,5 +1,15 @@
 # Runtime measurement harness
 
+Historical, unmaintained equipment for the completed build-841 investigation.
+Its capture/no-capture comparison uses the former CLI in the
+[archived source tree](https://github.com/Protonk/Observer/tree/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source).
+The measurement and live-control commands below do not run against maintained
+PolicyWitness. Reproduction requires the recorded application and inputs;
+the archive contains source, not the original signed binaries or local-only
+raw evidence. The scripts, configurations and captured commands remain
+unchanged to preserve the experiment. The summary reader can still inspect
+retained raw evidence without launching the application.
+
 Run from the repository root with `tests/lib/python.sh`. The harness uses only
 the standard library on the repository's pinned Python 3.14. It changes no
 application binaries, policy fixtures, settings or external runners.

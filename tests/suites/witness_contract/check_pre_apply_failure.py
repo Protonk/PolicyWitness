@@ -62,7 +62,6 @@ def no_cause_claim(envelope):
     data = envelope['data']
     runner = data['runner_result']
     assert runner['normalized_outcome'] != 'runner_sandbox_denied', runner
-    assert 'sandbox_log_capture' not in data
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None:
         assert isinstance(diagnostics, dict), diagnostics

@@ -90,11 +90,11 @@ The source-supported path is:
    cleanup and records L. Controller reply parsing, admission, association and
    envelope assembly follow; their individual durations are not exposed by L.
 
-These boundaries are implemented in [run_flow.rs](../../controller/src/run_flow.rs),
-[sandbox_log.rs](../../controller/src/sandbox_log.rs),
-[sandbox-log-observer.rs](../../controller/src/bin/sandbox-log-observer.rs),
-[log_capture.rs](../../controller/src/log_capture.rs), and
-[log_show.rs](../../controller/src/log_show.rs). Native execution evidence remains
+These boundaries are implemented in [run_flow.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/run_flow.rs),
+[sandbox_log.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/sandbox_log.rs),
+[sandbox-log-observer.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/bin/sandbox-log-observer.rs),
+[log_capture.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/log_capture.rs), and
+[log_show.rs](https://github.com/Protonk/Observer/blob/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source/controller/src/log_show.rs). Native execution evidence remains
 separate from supplementary collection.
 
 This pilot's `process_wall_ms` spans Popen entry through collected `wait4`,
