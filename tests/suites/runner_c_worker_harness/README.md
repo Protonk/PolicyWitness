@@ -214,9 +214,11 @@ writes only when a capture is requested, has no backing when the worker starts.
   application by the worker's own word and before any later worker activity;
   the seam store comes after release and `done`.
 - **Application.** The worker's own record: `applied`, `apply_rc` 0 and `done`.
-- **Enforcement.** The kernel denied the slot's open of `/etc/hosts` (`rc` 1,
-  errno EPERM or EACCES). This corroborates the application record without
-  relying on the worker's word.
+- **Enforcement.** The worker published a native denial result for the slot's
+  open of `/etc/hosts` (`rc` 1, errno EPERM or EACCES), consistent with sandbox
+  enforcement. This is not an independent observation of the kernel's decision
+  and does not independently establish the ordering of `sandbox_apply` and
+  the seam store.
 - **Publication.** Decisive: the harness read the pattern back through its
   own mapping after reap, and the worker exited 0 without a cleanup kill.
   Residency of the probe page after reap is a separate corroborating
@@ -245,8 +247,8 @@ correct value:
 The shipped `pw-probe-runner` runs under the same three rows. In those
 executions, one open-read slot per policy, the pages resident at the ready
 byte (0 and 224, the header and evidence pages) were the pages resident at
-`done` and after reap, the probe page stayed unbacked, and the probe word
-stayed zero. That is an observation of these runs, recorded in
+`done` and after reap, the probe page was nonresident at those samples, and the
+probe word read back as zero. That is an observation of these runs, recorded in
 `first-touch-report.json`, not an invariant over every plan or specimen.
 
 Reading a failure:
@@ -262,17 +264,20 @@ Reading a failure:
 - A failed residency **corroboration** beside a matching read-back means the
   value landed and `mincore` no longer reports the page; the sensitivity
   controls show whether the sample's meaning changed.
-- A **shipped-worker** difference means that execution published into a page
-  not resident at the ready byte, or did not apply, get denied and exit 0 as
-  before.
+- A **shipped-worker** residency difference records a change in sampled page
+  backing; it does not by itself identify a worker store or publication event.
+  The host's ready-byte sample may occur after application, and accesses
+  between samples are not traced. Other shipped-worker assertions separately
+  check the probe word, application and attempt records, and exit.
 
 None of these alone establishes that the sandbox caused the behavior. The
-witness for the policy being in force is the denied open; the worker's
-`applied` word is its own record; residency is a kernel report whose meaning
-is checked only by the worker-pretouched control. The case records what was
-observed and leaves the explanation to investigation. `first-touch-report.json`
-is written before any assertion, so a failing run keeps every unit's oracle
-answers, and the first line of `assert.log` names the failing unit and oracle.
+denied open is a worker-published native result consistent with enforcement;
+the worker's `applied` word is its own record; residency is a kernel report
+whose meaning is checked only by the worker-pretouched control. The case
+records what was observed and leaves the explanation to investigation.
+`first-touch-report.json` is written before any assertion, so a failing run
+keeps every unit's oracle answers, and the first line of `assert.log` names
+the failing unit and oracle.
 
 Limits: one probe page and one 8-byte store; three bare deny-default
 policies; the first touch after application is exercised only by the ad-hoc

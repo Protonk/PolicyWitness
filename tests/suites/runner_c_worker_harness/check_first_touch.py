@@ -5,7 +5,7 @@ Four oracles are kept apart: `condition` (the probe page was backed by no
 process through application, judged from the host's residency samples before
 spawn, at the ready byte, and when the worker's applied word was first seen
 before release), `application` and `enforcement` (the worker's own application
-record beside the kernel's denial of its attempt), and `publication` (the host
+record beside its published native attempt result), and `publication` (the host
 read the pattern back through its own mapping and the worker exited 0).
 Residency after reap corroborates; it never stands in for the read-back. The
 two pre-touched controls must publish and still be rejected by the unchanged
@@ -57,7 +57,12 @@ def application(r):
 
 
 def enforcement(r):
-    """Native corroboration independent of the worker's word: the kernel denied the slot's open."""
+    """Worker-published native result consistent with sandbox enforcement.
+
+    The reported /etc/hosts denial is not an independent observation of the
+    kernel's decision and does not independently establish the ordering of
+    sandbox_apply and the seam store.
+    """
     slot = r['slots'][0]
     return slot['completed'] == 1 and slot['rc'] == 1 and slot['errno'] in PERMISSION_ERRNOS
 
@@ -173,7 +178,8 @@ def main():
     shipped_pages = verdicts['shipped_v1']['resident_pages']['at_ready']
     print(f"first-touch store read back under deny-default v1/v2/v3 from a page unbacked at the ready byte and at "
           f"the worker's applied word before release; host- and worker-pretouched controls published but were "
-          f"rejected; shipped worker published only into pages {shipped_pages} resident at the ready byte")
+          f"rejected; shipped-worker resident-page sets unchanged across ready-byte, done and after-reap samples "
+          f"(v1: {shipped_pages}), with a zero probe word read back in each run")
     return 0
 
 
