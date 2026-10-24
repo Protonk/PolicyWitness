@@ -1,0 +1,267 @@
+{
+  "acquisition_refusals": 0,
+  "attestation": {
+    "listed": 17,
+    "unattested": []
+  },
+  "checks": {
+    "host_children_exiting_after_host": {
+      "[]": 4
+    },
+    "host_exit_basis": {
+      "kqueue_note_exit": 4
+    },
+    "host_fork_notifications": {
+      "2": 4
+    },
+    "host_invalidation_client_pids": {
+      "[]": 4
+    },
+    "host_responsible_pid_equals_controller_responsible_pid": {
+      "True": 4
+    },
+    "launchd_domain_client_pid": {
+      "79281": 1,
+      "79286": 1,
+      "79291": 1,
+      "79296": 1
+    },
+    "launchd_domain_matches_client": {
+      "True": 4
+    },
+    "launchd_exit_reason": {
+      "exited due to SIGKILL | sent by PWRunner[<host>] during teardown of process-scoped services after host exited": 4
+    },
+    "launchd_kill_message": {
+      "signaled service: Terminated: 15": 4
+    },
+    "validator_pids_agree": {
+      "False": 4
+    }
+  },
+  "controller_exit_codes": {
+    "1": 4
+  },
+  "controllers": 4,
+  "count": 4,
+  "distinct_host_generations": 4,
+  "exec_reassignments": [
+    {
+      "history": [
+        {
+          "at": {
+            "mono_ns": 1478170824429125,
+            "wall_ns": 1792815815338999000
+          },
+          "basis": "path_changed_before_registration",
+          "path_after": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "role_after": "worker",
+          "role_before": "host"
+        }
+      ],
+      "key": "79298:1792815815338816"
+    }
+  ],
+  "host_basis": {
+    "launchd_domain_of_client": 4
+  },
+  "hosts_identified": 4,
+  "intervals_ms": {
+    "C_client_span_controller_clock": {
+      "absent": 0,
+      "max": 33.0,
+      "median": 32.5,
+      "min": 29.0,
+      "n": 4,
+      "p90": 33.0
+    },
+    "W_controller_spawn_to_exit": {
+      "absent": 0,
+      "max": 35.425,
+      "median": 34.411,
+      "min": 30.367,
+      "n": 4,
+      "p90": 35.425
+    },
+    "client_exit_to_host_exit": {
+      "absent": 0,
+      "max": 6.228,
+      "median": 4.5495,
+      "min": 3.449,
+      "n": 4,
+      "p90": 6.228
+    },
+    "client_exit_to_launchd_kill_log": {
+      "absent": 0,
+      "max": 0.065,
+      "median": 0.061,
+      "min": 0.06,
+      "n": 4,
+      "p90": 0.065
+    },
+    "client_lifetime_kernel_start_to_exit": {
+      "absent": 0,
+      "max": 33.196,
+      "median": 32.567,
+      "min": 28.516,
+      "n": 4,
+      "p90": 33.196
+    },
+    "client_start_to_host_start": {
+      "absent": 0,
+      "max": 5.445,
+      "median": 4.9625,
+      "min": 4.831,
+      "n": 4,
+      "p90": 5.445
+    },
+    "controller_exit_to_host_exit": {
+      "absent": 0,
+      "max": 5.828,
+      "median": 4.173500000000001,
+      "min": 3.062,
+      "n": 4,
+      "p90": 5.828
+    },
+    "host_exec_to_worker_start": {
+      "absent": 1,
+      "max": 12.206,
+      "median": 11.848,
+      "min": 11.682,
+      "n": 3,
+      "p90": 12.206
+    },
+    "host_exit_to_launchd_exit_log": {
+      "absent": 0,
+      "max": 0.377,
+      "median": 0.033,
+      "min": 0.03,
+      "n": 4,
+      "p90": 0.377
+    },
+    "host_invalidation_log_to_host_exit": {
+      "absent": 4,
+      "n": 0
+    },
+    "host_lifetime_kernel_start_to_exit": {
+      "absent": 0,
+      "max": 32.188,
+      "median": 31.659999999999997,
+      "min": 29.913,
+      "n": 4,
+      "p90": 32.188
+    },
+    "host_start_to_exec": {
+      "absent": 1,
+      "max": 3.005,
+      "median": 2.659,
+      "min": 2.631,
+      "n": 3,
+      "p90": 3.005
+    },
+    "last_child_exit_to_client_exit": {
+      "absent": 0,
+      "max": -0.042,
+      "median": -1.329,
+      "min": -3.063,
+      "n": 4,
+      "p90": -0.042
+    },
+    "last_child_exit_to_host_exit": {
+      "absent": 0,
+      "max": 3.407,
+      "median": 3.2205000000000004,
+      "min": 3.165,
+      "n": 4,
+      "p90": 3.407
+    },
+    "launchd_kill_log_to_exit_log": {
+      "absent": 0,
+      "max": 6.545,
+      "median": 4.5205,
+      "min": 3.416,
+      "n": 4,
+      "p90": 6.545
+    },
+    "launchd_kill_log_to_host_exit": {
+      "absent": 0,
+      "max": 6.168,
+      "median": 4.4885,
+      "min": 3.384,
+      "n": 4,
+      "p90": 6.168
+    },
+    "previous_host_exit_to_client_start": {
+      "absent": 1,
+      "max": -1.471,
+      "median": -2.587,
+      "min": -4.129,
+      "n": 3,
+      "p90": -1.471
+    },
+    "previous_host_exit_to_controller_spawn": {
+      "absent": 1,
+      "max": -2.883,
+      "median": -4.038,
+      "min": -5.653,
+      "n": 3,
+      "p90": -2.883
+    }
+  },
+  "launchd_exit_reasons_in_window": {
+    "exited due to SIGKILL | sent by PWRunner[<host>] during teardown of process-scoped services after host exited": 4
+  },
+  "launchd_kill_messages_in_window": {
+    "signaled service: Terminated: 15": 4
+  },
+  "launchd_log": {
+    "argv": [
+      "/usr/bin/log",
+      "show",
+      "--start",
+      "2026-10-23 21:23:34",
+      "--end",
+      "2026-10-23 21:23:38",
+      "--info",
+      "--debug",
+      "--style",
+      "ndjson",
+      "--predicate",
+      "(process == \"launchd\" AND (subsystem CONTAINS \"PWRunner\" OR subsystem CONTAINS \"pw-runner-clien\" OR eventMessage CONTAINS \"PWRunner\")) OR (process == \"PWRunner\" AND eventMessage CONTAINS \"invalidated\")"
+    ],
+    "error": null,
+    "exit": 0
+  },
+  "launchd_log_events": 140,
+  "launchd_spawn_messages_in_window": 4,
+  "launchd_window_mono_us": [
+    1478170702740,
+    1478171837886
+  ],
+  "observer": {
+    "cpu_system_s": 0.029688,
+    "cpu_user_s": 0.11488199999999998,
+    "list_errors": 0,
+    "max_poll_gap_ns": 1547083,
+    "poll_gaps_over_5ms": 0,
+    "polls": 904
+  },
+  "outcomes": {
+    "xpc_timeout": 4
+  },
+  "owned_process_roles": {
+    "client": 4,
+    "controller": 4,
+    "host": 4,
+    "validator": 4,
+    "worker": 4
+  },
+  "pairs": [],
+  "raw_sha256sums_sha256": "29cd3066bae2c146d8a2b1cf2c13ed0d5d5148d4fef17e759c06c742ad2a69dc",
+  "run_id": "20261024T042335131650Z-hostlife-control-clienttimeout22-b853",
+  "series": "rapid",
+  "still_alive_at_end": [],
+  "stop_reason": "completed",
+  "unassociated_owned_processes": [],
+  "wall_minus_mono_drift_us": -5
+}

@@ -1,10 +1,11 @@
 # Runtime performance records
 
 Records of the runtime investigation of PolicyWitness as a running program,
-and the evidence behind them. The first built-in-runner cycle and two
-log-observer pilots are complete.
-The procedures and their source files are historical, unmaintained equipment
-for those runs. They require the recorded pre-retirement application and inputs;
+and the evidence behind them. The first built-in-runner cycle, two
+log-observer pilots and a host-lifetime investigation of build 853 are
+complete.
+The first-cycle and log-observer procedures and their source files are
+historical, unmaintained equipment for those runs. They require the recorded pre-retirement application and inputs;
 they are not measurement commands for the maintained application. The
 [archived source tree](https://github.com/Protonk/Observer/tree/0d0678f375103251573bd32bb9c2a6f4eaa58a8e/source)
 preserves their former integration. Recorded hashes, commands and evidence
@@ -30,6 +31,15 @@ Layout:
   executed log-observer pilot procedure, with the associated report link.
 - `LOG-OBSERVER-INVESTIGATION-REPORT.md`: two completed log-observer pilots,
   historical-query costs and fixed-event retrieval comparisons.
+- `PolicyWitness-Host-Lifetime-Investigation.md`: the host-lifetime
+  investigation's questions about host identity, admission, retirement and
+  relaunch.
+- `HOST-LIFETIME-INVESTIGATION-REPORT.md`: built-in host instancing, admission
+  and retirement observations, controls and the untested external case.
+- `host-lifetime/`: the external process observer and its run reader.
+- `PolicyWitness-Phase-Barrier-Investigation.md`: the phase-barrier
+  investigation's questions about the worker's wait between arrival and
+  release, and its own proceed deadline.
 - `log-observer/`: the pinned pilot configuration, bounded query procedure,
   content-comparison reader and stand-in controls.
 - `harness/`: the operator-run measurement procedure and its summarizer, with
@@ -37,7 +47,8 @@ Layout:
   `harness/configurations.json`.
 - `evidence/<run-id>/`: committed per run: `manifest.json`,
   `conditions-start.json`, `conditions-end.json`, `run.json`, `SHA256SUMS`
-  and the summarizer's output. Small, reviewable, enough to interpret a run
+  and the summarizer's output; host-lifetime runs have `summary.json`,
+  `units.json` and `run-record.json`. Small, reviewable, enough to interpret a run
   without its raw files.
 - `evidence/<control-batch>/`: the external terminal transcripts, observed exit
   statuses and assertion ledger for each bounded control or pilot in that batch.
@@ -46,5 +57,6 @@ Layout:
   by git and present only in the checkout that produced it; a record that
   cites a raw file says so.
 
-A run identifier is `<UTC stamp>-<config>-b<build number>`. Runs are never
+A run identifier is `<UTC stamp>-<config>-b<build number>`; host-lifetime
+runs are `<UTC stamp>-hostlife-<label>`, with the build number in the label. Runs are never
 overwritten; a procedure that finds its run directory present refuses.

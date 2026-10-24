@@ -1,0 +1,333 @@
+[
+  {
+    "checks": {
+      "host_children_exiting_after_host": [],
+      "host_exit_basis": "kqueue_note_exit",
+      "host_fork_notifications": 2,
+      "host_invalidation_client_pids": [
+        77726
+      ],
+      "host_responsible_pid_equals_controller_responsible_pid": true,
+      "launchd_domain_client_pid": 77726,
+      "launchd_domain_matches_client": true,
+      "launchd_exit_reason": "exited due to SIGKILL | sent by launchd[1] during teardown of process-scoped services after host exited",
+      "launchd_kill_message": "signaled service: Killed: 9",
+      "validator_pids_agree": true
+    },
+    "controller_exit_code": 0,
+    "envelope_outcome": "ok",
+    "envelope_parse_error": null,
+    "events_mono_us": {
+      "client_exit_observed": 1477817132309,
+      "client_kernel_start": 1477817063660,
+      "client_span_end_controller_ms": 1477817132094,
+      "client_span_start_controller_ms": 1477817063094,
+      "controller_exit_observed": 1477817133061,
+      "controller_kernel_start": 1477817054435,
+      "controller_reaped": 1477817133069,
+      "controller_spawn_harness": 1477817054336,
+      "host_exec_observed": 1477817086166,
+      "host_exit_observed": 1477817132962,
+      "host_invalidation_log": 1477817131915,
+      "host_kernel_start_xpcproxy": 1477817079795,
+      "launchd_log_kill": 1477817132430,
+      "launchd_log_spawned": 1477817086202,
+      "validator_exit_observed": [
+        1477817127794
+      ],
+      "worker_exit_observed": 1477817128326,
+      "worker_kernel_start": 1477817112971
+    },
+    "identities": {
+      "client": {
+        "kernel_start_wall_us": 1792815461579565,
+        "pid": 77726,
+        "uniqueid": 17357619
+      },
+      "clients_matched": 1,
+      "controller": {
+        "kernel_start_wall_us": 1792815461570341,
+        "pid": 77725,
+        "uniqueid": 17357618
+      },
+      "host": {
+        "kernel_start_wall_us": 1792815461595701,
+        "parent_uniqueid": 1,
+        "pid": 77727,
+        "responsible_pid": 1143,
+        "uniqueid": 17357620
+      },
+      "host_basis": "worker_parent_uniqueid",
+      "host_children_roles": [
+        "validator",
+        "worker"
+      ],
+      "validators": [
+        {
+          "kernel_start_wall_us": 1792815461642039,
+          "pid": 77729,
+          "uniqueid": 17357622
+        }
+      ],
+      "worker": {
+        "kernel_start_wall_us": 1792815461628877,
+        "pid": 77728,
+        "uniqueid": 17357621
+      },
+      "workers_matched": 1
+    },
+    "intervals_ms": {
+      "C_client_span_controller_clock": 69.0,
+      "W_controller_spawn_to_exit": 78.725,
+      "client_exit_to_host_exit": 0.653,
+      "client_exit_to_launchd_kill_log": 0.121,
+      "client_lifetime_kernel_start_to_exit": 68.649,
+      "client_start_to_host_start": 16.135,
+      "controller_exit_to_host_exit": -0.099,
+      "host_exec_to_worker_start": 26.805,
+      "host_exit_to_launchd_exit_log": 0.032,
+      "host_invalidation_log_to_host_exit": 1.047,
+      "host_lifetime_kernel_start_to_exit": 53.167,
+      "host_start_to_exec": 6.371,
+      "last_child_exit_to_client_exit": 3.983,
+      "last_child_exit_to_host_exit": 4.636,
+      "launchd_kill_log_to_exit_log": 0.564,
+      "launchd_kill_log_to_host_exit": 0.532
+    },
+    "label": "0",
+    "normalized_outcome": "ok",
+    "reply_pid": 77728,
+    "reply_validator_pids": [
+      77729
+    ],
+    "reply_worker_pid": 77728,
+    "runner_acquisition_refusals": 0,
+    "unit_dir": "unit-000",
+    "validators_reaped_per_reply": [
+      true
+    ],
+    "worker_reaped_per_reply": true
+  },
+  {
+    "checks": {
+      "host_children_exiting_after_host": [],
+      "host_exit_basis": "kqueue_note_exit",
+      "host_fork_notifications": 2,
+      "host_invalidation_client_pids": [
+        77732
+      ],
+      "host_responsible_pid_equals_controller_responsible_pid": true,
+      "launchd_domain_client_pid": 77732,
+      "launchd_domain_matches_client": true,
+      "launchd_exit_reason": "exited due to SIGKILL | sent by launchd[1] during teardown of process-scoped services after host exited",
+      "launchd_kill_message": "signaled service: Killed: 9",
+      "validator_pids_agree": true
+    },
+    "controller_exit_code": 0,
+    "envelope_outcome": "ok",
+    "envelope_parse_error": null,
+    "events_mono_us": {
+      "client_exit_observed": 1477818210899,
+      "client_kernel_start": 1477818145030,
+      "client_span_end_controller_ms": 1477818210099,
+      "client_span_start_controller_ms": 1477818144099,
+      "controller_exit_observed": 1477818211623,
+      "controller_kernel_start": 1477818135718,
+      "controller_reaped": 1477818211629,
+      "controller_spawn_harness": 1477818135660,
+      "host_exec_observed": 1477818167703,
+      "host_exit_observed": 1477818211568,
+      "host_invalidation_log": 1477818210438,
+      "host_kernel_start_xpcproxy": 1477818161516,
+      "launchd_log_kill": 1477818210986,
+      "launchd_log_spawned": 1477818167755,
+      "validator_exit_observed": [
+        1477818206610
+      ],
+      "worker_exit_observed": 1477818207227,
+      "worker_kernel_start": 1477818191597
+    },
+    "identities": {
+      "client": {
+        "kernel_start_wall_us": 1792815462660932,
+        "pid": 77732,
+        "uniqueid": 17357625
+      },
+      "clients_matched": 1,
+      "controller": {
+        "kernel_start_wall_us": 1792815462651619,
+        "pid": 77731,
+        "uniqueid": 17357624
+      },
+      "host": {
+        "kernel_start_wall_us": 1792815462677418,
+        "parent_uniqueid": 1,
+        "pid": 77733,
+        "responsible_pid": 1143,
+        "uniqueid": 17357626
+      },
+      "host_basis": "worker_parent_uniqueid",
+      "host_children_roles": [
+        "validator",
+        "worker"
+      ],
+      "validators": [
+        {
+          "kernel_start_wall_us": 1792815462720658,
+          "pid": 77735,
+          "uniqueid": 17357628
+        }
+      ],
+      "worker": {
+        "kernel_start_wall_us": 1792815462707498,
+        "pid": 77734,
+        "uniqueid": 17357627
+      },
+      "workers_matched": 1
+    },
+    "intervals_ms": {
+      "C_client_span_controller_clock": 66.0,
+      "W_controller_spawn_to_exit": 75.963,
+      "client_exit_to_host_exit": 0.669,
+      "client_exit_to_launchd_kill_log": 0.087,
+      "client_lifetime_kernel_start_to_exit": 65.869,
+      "client_start_to_host_start": 16.486,
+      "controller_exit_to_host_exit": -0.055,
+      "host_exec_to_worker_start": 23.894,
+      "host_exit_to_launchd_exit_log": 0.035,
+      "host_invalidation_log_to_host_exit": 1.13,
+      "host_lifetime_kernel_start_to_exit": 50.052,
+      "host_start_to_exec": 6.187,
+      "last_child_exit_to_client_exit": 3.672,
+      "last_child_exit_to_host_exit": 4.341,
+      "launchd_kill_log_to_exit_log": 0.617,
+      "launchd_kill_log_to_host_exit": 0.582,
+      "previous_host_exit_to_client_start": 1012.068,
+      "previous_host_exit_to_controller_spawn": 1002.698
+    },
+    "label": "1",
+    "normalized_outcome": "ok",
+    "reply_pid": 77734,
+    "reply_validator_pids": [
+      77735
+    ],
+    "reply_worker_pid": 77734,
+    "runner_acquisition_refusals": 0,
+    "unit_dir": "unit-001",
+    "validators_reaped_per_reply": [
+      true
+    ],
+    "worker_reaped_per_reply": true
+  },
+  {
+    "checks": {
+      "host_children_exiting_after_host": [],
+      "host_exit_basis": "kqueue_note_exit",
+      "host_fork_notifications": 2,
+      "host_invalidation_client_pids": [
+        77737
+      ],
+      "host_responsible_pid_equals_controller_responsible_pid": true,
+      "launchd_domain_client_pid": 77737,
+      "launchd_domain_matches_client": true,
+      "launchd_exit_reason": "exited due to SIGKILL | sent by launchd[1] during teardown of process-scoped services after host exited",
+      "launchd_kill_message": "signaled service: Killed: 9",
+      "validator_pids_agree": true
+    },
+    "controller_exit_code": 0,
+    "envelope_outcome": "ok",
+    "envelope_parse_error": null,
+    "events_mono_us": {
+      "client_exit_observed": 1477819289919,
+      "client_kernel_start": 1477819222747,
+      "client_span_end_controller_ms": 1477819289102,
+      "client_span_start_controller_ms": 1477819222102,
+      "controller_exit_observed": 1477819290639,
+      "controller_kernel_start": 1477819213840,
+      "controller_reaped": 1477819290643,
+      "controller_spawn_harness": 1477819213785,
+      "host_exec_observed": 1477819245935,
+      "host_exit_observed": 1477819290585,
+      "host_invalidation_log": 1477819289542,
+      "host_kernel_start_xpcproxy": 1477819239542,
+      "launchd_log_kill": 1477819290034,
+      "launchd_log_spawned": 1477819245971,
+      "validator_exit_observed": [
+        1477819285732
+      ],
+      "worker_exit_observed": 1477819286246,
+      "worker_kernel_start": 1477819271080
+    },
+    "identities": {
+      "client": {
+        "kernel_start_wall_us": 1792815463738644,
+        "pid": 77737,
+        "uniqueid": 17357630
+      },
+      "clients_matched": 1,
+      "controller": {
+        "kernel_start_wall_us": 1792815463729738,
+        "pid": 77736,
+        "uniqueid": 17357629
+      },
+      "host": {
+        "kernel_start_wall_us": 1792815463755439,
+        "parent_uniqueid": 1,
+        "pid": 77738,
+        "responsible_pid": 1143,
+        "uniqueid": 17357631
+      },
+      "host_basis": "worker_parent_uniqueid",
+      "host_children_roles": [
+        "validator",
+        "worker"
+      ],
+      "validators": [
+        {
+          "kernel_start_wall_us": 1792815463800064,
+          "pid": 77740,
+          "uniqueid": 17357633
+        }
+      ],
+      "worker": {
+        "kernel_start_wall_us": 1792815463786977,
+        "pid": 77739,
+        "uniqueid": 17357632
+      },
+      "workers_matched": 1
+    },
+    "intervals_ms": {
+      "C_client_span_controller_clock": 67.0,
+      "W_controller_spawn_to_exit": 76.854,
+      "client_exit_to_host_exit": 0.666,
+      "client_exit_to_launchd_kill_log": 0.115,
+      "client_lifetime_kernel_start_to_exit": 67.172,
+      "client_start_to_host_start": 16.795,
+      "controller_exit_to_host_exit": -0.054,
+      "host_exec_to_worker_start": 25.145,
+      "host_exit_to_launchd_exit_log": 0.031,
+      "host_invalidation_log_to_host_exit": 1.043,
+      "host_lifetime_kernel_start_to_exit": 51.043,
+      "host_start_to_exec": 6.393,
+      "last_child_exit_to_client_exit": 3.673,
+      "last_child_exit_to_host_exit": 4.339,
+      "launchd_kill_log_to_exit_log": 0.582,
+      "launchd_kill_log_to_host_exit": 0.551,
+      "previous_host_exit_to_client_start": 1011.179,
+      "previous_host_exit_to_controller_spawn": 1002.217
+    },
+    "label": "2",
+    "normalized_outcome": "ok",
+    "reply_pid": 77739,
+    "reply_validator_pids": [
+      77740
+    ],
+    "reply_worker_pid": 77739,
+    "runner_acquisition_refusals": 0,
+    "unit_dir": "unit-002",
+    "validators_reaped_per_reply": [
+      true
+    ],
+    "worker_reaped_per_reply": true
+  }
+]

@@ -1,0 +1,207 @@
+{
+  "acquisition_refusals": 0,
+  "attestation": {
+    "listed": 13,
+    "unattested": []
+  },
+  "checks": {
+    "host_children_exiting_after_host": {
+      "[]": 3
+    },
+    "host_exit_basis": {
+      "kqueue_note_exit": 3
+    },
+    "host_fork_notifications": {
+      "2": 3
+    },
+    "host_invalidation_client_pids": {
+      "[]": 3
+    },
+    "host_responsible_pid_equals_controller_responsible_pid": {
+      "True": 3
+    },
+    "launchd_domain_client_pid": {
+      "None": 3
+    },
+    "launchd_domain_matches_client": {
+      "False": 3
+    },
+    "launchd_exit_reason": {
+      "None": 3
+    },
+    "launchd_kill_message": {
+      "None": 3
+    },
+    "validator_pids_agree": {
+      "True": 3
+    }
+  },
+  "controller_exit_codes": {
+    "0": 3
+  },
+  "controllers": 3,
+  "count": 3,
+  "distinct_host_generations": 3,
+  "exec_reassignments": [],
+  "host_basis": {
+    "worker_parent_uniqueid": 3
+  },
+  "hosts_identified": 3,
+  "intervals_ms": {
+    "C_client_span_controller_clock": {
+      "absent": 0,
+      "max": 39.0,
+      "median": 38.0,
+      "min": 36.0,
+      "n": 3,
+      "p90": 39.0
+    },
+    "W_controller_spawn_to_exit": {
+      "absent": 0,
+      "max": 42.864,
+      "median": 40.325,
+      "min": 38.561,
+      "n": 3,
+      "p90": 42.864
+    },
+    "client_exit_to_host_exit": {
+      "absent": 0,
+      "max": 0.628,
+      "median": 0.603,
+      "min": 0.588,
+      "n": 3,
+      "p90": 0.628
+    },
+    "client_exit_to_launchd_kill_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "client_lifetime_kernel_start_to_exit": {
+      "absent": 0,
+      "max": 39.178,
+      "median": 38.033,
+      "min": 36.234,
+      "n": 3,
+      "p90": 39.178
+    },
+    "client_start_to_host_start": {
+      "absent": 0,
+      "max": 5.425,
+      "median": 5.274,
+      "min": 5.154,
+      "n": 3,
+      "p90": 5.425
+    },
+    "controller_exit_to_host_exit": {
+      "absent": 0,
+      "max": 0.087,
+      "median": 0.061,
+      "min": -0.045,
+      "n": 3,
+      "p90": 0.087
+    },
+    "host_exec_to_worker_start": {
+      "absent": 3,
+      "n": 0
+    },
+    "host_exit_to_launchd_exit_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "host_invalidation_log_to_host_exit": {
+      "absent": 3,
+      "n": 0
+    },
+    "host_lifetime_kernel_start_to_exit": {
+      "absent": 0,
+      "max": 34.341,
+      "median": 33.362,
+      "min": 31.708,
+      "n": 3,
+      "p90": 34.341
+    },
+    "host_start_to_exec": {
+      "absent": 3,
+      "n": 0
+    },
+    "last_child_exit_to_client_exit": {
+      "absent": 0,
+      "max": 3.595,
+      "median": 3.347,
+      "min": 3.331,
+      "n": 3,
+      "p90": 3.595
+    },
+    "last_child_exit_to_host_exit": {
+      "absent": 0,
+      "max": 4.183,
+      "median": 3.959,
+      "min": 3.95,
+      "n": 3,
+      "p90": 4.183
+    },
+    "launchd_kill_log_to_exit_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "launchd_kill_log_to_host_exit": {
+      "absent": 3,
+      "n": 0
+    },
+    "previous_host_exit_to_client_start": {
+      "absent": 1,
+      "max": 1003.102,
+      "median": 1002.948,
+      "min": 1002.794,
+      "n": 2,
+      "p90": 1003.102
+    },
+    "previous_host_exit_to_controller_spawn": {
+      "absent": 1,
+      "max": 1001.352,
+      "median": 1001.1800000000001,
+      "min": 1001.008,
+      "n": 2,
+      "p90": 1001.352
+    }
+  },
+  "launchd_exit_reasons_in_window": {},
+  "launchd_kill_messages_in_window": {},
+  "launchd_log": {
+    "argv": null,
+    "error": null,
+    "exit": null
+  },
+  "launchd_log_events": 0,
+  "launchd_spawn_messages_in_window": 0,
+  "launchd_window_mono_us": [
+    1477485091841,
+    1477488215967
+  ],
+  "observer": {
+    "cpu_system_s": 0.035362000000000005,
+    "cpu_user_s": 0.099965,
+    "list_errors": 0,
+    "max_poll_gap_ns": 1690625,
+    "poll_gaps_over_5ms": 0,
+    "polls": 3554
+  },
+  "outcomes": {
+    "ok": 3
+  },
+  "owned_process_roles": {
+    "client": 3,
+    "controller": 3,
+    "host": 3,
+    "validator": 3,
+    "worker": 3
+  },
+  "pairs": [],
+  "raw_sha256sums_sha256": "dc6cf75f5a91536af917e07511b62be091ca03b481800890b86849a3a3cbd958",
+  "run_id": "20261024T041208515113Z-hostlife-pilot1-separated-b853",
+  "series": "separated",
+  "still_alive_at_end": [],
+  "stop_reason": "completed",
+  "unassociated_owned_processes": [],
+  "wall_minus_mono_drift_us": -57
+}

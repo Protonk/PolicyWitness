@@ -1,0 +1,182 @@
+{
+  "acquisition_refusals": 0,
+  "attestation": {
+    "listed": 41,
+    "unattested": []
+  },
+  "checks": {
+    "host_children_exiting_after_host": {
+      "None": 12
+    },
+    "host_exit_basis": {
+      "None": 12
+    },
+    "host_fork_notifications": {
+      "None": 12
+    },
+    "host_invalidation_client_pids": {
+      "[]": 12
+    },
+    "host_responsible_pid_equals_controller_responsible_pid": {
+      "False": 12
+    },
+    "launchd_domain_client_pid": {
+      "None": 12
+    },
+    "launchd_domain_matches_client": {
+      "False": 12
+    },
+    "launchd_exit_reason": {
+      "None": 12
+    },
+    "launchd_kill_message": {
+      "None": 12
+    },
+    "validator_pids_agree": {
+      "False": 12
+    }
+  },
+  "controller_exit_codes": {
+    "0": 12
+  },
+  "controllers": 12,
+  "count": 12,
+  "distinct_host_generations": 0,
+  "exec_reassignments": [],
+  "host_basis": {
+    "None": 12
+  },
+  "hosts_identified": 0,
+  "intervals_ms": {
+    "C_client_span_controller_clock": {
+      "absent": 0,
+      "max": 38.0,
+      "median": 37.0,
+      "min": 34.0,
+      "n": 12,
+      "p90": 38.0
+    },
+    "W_controller_spawn_to_exit": {
+      "absent": 0,
+      "max": 40.218,
+      "median": 39.090999999999994,
+      "min": 36.366,
+      "n": 12,
+      "p90": 39.411
+    },
+    "client_exit_to_host_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "client_exit_to_launchd_kill_log": {
+      "absent": 12,
+      "n": 0
+    },
+    "client_lifetime_kernel_start_to_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "client_start_to_host_start": {
+      "absent": 12,
+      "n": 0
+    },
+    "controller_exit_to_host_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "host_exec_to_worker_start": {
+      "absent": 12,
+      "n": 0
+    },
+    "host_exit_to_launchd_exit_log": {
+      "absent": 12,
+      "n": 0
+    },
+    "host_invalidation_log_to_host_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "host_lifetime_kernel_start_to_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "host_start_to_exec": {
+      "absent": 12,
+      "n": 0
+    },
+    "last_child_exit_to_client_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "last_child_exit_to_host_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "launchd_kill_log_to_exit_log": {
+      "absent": 12,
+      "n": 0
+    },
+    "launchd_kill_log_to_host_exit": {
+      "absent": 12,
+      "n": 0
+    },
+    "previous_host_exit_to_client_start": {
+      "absent": 12,
+      "n": 0
+    },
+    "previous_host_exit_to_controller_spawn": {
+      "absent": 12,
+      "n": 0
+    }
+  },
+  "launchd_exit_reasons_in_window": {
+    "exited due to SIGKILL | sent by launchd[1] during teardown of process-scoped services after host exited": 12
+  },
+  "launchd_kill_messages_in_window": {
+    "signaled service: Killed: 9": 12
+  },
+  "launchd_log": {
+    "argv": [
+      "/usr/bin/log",
+      "show",
+      "--start",
+      "2026-10-23 21:22:28",
+      "--end",
+      "2026-10-23 21:22:33",
+      "--info",
+      "--debug",
+      "--style",
+      "ndjson",
+      "--predicate",
+      "(process == \"launchd\" AND (subsystem CONTAINS \"PWRunner\" OR subsystem CONTAINS \"pw-runner-clien\" OR eventMessage CONTAINS \"PWRunner\")) OR (process == \"PWRunner\" AND eventMessage CONTAINS \"invalidated\")"
+    ],
+    "error": null,
+    "exit": 0
+  },
+  "launchd_log_events": 408,
+  "launchd_spawn_messages_in_window": 12,
+  "launchd_window_mono_us": [
+    1478105073197,
+    1478106536543
+  ],
+  "observer": {
+    "cpu_system_s": 0.010175,
+    "cpu_user_s": 0.009164000000000002,
+    "list_errors": 0,
+    "max_poll_gap_ns": 0,
+    "poll_gaps_over_5ms": 0,
+    "polls": 0
+  },
+  "outcomes": {
+    "ok": 12
+  },
+  "owned_process_roles": {},
+  "pairs": [],
+  "raw_sha256sums_sha256": "c4b475769e9ade4f4e916c5c33d3dfff28262eff038748dd1ffa96a5180300d1",
+  "run_id": "20261024T042229504006Z-hostlife-control-unobserved-rapid-b853",
+  "series": "rapid",
+  "still_alive_at_end": [],
+  "stop_reason": "completed",
+  "unassociated_owned_processes": [],
+  "wall_minus_mono_drift_us": -6
+}

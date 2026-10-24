@@ -1,0 +1,266 @@
+{
+  "acquisition_refusals": 0,
+  "attestation": {
+    "listed": 14,
+    "unattested": []
+  },
+  "checks": {
+    "host_children_exiting_after_host": {
+      "[]": 3
+    },
+    "host_exit_basis": {
+      "kqueue_note_exit": 3
+    },
+    "host_fork_notifications": {
+      "2": 3
+    },
+    "host_invalidation_client_pids": {
+      "[77288]": 1,
+      "[77293]": 1,
+      "[77298]": 1
+    },
+    "host_responsible_pid_equals_controller_responsible_pid": {
+      "True": 3
+    },
+    "launchd_domain_client_pid": {
+      "77288": 1,
+      "77293": 1,
+      "77298": 1
+    },
+    "launchd_domain_matches_client": {
+      "False": 1,
+      "True": 2
+    },
+    "launchd_exit_reason": {
+      "exited due to SIGKILL | sent by launchd[1] during teardown of process-scoped services after host exited": 3
+    },
+    "launchd_kill_message": {
+      "signaled service: Killed: 9": 3
+    },
+    "validator_pids_agree": {
+      "True": 3
+    }
+  },
+  "controller_exit_codes": {
+    "0": 3
+  },
+  "controllers": 3,
+  "count": 3,
+  "distinct_host_generations": 3,
+  "exec_reassignments": [
+    {
+      "history": [
+        {
+          "at": {
+            "mono_ns": 1477674807655833,
+            "wall_ns": 1792815319324099000
+          },
+          "path_after": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+          "role_after": "host",
+          "role_before": "host"
+        }
+      ],
+      "key": "77289:1792815319317500"
+    },
+    {
+      "history": [
+        {
+          "at": {
+            "mono_ns": 1477675875087791,
+            "wall_ns": 1792815320391527000
+          },
+          "path_after": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+          "role_after": "host",
+          "role_before": "host"
+        }
+      ],
+      "key": "77294:1792815320384211"
+    }
+  ],
+  "host_basis": {
+    "worker_parent_uniqueid": 3
+  },
+  "hosts_identified": 3,
+  "intervals_ms": {
+    "C_client_span_controller_clock": {
+      "absent": 0,
+      "max": 64.0,
+      "median": 61.0,
+      "min": 61.0,
+      "n": 3,
+      "p90": 64.0
+    },
+    "W_controller_spawn_to_exit": {
+      "absent": 0,
+      "max": 69.305,
+      "median": 67.475,
+      "min": 67.122,
+      "n": 3,
+      "p90": 69.305
+    },
+    "client_exit_to_host_exit": {
+      "absent": 1,
+      "max": 0.643,
+      "median": 0.6395,
+      "min": 0.636,
+      "n": 2,
+      "p90": 0.643
+    },
+    "client_exit_to_launchd_kill_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "client_lifetime_kernel_start_to_exit": {
+      "absent": 1,
+      "max": 60.729,
+      "median": 60.435500000000005,
+      "min": 60.142,
+      "n": 2,
+      "p90": 60.729
+    },
+    "client_start_to_host_start": {
+      "absent": 1,
+      "max": 13.361,
+      "median": 13.1875,
+      "min": 13.014,
+      "n": 2,
+      "p90": 13.361
+    },
+    "controller_exit_to_host_exit": {
+      "absent": 0,
+      "max": -0.048,
+      "median": -0.056,
+      "min": -0.062,
+      "n": 3,
+      "p90": -0.048
+    },
+    "host_exec_to_worker_start": {
+      "absent": 1,
+      "max": 24.962,
+      "median": 23.7675,
+      "min": 22.573,
+      "n": 2,
+      "p90": 24.962
+    },
+    "host_exit_to_launchd_exit_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "host_invalidation_log_to_host_exit": {
+      "absent": 3,
+      "n": 0
+    },
+    "host_lifetime_kernel_start_to_exit": {
+      "absent": 0,
+      "max": 51.867,
+      "median": 48.351,
+      "min": 47.424,
+      "n": 3,
+      "p90": 51.867
+    },
+    "host_start_to_exec": {
+      "absent": 1,
+      "max": 7.315,
+      "median": 6.9565,
+      "min": 6.598,
+      "n": 2,
+      "p90": 7.315
+    },
+    "last_child_exit_to_client_exit": {
+      "absent": 1,
+      "max": 3.614,
+      "median": 3.2785,
+      "min": 2.943,
+      "n": 2,
+      "p90": 3.614
+    },
+    "last_child_exit_to_host_exit": {
+      "absent": 0,
+      "max": 4.324,
+      "median": 4.257,
+      "min": 3.579,
+      "n": 3,
+      "p90": 4.324
+    },
+    "launchd_kill_log_to_exit_log": {
+      "absent": 3,
+      "n": 0
+    },
+    "launchd_kill_log_to_host_exit": {
+      "absent": 3,
+      "n": 0
+    },
+    "previous_host_exit_to_client_start": {
+      "absent": 2,
+      "max": 1007.786,
+      "median": 1007.786,
+      "min": 1007.786,
+      "n": 1,
+      "p90": 1007.786
+    },
+    "previous_host_exit_to_controller_spawn": {
+      "absent": 1,
+      "max": 1001.497,
+      "median": 1001.2394999999999,
+      "min": 1000.982,
+      "n": 2,
+      "p90": 1001.497
+    }
+  },
+  "launchd_exit_reasons_in_window": {},
+  "launchd_kill_messages_in_window": {
+    "signaled service: Killed: 9": 0
+  },
+  "launchd_log": {
+    "argv": [
+      "/usr/bin/log",
+      "show",
+      "--start",
+      "2026-10-23 21:15:17",
+      "--end",
+      "2026-10-23 21:15:24",
+      "--info",
+      "--debug",
+      "--style",
+      "ndjson",
+      "--predicate",
+      "(process == \"launchd\" AND (subsystem CONTAINS \"PWRunner\" OR subsystem CONTAINS \"pw-runner-clien\" OR eventMessage CONTAINS \"PWRunner\")) OR (process == \"PWRunner\" AND eventMessage CONTAINS \"invalidated\")"
+    ],
+    "error": null,
+    "exit": 0
+  },
+  "launchd_log_events": 102,
+  "launchd_spawn_messages_in_window": 0,
+  "launchd_window_mono_us": [
+    1477674781995,
+    1477677988258
+  ],
+  "observer": {
+    "cpu_system_s": 0.108489,
+    "cpu_user_s": 0.40804599999999996,
+    "list_errors": 0,
+    "max_poll_gap_ns": 4110334,
+    "poll_gaps_over_5ms": 0,
+    "polls": 3290
+  },
+  "outcomes": {
+    "ok": 3
+  },
+  "owned_process_roles": {
+    "client": 2,
+    "controller": 4,
+    "host": 3,
+    "validator": 3,
+    "worker": 3
+  },
+  "pairs": [],
+  "raw_sha256sums_sha256": "b38ed7b0c6f07f453028405c1629769e3de18a31fdec591fd9b3df9750855dad",
+  "run_id": "20261024T041518215306Z-hostlife-pilot3-separated-b853",
+  "series": "separated",
+  "still_alive_at_end": [],
+  "stop_reason": "completed",
+  "unassociated_owned_processes": [
+    "77293:1792815320371264"
+  ],
+  "wall_minus_mono_drift_us": -17
+}
