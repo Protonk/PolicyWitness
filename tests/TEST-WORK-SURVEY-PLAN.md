@@ -5,7 +5,9 @@ do, what a passing result establishes, what a failing result establishes or
 fails to establish, and where activities that share the name *test* are doing
 materially different jobs or where apparently different activities do the
 same job. The deliverable is one report at
-`records/tests/TEST-WORK-SURVEY-REPORT.md`. Nothing else in the tree changes.
+`records/tests/TEST-WORK-SURVEY-REPORT.md` in the original checkout. The
+survey examines a recorded commit in a detached worktree; later commits to
+`main` do not change its subject.
 
 This plan follows [Planning a change](../CONTRIBUTING.md#planning-a-change)
 and the [test working guidance](AGENTS.md). The report belongs in
@@ -16,8 +18,8 @@ reference-style links.
 
 ## Question
 
-For every test and test-like procedure in the current tree, determined from
-its implementation and the assertions it actually makes:
+For every test and test-like procedure at the examined revision, determined
+from its implementation and the assertions it actually makes:
 
 - What is exercised, constructed, varied, mutated, observed, compared or
   checked?
@@ -47,10 +49,18 @@ their evidence, without repairing them or proposing repairs.
 
 ## Boundaries made operational
 
-- **Read-only.** No file under the checkout changes except the report.
-  Working notes, parsed plans, ledgers and scripts live in the session
-  scratch directory, not in `.tmp/` (which is inside the checkout) and not in
-  `tests/out/`.
+- **Pinned inspection.** Read sources, documentation and catalog entries,
+  and run discovery commands, in a detached worktree at the recorded full
+  commit. Create it under a session scratch directory outside the original
+  checkout. Keep working notes, parsed plans, ledgers and scripts beside the
+  worktree, outside both trees. The survey writes only its report in the
+  original checkout's working tree.
+- **Worktree lifecycle.** Creating and removing this detached worktree with
+  `git worktree add --detach` and `git worktree remove` is authorized,
+  including the shared Git metadata those commands update. This follows
+  the disposable-checkout guidance in `tests/AGENTS.md`. The original
+  checkout need not be clean or remain at the same revision; preserve other
+  authors' changes.
 - **Permitted discovery commands.** `tests/run.sh --list` with any selectors
   prints a plan and returns before taking the checkout lock
   (`tests/lib/test_cli.py` lines 169 and 210-212; `tests/README.md` lines
@@ -68,11 +78,15 @@ their evidence, without repairing them or proposing repairs.
 - **Runtime questions.** Where a material question needs an execution (for
   example how long a process takes to abort), the report records the
   proposed observation, the case it would inform and why static reading
-  cannot settle it. It does not run it.
-- **Retained evidence.** Runs under `tests/out/runs/` are local only; the
-  committed index is `tests/RETAINED.json`. Cite them only for the date of a
-  past execution, never as a present result. The survey makes no claim that
-  a case passes on this machine.
+  cannot settle it. It does not run it. Resolving a runtime question by
+  execution requires a separately authorized plan.
+- **Retained evidence.** Runs under the original checkout's
+  `tests/out/runs/` are local only and are not copied into the detached
+  worktree. Read the committed index, `tests/RETAINED.json`, at the examined
+  revision. Identify any run dates read from the original checkout by their
+  location and the date of inspection, separately from the pinned source
+  evidence. Cite them only for the date of a past execution, never as a
+  present result. The survey makes no claim that a case passes on this machine.
 - **Out of scope as subjects, in scope as population.** The harnesses under
   `records/performance/` are historical investigation equipment that
   `records/performance/README.md` says require a retired application; they
@@ -274,18 +288,27 @@ uses them rather than inventing others.
 
 ### Stage 0: establish the state
 
-1. Create a scratch directory outside the checkout for the command record,
-   parsed plans, count scripts and investigation notes. Record commands as
-   they are used so final footprint verification has its evidence.
-2. Confirm a clean starting tree for the footprint comparison. Record
-   `git rev-parse HEAD`, `git log -1 --date=iso`, `git status
-   --porcelain` and `ls tests/out/runs` at the start; repeat all four at the
-   end. Use the recorded revision for source citations. The report's scope
-   section quotes these observations.
+1. Record the original checkout's absolute path and capture its full
+   `git rev-parse HEAD` value once as the examined revision. Create a scratch
+   directory outside that checkout, reserving `source/` for the detached
+   worktree and `notes/` for the command record, parsed plans, count scripts
+   and investigation notes. Record commands as they are used.
+2. Create the worktree with
+   `git -C <original-checkout> worktree add --detach <scratch>/source <full-revision>`.
+   Use the captured hash even if the original checkout's `HEAD` has moved.
+   In the new worktree, record `git rev-parse HEAD`, `git log -1 --date=iso`
+   and `git status --porcelain`; verify the revision matches and status is
+   clean. Record the listing of its `tests/out/runs`, or its absence. The
+   report's scope section quotes these observations. All subsequent source
+   reads, imports, history queries and enumeration use this worktree;
+   retained-run dates and the final report destination are the exceptions
+   described in Boundaries.
 3. Read `tests/README.md`, `tests/AGENTS.md`, `tests/fixtures/README.md` and
    the dispatcher and result-recording code named above before interpreting
    individual cases. Use `runner/AGENTS.md` for runner tests and native helpers.
-4. Save the two selection plans in scratch:
+4. From the detached worktree, save the two selection plans under `notes/`.
+   Use an environment without inherited `PW_*` settings or `PYTHONOPTIMIZE`,
+   and retain the returned configuration, including its worktree paths:
 
    ```sh
    ./tests/run.sh --list
@@ -296,6 +319,15 @@ uses them rather than inventing others.
    parse used. Record differences from the reference and proceed with the
    population at the examined revision. Use `catalog()` and `select()` for
    inherited catalog fields and static source counts for batch populations.
+5. After establishing that inventory, put older accounts in revision
+   context before using their claims. The
+   [opt-in survey](../records/tests/OPT-IN-REPORT.md) examined
+   `2f23cad3cf5ac10a4d87f75d9bd1a2c2a026bc09`. Review
+   `git log --oneline 2f23cad..<examined-revision>` and the intervening diffs
+   that affect the claims being compared, including its B.5 claim used in
+   candidate 4. Treat older counts and claims as comparison texts to
+   re-verify against the pinned implementation, not as inventory inputs.
+   Read only the history relevant to those comparisons.
 
 ### Stage 1: account for the whole population
 
@@ -402,14 +434,14 @@ tracing relevant relationships and documentation in the same investigation.
    discrepancy and the unselectable `rust.fmt` branch in
    `tests/suites/unit/run.sh` lines 7-10: the branch inside
    `rust.unit`'s command cannot be selected under the dispatcher because
-   `rust.fmt` has its own catalog command and `suite_run.py` groups cases
-   by command.
+   `rust.fmt` has its own catalog command and `suite_run.py` gives every
+   standard-context case its own invocation. Only consecutive BYOXPC cases
+   sharing a command are combined (`execute`, lines 387-393).
    For `runner_unit/pwrunner_core_unit_executable`, resolve a disagreement
    between two documents: `tests/FAILURE-PROPAGATION-CONTRACT.md` ("TestKit.run
    counts a guarded early return as passed", under "Coverage audit and
-   acceptance ownership") and the
-   [opt-in survey](../records/tests/OPT-IN-REPORT.md) B.5 ("the equipment
-   guards throw a failure"). Read `workerExists()`, `bothBinariesExist()`
+   acceptance ownership") and the opt-in survey B.5 ("the equipment guards
+   throw a failure"). Read `workerExists()`, `bothBinariesExist()`
    and the `PW_LIFECYCLE_WORKER_FIXTURE` guards in `runner/Tests/PWRunnerCoreTests/`
    and state what a Swift block does when its equipment is absent and what
    the wrapper's `SKIP|FAIL` grep then sees. This decides what a passing
@@ -516,7 +548,11 @@ tracing relevant relationships and documentation in the same investigation.
 
 ### Stage 3: write the report
 
-Write `records/tests/TEST-WORK-SURVEY-REPORT.md` from the collected evidence:
+Write `records/tests/TEST-WORK-SURVEY-REPORT.md` in the original checkout
+from the collected evidence. Check the destination before writing so that
+concurrent report edits are preserved. State the full examined revision and
+use repository-relative source paths with citations tied to that revision;
+the report describes the pinned tree even if `main` has advanced.
 
 1. Scope and coverage: examined revision, enumeration commands, levels of
    granularity, per-case inspection accounting and per-group members read
@@ -540,20 +576,22 @@ lengths are routine choices for the executor.
 
 ## Verification of the survey
 
-- **Revision and footprint.** Repeat Stage 0's revision, status and run-list
-  observations. The examined revision must agree with the citations and
-  counts; reconcile any intervening source changes before finishing.
-  `git status --porcelain` lists only the report, establishing unchanged
-  tracked content and no other visible untracked paths relative to the
-  initial clean state. It does not inventory ignored paths (`tests/out/`,
-  `controller/target/`, `runner/.build/`, `builddir`, `.tmp/`). The command
-  record documents the discovery commands and the permitted scratch and
-  report writes. An unchanged `ls tests/out/runs` checks for added or removed
-  run directories. State the footprint claim at that strength.
+- **Revision and footprint.** Before removing the detached worktree, repeat
+  its Stage 0 revision, status and run-directory observations. Its `HEAD`
+  must still equal the recorded commit, its status must remain clean, and
+  its run-directory listing or absence must agree. These observations
+  establish unchanged tracked content, no visible untracked paths and no
+  added or removed run directories in that worktree. They do not inventory
+  ignored files or establish absence of transient writes. The command
+  record accounts for worktree setup and removal, discovery commands,
+  scratch writes and the report written to the original checkout. Review
+  that report's diff separately from concurrent changes there. Do not
+  require the original checkout to remain clean or at the examined revision,
+  or attribute another author's changes to the survey.
 - **Regenerable counts.** Every count in the report names the command or
-  parse that produced it; the executor re-runs each at the end and the
-  numbers agree. The two `--list` plans are regenerated last and compared
-  with the Stage 0 copies with `diff`.
+  parse that produced it; re-run each in the pinned worktree and require the
+  numbers to agree. Regenerate the two `--list` plans there with the same
+  environment and compare them with the Stage 0 copies using `diff`.
 - **Cited assertions.** Every "a pass establishes" sentence cites a file and
   the line of the assertion or terminal call it rests on, and a reader can
   open the file at the stated revision and find it. Before finishing, the
@@ -573,3 +611,9 @@ lengths are routine choices for the executor.
   investigations are present, including candidates 3, 4 and 5 and one
   example for every distinct contradiction found; any additional cases
   showing the same contradiction are listed by ID.
+- **Worktree cleanup.** After verification and preservation of the report
+  and notes, remove only the owned detached worktree with
+  `git -C <original-checkout> worktree remove <scratch>/source` and record
+  the outcome. If unexpected changes or test output exist, retain the
+  worktree and follow `tests/AGENTS.md` rather than forcing removal or
+  bypassing evidence cleanup rules.
