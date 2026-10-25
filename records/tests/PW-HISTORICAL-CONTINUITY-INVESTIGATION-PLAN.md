@@ -16,6 +16,15 @@ intention, not a finding that the implementation and repository already express
 it. Identify any conflicting current document or executable obligation precisely;
 do not silently resolve that conflict in favor of the premise.
 
+The intention includes continuity between earlier and current releases that
+share a wire-format version. Format admission and responsibility for historical
+interpretation are separate questions: older bytes may satisfy every current
+admission rule without establishing a promise to explain their original meaning
+or their relationship to later observations. Conversely, the disclaimer does
+not authorize rejecting otherwise admitted input because of its age or silently
+changing a versioned meaning. Identify any current obligation to interpret such
+input and treat a proposed narrowing as a conditional contract change.
+
 Retained historical evidence is not itself a removal target. Observations and
 comparisons can remain useful for establishing whether behavior changed without
 requiring old interpretations, old releases or their readers to remain usable.
@@ -119,17 +128,26 @@ shared test names or apparent duplication are insufficient grounds for removal.
 
 ### 3. Conduct a brief wider screen
 
-Use the survey's accounting to screen active batch readers, shared fixtures and
-supporting procedures for another direct historical dependency, including
-historical-format handling inside batches. Searches for `legacy`, `baseline`,
-`version`, `golden` and `red` can locate material; names and age are not findings.
-Distinguish inactive records from inputs consumed by current checks.
+Perform a bounded repository-wide text screen of tracked active tests and
+maintenance procedures, not only dependencies reachable from the four leads.
+Include tests embedded in controller and runner sources, shared fixtures and
+readers, generators, build/release scripts, workflow definitions and their owning
+documentation. Exclude investigation records, archives, retained run outputs,
+vendored sources and build outputs from the initial search population; follow
+references into historical evidence only when an active dependency warrants it.
 
-Record the actual search boundary and what remains unexamined. Follow a new
-lead only when a concrete current consumer or required procedure makes it
-material to this question. Stop widening the search when the required leads and
-their material dependencies support bounded conclusions; do not expand to
-obtain a positive result.
+Use the survey's accounting to interpret hits, including historical-format
+handling inside batches. Searches for `legacy`, `baseline`, `version`, `golden`
+and `red` can locate material; names and age are not findings. Read hits far
+enough to identify an active consumer or required procedure. Add a serious
+candidate only when that evidence points to a concrete historical obligation;
+do not reconstruct every matching test or procedure.
+
+Record search locations, exclusions and terms, leads selected for deeper tracing,
+and what remains unexamined. Depth remains limited to the four required leads,
+additional direct candidates and their material dependencies. Completing this
+screen does not establish repository-wide absence. Do not expand into a full
+compatibility audit or keep searching to obtain a positive result.
 
 ### 4. Establish the obligation and test the interpretation
 
@@ -145,12 +163,20 @@ machinery. Alternatively, the item may merely retain an observation and impose
 none of those responsibilities. Identify actual consumers and requirements,
 not a hypothetical inconvenience.
 
-For each alleged burden, describe a concrete change to the implementation that
-still satisfies its present obligations. State exactly what would then fail or
+For each alleged burden, first consider a concrete change to the implementation
+that still satisfies its present obligations. State exactly what would then fail or
 need maintenance and why. Distinguish a historical obligation from a useful
 regression alert, an invalid mutation anchor or a changed experimental
-prerequisite. Leave unresolved intent unresolved and identify any broader
-product-contract decision needed; this investigation does not authorize it.
+prerequisite. If the historical responsibility is itself a current contractual
+obligation, say why removing it cannot pass that test unchanged.
+
+The report may recommend a conditional contract change, rather than only naming
+the conflict. Identify the exact rule or promised behavior to narrow, affected
+callers and readers, and any versioning or admission implications. Explain how
+the change serves the stated intention and what decision it requires. Separate
+reductions consistent with current contracts from those contingent on changing
+them. Leave unresolved intent unresolved; neither the premise nor a proposal
+authorizes the contract change or its implementation.
 
 Apply these distinctions at assertion or helper level where a case mixes work:
 
@@ -181,6 +207,16 @@ concrete assertions and callers. State any lost observation, evidence or
 experimental capability explicitly; do not call a reduction coverage-neutral
 when such work disappears.
 
+Preserving every unique current diagnostic or experimental capability is not a
+precondition for proposing a reduction. A proposal may recommend surrendering
+one as an explicit tradeoff: name the unique claim or experiment lost, explain
+why the historical maintenance responsibility removed warrants that loss, and
+state whether any substitute exists. Present acceptance of that loss as a
+decision, not as an already-approved consequence of the disclaimer. Loss of a
+current contractual guarantee also requires the conditional contract proposal
+above. Unrelated current coverage is not a removal candidate merely because it
+would be convenient to eliminate it.
+
 For a smaller constructed fixture, specify the properties needed to exercise
 the intended boundary and the independent basis for its expected answer.
 Do not obtain that answer by regenerating expectations from today's producer.
@@ -203,8 +239,10 @@ Produce one compact report containing:
    their current purpose or the absence of an active historical obligation.
 3. Supported reductions, each naming the exact obligation removed, smallest
    affected surface, present work preserved, evidence or capability lost, and
-   unresolved decisions or verification. If none is supported, say so within
-   the examined boundary rather than claiming repository-wide absence.
+   unresolved decisions or verification. Distinguish proposals within current
+   contracts from conditional contract changes and identify decisions to surrender
+   unique current capabilities. If none is supported, say so within the examined
+   boundary rather than claiming repository-wide absence.
 4. Consequential uncertainties, including precise conflicts with the author's
    intention and the smallest additional observation needed for any conclusion
    that static inspection could not establish.
