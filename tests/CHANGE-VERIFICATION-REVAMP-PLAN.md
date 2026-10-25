@@ -139,8 +139,20 @@ An unsettled route may remain discoverable, but must not be presented or credite
 as a settled required or optional selection. The guide must not invent an
 obligation, waive one, or choose between conflicting instructions through an
 index label. Continue the independently settled routes and editorial work.
-Also record the follow-up question in the completion account; that account
-cannot substitute for the qualification in the published guide.
+
+Every route still marked unresolved must have a separate examination item in
+`tests/VERIFICATION-OUTFLOW-EXAMINATION-PLAN.md`. Prepare that handoff as part of
+the revamp for the user and another agent to examine the routes one by one.
+Each item identifies its index route, affected controls, the unresolved question,
+the supporting or conflicting sources, and the evidence or decision needed to
+settle it. Link the guide's qualification to the corresponding examination item
+while keeping the uncertainty understandable in the guide itself.
+
+Preparing this examination plan is required whenever unresolved routes remain;
+conducting those examinations is subsequent work. The completion account should
+identify the handoff and its unresolved routes, but cannot substitute for either
+the examination plan or the published qualifications. If no unresolved routes
+remain, report that result without inventing examination work.
 
 ## Preserve meaning while cleaning up entries
 
@@ -258,6 +270,11 @@ Readers arriving directly at an affected detailed guide entry must also see the
 qualification. A reader using only the guide must encounter the uncertainty;
 a passing navigation check does not settle that requirement.
 
+Compare every unresolved index route with the examination plan. Each must have
+its own actionable item, with the same unresolved question and a working link
+from the guide. Review this correspondence explicitly; completing the revamp
+does not require answering the examination items.
+
 Use [the Markdown reader](../docs/markdown_reader.py) to check local files and
 heading anchors in the new guide and every changed document. The existing
 generator link scan does not cover all test guides, suite READMEs, plans and
@@ -299,12 +316,14 @@ without organizing itself as an opt-in registry; substantive entries and
 verification obligations survive; the two obsolete general policies are gone;
 resource-based membership guidance remains available; current links and
 operational path references resolve; unresolved requirements are disclosed at
-the point of use; and the unchanged selection plus documentation checks pass.
+the point of use and each unresolved index route has its own item in
+`tests/VERIFICATION-OUTFLOW-EXAMINATION-PLAN.md`; and the unchanged selection
+plus documentation checks pass.
 Completion of the documentation revamp does not declare those requirements
-resolved. Commit the guide and its navigation changes together,
-recording the tested source, commands, run location and any unresolved editorial
-questions in the completion account. Do not claim those questions were settled
-by a passing mechanical check.
+resolved. Commit the guide, its navigation changes and any required examination
+plan together, recording the tested source, commands, run location and any
+unresolved editorial questions in the completion account. Do not claim those
+questions were settled by a passing mechanical check.
 
 Implementation is limited to this bounded documentation change. Preparing and
 committing the plan does not itself rename the guide or change test behavior.
