@@ -44,14 +44,16 @@ below apply to all claims about coverage.
   did not search, and the files exist), re-read 20 rows from all five passes
   beside the source text at their cited lines. Citation resolution establishes
   that a location exists, not that it supports the row's interpretation.
-  Section 2 contains fifteen investigations (2.0 through 2.14).
+  Section 2 contains seventeen investigations (2.0 through 2.16).
 - Review used detached worktrees at the same revision, traced findings to
   assertions and shared helpers, and enumerated batch members from source
   without importing or executing their tests. Assertion reading covers all
   223 Rust test functions, 277 Swift `tk.run` sites and 205 Python unittest
   methods in the listed batches. Names, comments, equipment guards, scenario
   tables and relevant setup/helpers distinguish the jobs those assertions
-  perform. Appendix A accounts for cases; Appendix B accounts for their
+  perform. Expected-answer sources, shared checker dependencies and the actual
+  paths from observation to reader were traced for 2.15–2.16. Appendix A
+  accounts for cases; Appendix B accounts for their
   groups. Neither the survey nor the review ran a case or credited a runtime
   result.
 - Older accounts: the opt-in survey (`records/tests/OPT-IN-REPORT.md`)
@@ -958,6 +960,134 @@ or failed fixture cleanup. The case status alone does not separate them;
 the batch log and named failing member do. Appendix B accounts for all member
 assertions and these distinct jobs without crediting any runtime outcome.
 
+### 2.15 What justifies an expected answer
+
+Agreement across readers establishes conformance to their shared expectations.
+It does not by itself establish that the expectations correctly describe a
+native operation or justify a conclusion about it. Independence here is
+specific: a checker can be independent of the production implementation while
+sharing its contract, vocabulary, observations and assumptions.
+
+| Expected answers | Support separate from the implementation under test | Shared premise or limit |
+| --- | --- | --- |
+| Acceptance flags and valid/invalid forms in the shared corpora of 2.12 | Fixed JSON examples are supplied to distinct language boundaries. They are not obtained by asking that boundary whether the current input is valid. Type, range, absence and phase-consistency assertions can refute a reader that violates those examples. | The flags encode the repository's chosen contract. A retained native envelope supplies a starting document, not independent justification for the acceptance of every constructed mutation. A common mistake in the contract and its readers can survive. |
+| Comparison matrix | Literal expected records accompany constructed inputs and live specimens. The live checker independently prepares files, observes mode-000 open/spawn failures and helper exit statuses, and checks file effects. | Those observations justify particular input/effect facts. They do not independently derive every comparison label, operation relation or ordering claim. The fixture and multiple readers share those meanings. |
+| Hand-reviewed lifecycle examples | `lifecycle_contract.EXAMPLES` stores observations beside explicit expected claims and projections; the oracle must reproduce them. | “Hand-reviewed” is the module's account of their provenance, not a separate proof of its semantic rules. The examples and producer implement the same disposition contract. |
+| The 2,880-row lifecycle model | Python computes expected answers without invoking the Swift resolver; Swift runs its actual resolver on each constructed observation row. | The expected-answer generator and Python acceptance checker both call `expected_claims`. Agreement with that model does not validate the model's assumptions or the fidelity of real publications to its inputs. |
+
+The lifecycle model is a Cartesian product of five status choices, six
+interventions, eight progress values, four two-slot configurations and three
+collection bases, with `exit_requested=True` fixed
+(`tests/lib/lifecycle_oracle.py:614-657`). It is exhaustive over those axes,
+not over process histories, phase combinations or all representable inputs.
+`--model-json` derives claims, issues and projections from `expected_claims`
+and `expected_projections` (864-873); `check_record` uses the same claim
+calculation (501-505). The Swift loop compares claim state/answer/value/reason,
+issue fields, lifecycle summaries, `partial_steps` and the invalid-basis result.
+Its `comparable` helper removes `basis` and `issue` from each claim before that
+comparison; it is not a comparison of every projection and reference field
+(`runner/Tests/PWRunnerCoreTests/DispositionResolverTests.swift:178-185,
+463-509`). Other integrity assertions check those fields separately.
+
+There is useful checking of the oracle itself. Its self-check compares against
+the separately written examples, requires accepted records and named mutation
+rejections, and checks properties such as an unrelated exit-code change leaving
+step claims unchanged (`tests/lib/lifecycle_contract.py:460-627`;
+`tests/lib/lifecycle_oracle.py:770-858`). These constrain an incorrect or
+indiscriminately accepting/rejecting checker. They still depend on the stated
+disposition rules. For example, the inference from terminal progress and an
+incomplete slot to `not_reached` depends on the protocol ordering and collection
+semantics used by both the model and production. A mistaken premise shared by
+the contract, examples, model and producer need not create any disagreement.
+The C2/C5 fixture observations add real publication/collection examples, but
+their no-sandbox child does not validate every possible native execution
+(`DispositionResolverTests.swift:189-251`).
+
+The comparison matrix has similarly mixed grounding. Its README says the
+expectations were reviewed against rules and independent controls, not generated
+from the producer. Its provenance account also records comparison against the
+older response-12 producer, including a corrected S22 row
+(`tests/fixtures/comparison/README.md:3-10, 103-116`;
+`tests/fixtures/comparison/baseline_response12/README.md:3-34`). Matching an
+older producer supports continuity with that producer; it is not an external
+derivation of the comparison's meaning. The current live check's direct
+controls observe file access, spawns and initial absence, while its effect
+checks inspect file bytes/existence; they do not independently observe every
+fact named in every row (`tests/suites/witness_contract/check_comparison_matrix.py:83-112,
+172-193`). In the Swift unit reader, `order` is supplied by the fixture and
+the lifecycle limitation is appended through the production
+`PWDisposition.limitationForSummary` mapping before comparison. That loop
+tests record construction under those inputs, not the collection/release
+barrier that would justify them in a real run
+(`runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift:75-85, 107-137`).
+
+Nor are the two Python entry points two independent implementations of every
+rule. The consumer and lifecycle oracle both use `lifecycle_adapter`,
+`phase_evidence` and `extension_evidence`; both receive facts from the same
+document (`tests/lib/consumer.py:23-31`;
+`tests/lib/lifecycle_oracle.py:24-28, 457-480, 506-510`). Agreement on a shared
+helper's decision is one implementation observed through two entry points.
+Independent filesystem/process observations constrain claims about those
+observed executions. They do not make every contract assumption independent.
+Thus a common mistaken premise can leave the relevant agreement checks green;
+no such mistake is established merely by identifying this dependency.
+
+### 2.16 Which boundaries one execution crosses
+
+A continuous CLI case and a chain of component checks support different claims.
+The following accounts trace the paths relevant to 2.12–2.15. “Selected app”
+means the app passed to the dispatcher, whose integrity and inventory gates
+must also pass; this survey did not run it or credit a retained execution.
+
+| Claim / cases | Path exercised by the case | Boundary of the resulting claim |
+| --- | --- | --- |
+| Ordinary comparison, phase and extension observations: matrix S/C, `witness_contract/phases` ordinary branches, `witness_contract/extensions` | Public CLI through the selected app's client, XPC host and applicable worker/validator/issuer, back to the controller envelope and Python readers. Cases also compare prepared file bytes, effects or identities. | These are continuous app paths for those specimens. A consistent envelope alone still cannot independently verify all of its reported native facts or timing; the external checks cover the particular facts they observe. |
+| `attempt_effects_wait_for_collection` | Selected CLI/client/host/worker with a test-owned native validator bridge. The gate, file contents, exec connection, process ancestry and exit events are observed before the final envelope is checked. | Continuous transport and host/worker ordering under a substituted validator. The held observations cover a 0.5 s interval; they do not exercise the shipped validator or prove every schedule obeys the barrier. |
+| Matrix B, phase aggregate/cutoff controls, extension combinations M01–M07 | Public CLI and envelope path, with a validator transcript/fixture or compiled issuer/worker substitutions at declared override boundaries. | Integrated handling of the controlled failures is exercised. The substitute's facts are not observations that the corresponding unmodified native component naturally produces those failures. |
+| M08, policy-transfer and worker-clock replies followed by Rust/Python replay | Swift test executable drives real children and production helpers/orchestration, saves encoded replies, then the wrapper requires Rust assembly and Python reader checks of those replies. | A connected data path through the saved reply exists. The host is built into the test executable, and the replay bypasses service admission, XPC, the client process and the built controller executable. |
+| Exec-reader and reaped-acknowledgement controls | Test-built Swift package with a native ABI fixture; baseline plus targeted source mutations, as in 2.5. | Reader/publication and host lifecycle boundaries are exercised. This is neither a native exec-child experiment nor a CLI traversal of the same exceptional state. |
+| Barrier mutation CLI controls | Public CLI path through a signed app copy with rebuilt worker and/or host, alongside separate C and Swift controls. | The CLI observation is integrated for that copy. Source reuse and equal before/after inventories of the selected app do not make the rebuilt pair its shipped bytes (2.5). |
+
+The first three paths are visible in `RunCapture`'s actual subprocess launch
+(`tests/lib/run_capture.py:25, 48-63`), the matrix loop
+(`tests/suites/witness_contract/check_comparison_matrix.py:195-242`), ordinary
+phase checks (`check_phases.py:26-37, 57-79`) and extension capture/read checks
+(`check_extensions.py:37-51, 67-106`). The held-collection observer ties its
+external worker/helper identities and effects to the returned reply
+(`check_ordering.py:76-145`). M01–M07 compile control fixtures and select them
+through `issuer_executable_path`/`worker_executable_path`, then launch the CLI
+(`check_extension_boundaries.py:67-81, 142-172`). These are concrete integration
+routes, not an inference from unrelated passing unit cases.
+
+Replay deserves more credit than separate checks of invented examples, but
+less than the complete app route. M08 runs `CWorkerOrchestrator` with the
+selected worker, fixture validators and an injected failed kill; it explicitly
+performs the service's path enrichment, observes late EPIPE and file contents,
+then writes `combined-phases.json`
+(`runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift:321-417`). The Rust test
+reads that file, passes the parsed reply into production assembly, requires
+the resulting envelope's `runner_result` to equal that reply, and invokes
+Python validation (`controller/src/run_flow.rs:931-1089`). This preserves the
+identity of the reply value across the checked stages. However, its surrounding
+specimen, client output, timestamps and request-delivery record are constructed
+(`controller/src/run_flow.rs:750-802`). Some clock replies are also assembled
+by a test helper from actual driver output rather than returned by the service
+(`runner/Tests/PWRunnerCoreTests/WorkerClockTests.swift:32-49`). The wrapper
+requires both replays to run, but does not insert the omitted app processes
+(`tests/suites/runner_unit/run.sh:55-68`).
+
+Consequently, passing these component checks would not alone rule out a defect
+in the omitted service/client route for that particular combined failure.
+Passing ordinary CLI phases does not supply that missing observation of M08's
+failed cleanup and late output; likewise, a constructed encoding check and a
+separate native publication check do not establish that the same exceptional
+publication survives the shipped service path. Connecting them requires the
+untested assumption that the service selects the same assembly/enrichment
+path and transports the same facts under those conditions. The continuous CLI
+cases constrain that assumption for their own specimens. They do not establish
+it for every independently tested component state. This is a limit on combining
+results, not evidence that an integration defect exists.
+
 ## 3. Consequential contrasts and overlaps
 
 Superficially similar, materially different:
@@ -1261,7 +1391,7 @@ survey.
 
 Review likewise used disposable worktrees at the examined revision and
 read-only source/Git commands, plus scratch files and edits to this report.
-The final source check (2026-10-25 18:27 UTC) found the examined HEAD, empty
+The final source check (2026-10-25 18:46 UTC) found the examined HEAD, empty
 status, no `tests/out` and no checkout lock. Focused review checks parsed the
 report, applied the Markdown command rule explicitly (records are normally
 excluded), resolved its relative link and reconciled all 235 IDs and inspection
@@ -1276,7 +1406,9 @@ not committed. Their location is
 `/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/c8bb3630-28e3-4e53-af2b-2d5a68bc4727/scratchpad/survey/notes`;
 review scratch is `/private/tmp/pw-survey-review.GdtY8j` and
 `/private/tmp/pw-survey-completion.Gaqd2T` (member inventory, assertion-reading
-excerpts and validation record). The disposable source worktrees were removed.
+excerpts and validation record), with the expected-answer and integration-path
+review in `/private/tmp/pw-survey-oracles.ynb0Lq`. The disposable source
+worktrees were removed.
 The appendices preserve the inspection accounting needed to read this report
 without those scratch files, but do not reproduce the working ledger's
 interpretations.
