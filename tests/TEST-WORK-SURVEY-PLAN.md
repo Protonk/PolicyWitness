@@ -219,9 +219,13 @@ Record a relationship only where it changes what a result means:
 
 ## Population reference
 
-The reference counts are from revision
-`87d5fb2d08d430ffabde6d6a3316257e8190e6c3`. Re-derive them at the survey's
-examined revision in Stage 0; each row names its source.
+The reference counts were taken at revision
+`87d5fb2d08d430ffabde6d6a3316257e8190e6c3` and re-derived unchanged at
+`f1e96a2e63ac8aa6f02c67a63e208a70e7aecfa4` from the two `--list` plans; every
+commit between those revisions changed only this plan file. The counts hold
+at any later examined revision whose `git diff --stat 87d5fb2..<revision>`
+names only this file; if anything else changed, treat them as historical.
+Stage 0 re-derives them regardless; each row names its source.
 
 | Level | At `87d5fb2` | Source |
 | --- | --- | --- |
